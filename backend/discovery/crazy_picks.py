@@ -148,6 +148,7 @@ async def run_crazy_picks(
     clients: dict,
     top_n: int = 10,
     generate_thesis: bool = True,
+    skip_slow: bool = False,
 ) -> list[CrazyPickResult]:
     """Crazy Picks 메인 실행.
 
@@ -155,15 +156,19 @@ async def run_crazy_picks(
     2. 스코어링
     3. Top N 선정
     4. LLM thesis 생성 (Top N 만)
+
+    Args:
+        skip_slow: True 시 SEC EDGAR / FINRA / ApeWisdom 등 느린 소스 skip
+                   (수동 dry-run·디버그 용 — Yahoo + Finnhub + RSS 만 사용)
     """
-    logger.info(f"[Crazy] start — universe size: {len(universe_tickers)}")
+    logger.info(f"[Crazy] start — universe size: {len(universe_tickers)} skip_slow={skip_slow}")
 
     # 1. 인자 수집 (병렬 max 10 동시)
     sem = asyncio.Semaphore(10)
 
     async def collect_one(info):
         async with sem:
-            inputs = await collect_factor_inputs(info.ticker, clients)
+            inputs = await collect_factor_inputs(info.ticker, clients, skip_slow=skip_slow)
             return info, inputs
 
     results = await asyncio.gather(

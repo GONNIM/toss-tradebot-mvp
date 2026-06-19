@@ -231,19 +231,31 @@ async def _load_dry_run_universe():
 
 
 async def run_crazy_picks_job():
-    """Crazy Picks 일일 실행 — Top N + DB + Telegram."""
+    """Crazy Picks 일일 실행 — Top N + DB + Telegram.
+
+    env:
+      CRAZY_SKIP_SLOW=1     SEC/FINRA skip (dry-run 빠른 모드)
+      WATCHLIST_LIMIT=N     universe 상위 N 개만 (수동 트리거 데모 용)
+    """
     from backend.discovery.crazy_picks import run_crazy_picks
     from backend.services.db import get_session
     from backend.services.models import CrazyPick
     from backend.services.notifier import TelegramNotifier, format_crazy_alert
 
-    logger.info("[crazy] start")
+    skip_slow = os.environ.get("CRAZY_SKIP_SLOW", "0") == "1"
+    limit = int(os.environ.get("WATCHLIST_LIMIT", "0"))
+    logger.info(f"[crazy] start skip_slow={skip_slow} limit={limit or 'all'}")
     today = datetime.now().strftime("%Y-%m-%d")
     universe = await _load_dry_run_universe()
+    if limit:
+        universe = universe[:limit]
+        logger.info(f"[crazy] universe truncated to {len(universe)}")
     clients = await _enter_clients(_build_clients())
 
     try:
-        picks = await run_crazy_picks(universe, clients, top_n=CRAZY_TOP_N, generate_thesis=True)
+        picks = await run_crazy_picks(
+            universe, clients, top_n=CRAZY_TOP_N, generate_thesis=True, skip_slow=skip_slow,
+        )
     finally:
         await _exit_clients(clients)
 
