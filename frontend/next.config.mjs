@@ -1,10 +1,8 @@
-import type { NextConfig } from "next";
-
-const nextConfig: NextConfig = {
+/** @type {import('next').NextConfig} */
+const nextConfig = {
   reactStrictMode: true,
-  output: "standalone",  // optimus8 self-host PM2 운영 최적화 (결정 42)
+  output: "standalone",
 
-  // FastAPI Backend 프록시 (동일 도메인 운영 — 결정 42)
   async rewrites() {
     return [
       {
