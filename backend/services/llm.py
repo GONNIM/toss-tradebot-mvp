@@ -1,7 +1,8 @@
-"""LLM provider — OpenAI GPT-5-mini (기본) + Anthropic Claude Haiku 4.5 (대안).
+"""LLM provider — Z.ai GLM (기본) + OpenAI gpt-5-mini + Anthropic Claude (모두 병행).
 
 번갈아 사용 가능 (메모리: keep-alternatives-alongside). `LLM_PROVIDER` 환경변수로 전환:
-  - LLM_PROVIDER=openai      (기본) — gpt-5-mini
+  - LLM_PROVIDER=zai         (기본) — glm-4.5-flash 무료 / glm-4.6 paid
+  - LLM_PROVIDER=openai      — gpt-5-mini
   - LLM_PROVIDER=anthropic   — claude-haiku-4-5
 
 공통 인터페이스:
@@ -11,8 +12,10 @@
         )
 
 비용 (월 ~10 picks × 30일 ≈ 3K 호출):
-  - GPT-5-mini: ~$0.5-1
-  - Claude Haiku 4.5: ~$5-15
+  - Z.ai glm-4.5-flash: 무료
+  - Z.ai glm-4.6:       ~$0.3 (저렴)
+  - OpenAI gpt-5-mini:  ~$0.5-1
+  - Claude Haiku 4.5:   ~$5-15
 """
 from __future__ import annotations
 
@@ -26,6 +29,8 @@ logger = logging.getLogger(__name__)
 
 
 # 기본 모델 (환경변수로 override 가능)
+DEFAULT_ZAI_MODEL = os.environ.get("ZAI_MODEL", "glm-4.5-flash")  # 무료 tier
+DEFAULT_ZAI_BASE_URL = os.environ.get("ZAI_BASE_URL", "https://api.z.ai/api/paas/v4/")
 DEFAULT_OPENAI_MODEL = os.environ.get("OPENAI_MODEL", "gpt-5-mini")
 DEFAULT_ANTHROPIC_MODEL = os.environ.get("ANTHROPIC_MODEL", "claude-haiku-4-5-20251001")
 
@@ -144,7 +149,93 @@ def _parse_thesis_json(raw: str, ticker: str) -> PickThesis:
 
 
 # ─────────────────────────────────────────────
-# OpenAI provider (기본)
+# Z.ai provider (기본 — OpenAI SDK 호환, glm-4.5-flash 무료)
+# ─────────────────────────────────────────────
+
+
+class ZaiLLM:
+    """Z.ai GLM provider — OpenAI SDK 호환 (base_url 만 변경).
+
+    무료 tier: glm-4.5-flash. paid 권장: glm-4.6 / glm-5.1.
+    """
+
+    def __init__(
+        self,
+        api_key: Optional[str] = None,
+        model: Optional[str] = None,
+        base_url: Optional[str] = None,
+    ) -> None:
+        self.api_key = api_key or os.environ.get("ZAI_API_KEY", "")
+        self.model = model or DEFAULT_ZAI_MODEL
+        self.base_url = base_url or DEFAULT_ZAI_BASE_URL
+        if not self.api_key:
+            logger.warning("[ZaiLLM] ZAI_API_KEY 미설정 — 호출 시 401")
+        self._client = None
+
+    async def __aenter__(self) -> "ZaiLLM":
+        try:
+            from openai import AsyncOpenAI
+        except ImportError as e:
+            raise RuntimeError("openai 미설치 (Z.ai 도 OpenAI SDK 사용). `pip install openai`") from e
+        self._client = AsyncOpenAI(api_key=self.api_key, base_url=self.base_url)
+        return self
+
+    async def __aexit__(self, *exc) -> None:
+        if self._client is not None:
+            try:
+                await self._client.close()
+            except Exception:
+                pass
+            self._client = None
+
+    async def generate_pick_thesis(
+        self,
+        ticker: str,
+        company_name: str,
+        sector: str,
+        current_price: float,
+        market_cap: Optional[float],
+        scores: dict[str, float],
+        catalysts_hint: Optional[list[str]] = None,
+        news_headlines: Optional[list[str]] = None,
+        risk_level: str = "MED",
+    ) -> PickThesis:
+        if self._client is None:
+            raise RuntimeError("ZaiLLM 컨텍스트 미진입 — `async with` 사용")
+
+        prompt = _build_prompt(
+            ticker, company_name, sector, current_price, market_cap,
+            scores, catalysts_hint, news_headlines, risk_level,
+        )
+
+        try:
+            # Z.ai 는 response_format json_object 가 모델별 차이 — 보수적으로 미사용,
+            # 프롬프트의 "JSON 만 출력" 지시 + _parse_thesis_json 의 코드블록 제거 의존
+            completion = await self._client.chat.completions.create(
+                model=self.model,
+                messages=[
+                    {"role": "system", "content": "You are a financial analyst. Reply ONLY with valid JSON, no prose."},
+                    {"role": "user", "content": prompt},
+                ],
+                max_tokens=900,
+                temperature=0.3,
+            )
+        except Exception as e:
+            logger.error(f"[ZaiLLM] {ticker} call failed: {e}")
+            return PickThesis(
+                thesis="(LLM 호출 실패)",
+                catalysts=[],
+                risks=[f"Z.ai 분석 불가: {e.__class__.__name__}"],
+                news_summary="",
+                manipulation_risk=3,
+            )
+
+        raw = (completion.choices[0].message.content or "").strip()
+        return _parse_thesis_json(raw, ticker)
+
+
+# ─────────────────────────────────────────────
+# OpenAI provider (대안)
 # ─────────────────────────────────────────────
 
 
@@ -292,11 +383,13 @@ class ClaudeLLM:
 
 
 def get_llm_client(provider: Optional[str] = None) -> LLMClient:
-    """LLM provider 선택. provider=None 이면 LLM_PROVIDER env 또는 'openai' 기본."""
-    name = (provider or os.environ.get("LLM_PROVIDER") or "openai").lower()
+    """LLM provider 선택. provider=None 이면 LLM_PROVIDER env 또는 'zai' 기본."""
+    name = (provider or os.environ.get("LLM_PROVIDER") or "zai").lower()
+    if name == "zai":
+        return ZaiLLM()  # type: ignore[return-value]
     if name == "openai":
         return OpenAILLM()  # type: ignore[return-value]
     if name == "anthropic":
         return ClaudeLLM()  # type: ignore[return-value]
-    logger.warning(f"[LLM] unknown provider {name!r}, falling back to openai")
-    return OpenAILLM()  # type: ignore[return-value]
+    logger.warning(f"[LLM] unknown provider {name!r}, falling back to zai")
+    return ZaiLLM()  # type: ignore[return-value]
