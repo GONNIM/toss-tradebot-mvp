@@ -71,17 +71,21 @@ MOONSHOT_TOP_N = int(os.environ.get("MOONSHOT_TOP_N", "3"))
 
 
 def _build_clients() -> dict:
-    """Discovery 클라이언트 dict. 호출 측이 async with 로 진입."""
+    """Discovery 클라이언트 dict. 호출 측이 async with 로 진입.
+
+    Stooq 가 JS PoW 봇 차단 도입 (2026-06-20) → Yahoo 우선, Stooq 보존 (대체).
+    crazy_picks.py 는 clients['stooq'] 키 호환 위해 Yahoo 도 'stooq' 키로 등록.
+    """
     from backend.discovery.data_sources.apewisdom import ApewisdomClient
     from backend.discovery.data_sources.finnhub import FinnhubClient
     from backend.discovery.data_sources.finra import FINRAClient
     from backend.discovery.data_sources.rss import RSSClient
     from backend.discovery.data_sources.sec_edgar import SECEdgarClient
-    from backend.discovery.data_sources.stooq import StooqClient
+    from backend.discovery.data_sources.yahoo import YahooClient
     from backend.services.llm import get_llm_client
 
     return {
-        "stooq": StooqClient(),
+        "stooq": YahooClient(),   # Yahoo 가 stooq 키 점유 — crazy_picks.py 호환
         "finnhub": FinnhubClient(),
         "sec": SECEdgarClient(),
         "apewisdom": ApewisdomClient(),
@@ -134,6 +138,7 @@ async def run_universe_refresh():
         for ticker in WATCHLIST:
             try:
                 profile = await clients["finnhub"].get_company_profile(ticker)
+                # clients['stooq'] 는 실제로 YahooClient (호환 키)
                 candles = await clients["stooq"].get_daily_candles(ticker, count=25)
                 if not candles:
                     logger.debug(f"[universe] {ticker} no candles")
