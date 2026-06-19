@@ -1,0 +1,76 @@
+[build-system]
+requires = ["setuptools>=68.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "toss-tradebot-backend"
+version = "0.1.0"
+description = "Toss Tradebot MVP — Backend (자동매매 코어 + Discovery 모듈 + /moonshot CLI + FastAPI)"
+requires-python = ">=3.12"
+readme = "../README.md"
+
+dependencies = [
+    # Web framework + API
+    "fastapi>=0.115.0",
+    "uvicorn[standard]>=0.32.0",
+    "pydantic>=2.9.0",
+
+    # DB
+    "sqlalchemy>=2.0.36",
+    "aiosqlite>=0.20.0",
+    "alembic>=1.14.0",
+
+    # HTTP / async
+    "httpx>=0.28.0",
+    "aiohttp>=3.11.0",
+
+    # Scheduling
+    "apscheduler>=3.11.0",
+
+    # Data
+    "pandas>=2.2.0",
+    "numpy>=2.1.0",
+    "pandas-datareader>=0.10.0",   # Stooq adapter
+
+    # External APIs
+    "anthropic>=0.40.0",            # Claude Haiku 4.5
+    "praw>=7.8.0",                  # Reddit
+    "feedparser>=6.0.0",            # RSS (PRNewswire / GlobeNewswire)
+
+    # CLI
+    "click>=8.1.0",
+    "rich>=13.9.0",
+
+    # Utilities
+    "python-dotenv>=1.0.0",
+    "tenacity>=9.0.0",              # 재시도 + 백오프
+
+    # Toss API (Phase K — OAuth 2.0)
+    "pyjwt>=2.10.0",
+    "requests>=2.32.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.3.0",
+    "pytest-asyncio>=0.24.0",
+    "pytest-cov>=6.0.0",
+    "ruff>=0.7.0",
+    "mypy>=1.13.0",
+]
+
+[project.scripts]
+# /moonshot CLI 진입점 (결정 36)
+moonshot = "backend.cli.moonshot:cli"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["backend*"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]

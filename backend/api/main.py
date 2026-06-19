@@ -1,0 +1,76 @@
+"""FastAPI 진입점.
+
+기동:
+    uvicorn backend.api.main:app --host 0.0.0.0 --port 8000
+
+라우트:
+    /api/v1/crazy       — Crazy Picks Top 10
+    /api/v1/moonshot    — Moonshot Picks Top 3
+    /api/v1/positions   — 보유 종목 (Phase K 후)
+    /api/v1/dashboard   — 자동매매 요약 (Phase K 후)
+    /api/v1/settings    — 파라미터
+    /api/v1/logs        — 감사 로그
+    /health             — 헬스체크
+"""
+from __future__ import annotations
+
+import logging
+from contextlib import asynccontextmanager
+
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+
+from backend.api.routes import crazy, dashboard, logs, moonshot, positions, settings
+from backend.services.db import init_db
+
+logger = logging.getLogger(__name__)
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # 시작 시
+    logger.info("[FastAPI] starting — init DB")
+    await init_db()
+    yield
+    # 종료 시
+    logger.info("[FastAPI] shutdown")
+
+
+app = FastAPI(
+    title="Toss Tradebot MVP API",
+    version="0.1.0",
+    description="자동매매 + Crazy + Moonshot Discovery API",
+    lifespan=lifespan,
+)
+
+# CORS — Next.js 프론트엔드
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:3000", "https://optimus8.cafe24.com"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+
+# 라우트 등록
+app.include_router(crazy.router, prefix="/api/v1/crazy", tags=["crazy"])
+app.include_router(moonshot.router, prefix="/api/v1/moonshot", tags=["moonshot"])
+app.include_router(positions.router, prefix="/api/v1/positions", tags=["positions"])
+app.include_router(dashboard.router, prefix="/api/v1/dashboard", tags=["dashboard"])
+app.include_router(settings.router, prefix="/api/v1/settings", tags=["settings"])
+app.include_router(logs.router, prefix="/api/v1/logs", tags=["logs"])
+
+
+@app.get("/health")
+async def health():
+    return {"status": "ok", "service": "toss-tradebot-mvp"}
+
+
+@app.get("/")
+async def root():
+    return {
+        "service": "Toss Tradebot MVP API",
+        "version": "0.1.0",
+        "docs": "/docs",
+    }

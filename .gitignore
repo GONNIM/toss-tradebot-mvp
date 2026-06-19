@@ -1,0 +1,71 @@
+# macOS
+.DS_Store
+.devcontainer
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+BKUP/
+data/
+
+# Environment
+.env
+.venv/
+venv/
+env/
+.env.local
+.streamlit
+.claudeignore
+.clauderc
+
+# IDE
+.idea/
+# .vscode/  # VS Code 설정은 프로젝트 공유를 위해 포함
+
+# Python version
+.python-version
+
+# 기타
+*.log
+*.bak
+*.tmp
+*.db
+*.db-shm
+*.db-wal
+
+# Node.js (frontend)
+node_modules/
+.next/
+out/
+*.tsbuildinfo
+next-env.d.ts
+
+# 쉘 스크립트 — scripts/ 하위만 추적
+*.sh
+# scripts/ 폴더 및 하위 디렉터리 스크립트는 추적
+!scripts/**/*.sh
+
+# 백업 디렉토리
+.backup/
+
+# 민감 정보 (Toss API 자격증명·OAuth·계좌 등)
+credentials.yaml
+credentials.json
+data/*.db*
+
+# Claude AI 컨텍스트 (일부 추적)
+.claude/*
+!.claude/context/
+!.claude/skills/
+!.claude/lessons-learned.md
+
+# 역사적 아카이브 (로컬 전용)
+/claude-docs*
+/thoughts*
+
+# 사용자 개인 문서 (로컬 전용)
+/user-docs/
+
+# 테스트 산출물 (로컬 전용)
+/test_*.py

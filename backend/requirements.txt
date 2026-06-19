@@ -1,0 +1,42 @@
+# Production dependencies for Toss Tradebot Backend
+# 정식 의존성은 pyproject.toml 참조. 본 파일은 빠른 설치용 fallback.
+# `pip install -e .[dev]` 또는 `pip install -r requirements.txt` 사용 가능.
+
+# Web framework + API
+fastapi>=0.115.0
+uvicorn[standard]>=0.32.0
+pydantic>=2.9.0
+
+# DB
+sqlalchemy>=2.0.36
+aiosqlite>=0.20.0
+alembic>=1.14.0
+
+# HTTP / async
+httpx>=0.28.0
+aiohttp>=3.11.0
+
+# Scheduling
+apscheduler>=3.11.0
+
+# Data
+pandas>=2.2.0
+numpy>=2.1.0
+pandas-datareader>=0.10.0
+
+# External APIs
+anthropic>=0.40.0
+praw>=7.8.0
+feedparser>=6.0.0
+
+# CLI
+click>=8.1.0
+rich>=13.9.0
+
+# Utilities
+python-dotenv>=1.0.0
+tenacity>=9.0.0
+
+# Toss API (Phase K)
+pyjwt>=2.10.0
+requests>=2.32.0
