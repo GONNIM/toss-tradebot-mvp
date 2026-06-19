@@ -110,15 +110,17 @@ async def collect_factor_inputs(
         except Exception as e:
             logger.debug(f"[CrazyInputs] {ticker} SEC fail: {e}")
 
-    # 4. Reddit — WSB 멘션 (sync, asyncio.to_thread)
+    # 4. ApeWisdom — WSB 멘션 (Reddit 대체, 결정 2026-06-19)
+    #    Reddit 정책 변경 (2025-11-11 사전 승인 필수) → 무인증 ApeWisdom 사용
     if not skip_slow:
         try:
-            reddit = clients["reddit"]
-            stats = await asyncio.to_thread(reddit.get_mention_stats, ticker, window_hours=24)
+            ape = clients["apewisdom"]
+            stats = await ape.get_mention_stats(ticker)
             inputs["wsb_mention_count"] = stats.mention_count
-            inputs["wsb_distinct_authors"] = stats.distinct_authors
+            # ApeWisdom 은 distinct_authors 미제공 — upvotes 를 근사 활동 지표로 사용
+            inputs["wsb_distinct_authors"] = min(stats.upvotes // 10, stats.mention_count)
         except Exception as e:
-            logger.debug(f"[CrazyInputs] {ticker} Reddit fail: {e}")
+            logger.debug(f"[CrazyInputs] {ticker} ApeWisdom fail: {e}")
 
     # 5. FINRA — 단기매도
     if not skip_slow:
