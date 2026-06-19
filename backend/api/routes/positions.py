@@ -21,11 +21,11 @@ async def list_positions():
         return [
             PositionResponse(
                 ticker=p.ticker,
-                shares=p.shares,
-                avg_cost=p.avg_cost,
-                current_price=p.current_price,
-                unrealized_pnl_pct=p.unrealized_pnl_pct,
-                risk_level=p.risk_level or "MED",
+                shares=p.qty or 0,
+                avg_cost=p.avg_price or 0,
+                current_price=None,    # Phase K — 실시간 시세 후 채움
+                unrealized_pnl_pct=None,
+                risk_level="MED",      # Phase K — TickerUniverse JOIN 후 채움
             )
             for p in positions
         ]

@@ -80,11 +80,11 @@ class LogEntry(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     id: int
+    timestamp: datetime
     level: str
-    category: str
+    module: str
     message: str
-    metadata: Optional[dict]
-    created_at: datetime
+    context: Optional[str]
 
 
 class SettingsResponse(BaseModel):
