@@ -1,17 +1,18 @@
-"""Anthropic Claude Haiku 4.5 — Discovery thesis 생성 (결정 16).
+"""LLM provider — OpenAI GPT-5-mini (기본) + Anthropic Claude Haiku 4.5 (대안).
 
-- 입력: 종목 정보 + 인자 점수 + 뉴스 요약
-- 출력: thesis (3~5줄) + catalysts + risks + manipulation_risk (1~5)
-- 비용: ~$5~15/월 (Top 10 × 30일)
+번갈아 사용 가능 (메모리: keep-alternatives-alongside). `LLM_PROVIDER` 환경변수로 전환:
+  - LLM_PROVIDER=openai      (기본) — gpt-5-mini
+  - LLM_PROVIDER=anthropic   — claude-haiku-4-5
 
-사용:
-    async with ClaudeLLM() as llm:
+공통 인터페이스:
+    async with get_llm_client() as llm:
         thesis = await llm.generate_pick_thesis(
-            ticker="EHGO",
-            scores={...},
-            news=["..."],
-            risk_level="HIGH",
+            ticker="EHGO", scores={...}, news=["..."], risk_level="HIGH",
         )
+
+비용 (월 ~10 picks × 30일 ≈ 3K 호출):
+  - GPT-5-mini: ~$0.5-1
+  - Claude Haiku 4.5: ~$5-15
 """
 from __future__ import annotations
 
@@ -19,49 +20,32 @@ import json
 import logging
 import os
 from dataclasses import dataclass
-from typing import Optional
+from typing import Optional, Protocol
 
 logger = logging.getLogger(__name__)
 
-MODEL = "claude-haiku-4-5-20251001"
+
+# 기본 모델 (환경변수로 override 가능)
+DEFAULT_OPENAI_MODEL = os.environ.get("OPENAI_MODEL", "gpt-5-mini")
+DEFAULT_ANTHROPIC_MODEL = os.environ.get("ANTHROPIC_MODEL", "claude-haiku-4-5-20251001")
 
 
 @dataclass(frozen=True)
 class PickThesis:
-    """LLM 생성 종목 분석 결과 (Crazy + Moonshot 공통)."""
+    """LLM 생성 종목 분석 결과 (provider 공통)."""
 
-    thesis: str           # 3~5줄, 왜 오를 후보인가
-    catalysts: list[str]  # 임박 이벤트 목록
-    risks: list[str]      # 위험 요소
-    news_summary: str     # 최근 뉴스 핵심
-    manipulation_risk: int  # 1~5 (HIGH 종목 강조)
+    thesis: str
+    catalysts: list[str]
+    risks: list[str]
+    news_summary: str
+    manipulation_risk: int
 
 
-class ClaudeLLM:
-    """Anthropic Claude Haiku 4.5 클라이언트 (결정 16)."""
+class LLMClient(Protocol):
+    """LLM provider 공통 인터페이스."""
 
-    def __init__(self, api_key: Optional[str] = None) -> None:
-        self.api_key = api_key or os.environ.get("ANTHROPIC_API_KEY", "")
-        if not self.api_key:
-            logger.warning(
-                "[LLM] ANTHROPIC_API_KEY 미설정 — 호출 시 401. "
-                ".env 에 추가 (upbit-tradebot-mvp/.env 에 동일 키 보유 — 사용자 확인 2026-06-17)"
-            )
-        self._client = None  # anthropic.AsyncAnthropic, lazy
-
-    def _ensure_client(self):
-        """anthropic SDK lazy 초기화."""
-        if self._client is not None:
-            return self._client
-        try:
-            import anthropic
-        except ImportError as e:
-            raise RuntimeError(
-                "anthropic 미설치. `pip install anthropic` 또는 `pip install -e .[dev]`"
-            ) from e
-        self._client = anthropic.AsyncAnthropic(api_key=self.api_key)
-        return self._client
-
+    async def __aenter__(self) -> "LLMClient": ...
+    async def __aexit__(self, *exc) -> None: ...
     async def generate_pick_thesis(
         self,
         ticker: str,
@@ -73,21 +57,30 @@ class ClaudeLLM:
         catalysts_hint: Optional[list[str]] = None,
         news_headlines: Optional[list[str]] = None,
         risk_level: str = "MED",
-    ) -> PickThesis:
-        """종목 thesis 생성 (Crazy + Moonshot 공통).
+    ) -> PickThesis: ...
 
-        Returns:
-            PickThesis (Pydantic-like dataclass)
-        """
-        client = self._ensure_client()
 
-        # 입력 데이터 구성
-        scores_text = "\n".join(f"  - {k}: {v:.1f}/100" for k, v in scores.items())
-        catalysts_text = ", ".join(catalysts_hint) if catalysts_hint else "(없음)"
-        news_text = "\n".join(f"  - {h}" for h in (news_headlines or [])[:5])
-        mcap_text = f"${market_cap:,.0f}M" if market_cap else "(미상)"
+# ─────────────────────────────────────────────
+# 공통 프롬프트
+# ─────────────────────────────────────────────
 
-        prompt = f"""다음 종목을 분석해 JSON 형식으로 응답해라.
+def _build_prompt(
+    ticker: str,
+    company_name: str,
+    sector: str,
+    current_price: float,
+    market_cap: Optional[float],
+    scores: dict[str, float],
+    catalysts_hint: Optional[list[str]],
+    news_headlines: Optional[list[str]],
+    risk_level: str,
+) -> str:
+    scores_text = "\n".join(f"  - {k}: {v:.1f}/100" for k, v in scores.items())
+    catalysts_text = ", ".join(catalysts_hint) if catalysts_hint else "(없음)"
+    news_text = "\n".join(f"  - {h}" for h in (news_headlines or [])[:5]) or "  (데이터 없음)"
+    mcap_text = f"${market_cap:,.0f}M" if market_cap else "(미상)"
+
+    return f"""다음 종목을 분석해 JSON 형식으로 응답해라.
 
 종목: {ticker} ({company_name})
 섹터: {sector}
@@ -102,7 +95,7 @@ class ClaudeLLM:
   {catalysts_text}
 
 최근 뉴스 (상위 5건):
-{news_text or "  (데이터 없음)"}
+{news_text}
 
 다음 형식의 JSON 만 출력 (다른 설명 X):
 {{
@@ -120,49 +113,190 @@ class ClaudeLLM:
 - 사실 기반 (추측 X, 데이터 없으면 "(데이터 없음)" 표기)
 - catalysts·risks 각 1~5건"""
 
+
+def _parse_thesis_json(raw: str, ticker: str) -> PickThesis:
+    """LLM 응답 텍스트 → PickThesis. 마크다운 코드블록 제거 + 파싱 실패 graceful."""
+    text = raw.strip()
+    if text.startswith("```"):
+        lines = text.split("\n")
+        text = "\n".join(lines[1:-1] if lines[-1].strip() == "```" else lines[1:])
+        text = text.replace("```json", "").replace("```", "").strip()
+
+    try:
+        data = json.loads(text)
+    except json.JSONDecodeError as e:
+        logger.warning(f"[LLM] JSON parse failed for {ticker}: {e}. Raw: {text[:200]}")
+        return PickThesis(
+            thesis=text[:500] if text else "(파싱 실패)",
+            catalysts=[],
+            risks=["LLM 응답 형식 오류"],
+            news_summary="",
+            manipulation_risk=3,
+        )
+
+    return PickThesis(
+        thesis=str(data.get("thesis", "")).strip(),
+        catalysts=list(data.get("catalysts", [])),
+        risks=list(data.get("risks", [])),
+        news_summary=str(data.get("news_summary", "")).strip(),
+        manipulation_risk=int(data.get("manipulation_risk", 3)),
+    )
+
+
+# ─────────────────────────────────────────────
+# OpenAI provider (기본)
+# ─────────────────────────────────────────────
+
+
+class OpenAILLM:
+    """OpenAI GPT-5-mini (기본 LLM provider)."""
+
+    def __init__(self, api_key: Optional[str] = None, model: Optional[str] = None) -> None:
+        self.api_key = api_key or os.environ.get("OPENAI_API_KEY", "")
+        self.model = model or DEFAULT_OPENAI_MODEL
+        if not self.api_key:
+            logger.warning("[OpenAILLM] OPENAI_API_KEY 미설정 — 호출 시 401")
+        self._client = None
+
+    async def __aenter__(self) -> "OpenAILLM":
         try:
-            message = await client.messages.create(
-                model=MODEL,
+            from openai import AsyncOpenAI
+        except ImportError as e:
+            raise RuntimeError("openai 미설치. `pip install openai`") from e
+        self._client = AsyncOpenAI(api_key=self.api_key)
+        return self
+
+    async def __aexit__(self, *exc) -> None:
+        if self._client is not None:
+            try:
+                await self._client.close()
+            except Exception:
+                pass
+            self._client = None
+
+    async def generate_pick_thesis(
+        self,
+        ticker: str,
+        company_name: str,
+        sector: str,
+        current_price: float,
+        market_cap: Optional[float],
+        scores: dict[str, float],
+        catalysts_hint: Optional[list[str]] = None,
+        news_headlines: Optional[list[str]] = None,
+        risk_level: str = "MED",
+    ) -> PickThesis:
+        if self._client is None:
+            raise RuntimeError("OpenAILLM 컨텍스트 미진입 — `async with` 사용")
+
+        prompt = _build_prompt(
+            ticker, company_name, sector, current_price, market_cap,
+            scores, catalysts_hint, news_headlines, risk_level,
+        )
+
+        try:
+            completion = await self._client.chat.completions.create(
+                model=self.model,
+                messages=[
+                    {"role": "system", "content": "You are a financial analyst. Reply only with valid JSON."},
+                    {"role": "user", "content": prompt},
+                ],
+                response_format={"type": "json_object"},
+                max_completion_tokens=900,
+            )
+        except Exception as e:
+            logger.error(f"[OpenAILLM] {ticker} call failed: {e}")
+            return PickThesis(
+                thesis="(LLM 호출 실패)",
+                catalysts=[],
+                risks=[f"OpenAI 분석 불가: {e.__class__.__name__}"],
+                news_summary="",
+                manipulation_risk=3,
+            )
+
+        raw = (completion.choices[0].message.content or "").strip()
+        return _parse_thesis_json(raw, ticker)
+
+
+# ─────────────────────────────────────────────
+# Anthropic provider (대안, 번갈아 사용)
+# ─────────────────────────────────────────────
+
+
+class ClaudeLLM:
+    """Anthropic Claude Haiku 4.5 (대안 LLM provider)."""
+
+    def __init__(self, api_key: Optional[str] = None, model: Optional[str] = None) -> None:
+        self.api_key = api_key or os.environ.get("ANTHROPIC_API_KEY", "")
+        self.model = model or DEFAULT_ANTHROPIC_MODEL
+        if not self.api_key:
+            logger.warning("[ClaudeLLM] ANTHROPIC_API_KEY 미설정 — 호출 시 401")
+        self._client = None
+
+    async def __aenter__(self) -> "ClaudeLLM":
+        try:
+            import anthropic
+        except ImportError as e:
+            raise RuntimeError("anthropic 미설치. `pip install anthropic`") from e
+        self._client = anthropic.AsyncAnthropic(api_key=self.api_key)
+        return self
+
+    async def __aexit__(self, *exc) -> None:
+        self._client = None
+
+    async def generate_pick_thesis(
+        self,
+        ticker: str,
+        company_name: str,
+        sector: str,
+        current_price: float,
+        market_cap: Optional[float],
+        scores: dict[str, float],
+        catalysts_hint: Optional[list[str]] = None,
+        news_headlines: Optional[list[str]] = None,
+        risk_level: str = "MED",
+    ) -> PickThesis:
+        if self._client is None:
+            raise RuntimeError("ClaudeLLM 컨텍스트 미진입 — `async with` 사용")
+
+        prompt = _build_prompt(
+            ticker, company_name, sector, current_price, market_cap,
+            scores, catalysts_hint, news_headlines, risk_level,
+        )
+
+        try:
+            message = await self._client.messages.create(
+                model=self.model,
                 max_tokens=800,
                 messages=[{"role": "user", "content": prompt}],
             )
         except Exception as e:
-            logger.error(f"[LLM] generate_pick_thesis failed for {ticker}: {e}")
+            logger.error(f"[ClaudeLLM] {ticker} call failed: {e}")
             return PickThesis(
                 thesis="(LLM 호출 실패)",
                 catalysts=[],
-                risks=["LLM 분석 불가"],
+                risks=[f"Claude 분석 불가: {e.__class__.__name__}"],
                 news_summary="",
                 manipulation_risk=3,
             )
 
-        # 응답 파싱 (JSON 추출)
         raw = "".join(
             block.text for block in message.content if hasattr(block, "text")
         ).strip()
+        return _parse_thesis_json(raw, ticker)
 
-        # JSON 추출 (마크다운 코드 블록 제거)
-        if raw.startswith("```"):
-            lines = raw.split("\n")
-            raw = "\n".join(lines[1:-1]) if lines[-1].strip() == "```" else "\n".join(lines[1:])
-            raw = raw.replace("```json", "").replace("```", "").strip()
 
-        try:
-            data = json.loads(raw)
-        except json.JSONDecodeError as e:
-            logger.warning(f"[LLM] JSON parse failed for {ticker}: {e}. Raw: {raw[:200]}")
-            return PickThesis(
-                thesis=raw[:500] if raw else "(파싱 실패)",
-                catalysts=[],
-                risks=["LLM 응답 형식 오류"],
-                news_summary="",
-                manipulation_risk=3,
-            )
+# ─────────────────────────────────────────────
+# Factory — LLM_PROVIDER 환경변수 기반 선택
+# ─────────────────────────────────────────────
 
-        return PickThesis(
-            thesis=data.get("thesis", "").strip(),
-            catalysts=list(data.get("catalysts", [])),
-            risks=list(data.get("risks", [])),
-            news_summary=data.get("news_summary", "").strip(),
-            manipulation_risk=int(data.get("manipulation_risk", 3)),
-        )
+
+def get_llm_client(provider: Optional[str] = None) -> LLMClient:
+    """LLM provider 선택. provider=None 이면 LLM_PROVIDER env 또는 'openai' 기본."""
+    name = (provider or os.environ.get("LLM_PROVIDER") or "openai").lower()
+    if name == "openai":
+        return OpenAILLM()  # type: ignore[return-value]
+    if name == "anthropic":
+        return ClaudeLLM()  # type: ignore[return-value]
+    logger.warning(f"[LLM] unknown provider {name!r}, falling back to openai")
+    return OpenAILLM()  # type: ignore[return-value]

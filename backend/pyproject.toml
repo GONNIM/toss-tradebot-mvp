@@ -31,9 +31,10 @@ dependencies = [
     "numpy>=2.1.0",
     "pandas-datareader>=0.10.0",   # Stooq adapter
 
-    # External APIs
-    "anthropic>=0.40.0",            # Claude Haiku 4.5
-    "praw>=7.8.0",                  # Reddit
+    # External APIs (LLM provider 병행 — 결정 2026-06-19, LLM_PROVIDER env 로 전환)
+    "openai>=2.0.0",                # GPT-5-mini (현재 기본)
+    "anthropic>=0.40.0",            # Claude Haiku 4.5 (대안 — 번갈아 사용 가능)
+    "praw>=7.8.0",                  # Reddit (deprecated 활성 — ApeWisdom 우선)
     "feedparser>=6.0.0",            # RSS (PRNewswire / GlobeNewswire)
 
     # CLI
