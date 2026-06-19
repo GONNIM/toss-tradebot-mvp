@@ -214,10 +214,13 @@ class ZaiLLM:
             completion = await self._client.chat.completions.create(
                 model=self.model,
                 messages=[
-                    {"role": "system", "content": "You are a financial analyst. Reply ONLY with valid JSON, no prose."},
+                    {
+                        "role": "system",
+                        "content": "당신은 한국어로 응답하는 금융 분석가다. 반드시 유효한 JSON 만 출력하고 다른 설명은 절대 추가하지 않는다.",
+                    },
                     {"role": "user", "content": prompt},
                 ],
-                max_tokens=900,
+                max_tokens=2500,  # GLM 한국어 응답 + catalysts/risks 각 1-5건 여유
                 temperature=0.3,
             )
         except Exception as e:
@@ -289,11 +292,14 @@ class OpenAILLM:
             completion = await self._client.chat.completions.create(
                 model=self.model,
                 messages=[
-                    {"role": "system", "content": "You are a financial analyst. Reply only with valid JSON."},
+                    {
+                        "role": "system",
+                        "content": "당신은 한국어로 응답하는 금융 분석가다. 반드시 유효한 JSON 만 출력한다.",
+                    },
                     {"role": "user", "content": prompt},
                 ],
                 response_format={"type": "json_object"},
-                max_completion_tokens=900,
+                max_completion_tokens=2500,
             )
         except Exception as e:
             logger.error(f"[OpenAILLM] {ticker} call failed: {e}")
@@ -358,7 +364,8 @@ class ClaudeLLM:
         try:
             message = await self._client.messages.create(
                 model=self.model,
-                max_tokens=800,
+                max_tokens=2000,
+                system="당신은 한국어로 응답하는 금융 분석가다. 반드시 유효한 JSON 만 출력한다.",
                 messages=[{"role": "user", "content": prompt}],
             )
         except Exception as e:
