@@ -1,10 +1,9 @@
 # GitHub Actions — Deploy to optimus8.cafe24.com (결정 42)
 #
-# Phase I 에서 완성 — 현재는 placeholder.
-# 실 활성화 전 GitHub Secrets 등록 필요:
-#   - DEPLOY_SSH_KEY     (서버 SSH private key, 비root 운영 계정용)
-#   - DEPLOY_SSH_HOST    = optimus8.cafe24.com
-#   - DEPLOY_SSH_USER    = tradebot (비root 운영 계정 권고)
+# 활성 secrets (GONNIM/toss-tradebot-mvp):
+#   - OPTIMUS8_SSH_KEY   (deploy 전용 ed25519 private key)
+#   - OPTIMUS8_HOST      = optimus8.cafe24.com
+#   - OPTIMUS8_USER      = root
 #
 # 가드레일 (글로벌 §1): 평문 자격증명 절대 workflow yml 작성 금지. Secrets 사용.
 
@@ -13,64 +12,71 @@ name: Deploy to optimus8
 on:
   push:
     branches: [main]
-  workflow_dispatch:  # 수동 트리거 허용
+  workflow_dispatch:
 
 jobs:
-  # Phase I 완성 후 활성화. 현재는 syntax check만.
   validate:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 
-      - name: 🐍 Backend syntax check (Python)
+      - name: Backend syntax check
         run: |
           if [ -d "backend" ]; then
             python3 -m compileall backend/ -q
           fi
 
-      - name: 📦 Frontend lint (Next.js) — Phase H 활성화
+      - name: Frontend package.json 검증
         run: |
           if [ -f "frontend/package.json" ]; then
-            echo "Frontend package.json found (Phase H 완성 후 npm install + lint)"
+            node -e "JSON.parse(require('fs').readFileSync('frontend/package.json'))"
+            echo "frontend/package.json OK"
           fi
 
-  # deploy:
-  #   needs: validate
-  #   runs-on: ubuntu-latest
-  #   if: github.ref == 'refs/heads/main'
-  #   steps:
-  #     - uses: actions/checkout@v4
-  #
-  #     - name: 🔑 Setup SSH (key-based)
-  #       uses: webfactory/ssh-agent@v0.9.0
-  #       with:
-  #         ssh-private-key: ${{ secrets.DEPLOY_SSH_KEY }}
-  #
-  #     - name: 🌐 Add host fingerprint
-  #       run: ssh-keyscan -H ${{ secrets.DEPLOY_SSH_HOST }} >> ~/.ssh/known_hosts
-  #
-  #     - name: 🚀 Deploy to optimus8
-  #       run: |
-  #         ssh ${{ secrets.DEPLOY_SSH_USER }}@${{ secrets.DEPLOY_SSH_HOST }} << 'EOF'
-  #           set -e
-  #           cd /home/tradebot/toss-tradebot-mvp
-  #           git pull origin main
-  #
-  #           # Backend
-  #           cd backend
-  #           source venv/bin/activate
-  #           pip install -e .
-  #           sudo systemctl restart tradebot-backend
-  #
-  #           # Frontend
-  #           cd ../frontend
-  #           npm ci
-  #           npm run build
-  #           pm2 restart tradebot-frontend
-  #         EOF
-  #
-  #     - name: ✅ Notify Telegram (선택)
-  #       if: always()
-  #       run: |
-  #         # Phase I 완성 시 Telegram 알림 추가
-  #         echo "Deploy status: ${{ job.status }}"
+  deploy:
+    needs: validate
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup SSH (key-based)
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.OPTIMUS8_SSH_KEY }}
+
+      - name: Add host fingerprint
+        run: |
+          mkdir -p ~/.ssh
+          ssh-keyscan -H ${{ secrets.OPTIMUS8_HOST }} >> ~/.ssh/known_hosts 2>/dev/null
+
+      - name: Deploy to optimus8
+        run: |
+          ssh ${{ secrets.OPTIMUS8_USER }}@${{ secrets.OPTIMUS8_HOST }} 'bash -s' << 'EOF'
+          set -e
+          cd /root/toss-tradebot-mvp
+          echo "[1/5] git pull"
+          git pull --ff-only origin main
+
+          echo "[2/5] backend deps"
+          cd backend
+          .venv/bin/pip install -e ".[dev]" -q
+
+          echo "[3/5] frontend build"
+          cd ../frontend
+          npm install --legacy-peer-deps --silent
+          npm run build
+
+          echo "[4/5] systemd restart"
+          systemctl restart tradebot-api tradebot-cron
+
+          echo "[5/5] pm2 reload"
+          pm2 reload tradebot-web
+
+          echo "✅ deploy complete"
+          EOF
+
+      - name: Verify deployment
+        run: |
+          sleep 5
+          curl -sSf https://${{ secrets.OPTIMUS8_HOST }}/health
