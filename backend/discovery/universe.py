@@ -131,7 +131,7 @@ async def enrich_ticker(
         logger.debug(f"[Universe] {ticker} stooq fetch failed: {e}")
         return None
 
-    mcap_usd = (profile.market_cap_millions or 0) * 1_000_000
+    mcap_usd = (profile.market_cap or 0) * 1_000_000
     risk = classify_risk(mcap_usd, current.close)
 
     info = TickerInfo(

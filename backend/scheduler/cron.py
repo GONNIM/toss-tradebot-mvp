@@ -145,7 +145,7 @@ async def run_universe_refresh():
                     continue
                 latest = candles[-1]
                 avg_vol = sum(c.volume for c in candles) / len(candles)
-                mcap_usd = (profile.market_cap_millions or 0) * 1_000_000
+                mcap_usd = (profile.market_cap or 0) * 1_000_000  # Finnhub 은 millions 단위
 
                 async with get_session() as session:
                     stmt = select(TickerUniverse).where(TickerUniverse.symbol == ticker)
