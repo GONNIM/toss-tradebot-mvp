@@ -27,10 +27,10 @@ dependencies = [
     "apscheduler>=3.11.0",
 
     # Data
-    "pandas>=2.2.0",
-    "numpy>=2.1.0",
-    "pandas-datareader>=0.10.0",   # Stooq adapter (deprecated — Yahoo 우선)
-    "yfinance>=0.2.40",            # Yahoo Finance (Stooq 봇 차단 우회, 결정 2026-06-20)
+    "pandas>=2.2.0,<2.3.0",
+    "numpy>=1.26.0,<2.0.0",         # optimus8 QEMU cpu64-rhel6 sse4_2 미지원 → 1.x 강제
+    "pandas-datareader>=0.10.0",    # Stooq adapter (deprecated — Yahoo 우선)
+    "yfinance>=0.2.40",             # Yahoo Finance (Stooq 봇 차단 우회, 결정 2026-06-20)
 
     # External APIs (LLM provider 병행 — 결정 2026-06-19, LLM_PROVIDER env 로 전환)
     "openai>=2.0.0",                # GPT-5-mini (현재 기본)
