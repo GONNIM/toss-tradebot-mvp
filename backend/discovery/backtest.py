@@ -54,7 +54,7 @@ async def fetch_actual_returns(
         {"return_1d": float, "return_5d": float, "return_20d": float, "max_return_within_5d": float}
     """
     try:
-        candles = await stooq_client.get_daily_candles(ticker, days=40)
+        candles = await stooq_client.get_daily_candles(ticker, count=40)
     except Exception as e:
         logger.debug(f"[Backtest] {ticker} candles fail: {e}")
         return {"return_1d": None, "return_5d": None, "return_20d": None, "max_return_within_5d": None}

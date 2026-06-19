@@ -134,7 +134,7 @@ async def run_universe_refresh():
         for ticker in WATCHLIST:
             try:
                 profile = await clients["finnhub"].get_company_profile(ticker)
-                candles = await clients["stooq"].get_daily_candles(ticker, days=25)
+                candles = await clients["stooq"].get_daily_candles(ticker, count=25)
                 if not candles:
                     logger.debug(f"[universe] {ticker} no candles")
                     continue

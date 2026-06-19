@@ -122,7 +122,7 @@ async def enrich_ticker(
         return None
 
     try:
-        candles = await stooq_client.get_daily_candles(ticker, days=30)
+        candles = await stooq_client.get_daily_candles(ticker, count=30)
         if not candles:
             return None
         current = candles[-1]

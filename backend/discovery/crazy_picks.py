@@ -64,7 +64,7 @@ async def collect_factor_inputs(
     try:
         stooq = clients["stooq"]
         stats = await stooq.get_52w_stats(ticker)
-        candles = await stooq.get_daily_candles(ticker, days=25)
+        candles = await stooq.get_daily_candles(ticker, count=25)
         if candles and stats:
             latest = candles[-1]
             prev = candles[-2] if len(candles) >= 2 else latest
