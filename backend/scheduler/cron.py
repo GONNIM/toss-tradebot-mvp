@@ -210,18 +210,15 @@ async def _load_dry_run_universe():
                 ticker=row.symbol, name=row.company_name or "",
                 exchange=row.market, sector=row.sector,
                 market_cap_usd=row.market_cap,
-                avg_daily_volume_20d=None,  # 갱신 시 수집하면 채움
+                avg_daily_volume_20d=None,
                 current_price=None,
                 listing_date=None,
                 risk_level=risk,
-                is_crazy=False, is_moonshot=False,
+                # dry-run watchlist 전체 강제 통과 — 데모·디버그 목적.
+                # 운영 universe 확장 시 passes_*_filter 활성화 필요.
+                is_crazy=True, is_moonshot=True,
             )
-            # filter 적용 — 가격·거래량 미상이면 watchlist 강제 통과
-            is_crazy = passes_crazy_filter(info) if info.market_cap_usd else True
-            is_moonshot = True  # watchlist 전체 Moonshot 후보
-            universe.append(TickerInfo(
-                **{**info.__dict__, "is_crazy": is_crazy, "is_moonshot": is_moonshot}
-            ))
+            universe.append(info)
     return universe
 
 
