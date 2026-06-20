@@ -220,7 +220,7 @@ class ZaiLLM:
                     },
                     {"role": "user", "content": prompt},
                 ],
-                max_tokens=2500,  # GLM 한국어 응답 + catalysts/risks 각 1-5건 여유
+                max_tokens=4000,  # GLM-4.5-flash 안전 최대치 (~4K output limit)
                 temperature=0.3,
             )
         except Exception as e:

@@ -58,6 +58,19 @@ WATCHLIST = [
     "SPY", "QQQ",
     # 미친 상승 후보 (역사적 화제 / 백테스트 검증)
     "EHGO", "AZTR", "AMC", "GME", "CARV",
+    # 마이크로캡 / 페니 추가 (Moonshot HIGH 위험 후보 — 결정 2026-06-20)
+    "BBAI",     # BigBear.ai — AI 정부 계약 마이크로캡
+    "SOFI",     # SoFi Tech — 핀테크 소형주
+    "RIVN",     # Rivian — EV 손실 누적 후보
+    "LCID",     # Lucid Motors — EV 단가 변동성
+    "MNTS",     # Momentus — 우주 마이크로캡
+    "IPDN",     # Professional Diversity — 페니스톡
+    "ZAPP",     # Zapp Electric Vehicles — EV 페니
+    "BURU",     # Nuburu — 레이저 페니
+    "HCDI",     # Harbor Custom Dev — 주택 페니
+    "NUKK",     # Nukkleus — 핀테크 페니
+    "BREA",     # Brera Holdings — 스포츠 마이크로캡
+    "WAVE",     # Eco Wave Power — 청정에너지 마이크로
 ]
 
 # Top N 설정
@@ -287,19 +300,28 @@ async def run_crazy_picks_job():
 
 
 async def run_moonshot_picks_job():
-    """Moonshot Picks 일일 실행 — Top N + DB + Telegram."""
+    """Moonshot Picks 일일 실행 — Top N + DB + Telegram.
+
+    env: MOONSHOT_SKIP_SLOW / WATCHLIST_LIMIT
+    """
     from backend.discovery.moonshot_picks import run_moonshot_picks
     from backend.services.db import get_session
     from backend.services.models import MoonshotPick
     from backend.services.notifier import TelegramNotifier, format_moonshot_alert
 
-    logger.info("[moonshot] start")
+    skip_slow = os.environ.get("MOONSHOT_SKIP_SLOW", "0") == "1"
+    limit = int(os.environ.get("WATCHLIST_LIMIT", "0"))
+    logger.info(f"[moonshot] start skip_slow={skip_slow} limit={limit or 'all'}")
     today = datetime.now().strftime("%Y-%m-%d")
     universe = await _load_dry_run_universe()
+    if limit:
+        universe = universe[:limit]
     clients = await _enter_clients(_build_clients())
 
     try:
-        picks = await run_moonshot_picks(universe, clients, top_n=MOONSHOT_TOP_N)
+        picks = await run_moonshot_picks(
+            universe, clients, top_n=MOONSHOT_TOP_N, skip_slow=skip_slow,
+        )
     finally:
         await _exit_clients(clients)
 

@@ -60,11 +60,14 @@ async def collect_factor_inputs(
     """
     inputs: dict = {}
 
-    # 1. Stooq — 52w, gap, volume
+    # 각 외부 호출 개별 timeout — 한 소스 stuck 시 전체 hang 방지
+    PER_STEP_TIMEOUT = 20.0  # 초
+
+    # 1. Stooq (실제 Yahoo) — 52w, gap, volume
     try:
         stooq = clients["stooq"]
-        stats = await stooq.get_52w_stats(ticker)
-        candles = await stooq.get_daily_candles(ticker, count=25)
+        stats = await asyncio.wait_for(stooq.get_52w_stats(ticker), timeout=PER_STEP_TIMEOUT)
+        candles = await asyncio.wait_for(stooq.get_daily_candles(ticker, count=25), timeout=PER_STEP_TIMEOUT)
         if candles and stats:
             latest = candles[-1]
             prev = candles[-2] if len(candles) >= 2 else latest
@@ -90,7 +93,10 @@ async def collect_factor_inputs(
     # 2. Finnhub — 어닝 캘린더
     try:
         finnhub = clients["finnhub"]
-        earnings = await finnhub.get_earnings_calendar(ticker, days_ahead=14)
+        earnings = await asyncio.wait_for(
+            finnhub.get_earnings_calendar(ticker, days_ahead=14),
+            timeout=PER_STEP_TIMEOUT,
+        )
         if earnings:
             from datetime import datetime as dt
             today = dt.now().date()
@@ -100,11 +106,14 @@ async def collect_factor_inputs(
     except Exception as e:
         logger.debug(f"[CrazyInputs] {ticker} Finnhub fail: {e}")
 
-    # 3. SEC EDGAR — 인사이더 cluster
+    # 3. SEC EDGAR — 인사이더 cluster (가장 무거움 — timeout 30s)
     if not skip_slow:
         try:
             sec = clients["sec"]
-            cluster = await sec.get_cluster_stats(ticker, window_days=15)
+            cluster = await asyncio.wait_for(
+                sec.get_cluster_stats(ticker, window_days=15),
+                timeout=30.0,
+            )
             inputs["distinct_insider_buyers"] = cluster.distinct_buyers
             inputs["insider_cluster"] = cluster.cluster_detected
         except Exception as e:
@@ -115,18 +124,21 @@ async def collect_factor_inputs(
     if not skip_slow:
         try:
             ape = clients["apewisdom"]
-            stats = await ape.get_mention_stats(ticker)
+            stats = await asyncio.wait_for(ape.get_mention_stats(ticker), timeout=PER_STEP_TIMEOUT)
             inputs["wsb_mention_count"] = stats.mention_count
             # ApeWisdom 은 distinct_authors 미제공 — upvotes 를 근사 활동 지표로 사용
             inputs["wsb_distinct_authors"] = min(stats.upvotes // 10, stats.mention_count)
         except Exception as e:
             logger.debug(f"[CrazyInputs] {ticker} ApeWisdom fail: {e}")
 
-    # 5. FINRA — 단기매도
+    # 5. FINRA — 단기매도 (5일 윈도우 직렬 호출 → timeout 30s)
     if not skip_slow:
         try:
             finra = clients["finra"]
-            summary = await finra.get_short_summary(ticker, window_days=5)
+            summary = await asyncio.wait_for(
+                finra.get_short_summary(ticker, window_days=5),
+                timeout=30.0,
+            )
             inputs["short_ratio"] = summary.latest_short_ratio
             inputs["short_trend_up"] = summary.trend_up
         except Exception as e:
@@ -135,7 +147,10 @@ async def collect_factor_inputs(
     # 6. RSS — 24h 뉴스 건수
     try:
         rss = clients["rss"]
-        news = await asyncio.to_thread(rss.fetch_for_ticker, ticker, 24)
+        news = await asyncio.wait_for(
+            asyncio.to_thread(rss.fetch_for_ticker, ticker, 24),
+            timeout=PER_STEP_TIMEOUT,
+        )
         inputs["news_count_24h"] = len(news)
     except Exception as e:
         logger.debug(f"[CrazyInputs] {ticker} RSS fail: {e}")

@@ -80,18 +80,22 @@ async def run_moonshot_picks(
     clients: dict,
     top_n: int = 3,
     high_risk_min_ratio: float = 0.6,  # HIGH 위험 60% 이상 보장
+    skip_slow: bool = False,
 ) -> list[MoonshotPickResult]:
     """Moonshot Picks 메인 실행.
 
     Top N 선정 시 HIGH 위험 종목 비율 보장 (페니스톡 발견 우선).
+
+    Args:
+        skip_slow: True 시 SEC/FINRA skip — 빠른 데모·디버그 용.
     """
-    logger.info(f"[Moonshot] start — universe: {len(universe_tickers)}")
+    logger.info(f"[Moonshot] start — universe: {len(universe_tickers)} skip_slow={skip_slow}")
 
     sem = asyncio.Semaphore(10)
 
     async def collect_one(info):
         async with sem:
-            inputs = await collect_factor_inputs(info.ticker, clients)
+            inputs = await collect_factor_inputs(info.ticker, clients, skip_slow=skip_slow)
             return info, inputs
 
     # 모든 moonshot 후보 (universe 필터 통과)
