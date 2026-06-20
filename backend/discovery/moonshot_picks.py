@@ -149,16 +149,19 @@ async def run_moonshot_picks(
                 "low_52w": scores.low_52w,
             }
             try:
-                thesis = await llm.generate_pick_thesis(
-                    ticker=info.ticker,
-                    company_name=info.name,
-                    sector=info.sector or "Unknown",
-                    current_price=info.current_price or 0,
-                    market_cap=(info.market_cap_usd / 1_000_000) if info.market_cap_usd else None,
-                    scores=scores_dict,
-                    catalysts_hint=[],
-                    news_headlines=[],
-                    risk_level=info.risk_level,
+                thesis = await asyncio.wait_for(
+                    llm.generate_pick_thesis(
+                        ticker=info.ticker,
+                        company_name=info.name,
+                        sector=info.sector or "Unknown",
+                        current_price=info.current_price or 0,
+                        market_cap=(info.market_cap_usd / 1_000_000) if info.market_cap_usd else None,
+                        scores=scores_dict,
+                        catalysts_hint=[],
+                        news_headlines=[],
+                        risk_level=info.risk_level,
+                    ),
+                    timeout=60.0,
                 )
             except Exception as e:
                 logger.warning(f"[Moonshot] {info.ticker} LLM fail: {e}")

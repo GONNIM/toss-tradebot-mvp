@@ -177,7 +177,8 @@ class ZaiLLM:
             from openai import AsyncOpenAI
         except ImportError as e:
             raise RuntimeError("openai 미설치 (Z.ai 도 OpenAI SDK 사용). `pip install openai`") from e
-        self._client = AsyncOpenAI(api_key=self.api_key, base_url=self.base_url)
+        # timeout 명시 — OpenAI SDK default 600s 는 cron stuck 원인
+        self._client = AsyncOpenAI(api_key=self.api_key, base_url=self.base_url, timeout=45.0)
         return self
 
     async def __aexit__(self, *exc) -> None:
@@ -257,7 +258,7 @@ class OpenAILLM:
             from openai import AsyncOpenAI
         except ImportError as e:
             raise RuntimeError("openai 미설치. `pip install openai`") from e
-        self._client = AsyncOpenAI(api_key=self.api_key)
+        self._client = AsyncOpenAI(api_key=self.api_key, timeout=45.0)
         return self
 
     async def __aexit__(self, *exc) -> None:
