@@ -237,7 +237,7 @@ async def run_crazy_picks(
                             news_headlines=[],
                             risk_level="LOW",  # Crazy 는 시총 $1B+
                         ),
-                        timeout=60.0,  # LLM 호출 60s 상한 (개별 hang 방지)
+                        timeout=90.0,  # 실측 max 43.7s + 안전 마진 (개별 hang 방지)
                     )
                 except Exception as e:
                     logger.warning(f"[Crazy] {info.ticker} LLM fail: {e}")

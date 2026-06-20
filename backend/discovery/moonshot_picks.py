@@ -161,7 +161,7 @@ async def run_moonshot_picks(
                         news_headlines=[],
                         risk_level=info.risk_level,
                     ),
-                    timeout=60.0,
+                    timeout=90.0,
                 )
             except Exception as e:
                 logger.warning(f"[Moonshot] {info.ticker} LLM fail: {e}")

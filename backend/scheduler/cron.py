@@ -109,16 +109,27 @@ def _build_clients() -> dict:
 
 
 async def _enter_clients(clients: dict) -> dict:
-    """모든 async-context 클라이언트 동시 진입."""
+    """모든 async-context 클라이언트 동시 진입.
+
+    예외: 'llm' 키는 진입하지 않는다. Z.ai GLM 은 undocumented concurrent=1
+    제한이 있어 cron 에서 client A 만들고 crazy_picks 가 또 만들면 A 연결이
+    z.ai 서버에 남아 B 호출이 "두 번째 동시 호출" 로 분류돼 hang.
+    → LLM 은 호출 측 (run_crazy_picks/run_moonshot_picks) 내부 `async with`
+       으로만 lifecycle 관리.
+    """
     for name, c in list(clients.items()):
+        if name == "llm":
+            continue
         if hasattr(c, "__aenter__"):
             await c.__aenter__()
     return clients
 
 
 async def _exit_clients(clients: dict) -> None:
-    """모든 클라이언트 graceful close."""
-    for c in clients.values():
+    """모든 클라이언트 graceful close (LLM 은 호출 측이 이미 close)."""
+    for name, c in clients.items():
+        if name == "llm":
+            continue
         if hasattr(c, "__aexit__"):
             try:
                 await c.__aexit__(None, None, None)
