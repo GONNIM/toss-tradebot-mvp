@@ -122,6 +122,7 @@ export const api = {
   crazy: {
     list: (limit = 10) => get<CrazyPick[]>(`/crazy?limit=${limit}`),
     byTicker: (ticker: string) => get<CrazyPick>(`/crazy/${ticker}`),
+    history: (days = 7) => get<CrazyPick[]>(`/crazy/history?days=${days}`),
   },
   moonshot: {
     list: (limit = 3, risk?: RiskLevel) => {

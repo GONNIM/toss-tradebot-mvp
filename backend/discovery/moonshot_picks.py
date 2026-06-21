@@ -188,7 +188,7 @@ async def run_moonshot_picks(
             from backend.discovery.scoring import score_news_llm
             scores.news_llm = score_news_llm(thesis.manipulation_risk, has_thesis=True)
 
-            cur_price = info.current_price or 0
+            cur_price = scores.raw_inputs.get("_current_price") or info.current_price or 0
             final.append(MoonshotPickResult(
                 ticker=info.ticker,
                 rank=rank,

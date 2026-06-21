@@ -87,6 +87,12 @@ async def collect_factor_inputs(
                 sum((c.high - c.low) / c.close for c in recent_5 if c.close) / len(recent_5) * 100
             )
             inputs["atr_pct"] = atr_pct_calc
+            # 가격/52w 메타 (result/DB 저장용 — _ 접두사로 score 입력과 구분)
+            inputs["_current_price"] = latest.close
+            inputs["_high_52w"] = stats.high
+            inputs["_low_52w"] = stats.low
+            inputs["_volume"] = latest.volume
+            inputs["_avg_volume_20"] = avg_vol_20
     except Exception as e:
         logger.debug(f"[CrazyInputs] {ticker} Stooq fail: {e}")
 
@@ -269,7 +275,8 @@ async def run_crazy_picks(
                     rank=rank,
                     company_name=info.name,
                     sector=info.sector or "",
-                    current_price=info.current_price or 0,
+                    # factor 수집 시 Yahoo 에서 받은 latest.close 우선, 없으면 info
+                    current_price=scores.raw_inputs.get("_current_price") or info.current_price or 0,
                     market_cap_usd=info.market_cap_usd or 0,
                     total_score=scores.total(),
                     factor_scores=scores,
@@ -287,7 +294,7 @@ async def run_crazy_picks(
                 rank=rank,
                 company_name=info.name,
                 sector=info.sector or "",
-                current_price=info.current_price or 0,
+                current_price=scores.raw_inputs.get("_current_price") or info.current_price or 0,
                 market_cap_usd=info.market_cap_usd or 0,
                 total_score=scores.total(),
                 factor_scores=scores,
