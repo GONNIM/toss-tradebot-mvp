@@ -8,47 +8,67 @@ from pydantic import BaseModel, ConfigDict
 
 
 class CrazyPickResponse(BaseModel):
-    """Crazy Pick API 응답."""
+    """Crazy Pick API 응답 — models.CrazyPick 필드 매핑."""
     model_config = ConfigDict(from_attributes=True)
 
     id: int
-    ticker: str
+    pick_date: str
     rank: int
-    company_name: str
-    sector: Optional[str]
-    current_price: float
-    market_cap_usd: Optional[float]
-    total_score: float
-    thesis: str
-    catalysts: list[str]
-    risks: list[str]
-    news_summary: str
-    manipulation_risk: int
+    ticker: str
+    company_name: Optional[str] = None
+    sector: Optional[str] = None
+    close_price: Optional[float] = None
+    market_cap: Optional[float] = None
+    composite_score: Optional[float] = None
+    thesis: Optional[str] = None
+    catalysts: Optional[str] = None     # JSON string
+    risks: Optional[str] = None
+    news_summary: Optional[str] = None
     created_at: datetime
 
 
 class MoonshotPickResponse(BaseModel):
-    """Moonshot Pick API 응답."""
+    """Moonshot Pick API 응답 — models.MoonshotPick 필드 매핑."""
     model_config = ConfigDict(from_attributes=True)
 
     id: int
-    ticker: str
+    pick_date: str
     rank: int
-    company_name: str
-    sector: Optional[str]
-    current_price: float
-    market_cap_usd: Optional[float]
-    risk_level: str
-    total_score: float
-    thesis: str
-    catalysts: list[str]
-    risks: list[str]
-    news_summary: str
-    manipulation_risk: int
-    buy_price_market: float
-    buy_price_limit_3pct: float
-    buy_price_limit_7pct: float
-    risk_warning: str
+    ticker: str
+    company_name: Optional[str] = None
+    sector: Optional[str] = None
+    market_cap: Optional[float] = None
+    current_price: Optional[float] = None
+    risk_level: Optional[str] = None
+    market_cap_category: Optional[str] = None
+    manipulation_risk: Optional[int] = None
+    composite_score: Optional[float] = None
+    # 9 인자 점수
+    score_volatility: Optional[float] = None
+    score_catalyst: Optional[float] = None
+    score_squeeze: Optional[float] = None
+    score_social: Optional[float] = None
+    score_news: Optional[float] = None
+    score_technical: Optional[float] = None
+    score_gap_volume: Optional[float] = None
+    score_low_rebound: Optional[float] = None
+    score_insider: Optional[float] = None
+    # 매수 3 가격대 (Decision 33)
+    buy_price_a: Optional[float] = None  # 시장가
+    buy_price_b: Optional[float] = None  # -5% drop
+    buy_price_c: Optional[float] = None  # +8% breakout
+    # 매도 정책 (Decision 34)
+    target_sell_multiplier: Optional[float] = None
+    stop_loss_multiplier: Optional[float] = None
+    time_stop_days: Optional[int] = None
+    # LLM 콘텐츠
+    thesis: Optional[str] = None
+    catalysts: Optional[str] = None
+    risks: Optional[str] = None
+    news_summary: Optional[str] = None
+    # 추적
+    high_52w: Optional[float] = None
+    low_52w: Optional[float] = None
     created_at: datetime
 
 

@@ -24,40 +24,59 @@ export type RiskLevel = "HIGH" | "MED" | "LOW";
 
 export interface CrazyPick {
   id: number;
-  ticker: string;
+  pick_date: string;
   rank: number;
-  company_name: string;
+  ticker: string;
+  company_name: string | null;
   sector: string | null;
-  current_price: number;
-  market_cap_usd: number | null;
-  total_score: number;
-  thesis: string;
-  catalysts: string[];
-  risks: string[];
-  news_summary: string;
-  manipulation_risk: number;
+  close_price: number | null;
+  market_cap: number | null;          // USD (millions 단위 아님 — 일관성 위해 USD)
+  composite_score: number | null;
+  thesis: string | null;
+  catalysts: string | null;            // JSON string
+  risks: string | null;
+  news_summary: string | null;
   created_at: string;
 }
 
 export interface MoonshotPick {
   id: number;
-  ticker: string;
+  pick_date: string;
   rank: number;
-  company_name: string;
+  ticker: string;
+  company_name: string | null;
   sector: string | null;
-  current_price: number;
-  market_cap_usd: number | null;
-  risk_level: RiskLevel;
-  total_score: number;
-  thesis: string;
-  catalysts: string[];
-  risks: string[];
-  news_summary: string;
-  manipulation_risk: number;
-  buy_price_market: number;
-  buy_price_limit_3pct: number;
-  buy_price_limit_7pct: number;
-  risk_warning: string;
+  market_cap: number | null;
+  current_price: number | null;
+  risk_level: RiskLevel | null;
+  market_cap_category: string | null;
+  manipulation_risk: number | null;
+  composite_score: number | null;
+  // 9 인자 점수
+  score_volatility: number | null;
+  score_catalyst: number | null;
+  score_squeeze: number | null;
+  score_social: number | null;
+  score_news: number | null;
+  score_technical: number | null;
+  score_gap_volume: number | null;
+  score_low_rebound: number | null;
+  score_insider: number | null;
+  // 매수 3 가격대 (Decision 33)
+  buy_price_a: number | null;          // 시장가
+  buy_price_b: number | null;          // -5% drop
+  buy_price_c: number | null;          // +8% breakout
+  // 매도 정책 (Decision 34)
+  target_sell_multiplier: number | null;
+  stop_loss_multiplier: number | null;
+  time_stop_days: number | null;
+  // LLM 콘텐츠
+  thesis: string | null;
+  catalysts: string | null;
+  risks: string | null;
+  news_summary: string | null;
+  high_52w: number | null;
+  low_52w: number | null;
   created_at: string;
 }
 

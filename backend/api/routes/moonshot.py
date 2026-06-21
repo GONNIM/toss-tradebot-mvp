@@ -16,11 +16,15 @@ router = APIRouter()
 @router.get("/", response_model=list[MoonshotPickResponse])
 async def list_moonshot_picks(
     limit: int = Query(3, ge=1, le=20),
-    risk_level: str | None = Query(None, regex="^(HIGH|MED|LOW)$"),
+    risk_level: str | None = Query(None, pattern="^(HIGH|MED|LOW)$"),
 ):
-    """최근 Moonshot Picks Top N."""
+    """최근 Moonshot Picks Top N (최신 pick_date 의 rank 순)."""
     async with get_session() as session:
-        stmt = select(MoonshotPick).order_by(desc(MoonshotPick.created_at))
+        # 최신 pick_date 부터 rank 오름차순
+        stmt = (
+            select(MoonshotPick)
+            .order_by(desc(MoonshotPick.pick_date), MoonshotPick.rank)
+        )
         if risk_level:
             stmt = stmt.where(MoonshotPick.risk_level == risk_level)
         stmt = stmt.limit(limit)

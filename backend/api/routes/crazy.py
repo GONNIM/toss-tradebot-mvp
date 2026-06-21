@@ -13,9 +13,13 @@ router = APIRouter()
 
 @router.get("/", response_model=list[CrazyPickResponse])
 async def list_crazy_picks(limit: int = Query(10, ge=1, le=50)):
-    """최근 Crazy Picks Top N."""
+    """최근 Crazy Picks Top N (최신 pick_date 의 rank 순)."""
     async with get_session() as session:
-        stmt = select(CrazyPick).order_by(desc(CrazyPick.created_at)).limit(limit)
+        stmt = (
+            select(CrazyPick)
+            .order_by(desc(CrazyPick.pick_date), CrazyPick.rank)
+            .limit(limit)
+        )
         result = await session.execute(stmt)
         return result.scalars().all()
 

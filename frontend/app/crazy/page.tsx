@@ -54,12 +54,18 @@ export default function CrazyPage() {
                 <tr key={p.id} className="border-b border-border hover:bg-muted/20">
                   <td className="px-4 py-3 text-muted-foreground">#{p.rank}</td>
                   <td className="px-4 py-3 font-bold">{p.ticker}</td>
-                  <td className="px-4 py-3 max-w-[180px] truncate">{p.company_name}</td>
+                  <td className="px-4 py-3 max-w-[180px] truncate">{p.company_name || "—"}</td>
                   <td className="px-4 py-3 text-muted-foreground">{p.sector || "—"}</td>
-                  <td className="px-4 py-3 text-right font-mono">{formatUSD(p.current_price)}</td>
-                  <td className="px-4 py-3 text-right font-mono">{formatMarketCap(p.market_cap_usd)}</td>
-                  <td className="px-4 py-3 text-right font-bold">{p.total_score.toFixed(1)}</td>
-                  <td className="px-4 py-3 max-w-[300px] truncate text-muted-foreground">{p.thesis}</td>
+                  <td className="px-4 py-3 text-right font-mono">
+                    {p.close_price != null ? formatUSD(p.close_price) : "—"}
+                  </td>
+                  <td className="px-4 py-3 text-right font-mono">{formatMarketCap(p.market_cap)}</td>
+                  <td className="px-4 py-3 text-right font-bold">
+                    {(p.composite_score ?? 0).toFixed(1)}
+                  </td>
+                  <td className="px-4 py-3 max-w-[300px] truncate text-muted-foreground">
+                    {p.thesis || "(미생성)"}
+                  </td>
                 </tr>
               ))}
             </tbody>
