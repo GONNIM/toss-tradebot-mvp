@@ -178,8 +178,9 @@ async def run_crazy_picks(
     """
     logger.info(f"[Crazy] start — universe size: {len(universe_tickers)} skip_slow={skip_slow}")
 
-    # 1. 인자 수집 (병렬 max 10 동시)
-    sem = asyncio.Semaphore(10)
+    # 1. 인자 수집 (병렬 max 3 — yfinance/Yahoo Finance fd 누수 + Cloudflare rate
+    #    limit 회피. 15 ticker 기준 약 1-2분, fd 안정)
+    sem = asyncio.Semaphore(3)
 
     async def collect_one(info):
         async with sem:

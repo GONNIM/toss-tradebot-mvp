@@ -91,7 +91,7 @@ async def run_moonshot_picks(
     """
     logger.info(f"[Moonshot] start — universe: {len(universe_tickers)} skip_slow={skip_slow}")
 
-    sem = asyncio.Semaphore(10)
+    sem = asyncio.Semaphore(3)  # Yahoo fd 누수 회피 (2026-06-21 진단)
 
     async def collect_one(info):
         async with sem:
