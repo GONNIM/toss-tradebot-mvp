@@ -178,8 +178,8 @@ class ZaiLLM:
         except ImportError as e:
             raise RuntimeError("openai 미설치 (Z.ai 도 OpenAI SDK 사용). `pip install openai`") from e
         # timeout 명시 — OpenAI SDK default 600s 는 cron stuck 원인
-        # Z.ai GLM 실측 max 43.7s → 60s SDK timeout 으로 마진 확보
-        self._client = AsyncOpenAI(api_key=self.api_key, base_url=self.base_url, timeout=60.0)
+        # glm-4.6 (paid) 실측 max 56.9s → 90s SDK timeout 마진
+        self._client = AsyncOpenAI(api_key=self.api_key, base_url=self.base_url, timeout=90.0)
         return self
 
     async def __aexit__(self, *exc) -> None:

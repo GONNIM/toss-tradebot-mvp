@@ -163,7 +163,7 @@ async def run_moonshot_picks(
                         news_headlines=[],
                         risk_level=info.risk_level,
                     ),
-                    timeout=90.0,
+                    timeout=120.0,
                 )
 
             thesis = None

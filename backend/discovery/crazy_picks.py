@@ -238,7 +238,7 @@ async def run_crazy_picks(
                             news_headlines=[],
                             risk_level="LOW",
                         ),
-                        timeout=90.0,
+                        timeout=120.0,  # glm-4.6 max 56.9s + 마진
                     )
 
                 thesis = None
