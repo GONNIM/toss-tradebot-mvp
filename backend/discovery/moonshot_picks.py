@@ -135,6 +135,7 @@ async def run_moonshot_picks(
         logger.warning("[Moonshot] LLM client 미제공 — thesis 생략")
         return final
 
+    from backend.services.llm import PickThesis
     llm = clients["llm"]
     async with llm:
         for rank, (info, scores) in enumerate(selected, start=1):
@@ -148,8 +149,9 @@ async def run_moonshot_picks(
                 "squeeze": scores.squeeze,
                 "low_52w": scores.low_52w,
             }
-            try:
-                thesis = await asyncio.wait_for(
+
+            async def _call():
+                return await asyncio.wait_for(
                     llm.generate_pick_thesis(
                         ticker=info.ticker,
                         company_name=info.name,
@@ -163,10 +165,24 @@ async def run_moonshot_picks(
                     ),
                     timeout=90.0,
                 )
-            except Exception as e:
-                logger.warning(f"[Moonshot] {info.ticker} LLM fail: {e}")
-                from backend.services.llm import PickThesis
-                thesis = PickThesis("", [], ["LLM 호출 실패"], "", 3)
+
+            thesis = None
+            for attempt in (1, 2):
+                try:
+                    thesis = await _call()
+                    if thesis.thesis:
+                        break
+                    logger.info(f"[Moonshot] {info.ticker} empty thesis (attempt {attempt}), retry")
+                except Exception as e:
+                    logger.warning(f"[Moonshot] {info.ticker} LLM fail attempt {attempt}: {e!r}")
+                    if attempt == 1:
+                        await asyncio.sleep(5)
+            if thesis is None or not thesis.thesis:
+                thesis = PickThesis("", [], ["LLM 호출 실패 (재시도 포함)"], "", 3)
+
+            # Z.ai concurrent=1 정책 — 다음 호출까지 2초 휴식
+            if rank < len(selected):
+                await asyncio.sleep(2)
 
             # 뉴스 점수 갱신
             from backend.discovery.scoring import score_news_llm

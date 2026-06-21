@@ -207,13 +207,13 @@ async def run_crazy_picks(
     top = scored[:top_n]
     logger.info(f"[Crazy] {len(scored)} scored → Top {len(top)}")
 
-    # 4. LLM thesis
+    # 4. LLM thesis (Z.ai concurrent=1 정책 — 순차 + 호출 사이 sleep + 1회 재시도)
+    from backend.services.llm import PickThesis
     final: list[CrazyPickResult] = []
     if generate_thesis and "llm" in clients:
         llm = clients["llm"]
         async with llm:
             for rank, (info, scores) in enumerate(top, start=1):
-                # thesis 후 재스코어
                 scores_dict = {
                     "catalyst": scores.catalyst,
                     "gap_volume": scores.gap_volume,
@@ -224,8 +224,9 @@ async def run_crazy_picks(
                     "squeeze": scores.squeeze,
                     "low_52w": scores.low_52w,
                 }
-                try:
-                    thesis = await asyncio.wait_for(
+
+                async def _call():
+                    return await asyncio.wait_for(
                         llm.generate_pick_thesis(
                             ticker=info.ticker,
                             company_name=info.name,
@@ -235,14 +236,28 @@ async def run_crazy_picks(
                             scores=scores_dict,
                             catalysts_hint=[],
                             news_headlines=[],
-                            risk_level="LOW",  # Crazy 는 시총 $1B+
+                            risk_level="LOW",
                         ),
-                        timeout=90.0,  # 실측 max 43.7s + 안전 마진 (개별 hang 방지)
+                        timeout=90.0,
                     )
-                except Exception as e:
-                    logger.warning(f"[Crazy] {info.ticker} LLM fail: {e}")
-                    from backend.services.llm import PickThesis
-                    thesis = PickThesis("", [], ["LLM 호출 실패"], "", 3)
+
+                thesis = None
+                for attempt in (1, 2):
+                    try:
+                        thesis = await _call()
+                        if thesis.thesis:  # 빈 응답 아닐 때만 성공
+                            break
+                        logger.info(f"[Crazy] {info.ticker} LLM empty thesis (attempt {attempt}), retry")
+                    except Exception as e:
+                        logger.warning(f"[Crazy] {info.ticker} LLM fail attempt {attempt}: {e!r}")
+                        if attempt == 1:
+                            await asyncio.sleep(5)  # rate limit 회복 대기
+                if thesis is None or not thesis.thesis:
+                    thesis = PickThesis("", [], ["LLM 호출 실패 (재시도 포함)"], "", 3)
+
+                # Z.ai concurrent=1 정책 — 다음 호출까지 2초 휴식
+                if rank < len(top):
+                    await asyncio.sleep(2)
 
                 # 뉴스 점수 업데이트 (LLM 분석 후)
                 from backend.discovery.scoring import score_news_llm
