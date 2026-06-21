@@ -1,7 +1,9 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
-  output: "standalone",
+  // 'standalone' 은 next start 와 호환 안 됨 (PM2 crash loop 원인, 2026-06-21
+  // restarts 241회). PM2 가 "next start -p 3000" 사용하므로 standalone 제거.
+  // standalone 빌드를 원하면 PM2 script 를 ".next/standalone/server.js" 로 변경.
 
   async rewrites() {
     return [
