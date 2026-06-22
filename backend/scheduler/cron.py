@@ -125,6 +125,31 @@ async def _enter_clients(clients: dict) -> dict:
     return clients
 
 
+async def _fill_missing_prices(picks):
+    """current_price=0 인 pick 에 대해 단독 Yahoo fetch — fallback.
+
+    factor 수집 단계에서 Yahoo 가 fd 누수/timeout 등으로 fail 했더라도 DB 에는
+    실 가격이 들어가도록 보장.
+    """
+    from backend.discovery.data_sources.yahoo import YahooClient
+    missing = [p for p in picks if not p.current_price or p.current_price == 0]
+    if not missing:
+        return picks
+    logger.info(f"[fill_prices] {len(missing)} picks missing close_price → Yahoo fetch")
+    async with YahooClient() as yh:
+        for p in missing:
+            try:
+                price = await asyncio.wait_for(yh.get_current_price(p.ticker), timeout=10.0)
+                # dataclass replace
+                from dataclasses import replace as _replace
+                idx = picks.index(p)
+                picks[idx] = _replace(p, current_price=price)
+                logger.debug(f"[fill_prices] {p.ticker} = ${price:.2f}")
+            except Exception as e:
+                logger.warning(f"[fill_prices] {p.ticker} fail: {e}")
+    return picks
+
+
 async def _exit_clients(clients: dict) -> None:
     """모든 클라이언트 graceful close (LLM 은 호출 측이 이미 close).
 
@@ -284,6 +309,9 @@ async def run_crazy_picks_job():
     finally:
         await _exit_clients(clients)
 
+    # close_price=0 인 pick 에 한해 별도 Yahoo fetch (factor 단계 Yahoo timeout 회복)
+    picks = await _fill_missing_prices(picks)
+
     # DB 저장
     async with get_session() as session:
         for p in picks:
@@ -339,6 +367,20 @@ async def run_moonshot_picks_job():
         )
     finally:
         await _exit_clients(clients)
+
+    # close_price=0 fallback fetch
+    picks = await _fill_missing_prices(picks)
+
+    # 3 가격대도 fallback 후 재계산 (current_price 가 업데이트됐으므로)
+    from dataclasses import replace as _replace
+    for i, p in enumerate(picks):
+        if p.buy_price_market == 0 and p.current_price > 0:
+            picks[i] = _replace(
+                p,
+                buy_price_market=p.current_price,
+                buy_price_limit_3pct=round(p.current_price * 0.97, 4),
+                buy_price_limit_7pct=round(p.current_price * 0.93, 4),
+            )
 
     # DB 저장 — Decision 33 (3 가격대) + Decision 34 (target/stop/time) + Decision 40 (위험)
     async with get_session() as session:
