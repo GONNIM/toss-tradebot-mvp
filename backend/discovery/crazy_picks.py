@@ -112,6 +112,11 @@ async def collect_factor_inputs(
             ev_date = dt.strptime(earnings[0].date, "%Y-%m-%d").date()
             days_to = (ev_date - today).days
             inputs["earnings_days"] = days_to
+            # LLM 카탈리스트 힌트
+            inputs["_earnings_event"] = (
+                f"{ticker} 어닝 D-{days_to} ({earnings[0].date})"
+                + (f" — EPS est ${earnings[0].eps_estimate}" if getattr(earnings[0], "eps_estimate", None) else "")
+            )
     except Exception as e:
         logger.debug(f"[CrazyInputs] {ticker} Finnhub fail: {e}")
 
@@ -125,6 +130,11 @@ async def collect_factor_inputs(
             )
             inputs["distinct_insider_buyers"] = cluster.distinct_buyers
             inputs["insider_cluster"] = cluster.cluster_detected
+            if cluster.distinct_buyers > 0:
+                inputs["_insider_event"] = (
+                    f"SEC Form 4 — {cluster.distinct_buyers}명 내부자 매수 (최근 15일"
+                    + (f", cluster ≥3)" if cluster.cluster_detected else ")")
+                )
         except Exception as e:
             logger.debug(f"[CrazyInputs] {ticker} SEC fail: {e}")
 
@@ -137,6 +147,11 @@ async def collect_factor_inputs(
             inputs["wsb_mention_count"] = stats.mention_count
             # ApeWisdom 은 distinct_authors 미제공 — upvotes 를 근사 활동 지표로 사용
             inputs["wsb_distinct_authors"] = min(stats.upvotes // 10, stats.mention_count)
+            if stats.mention_count >= 10:
+                trend = " (멘션 급증)" if stats.trend_up else ""
+                inputs["_social_event"] = (
+                    f"WSB 24h 멘션 {stats.mention_count}회{trend}"
+                )
         except Exception as e:
             logger.debug(f"[CrazyInputs] {ticker} ApeWisdom fail: {e}")
 
@@ -153,7 +168,7 @@ async def collect_factor_inputs(
         except Exception as e:
             logger.debug(f"[CrazyInputs] {ticker} FINRA fail: {e}")
 
-    # 6. RSS — 24h 뉴스 건수
+    # 6. RSS — 24h 뉴스 (건수 + headline 목록 → LLM news_headlines 전달)
     try:
         rss = clients["rss"]
         news = await asyncio.wait_for(
@@ -161,6 +176,11 @@ async def collect_factor_inputs(
             timeout=PER_STEP_TIMEOUT,
         )
         inputs["news_count_24h"] = len(news)
+        # LLM news_headlines 전달용 (상위 5건)
+        if news:
+            inputs["_news_headlines"] = [
+                (item.title or "").strip() for item in news[:5] if item.title
+            ]
     except Exception as e:
         logger.debug(f"[CrazyInputs] {ticker} RSS fail: {e}")
 
@@ -248,17 +268,26 @@ async def run_crazy_picks(
                     "low_52w": scores.low_52w,
                 }
 
+                # raw_inputs 에서 LLM 입력 데이터 추출
+                ri = scores.raw_inputs
+                catalysts_hint = [
+                    h for h in [ri.get("_earnings_event"), ri.get("_insider_event"), ri.get("_social_event")]
+                    if h
+                ]
+                news_headlines = ri.get("_news_headlines") or []
+                cur_price = ri.get("_current_price") or info.current_price or 0
+
                 async def _call():
                     return await asyncio.wait_for(
                         llm.generate_pick_thesis(
                             ticker=info.ticker,
                             company_name=info.name,
                             sector=info.sector or "Unknown",
-                            current_price=info.current_price or 0,
+                            current_price=cur_price,
                             market_cap=(info.market_cap_usd / 1_000_000) if info.market_cap_usd else None,
                             scores=scores_dict,
-                            catalysts_hint=[],
-                            news_headlines=[],
+                            catalysts_hint=catalysts_hint,
+                            news_headlines=news_headlines,
                             risk_level="LOW",
                         ),
                         timeout=120.0,  # glm-4.6 max 56.9s + 마진

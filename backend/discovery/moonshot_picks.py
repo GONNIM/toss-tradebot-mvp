@@ -160,17 +160,26 @@ async def run_moonshot_picks(
                 "low_52w": scores.low_52w,
             }
 
+            # raw_inputs 에서 catalysts/news 추출
+            ri = scores.raw_inputs
+            catalysts_hint = [
+                h for h in [ri.get("_earnings_event"), ri.get("_insider_event"), ri.get("_social_event")]
+                if h
+            ]
+            news_headlines = ri.get("_news_headlines") or []
+            cur_price = ri.get("_current_price") or info.current_price or 0
+
             async def _call():
                 return await asyncio.wait_for(
                     llm.generate_pick_thesis(
                         ticker=info.ticker,
                         company_name=info.name,
                         sector=info.sector or "Unknown",
-                        current_price=info.current_price or 0,
+                        current_price=cur_price,
                         market_cap=(info.market_cap_usd / 1_000_000) if info.market_cap_usd else None,
                         scores=scores_dict,
-                        catalysts_hint=[],
-                        news_headlines=[],
+                        catalysts_hint=catalysts_hint,
+                        news_headlines=news_headlines,
                         risk_level=info.risk_level,
                     ),
                     timeout=120.0,
