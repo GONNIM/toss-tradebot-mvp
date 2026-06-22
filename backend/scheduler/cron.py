@@ -312,8 +312,10 @@ async def run_crazy_picks_job():
     # close_price=0 인 pick 에 한해 별도 Yahoo fetch (factor 단계 Yahoo timeout 회복)
     picks = await _fill_missing_prices(picks)
 
-    # DB 저장
+    # DB 저장 — 같은 pick_date 의 이전 row 모두 삭제 후 insert (중복 방지)
+    from sqlalchemy import delete as _delete
     async with get_session() as session:
+        await session.execute(_delete(CrazyPick).where(CrazyPick.pick_date == today))
         for p in picks:
             row = CrazyPick(
                 pick_date=today,
@@ -332,7 +334,7 @@ async def run_crazy_picks_job():
             )
             session.add(row)
         await session.commit()
-    logger.info(f"[crazy] saved {len(picks)} picks to DB")
+    logger.info(f"[crazy] saved {len(picks)} picks to DB (이전 동일 날짜 삭제)")
 
     # Telegram
     if picks:
@@ -382,8 +384,10 @@ async def run_moonshot_picks_job():
                 buy_price_limit_7pct=round(p.current_price * 0.93, 4),
             )
 
-    # DB 저장 — Decision 33 (3 가격대) + Decision 34 (target/stop/time) + Decision 40 (위험)
+    # DB 저장 — 같은 pick_date 이전 row 삭제 후 insert (중복 방지)
+    from sqlalchemy import delete as _delete
     async with get_session() as session:
+        await session.execute(_delete(MoonshotPick).where(MoonshotPick.pick_date == today))
         for p in picks:
             fs = p.factor_scores
             row = MoonshotPick(
