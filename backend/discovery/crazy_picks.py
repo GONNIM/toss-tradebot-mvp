@@ -96,11 +96,14 @@ async def collect_factor_inputs(
     except Exception as e:
         logger.debug(f"[CrazyInputs] {ticker} Stooq fail: {e}")
 
-    # 2. Finnhub — 어닝 캘린더
+    # 2. Finnhub — 어닝 캘린더 (오늘 ~ +14일)
     try:
+        from datetime import datetime as _dt, timedelta as _td
+        _today = _dt.now().strftime("%Y-%m-%d")
+        _to = (_dt.now() + _td(days=14)).strftime("%Y-%m-%d")
         finnhub = clients["finnhub"]
         earnings = await asyncio.wait_for(
-            finnhub.get_earnings_calendar(ticker, days_ahead=14),
+            finnhub.get_earnings_calendar(from_date=_today, to_date=_to, ticker=ticker),
             timeout=PER_STEP_TIMEOUT,
         )
         if earnings:
@@ -213,6 +216,19 @@ async def run_crazy_picks(
     scored.sort(key=lambda x: x[1].total(), reverse=True)
     top = scored[:top_n]
     logger.info(f"[Crazy] {len(scored)} scored → Top {len(top)}")
+
+    # ── factor 수집 client 명시적 close — LLM 호출 자원 확보 (2026-06-22 진단) ──
+    # 6개 외부 client 의 잔존 connection (CLOSE-WAIT, ESTAB) 이 asyncio event loop
+    # 자원 점유 → LLM 호출이 starvation 으로 hang. factor 단계 끝나면 모두 종료.
+    for name in ("stooq", "finnhub", "sec", "apewisdom", "finra"):
+        c = clients.get(name)
+        if c is None or not hasattr(c, "__aexit__"):
+            continue
+        try:
+            await c.__aexit__(None, None, None)
+            logger.debug(f"[Crazy] factor client closed: {name}")
+        except Exception as e:
+            logger.debug(f"[Crazy] close {name} fail: {e}")
 
     # 4. LLM thesis (Z.ai concurrent=1 정책 — 순차 + 호출 사이 sleep + 1회 재시도)
     from backend.services.llm import PickThesis

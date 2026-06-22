@@ -129,6 +129,16 @@ async def run_moonshot_picks(
     selected.sort(key=lambda x: x[1].total(), reverse=True)
     logger.info(f"[Moonshot] {len(scored)} scored → Top {len(selected)} (HIGH: {len(high_picks)})")
 
+    # factor client close — LLM 호출 자원 확보 (crazy_picks 동일 패턴)
+    for name in ("stooq", "finnhub", "sec", "apewisdom", "finra"):
+        c = clients.get(name)
+        if c is None or not hasattr(c, "__aexit__"):
+            continue
+        try:
+            await c.__aexit__(None, None, None)
+        except Exception as e:
+            logger.debug(f"[Moonshot] close {name} fail: {e}")
+
     # LLM thesis (필수 — Moonshot 은 thesis 가 핵심)
     final: list[MoonshotPickResult] = []
     if "llm" not in clients:

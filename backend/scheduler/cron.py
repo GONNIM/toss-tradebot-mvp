@@ -126,7 +126,11 @@ async def _enter_clients(clients: dict) -> dict:
 
 
 async def _exit_clients(clients: dict) -> None:
-    """모든 클라이언트 graceful close (LLM 은 호출 측이 이미 close)."""
+    """모든 클라이언트 graceful close (LLM 은 호출 측이 이미 close).
+
+    crazy_picks/moonshot_picks 내부에서 factor 단계 끝나고 이미 close 했을 수
+    있음 — _aexit__ 이중 호출 안전 (httpx AsyncClient 는 idempotent).
+    """
     for name, c in clients.items():
         if name == "llm":
             continue
