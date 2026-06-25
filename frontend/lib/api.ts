@@ -101,11 +101,11 @@ export interface DashboardSummary {
 
 export interface LogEntry {
   id: number;
+  timestamp: string;
   level: string;
-  category: string;
+  module: string;
   message: string;
-  metadata: Record<string, unknown> | null;
-  created_at: string;
+  context: string | null;
 }
 
 export interface Setting {
@@ -413,8 +413,14 @@ export const api = {
     list: () => get<Setting[]>(`/settings`),
   },
   logs: {
-    list: (limit = 50, hours = 24) =>
-      get<LogEntry[]>(`/logs?limit=${limit}&hours=${hours}`),
+    list: (limit = 50, hours = 24, module?: string) => {
+      const q = new URLSearchParams({
+        limit: String(limit),
+        hours: String(hours),
+      });
+      if (module) q.set("module", module);
+      return get<LogEntry[]>(`/logs?${q.toString()}`);
+    },
   },
   sectorLeaders: {
     items: () => get<SectorItemSummary[]>(`/sector-leaders/`),

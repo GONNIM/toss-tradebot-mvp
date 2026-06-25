@@ -10,11 +10,20 @@ customs / recompute 진행을 막지 않음.
 """
 from __future__ import annotations
 
+import asyncio
+import json
 import logging
 from datetime import date, datetime
 from pathlib import Path
 from typing import Optional
 
+from apscheduler.events import (
+    EVENT_JOB_ERROR,
+    EVENT_JOB_EXECUTED,
+    EVENT_JOB_SUBMITTED,
+    JobExecutionEvent,
+    JobSubmissionEvent,
+)
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.cron import CronTrigger
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -30,8 +39,11 @@ from backend.discovery.sector_leaders.analysis import (
 )
 from backend.discovery.sector_leaders.ingest import ingest_pdf
 from backend.services.db import get_session
+from backend.services.models import Log
 
 logger = logging.getLogger(__name__)
+
+_job_start_times: dict[str, datetime] = {}
 
 
 def _first_of_current_month() -> date:
@@ -172,6 +184,72 @@ async def customs_interim_20day_job() -> dict:
 
 
 # ─────────────────────────────────────────────────────────────────
+# 잡 실행 이력 — `logs` 테이블에 module="scheduler" 로 기록
+# ─────────────────────────────────────────────────────────────────
+
+
+async def _persist_scheduler_log(
+    level: str, message: str, context: dict
+) -> None:
+    try:
+        async with get_session() as session:
+            session.add(
+                Log(
+                    level=level,
+                    module="scheduler",
+                    message=message,
+                    context=json.dumps(context, ensure_ascii=False, default=str),
+                )
+            )
+            await session.commit()
+    except Exception as e:
+        logger.exception(f"[scheduler-log] persist failed: {e}")
+
+
+def _on_job_submitted(event: JobSubmissionEvent) -> None:
+    _job_start_times[event.job_id] = datetime.now()
+
+
+def _on_job_event(event: JobExecutionEvent) -> None:
+    """잡 완료/에러 → Log 테이블 기록."""
+    started = _job_start_times.pop(event.job_id, None)
+    duration_ms = (
+        int((datetime.now() - started).total_seconds() * 1000)
+        if started is not None
+        else None
+    )
+
+    if event.exception is not None:
+        level = "ERROR"
+        message = f"[{event.job_id}] 실패: {type(event.exception).__name__}: {event.exception}"
+        context = {
+            "job_id": event.job_id,
+            "duration_ms": duration_ms,
+            "error": str(event.exception),
+            "error_type": type(event.exception).__name__,
+        }
+    else:
+        level = "INFO"
+        stats = event.retval if isinstance(event.retval, dict) else {}
+        message = f"[{event.job_id}] 완료"
+        if duration_ms is not None:
+            message += f" ({duration_ms}ms)"
+        context = {
+            "job_id": event.job_id,
+            "duration_ms": duration_ms,
+            "stats": stats,
+        }
+
+    try:
+        loop = asyncio.get_event_loop()
+        loop.create_task(_persist_scheduler_log(level, message, context))
+    except RuntimeError:
+        logger.warning(
+            f"[scheduler-log] event loop not running — skip persist: {message}"
+        )
+
+
+# ─────────────────────────────────────────────────────────────────
 # 등록
 # ─────────────────────────────────────────────────────────────────
 
@@ -208,9 +286,14 @@ def register_monthly_jobs(scheduler: AsyncIOScheduler) -> None:
         replace_existing=True,
         misfire_grace_time=3600,
     )
+    # 잡 실행 이력 listener — submit / executed / error
+    scheduler.add_listener(_on_job_submitted, EVENT_JOB_SUBMITTED)
+    scheduler.add_listener(_on_job_event, EVENT_JOB_EXECUTED | EVENT_JOB_ERROR)
+
     logger.info(
         "[scheduler] 3 jobs registered: "
         "monthly_full_refresh (1st 11:30) · "
         "customs_interim_10day (11th 12:00) · "
-        "customs_interim_20day (21st 12:00) · all KST"
+        "customs_interim_20day (21st 12:00) · all KST · "
+        "listeners attached (submit/executed/error)"
     )
