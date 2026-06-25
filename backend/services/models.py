@@ -307,6 +307,32 @@ class MotirExportHistory(Base):
     recorded_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
 
 
+class CustomsInterimExport(Base):
+    """관세청 10일 단위 잠정 수출 통계 (B-2k).
+
+    cntyMmUtPrviExpAcrs API 응답:
+      - 매월 1~10일, 1~20일, 1~말일 3회 잠정 발표
+      - 전체 + 10개 주요국 (CN·US·EU·VN·HK·JP·TW·IN·SG·MY)
+      - 단위: 천 달러
+    """
+
+    __tablename__ = "customs_interim_exports"
+
+    month: Mapped[str] = mapped_column(String(7), primary_key=True)
+    period: Mapped[str] = mapped_column(String(5), primary_key=True)
+    # '01~10' / '01~20' / '01~31'
+    country_code: Mapped[str] = mapped_column(String(10), primary_key=True)
+    # 'TOTAL' / 'CN' / 'US' / 'EU' / 'VN' / 'HK' / 'JP' / 'TW' / 'IN' / 'SG' / 'MY'
+    usd_amount_thousand: Mapped[float] = mapped_column(Float)
+    fetched_at: Mapped[datetime] = mapped_column(
+        DateTime, server_default=func.now(), onupdate=func.now()
+    )
+
+    __table_args__ = (
+        Index("idx_customs_month_period", "month", "period"),
+    )
+
+
 class SectorLeader(Base):
     """Sector Leaders 분석 결과 — 품목 × 종목 페어별 (B-2d).
 

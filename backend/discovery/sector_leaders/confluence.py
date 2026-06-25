@@ -87,7 +87,7 @@ def signal_export_yoy(yoy_pct: float, correlation_sign: int) -> SignalContributi
     if correlation_sign < 0:
         # 음의 상관: 수출 ↑ 시 주가 ↓ 기대 → 부호 반전
         normalized = -normalized
-    weight = 0.40
+    weight = 0.35
     contribution = normalized * weight
     direction = _sign_direction(normalized)
     detail = (
@@ -139,7 +139,7 @@ def signal_region_consistency(
     normalized = _clamp(mean_yoy / 50.0)
     if correlation_sign < 0:
         normalized = -normalized
-    weight = 0.25
+    weight = 0.20
     contribution = normalized * weight
     direction = _sign_direction(normalized)
     pos_pct = positive_ratio * 100
@@ -237,7 +237,7 @@ def signal_revision_trend(
     normalized = _clamp(mean_delta / 5.0)
     if correlation_sign < 0:
         normalized = -normalized
-    weight = 0.15
+    weight = 0.10
     contribution = normalized * weight
     direction = _sign_direction(normalized)
     upward = sum(1 for d in deltas if d > 0)
@@ -250,6 +250,59 @@ def signal_revision_trend(
         label="잠정→확정 갱신 추세",
         raw_value=mean_delta,
         raw_label=f"평균 {mean_delta:+.2f}%p",
+        normalized=normalized,
+        weight=weight,
+        contribution=contribution,
+        detail=detail,
+        direction=direction,
+    )
+
+
+# ─────────────────────────────────────────────────────────────────
+# 시그널 ⑤ 관세청 10일 잠정 (B-2k) — 매크로 사전 시그널
+# ─────────────────────────────────────────────────────────────────
+
+
+def signal_customs_interim(
+    interim_yoy_pct: Optional[float],
+    period_label: Optional[str],
+    correlation_sign: int,
+) -> SignalContribution:
+    """관세청 10일 단위 잠정 TOTAL YoY → 매크로 사전 시그널.
+
+    매월 11일경 1~10일 / 21일경 1~20일 / 익월 1일 1~말일 발표.
+    가장 빠른 전체 시장 시그널 (motir PDF 보다 5~10일 빠름).
+
+    가중치 0.10 — 종합 매크로지만 품목별 시그널이 아니라 작게 적용.
+    """
+    if interim_yoy_pct is None:
+        return _empty_signal(
+            "customs_interim",
+            "관세청 잠정 (매크로)",
+            weight=0.10,
+            detail="관세청 잠정 YoY 데이터 부재",
+        )
+    raw_label = f"{interim_yoy_pct:+.1f}%"
+    normalized = _clamp(interim_yoy_pct / 50.0)
+    if correlation_sign < 0:
+        normalized = -normalized
+    weight = 0.10
+    contribution = normalized * weight
+    direction = _sign_direction(normalized)
+    detail = (
+        f"전체 시장 {period_label or '잠정'} YoY {interim_yoy_pct:+.1f}% — "
+        + ("강한 매크로 상승" if normalized > 0.5 else
+           "완만한 상승" if normalized > 0.1 else
+           "강한 매크로 하락" if normalized < -0.5 else
+           "완만한 하락" if normalized < -0.1 else
+           "횡보")
+        + " · 매월 11일/21일 발표"
+    )
+    return SignalContribution(
+        name="customs_interim",
+        label=f"관세청 잠정 ({period_label or 'TOTAL'})",
+        raw_value=interim_yoy_pct,
+        raw_label=raw_label,
         normalized=normalized,
         weight=weight,
         contribution=contribution,
@@ -280,13 +333,25 @@ def compute_confluence(
     monthly_close_by_month: dict[str, float],
     history_revisions: list[tuple[float, float]],
     correlation_sign: int = 1,
+    customs_interim_yoy: Optional[float] = None,
+    customs_interim_period: Optional[str] = None,
 ) -> ConfluenceResult:
-    """4종 시그널 통합 → ConfluenceResult."""
+    """5종 시그널 통합 → ConfluenceResult.
+
+    가중치:
+      ① 수출 YoY (메인 품목): 0.35
+      ② 지역 일관성: 0.20
+      ③ 종목 3M 모멘텀: 0.20
+      ④ 잠정→확정 갱신: 0.10
+      ⑤ 관세청 잠정 (매크로): 0.10
+      합 = 0.95 (모멘텀이 항상 가용)
+    """
     contribs: list[SignalContribution] = [
         signal_export_yoy(yoy_pct, correlation_sign),
         signal_region_consistency(region_latest_yoys, correlation_sign),
         signal_stock_momentum(monthly_close_by_month),
         signal_revision_trend(history_revisions, correlation_sign),
+        signal_customs_interim(customs_interim_yoy, customs_interim_period, correlation_sign),
     ]
     score = sum(c.contribution for c in contribs)
     # 가용한 시그널만 카운트 (raw_value=None 인 시그널은 데이터 부족)

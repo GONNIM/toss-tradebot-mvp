@@ -12,7 +12,7 @@ from __future__ import annotations
 from typing import Optional
 
 from fastapi import APIRouter, HTTPException, Query
-from sqlalchemy import asc, desc, select
+from sqlalchemy import asc, desc, func, select
 
 from backend.api.schemas import (
     BacktestBucketResponse,
@@ -37,13 +37,17 @@ from backend.api.schemas import (
     TickerConfluenceResponse,
     TickerDetail,
     TickerForecastResponse,
+    Top10ItemResponse,
+    Top10Response,
     VerdictResponse,
 )
+from backend.discovery.data_sources.customs_interim import yoy_for_period
 from backend.discovery.data_sources.mapping import load_mapping
 from backend.discovery.sector_leaders import (
     compute_confluence,
     compute_monthly_join,
     compute_rr_ratio,
+    compute_top10,
     compute_verdict,
     compute_yoy_buckets,
     daily_to_monthly,
@@ -56,6 +60,7 @@ from backend.discovery.sector_leaders import (
 )
 from backend.services.db import get_session
 from backend.services.models import (
+    CustomsInterimExport,
     KrxDailyCandle,
     MotirExportHistory,
     MotirItemExport,
@@ -64,6 +69,30 @@ from backend.services.models import (
 )
 
 router = APIRouter()
+
+
+# ─────────────────────────────────────────────────────────────────
+# GET /top10  — 투자 종목 Top 10 (B-2j)
+# ─────────────────────────────────────────────────────────────────
+
+
+@router.get("/top10", response_model=Top10Response)
+async def get_top10(limit: int = Query(10, ge=1, le=51)):
+    """매력도 점수 상위 N — Confluence 0.5 + 신뢰도 0.3 + R/R 0.2."""
+    from datetime import datetime
+
+    async with get_session() as session:
+        items = await compute_top10(session, top_n=limit)
+        # total_candidates: 양의 매력도 종목 개수 (참고용)
+        all_count = (
+            await session.execute(select(func.count()).select_from(SectorLeader))
+        ).scalar() or 0
+
+    return Top10Response(
+        items=[Top10ItemResponse(**it.__dict__) for it in items],
+        total_candidates=all_count,
+        computed_at=datetime.utcnow().isoformat(timespec="seconds") + "Z",
+    )
 
 
 CONFIDENCE_RANK = {"strong": 0, "medium": 1, "weak": 2}
@@ -530,12 +559,36 @@ async def get_ticker_confluence(
 
     correlation_sign = 1 if (leader.best_r is not None and leader.best_r >= 0) else -1
 
+    # 관세청 잠정 YoY — 가장 최근 1~20일 우선, 없으면 1~10일
+    customs_yoy: Optional[float] = None
+    customs_period_label: Optional[str] = None
+    async with get_session() as session2:
+        # 최신 관세청 데이터 month·period 찾기
+        latest_customs = (
+            await session2.execute(
+                select(CustomsInterimExport)
+                .where(CustomsInterimExport.country_code == "TOTAL")
+                .order_by(desc(CustomsInterimExport.month), desc(CustomsInterimExport.period))
+                .limit(1)
+            )
+        ).scalar_one_or_none()
+        if latest_customs is not None:
+            customs_yoy = await yoy_for_period(
+                session2,
+                month=latest_customs.month,
+                period=latest_customs.period,
+                country_code="TOTAL",
+            )
+            customs_period_label = f"{latest_customs.month}/{latest_customs.period}"
+
     result = compute_confluence(
         yoy_pct=latest_yoy,
         region_latest_yoys=region_yoys,
         monthly_close_by_month=close_map,
         history_revisions=revisions,
         correlation_sign=correlation_sign,
+        customs_interim_yoy=customs_yoy,
+        customs_interim_period=customs_period_label,
     )
 
     return TickerConfluenceResponse(

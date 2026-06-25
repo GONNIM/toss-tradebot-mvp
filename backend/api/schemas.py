@@ -331,6 +331,44 @@ class TickerConfluenceResponse(BaseModel):
     confluence: ConfluenceResponse
 
 
+# ─── Top 10 (B-2j) ──────────────────────────────────────────
+
+
+class Top10ItemResponse(BaseModel):
+    rank: int
+    ticker: str
+    name: str
+    item: str
+    market_cap_krw: Optional[float] = None
+
+    current_price: float
+    entry_price: float
+    entry_status: str
+    entry_gap_pct: float
+
+    point_price: float
+    point_pct: float
+    stop_price: Optional[float] = None
+    stop_pct: Optional[float] = None
+    take_price: Optional[float] = None
+    take_pct: Optional[float] = None
+
+    confluence_score: float
+    confidence_stars: str
+    confidence_label: str
+    attractiveness: float
+
+    horizon_months: int
+    best_r: Optional[float] = None
+    sample_warning: bool
+
+
+class Top10Response(BaseModel):
+    items: list[Top10ItemResponse]
+    total_candidates: int
+    computed_at: str
+
+
 class HorizonAdvice(BaseModel):
     """horizon 별 종합 판정·R/R·Stop/Take (B-2g v4)."""
     horizon_months: int

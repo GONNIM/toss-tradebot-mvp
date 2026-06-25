@@ -325,6 +325,43 @@ export interface TickerConfluence {
   confluence: Confluence;
 }
 
+// ─── Top 10 (B-2j) ────────────────────────────────────────────
+
+export interface Top10Item {
+  rank: number;
+  ticker: string;
+  name: string;
+  item: string;
+  market_cap_krw: number | null;
+
+  current_price: number;
+  entry_price: number;
+  entry_status: string;
+  entry_gap_pct: number;
+
+  point_price: number;
+  point_pct: number;
+  stop_price: number | null;
+  stop_pct: number | null;
+  take_price: number | null;
+  take_pct: number | null;
+
+  confluence_score: number;
+  confidence_stars: string;
+  confidence_label: string;
+  attractiveness: number;
+
+  horizon_months: number;
+  best_r: number | null;
+  sample_warning: boolean;
+}
+
+export interface Top10Response {
+  items: Top10Item[];
+  total_candidates: number;
+  computed_at: string;
+}
+
 export interface ForecastDisclaimer {
   method: string;
   ci_method: string;
@@ -408,5 +445,7 @@ export const api = {
         `/sector-leaders/tickers/${ticker}/confluence${q}`,
       );
     },
+    top10: (limit = 10) =>
+      get<Top10Response>(`/sector-leaders/top10?limit=${limit}`),
   },
 };

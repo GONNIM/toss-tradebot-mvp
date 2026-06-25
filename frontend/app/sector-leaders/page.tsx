@@ -25,6 +25,7 @@ import {
 } from "recharts";
 
 import { AnalysisPanel } from "@/components/sector-leaders/AnalysisPanel";
+import { Top10Modal } from "@/components/sector-leaders/Top10Modal";
 import { api, type SectorItemSummary, type SectorLeader } from "@/lib/api";
 import {
   confidenceBadgeClass,
@@ -37,6 +38,7 @@ import {
 export default function SectorLeadersPage() {
   const [selectedItem, setSelectedItem] = useState<string | null>(null);
   const [selectedTicker, setSelectedTicker] = useState<string | null>(null);
+  const [top10Open, setTop10Open] = useState(false);
   const itemsQuery = useQuery({
     queryKey: ["sector-leaders", "items"],
     queryFn: () => api.sectorLeaders.items(),
@@ -53,13 +55,23 @@ export default function SectorLeadersPage() {
 
   return (
     <div className="space-y-4">
-      <header className="space-y-1">
-        <h1 className="text-3xl font-bold">🇰🇷 섹터별 주도주 Top 3</h1>
-        <p className="text-sm text-muted-foreground">
-          산업통상부 월간 수출입동향 ↔ KRX 주도주 ·{" "}
-          매월 1일 발표 자료 자동 갱신 · 24개월 Pearson 상관 + lead/lag 시그널
-        </p>
+      <header className="flex items-end justify-between gap-3 flex-wrap">
+        <div className="space-y-1">
+          <h1 className="text-3xl font-bold">🇰🇷 섹터별 주도주 Top 3</h1>
+          <p className="text-sm text-muted-foreground">
+            산업통상부 월간 수출입동향 ↔ KRX 주도주 ·{" "}
+            매월 1일 발표 자료 자동 갱신 · 24개월 Pearson 상관 + lead/lag 시그널
+          </p>
+        </div>
+        <button
+          onClick={() => setTop10Open(true)}
+          className="rounded-lg border border-cyan-500/60 bg-cyan-500/10 px-4 py-2 text-sm font-semibold text-cyan-300 hover:bg-cyan-500/20 transition"
+        >
+          🏆 투자 종목 Top 10
+        </button>
       </header>
+
+      <Top10Modal open={top10Open} onClose={() => setTop10Open(false)} />
 
       <div className="grid grid-cols-12 gap-4">
         {/* 좌측 사이드 — 17 품목 */}

@@ -21,6 +21,11 @@ from backend.discovery.sector_leaders.confluence import (
     SignalContribution,
     compute_confluence,
 )
+from backend.discovery.sector_leaders.top10 import (
+    Top10Item,
+    compute_attractiveness,
+    compute_top10,
+)
 from backend.discovery.sector_leaders.forecast import (
     FanChartPoint,
     HistoricalBand,
@@ -64,6 +69,9 @@ __all__ = [
     "ConfluenceResult",
     "SignalContribution",
     "compute_confluence",
+    "Top10Item",
+    "compute_attractiveness",
+    "compute_top10",
     "FanChartPoint",
     "HistoricalBand",
     "HorizonForecast",
