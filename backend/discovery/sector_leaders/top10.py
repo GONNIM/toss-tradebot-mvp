@@ -18,6 +18,7 @@ from sqlalchemy import desc, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.discovery.data_sources.customs_interim import yoy_for_period
+from backend.discovery.data_sources.naver_quote import fetch_quotes
 from backend.discovery.sector_leaders.confluence import compute_confluence
 from backend.discovery.sector_leaders.forecast import (
     compute_rr_ratio,
@@ -66,6 +67,11 @@ class Top10Item:
     best_r: Optional[float]
     sample_warning: bool
 
+    # 현재가 출처
+    price_source: str           # "live" | "fallback"
+    price_at: Optional[str]     # ISO timestamp (live) 또는 None (fallback)
+    price_market_status: Optional[str]  # OPEN / CLOSE / None
+
 
 # ─────────────────────────────────────────────────────────────────
 # 매력도 계산
@@ -110,6 +116,7 @@ async def compute_top10(
     top_n: int = 10,
 ) -> list[Top10Item]:
     """SectorLeader 전체 → 매력도 정렬 → 상위 N."""
+    from datetime import datetime, timezone
 
     # 일괄 사전 load
     leaders = (
@@ -117,6 +124,9 @@ async def compute_top10(
     ).scalars().all()
     metas = (await session.execute(select(KrxStockMeta))).scalars().all()
     meta_by_ticker = {m.ticker: m for m in metas}
+
+    # 실시간 현재가 일괄 fetch (60초 캐시, 외부 실패 시 last_close fallback)
+    live_quotes = await fetch_quotes([leader.ticker for leader in leaders])
 
     # 일봉 → 종목별 월말 종가/수익률
     prices = (
@@ -196,6 +206,21 @@ async def compute_top10(
         if meta is None or not meta.last_close or meta.last_close <= 0:
             continue
 
+        # 현재가 — 실시간 우선, 실패 시 last_close fallback
+        quote = live_quotes.get(ticker.zfill(6)) or live_quotes.get(ticker)
+        if quote is not None and quote.current_price > 0:
+            current_price = quote.current_price
+            price_source = "live"
+            price_at = datetime.fromtimestamp(
+                quote.fetched_at, tz=timezone.utc
+            ).isoformat()
+            price_market_status = quote.market_status
+        else:
+            current_price = meta.last_close
+            price_source = "fallback"
+            price_at = None
+            price_market_status = None
+
         close_map, ret_map = monthly_by_ticker.get(ticker, ({}, {}))
         if not close_map:
             continue
@@ -239,9 +264,9 @@ async def compute_top10(
             continue
 
         # R/R
-        rr = compute_rr_ratio(meta.last_close, horizon.point_estimate_pct, band)
+        rr = compute_rr_ratio(current_price, horizon.point_estimate_pct, band)
         # Stop / Take
-        st = recommend_stop_take(meta.last_close, horizon.point_estimate_pct, band)
+        st = recommend_stop_take(current_price, horizon.point_estimate_pct, band)
 
         # 매력도
         attr = compute_attractiveness(
@@ -251,16 +276,16 @@ async def compute_top10(
         )
 
         # 점추정 가격
-        point_price = meta.last_close * (1 + horizon.point_estimate_pct / 100)
+        point_price = current_price * (1 + horizon.point_estimate_pct / 100)
         # 진입가
-        entry_price_raw = min(meta.last_close, point_price * 0.9)
+        entry_price_raw = min(current_price, point_price * 0.9)
         # 점추정이 현재가 이하면 entry 의미 없음 → 현재가 그대로
         entry_price = max(entry_price_raw, 0.0)
-        if entry_price >= meta.last_close * 0.99:
+        if entry_price >= current_price * 0.99:
             entry_status = "🟢 지금 매수 가능"
             entry_gap_pct = 0.0
         else:
-            gap = (entry_price / meta.last_close - 1) * 100
+            gap = (entry_price / current_price - 1) * 100
             entry_status = f"🟡 {abs(gap):.1f}% 조정 대기"
             entry_gap_pct = gap
 
@@ -273,7 +298,7 @@ async def compute_top10(
                 name=leader.name,
                 item=item,
                 market_cap_krw=leader.market_cap_krw,
-                current_price=meta.last_close,
+                current_price=current_price,
                 entry_price=entry_price,
                 entry_status=entry_status,
                 entry_gap_pct=entry_gap_pct,
@@ -290,6 +315,9 @@ async def compute_top10(
                 horizon_months=h_target,
                 best_r=leader.best_r,
                 sample_warning=horizon.sample_warning,
+                price_source=price_source,
+                price_at=price_at,
+                price_market_status=price_market_status,
             )
         )
 

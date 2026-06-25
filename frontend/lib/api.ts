@@ -354,6 +354,10 @@ export interface Top10Item {
   horizon_months: number;
   best_r: number | null;
   sample_warning: boolean;
+
+  price_source: "live" | "fallback";
+  price_at: string | null;
+  price_market_status: string | null;
 }
 
 export interface Top10Response {

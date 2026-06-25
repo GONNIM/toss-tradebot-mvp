@@ -80,6 +80,45 @@ export function Top10Modal({ open, onClose }: { open: boolean; onClose: () => vo
   );
 }
 
+function PriceSourceBadge({
+  source,
+  marketStatus,
+  priceAt,
+}: {
+  source: "live" | "fallback";
+  marketStatus: string | null;
+  priceAt: string | null;
+}) {
+  if (source === "fallback") {
+    return (
+      <div
+        className="text-xs text-amber-400 leading-tight mt-0.5"
+        title="네이버 실시간 가격 fetch 실패 — 최근 종가 표시"
+      >
+        ⚠️ 종가 (fallback)
+      </div>
+    );
+  }
+  const isOpen = marketStatus === "OPEN";
+  const label = isOpen ? "🟢 LIVE" : "⚪ 종가";
+  const kstTime = priceAt ? formatKstTime(priceAt) : null;
+  return (
+    <div className="text-xs text-emerald-300 leading-tight mt-0.5">
+      {label}
+      {kstTime && <span className="text-zinc-400 ml-1">{kstTime}</span>}
+    </div>
+  );
+}
+
+function formatKstTime(iso: string): string {
+  const hasTz = /Z$|[+-]\d{2}:?\d{2}$/.test(iso);
+  const d = new Date(hasTz ? iso : iso + "Z");
+  if (isNaN(d.getTime())) return "";
+  const kst = new Date(d.getTime() + 9 * 60 * 60 * 1000);
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${pad(kst.getUTCHours())}:${pad(kst.getUTCMinutes())} KST`;
+}
+
 function formatComputedAt(iso: string): string {
   if (!iso) return "—";
   const d = new Date(iso);
@@ -158,8 +197,15 @@ function Row({ it }: { it: Top10Item }) {
           {it.ticker} · {it.item}
         </div>
       </td>
-      <td className="px-2.5 py-2 text-right font-mono text-zinc-100">
-        {formatKRW(it.current_price)}
+      <td className="px-2.5 py-2 text-right whitespace-nowrap">
+        <div className="font-mono text-zinc-100 font-semibold leading-tight">
+          {formatKRW(it.current_price)}
+        </div>
+        <PriceSourceBadge
+          source={it.price_source}
+          marketStatus={it.price_market_status}
+          priceAt={it.price_at}
+        />
       </td>
       <td className="px-2.5 py-2 text-right">
         <div className="font-mono font-semibold text-zinc-50 leading-tight">

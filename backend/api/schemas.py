@@ -362,6 +362,10 @@ class Top10ItemResponse(BaseModel):
     best_r: Optional[float] = None
     sample_warning: bool
 
+    price_source: str = "fallback"
+    price_at: Optional[str] = None
+    price_market_status: Optional[str] = None
+
 
 class Top10Response(BaseModel):
     items: list[Top10ItemResponse]
