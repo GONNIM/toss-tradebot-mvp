@@ -1,0 +1,135 @@
+# 산업통상부 17품목 ↔ KRX 종목 매핑
+# 설계: docs/plans/sector-leaders/01-mvp-design.md
+#
+# **검수 권장** — 매핑 정확도가 주도주 선정·상관 분석 신뢰도에 직결.
+# 각 종목은 시총(FDR Marcap) + 해당 품목 매출 비중(DART, 추후) 으로 score.
+#
+# - code: KRX 6자리 종목 코드
+# - name: 종목명 (검증/추적 용 — 실제 매칭은 code 기준)
+# - export_ratio_hint: 해외매출비중 추정값 0.0~1.0 (DART 보강 전 임시값, 대표 종목엔 0.8~)
+# - notes: 매핑 근거 또는 주의사항
+#
+# 한 종목이 여러 품목에 걸치는 경우 (예: 삼성전자 = 반도체+가전+무선통신) → 주력만 명시.
+
+version: "0.1-draft-2026-06-24"
+
+items:
+  반도체:
+    description: "메모리·시스템·파운드리·웨이퍼·후공정 장비"
+    tickers:
+      - {code: "005930", name: "삼성전자",         export_ratio_hint: 0.85}
+      - {code: "000660", name: "SK하이닉스",       export_ratio_hint: 0.95}
+      - {code: "042700", name: "한미반도체",       export_ratio_hint: 0.80}
+      - {code: "058470", name: "리노공업",         export_ratio_hint: 0.85}
+      - {code: "240810", name: "원익IPS",          export_ratio_hint: 0.50}
+
+  자동차:
+    description: "승용차·화물차·특장차"
+    tickers:
+      - {code: "005380", name: "현대차",           export_ratio_hint: 0.65}
+      - {code: "000270", name: "기아",             export_ratio_hint: 0.70}
+
+  자동차부품:
+    description: "라디에이터·배터리·클러치·변속레버·배기관"
+    tickers:
+      - {code: "012330", name: "현대모비스",       export_ratio_hint: 0.55}
+      - {code: "018880", name: "한온시스템",       export_ratio_hint: 0.85}
+      - {code: "011210", name: "현대위아",         export_ratio_hint: 0.60}
+
+  일반기계:
+    description: "건설기계·공작기계·냉동공조·보일러·금형·농기계"
+    tickers:
+      # 042670 HD현대인프라코어 — KRX 미상장 (옛 두산인프라코어, 합병/소멸 추정) → 제거
+      - {code: "064350", name: "현대로템",         export_ratio_hint: 0.40}
+      - {code: "241560", name: "두산밥캣",         export_ratio_hint: 0.95, notes: "선박/건설장비 글로벌. 옛 코드 002710 → TCC스틸이라 정정"}
+      - {code: "267260", name: "HD현대일렉트릭",   export_ratio_hint: 0.70, notes: "중전기기 (전기기기 경계)"}
+
+  석유화학:
+    description: "기초유분·중간원료·합성수지·합성고무"
+    tickers:
+      - {code: "011170", name: "롯데케미칼",       export_ratio_hint: 0.60}
+      - {code: "011780", name: "금호석유화학",     export_ratio_hint: 0.65}
+      - {code: "285130", name: "SK케미칼",         export_ratio_hint: 0.55}
+
+  석유제품:
+    description: "휘발유·경유·제트유·등유·나프타·중유"
+    tickers:
+      - {code: "010950", name: "S-Oil",            export_ratio_hint: 0.65}
+      - {code: "096770", name: "SK이노베이션",     export_ratio_hint: 0.60}
+      - {code: "078930", name: "GS",               export_ratio_hint: 0.55}
+
+  철강제품:
+    description: "판재류(열연·냉연·아연도)·강관"
+    tickers:
+      - {code: "005490", name: "POSCO홀딩스",      export_ratio_hint: 0.50}
+      - {code: "004020", name: "현대제철",         export_ratio_hint: 0.30}
+
+  선박:
+    description: "여객선·화물선·해양플랜트·선용부품"
+    tickers:
+      - {code: "329180", name: "HD현대중공업",     export_ratio_hint: 0.85, notes: "옛 329180=HD현대미포는 정정 — 실 조선업체"}
+      - {code: "009540", name: "HD한국조선해양",   export_ratio_hint: 0.80, notes: "선박 부문 지주사"}
+      - {code: "010140", name: "삼성중공업",       export_ratio_hint: 0.95}
+      - {code: "042660", name: "한화오션",         export_ratio_hint: 0.90}
+      - {code: "071970", name: "HD현대마린엔진",   export_ratio_hint: 0.75, notes: "선용 엔진 (선박 경계)"}
+
+  무선통신기기:
+    description: "휴대폰·위성방송수신기·레이더·리모컨·안테나"
+    tickers:
+      - {code: "009150", name: "삼성전기",         export_ratio_hint: 0.75}
+      - {code: "011070", name: "LG이노텍",         export_ratio_hint: 0.85}
+
+  디스플레이:
+    description: "LCD·OLED·PDP"
+    tickers:
+      - {code: "034220", name: "LG디스플레이",     export_ratio_hint: 0.90}
+
+  섬유:
+    description: "섬유원료·섬유사·직물·섬유제품"
+    tickers:
+      - {code: "298020", name: "효성티앤씨",       export_ratio_hint: 0.70, notes: "옛 298050은 HS효성첨단소재"}
+      - {code: "298050", name: "HS효성첨단소재",   export_ratio_hint: 0.65, notes: "섬유 관련 분사"}
+      - {code: "120110", name: "코오롱인더",       export_ratio_hint: 0.50}
+
+  가전:
+    description: "TV·스피커·냉장고·세탁기·에어컨·조명기기"
+    tickers:
+      - {code: "066570", name: "LG전자",           export_ratio_hint: 0.70}
+
+  컴퓨터:
+    description: "SSD·노트북·데스크탑·모니터·프린터·메인보드"
+    tickers:
+      - {code: "005930", name: "삼성전자",         export_ratio_hint: 0.85, notes: "SSD 부문 — 반도체와 중복 가능"}
+      - {code: "000660", name: "SK하이닉스",       export_ratio_hint: 0.95, notes: "SSD 부문"}
+
+  바이오헬스:
+    description: "원료의약품·완제의약품·의료기기"
+    tickers:
+      - {code: "207940", name: "삼성바이오로직스", export_ratio_hint: 0.80}
+      - {code: "068270", name: "셀트리온",         export_ratio_hint: 0.85}
+      - {code: "326030", name: "SK바이오팜",       export_ratio_hint: 0.70}
+      - {code: "196170", name: "알테오젠",         export_ratio_hint: 0.50}
+
+  이차전지:
+    description: "리튬이온전지·납축전지"
+    tickers:
+      - {code: "373220", name: "LG에너지솔루션",   export_ratio_hint: 0.95}
+      - {code: "006400", name: "삼성SDI",          export_ratio_hint: 0.90}
+      - {code: "247540", name: "에코프로비엠",     export_ratio_hint: 0.85}
+      - {code: "086520", name: "에코프로",         export_ratio_hint: 0.85}
+
+  농수산식품:
+    description: "농산물(면류·음료·커피)·축산물·임산물·수산물"
+    tickers:
+      - {code: "097950", name: "CJ제일제당",       export_ratio_hint: 0.40}
+      - {code: "271560", name: "오리온",           export_ratio_hint: 0.65}
+      - {code: "280360", name: "롯데웰푸드",       export_ratio_hint: 0.30}
+      - {code: "005180", name: "빙그레",           export_ratio_hint: 0.25}
+
+  화장품:
+    description: "메이크업·기초화장품·세안용품·샴푸"
+    tickers:
+      - {code: "090430", name: "아모레퍼시픽",     export_ratio_hint: 0.45}
+      - {code: "051900", name: "LG생활건강",       export_ratio_hint: 0.30}
+      - {code: "192820", name: "코스맥스",         export_ratio_hint: 0.55}
+      - {code: "161890", name: "한국콜마",         export_ratio_hint: 0.30}

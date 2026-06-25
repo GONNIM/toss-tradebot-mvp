@@ -112,3 +112,210 @@ class SettingsResponse(BaseModel):
     key: str
     value: str
     description: Optional[str]
+
+
+# ─────────────────────────────────────────────────────────────────
+# Sector Leaders (B-2e)
+# ─────────────────────────────────────────────────────────────────
+
+
+class SectorLeaderResponse(BaseModel):
+    """단일 (품목, 종목) 분석 결과."""
+    model_config = ConfigDict(from_attributes=True)
+
+    item: str
+    ticker: str
+    name: str
+    rank: int
+    score: float
+    market_cap_krw: Optional[float] = None
+    export_ratio_hint: Optional[float] = None
+    pearson_r0: Optional[float] = None
+    best_r: Optional[float] = None
+    best_lag_months: Optional[int] = None
+    sample_n: Optional[int] = None
+    confidence: str
+    computed_at: datetime
+
+
+class ExportSeriesPoint(BaseModel):
+    """월별 수출 데이터 1행."""
+    month: str               # 'YYYY-MM'
+    value_musd: float        # 백만 달러
+    yoy_pct: Optional[float] = None
+
+
+class PriceSeriesPoint(BaseModel):
+    """일봉 1행."""
+    date: str                # 'YYYY-MM-DD'
+    close: float
+    return_pct: Optional[float] = None
+
+
+class SectorItemSummary(BaseModel):
+    """품목 카드 요약 — 사이드 리스트용."""
+    item: str
+    latest_value_musd: Optional[float] = None
+    latest_yoy_pct: Optional[float] = None
+    top_confidence: str       # strong/medium/weak (품목 내 최강 페어 기준)
+    leader_count: int         # 매핑된 종목 수
+
+
+class SectorItemDetail(BaseModel):
+    """단일 품목 상세 — 메인 패널용.
+
+    수출 13M 시계열 + 주도주 Top N + 각 종목의 r/lag/배지.
+    """
+    item: str
+    description: Optional[str] = None
+    export_series: list[ExportSeriesPoint]
+    leaders: list[SectorLeaderResponse]
+
+
+class TickerDetail(BaseModel):
+    """단일 종목 상세 — 24M 일봉 + 해당 품목 수출 시계열 + r/lag."""
+    leader: SectorLeaderResponse
+    price_series: list[PriceSeriesPoint]
+    export_series: list[ExportSeriesPoint]
+
+
+# ─── Sector Leader Analysis Panel (B-2f) ──────────────────────
+
+
+class BacktestBucketResponse(BaseModel):
+    label: str
+    threshold_low: Optional[float] = None
+    threshold_high: Optional[float] = None
+    n_months: int
+    mean_return_pct: float
+    cumulative_return_pct: float
+
+
+class MonthlyJoinRowResponse(BaseModel):
+    month: str
+    export_value_musd: Optional[float] = None
+    export_yoy_pct: Optional[float] = None
+    price_close: Optional[float] = None
+    return_pct: Optional[float] = None
+    signal: str  # agree_up / agree_down / disagree / neutral / no_data
+
+
+class LatestSignalHintResponse(BaseModel):
+    month: str
+    export_yoy_pct: Optional[float] = None
+    bucket_label: str
+    expected_window: str
+    regime: str
+    direction: str          # up / down
+    based_on_lag: int
+
+
+class TickerAnalysisResponse(BaseModel):
+    """분석 패널 단일 응답 — leader + 차트 데이터 + 백테스트 + 시그널."""
+    leader: SectorLeaderResponse
+    correlation_sign: int    # +1 / -1 (r 부호)
+    export_series: list[ExportSeriesPoint]
+    monthly_close: list[PriceSeriesPoint]
+    backtest_lag0: list[BacktestBucketResponse]
+    backtest_best_lag: list[BacktestBucketResponse]
+    monthly_join: list[MonthlyJoinRowResponse]
+    latest_signal: Optional[LatestSignalHintResponse] = None
+
+
+# ─── Forecast (B-2g) ──────────────────────────────────────────
+
+
+class HorizonForecastResponse(BaseModel):
+    horizon_months: int
+    n_samples: int
+    alpha: float
+    beta: float
+    r_squared: float
+    p_value_approx: float
+    rmse: float
+    hit_rate: float
+    latest_input_yoy: float
+    point_estimate_pct: float
+    ci_low_pct: float
+    ci_high_pct: float
+    sample_warning: bool
+
+
+class FanChartPointResponse(BaseModel):
+    month_offset: int
+    target_month: str
+    point_estimate_pct: float
+    sigma_pct: float
+    ci_low_pct: float
+    ci_high_pct: float
+
+
+class OOSMetricsResponse(BaseModel):
+    train_n: int
+    test_n: int
+    mae: float
+    rmse: float
+    hit_rate: float
+    directional_accuracy: Optional[float] = None
+
+
+class HistoricalBandResponse(BaseModel):
+    horizon_months: int
+    n_windows: int
+    p10_pct: float
+    p50_pct: float
+    p90_pct: float
+
+
+class VerdictResponse(BaseModel):
+    color: str
+    label: str
+    context: str
+    action_hint: str
+
+
+class RiskRewardResponse(BaseModel):
+    ratio: float
+    grade: str
+    grade_label: str
+    upside_pct: float
+    downside_pct: float
+
+
+class StopTakeProfitResponse(BaseModel):
+    stop_price: float
+    stop_pct: float
+    stop_basis: str
+    take_price: float
+    take_pct: float
+    take_basis: str
+
+
+class ForecastDisclaimer(BaseModel):
+    method: str = "lagged_linear_regression_ols"
+    ci_method: str = "z_1.96_normal_approx_small_sample"
+    sample_window: str
+    limitations: list[str]
+
+
+class HorizonAdvice(BaseModel):
+    """horizon 별 종합 판정·R/R·Stop/Take (B-2g v4)."""
+    horizon_months: int
+    verdict: VerdictResponse
+    risk_reward: Optional[RiskRewardResponse] = None
+    stop_take: Optional[StopTakeProfitResponse] = None
+
+
+class TickerForecastResponse(BaseModel):
+    leader: SectorLeaderResponse
+    correlation_sign: int
+    latest_data_month: str
+    latest_input_yoy: float
+    latest_close_krw: Optional[float] = None  # 가격 시나리오 환산 기준
+    latest_close_date: Optional[str] = None
+    horizons: list[HorizonForecastResponse]
+    fan_chart: list[FanChartPointResponse]
+    historical_bands: list[HistoricalBandResponse] = []
+    advice_by_horizon: list[HorizonAdvice] = []  # v4 종합 판정
+    oos_metrics: Optional[OOSMetricsResponse] = None
+    disclaimer: ForecastDisclaimer

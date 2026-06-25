@@ -10,8 +10,9 @@ export const metadata: Metadata = {
 
 const NAV = [
   { href: "/", label: "홈" },
-  { href: "/crazy", label: "Crazy Picks" },
-  { href: "/moonshot", label: "Moonshot" },
+  { href: "/sector-leaders", label: "🇰🇷 섹터별 주도주 Top 3" },
+  // { href: "/crazy", label: "Crazy Picks" },        // 한국 주식 전환으로 숨김 (라우트 유지)
+  // { href: "/moonshot", label: "Moonshot" },        // 한국 주식 전환으로 숨김 (라우트 유지)
   { href: "/dashboard", label: "대시보드" },
   { href: "/positions", label: "포지션" },
   { href: "/settings", label: "설정" },

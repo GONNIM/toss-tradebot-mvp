@@ -12,7 +12,7 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Optional
 
-from sqlalchemy import DateTime, Index, String, Text, func
+from sqlalchemy import Boolean, Date, DateTime, Float, Index, Integer, String, Text, func
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
 
@@ -189,6 +189,152 @@ class Log(Base):
     module: Mapped[str] = mapped_column(String(50))  # crazy/moonshot/auto/api/cli
     message: Mapped[str] = mapped_column(Text)
     context: Mapped[Optional[str]] = mapped_column(Text)  # JSON
+
+
+# ─────────────────────────────────────────────────────────────────
+# Sector Leaders 모듈 테이블 (Phase B-2 — 산업통상부 월간 수출입동향)
+#   설계: docs/plans/sector-leaders/01-mvp-design.md
+# ─────────────────────────────────────────────────────────────────
+
+
+class MotirItemExport(Base):
+    """20대 품목 × 월별 수출 실적 (산업통상부 보도자료 참고 표 ②).
+
+    잠정치 → 확정치 BACKFILL: 발표 후 약 9개월 후 정정 가능 ('27.2월 확정 발표 시).
+    매월 1일 PDF 다운로드 후 적재. is_provisional=True 로 저장, 확정 발표 시 갱신.
+    """
+
+    __tablename__ = "motir_item_exports"
+
+    item: Mapped[str] = mapped_column(String(20), primary_key=True)
+    # 보도자료 정식 명칭 (예: '반도체', '무선통신기기'). ITEM_ORDER_20 참조
+    month: Mapped[str] = mapped_column(String(7), primary_key=True)  # 'YYYY-MM'
+    value_musd: Mapped[float] = mapped_column(Float)               # 수출액 (백만 달러)
+    yoy_pct: Mapped[Optional[float]] = mapped_column(Float)        # 전년동월대비 %. PDF 결함 시 None
+    share_pct: Mapped[Optional[float]] = mapped_column(Float)      # 전체 수출 중 비중 %
+    is_provisional: Mapped[bool] = mapped_column(Boolean, default=True)
+    source_report_month: Mapped[str] = mapped_column(String(7))    # 출처 보도자료 발표월 'YYYY-MM'
+    source_pdf: Mapped[str] = mapped_column(String(255))           # 출처 PDF 파일명
+    fetched_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
+    confirmed_at: Mapped[Optional[datetime]] = mapped_column(DateTime)  # 확정 발표로 갱신된 시각
+
+    __table_args__ = (
+        Index("idx_motir_item_month", "month"),
+        Index("idx_motir_item_source", "source_report_month"),
+    )
+
+
+class MotirRegionExport(Base):
+    """10대 지역(9대+베트남) × 월별 수출 실적."""
+
+    __tablename__ = "motir_region_exports"
+
+    region: Mapped[str] = mapped_column(String(10), primary_key=True)
+    month: Mapped[str] = mapped_column(String(7), primary_key=True)
+    value_musd: Mapped[float] = mapped_column(Float)
+    yoy_pct: Mapped[Optional[float]] = mapped_column(Float)
+    is_provisional: Mapped[bool] = mapped_column(Boolean, default=True)
+    source_report_month: Mapped[str] = mapped_column(String(7))
+    source_pdf: Mapped[str] = mapped_column(String(255))
+    fetched_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
+    confirmed_at: Mapped[Optional[datetime]] = mapped_column(DateTime)
+
+    __table_args__ = (
+        Index("idx_motir_region_month", "month"),
+    )
+
+
+class KrxStockMeta(Base):
+    """KRX 종목 메타정보 — FDR StockListing 기반 (B-2c).
+
+    매일 1회 갱신 또는 분석 직전 fetch.
+    """
+
+    __tablename__ = "krx_stock_meta"
+
+    ticker: Mapped[str] = mapped_column(String(6), primary_key=True)
+    name: Mapped[str] = mapped_column(String(50))
+    market: Mapped[Optional[str]] = mapped_column(String(10))   # KOSPI/KOSDAQ
+    market_cap_krw: Mapped[Optional[float]] = mapped_column(Float)
+    shares_outstanding: Mapped[Optional[float]] = mapped_column(Float)
+    last_close: Mapped[Optional[float]] = mapped_column(Float)
+    fetched_at: Mapped[datetime] = mapped_column(
+        DateTime, server_default=func.now(), onupdate=func.now()
+    )
+
+
+class KrxDailyCandle(Base):
+    """KRX 일봉 캐시 — pykrx 수집 (B-2c).
+
+    Sector Leaders 24개월 분석용. 24M = 약 500 거래일 / 종목.
+    """
+
+    __tablename__ = "krx_daily_candles"
+
+    ticker: Mapped[str] = mapped_column(String(6), primary_key=True)
+    date: Mapped[str] = mapped_column(String(10), primary_key=True)  # YYYY-MM-DD
+    open: Mapped[float] = mapped_column(Float)
+    high: Mapped[float] = mapped_column(Float)
+    low: Mapped[float] = mapped_column(Float)
+    close: Mapped[float] = mapped_column(Float)
+    volume: Mapped[Optional[float]] = mapped_column(Float)
+    return_pct: Mapped[Optional[float]] = mapped_column(Float)
+    fetched_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
+
+    __table_args__ = (
+        Index("idx_krx_candle_ticker_date", "ticker", "date"),
+    )
+
+
+class MotirExportHistory(Base):
+    """잠정 → 확정 갱신 이력 (BACKFILL).
+
+    동일 (kind, key, month) 에 대해 잠정치 값이 변경될 때마다 1행 추가.
+    kind: 'item' / 'region'.  key: 품목명 / 지역명.
+    """
+
+    __tablename__ = "motir_export_history"
+
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    kind: Mapped[str] = mapped_column(String(10), index=True)  # 'item' / 'region'
+    key: Mapped[str] = mapped_column(String(20), index=True)   # 품목명 또는 지역명
+    month: Mapped[str] = mapped_column(String(7), index=True)
+    value_musd: Mapped[float] = mapped_column(Float)
+    yoy_pct: Mapped[Optional[float]] = mapped_column(Float)
+    share_pct: Mapped[Optional[float]] = mapped_column(Float)
+    is_provisional: Mapped[bool] = mapped_column(Boolean)
+    source_report_month: Mapped[str] = mapped_column(String(7))
+    recorded_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
+
+
+class SectorLeader(Base):
+    """Sector Leaders 분석 결과 — 품목 × 종목 페어별 (B-2d).
+
+    매월 1일 PDF 적재 후 재계산.
+    confidence 배지: strong (|r|≥0.7) / medium (0.4~0.7) / weak (<0.4).
+    """
+
+    __tablename__ = "sector_leaders"
+
+    item: Mapped[str] = mapped_column(String(20), primary_key=True)
+    ticker: Mapped[str] = mapped_column(String(6), primary_key=True)
+    name: Mapped[str] = mapped_column(String(50))
+    rank: Mapped[int] = mapped_column(Integer)
+    score: Mapped[float] = mapped_column(Float)
+    market_cap_krw: Mapped[Optional[float]] = mapped_column(Float)
+    export_ratio_hint: Mapped[Optional[float]] = mapped_column(Float)
+    pearson_r0: Mapped[Optional[float]] = mapped_column(Float)
+    best_r: Mapped[Optional[float]] = mapped_column(Float)
+    best_lag_months: Mapped[Optional[int]] = mapped_column(Integer)
+    sample_n: Mapped[Optional[int]] = mapped_column(Integer)
+    confidence: Mapped[str] = mapped_column(String(10))  # strong/medium/weak
+    computed_at: Mapped[datetime] = mapped_column(
+        DateTime, server_default=func.now(), onupdate=func.now()
+    )
+
+    __table_args__ = (
+        Index("idx_sector_leader_item_rank", "item", "rank"),
+    )
 
 
 class TickerUniverse(Base):

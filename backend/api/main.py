@@ -20,7 +20,15 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from backend.api.routes import crazy, dashboard, logs, moonshot, positions, settings
+from backend.api.routes import (
+    crazy,
+    dashboard,
+    logs,
+    moonshot,
+    positions,
+    sector_leaders,
+    settings,
+)
 from backend.services.db import init_db
 
 logger = logging.getLogger(__name__)
@@ -60,6 +68,11 @@ app.include_router(positions.router, prefix="/api/v1/positions", tags=["position
 app.include_router(dashboard.router, prefix="/api/v1/dashboard", tags=["dashboard"])
 app.include_router(settings.router, prefix="/api/v1/settings", tags=["settings"])
 app.include_router(logs.router, prefix="/api/v1/logs", tags=["logs"])
+app.include_router(
+    sector_leaders.router,
+    prefix="/api/v1/sector-leaders",
+    tags=["sector-leaders"],
+)
 
 
 @app.get("/health")

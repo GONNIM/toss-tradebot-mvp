@@ -114,6 +114,204 @@ export interface Setting {
   description: string | null;
 }
 
+// ─── Sector Leaders (B-2e) ────────────────────────────────────
+
+export type Confidence = "strong" | "medium" | "weak";
+
+export interface SectorLeader {
+  item: string;
+  ticker: string;
+  name: string;
+  rank: number;
+  score: number;
+  market_cap_krw: number | null;
+  export_ratio_hint: number | null;
+  pearson_r0: number | null;
+  best_r: number | null;
+  best_lag_months: number | null;
+  sample_n: number | null;
+  confidence: Confidence;
+  computed_at: string;
+}
+
+export interface ExportSeriesPoint {
+  month: string;
+  value_musd: number;
+  yoy_pct: number | null;
+}
+
+export interface PriceSeriesPoint {
+  date: string;
+  close: number;
+  return_pct: number | null;
+}
+
+export interface SectorItemSummary {
+  item: string;
+  latest_value_musd: number | null;
+  latest_yoy_pct: number | null;
+  top_confidence: Confidence;
+  leader_count: number;
+}
+
+export interface SectorItemDetail {
+  item: string;
+  description: string | null;
+  export_series: ExportSeriesPoint[];
+  leaders: SectorLeader[];
+}
+
+export interface TickerDetail {
+  leader: SectorLeader;
+  price_series: PriceSeriesPoint[];
+  export_series: ExportSeriesPoint[];
+}
+
+// ─── Sector Leader Analysis Panel (B-2f) ─────────────────────
+
+export interface BacktestBucket {
+  label: string;
+  threshold_low: number | null;
+  threshold_high: number | null;
+  n_months: number;
+  mean_return_pct: number;
+  cumulative_return_pct: number;
+}
+
+export type JoinSignal =
+  | "agree_up"
+  | "agree_down"
+  | "disagree"
+  | "neutral"
+  | "no_data";
+
+export interface MonthlyJoinRow {
+  month: string;
+  export_value_musd: number | null;
+  export_yoy_pct: number | null;
+  price_close: number | null;
+  return_pct: number | null;
+  signal: JoinSignal;
+}
+
+export interface LatestSignalHint {
+  month: string;
+  export_yoy_pct: number | null;
+  bucket_label: string;
+  expected_window: string;
+  regime: string;
+  direction: "up" | "down";
+  based_on_lag: number;
+}
+
+export interface TickerAnalysis {
+  leader: SectorLeader;
+  correlation_sign: number;       // +1 / -1
+  export_series: ExportSeriesPoint[];
+  monthly_close: PriceSeriesPoint[];
+  backtest_lag0: BacktestBucket[];
+  backtest_best_lag: BacktestBucket[];
+  monthly_join: MonthlyJoinRow[];
+  latest_signal: LatestSignalHint | null;
+}
+
+// ─── Forecast (B-2g) ──────────────────────────────────────────
+
+export interface HorizonForecast {
+  horizon_months: number;
+  n_samples: number;
+  alpha: number;
+  beta: number;
+  r_squared: number;
+  p_value_approx: number;
+  rmse: number;
+  hit_rate: number;
+  latest_input_yoy: number;
+  point_estimate_pct: number;
+  ci_low_pct: number;
+  ci_high_pct: number;
+  sample_warning: boolean;
+}
+
+export interface FanChartPoint {
+  month_offset: number;
+  target_month: string;
+  point_estimate_pct: number;
+  sigma_pct: number;
+  ci_low_pct: number;
+  ci_high_pct: number;
+}
+
+export interface OOSMetrics {
+  train_n: number;
+  test_n: number;
+  mae: number;
+  rmse: number;
+  hit_rate: number;
+  directional_accuracy: number | null;
+}
+
+export interface HistoricalBand {
+  horizon_months: number;
+  n_windows: number;
+  p10_pct: number;
+  p50_pct: number;
+  p90_pct: number;
+}
+
+export interface Verdict {
+  color: "green" | "amber" | "red";
+  label: string;
+  context: string;
+  action_hint: string;
+}
+
+export interface RiskReward {
+  ratio: number;
+  grade: "excellent" | "good" | "weak" | "too_high";
+  grade_label: string;
+  upside_pct: number;
+  downside_pct: number;
+}
+
+export interface StopTakeProfit {
+  stop_price: number;
+  stop_pct: number;
+  stop_basis: string;
+  take_price: number;
+  take_pct: number;
+  take_basis: string;
+}
+
+export interface HorizonAdvice {
+  horizon_months: number;
+  verdict: Verdict;
+  risk_reward: RiskReward | null;
+  stop_take: StopTakeProfit | null;
+}
+
+export interface ForecastDisclaimer {
+  method: string;
+  ci_method: string;
+  sample_window: string;
+  limitations: string[];
+}
+
+export interface TickerForecast {
+  leader: SectorLeader;
+  correlation_sign: number;
+  latest_data_month: string;
+  latest_input_yoy: number;
+  latest_close_krw: number | null;
+  latest_close_date: string | null;
+  horizons: HorizonForecast[];
+  fan_chart: FanChartPoint[];
+  historical_bands: HistoricalBand[];
+  advice_by_horizon: HorizonAdvice[];
+  oos_metrics: OOSMetrics | null;
+  disclaimer: ForecastDisclaimer;
+}
+
 // ─────────────────────────────────────────────
 // 메소드
 // ─────────────────────────────────────────────
@@ -145,5 +343,29 @@ export const api = {
   logs: {
     list: (limit = 50, hours = 24) =>
       get<LogEntry[]>(`/logs?limit=${limit}&hours=${hours}`),
+  },
+  sectorLeaders: {
+    items: () => get<SectorItemSummary[]>(`/sector-leaders/`),
+    itemDetail: (item: string, topN = 3) =>
+      get<SectorItemDetail>(
+        `/sector-leaders/items/${encodeURIComponent(item)}?top_n=${topN}`,
+      ),
+    tickerDetail: (ticker: string, item?: string) => {
+      const q = item ? `?item=${encodeURIComponent(item)}` : "";
+      return get<TickerDetail>(`/sector-leaders/tickers/${ticker}${q}`);
+    },
+    tickerAnalysis: (ticker: string, item?: string) => {
+      const q = item ? `?item=${encodeURIComponent(item)}` : "";
+      return get<TickerAnalysis>(
+        `/sector-leaders/tickers/${ticker}/analysis${q}`,
+      );
+    },
+    tickerForecast: (ticker: string, item?: string, horizons = "1,3,6") => {
+      const params = new URLSearchParams({ horizons });
+      if (item) params.set("item", item);
+      return get<TickerForecast>(
+        `/sector-leaders/tickers/${ticker}/forecast?${params.toString()}`,
+      );
+    },
   },
 };

@@ -21,8 +21,12 @@ apscheduler>=3.11.0
 
 # Data
 pandas>=2.2.0
-numpy>=2.1.0
+numpy>=1.26.0,<2.0.0  # pyproject.toml 일치 (optimus8 QEMU cpu64-rhel6 sse4_2 미지원)
 pandas-datareader>=0.10.0
+pdfplumber>=0.11.0  # Sector Leaders — motir 월간 수출입동향 PDF 파싱 (B-2a)
+pykrx>=1.0.55  # Sector Leaders — KRX 일봉 (B-2c)
+finance-datareader>=0.9.94  # Sector Leaders — KRX 시총·종목 리스트 (B-2c)
+pyyaml>=6.0    # Sector Leaders — 품목↔KRX 매핑 YAML (B-2c)
 
 # External APIs
 anthropic>=0.40.0

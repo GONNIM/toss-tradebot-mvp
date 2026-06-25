@@ -5,15 +5,9 @@ import Link from "next/link";
 
 const CARDS = [
   {
-    href: "/moonshot",
-    title: "🚀 Moonshot Picks",
-    desc: "100만원 카지노 자금. 모든 미국 주식 (페니스톡 포함). 매일 16:50 KST.",
-    accent: "border-red-500/30 hover:border-red-500/60",
-  },
-  {
-    href: "/crazy",
-    title: "🎯 Crazy Picks",
-    desc: "시총 ≥ $1B 안전 universe. 정보 전용. 매일 06:30 KST.",
+    href: "/sector-leaders",
+    title: "🇰🇷 섹터별 주도주 Top 3",
+    desc: "산업통상부 월간 수출입동향 ↔ KRX 주도주. 17품목 × 24개월 Pearson + lead/lag 시그널.",
     accent: "border-cyan-500/30 hover:border-cyan-500/60",
   },
   {
@@ -36,7 +30,7 @@ export default function Home() {
       <section className="text-center">
         <h1 className="text-4xl font-bold">🌙 Toss Tradebot MVP</h1>
         <p className="mt-2 text-muted-foreground">
-          Toss API 기반 자동매매 + Discovery (Crazy + Moonshot)
+          산업통상부 수출입동향 ↔ KRX 주도주 분석 + Toss API 자동매매 (한국 주식)
         </p>
         <p className="mt-1 text-xs text-muted-foreground">
           목표: 1,000만원 → 1억원 · 절대 실현 손실 0
