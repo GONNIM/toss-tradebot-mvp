@@ -29,6 +29,7 @@ How to apply: fetch_quotes(tickers) → 60초 메모리 캐시 → 호출자는 
 """
 from __future__ import annotations
 
+import json as _json
 import logging
 import time
 from dataclasses import dataclass
@@ -90,7 +91,9 @@ async def _fetch_chunk(
             headers={"User-Agent": _UA},
         )
         resp.raise_for_status()
-        data = resp.json()
+        # 네이버 polling 응답은 CP949 (한글 종목명) — httpx 의 utf-8 자동 디코딩 실패.
+        # nm 필드는 안 쓰지만 json.loads 가 전체 문자열을 디코딩하므로 한 글자라도 깨지면 실패.
+        data = _json.loads(resp.content.decode("cp949", errors="replace"))
     except Exception as e:
         logger.warning(
             f"[naver_quote] fetch failed for {len(tickers)} tickers: {e}"
