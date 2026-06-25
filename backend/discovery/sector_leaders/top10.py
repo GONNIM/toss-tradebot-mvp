@@ -321,9 +321,16 @@ async def compute_top10(
             )
         )
 
-    # 정렬 + rank 할당
+    # 정렬 + 종목 무결성 (한 종목이 여러 품목에 매핑되어도 가장 강한 페어만 유지)
     candidates.sort(key=lambda c: c.attractiveness, reverse=True)
-    top = candidates[:top_n]
+    seen: set[str] = set()
+    unique: list[Top10Item] = []
+    for c in candidates:
+        if c.ticker in seen:
+            continue
+        seen.add(c.ticker)
+        unique.append(c)
+    top = unique[:top_n]
     return [
         Top10Item(**{**c.__dict__, "rank": i + 1}) for i, c in enumerate(top)
     ]
