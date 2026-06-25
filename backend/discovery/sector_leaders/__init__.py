@@ -16,6 +16,11 @@ from backend.discovery.sector_leaders.backtest import (
     daily_to_monthly,
     latest_signal_hint,
 )
+from backend.discovery.sector_leaders.confluence import (
+    ConfluenceResult,
+    SignalContribution,
+    compute_confluence,
+)
 from backend.discovery.sector_leaders.forecast import (
     FanChartPoint,
     HistoricalBand,
@@ -56,6 +61,9 @@ __all__ = [
     "compute_yoy_buckets",
     "daily_to_monthly",
     "latest_signal_hint",
+    "ConfluenceResult",
+    "SignalContribution",
+    "compute_confluence",
     "FanChartPoint",
     "HistoricalBand",
     "HorizonForecast",

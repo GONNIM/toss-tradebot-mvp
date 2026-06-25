@@ -40,6 +40,7 @@ import {
   lagDescription,
 } from "@/lib/utils";
 import { ForecastCard } from "@/components/sector-leaders/ForecastCard";
+import { ConfluenceCard } from "@/components/sector-leaders/ConfluenceCard";
 
 export function AnalysisPanel({
   ticker,
@@ -55,6 +56,10 @@ export function AnalysisPanel({
   const forecastQ = useQuery({
     queryKey: ["sector-leaders", "forecast", ticker, item],
     queryFn: () => api.sectorLeaders.tickerForecast(ticker, item),
+  });
+  const confluenceQ = useQuery({
+    queryKey: ["sector-leaders", "confluence", ticker, item],
+    queryFn: () => api.sectorLeaders.tickerConfluence(ticker, item),
   });
   if (analysisQ.isLoading) {
     return (
@@ -76,6 +81,9 @@ export function AnalysisPanel({
       forecast={forecastQ.data ?? null}
       forecastLoading={forecastQ.isLoading}
       forecastError={!!forecastQ.error}
+      confluence={confluenceQ.data ?? null}
+      confluenceLoading={confluenceQ.isLoading}
+      confluenceError={!!confluenceQ.error}
     />
   );
 }
@@ -85,11 +93,17 @@ function PanelBody({
   forecast,
   forecastLoading,
   forecastError,
+  confluence,
+  confluenceLoading,
+  confluenceError,
 }: {
   data: TickerAnalysis;
   forecast: import("@/lib/api").TickerForecast | null;
   forecastLoading: boolean;
   forecastError: boolean;
+  confluence: import("@/lib/api").TickerConfluence | null;
+  confluenceLoading: boolean;
+  confluenceError: boolean;
 }) {
   return (
     <div className="space-y-4">
@@ -97,6 +111,19 @@ function PanelBody({
       <div className="rounded-xl border border-cyan-500/30 bg-card p-4">
         <PanelHeader data={data} />
       </div>
+
+      {/* (0) Confluence — 다중 시그널 (가장 상단, 종합 판단 보조) */}
+      {confluenceLoading && (
+        <div className="rounded-xl border border-border bg-card p-4 text-muted-foreground text-sm">
+          Confluence 시그널 로딩 중...
+        </div>
+      )}
+      {confluenceError && (
+        <div className="rounded-xl border border-red-500/30 bg-red-500/10 p-4 text-sm text-red-400">
+          Confluence 호출 실패
+        </div>
+      )}
+      {confluence && <ConfluenceCard data={confluence.confluence} />}
 
       {/* (1) 미래 주가 예측 — 사용자 결정 2026-06-25 최상단 이동 */}
       {forecastLoading && (

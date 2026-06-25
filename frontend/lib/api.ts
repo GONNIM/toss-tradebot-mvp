@@ -290,6 +290,41 @@ export interface HorizonAdvice {
   stop_take: StopTakeProfit | null;
 }
 
+// ─── Confluence (B-2i-a) ──────────────────────────────────────
+
+export interface SignalContribution {
+  name: string;
+  label: string;
+  raw_value: number | null;
+  raw_label: string;
+  normalized: number;
+  weight: number;
+  contribution: number;
+  detail: string;
+  direction: "bullish" | "bearish" | "neutral";
+}
+
+export interface Confluence {
+  score: number;          // -1 ~ +1
+  score_pct: number;      // 0 ~ 100
+  direction: "bullish" | "bearish" | "neutral";
+  agreement_count: number;
+  disagreement_count: number;
+  total_signals: number;
+  contributions: SignalContribution[];
+  grade: string;
+  grade_label: string;
+  grade_color: "green" | "amber" | "red";
+  interpretation: string;
+}
+
+export interface TickerConfluence {
+  leader: SectorLeader;
+  correlation_sign: number;
+  latest_data_month: string;
+  confluence: Confluence;
+}
+
 export interface ForecastDisclaimer {
   method: string;
   ci_method: string;
@@ -365,6 +400,12 @@ export const api = {
       if (item) params.set("item", item);
       return get<TickerForecast>(
         `/sector-leaders/tickers/${ticker}/forecast?${params.toString()}`,
+      );
+    },
+    tickerConfluence: (ticker: string, item?: string) => {
+      const q = item ? `?item=${encodeURIComponent(item)}` : "";
+      return get<TickerConfluence>(
+        `/sector-leaders/tickers/${ticker}/confluence${q}`,
       );
     },
   },

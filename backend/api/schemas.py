@@ -298,6 +298,39 @@ class ForecastDisclaimer(BaseModel):
     limitations: list[str]
 
 
+class SignalContributionResponse(BaseModel):
+    name: str
+    label: str
+    raw_value: Optional[float] = None
+    raw_label: str
+    normalized: float
+    weight: float
+    contribution: float
+    detail: str
+    direction: str
+
+
+class ConfluenceResponse(BaseModel):
+    score: float
+    score_pct: float
+    direction: str
+    agreement_count: int
+    disagreement_count: int
+    total_signals: int
+    contributions: list[SignalContributionResponse]
+    grade: str
+    grade_label: str
+    grade_color: str
+    interpretation: str
+
+
+class TickerConfluenceResponse(BaseModel):
+    leader: SectorLeaderResponse
+    correlation_sign: int
+    latest_data_month: str
+    confluence: ConfluenceResponse
+
+
 class HorizonAdvice(BaseModel):
     """horizon 별 종합 판정·R/R·Stop/Take (B-2g v4)."""
     horizon_months: int

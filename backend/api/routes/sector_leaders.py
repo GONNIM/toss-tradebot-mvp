@@ -16,6 +16,7 @@ from sqlalchemy import asc, desc, select
 
 from backend.api.schemas import (
     BacktestBucketResponse,
+    ConfluenceResponse,
     ExportSeriesPoint,
     FanChartPointResponse,
     ForecastDisclaimer,
@@ -30,14 +31,17 @@ from backend.api.schemas import (
     SectorItemDetail,
     SectorItemSummary,
     SectorLeaderResponse,
+    SignalContributionResponse,
     StopTakeProfitResponse,
     TickerAnalysisResponse,
+    TickerConfluenceResponse,
     TickerDetail,
     TickerForecastResponse,
     VerdictResponse,
 )
 from backend.discovery.data_sources.mapping import load_mapping
 from backend.discovery.sector_leaders import (
+    compute_confluence,
     compute_monthly_join,
     compute_rr_ratio,
     compute_verdict,
@@ -53,7 +57,9 @@ from backend.discovery.sector_leaders import (
 from backend.services.db import get_session
 from backend.services.models import (
     KrxDailyCandle,
+    MotirExportHistory,
     MotirItemExport,
+    MotirRegionExport,
     SectorLeader,
 )
 
@@ -429,4 +435,126 @@ async def get_ticker_forecast(
         advice_by_horizon=advice_list,
         oos_metrics=(OOSMetricsResponse(**oos.__dict__) if oos else None),
         disclaimer=disclaimer,
+    )
+
+
+# ─────────────────────────────────────────────────────────────────
+# GET /tickers/{ticker}/confluence  — 다중 시그널 통합 (B-2i-a)
+# ─────────────────────────────────────────────────────────────────
+
+
+@router.get("/tickers/{ticker}/confluence", response_model=TickerConfluenceResponse)
+async def get_ticker_confluence(
+    ticker: str,
+    item: Optional[str] = Query(None),
+):
+    """4종 시그널(수출/지역/모멘텀/갱신) 통합 — Confluence Score."""
+    async with get_session() as session:
+        stmt = (
+            select(SectorLeader)
+            .where(SectorLeader.ticker == ticker)
+            .order_by(SectorLeader.rank)
+        )
+        if item:
+            stmt = stmt.where(SectorLeader.item == item)
+        leader = (await session.execute(stmt)).scalars().first()
+        if leader is None:
+            raise HTTPException(404, f"종목 매핑 없음: {ticker}")
+
+        # 최신 수출 yoy
+        latest_item = (
+            await session.execute(
+                select(MotirItemExport)
+                .where(
+                    MotirItemExport.item == leader.item,
+                    MotirItemExport.yoy_pct.is_not(None),
+                )
+                .order_by(desc(MotirItemExport.month))
+                .limit(1)
+            )
+        ).scalar_one_or_none()
+        if latest_item is None:
+            raise HTTPException(404, f"수출 시계열 없음: {leader.item}")
+
+        latest_month = latest_item.month
+        latest_yoy = latest_item.yoy_pct or 0.0
+
+        # 지역별 최신 yoy
+        region_rows = (
+            await session.execute(
+                select(MotirRegionExport)
+                .where(MotirRegionExport.month == latest_month)
+            )
+        ).scalars().all()
+        region_yoys: dict[str, float] = {
+            r.region: r.yoy_pct for r in region_rows if r.yoy_pct is not None
+        }
+
+        # 종목 일봉 → 월말 종가
+        prices = (
+            await session.execute(
+                select(KrxDailyCandle)
+                .where(KrxDailyCandle.ticker == ticker)
+                .order_by(asc(KrxDailyCandle.date))
+            )
+        ).scalars().all()
+        daily_pairs = [(p.date, p.close) for p in prices]
+        close_map, _ = daily_to_monthly(daily_pairs)
+
+        # 잠정→확정 변경 이력
+        history_rows = (
+            await session.execute(
+                select(MotirExportHistory)
+                .where(
+                    MotirExportHistory.kind == "item",
+                    MotirExportHistory.key == leader.item,
+                )
+            )
+        ).scalars().all()
+        # 각 이력 행: history 의 yoy(이전) vs 현재 최종 (MotirItemExport)
+        # 단순화: 각 이력 → (이전 yoy, 현재 final yoy) 페어
+        # 현재 final 가져오기
+        final_by_month = {
+            it.month: it.yoy_pct
+            for it in (await session.execute(select(MotirItemExport).where(MotirItemExport.item == leader.item))).scalars().all()
+            if it.yoy_pct is not None
+        }
+        revisions: list[tuple[float, float]] = []
+        for h in history_rows:
+            if h.yoy_pct is None:
+                continue
+            curr = final_by_month.get(h.month)
+            if curr is None:
+                continue
+            revisions.append((h.yoy_pct, curr))
+
+    correlation_sign = 1 if (leader.best_r is not None and leader.best_r >= 0) else -1
+
+    result = compute_confluence(
+        yoy_pct=latest_yoy,
+        region_latest_yoys=region_yoys,
+        monthly_close_by_month=close_map,
+        history_revisions=revisions,
+        correlation_sign=correlation_sign,
+    )
+
+    return TickerConfluenceResponse(
+        leader=SectorLeaderResponse.model_validate(leader),
+        correlation_sign=correlation_sign,
+        latest_data_month=latest_month,
+        confluence=ConfluenceResponse(
+            score=result.score,
+            score_pct=result.score_pct,
+            direction=result.direction,
+            agreement_count=result.agreement_count,
+            disagreement_count=result.disagreement_count,
+            total_signals=result.total_signals,
+            contributions=[
+                SignalContributionResponse(**c.__dict__) for c in result.contributions
+            ],
+            grade=result.grade,
+            grade_label=result.grade_label,
+            grade_color=result.grade_color,
+            interpretation=result.interpretation,
+        ),
     )
