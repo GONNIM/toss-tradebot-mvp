@@ -1,17 +1,24 @@
-"""Meme Watch universe 빌드 (Phase 1a).
+"""Meme Watch universe 빌드 (Phase 1a / 1a-bonus).
 
-US (NASDAQ + NYSE) 시총 ≤ 5B USD + KOSDAQ 시총 ≤ 1조원 종목 마스터.
+US: Russell 2000 (iShares IWM ETF holdings) — small/mid cap 표준 지수.
+KRX: KOSDAQ 시총 ≤ 1조원.
+
 매주 일요일 03:00 KST 자동 갱신 (APScheduler).
 
-데이터 소스: FinanceDataReader (이미 sector_leaders 에서 사용 중).
+데이터 소스:
+- FDR (이미 sector_leaders 에서 사용 중) — KOSDAQ 리스트
+- iShares IWM holdings CSV (공식) — Russell 2000 small/mid cap
 """
 from __future__ import annotations
 
 import asyncio
+import io
 import logging
+import re
 from typing import Optional
 
 import FinanceDataReader as fdr
+import httpx
 import pandas as pd
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -21,8 +28,14 @@ from backend.services.models import MemeUniverse
 
 logger = logging.getLogger(__name__)
 
-US_MARKET_CAP_MAX = 5_000_000_000      # 5B USD
 KRX_MARKET_CAP_MAX = 1_000_000_000_000  # 1조원
+
+# iShares IWM (Russell 2000 ETF) 공식 holdings CSV. 매일 갱신.
+IWM_HOLDINGS_URL = (
+    "https://www.ishares.com/us/products/239710/ishares-russell-2000-etf/"
+    "1467271812596.ajax?fileType=csv&fileName=IWM_holdings&dataType=fund"
+)
+_TICKER_RE = re.compile(r"^[A-Z][A-Z0-9.\-]{0,5}$")
 
 
 def _pick_col(df: pd.DataFrame, *candidates: str) -> Optional[str]:
@@ -33,26 +46,49 @@ def _pick_col(df: pd.DataFrame, *candidates: str) -> Optional[str]:
 
 
 async def _fetch_listing(market: str) -> pd.DataFrame:
-    """FDR StockListing — 시장명 (NASDAQ/NYSE/KOSDAQ) 별 호출."""
+    """FDR StockListing — 시장명 (KOSDAQ 등) 별 호출."""
     return await asyncio.to_thread(fdr.StockListing, market)
 
 
 async def fetch_us_candidates() -> pd.DataFrame:
-    """NASDAQ + NYSE 시총 ≤ US_MARKET_CAP_MAX 종목."""
-    logger.info("[meme_universe] fetching US (NASDAQ + NYSE)")
-    nasdaq = await _fetch_listing("NASDAQ")
-    nyse = await _fetch_listing("NYSE")
-    df = pd.concat([nasdaq, nyse], ignore_index=True)
+    """Russell 2000 ETF (IWM) holdings — small/mid cap 표준."""
+    logger.info("[meme_universe] fetching Russell 2000 (iShares IWM holdings)")
+    async with httpx.AsyncClient(follow_redirects=True) as client:
+        resp = await client.get(IWM_HOLDINGS_URL, timeout=30.0)
+        resp.raise_for_status()
+        text = resp.content.decode("utf-8-sig", errors="replace")
 
-    cap_col = _pick_col(df, "MarketCap", "Marcap", "market_cap")
-    if cap_col is None:
-        logger.warning("[meme_universe] US: MarketCap 컬럼 없음 — 필터 skip")
-        df["_cap"] = 0.0
+    # iShares CSV 는 상단에 메타 행, 본 데이터의 헤더는 "Ticker," 로 시작
+    lines = text.split("\n")
+    header_idx: Optional[int] = None
+    for i, line in enumerate(lines):
+        if line.startswith("Ticker,") or line.startswith('"Ticker"'):
+            header_idx = i
+            break
+    if header_idx is None:
+        raise ValueError("iShares IWM CSV: 'Ticker' header line not found")
+
+    df = pd.read_csv(
+        io.StringIO("\n".join(lines[header_idx:])), on_bad_lines="skip"
+    )
+    df.columns = [c.strip() for c in df.columns]
+    if "Ticker" not in df.columns:
+        raise ValueError(f"IWM CSV: Ticker column missing — {df.columns.tolist()}")
+
+    # 시총 (Market Value) — 쉼표 제거 후 numeric
+    cap_col = _pick_col(df, "Market Value", "Marcap", "MarketCap")
+    if cap_col:
+        df["_cap"] = pd.to_numeric(
+            df[cap_col].astype(str).str.replace(",", "").str.replace('"', ""),
+            errors="coerce",
+        ).fillna(0.0)
     else:
-        df["_cap"] = pd.to_numeric(df[cap_col], errors="coerce").fillna(0.0)
-        df = df[(df["_cap"] > 0) & (df["_cap"] <= US_MARKET_CAP_MAX)]
+        df["_cap"] = 0.0
 
-    logger.info(f"[meme_universe] US after filter: {len(df)} rows")
+    # ticker 유효성 (대문자 영문 1~6자, '.', '-' 허용)
+    df = df[df["Ticker"].astype(str).str.match(_TICKER_RE, na=False)]
+
+    logger.info(f"[meme_universe] Russell 2000 IWM holdings: {len(df)} rows")
     return df
 
 
@@ -79,7 +115,7 @@ async def upsert_universe(
     """DataFrame → MemeUniverse 테이블 UPSERT + 미출현 종목 deactivate."""
     stats = {"inserted": 0, "updated": 0, "deactivated": 0, "total_input": len(df)}
 
-    ticker_col = _pick_col(df, "Symbol", "Code", "ticker")
+    ticker_col = _pick_col(df, "Symbol", "Code", "Ticker", "ticker")
     name_col = _pick_col(df, "Name", "name")
     sector_col = _pick_col(df, "Sector", "Industry", "sector")
 
