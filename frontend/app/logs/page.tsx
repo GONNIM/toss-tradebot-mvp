@@ -7,12 +7,12 @@ import { api, type LogEntry } from "@/lib/api";
 import { cn } from "@/lib/utils";
 
 const LEVEL_COLORS: Record<string, string> = {
-  CRITICAL: "text-red-500",
-  ERROR: "text-red-400",
-  WARNING: "text-yellow-400",
-  WARN: "text-yellow-400",
-  INFO: "text-cyan-400",
-  DEBUG: "text-gray-400",
+  CRITICAL: "text-red-700 dark:text-red-400",
+  ERROR: "text-red-600 dark:text-red-400",
+  WARNING: "text-amber-600 dark:text-yellow-400",
+  WARN: "text-amber-600 dark:text-yellow-400",
+  INFO: "text-cyan-700 dark:text-cyan-400",
+  DEBUG: "text-zinc-500 dark:text-zinc-400",
 };
 
 const JOB_LABELS: Record<string, string> = {
@@ -62,6 +62,8 @@ export default function LogsPage() {
         </TabButton>
       </div>
 
+      <p className="text-xs text-muted-foreground">시각은 KST (Asia/Seoul) 기준입니다.</p>
+
       {tab === "audit" ? <AuditTable hours={hours} /> : <SchedulerTable hours={hours} />}
     </div>
   );
@@ -82,7 +84,7 @@ function TabButton({
       className={cn(
         "px-4 py-2 text-sm font-medium transition-colors border-b-2 -mb-px",
         active
-          ? "border-cyan-500 text-cyan-300"
+          ? "border-cyan-500 text-cyan-700 dark:text-cyan-300"
           : "border-transparent text-muted-foreground hover:text-foreground",
       )}
     >
@@ -106,11 +108,11 @@ function AuditTable({ hours }: { hours: number }) {
     );
 
   return (
-    <div className="rounded-xl border border-border overflow-hidden">
+    <div className="rounded-xl border border-border overflow-hidden bg-card">
       <table className="w-full text-sm">
-        <thead className="border-b border-border bg-muted/40 text-left">
+        <thead className="border-b border-border bg-muted/60 text-left text-foreground font-semibold">
           <tr>
-            <th className="px-4 py-3">시각</th>
+            <th className="px-4 py-3">시각 (KST)</th>
             <th className="px-4 py-3">레벨</th>
             <th className="px-4 py-3">모듈</th>
             <th className="px-4 py-3">메시지</th>
@@ -118,20 +120,20 @@ function AuditTable({ hours }: { hours: number }) {
         </thead>
         <tbody>
           {data.map((log) => (
-            <tr key={log.id} className="border-b border-border last:border-0">
-              <td className="px-4 py-3 font-mono text-xs text-zinc-400">
+            <tr key={log.id} className="border-b border-border last:border-0 hover:bg-muted/30">
+              <td className="px-4 py-3 font-mono text-xs text-muted-foreground whitespace-nowrap">
                 {formatTs(log.timestamp)}
               </td>
               <td
                 className={cn(
                   "px-4 py-3 font-bold",
-                  LEVEL_COLORS[log.level] || "",
+                  LEVEL_COLORS[log.level] || "text-foreground",
                 )}
               >
                 {log.level}
               </td>
-              <td className="px-4 py-3 text-zinc-300">{log.module}</td>
-              <td className="px-4 py-3 max-w-[600px] truncate text-zinc-100">
+              <td className="px-4 py-3 text-muted-foreground">{log.module}</td>
+              <td className="px-4 py-3 max-w-[600px] truncate text-foreground">
                 {log.message}
               </td>
             </tr>
@@ -162,14 +164,14 @@ function SchedulerTable({ hours }: { hours: number }) {
 
   return (
     <div className="space-y-3">
-      <div className="text-xs text-zinc-400">
+      <div className="text-xs text-muted-foreground">
         총 {data.length}건 · 매월 1일/11일/21일 KST 자동 실행
       </div>
-      <div className="rounded-xl border border-border overflow-hidden">
+      <div className="rounded-xl border border-border overflow-hidden bg-card">
         <table className="w-full text-sm">
-          <thead className="border-b border-cyan-500/40 bg-cyan-500/10 text-cyan-200 text-left">
+          <thead className="border-b border-cyan-500/40 bg-cyan-500/15 text-cyan-700 dark:text-cyan-200 text-left font-semibold">
             <tr>
-              <th className="px-3 py-3">시각</th>
+              <th className="px-3 py-3">시각 (KST)</th>
               <th className="px-3 py-3">잡</th>
               <th className="px-3 py-3 text-center">결과</th>
               <th className="px-3 py-3 text-right">소요</th>
@@ -178,7 +180,7 @@ function SchedulerTable({ hours }: { hours: number }) {
               <th className="px-3 py-3">recompute</th>
             </tr>
           </thead>
-          <tbody className="text-zinc-100">
+          <tbody className="text-foreground">
             {data.map((log) => (
               <SchedulerRow key={log.id} log={log} />
             ))}
@@ -197,33 +199,40 @@ function SchedulerRow({ log }: { log: LogEntry }) {
   const stats = ctx.stats || {};
 
   return (
-    <tr className="border-b border-border/40 last:border-0 hover:bg-muted/20">
-      <td className="px-3 py-2.5 font-mono text-xs text-zinc-400 whitespace-nowrap">
-        {formatTs(log.timestamp)}
-      </td>
-      <td className="px-3 py-2.5">
-        <div className="font-semibold text-zinc-50">{jobLabel}</div>
-        <div className="text-xs text-zinc-500 font-mono">{jobId}</div>
-      </td>
-      <td className="px-3 py-2.5 text-center">
-        {isError ? (
-          <span className="text-rose-400 font-semibold">✗ 실패</span>
-        ) : (
-          <span className="text-emerald-400 font-semibold">✓ 완료</span>
-        )}
-      </td>
-      <td className="px-3 py-2.5 text-right font-mono text-xs text-zinc-300">
-        {ctx.duration_ms != null ? formatDuration(ctx.duration_ms) : "—"}
-      </td>
-      <td className="px-3 py-2.5 text-xs">{renderStep(stats.motir)}</td>
-      <td className="px-3 py-2.5 text-xs">{renderStep(stats.customs)}</td>
-      <td className="px-3 py-2.5 text-xs">{renderStep(stats.recompute)}</td>
-      {isError && (
-        <td colSpan={7} className="px-3 py-2 text-xs text-rose-300 bg-rose-500/5">
-          {ctx.error_type}: {ctx.error}
+    <>
+      <tr className="border-b border-border/40 hover:bg-muted/30">
+        <td className="px-3 py-2.5 font-mono text-xs text-muted-foreground whitespace-nowrap">
+          {formatTs(log.timestamp)}
         </td>
+        <td className="px-3 py-2.5">
+          <div className="font-semibold text-foreground">{jobLabel}</div>
+          <div className="text-xs text-muted-foreground font-mono">{jobId}</div>
+        </td>
+        <td className="px-3 py-2.5 text-center">
+          {isError ? (
+            <span className="text-rose-600 dark:text-rose-400 font-semibold">✗ 실패</span>
+          ) : (
+            <span className="text-emerald-600 dark:text-emerald-400 font-semibold">✓ 완료</span>
+          )}
+        </td>
+        <td className="px-3 py-2.5 text-right font-mono text-xs text-foreground">
+          {ctx.duration_ms != null ? formatDuration(ctx.duration_ms) : "—"}
+        </td>
+        <td className="px-3 py-2.5 text-xs">{renderStep(stats.motir)}</td>
+        <td className="px-3 py-2.5 text-xs">{renderStep(stats.customs)}</td>
+        <td className="px-3 py-2.5 text-xs">{renderStep(stats.recompute)}</td>
+      </tr>
+      {isError && (
+        <tr className="border-b border-border/40 last:border-0">
+          <td
+            colSpan={7}
+            className="px-3 py-2 text-xs text-rose-700 dark:text-rose-300 bg-rose-500/10"
+          >
+            {ctx.error_type}: {ctx.error}
+          </td>
+        </tr>
       )}
-    </tr>
+    </>
   );
 }
 
@@ -250,18 +259,18 @@ function extractJobId(message: string): string | null {
 }
 
 function renderStep(step: unknown): React.ReactNode {
-  if (step == null) return <span className="text-zinc-600">—</span>;
-  if (typeof step !== "object") return <span>{String(step)}</span>;
+  if (step == null) return <span className="text-muted-foreground">—</span>;
+  if (typeof step !== "object") return <span className="text-foreground">{String(step)}</span>;
   const obj = step as Record<string, unknown>;
   if ("error" in obj)
     return (
-      <span className="text-rose-400" title={String(obj.error)}>
+      <span className="text-rose-600 dark:text-rose-400" title={String(obj.error)}>
         ✗ error
       </span>
     );
   if ("skipped" in obj)
     return (
-      <span className="text-amber-400" title={String(obj.skipped)}>
+      <span className="text-amber-600 dark:text-amber-400" title={String(obj.skipped)}>
         skip
       </span>
     );
@@ -270,7 +279,7 @@ function renderStep(step: unknown): React.ReactNode {
   for (const k of keys) {
     if (k in obj)
       return (
-        <span className="text-emerald-300">
+        <span className="text-emerald-700 dark:text-emerald-300">
           ✓ {k}: {String(obj[k])}
         </span>
       );
@@ -279,21 +288,26 @@ function renderStep(step: unknown): React.ReactNode {
   const first = Object.keys(obj)[0];
   if (first)
     return (
-      <span className="text-emerald-300">
+      <span className="text-emerald-700 dark:text-emerald-300">
         ✓ {first}: {String(obj[first])}
       </span>
     );
-  return <span className="text-emerald-300">✓</span>;
+  return <span className="text-emerald-700 dark:text-emerald-300">✓</span>;
 }
 
 function formatTs(iso: string): string {
   if (!iso) return "—";
-  const d = new Date(iso);
+  // Backend SQLite 는 timezone 없는 UTC ISO 문자열을 반환 ("2026-06-25T06:33:41").
+  // timezone suffix 가 없으면 UTC 로 강제 해석, 있으면 그대로 사용.
+  const hasTz = /Z$|[+-]\d{2}:?\d{2}$/.test(iso);
+  const d = new Date(hasTz ? iso : iso + "Z");
   if (isNaN(d.getTime())) return iso;
+  // KST = UTC + 9h 변환 후 getUTC* 로 추출 → 사용자 로컬 타임존과 무관하게 KST 표시.
+  const kst = new Date(d.getTime() + 9 * 60 * 60 * 1000);
   const pad = (n: number) => String(n).padStart(2, "0");
   return (
-    `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ` +
-    `${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`
+    `${kst.getUTCFullYear()}-${pad(kst.getUTCMonth() + 1)}-${pad(kst.getUTCDate())} ` +
+    `${pad(kst.getUTCHours())}:${pad(kst.getUTCMinutes())}:${pad(kst.getUTCSeconds())}`
   );
 }
 
