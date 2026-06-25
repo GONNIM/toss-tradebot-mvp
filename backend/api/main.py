@@ -39,8 +39,21 @@ async def lifespan(app: FastAPI):
     # 시작 시
     logger.info("[FastAPI] starting — init DB")
     await init_db()
+
+    # APScheduler (B-2l) — 매월 1일/11일/21일 자동 잡
+    from apscheduler.schedulers.asyncio import AsyncIOScheduler
+
+    from backend.discovery.sector_leaders.scheduler import register_monthly_jobs
+
+    scheduler = AsyncIOScheduler(timezone="Asia/Seoul")
+    register_monthly_jobs(scheduler)
+    scheduler.start()
+    app.state.scheduler = scheduler
+    logger.info("[FastAPI] APScheduler started — 3 monthly jobs registered")
+
     yield
     # 종료 시
+    scheduler.shutdown(wait=False)
     logger.info("[FastAPI] shutdown")
 
 
