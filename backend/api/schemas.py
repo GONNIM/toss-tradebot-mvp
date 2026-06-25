@@ -386,11 +386,16 @@ class TickerForecastResponse(BaseModel):
     correlation_sign: int
     latest_data_month: str
     latest_input_yoy: float
-    latest_close_krw: Optional[float] = None  # 가격 시나리오 환산 기준
-    latest_close_date: Optional[str] = None
+    latest_close_krw: Optional[float] = None  # 가격 시나리오 환산 기준 — live 우선
+    latest_close_date: Optional[str] = None   # fallback 시 일봉 date, live 시 None
     horizons: list[HorizonForecastResponse]
     fan_chart: list[FanChartPointResponse]
     historical_bands: list[HistoricalBandResponse] = []
     advice_by_horizon: list[HorizonAdvice] = []  # v4 종합 판정
     oos_metrics: Optional[OOSMetricsResponse] = None
     disclaimer: ForecastDisclaimer
+
+    # 현재가 출처 (live = 네이버 polling, fallback = 일봉 마지막 종가)
+    price_source: str = "fallback"
+    price_at: Optional[str] = None
+    price_market_status: Optional[str] = None

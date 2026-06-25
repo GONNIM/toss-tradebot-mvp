@@ -386,6 +386,10 @@ export interface TickerForecast {
   advice_by_horizon: HorizonAdvice[];
   oos_metrics: OOSMetrics | null;
   disclaimer: ForecastDisclaimer;
+
+  price_source: "live" | "fallback";
+  price_at: string | null;
+  price_market_status: string | null;
 }
 
 // ─────────────────────────────────────────────

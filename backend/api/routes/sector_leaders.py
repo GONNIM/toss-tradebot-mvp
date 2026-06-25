@@ -421,8 +421,26 @@ async def get_ticker_forecast(
         ],
     )
 
-    latest_close = prices[-1].close if prices else None
-    latest_close_date = prices[-1].date if prices else None
+    # 현재가 — 실시간 우선, 실패 시 일봉 마지막 종가 fallback
+    from datetime import datetime, timezone
+    from backend.discovery.data_sources.naver_quote import fetch_one
+    fallback_close = prices[-1].close if prices else None
+    fallback_date = prices[-1].date if prices else None
+    quote = await fetch_one(ticker)
+    if quote is not None and quote.current_price > 0:
+        latest_close = quote.current_price
+        latest_close_date = None
+        price_source = "live"
+        price_at = datetime.fromtimestamp(
+            quote.fetched_at, tz=timezone.utc
+        ).isoformat()
+        price_market_status = quote.market_status
+    else:
+        latest_close = fallback_close
+        latest_close_date = fallback_date
+        price_source = "fallback"
+        price_at = None
+        price_market_status = None
 
     # v4 — horizon별 종합 판정 / R/R / Stop·Take
     bands_by_h = {b.horizon_months: b for b in bands_out}
@@ -464,6 +482,9 @@ async def get_ticker_forecast(
         advice_by_horizon=advice_list,
         oos_metrics=(OOSMetricsResponse(**oos.__dict__) if oos else None),
         disclaimer=disclaimer,
+        price_source=price_source,
+        price_at=price_at,
+        price_market_status=price_market_status,
     )
 
 

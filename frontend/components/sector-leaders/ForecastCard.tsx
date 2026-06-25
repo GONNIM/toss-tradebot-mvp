@@ -32,6 +32,47 @@ function formatKRWPrice(amount: number): string {
   return amount.toLocaleString("ko-KR") + "원";
 }
 
+function formatKstTime(iso: string): string {
+  const hasTz = /Z$|[+-]\d{2}:?\d{2}$/.test(iso);
+  const d = new Date(hasTz ? iso : iso + "Z");
+  if (isNaN(d.getTime())) return "";
+  const kst = new Date(d.getTime() + 9 * 60 * 60 * 1000);
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${pad(kst.getUTCHours())}:${pad(kst.getUTCMinutes())} KST`;
+}
+
+function PriceSourceTag({
+  source,
+  priceAt,
+  marketStatus,
+  fallbackDate,
+}: {
+  source: "live" | "fallback";
+  priceAt: string | null;
+  marketStatus: string | null;
+  fallbackDate: string | null;
+}) {
+  if (source === "live") {
+    const isOpen = marketStatus === "OPEN";
+    const badge = isOpen ? "🟢 LIVE" : "⚪ 종가";
+    const t = priceAt ? formatKstTime(priceAt) : null;
+    return (
+      <span className="text-xs text-emerald-600 dark:text-emerald-400">
+        ({badge}
+        {t && <span className="text-muted-foreground"> · {t}</span>})
+      </span>
+    );
+  }
+  return (
+    <span
+      className="text-xs text-amber-600 dark:text-amber-400"
+      title="네이버 실시간 가격 fetch 실패 — 일봉 종가 사용"
+    >
+      ({fallbackDate || "—"} 종가 · fallback)
+    </span>
+  );
+}
+
 function formatKRWDelta(amount: number): string {
   const sign = amount >= 0 ? "+" : "";
   return sign + amount.toLocaleString("ko-KR") + "원";
@@ -164,11 +205,12 @@ function Header({ data }: { data: TickerForecast }) {
             <span className="font-mono font-semibold">
               {formatKRWPrice(data.latest_close_krw)}
             </span>{" "}
-            {data.latest_close_date && (
-              <span className="text-xs text-muted-foreground">
-                ({data.latest_close_date} 종가)
-              </span>
-            )}
+            <PriceSourceTag
+              source={data.price_source}
+              priceAt={data.price_at}
+              marketStatus={data.price_market_status}
+              fallbackDate={data.latest_close_date}
+            />
           </span>
         )}
       </div>
