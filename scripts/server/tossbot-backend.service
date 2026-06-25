@@ -1,0 +1,29 @@
+# systemd unit — toss-tradebot-mvp Backend (FastAPI uvicorn)
+#
+# 배치: /etc/systemd/system/tossbot-backend.service
+# 등록: sudo systemctl daemon-reload && sudo systemctl enable --now tossbot-backend
+
+[Unit]
+Description=Toss Tradebot Backend (FastAPI uvicorn)
+After=network.target
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/root/toss-tradebot-mvp
+Environment="PYTHONPATH=/root/toss-tradebot-mvp"
+Environment="DATABASE_URL=sqlite+aiosqlite:///backend/data/tradebot.db"
+# .env 파일 추가 시:
+# EnvironmentFile=/root/toss-tradebot-mvp/backend/.env
+ExecStart=/root/toss-tradebot-mvp/backend/venv/bin/uvicorn \
+    backend.api.main:app \
+    --host 127.0.0.1 \
+    --port 8001 \
+    --log-level info
+Restart=on-failure
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

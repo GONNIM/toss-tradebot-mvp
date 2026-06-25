@@ -1,0 +1,26 @@
+# systemd unit — toss-tradebot-mvp Frontend (Next.js production)
+#
+# 배치: /etc/systemd/system/tossbot-frontend.service
+# 등록: sudo systemctl daemon-reload && sudo systemctl enable --now tossbot-frontend
+#
+# 의존: frontend 디렉토리에서 npm run build 가 선행되어야 함 (deploy-tossbot.sh 3/5 단계)
+
+[Unit]
+Description=Toss Tradebot Frontend (Next.js)
+After=network.target tossbot-backend.service
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/root/toss-tradebot-mvp/frontend
+Environment="NODE_ENV=production"
+Environment="NEXT_PUBLIC_API_BASE_URL=http://127.0.0.1:8001"
+Environment="PORT=3000"
+ExecStart=/usr/bin/npm run start
+Restart=on-failure
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target
