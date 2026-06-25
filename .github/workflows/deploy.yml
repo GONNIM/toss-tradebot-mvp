@@ -55,8 +55,14 @@ jobs:
           ssh ${{ secrets.OPTIMUS8_USER }}@${{ secrets.OPTIMUS8_HOST }} 'bash -s' << 'EOF'
           set -e
           cd /root/toss-tradebot-mvp
-          echo "[1/5] git pull"
-          git pull --ff-only origin main
+          echo "[1/5] sync to origin/main"
+          # ── origin/main single source of truth. npm install 이 lockfile 재생성해도 매번 안전.
+          # ── .gitignore (.venv/.next/node_modules/data/) 항목은 reset 영향 없음.
+          git fetch --quiet origin main
+          BEFORE=$(git rev-parse --short HEAD)
+          git reset --hard origin/main
+          AFTER=$(git rev-parse --short HEAD)
+          echo "  $BEFORE → $AFTER"
 
           echo "[2/5] backend deps"
           cd backend
