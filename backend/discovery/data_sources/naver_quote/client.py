@@ -29,6 +29,7 @@ How to apply: fetch_quotes(tickers) → 60초 메모리 캐시 → 호출자는 
 """
 from __future__ import annotations
 
+import asyncio
 import json as _json
 import logging
 import time
@@ -42,7 +43,7 @@ logger = logging.getLogger(__name__)
 _BASE = "https://polling.finance.naver.com/api/realtime"
 _TTL_SEC = 60
 _TIMEOUT_SEC = 3.0
-_BATCH_SIZE = 30  # 한 번 호출에 종목 수 상한 (URL 길이·서버 부하 균형)
+_CONCURRENCY = 10  # 동시 요청 상한 (네이버 부담·응답 속도 균형)
 _UA = (
     "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 "
     "(KHTML, like Gecko) Chrome/124.0 Safari/537.36"
@@ -77,31 +78,25 @@ def _read_cache(ticker: str, now: float) -> Optional[Quote]:
     return q
 
 
-async def _fetch_chunk(
-    tickers: list[str], client: httpx.AsyncClient
-) -> dict[str, Quote]:
-    if not tickers:
-        return {}
-    query = ",".join(f"SERVICE_ITEM:{t}" for t in tickers)
+async def _fetch_one_internal(
+    ticker: str, client: httpx.AsyncClient
+) -> Optional[Quote]:
+    """단일 종목 호출 — 네이버 polling 은 batch query 미지원 (첫 종목만 응답)."""
     try:
         resp = await client.get(
             _BASE,
-            params={"query": query},
+            params={"query": f"SERVICE_ITEM:{ticker}"},
             timeout=_TIMEOUT_SEC,
             headers={"User-Agent": _UA},
         )
         resp.raise_for_status()
-        # 네이버 polling 응답은 CP949 (한글 종목명) — httpx 의 utf-8 자동 디코딩 실패.
+        # 네이버 polling 응답은 CP949 (한글 종목명) — utf-8 자동 디코딩 실패.
         # nm 필드는 안 쓰지만 json.loads 가 전체 문자열을 디코딩하므로 한 글자라도 깨지면 실패.
         data = _json.loads(resp.content.decode("cp949", errors="replace"))
     except Exception as e:
-        logger.warning(
-            f"[naver_quote] fetch failed for {len(tickers)} tickers: {e}"
-        )
-        return {}
+        logger.warning(f"[naver_quote] fetch {ticker} failed: {e}")
+        return None
 
-    out: dict[str, Quote] = {}
-    now = time.time()
     try:
         areas = data.get("result", {}).get("areas", [])
         for area in areas:
@@ -110,27 +105,23 @@ async def _fetch_chunk(
                 nv = item.get("nv")
                 if cd is None or nv is None:
                     continue
-                try:
-                    out[cd] = Quote(
-                        ticker=cd,
-                        current_price=float(nv),
-                        prev_close=float(item["pcv"])
-                        if item.get("pcv") is not None
-                        else None,
-                        change_rate=float(item["cr"])
-                        if item.get("cr") is not None
-                        else None,
-                        market_status=item.get("ms"),
-                        fetched_at=now,
-                    )
-                except (TypeError, ValueError) as e:
-                    logger.warning(
-                        f"[naver_quote] parse item {cd} failed: {e}"
-                    )
-    except (KeyError, TypeError) as e:
-        logger.warning(f"[naver_quote] response shape unexpected: {e}")
-
-    return out
+                if cd != ticker:
+                    continue
+                return Quote(
+                    ticker=cd,
+                    current_price=float(nv),
+                    prev_close=float(item["pcv"])
+                    if item.get("pcv") is not None
+                    else None,
+                    change_rate=float(item["cr"])
+                    if item.get("cr") is not None
+                    else None,
+                    market_status=item.get("ms"),
+                    fetched_at=time.time(),
+                )
+    except (KeyError, TypeError, ValueError) as e:
+        logger.warning(f"[naver_quote] parse {ticker} failed: {e}")
+    return None
 
 
 async def fetch_quotes(tickers: list[str]) -> dict[str, Quote]:
@@ -162,12 +153,18 @@ async def fetch_quotes(tickers: list[str]) -> dict[str, Quote]:
     if not miss:
         return result
 
-    # 캐시 미스 분량 batch fetch
+    # 캐시 미스 종목 — concurrency 제한 하에 동시 호출
+    sem = asyncio.Semaphore(_CONCURRENCY)
+
     async with httpx.AsyncClient() as client:
-        for i in range(0, len(miss), _BATCH_SIZE):
-            chunk = miss[i : i + _BATCH_SIZE]
-            fetched = await _fetch_chunk(chunk, client)
-            for t, q in fetched.items():
+        async def bounded(t: str) -> tuple[str, Optional[Quote]]:
+            async with sem:
+                return t, await _fetch_one_internal(t, client)
+
+        tasks = [bounded(t) for t in miss]
+        for fut in asyncio.as_completed(tasks):
+            t, q = await fut
+            if q is not None:
                 _cache[t] = (q, now + _TTL_SEC)
                 result[t] = q
 
