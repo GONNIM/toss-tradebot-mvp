@@ -474,3 +474,77 @@ class AuditTrade(Base):
     pct_from_52w_high: Mapped[Optional[float]]
     pnl_pct: Mapped[Optional[float]]
     meta: Mapped[Optional[str]] = mapped_column(Text)  # JSON
+
+
+# ─────────────────────────────────────────────────────────────────
+# Meme Watch 모듈 테이블 (Phase 1a — 화끈한 밈주 찾기)
+#   설계: docs/plans/meme-stock-discovery/01-signal-sources.md
+# ─────────────────────────────────────────────────────────────────
+
+
+class MemeUniverse(Base):
+    """추적 대상 종목 마스터 — US(시총 ≤ 5B$) + KOSDAQ(시총 ≤ 1조원)."""
+
+    __tablename__ = "meme_universe"
+
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    market: Mapped[str] = mapped_column(String(10), index=True)  # "US" / "KRX"
+    ticker: Mapped[str] = mapped_column(String(20), index=True)
+    name: Mapped[str] = mapped_column(String(100))
+    sector: Mapped[Optional[str]] = mapped_column(String(50))
+    market_cap: Mapped[Optional[float]]  # USD (US) / KRW (KRX)
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True)
+    last_updated: Mapped[datetime] = mapped_column(
+        DateTime, server_default=func.now(), onupdate=func.now()
+    )
+
+    __table_args__ = (
+        Index("ix_meme_universe_market_ticker", "market", "ticker", unique=True),
+    )
+
+
+class MemeSocialSignal(Base):
+    """소셜 시그널 — 5분 batch 누적."""
+
+    __tablename__ = "meme_social_signal"
+
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    ticker: Mapped[str] = mapped_column(String(20), index=True)
+    source: Mapped[str] = mapped_column(String(30))
+    # "reddit" / "stocktwits" / "google_trends"
+    fetched_at: Mapped[datetime] = mapped_column(DateTime, index=True)
+    mention_count: Mapped[int] = mapped_column(Integer, default=0)
+    weighted_score: Mapped[float] = mapped_column(Float, default=0.0)
+    sentiment_delta: Mapped[Optional[float]] = mapped_column(Float)
+    # stocktwits 전용: (Bullish − Bearish) / total
+    window_hours: Mapped[int] = mapped_column(Integer, default=24)
+
+
+class MemeShortInterest(Base):
+    """공매도 잔고 — US FINRA(격주) + KRX 일별."""
+
+    __tablename__ = "meme_short_interest"
+
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    ticker: Mapped[str] = mapped_column(String(20), index=True)
+    market: Mapped[str] = mapped_column(String(10))     # "US" / "KRX"
+    as_of_date: Mapped[str] = mapped_column(String(10), index=True)  # YYYY-MM-DD
+    pct_of_float: Mapped[float]
+    days_to_cover: Mapped[Optional[float]]
+    source: Mapped[str] = mapped_column(String(30))
+    # "finra" / "krx" / "yahoo_estimate"
+
+
+class MemeVolumeSnapshot(Base):
+    """일봉 거래량·반등·RSI 스냅샷 — 5분 batch."""
+
+    __tablename__ = "meme_volume_snapshot"
+
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    ticker: Mapped[str] = mapped_column(String(20), index=True)
+    snapshot_at: Mapped[datetime] = mapped_column(DateTime, index=True)
+    volume: Mapped[float]
+    volume_z_20d: Mapped[float]
+    return_1d_pct: Mapped[float]
+    rsi_14: Mapped[Optional[float]]
+    halt_triggered: Mapped[bool] = mapped_column(Boolean, default=False)
