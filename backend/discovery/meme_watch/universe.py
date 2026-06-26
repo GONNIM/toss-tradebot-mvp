@@ -1,41 +1,33 @@
-"""Meme Watch universe 빌드 (Phase 1a / 1a-bonus).
+"""Meme Watch universe 빌드 (Phase 1a / 1a-bonus / 1b 네이버 전환).
 
-US: Russell 2000 (iShares IWM ETF holdings) — small/mid cap 표준 지수.
-KRX: KOSDAQ 시총 ≤ 1조원.
+US: NASDAQ + NYSE 시총 ≤ 5B USD (네이버 금융 marketValue 페이지네이션).
+KRX: KOSDAQ 시총 ≤ 1조원 (FDR).
 
 매주 일요일 03:00 KST 자동 갱신 (APScheduler).
 
 데이터 소스:
-- FDR (이미 sector_leaders 에서 사용 중) — KOSDAQ 리스트
-- iShares IWM holdings CSV (공식) — Russell 2000 small/mid cap
+- 네이버 금융 (api.stock.naver.com) — 미국 시총·종목 리스트 (yfinance 차단 우회)
+- FDR StockListing("KOSDAQ") — 한국 KOSDAQ 리스트 + 시총
 """
 from __future__ import annotations
 
 import asyncio
-import io
 import logging
-import re
 from typing import Optional
 
 import FinanceDataReader as fdr
-import httpx
 import pandas as pd
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from backend.discovery.data_sources.naver_quote import fetch_us_listings
 from backend.services.db import get_session
 from backend.services.models import MemeUniverse
 
 logger = logging.getLogger(__name__)
 
+US_MARKET_CAP_MAX = 5_000_000_000       # 5B USD
 KRX_MARKET_CAP_MAX = 1_000_000_000_000  # 1조원
-
-# iShares IWM (Russell 2000 ETF) 공식 holdings CSV. 매일 갱신.
-IWM_HOLDINGS_URL = (
-    "https://www.ishares.com/us/products/239710/ishares-russell-2000-etf/"
-    "1467271812596.ajax?fileType=csv&fileName=IWM_holdings&dataType=fund"
-)
-_TICKER_RE = re.compile(r"^[A-Z][A-Z0-9.\-]{0,5}$")
 
 
 def _pick_col(df: pd.DataFrame, *candidates: str) -> Optional[str]:
@@ -51,44 +43,33 @@ async def _fetch_listing(market: str) -> pd.DataFrame:
 
 
 async def fetch_us_candidates() -> pd.DataFrame:
-    """Russell 2000 ETF (IWM) holdings — small/mid cap 표준."""
-    logger.info("[meme_universe] fetching Russell 2000 (iShares IWM holdings)")
-    async with httpx.AsyncClient(follow_redirects=True) as client:
-        resp = await client.get(IWM_HOLDINGS_URL, timeout=30.0)
-        resp.raise_for_status()
-        text = resp.content.decode("utf-8-sig", errors="replace")
+    """NASDAQ + NYSE 시총 ≤ 5B USD (네이버 금융 marketValue 페이지네이션).
 
-    # iShares CSV 는 상단에 메타 행, 본 데이터의 헤더는 "Ticker," 로 시작
-    lines = text.split("\n")
-    header_idx: Optional[int] = None
-    for i, line in enumerate(lines):
-        if line.startswith("Ticker,") or line.startswith('"Ticker"'):
-            header_idx = i
-            break
-    if header_idx is None:
-        raise ValueError("iShares IWM CSV: 'Ticker' header line not found")
-
-    df = pd.read_csv(
-        io.StringIO("\n".join(lines[header_idx:])), on_bad_lines="skip"
+    네이버 응답의 reutersCode 를 ticker 로 사용 (.O / .K suffix 포함) —
+    일봉 fetch 시 그대로 호출 가능.
+    """
+    logger.info("[meme_universe] fetching US via Naver (NASDAQ + NYSE)")
+    nasdaq, nyse = await asyncio.gather(
+        fetch_us_listings("NASDAQ", US_MARKET_CAP_MAX),
+        fetch_us_listings("NYSE", US_MARKET_CAP_MAX),
     )
-    df.columns = [c.strip() for c in df.columns]
-    if "Ticker" not in df.columns:
-        raise ValueError(f"IWM CSV: Ticker column missing — {df.columns.tolist()}")
 
-    # 시총 (Market Value) — 쉼표 제거 후 numeric
-    cap_col = _pick_col(df, "Market Value", "Marcap", "MarketCap")
-    if cap_col:
-        df["_cap"] = pd.to_numeric(
-            df[cap_col].astype(str).str.replace(",", "").str.replace('"', ""),
-            errors="coerce",
-        ).fillna(0.0)
-    else:
-        df["_cap"] = 0.0
-
-    # ticker 유효성 (대문자 영문 1~6자, '.', '-' 허용)
-    df = df[df["Ticker"].astype(str).str.match(_TICKER_RE, na=False)]
-
-    logger.info(f"[meme_universe] Russell 2000 IWM holdings: {len(df)} rows")
+    rows = []
+    for listing in [*nasdaq, *nyse]:
+        rows.append(
+            {
+                "Ticker": listing.reuters_code,
+                "Symbol": listing.symbol,
+                "Name": listing.name_eng or listing.name_kor,
+                "Sector": listing.industry_kor,
+                "_cap": listing.market_value_usd,
+            }
+        )
+    df = pd.DataFrame(rows)
+    logger.info(
+        f"[meme_universe] US (Naver): NASDAQ {len(nasdaq)} + NYSE {len(nyse)} "
+        f"= {len(df)} total (cap ≤ ${US_MARKET_CAP_MAX:,})"
+    )
     return df
 
 

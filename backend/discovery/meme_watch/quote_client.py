@@ -1,79 +1,35 @@
-"""yfinance bulk 일봉 fetch — US universe 60일 close + volume.
+"""US universe 60일 일봉 fetch — 네이버 금융 기반 (yfinance 차단 우회).
 
-Phase 1b MVP — US Russell 2000 일배치. KRX 일봉은 Phase 1b-bonus 또는
-Phase 2 (pykrx 통합).
+운영 IP 가 Yahoo Finance 에 YFRateLimitError 로 차단되어, 이미 polling 으로
+검증된 네이버 금융 API 로 전환. 종목별 호출 + concurrency 10.
 """
 from __future__ import annotations
 
-import asyncio
 import logging
 
 import pandas as pd
-import yfinance as yf
+
+from backend.discovery.data_sources.naver_quote import fetch_daily_us_batch
 
 logger = logging.getLogger(__name__)
 
-_CHUNK = 100   # yfinance bulk 안전 chunk (URL 길이·rate limit 균형)
-
-
-def _sync_bulk_download(tickers: list[str], period_days: int) -> dict[str, pd.DataFrame]:
-    """yfinance.download 동기 호출 — asyncio.to_thread 로 래핑됨."""
-    out: dict[str, pd.DataFrame] = {}
-    try:
-        data = yf.download(
-            tickers=" ".join(tickers),
-            period=f"{period_days}d",
-            interval="1d",
-            group_by="ticker",
-            threads=True,
-            progress=False,
-            auto_adjust=False,
-        )
-        if data is None or data.empty:
-            return out
-        if len(tickers) == 1:
-            t = tickers[0]
-            sub = data[["Close", "Volume"]].dropna()
-            if not sub.empty:
-                out[t] = sub
-        else:
-            for t in tickers:
-                try:
-                    sub = data[t][["Close", "Volume"]].dropna()
-                    if not sub.empty:
-                        out[t] = sub
-                except (KeyError, ValueError, IndexError):
-                    pass
-    except Exception as e:
-        logger.warning(f"[quote_client] yf.download chunk ({len(tickers)} tickers) failed: {e}")
-    return out
+_CONCURRENCY = 10
 
 
 async def fetch_us_daily(
-    tickers: list[str], period_days: int = 60
+    tickers: list[str], period_days: int = 90
 ) -> dict[str, pd.DataFrame]:
-    """US universe 60일 일봉 (close + volume) — chunked bulk.
+    """US universe N일 일봉 (Close + Volume).
+
+    Args:
+        tickers: reuters_code 리스트 (예: "AAPL.O", "TSM").
+        period_days: 일봉 days 범위 (주말/공휴일 고려 90일 기본 → ~60 거래일).
 
     Returns:
-        {ticker: DataFrame[Close, Volume]} (date 정렬, 결손 종목은 누락).
+        {reuters_code: DataFrame[Close, Volume]} (asc 정렬, 결손 종목 누락).
     """
     if not tickers:
         return {}
-
-    result: dict[str, pd.DataFrame] = {}
-    total_chunks = (len(tickers) + _CHUNK - 1) // _CHUNK
-
-    for i in range(0, len(tickers), _CHUNK):
-        chunk = tickers[i : i + _CHUNK]
-        fetched = await asyncio.to_thread(_sync_bulk_download, chunk, period_days)
-        result.update(fetched)
-        chunk_idx = i // _CHUNK + 1
-        logger.info(
-            f"[quote_client] chunk {chunk_idx}/{total_chunks} "
-            f"({len(chunk)} req → {len(fetched)} got)"
-        )
-
-    logger.info(
-        f"[quote_client] US daily fetch: {len(result)} / {len(tickers)} tickers"
+    return await fetch_daily_us_batch(
+        tickers, days_back=period_days, concurrency=_CONCURRENCY
     )
-    return result
