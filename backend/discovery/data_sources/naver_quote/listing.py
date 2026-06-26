@@ -9,10 +9,15 @@ from __future__ import annotations
 
 import json as _json
 import logging
+import re
 from dataclasses import dataclass
 from typing import Optional
 
 import httpx
+
+# 보통주만 — 우선주 (공백, "PR"), 워런트 ("WS"), unit 류 제외.
+# 패턴: 대문자 1~5 + 선택적 .O / .OB / .K suffix.
+_VALID_TICKER_RE = re.compile(r"^[A-Z]{1,5}(\.[A-Z]{1,2})?$")
 
 logger = logging.getLogger(__name__)
 
@@ -77,15 +82,29 @@ async def fetch_us_listings(
                 total = data.get("totalCount", 0)
 
             for s in stocks:
-                cap_raw = s.get("marketValueRaw") or 0
-                if cap_raw <= 0:
+                # 시총 — str/int/None 모두 안전하게 float
+                try:
+                    cap_raw = float(s.get("marketValueRaw") or 0)
+                except (TypeError, ValueError):
                     continue
-                if cap_raw > market_cap_max_usd:
-                    continue  # skip — desc 정렬이라 점차 줄어듦
-                rc = s.get("reutersCode") or ""
+                if cap_raw <= 0 or cap_raw > market_cap_max_usd:
+                    continue
+
+                rc = (s.get("reutersCode") or "").strip()
+                if not rc or not _VALID_TICKER_RE.match(rc):
+                    # 우선주 / 워런트 / unit 등 (공백·특수 패턴) 제외
+                    continue
+
                 sym = s.get("symbolCode") or rc
-                if not rc:
-                    continue
+                try:
+                    close = (
+                        float(s.get("closePriceRaw"))
+                        if s.get("closePriceRaw") not in (None, "")
+                        else None
+                    )
+                except (TypeError, ValueError):
+                    close = None
+
                 results.append(
                     StockListing(
                         reuters_code=rc,
@@ -96,12 +115,8 @@ async def fetch_us_listings(
                         industry_kor=(
                             (s.get("industryCodeType") or {}).get("industryGroupKor")
                         ),
-                        market_value_usd=float(cap_raw),
-                        close_price=(
-                            float(s.get("closePriceRaw"))
-                            if s.get("closePriceRaw") not in (None, "")
-                            else None
-                        ),
+                        market_value_usd=cap_raw,
+                        close_price=close,
                     )
                 )
 
