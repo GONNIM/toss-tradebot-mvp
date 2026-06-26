@@ -14,6 +14,7 @@ from sqlalchemy import desc, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.discovery.meme_watch.confluence import MemeScore, compute_meme_score
+from backend.discovery.meme_watch.filters import is_blacklisted
 from backend.services.db import get_session
 from backend.services.models import (
     MemeSocialSignal,
@@ -130,6 +131,9 @@ async def compute_top_memes(top_n: int = 20) -> list[dict]:
 
     results = []
     for ticker in candidate_tickers:
+        # ETF / 펀드 블랙리스트 제외 (Phase 3-A)
+        if is_blacklisted(ticker):
+            continue
         soc = social.get(ticker)
         vol = volumes.get(ticker)
         meta = metas.get(ticker)
