@@ -462,4 +462,46 @@ export const api = {
     top10: (limit = 10) =>
       get<Top10Response>(`/sector-leaders/top10?limit=${limit}`),
   },
+  memeWatch: {
+    top: (limit = 20) =>
+      get<MemeWatchTopResponse>(`/meme-watch/top?limit=${limit}`),
+  },
 };
+
+// ─── Meme Watch (Phase 1e) ────────────────────────────────────
+
+export interface MemeSignalContribution {
+  name: string;          // social / volume / oversold / short / catalyst
+  label: string;
+  raw_value: number | null;
+  raw_label: string;
+  normalized: number;
+  weight: number;
+  contribution: number;
+  detail: string;
+}
+
+export interface MemeScoreItem {
+  ticker: string;
+  name: string | null;
+  market: string | null;
+  sector: string | null;
+  market_cap: number | null;
+
+  score: number;
+  label: string;     // BLAZING / HOT / WATCH / OBSERVE / SLEEP
+  emoji: string;
+
+  active_signals: number;
+  strongest_signal: string;
+  confidence_label: string;
+  sample_warning: boolean;
+  contributions: MemeSignalContribution[];
+}
+
+export interface MemeWatchTopResponse {
+  items: MemeScoreItem[];
+  total: number;
+  computed_at: string;
+  sources_status: Record<string, string>;  // {"apewisdom":"ok",...}
+}
