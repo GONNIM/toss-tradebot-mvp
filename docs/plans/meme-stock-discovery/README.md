@@ -60,12 +60,33 @@ random universe 100 ticker × 90D 시뮬 → 816 score days:
 → HOT 위양성률 합격선 5% 의 1/10 = **합격**. 모델이 random 종목에서는
 신호를 거의 안 냄 + 실 폭등 사례에서는 80% detect.
 
-## 다음 단계 (Phase 2 순차)
-- ✅ A. False positive 시뮬 — 완료
-- ⏳ B. Forward test (apewisdom 1~2주 누적 후 재실행) — 시간 누적
-- 🚧 C. KRX 트랙 (작전주/테마주) — 진행 중
-- 📋 D. Catalyst (KRX VI / FINRA / DART)
-- 📋 E. Phase 1+2 마감 + 운영 모니터링
+## Phase 2 진행 완료 (2026-06-26)
+- ✅ **A. False positive 시뮬** — HOT 0.49% (합격선 5% 의 1/10)
+- ⏳ **B. Forward test** — 운영 누적 중 (apewisdom 5분 batch). 1~2주 후 재실행 예정
+- ✅ **C. KRX 트랙** — 1,735 KOSDAQ 종목 일봉 적재 (pykrx 차단 → 네이버 domestic)
+- ✅ **D. Catalyst** — 1D gap up 자동 검출 (+10%↑ 시 0.3~1.0 점수). 외부 catalyst (VI/halt/공시) 는 후속
+- 🚧 **E. 운영 모니터링** — `/meme-watch` 1주 운영 + 시그널 누적 검증
+
+## 5요소 confluence 모두 활성 (Phase 2)
+| 시그널 | 가중치 (재정규화 전) | 데이터 소스 |
+|---|---|---|
+| ① 공매도 | 0.30 (Phase 3) | FINRA / KRX |
+| ② 소셜 모멘텀 | 0.30 | apewisdom (US), KRX 부재 |
+| ③ 유동성 폭주 | 0.25 | 네이버 일봉 (US + KRX) |
+| ④ Momentum/Breakout | 0.15 | RSI + 1D return |
+| ⑤ Catalyst | 0.15 | 1D gap up 자동 (VI/halt/공시 후속) |
+
+## 운영 차단 매트릭스 (Phase 1+2 정리)
+| 소스 | 운영 IP | 우회 |
+|---|---|---|
+| yfinance | ❌ Rate limit | 네이버 일봉 (US) |
+| iShares IWM | ❌ Cookie/JS | 네이버 marketValue |
+| Reddit 공개 JSON | ❌ 403 | apewisdom (사실상 대체) |
+| Stocktwits | ❌ 403 | 코드 보존 (1d 잡 등록만) |
+| Google Trends | ❌ 429 | 코드 보존 |
+| pykrx | ❌ 인증 요구 | 네이버 domestic 일봉 |
+| 네이버 금융 | ✅ | — |
+| apewisdom | ✅ | — |
 
 ## 핵심 위험
 
