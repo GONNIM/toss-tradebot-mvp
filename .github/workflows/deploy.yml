@@ -50,6 +50,24 @@ jobs:
           mkdir -p ~/.ssh
           ssh-keyscan -H ${{ secrets.OPTIMUS8_HOST }} >> ~/.ssh/known_hosts 2>/dev/null
 
+      - name: Inject runtime secrets into backend/.env
+        env:
+          DART_API_KEY: ${{ secrets.DART_API_KEY }}
+        run: |
+          # GitHub Secrets → 운영 backend/.env 동기화. 빈 secret 은 skip.
+          # heredoc EOF (no quotes) 로 변수 확장 — ssh 로 ${VAR} 만 전송.
+          if [ -n "${DART_API_KEY}" ]; then
+            ssh ${{ secrets.OPTIMUS8_USER }}@${{ secrets.OPTIMUS8_HOST }} 'bash -s' << EOF
+          ENV_FILE=/root/toss-tradebot-mvp/backend/.env
+          sed -i '/^DART_API_KEY=/d' "\$ENV_FILE" 2>/dev/null || true
+          echo "DART_API_KEY=${DART_API_KEY}" >> "\$ENV_FILE"
+          chmod 600 "\$ENV_FILE"
+          echo "✓ DART_API_KEY synced to .env"
+          EOF
+          else
+            echo "⚠️ DART_API_KEY secret 미설정 — skip"
+          fi
+
       - name: Deploy to optimus8
         run: |
           ssh ${{ secrets.OPTIMUS8_USER }}@${{ secrets.OPTIMUS8_HOST }} 'bash -s' << 'EOF'
