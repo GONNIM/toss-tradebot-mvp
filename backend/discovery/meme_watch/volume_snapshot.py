@@ -87,22 +87,14 @@ async def build_us_snapshots() -> dict:
 async def build_krx_snapshots() -> dict:
     """KOSDAQ universe 일봉 snapshot (Phase 2-C).
 
-    pykrx get_market_ohlcv_by_ticker 로 60일치 by-date batch fetch.
-    각 일자별 1번 호출에 KOSDAQ 전체 종목 데이터 → 60 호출 × ~1초 = ~60s.
+    pykrx 가 운영에서 KRX 인증 요구 + 차단 → 네이버 domestic 일봉으로 대체.
+    fetch_daily_kr_batch — concurrency 10, ~1700 종목 × 90일 ~ 3분.
     """
-    import asyncio
-    from datetime import date, timedelta
-
-    import pandas as pd
+    from datetime import datetime as _dt
 
     from sqlalchemy import select
 
-    from backend.discovery.meme_watch.oversold import (
-        compute_return_1d,
-        compute_rsi,
-        compute_volume_ratio,
-        compute_volume_z,
-    )
+    from backend.discovery.data_sources.naver_quote import fetch_daily_kr_batch
     from backend.services.db import get_session
     from backend.services.models import MemeUniverse, MemeVolumeSnapshot
 
@@ -117,70 +109,23 @@ async def build_krx_snapshots() -> dict:
                 )
             )
         ).scalars().all()
-    targets = set(t for t in active if t)
-    if not targets:
+    tickers = [t for t in active if t]
+    if not tickers:
         return stats
-    logger.info(f"[meme_krx_volume] KOSDAQ universe: {len(targets)} tickers")
+    logger.info(f"[meme_krx_volume] KOSDAQ universe: {len(tickers)}")
 
-    def _fetch_60d_by_date() -> dict[str, list[dict]]:
-        """pykrx 동기 — KOSDAQ 60일치 by-date batch."""
-        from pykrx import stock as pkx
-
-        end_d = date.today()
-        start_d = end_d - timedelta(days=90)
-        out: dict[str, list[dict]] = {}
-        current = start_d
-        while current <= end_d:
-            day_str = current.strftime("%Y%m%d")
-            try:
-                df = pkx.get_market_ohlcv_by_ticker(day_str, market="KOSDAQ")
-            except Exception:
-                current += timedelta(days=1)
-                continue
-            if df is None or df.empty:
-                current += timedelta(days=1)
-                continue
-            close_col = next(
-                (c for c in ["종가", "Close", "close"] if c in df.columns), None
-            )
-            vol_col = next(
-                (c for c in ["거래량", "Volume", "volume"] if c in df.columns), None
-            )
-            if close_col is None or vol_col is None:
-                current += timedelta(days=1)
-                continue
-            for tkr, row in df.iterrows():
-                if tkr not in targets:
-                    continue
-                try:
-                    out.setdefault(tkr, []).append(
-                        {
-                            "date": pd.Timestamp(current),
-                            "close": float(row[close_col]),
-                            "volume": float(row[vol_col]),
-                        }
-                    )
-                except (ValueError, TypeError):
-                    pass
-            current += timedelta(days=1)
-        return out
-
-    data_by_ticker = await asyncio.to_thread(_fetch_60d_by_date)
-    stats["fetched"] = len(data_by_ticker)
-    logger.info(f"[meme_krx_volume] fetched {len(data_by_ticker)} / {len(targets)}")
-
-    from datetime import datetime as _dt
+    daily = await fetch_daily_kr_batch(tickers, days_back=90, concurrency=10)
+    stats["fetched"] = len(daily)
 
     now = _dt.now()
     async with get_session() as session:
-        for ticker, rows in data_by_ticker.items():
+        for ticker, df in daily.items():
             try:
-                if len(rows) < 21:
+                if df is None or df.empty or len(df) < 21:
                     stats["skipped_short_history"] += 1
                     continue
-                df = pd.DataFrame(rows).set_index("date").sort_index()
-                closes = df["close"]
-                volumes = df["volume"]
+                closes = df["Close"]
+                volumes = df["Volume"]
                 r1d = compute_return_1d(closes)
                 if r1d is None:
                     stats["skipped_short_history"] += 1

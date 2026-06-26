@@ -2,6 +2,7 @@
 from backend.discovery.data_sources.naver_quote.client import (
     Quote,
     fetch_daily_kr,
+    fetch_daily_kr_batch,
     fetch_daily_us,
     fetch_daily_us_batch,
     fetch_daily_us_range,
@@ -21,6 +22,7 @@ __all__ = [
     "fetch_daily_us",
     "fetch_daily_kr",
     "fetch_daily_us_batch",
+    "fetch_daily_kr_batch",
     "fetch_daily_us_range",
     "fetch_us_listings",
 ]

@@ -288,6 +288,43 @@ async def fetch_daily_kr(
         return await _fetch_daily_naver("domestic", _normalize(ticker), days_back, client)
 
 
+async def fetch_daily_kr_batch(
+    tickers: list[str], days_back: int = 90, concurrency: int = 10
+) -> dict[str, pd.DataFrame]:
+    """KRX 종목 batch 일봉 — 6자리 ticker (zfill)."""
+    if not tickers:
+        return {}
+    result: dict[str, pd.DataFrame] = {}
+    sem = asyncio.Semaphore(concurrency)
+
+    async with httpx.AsyncClient() as client:
+        async def bounded(t: str) -> tuple[str, Optional[pd.DataFrame]]:
+            normalized = _normalize(t)
+            async with sem:
+                df = await _fetch_daily_naver(
+                    "domestic", normalized, days_back, client
+                )
+                return t, df
+
+        tasks = [bounded(t) for t in tickers]
+        completed = 0
+        for fut in asyncio.as_completed(tasks):
+            t, df = await fut
+            completed += 1
+            if df is not None and not df.empty:
+                result[t] = df
+            if completed % 200 == 0:
+                logger.info(
+                    f"[naver_daily_kr_batch] {completed}/{len(tickers)} "
+                    f"processed, {len(result)} success"
+                )
+
+    logger.info(
+        f"[naver_daily_kr_batch] done: {len(result)} / {len(tickers)} success"
+    )
+    return result
+
+
 async def fetch_daily_us_batch(
     reuters_codes: list[str], days_back: int = 90, concurrency: int = 10
 ) -> dict[str, pd.DataFrame]:
