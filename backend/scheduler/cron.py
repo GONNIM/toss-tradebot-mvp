@@ -76,6 +76,7 @@ WATCHLIST = [
 # Top N 설정
 CRAZY_TOP_N = int(os.environ.get("CRAZY_TOP_N", "10"))
 MOONSHOT_TOP_N = int(os.environ.get("MOONSHOT_TOP_N", "3"))
+SECTOR_LEADERS_TOP_N = int(os.environ.get("SECTOR_LEADERS_TOP_N", "3"))
 
 
 # ─────────────────────────────────────────────
@@ -461,6 +462,74 @@ async def job_moonshot_picks():
 
 
 # ─────────────────────────────────────────────
+# Sector Leaders Top 매력도 알림 (KRX, 일 2회)
+# ─────────────────────────────────────────────
+
+
+async def run_sector_leaders_alert_job(slot: str = "default") -> int:
+    """Sector Leaders Top 매력도 알림 — Top N 발송.
+
+    Logic:
+        1) compute_top10(session, top_n=10) — 매력도 정렬 Top 10
+        2) ≥0.6 항목 추출 — 6개 이상이면 그대로, 5개 이하면 ≥0.5 까지 확장
+        3) 매력도 상위 SECTOR_LEADERS_TOP_N (=3) 컷 + rank 재계산
+        4) format_sector_leaders_alert → Telegram send_info
+    """
+    from dataclasses import replace as _replace
+
+    from backend.discovery.sector_leaders.top10 import compute_top10
+    from backend.services.db import get_session
+    from backend.services.notifier import (
+        TelegramNotifier,
+        format_sector_leaders_alert,
+    )
+
+    logger.info(f"[sector_leaders_alert] start slot={slot}")
+
+    async with get_session() as session:
+        items = await compute_top10(session, top_n=10)
+
+    high = [i for i in items if i.attractiveness >= 0.6]
+    if len(high) >= 6:
+        candidates = high
+        bucket = "0.6"
+        expanded = False
+    else:
+        candidates = [i for i in items if i.attractiveness >= 0.5]
+        bucket = "0.5"
+        expanded = True
+
+    picks = candidates[:SECTOR_LEADERS_TOP_N]
+    picks = [_replace(p, rank=i + 1) for i, p in enumerate(picks)]
+
+    if not picks:
+        bucket = "empty"
+
+    title, body = format_sector_leaders_alert(picks, bucket, expanded=expanded)
+    notifier = TelegramNotifier()
+    await notifier.send_info(title, body)
+
+    logger.info(
+        f"[sector_leaders_alert] slot={slot} sent={len(picks)} bucket={bucket}"
+    )
+    return len(picks)
+
+
+async def job_sector_leaders_alert_0905():
+    try:
+        await run_sector_leaders_alert_job(slot="09:05")
+    except Exception as e:
+        logger.error(f"[cron] sector_leaders 09:05 failed: {e}", exc_info=True)
+
+
+async def job_sector_leaders_alert_1705():
+    try:
+        await run_sector_leaders_alert_job(slot="17:05")
+    except Exception as e:
+        logger.error(f"[cron] sector_leaders 17:05 failed: {e}", exc_info=True)
+
+
+# ─────────────────────────────────────────────
 # Scheduler + entry
 # ─────────────────────────────────────────────
 
@@ -473,6 +542,14 @@ def build_scheduler() -> AsyncIOScheduler:
                       id="crazy_picks", name="Crazy Picks 06:30 KST", replace_existing=True)
     scheduler.add_job(job_moonshot_picks, CronTrigger(hour=16, minute=50),
                       id="moonshot_picks", name="Moonshot Picks 16:50 KST", replace_existing=True)
+    scheduler.add_job(job_sector_leaders_alert_0905, CronTrigger(hour=9, minute=5),
+                      id="sector_leaders_alert_0905",
+                      name="Sector Leaders Top — 09:05 KST (개장 안정)",
+                      replace_existing=True)
+    scheduler.add_job(job_sector_leaders_alert_1705, CronTrigger(hour=17, minute=5),
+                      id="sector_leaders_alert_1705",
+                      name="Sector Leaders Top — 17:05 KST (정규장 마감 후)",
+                      replace_existing=True)
     return scheduler
 
 
@@ -505,6 +582,9 @@ async def main_once(target: str):
     elif target == "moonshot":
         n = await run_moonshot_picks_job()
         print(f"✅ Moonshot Picks: Top {n} 저장 + Telegram 알림")
+    elif target == "sector_leaders":
+        n = await run_sector_leaders_alert_job(slot="manual")
+        print(f"✅ Sector Leaders Alert: Top {n} 발송")
     else:
         print(f"❌ unknown target: {target}")
 
@@ -515,7 +595,7 @@ if __name__ == "__main__":
         format="%(asctime)s [%(name)s] %(levelname)s: %(message)s",
     )
     parser = argparse.ArgumentParser()
-    parser.add_argument("--once", choices=["universe", "crazy", "moonshot"],
+    parser.add_argument("--once", choices=["universe", "crazy", "moonshot", "sector_leaders"],
                         help="1회 즉시 실행 (수동 검증). 미지정 시 데몬 모드.")
     args = parser.parse_args()
 

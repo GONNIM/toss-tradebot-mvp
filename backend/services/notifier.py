@@ -163,3 +163,50 @@ def format_crazy_alert(picks: list) -> tuple[str, str]:
             f"💡 {p.thesis[:150]}{'...' if len(p.thesis) > 150 else ''}\n"
         )
     return title, "".join(lines)
+
+
+# ─────────────────────────────────────────────
+# Sector Leaders Top — 매력도 임계 알림 (KRX)
+# ─────────────────────────────────────────────
+
+
+def format_sector_leaders_alert(
+    items: list,
+    bucket_label: str,
+    expanded: bool = False,
+) -> tuple[str, str]:
+    """Sector Leaders 매력도 임계 통과 종목 → Telegram (title, body).
+
+    Args:
+        items: list[Top10Item] — 발송 대상 (이미 상위 N 컷·rank 재계산된 상태).
+        bucket_label: "0.6" / "0.5" / "empty".
+        expanded: 0.6 이상이 5개 이하라 0.5 이상까지 확장된 경우 True.
+    """
+    if not items or bucket_label == "empty":
+        title = "📊 Sector Leaders — 오늘 매수 후보 없음"
+        body = (
+            "매력도 0.5 이상 종목이 없습니다.\n"
+            "<i>모든 시그널이 약하거나 음의 영역에 있는 상황입니다.</i>"
+        )
+        return title, body
+
+    title = f"📊 Sector Leaders Top {len(items)} — 매력도 {bucket_label}+"
+
+    lines = []
+    if expanded:
+        lines.append(
+            "<i>※ 0.6 이상이 5개 이하라 0.5 이상까지 확장한 결과입니다.</i>\n"
+        )
+
+    for it in items:
+        price_tag = "" if it.price_source == "live" else " <i>(전일종가)</i>"
+        lines.append(
+            f"\n<b>#{it.rank} {it.name} ({it.ticker})</b>"
+            f"  매력도 <b>{it.attractiveness:.2f}</b>\n"
+            f"품목: {it.item}\n"
+            f"현재가: {it.current_price:,.0f}원{price_tag}\n"
+            f"진입가: {it.entry_price:,.0f}원  ({it.entry_status})\n"
+            f"예측수익가: {it.point_price:,.0f}원  (+{it.point_pct:.1f}%)\n"
+        )
+
+    return title, "".join(lines)
