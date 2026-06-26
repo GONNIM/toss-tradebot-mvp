@@ -122,4 +122,19 @@
 - social 시그널 추가 시 detect 정확도 ↑ 예상 (apewisdom 30일 누적 후 재검증)
 - false positive 검증은 본 보고서 범위 밖 — Phase 2 에서 6,000 random ticker × month 시뮬 후 추가
 
-**보고서 생성**: 2026-06-26T15:29:35.843741
+**보고서 생성**: 2026-06-26T15:39:54.268849
+
+---
+
+## False Positive 시뮬 — Random Universe Sample
+
+- Sample: 100 random US tickers (20 fetched)
+- 총 score days: 816
+
+| 임계 | 진입 count | 비율 |
+|---|---|---|
+| ⚠️ WATCH (≥0.50) | 16 | 1.96% |
+| 🔥 HOT (≥0.75)   | 4 | 0.49% |
+| 🔥🔥 BLAZING (≥1.00) | 0 | 0.00% |
+
+**HOT false positive rate**: 0.49% — ✅ 합격 (<5%)
