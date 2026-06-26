@@ -24,6 +24,7 @@ from backend.api.routes import (
     crazy,
     dashboard,
     logs,
+    meme_watch,
     moonshot,
     positions,
     sector_leaders,
@@ -87,6 +88,11 @@ app.include_router(
     sector_leaders.router,
     prefix="/api/v1/sector-leaders",
     tags=["sector-leaders"],
+)
+app.include_router(
+    meme_watch.router,
+    prefix="/api/v1/meme-watch",
+    tags=["meme-watch"],
 )
 
 

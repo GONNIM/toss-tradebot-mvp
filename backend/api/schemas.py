@@ -399,3 +399,42 @@ class TickerForecastResponse(BaseModel):
     price_source: str = "fallback"
     price_at: Optional[str] = None
     price_market_status: Optional[str] = None
+
+
+# ─── Meme Watch (Phase 1e) ────────────────────────────────────
+
+
+class MemeSignalContributionResponse(BaseModel):
+    name: str          # social / volume / oversold / short / catalyst
+    label: str
+    raw_value: Optional[float] = None
+    raw_label: str
+    normalized: float
+    weight: float
+    contribution: float
+    detail: str
+
+
+class MemeScoreResponse(BaseModel):
+    ticker: str
+    name: Optional[str] = None
+    market: Optional[str] = None
+    sector: Optional[str] = None
+    market_cap: Optional[float] = None
+
+    score: float
+    label: str             # BLAZING / HOT / WATCH / OBSERVE / SLEEP
+    emoji: str             # 🔥🔥 / 🔥 / ⚠️ / 👀 / 💤
+
+    active_signals: int
+    strongest_signal: str
+    confidence_label: str  # strong / medium / weak
+    sample_warning: bool
+    contributions: list[MemeSignalContributionResponse]
+
+
+class MemeWatchTopResponse(BaseModel):
+    items: list[MemeScoreResponse]
+    total: int
+    computed_at: str
+    sources_status: dict[str, str]   # {"apewisdom":"ok","stocktwits":"blocked",...}
