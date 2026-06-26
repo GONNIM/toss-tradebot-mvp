@@ -197,6 +197,45 @@ def _date_range_params(days_back: int) -> dict:
     }
 
 
+def _date_range_params_explicit(start, end) -> dict:
+    """명시 start/end (date 또는 datetime). 백테스트용."""
+    return {
+        "startDateTime": start.strftime("%Y%m%d0000"),
+        "endDateTime": end.strftime("%Y%m%d2359"),
+    }
+
+
+async def fetch_daily_us_range(reuters_code, start, end):
+    """미국 종목 일봉 — 명시 start/end (date/datetime). 백테스트 용도."""
+    async with httpx.AsyncClient() as client:
+        url = f"{_DAILY_BASE}/foreign/item/{reuters_code}/day"
+        try:
+            resp = await client.get(
+                url,
+                params=_date_range_params_explicit(start, end),
+                timeout=_DAILY_TIMEOUT_SEC,
+                headers={"User-Agent": _UA},
+            )
+            resp.raise_for_status()
+            data = _json.loads(resp.content.decode("cp949", errors="replace"))
+        except Exception as e:
+            logger.warning(f"[naver_daily_range] {reuters_code} failed: {e}")
+            return None
+
+    if not data:
+        return None
+    try:
+        df = pd.DataFrame(data)
+        df["Date"] = pd.to_datetime(df["localDate"], format="%Y%m%d")
+        df["Close"] = df["closePrice"].astype(float)
+        df["Volume"] = df["accumulatedTradingVolume"].astype(float)
+        df = df.set_index("Date").sort_index()
+        return df[["Close", "Volume"]]
+    except (KeyError, ValueError, TypeError) as e:
+        logger.warning(f"[naver_daily_range] {reuters_code} parse failed: {e}")
+        return None
+
+
 async def _fetch_daily_naver(
     path: str, identifier: str, days_back: int, client: httpx.AsyncClient
 ) -> Optional[pd.DataFrame]:
