@@ -195,6 +195,33 @@ def _label_and_emoji(score: float) -> tuple[str, str]:
     return "SLEEP", "💤"
 
 
+def normalize_catalyst(return_1d_pct: Optional[float]) -> tuple[float, str, float]:
+    """Catalyst 시그널 (Phase 2-D) — 1D gap up 자동 검출.
+
+    KRX VI 발동 / FINRA halt / DART 공시 등 외부 트리거는 후속 phase.
+    1차 MVP: 일봉 return 자체로 trigger event 추정.
+
+    +30%+ → 1.0 (확실한 catalyst)
+    +20%+ → 0.7
+    +15%+ → 0.5
+    +10%+ → 0.3
+    그 외 → 0.0
+    """
+    if return_1d_pct is None:
+        return 0.0, "—", 0.0
+    if return_1d_pct >= 30:
+        n = 1.0
+    elif return_1d_pct >= 20:
+        n = 0.7
+    elif return_1d_pct >= 15:
+        n = 0.5
+    elif return_1d_pct >= 10:
+        n = 0.3
+    else:
+        n = 0.0
+    return n, f"1D {return_1d_pct:+.1f}% (gap)", float(return_1d_pct)
+
+
 def compute_meme_score(
     *,
     ticker: str,
@@ -204,7 +231,7 @@ def compute_meme_score(
     rsi_14: Optional[float] = None,
     return_1d_pct: Optional[float] = None,
     short_pct_of_float: Optional[float] = None,  # Phase 2
-    catalyst_score: Optional[float] = None,      # Phase 2
+    catalyst_score: Optional[float] = None,      # 외부 catalyst (VI/halt 등)
 ) -> MemeScore:
     """5요소 confluence — 가용 시그널만으로 가중치 재정규화."""
     contributions: list[SignalContribution] = []
@@ -284,20 +311,31 @@ def compute_meme_score(
             )
         )
 
-    # ⑤ Catalyst (Phase 2)
+    # ⑤ Catalyst (Phase 2-D)
+    # 외부 catalyst 미명시 시 1D return 으로 자동 gap up 검출 (10%↑ 부터)
     if catalyst_score is not None:
         n = max(0.0, min(1.5, catalyst_score))
+        raw_label = f"{catalyst_score:.2f}"
+        raw_val = catalyst_score
+        detail = "VI/halt/공시 등 외부 트리거"
+    elif return_1d_pct is not None and return_1d_pct >= 10:
+        n, raw_label, raw_val = normalize_catalyst(return_1d_pct)
+        detail = "1D gap up ≥ +10% (외부 catalyst 부재 시 자동 추정)"
+    else:
+        n = None
+
+    if n is not None:
         available.add("catalyst")
         contributions.append(
             SignalContribution(
                 name="catalyst",
                 label="Catalyst",
-                raw_value=catalyst_score,
-                raw_label=f"{catalyst_score:.2f}",
+                raw_value=raw_val,
+                raw_label=raw_label,
                 normalized=n,
                 weight=0.0,
                 contribution=0.0,
-                detail="VI/halt/공시 등 트리거 이벤트",
+                detail=detail,
             )
         )
 
