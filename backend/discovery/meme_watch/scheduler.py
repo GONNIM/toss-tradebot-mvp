@@ -1,12 +1,14 @@
-"""Meme Watch APScheduler 잡 등록 (Phase 1a + 1b).
+"""Meme Watch APScheduler 잡 등록 (Phase 1a + 1b + 1c).
 
 잡 (모두 KST):
   ① meme_universe_weekly   — 매 일요일 03:00 — universe 재빌드 (Phase 1a)
-  ② meme_volume_us_daily   — 매일 06:00 — US Russell 2000 일봉 snapshot (Phase 1b)
+  ② meme_volume_us_daily   — 매일 06:00 — US 일봉 snapshot (Phase 1b)
+  ③ meme_social_reddit_5min — 5분마다 — Reddit 4 subreddit (Phase 1c)
 
 후속 Phase 에서 추가:
-  ③ meme_social_5min       — 5분마다 (장중) — Reddit/Stocktwits/Trends
-  ④ meme_short_daily       — 매일 06:00 — FINRA + KRX 공매도
+  ④ meme_social_stocktwits_5min — Stocktwits
+  ⑤ meme_social_trends_hourly   — Google Trends
+  ⑥ meme_short_daily      — 매일 06:00 — FINRA + KRX 공매도
 """
 from __future__ import annotations
 
@@ -15,6 +17,7 @@ import logging
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.cron import CronTrigger
 
+from backend.discovery.meme_watch.social_signal import build_reddit_signals
 from backend.discovery.meme_watch.universe import build_universe
 from backend.discovery.meme_watch.volume_snapshot import build_us_snapshots
 
@@ -45,8 +48,17 @@ def register_meme_jobs(scheduler: AsyncIOScheduler) -> None:
         replace_existing=True,
         misfire_grace_time=3600,
     )
+    scheduler.add_job(
+        build_reddit_signals,
+        trigger=CronTrigger(minute="*/5", timezone="Asia/Seoul"),
+        id="meme_social_reddit_5min",
+        name="5분마다 — Reddit 4 subreddit ticker mention 24h 윈도우 집계",
+        replace_existing=True,
+        misfire_grace_time=300,
+    )
     logger.info(
-        "[meme_watch.scheduler] 2 jobs registered: "
+        "[meme_watch.scheduler] 3 jobs registered: "
         "meme_universe_weekly (Sun 03:00) · "
-        "meme_volume_us_daily (06:00 KST)"
+        "meme_volume_us_daily (06:00 KST) · "
+        "meme_social_reddit_5min (every 5m)"
     )

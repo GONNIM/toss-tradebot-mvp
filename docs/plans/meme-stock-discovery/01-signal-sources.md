@@ -38,18 +38,33 @@
 
 ### 2.1 Reddit (US 트랙 핵심)
 
-| 항목 | 값 |
-|---|---|
-| **공식 문서** | https://www.reddit.com/dev/api/ · https://praw.readthedocs.io/ |
-| **라이브러리** | `praw` (Python Reddit API Wrapper) |
-| **인증** | client_id + client_secret + user_agent (무료 등록) |
-| **Rate limit** | 100 QPM (인증된 앱) |
-| **모니터 대상** | r/wallstreetbets, r/stocks, r/pennystocks, r/Shortsqueeze |
-| **수집 방식** | `subreddit.new(limit=100)` 5분 주기 + 종목 ticker 정규식 매칭 (`\$([A-Z]{1,5})`) |
-| **카운트 단위** | 24시간 윈도우 언급 횟수 + upvote 가중 |
-| **저장** | `meme_social_signal` 테이블 (ticker, source="reddit", count, weighted_score, fetched_at) |
+> ⚠️ **2025-11 정책 변경**: Reddit self-service API key 발급 폐지. 모든
+> OAuth credentials manual approval 필요 (7일 응답). 대안으로 **공개 JSON
+> endpoint** 사용 (무인증, 정책 부합).
+>
+> 결정: **B + A 병행** (Q26, 2026-06-26):
+> - B = 공개 JSON endpoint 즉시 진행 (Phase 1c MVP)
+> - A = Developer Support form 신청 → 7일 후 OAuth 발급 시 전환
 
-**실패 폴백**: Reddit API 다운 시 → Stocktwits + Google Trends 비중 ↑ (가중치 재정규화).
+| 항목 | 값 (Phase 1c MVP — 공개 JSON) |
+|---|---|
+| **공식 안내** | https://www.reddit.com/dev/api/ · Responsible Builder Policy |
+| **라이브러리** | `httpx` (직접 JSON fetch) |
+| **인증** | 없음 (공개 endpoint) |
+| **Rate limit** | 60 QPM (IP 기반) — 우리 사용 ~0.8 QPM (1.3%) |
+| **User-Agent** | `toss-tradebot-mvp:meme-watch:v0.1 (by /u/Gonnim)` |
+| **Endpoint** | `https://www.reddit.com/r/{subreddit}/new.json?limit=100` |
+| **모니터 대상** | r/wallstreetbets, r/stocks, r/pennystocks, r/Shortsqueeze |
+| **수집 방식** | 5분 주기 batch + 종목 ticker 정규식 (`\$([A-Z]{1,5})`) |
+| **카운트 단위** | 24시간 윈도우 언급 횟수 + upvote(score) 가중 |
+| **저장** | `meme_social_signal` (ticker, source="reddit", count, weighted_score) |
+| **정책 부합** | 공개 데이터만, 본문 저장 X, AI 학습 X, 재배포 X |
+
+**실패 폴백**: 공개 endpoint 차단/rate limit 발생 시 → Stocktwits + Google
+Trends 가중치 재정규화 + 운영 ERROR 로그 (메모리 [[partner_accountability]]).
+
+**OAuth 전환 (후속)**: A 승인 후 `praw` 도입 + `REDDIT_CLIENT_ID/SECRET`
+secrets 추가 + Phase 1c 의 fetch 함수만 교체 (signal 산출 로직 그대로).
 
 ### 2.2 Stocktwits (US 보조)
 
