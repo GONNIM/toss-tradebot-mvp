@@ -202,7 +202,7 @@ def format_sector_leaders_alert(
         price_tag = "" if it.price_source == "live" else " <i>(전일종가)</i>"
         lines.append(
             f"\n<b>#{it.rank} {it.name} ({it.ticker})</b>"
-            f"  매력도 <b>{it.attractiveness:.2f}</b>\n"
+            f"  매력도 <b>{it.attractiveness:.3f}</b>\n"
             f"품목: {it.item}\n"
             f"현재가: {it.current_price:,.0f}원{price_tag}\n"
             f"진입가: {it.entry_price:,.0f}원  ({it.entry_status})\n"
