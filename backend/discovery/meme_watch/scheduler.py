@@ -25,7 +25,10 @@ from backend.discovery.meme_watch.social_signal import (
     build_trends_signals,
 )
 from backend.discovery.meme_watch.universe import build_universe
-from backend.discovery.meme_watch.volume_snapshot import build_us_snapshots
+from backend.discovery.meme_watch.volume_snapshot import (
+    build_krx_snapshots,
+    build_us_snapshots,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -51,6 +54,16 @@ def register_meme_jobs(scheduler: AsyncIOScheduler) -> None:
         trigger=CronTrigger(hour=6, minute=0, timezone="Asia/Seoul"),
         id="meme_volume_us_daily",
         name="매일 06:00 KST — US Russell 2000 일봉 snapshot (volume z + RSI + 1D return)",
+        replace_existing=True,
+        misfire_grace_time=3600,
+    )
+    # KRX 트랙 — KOSDAQ universe 일봉 snapshot (Phase 2-C)
+    # 한국 장 마감(15:30 KST) 이후 16:00 fetch 시 당일 일봉 받음
+    scheduler.add_job(
+        build_krx_snapshots,
+        trigger=CronTrigger(hour=16, minute=0, timezone="Asia/Seoul"),
+        id="meme_volume_krx_daily",
+        name="매일 16:00 KST — KOSDAQ 일봉 snapshot (pykrx 60일 batch)",
         replace_existing=True,
         misfire_grace_time=3600,
     )

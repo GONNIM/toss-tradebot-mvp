@@ -10,7 +10,7 @@ from collections import defaultdict
 from datetime import datetime
 from typing import Optional
 
-from sqlalchemy import desc, select
+from sqlalchemy import desc, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.discovery.meme_watch.confluence import MemeScore, compute_meme_score
@@ -58,22 +58,31 @@ async def _latest_apewisdom_snapshot(session: AsyncSession) -> dict[str, dict]:
 async def _latest_volume_snapshots(
     session: AsyncSession, tickers: list[str]
 ) -> dict[str, MemeVolumeSnapshot]:
-    """각 ticker 의 최신 volume_snapshot row."""
+    """각 ticker 의 최신 volume_snapshot 일괄 — subquery + JOIN.
+
+    Phase 2-C: KRX universe 통합으로 ticker 수 ↑ → ticker별 N+1 query 회피.
+    """
     if not tickers:
         return {}
-    out: dict[str, MemeVolumeSnapshot] = {}
-    for t in tickers:
-        row = (
-            await session.execute(
-                select(MemeVolumeSnapshot)
-                .where(MemeVolumeSnapshot.ticker == t)
-                .order_by(desc(MemeVolumeSnapshot.snapshot_at))
-                .limit(1)
+    subq = (
+        select(
+            MemeVolumeSnapshot.ticker,
+            func.max(MemeVolumeSnapshot.snapshot_at).label("max_at"),
+        )
+        .where(MemeVolumeSnapshot.ticker.in_(tickers))
+        .group_by(MemeVolumeSnapshot.ticker)
+        .subquery()
+    )
+    rows = (
+        await session.execute(
+            select(MemeVolumeSnapshot).join(
+                subq,
+                (MemeVolumeSnapshot.ticker == subq.c.ticker)
+                & (MemeVolumeSnapshot.snapshot_at == subq.c.max_at),
             )
-        ).scalar_one_or_none()
-        if row is not None:
-            out[t] = row
-    return out
+        )
+    ).scalars().all()
+    return {r.ticker: r for r in rows}
 
 
 async def _universe_meta(
@@ -91,25 +100,42 @@ async def _universe_meta(
 
 
 async def compute_top_memes(top_n: int = 20) -> list[dict]:
-    """apewisdom Top → 시그널 join → score 산출 → 상위 N.
+    """US (apewisdom + volume) + KRX (volume only) → score → 상위 N.
 
-    Returns:
-        list of dict {meta, score: MemeScore}. score 내림차순.
+    Phase 2-C — KRX universe 종목도 score 산출 대상 (social 시그널 부재 →
+    가중치 동적 재정규화: volume 0.625 / momentum 0.375).
     """
     async with get_session() as session:
         social = await _latest_apewisdom_snapshot(session)
-        if not social:
-            logger.warning("[meme_top] apewisdom snapshot 없음")
+        # KRX universe 종목 (active)
+        krx_rows = (
+            await session.execute(
+                select(MemeUniverse.ticker).where(
+                    MemeUniverse.market == "KRX",
+                    MemeUniverse.is_active.is_(True),
+                )
+            )
+        ).scalars().all()
+        krx_tickers = set(t for t in krx_rows if t)
+
+        # 후보 ticker — US (apewisdom mention) ∪ KRX (universe)
+        candidate_tickers = set(social.keys()) | krx_tickers
+        if not candidate_tickers:
+            logger.warning("[meme_top] no candidate tickers")
             return []
 
-        tickers = list(social.keys())
-        volumes = await _latest_volume_snapshots(session, tickers)
-        metas = await _universe_meta(session, tickers)
+        all_list = list(candidate_tickers)
+        volumes = await _latest_volume_snapshots(session, all_list)
+        metas = await _universe_meta(session, all_list)
 
     results = []
-    for ticker, soc in social.items():
+    for ticker in candidate_tickers:
+        soc = social.get(ticker)
         vol = volumes.get(ticker)
         meta = metas.get(ticker)
+        # 시그널이 하나도 없으면 skip
+        if soc is None and vol is None:
+            continue
         score = compute_meme_score(
             ticker=ticker,
             social_inputs=soc,
@@ -120,6 +146,5 @@ async def compute_top_memes(top_n: int = 20) -> list[dict]:
         )
         results.append({"score": score, "meta": meta, "volume": vol})
 
-    # score desc 정렬
     results.sort(key=lambda r: r["score"].score, reverse=True)
     return results[:top_n]
