@@ -18,6 +18,7 @@ import logging
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.cron import CronTrigger
 
+from backend.discovery.meme_watch.catalyst_signal import build_dart_catalyst
 from backend.discovery.meme_watch.social_signal import (
     build_apewisdom_signals,
     build_reddit_signals,
@@ -93,6 +94,15 @@ def register_meme_jobs(scheduler: AsyncIOScheduler) -> None:
         name="매시 15분 — apewisdom Top 30 종목 Google Trends 검색량",
         replace_existing=True,
         misfire_grace_time=3600,
+    )
+    # DART catalyst (Phase 3-B) — 매시 30분 한국 공시 4유형 fetch
+    scheduler.add_job(
+        build_dart_catalyst,
+        trigger=CronTrigger(minute=30, timezone="Asia/Seoul"),
+        id="meme_catalyst_dart_hourly",
+        name="매시 30분 — DART 공시 4유형 (B/C/D/I) fetch + UPSERT",
+        replace_existing=True,
+        misfire_grace_time=1800,
     )
     # Reddit 직접 fetch (PRAW) 는 A 승인 후 활성. build_reddit_signals 함수는 보존.
     logger.info(

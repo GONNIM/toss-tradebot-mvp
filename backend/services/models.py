@@ -535,6 +535,26 @@ class MemeShortInterest(Base):
     # "finra" / "krx" / "yahoo_estimate"
 
 
+class MemeCatalystEvent(Base):
+    """외부 catalyst 이벤트 — DART 공시 / KRX VI / FINRA halt 등 (Phase 3-B).
+
+    event_id 는 source 내 고유 ID (DART rcept_no 등) — UPSERT 중복 방지.
+    24h 윈도우 ticker 별 카운트 → catalyst_score 산출.
+    """
+
+    __tablename__ = "meme_catalyst_event"
+
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    ticker: Mapped[str] = mapped_column(String(20), index=True)
+    source: Mapped[str] = mapped_column(String(30))     # "dart" / "krx_vi" / "finra"
+    event_type: Mapped[str] = mapped_column(String(50)) # "B" / "C" / "halt" / "VI" 등
+    event_label: Mapped[Optional[str]] = mapped_column(Text)  # 공시 제목·이벤트 설명
+    occurred_at: Mapped[datetime] = mapped_column(DateTime, index=True)
+    event_id: Mapped[str] = mapped_column(String(50), unique=True, index=True)
+    # source 별 고유 ID (DART rcept_no = 14자리 / KRX = date+ticker+seq)
+    payload: Mapped[Optional[str]] = mapped_column(Text)   # JSON
+
+
 class MemeVolumeSnapshot(Base):
     """일봉 거래량·반등·RSI 스냅샷 — 5분 batch.
 

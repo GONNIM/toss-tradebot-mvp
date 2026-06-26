@@ -13,6 +13,7 @@ from typing import Optional
 from sqlalchemy import desc, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from backend.discovery.meme_watch.catalyst_signal import get_catalyst_scores
 from backend.discovery.meme_watch.confluence import MemeScore, compute_meme_score
 from backend.discovery.meme_watch.filters import is_blacklisted
 from backend.services.db import get_session
@@ -129,6 +130,9 @@ async def compute_top_memes(top_n: int = 20) -> list[dict]:
         volumes = await _latest_volume_snapshots(session, all_list)
         metas = await _universe_meta(session, all_list)
 
+    # 외부 catalyst (DART) — KRX 종목 24h 카운트 → catalyst_score (Phase 3-B)
+    catalysts = await get_catalyst_scores(all_list, hours=24)
+
     results = []
     for ticker in candidate_tickers:
         # ETF / 펀드 블랙리스트 제외 (Phase 3-A)
@@ -137,8 +141,9 @@ async def compute_top_memes(top_n: int = 20) -> list[dict]:
         soc = social.get(ticker)
         vol = volumes.get(ticker)
         meta = metas.get(ticker)
+        cat = catalysts.get(ticker)
         # 시그널이 하나도 없으면 skip
-        if soc is None and vol is None:
+        if soc is None and vol is None and cat is None:
             continue
         score = compute_meme_score(
             ticker=ticker,
@@ -147,6 +152,7 @@ async def compute_top_memes(top_n: int = 20) -> list[dict]:
             volume_ratio_20d=(vol.volume_ratio_20d if vol else None),
             rsi_14=(vol.rsi_14 if vol else None),
             return_1d_pct=(vol.return_1d_pct if vol else None),
+            catalyst_score=cat,
         )
         results.append({"score": score, "meta": meta, "volume": vol})
 
