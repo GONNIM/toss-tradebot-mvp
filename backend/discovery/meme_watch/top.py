@@ -114,6 +114,7 @@ async def compute_top_memes(top_n: int = 20) -> list[dict]:
             ticker=ticker,
             social_inputs=soc,
             volume_z_20d=(vol.volume_z_20d if vol else None),
+            volume_ratio_20d=(vol.volume_ratio_20d if vol else None),
             rsi_14=(vol.rsi_14 if vol else None),
             return_1d_pct=(vol.return_1d_pct if vol else None),
         )

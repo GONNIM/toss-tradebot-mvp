@@ -536,7 +536,11 @@ class MemeShortInterest(Base):
 
 
 class MemeVolumeSnapshot(Base):
-    """일봉 거래량·반등·RSI 스냅샷 — 5분 batch."""
+    """일봉 거래량·반등·RSI 스냅샷 — 5분 batch.
+
+    Phase 2 튜닝: volume_z_20d 외에 volume_ratio_20d (단순 배수) 도 적재 —
+    백테스트로 z-score 가 폭증 누적 시 std 폭증으로 무뎌짐 확인됨.
+    """
 
     __tablename__ = "meme_volume_snapshot"
 
@@ -545,6 +549,7 @@ class MemeVolumeSnapshot(Base):
     snapshot_at: Mapped[datetime] = mapped_column(DateTime, index=True)
     volume: Mapped[float]
     volume_z_20d: Mapped[float]
+    volume_ratio_20d: Mapped[Optional[float]]  # Phase 2: today / 20D 평균
     return_1d_pct: Mapped[float]
     rsi_14: Mapped[Optional[float]]
     halt_triggered: Mapped[bool] = mapped_column(Boolean, default=False)

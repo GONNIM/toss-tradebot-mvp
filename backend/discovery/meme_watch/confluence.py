@@ -114,32 +114,68 @@ def normalize_social(
     return n, raw_label, ratio
 
 
-def normalize_volume(volume_z_20d: Optional[float]) -> tuple[float, str, float]:
-    """거래량 z-score / 10 → clip [0, 1.5]. 02 §2.3."""
-    if volume_z_20d is None:
-        return 0.0, "—", 0.0
-    n = max(0.0, min(1.5, volume_z_20d / 10.0))
-    return n, f"+{volume_z_20d:.1f}σ", float(volume_z_20d)
+def normalize_volume(
+    volume_ratio_20d: Optional[float],
+    volume_z_20d: Optional[float] = None,
+) -> tuple[float, str, float]:
+    """거래량 정규화 (Phase 2 튜닝).
+
+    배수 우선 사용 — 1배 미만 0, 2배 0.5, 5배 1.0, 10배+ 1.5.
+    배수 없으면 z-score (구식) fallback.
+    """
+    if volume_ratio_20d is not None and volume_ratio_20d > 0:
+        r = volume_ratio_20d
+        if r < 1.0:
+            n = 0.0
+        elif r <= 2.0:
+            n = (r - 1.0) * 0.5
+        elif r <= 5.0:
+            n = 0.5 + (r - 2.0) / 3.0 * 0.5
+        elif r <= 10.0:
+            n = 1.0 + (r - 5.0) / 5.0 * 0.5
+        else:
+            n = 1.5
+        return n, f"{r:.1f}× (20D 평균 대비)", r
+
+    if volume_z_20d is not None:
+        n = max(0.0, min(1.5, volume_z_20d / 10.0))
+        return n, f"+{volume_z_20d:.1f}σ", float(volume_z_20d)
+
+    return 0.0, "—", 0.0
 
 
-def normalize_oversold(
+def normalize_momentum(
     rsi_14: Optional[float], return_1d_pct: Optional[float]
 ) -> tuple[float, str, float]:
-    """RSI + 1D return 복합 binary. 02 §2.4.
+    """Momentum / Breakout — 02 plan 의 Oversold 재정의 (Phase 2 튜닝).
+
+    백테스트에서 밈주 폭등이 RSI > 70 상태에서 추가 폭발임을 확인.
+    "Oversold + 반등" 은 별개 케이스로 보존 (시그널 강도 0.6).
 
     Returns: (normalized, raw_label, raw_value=rsi)
     """
     if rsi_14 is None or return_1d_pct is None:
         return 0.0, "—", 0.0
-    if rsi_14 <= 30 and return_1d_pct >= 5:
+
+    # Breakout — 강한 폭등 + 강세 RSI
+    if return_1d_pct >= 10 and rsi_14 >= 70:
         n = 1.0
-    elif rsi_14 <= 35:
-        n = 0.5
-    elif return_1d_pct >= 8 and rsi_14 <= 45:
+    # Breakout 후보 — 폭등 + 중강 RSI
+    elif return_1d_pct >= 5 and rsi_14 >= 65:
         n = 0.7
+    # 약한 폭등
+    elif return_1d_pct >= 3:
+        n = 0.4
+    # Oversold 반전 (별개 — 하락 후 반등)
+    elif rsi_14 <= 30 and return_1d_pct >= 5:
+        n = 0.6
     else:
         n = 0.0
     return n, f"RSI {rsi_14:.0f} · 1D {return_1d_pct:+.1f}%", float(rsi_14)
+
+
+# 하위 호환 — 기존 코드 (이전 normalize_oversold 호출처) 보존
+normalize_oversold = normalize_momentum
 
 
 # ─────────────────────────────────────────────────────────────────
@@ -164,6 +200,7 @@ def compute_meme_score(
     ticker: str,
     social_inputs: Optional[dict] = None,  # {mentions, mentions_24h_ago, upvotes}
     volume_z_20d: Optional[float] = None,
+    volume_ratio_20d: Optional[float] = None,    # Phase 2 튜닝 — 우선
     rsi_14: Optional[float] = None,
     return_1d_pct: Optional[float] = None,
     short_pct_of_float: Optional[float] = None,  # Phase 2
@@ -195,9 +232,9 @@ def compute_meme_score(
                 )
             )
 
-    # ③ Volume
-    if volume_z_20d is not None:
-        n, label, raw = normalize_volume(volume_z_20d)
+    # ③ Volume — Phase 2 튜닝: 배수 우선, z fallback
+    if volume_ratio_20d is not None or volume_z_20d is not None:
+        n, label, raw = normalize_volume(volume_ratio_20d, volume_z_20d)
         available.add("volume")
         contributions.append(
             SignalContribution(
@@ -208,24 +245,24 @@ def compute_meme_score(
                 normalized=n,
                 weight=0.0,
                 contribution=0.0,
-                detail="20D 평균 대비 거래량 z-score",
+                detail="20D 평균 대비 거래량 배수 (또는 z-score fallback)",
             )
         )
 
-    # ④ Oversold
+    # ④ Momentum / Breakout (Phase 2 재정의 — 기존 Oversold 명칭 유지하되 의미 확장)
     if rsi_14 is not None and return_1d_pct is not None:
-        n, label, raw = normalize_oversold(rsi_14, return_1d_pct)
-        available.add("oversold")
+        n, label, raw = normalize_momentum(rsi_14, return_1d_pct)
+        available.add("oversold")  # weight key 그대로 — backward compat
         contributions.append(
             SignalContribution(
                 name="oversold",
-                label="Oversold 반전",
+                label="Momentum / Breakout",
                 raw_value=raw,
                 raw_label=label,
                 normalized=n,
                 weight=0.0,
                 contribution=0.0,
-                detail="RSI ≤ 30 + 1D 반등 ≥ 5%",
+                detail="RSI ≥ 70 + 1D ≥ +10% (강한 폭등) 또는 RSI ≤ 30 + 반등 (Oversold)",
             )
         )
 

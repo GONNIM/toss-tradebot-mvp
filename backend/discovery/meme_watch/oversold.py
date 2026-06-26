@@ -38,6 +38,22 @@ def compute_volume_z(volumes: pd.Series, window: int = 20) -> Optional[float]:
     return float((recent - mean) / std)
 
 
+def compute_volume_ratio(volumes: pd.Series, window: int = 20) -> Optional[float]:
+    """20일 거래량 평균 대비 당일 배수 (Phase 2 튜닝).
+
+    z-score 가 폭증 누적 시 std 폭증으로 무뎌지는 문제 해결.
+    예: 거래량 1억주, 20D 평균 1천만주 → ratio = 10 (선형 표현).
+    """
+    if volumes is None or len(volumes) < window + 1:
+        return None
+    recent = float(volumes.iloc[-1])
+    history = volumes.iloc[-(window + 1) : -1].astype(float)
+    mean = history.mean()
+    if not mean or mean <= 0 or pd.isna(mean):
+        return None
+    return float(recent / mean)
+
+
 def compute_return_1d(closes: pd.Series) -> Optional[float]:
     """1일 수익률 (% 단위)."""
     if closes is None or len(closes) < 2:

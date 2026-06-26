@@ -13,6 +13,7 @@ from sqlalchemy import select
 from backend.discovery.meme_watch.oversold import (
     compute_return_1d,
     compute_rsi,
+    compute_volume_ratio,
     compute_volume_z,
 )
 from backend.discovery.meme_watch.quote_client import fetch_us_daily
@@ -60,12 +61,14 @@ async def build_us_snapshots() -> dict:
                     continue
                 rsi = compute_rsi(closes)
                 vz = compute_volume_z(volumes)
+                vr = compute_volume_ratio(volumes)
                 session.add(
                     MemeVolumeSnapshot(
                         ticker=ticker,
                         snapshot_at=now,
                         volume=float(volumes.iloc[-1]),
                         volume_z_20d=float(vz or 0.0),
+                        volume_ratio_20d=vr,
                         return_1d_pct=float(r1d),
                         rsi_14=rsi,
                         halt_triggered=False,

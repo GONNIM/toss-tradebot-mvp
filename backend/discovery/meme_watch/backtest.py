@@ -30,6 +30,7 @@ from backend.discovery.meme_watch.confluence import compute_meme_score
 from backend.discovery.meme_watch.oversold import (
     compute_return_1d,
     compute_rsi,
+    compute_volume_ratio,
     compute_volume_z,
 )
 
@@ -52,6 +53,7 @@ class DayPoint:
     label: str
     emoji: str
     volume_z: Optional[float]
+    volume_ratio: Optional[float]
     rsi: Optional[float]
     return_1d: Optional[float]
 
@@ -105,13 +107,15 @@ async def run_case(case: BacktestCase) -> Optional[CaseResult]:
         closes = sub["Close"]
         volumes = sub["Volume"]
         vol_z = compute_volume_z(volumes)
+        vol_r = compute_volume_ratio(volumes)
         rsi = compute_rsi(closes)
         r1d = compute_return_1d(closes)
 
-        # score 산출
+        # score 산출 (Phase 2 튜닝 — ratio 우선)
         score = compute_meme_score(
             ticker=case.ticker,
             volume_z_20d=vol_z,
+            volume_ratio_20d=vol_r,
             rsi_14=rsi,
             return_1d_pct=r1d,
         )
@@ -132,6 +136,7 @@ async def run_case(case: BacktestCase) -> Optional[CaseResult]:
                 label=score.label,
                 emoji=score.emoji,
                 volume_z=vol_z,
+                volume_ratio=vol_r,
                 rsi=rsi,
                 return_1d=r1d,
             )
@@ -212,17 +217,22 @@ def report_markdown(results: list[CaseResult]) -> str:
             f"- 첫 HOT (≥0.75) 진입: "
             + (f"D{r.first_hot_offset:+d}" if r.first_hot_offset is not None else "—"),
             "",
-            "| D | date | score | label | vol_z | RSI | 1D% |",
-            "|---|---|---|---|---|---|---|",
+            "| D | date | score | label | vol× | vol_z | RSI | 1D% |",
+            "|---|---|---|---|---|---|---|---|",
         ]
         for p in r.points:
-            lines.append(
-                f"| D{p.d_offset:+d} | {p.date} | {p.score:.3f} | "
-                f"{p.emoji} {p.label} | "
-                f"{p.volume_z:+.1f}σ | {p.rsi:.0f} | {p.return_1d:+.1f}% |"
-                if p.volume_z is not None and p.rsi is not None and p.return_1d is not None
-                else f"| D{p.d_offset:+d} | {p.date} | — | — | — | — | — |"
-            )
+            if p.rsi is not None and p.return_1d is not None:
+                vol_r_str = f"{p.volume_ratio:.1f}×" if p.volume_ratio else "—"
+                vol_z_str = f"{p.volume_z:+.1f}σ" if p.volume_z is not None else "—"
+                lines.append(
+                    f"| D{p.d_offset:+d} | {p.date} | {p.score:.3f} | "
+                    f"{p.emoji} {p.label} | {vol_r_str} | {vol_z_str} | "
+                    f"{p.rsi:.0f} | {p.return_1d:+.1f}% |"
+                )
+            else:
+                lines.append(
+                    f"| D{p.d_offset:+d} | {p.date} | — | — | — | — | — | — |"
+                )
         lines.append("")
 
     lines += [
