@@ -68,15 +68,14 @@ class CaseResult:
 
 
 CASES: list[BacktestCase] = [
+    # 운영 종목 (현존)
     BacktestCase("GME", "US", date(2021, 1, 27), "Reddit WSB GameStop 1차 squeeze"),
     BacktestCase("AMC", "US", date(2021, 6, 2), "AMC squeeze (GME 후속)"),
-    BacktestCase("BBBY", "US", date(2022, 8, 15), "Ryan Cohen 13G 공시 → WSB"),
-    BacktestCase("KOSS", "US", date(2021, 1, 27), "GME 동반 low float squeeze"),
-    BacktestCase("SPRT", "US", date(2021, 8, 27), "합병 + WSB 발화"),
-    BacktestCase("ATER", "US", date(2021, 9, 23), "Short squeeze + WSB"),
-    BacktestCase("MULN", "US", date(2022, 9, 26), "EV 테마 + 개인 매수"),
-    BacktestCase("APE", "US", date(2022, 8, 8), "AMC preferred 도입 발표"),
+    BacktestCase("KOSS.O", "US", date(2021, 1, 27), "GME 동반 low float squeeze"),
+    BacktestCase("ATER.O", "US", date(2021, 9, 23), "Short squeeze + WSB"),
     BacktestCase("WEN.O", "US", date(2026, 6, 24), "Reddit WSB Save Wendy's"),
+    # 상장폐지 종목 — 네이버 데이터 없음: BBBY (2023 파산), SPRT (합병),
+    # MULN (퇴출), APE (AMC 흡수)
 ]
 
 
