@@ -248,6 +248,106 @@ def report_markdown(results: list[CaseResult]) -> str:
     return "\n".join(lines)
 
 
+async def false_positive_sample(
+    n_tickers: int = 100, period_days: int = 90
+) -> dict:
+    """Random universe sample → 임계 통과 일수 / 전체 = false positive rate.
+
+    실제 폭등 사례 없는 random 종목 × 일자 조합에서 score ≥ 임계가 얼마나
+    자주 발생하는지 측정. 5% 미만이면 합격 (Q14 변형).
+    """
+    import random
+
+    from sqlalchemy import select
+
+    from backend.discovery.data_sources.naver_quote import fetch_daily_us_batch
+    from backend.services.db import get_session
+    from backend.services.models import MemeUniverse
+
+    async with get_session() as session:
+        all_tickers = (
+            await session.execute(
+                select(MemeUniverse.ticker).where(
+                    MemeUniverse.market == "US",
+                    MemeUniverse.is_active.is_(True),
+                )
+            )
+        ).scalars().all()
+
+    sample = random.sample(list(all_tickers), min(n_tickers, len(all_tickers)))
+    logger.info(f"[fp-sample] {len(sample)} random tickers fetching {period_days}D")
+    daily = await fetch_daily_us_batch(sample, days_back=period_days, concurrency=10)
+    logger.info(f"[fp-sample] fetched {len(daily)} / {len(sample)}")
+
+    total_days = 0
+    counts = {"watch": 0, "hot": 0, "blazing": 0}
+
+    for ticker, df in daily.items():
+        if df is None or len(df) < 21:
+            continue
+        for i in range(20, len(df)):
+            sub = df.iloc[: i + 1]
+            volumes = sub["Volume"]
+            closes = sub["Close"]
+            vr = compute_volume_ratio(volumes)
+            vz = compute_volume_z(volumes)
+            rsi = compute_rsi(closes)
+            r1d = compute_return_1d(closes)
+            if r1d is None:
+                continue
+            score = compute_meme_score(
+                ticker=ticker,
+                volume_z_20d=vz,
+                volume_ratio_20d=vr,
+                rsi_14=rsi,
+                return_1d_pct=r1d,
+            )
+            total_days += 1
+            if score.score >= 0.50:
+                counts["watch"] += 1
+            if score.score >= 0.75:
+                counts["hot"] += 1
+            if score.score >= 1.00:
+                counts["blazing"] += 1
+
+    rates = {
+        k: (v / total_days if total_days > 0 else 0.0) for k, v in counts.items()
+    }
+    return {
+        "n_tickers_sampled": len(sample),
+        "n_tickers_with_data": len(daily),
+        "total_score_days": total_days,
+        "watch_count": counts["watch"],
+        "watch_rate": rates["watch"],
+        "hot_count": counts["hot"],
+        "hot_rate": rates["hot"],
+        "blazing_count": counts["blazing"],
+        "blazing_rate": rates["blazing"],
+    }
+
+
+def fp_report_markdown(stats: dict) -> str:
+    rate_pct = lambda r: f"{r * 100:.2f}%"  # noqa: E731
+    pass_hot = stats["hot_rate"] < 0.05
+    lines = [
+        "## False Positive 시뮬 — Random Universe Sample",
+        "",
+        f"- Sample: {stats['n_tickers_sampled']} random US tickers "
+        f"({stats['n_tickers_with_data']} fetched)",
+        f"- 총 score days: {stats['total_score_days']:,}",
+        "",
+        "| 임계 | 진입 count | 비율 |",
+        "|---|---|---|",
+        f"| ⚠️ WATCH (≥0.50) | {stats['watch_count']:,} | {rate_pct(stats['watch_rate'])} |",
+        f"| 🔥 HOT (≥0.75)   | {stats['hot_count']:,} | {rate_pct(stats['hot_rate'])} |",
+        f"| 🔥🔥 BLAZING (≥1.00) | {stats['blazing_count']:,} | {rate_pct(stats['blazing_rate'])} |",
+        "",
+        f"**HOT false positive rate**: {rate_pct(stats['hot_rate'])} — "
+        f"{'✅ 합격 (<5%)' if pass_hot else '❌ 미합격 (≥5%)'}",
+    ]
+    return "\n".join(lines)
+
+
 async def main() -> None:
     """CLI 진입점."""
     logging.basicConfig(
@@ -255,13 +355,27 @@ async def main() -> None:
         format="%(asctime)s %(levelname)s %(message)s",
     )
     results = await run_backtest()
+    backtest_report = report_markdown(results)
 
-    report = report_markdown(results)
+    # False positive 시뮬 (옵션 — 환경변수 BACKTEST_FP=1 시 활성)
+    import os
+
+    fp_report = ""
+    if os.getenv("BACKTEST_FP") == "1":
+        logger.info("[backtest] running false positive simulation...")
+        fp_stats = await false_positive_sample(n_tickers=100, period_days=90)
+        fp_report = fp_report_markdown(fp_stats)
+        print(fp_report)
+
+    full_report = backtest_report
+    if fp_report:
+        full_report += "\n\n---\n\n" + fp_report
+
     out_path = Path(__file__).resolve().parents[3] / (
         "docs/plans/meme-stock-discovery/03-backtest-report.md"
     )
     out_path.parent.mkdir(parents=True, exist_ok=True)
-    out_path.write_text(report, encoding="utf-8")
+    out_path.write_text(full_report, encoding="utf-8")
     logger.info(f"[backtest] report saved → {out_path}")
 
     passed = sum(1 for r in results if r.passed)
