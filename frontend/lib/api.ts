@@ -463,8 +463,11 @@ export const api = {
       get<Top10Response>(`/sector-leaders/top10?limit=${limit}`),
   },
   memeWatch: {
-    top: (limit = 20) =>
-      get<MemeWatchTopResponse>(`/meme-watch/top?limit=${limit}`),
+    top: (limit = 20, market?: "US" | "KRX") => {
+      const q = new URLSearchParams({ limit: String(limit) });
+      if (market) q.set("market", market);
+      return get<MemeWatchTopResponse>(`/meme-watch/top?${q.toString()}`);
+    },
   },
 };
 
@@ -497,6 +500,8 @@ export interface MemeScoreItem {
   confidence_label: string;
   sample_warning: boolean;
   contributions: MemeSignalContribution[];
+  current_price: number | null;
+  return_1d_pct: number | null;
 }
 
 export interface MemeWatchTopResponse {

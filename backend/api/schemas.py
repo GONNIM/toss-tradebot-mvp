@@ -432,6 +432,10 @@ class MemeScoreResponse(BaseModel):
     sample_warning: bool
     contributions: list[MemeSignalContributionResponse]
 
+    # Phase 3-D — 가격 (일봉 마지막 close). US=USD, KRX=원.
+    current_price: Optional[float] = None
+    return_1d_pct: Optional[float] = None
+
 
 class MemeWatchTopResponse(BaseModel):
     items: list[MemeScoreResponse]

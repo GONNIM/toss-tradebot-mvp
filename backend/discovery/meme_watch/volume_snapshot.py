@@ -72,6 +72,7 @@ async def build_us_snapshots() -> dict:
                         return_1d_pct=float(r1d),
                         rsi_14=rsi,
                         halt_triggered=False,
+                        close=float(closes.iloc[-1]),
                     )
                 )
                 stats["saved"] += 1
@@ -143,6 +144,7 @@ async def build_krx_snapshots() -> dict:
                         return_1d_pct=float(r1d),
                         rsi_14=rsi,
                         halt_triggered=False,
+                        close=float(closes.iloc[-1]),
                     )
                 )
                 stats["saved"] += 1

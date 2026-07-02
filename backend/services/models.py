@@ -573,3 +573,4 @@ class MemeVolumeSnapshot(Base):
     return_1d_pct: Mapped[float]
     rsi_14: Mapped[Optional[float]]
     halt_triggered: Mapped[bool] = mapped_column(Boolean, default=False)
+    close: Mapped[Optional[float]]  # Phase 3-D: 일봉 마지막 종가 (UI current_price)

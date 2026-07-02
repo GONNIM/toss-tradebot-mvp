@@ -23,6 +23,12 @@ const STRONGEST_LABELS: Record<string, string> = {
   catalyst: "Catalyst",
 };
 
+function formatPrice(price: number | null, market: string | null): string {
+  if (price == null) return "—";
+  if (market === "KRX") return `${Math.round(price).toLocaleString("ko-KR")}원`;
+  return `$${price.toLocaleString("en-US", { maximumFractionDigits: 2 })}`;
+}
+
 export function MemeWatchTable({ items }: { items: MemeScoreItem[] }) {
   const [selected, setSelected] = useState<MemeScoreItem | null>(null);
 
@@ -44,9 +50,10 @@ export function MemeWatchTable({ items }: { items: MemeScoreItem[] }) {
               <th className="px-3 py-3">종목</th>
               <th className="px-3 py-3 text-right">Score</th>
               <th className="px-3 py-3 text-center">라벨</th>
+              <th className="px-3 py-3 text-right">현재가</th>
+              <th className="px-3 py-3 text-right">1D</th>
               <th className="px-3 py-3 text-center">활성</th>
               <th className="px-3 py-3">최강 시그널</th>
-              <th className="px-3 py-3">시장</th>
               <th className="px-3 py-3 text-right">시총</th>
             </tr>
           </thead>
@@ -55,6 +62,13 @@ export function MemeWatchTable({ items }: { items: MemeScoreItem[] }) {
               const labelClass = LABEL_COLORS[it.label] || "";
               const strongestLabel =
                 STRONGEST_LABELS[it.strongest_signal] || it.strongest_signal;
+              const r1d = it.return_1d_pct;
+              const r1dClass =
+                r1d == null
+                  ? "text-muted-foreground"
+                  : r1d >= 0
+                    ? "text-emerald-600 dark:text-emerald-400"
+                    : "text-rose-600 dark:text-rose-400";
               return (
                 <tr
                   key={`${it.ticker}-${i}`}
@@ -84,6 +98,12 @@ export function MemeWatchTable({ items }: { items: MemeScoreItem[] }) {
                     <span className="mr-1">{it.emoji}</span>
                     {it.label}
                   </td>
+                  <td className="px-3 py-2.5 text-right font-mono text-foreground">
+                    {formatPrice(it.current_price, it.market)}
+                  </td>
+                  <td className={cn("px-3 py-2.5 text-right font-mono", r1dClass)}>
+                    {r1d == null ? "—" : `${r1d >= 0 ? "+" : ""}${r1d.toFixed(1)}%`}
+                  </td>
                   <td className="px-3 py-2.5 text-center font-mono text-muted-foreground">
                     {it.active_signals}/5
                   </td>
@@ -98,12 +118,11 @@ export function MemeWatchTable({ items }: { items: MemeScoreItem[] }) {
                       </span>
                     )}
                   </td>
-                  <td className="px-3 py-2.5 text-muted-foreground">
-                    {it.market || "—"}
-                  </td>
                   <td className="px-3 py-2.5 text-right font-mono text-muted-foreground">
                     {it.market_cap
-                      ? `$${(it.market_cap / 1e9).toFixed(1)}B`
+                      ? it.market === "KRX"
+                        ? `${(it.market_cap / 1e12).toFixed(2)}조원`
+                        : `$${(it.market_cap / 1e9).toFixed(1)}B`
                       : "—"}
                   </td>
                 </tr>

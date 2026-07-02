@@ -46,15 +46,29 @@ async def _sources_status() -> dict[str, str]:
 
 
 @router.get("/top", response_model=MemeWatchTopResponse)
-async def get_top_memes(limit: int = Query(20, ge=1, le=100)):
-    """apewisdom 상위 종목 × 시그널 join → Meme Score 상위 N."""
-    results = await compute_top_memes(top_n=limit)
+async def get_top_memes(
+    limit: int = Query(20, ge=1, le=100),
+    market: Optional[str] = Query(
+        None, pattern="^(US|KRX)$", description="시장 필터: US / KRX / (없음=전체)"
+    ),
+):
+    """apewisdom 상위 종목 × 시그널 join → Meme Score 상위 N. market 필터 지원."""
+    # compute_top_memes 는 전체 후보 산출. market 필터는 후처리 (여유분 위해 3× fetch).
+    fetch_n = limit * 3 if market else limit
+    results = await compute_top_memes(top_n=fetch_n)
+    if market:
+        results = [
+            r for r in results if r.get("meta") and r["meta"].market == market
+        ][:limit]
+    else:
+        results = results[:limit]
     sources = await _sources_status()
 
     items = []
     for r in results:
         score = r["score"]
         meta = r.get("meta")
+        vol = r.get("volume")
         items.append(
             MemeScoreResponse(
                 ticker=score.ticker,
@@ -82,6 +96,8 @@ async def get_top_memes(limit: int = Query(20, ge=1, le=100)):
                     )
                     for c in score.contributions
                 ],
+                current_price=(vol.close if vol else None),
+                return_1d_pct=(vol.return_1d_pct if vol else None),
             )
         )
 

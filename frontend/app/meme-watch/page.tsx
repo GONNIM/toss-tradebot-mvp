@@ -5,7 +5,11 @@ import { useQuery } from "@tanstack/react-query";
 
 import { MemeWatchTable } from "@/components/meme-watch/MemeWatchTable";
 import { SourcesStatusBar } from "@/components/meme-watch/SourcesStatusBar";
+import { UsageGuide } from "@/components/meme-watch/UsageGuide";
 import { api } from "@/lib/api";
+import { cn } from "@/lib/utils";
+
+type MarketFilter = "all" | "US" | "KRX";
 
 function formatKstTime(iso: string): string {
   if (!iso) return "—";
@@ -22,20 +26,23 @@ function formatKstTime(iso: string): string {
 
 export default function MemeWatchPage() {
   const [limit, setLimit] = useState(20);
+  const [market, setMarket] = useState<MarketFilter>("all");
+
+  const marketParam = market === "all" ? undefined : market;
   const { data, isLoading } = useQuery({
-    queryKey: ["meme-watch", "top", limit],
-    queryFn: () => api.memeWatch.top(limit),
-    refetchInterval: 60_000, // 1분마다 자동 갱신
+    queryKey: ["meme-watch", "top", limit, market],
+    queryFn: () => api.memeWatch.top(limit, marketParam),
+    refetchInterval: 60_000,
   });
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-4">
       <header className="flex items-start justify-between flex-wrap gap-3">
         <div>
           <h1 className="text-3xl font-bold">🔥 화끈한 밈주 찾기</h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            5요소 confluence — 공매도 · 소셜 · 거래량 · Oversold · Catalyst.
-            매 5분 갱신 (apewisdom + 일봉 + …).
+            5요소 confluence — 공매도 · 소셜 · 거래량 · Momentum · Catalyst.
+            매 5분 갱신.
           </p>
         </div>
         <select
@@ -50,11 +57,26 @@ export default function MemeWatchPage() {
         </select>
       </header>
 
+      <UsageGuide />
+
+      {/* 시장 탭 */}
+      <div className="flex gap-2 border-b border-border">
+        <MarketTab active={market === "all"} onClick={() => setMarket("all")}>
+          🌐 전체
+        </MarketTab>
+        <MarketTab active={market === "US"} onClick={() => setMarket("US")}>
+          🇺🇸 미국
+        </MarketTab>
+        <MarketTab active={market === "KRX"} onClick={() => setMarket("KRX")}>
+          🇰🇷 한국
+        </MarketTab>
+      </div>
+
       {data && (
         <div className="flex items-center justify-between flex-wrap gap-3">
           <SourcesStatusBar status={data.sources_status} />
           <div className="text-xs text-muted-foreground font-mono">
-            산출 시각: {formatKstTime(data.computed_at)} · 총 {data.total} 종목
+            산출 시각: {formatKstTime(data.computed_at)} · {data.total} 종목
           </div>
         </div>
       )}
@@ -70,5 +92,29 @@ export default function MemeWatchPage() {
         손실 가능 — Moonshot 모듈과 동일하게 "카지노 머니" 로만 운영 권장.
       </div>
     </div>
+  );
+}
+
+function MarketTab({
+  active,
+  onClick,
+  children,
+}: {
+  active: boolean;
+  onClick: () => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      className={cn(
+        "px-4 py-2 text-sm font-medium transition-colors border-b-2 -mb-px",
+        active
+          ? "border-cyan-500 text-cyan-700 dark:text-cyan-300"
+          : "border-transparent text-muted-foreground hover:text-foreground",
+      )}
+    >
+      {children}
+    </button>
   );
 }
