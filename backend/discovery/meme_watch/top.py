@@ -57,6 +57,31 @@ async def _latest_apewisdom_snapshot(session: AsyncSession) -> dict[str, dict]:
     return out
 
 
+async def _latest_trends_snapshot(session: AsyncSession) -> dict[str, int]:
+    """최신 Google Trends batch — {ticker: score_24h (0~100)}. Phase 3-C."""
+    latest_at = (
+        await session.execute(
+            select(MemeSocialSignal.fetched_at)
+            .where(MemeSocialSignal.source == "google_trends")
+            .order_by(desc(MemeSocialSignal.fetched_at))
+            .limit(1)
+        )
+    ).scalar_one_or_none()
+    if latest_at is None:
+        return {}
+    rows = (
+        await session.execute(
+            select(MemeSocialSignal.ticker, MemeSocialSignal.mention_count)
+            .where(
+                MemeSocialSignal.source == "google_trends",
+                MemeSocialSignal.fetched_at == latest_at,
+            )
+        )
+    ).all()
+    # trends 의 mention_count 필드 = score_24h (0~100)
+    return {r[0]: int(r[1]) for r in rows}
+
+
 async def _latest_volume_snapshots(
     session: AsyncSession, tickers: list[str]
 ) -> dict[str, MemeVolumeSnapshot]:
@@ -109,6 +134,7 @@ async def compute_top_memes(top_n: int = 20) -> list[dict]:
     """
     async with get_session() as session:
         social = await _latest_apewisdom_snapshot(session)
+        trends = await _latest_trends_snapshot(session)  # Phase 3-C
         # KRX universe 종목 (active)
         krx_rows = (
             await session.execute(
@@ -120,8 +146,8 @@ async def compute_top_memes(top_n: int = 20) -> list[dict]:
         ).scalars().all()
         krx_tickers = set(t for t in krx_rows if t)
 
-        # 후보 ticker — US (apewisdom mention) ∪ KRX (universe)
-        candidate_tickers = set(social.keys()) | krx_tickers
+        # 후보 ticker — US (apewisdom ∪ trends) ∪ KRX (universe)
+        candidate_tickers = set(social.keys()) | set(trends.keys()) | krx_tickers
         if not candidate_tickers:
             logger.warning("[meme_top] no candidate tickers")
             return []
@@ -139,9 +165,15 @@ async def compute_top_memes(top_n: int = 20) -> list[dict]:
         if is_blacklisted(ticker):
             continue
         soc = social.get(ticker)
+        tr = trends.get(ticker)
         vol = volumes.get(ticker)
         meta = metas.get(ticker)
         cat = catalysts.get(ticker)
+        # Google Trends 만 있는 종목은 soc dict 로 승격 (Phase 3-C)
+        if soc is None and tr is not None:
+            soc = {"mentions": 0, "mentions_24h_ago": None, "upvotes": 0}
+        if soc is not None and tr is not None:
+            soc = {**soc, "trends_score_24h": tr}
         # 시그널이 하나도 없으면 skip
         if soc is None and vol is None and cat is None:
             continue

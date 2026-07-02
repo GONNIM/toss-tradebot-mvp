@@ -76,42 +76,90 @@ def normalize_weights(available: set[str]) -> dict[str, float]:
 # ─────────────────────────────────────────────────────────────────
 
 
-def normalize_social(
+def _normalize_apewisdom(
     mentions: int, mentions_24h_ago: Optional[int], upvotes: int
 ) -> tuple[float, str, float]:
-    """apewisdom mentions 24h vs 전일 비율 + upvote 강도.
-
-    Returns: (normalized, raw_label, raw_value)
-    """
+    """apewisdom mentions 24h vs 전일 비율 + upvote 강도."""
     if not mentions:
         return 0.0, "0 mentions", 0.0
-    # 24h_ago baseline 부재 시 — 절대 mention 수로 보정
     if not mentions_24h_ago:
-        # mention 자체가 충분히 많으면 (>= 500) 시그널 강
         ratio = mentions / 100.0
     else:
         ratio = mentions / max(1, mentions_24h_ago)
 
-    # ratio → normalized [0, 1.5]
     if ratio >= 5.0:
         n = 1.5
     elif ratio >= 3.0:
-        n = 1.0 + (ratio - 3.0) * 0.25  # 3~5 → 1.0~1.5
+        n = 1.0 + (ratio - 3.0) * 0.25
     elif ratio >= 2.0:
-        n = 0.7 + (ratio - 2.0) * 0.3   # 2~3 → 0.7~1.0
+        n = 0.7 + (ratio - 2.0) * 0.3
     elif ratio >= 1.5:
-        n = 0.4 + (ratio - 1.5) * 0.6   # 1.5~2 → 0.4~0.7
+        n = 0.4 + (ratio - 1.5) * 0.6
     elif ratio >= 1.0:
-        n = 0.2 + (ratio - 1.0) * 0.4   # 1~1.5 → 0.2~0.4
+        n = 0.2 + (ratio - 1.0) * 0.4
     else:
         n = 0.0
 
-    # upvote 강도 보너스 — upvote/mention 이 5 이상 (열정도) 시 +0.1
     if mentions > 0 and (upvotes / mentions) >= 5.0:
         n = min(1.5, n + 0.1)
 
     raw_label = f"{mentions:,}↑/{mentions_24h_ago or 0:,} ({ratio:.1f}×)"
     return n, raw_label, ratio
+
+
+def _normalize_trends(score_24h: Optional[int]) -> tuple[float, str]:
+    """Google Trends 검색량 0~100 → normalized [0, 1.5]."""
+    if score_24h is None or score_24h <= 0:
+        return 0.0, ""
+    # 100 = 최대 (검색량 폭증) → 1.5
+    # 80+ → 1.0
+    # 50+ → 0.7
+    # 30+ → 0.4
+    # 15+ → 0.2
+    if score_24h >= 90:
+        n = 1.5
+    elif score_24h >= 70:
+        n = 1.0 + (score_24h - 70) / 20 * 0.5
+    elif score_24h >= 50:
+        n = 0.7 + (score_24h - 50) / 20 * 0.3
+    elif score_24h >= 30:
+        n = 0.4 + (score_24h - 30) / 20 * 0.3
+    elif score_24h >= 15:
+        n = 0.2 + (score_24h - 15) / 15 * 0.2
+    else:
+        n = 0.0
+    return n, f"Trends {score_24h}"
+
+
+def normalize_social(
+    mentions: int,
+    mentions_24h_ago: Optional[int],
+    upvotes: int,
+    trends_score_24h: Optional[int] = None,
+) -> tuple[float, str, float]:
+    """apewisdom + Google Trends 통합 소셜 시그널.
+
+    두 sub-source 다 가용 시 max(apewisdom, trends) 사용 —
+    한쪽만 강해도 시그널 인식. trends 만 가용 시 그 값 사용.
+
+    Returns: (normalized, raw_label, raw_value)
+    """
+    ape_n, ape_label, ape_ratio = _normalize_apewisdom(
+        mentions, mentions_24h_ago, upvotes
+    )
+    trends_n, trends_label = _normalize_trends(trends_score_24h)
+
+    # 두 sub-source max — 하나가 강하면 그 시그널 인정
+    n = max(ape_n, trends_n)
+
+    if ape_n > 0 and trends_n > 0:
+        raw_label = f"{ape_label} · {trends_label}"
+    elif trends_n > 0:
+        raw_label = trends_label
+    else:
+        raw_label = ape_label
+
+    return n, raw_label, ape_ratio
 
 
 def normalize_volume(
@@ -237,14 +285,19 @@ def compute_meme_score(
     contributions: list[SignalContribution] = []
     available: set[str] = set()
 
-    # ② Social
+    # ② Social — apewisdom + Google Trends (Phase 3-C)
     if social_inputs is not None:
         n, label, raw = normalize_social(
             social_inputs.get("mentions") or 0,
             social_inputs.get("mentions_24h_ago"),
             social_inputs.get("upvotes") or 0,
+            social_inputs.get("trends_score_24h"),
         )
-        if n > 0 or social_inputs.get("mentions"):
+        has_any_signal = (
+            social_inputs.get("mentions")
+            or social_inputs.get("trends_score_24h")
+        )
+        if n > 0 or has_any_signal:
             available.add("social")
             contributions.append(
                 SignalContribution(
@@ -253,9 +306,9 @@ def compute_meme_score(
                     raw_value=raw,
                     raw_label=label,
                     normalized=n,
-                    weight=0.0,  # 후 재정규화
+                    weight=0.0,
                     contribution=0.0,
-                    detail="apewisdom 24h 언급 변화율 + upvote 강도",
+                    detail="apewisdom 24h 언급 + Google Trends 검색량 (max)",
                 )
             )
 
