@@ -102,5 +102,16 @@ jobs:
 
       - name: Verify deployment
         run: |
-          sleep 5
-          curl -sSf https://${{ secrets.OPTIMUS8_HOST }}/health
+          # backend systemctl restart 후 uvicorn startup 완료까지 대기.
+          # 5s 는 부족 (application startup 중 502) → 20s + 재시도.
+          sleep 20
+          for i in 1 2 3; do
+            if curl -sSf https://${{ secrets.OPTIMUS8_HOST }}/health; then
+              echo "✓ health OK"
+              exit 0
+            fi
+            echo "retry $i/3 in 10s..."
+            sleep 10
+          done
+          echo "✗ health check failed after 3 retries"
+          exit 1
