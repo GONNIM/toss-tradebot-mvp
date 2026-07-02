@@ -127,6 +127,34 @@ journalctl -u tossbot-frontend -n 50 --no-pager
 [`backend/discovery/data_sources/motir_export/downloader.py`](../../backend/discovery/data_sources/motir_export/downloader.py)
 의 `KDI_NUM_CATALOG` dict에 신규 발표월 num 추가 후 커밋 → push → `deploy-tossbot`.
 
+### 로그 파일 조회 — `.log` 는 대부분 비어 있음, 실 로그는 `.error.log`
+
+Python `logging.basicConfig` 가 기본 stderr 로 출력하므로, systemd
+`StandardOutput` / `StandardError` 분리 redirect 결과 **모든 INFO 로그가
+`*.error.log` 쪽에 쌓인다** (이름과 달리 "에러 전용" 파일이 아니다).
+
+| 파일 | 실제 내용 |
+|---|---|
+| `/var/log/toss-tradebot/api.log` | 대부분 0 byte / 미갱신 |
+| `/var/log/toss-tradebot/api.error.log` | **FastAPI INFO / 에러 로그 (실제)** |
+| `/var/log/toss-tradebot/cron.log` | 대부분 0 byte / 미갱신 |
+| `/var/log/toss-tradebot/cron.error.log` | **Scheduler + job INFO / 에러 로그 (실제)** |
+| `/var/log/toss-tradebot/web-0.log` | PM2 stdout (Next.js) |
+| `/var/log/toss-tradebot/web.error-0.log` | PM2 stderr (Next.js) |
+
+**운영 조회 예시**:
+```bash
+# Sector Leaders 알림 발사 로그
+tail -f /var/log/toss-tradebot/cron.error.log
+
+# FastAPI 요청 로그
+tail -f /var/log/toss-tradebot/api.error.log
+```
+
+`cron.log` 만 확인하면 "로그가 없다"고 오해할 수 있으니 주의. 이 동작은
+Python `logging` 기본 동작 + systemd redirect 조합에서 발생하며 에러 아니다.
+(추후 여유 시 `logging` 을 stdout 으로 명시 지정하는 리팩토링 여지)
+
 ### 운영 DB (`backend/data/tradebot.db`) 백업
 ```bash
 ssh root@optimus8.cafe24.com "cp /root/toss-tradebot-mvp/backend/data/tradebot.db /root/tradebot.db.$(date +%Y%m%d-%H%M).bak"

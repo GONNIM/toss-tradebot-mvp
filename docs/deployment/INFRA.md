@@ -98,6 +98,11 @@ StandardError=append:/var/log/toss-tradebot/cron.error.log
 WantedBy=multi-user.target
 ```
 
+> ⚠️ **로그 파일명 주의**: Python `logging.basicConfig` 가 기본 stderr 로
+> 출력하기 때문에 **INFO 로그도 `.error.log` 쪽에 쌓인다** (`.log` 는 대부분
+> 0 byte 로 남음). 운영 조회 시 `cron.error.log` / `api.error.log` 를 봐야
+> 실제 로그를 확인할 수 있다. 상세: [`../operations/deployment.md`](../operations/deployment.md#로그-파일-조회--log-는-대부분-비어-있음-실-로그는-errorlog) 참조.
+
 활성화:
 ```bash
 sudo mkdir -p /var/log/toss-tradebot
