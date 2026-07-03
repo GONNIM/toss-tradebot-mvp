@@ -19,6 +19,7 @@ from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.cron import CronTrigger
 
 from backend.discovery.meme_watch.catalyst_signal import build_dart_catalyst
+from backend.discovery.meme_watch.score_history import build_score_history
 from backend.discovery.meme_watch.social_signal import (
     build_apewisdom_signals,
     build_reddit_signals,
@@ -103,6 +104,16 @@ def register_meme_jobs(scheduler: AsyncIOScheduler) -> None:
         name="매시 30분 — DART 공시 4유형 (B/C/D/I) fetch + UPSERT",
         replace_existing=True,
         misfire_grace_time=1800,
+    )
+    # Score history (Phase 4) — apewisdom(:00) + volume(daily) 후 저장.
+    # 매 5분 apewisdom 완료 후 3분 offset (:03/:08/:13/...) → top 100 저장.
+    scheduler.add_job(
+        build_score_history,
+        trigger=CronTrigger(minute="3-58/5", timezone="Asia/Seoul"),
+        id="meme_score_history_5min",
+        name="5분마다 (3분 offset) — top 100 종목 score 이력 저장",
+        replace_existing=True,
+        misfire_grace_time=300,
     )
     # Reddit 직접 fetch (PRAW) 는 A 승인 후 활성. build_reddit_signals 함수는 보존.
     logger.info(

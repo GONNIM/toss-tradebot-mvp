@@ -492,6 +492,8 @@ export interface MemeIntensity {
   return_5d: number | null;
   acceleration: number | null;
   volume_ratio: number | null;
+  score_delta_24h: number | null;   // Phase 4
+  time_in_blazing_7d: number;        // Phase 4
   sample_days: number;
 }
 

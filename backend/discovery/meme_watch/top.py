@@ -207,9 +207,11 @@ async def compute_top_memes(
 
     top_slice = results[:top_n]
 
-    # Intensity 계산 — top_slice 만 (전체 계산 부담 회피, Phase 3-E)
+    # Intensity 계산 — top_slice 만 (Phase 4: current_score 전달로 score_delta 활성)
     async with get_session() as session:
         for r in top_slice:
-            r["intensity"] = await compute_intensity(session, r["score"].ticker)
+            r["intensity"] = await compute_intensity(
+                session, r["score"].ticker, current_score=r["score"].score
+            )
 
     return top_slice

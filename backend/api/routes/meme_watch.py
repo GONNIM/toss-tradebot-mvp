@@ -101,6 +101,8 @@ async def get_top_memes(
                         return_5d=r["intensity"].return_5d,
                         acceleration=r["intensity"].acceleration,
                         volume_ratio=r["intensity"].volume_ratio,
+                        score_delta_24h=r["intensity"].score_delta_24h,
+                        time_in_blazing_7d=r["intensity"].time_in_blazing_7d,
                         sample_days=r["intensity"].sample_days,
                     )
                     if r.get("intensity")

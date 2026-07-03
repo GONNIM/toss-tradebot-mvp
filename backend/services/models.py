@@ -535,6 +535,24 @@ class MemeShortInterest(Base):
     # "finra" / "krx" / "yahoo_estimate"
 
 
+class MemeScoreHistory(Base):
+    """Meme Score 5분 batch 이력 (Phase 4).
+
+    Intensity 의 score_delta / Time-in-BLAZING / persistence 등 시계열
+    지표 계산 baseline. 매 5분 top N 종목 저장.
+    """
+
+    __tablename__ = "meme_score_history"
+
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    ticker: Mapped[str] = mapped_column(String(20), index=True)
+    snapshot_at: Mapped[datetime] = mapped_column(DateTime, index=True)
+    market: Mapped[Optional[str]] = mapped_column(String(10))
+    score: Mapped[float]
+    label: Mapped[str] = mapped_column(String(20))
+    active_signals: Mapped[int] = mapped_column(Integer, default=0)
+
+
 class MemeCatalystEvent(Base):
     """외부 catalyst 이벤트 — DART 공시 / KRX VI / FINRA halt 등 (Phase 3-B).
 

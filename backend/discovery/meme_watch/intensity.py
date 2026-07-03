@@ -39,7 +39,9 @@ class IntensityScore:
     return_5d: Optional[float]
     acceleration: Optional[float]
     volume_ratio: Optional[float]
-    sample_days: int          # 사용된 snapshot 개수
+    score_delta_24h: Optional[float]  # Phase 4
+    time_in_blazing_7d: int           # Phase 4 — 최근 7일 BLAZING/HOT 카운트
+    sample_days: int
 
 
 def _label_emoji(intensity: float) -> tuple[str, str]:
@@ -125,6 +127,26 @@ def _norm_volume_ratio(v: Optional[float]) -> Optional[float]:
     return 0.0
 
 
+def _norm_score_delta(d: Optional[float]) -> Optional[float]:
+    """24h Meme Score 변화량 → 0~10.
+
+    +0.5 이상 = 시그널 강해지는 중 (강한 상승 국면 진입).
+    """
+    if d is None:
+        return None
+    if d >= 0.5:
+        return 10.0
+    if d >= 0.3:
+        return 8.0
+    if d >= 0.15:
+        return 6.0
+    if d >= 0.05:
+        return 4.0
+    if d >= 0:
+        return 2.0
+    return 0.0
+
+
 async def get_snapshot_history(
     session: AsyncSession, ticker: str, limit: int = 10
 ) -> list[MemeVolumeSnapshot]:
@@ -141,13 +163,21 @@ async def get_snapshot_history(
 
 
 async def compute_intensity(
-    session: AsyncSession, ticker: str
+    session: AsyncSession,
+    ticker: str,
+    current_score: Optional[float] = None,
 ) -> Optional[IntensityScore]:
-    """4지표 가중합 → 0~10 intensity + 라벨.
+    """5지표 가중합 → 0~10 intensity + 라벨 (Phase 4 완성).
 
-    가중치: return_1d 0.30 · acceleration 0.30 · return_5d 0.20 · vol_ratio 0.20.
-    (Phase 4 score_delta 도입 시: 0.25 / 0.25 / 0.15 / 0.15 / 0.20 재배분)
+    가중치: return_1d 0.25 · acceleration 0.25 · return_5d 0.15 ·
+    vol_ratio 0.15 · score_delta 0.20.
+    부재 지표는 자동 재정규화.
     """
+    from backend.discovery.meme_watch.score_history import (
+        get_score_delta_24h,
+        get_time_in_blazing,
+    )
+
     snapshots = await get_snapshot_history(session, ticker, limit=10)
     if not snapshots:
         return None
@@ -174,12 +204,18 @@ async def compute_intensity(
         ):
             r_5d = (latest.close / five_ago.close - 1) * 100
 
-    # 정규화 (None 지표는 가중치에서 제외)
+    # Phase 4 — score_delta 24h + Time-in-BLAZING 7d
+    score_delta: Optional[float] = None
+    if current_score is not None:
+        score_delta = await get_score_delta_24h(session, ticker, current_score)
+    time_in_blazing = await get_time_in_blazing(session, ticker, days=7)
+
     values = {
-        "return_1d": (_norm_1d_return(today_r1d), 0.30),
-        "acceleration": (_norm_acceleration(accel), 0.30),
-        "return_5d": (_norm_5d_cumulative(r_5d), 0.20),
-        "volume_ratio": (_norm_volume_ratio(today_ratio), 0.20),
+        "return_1d": (_norm_1d_return(today_r1d), 0.25),
+        "acceleration": (_norm_acceleration(accel), 0.25),
+        "return_5d": (_norm_5d_cumulative(r_5d), 0.15),
+        "volume_ratio": (_norm_volume_ratio(today_ratio), 0.15),
+        "score_delta": (_norm_score_delta(score_delta), 0.20),
     }
 
     weighted_sum = 0.0
@@ -192,7 +228,7 @@ async def compute_intensity(
 
     if total_weight <= 0:
         return None
-    intensity = weighted_sum / total_weight  # 재정규화 (가용 지표만)
+    intensity = weighted_sum / total_weight
     intensity = max(0.0, min(10.0, intensity))
 
     label, emoji = _label_emoji(intensity)
@@ -206,5 +242,7 @@ async def compute_intensity(
         return_5d=r_5d,
         acceleration=accel,
         volume_ratio=today_ratio,
+        score_delta_24h=score_delta,
+        time_in_blazing_7d=time_in_blazing,
         sample_days=len(snapshots),
     )
