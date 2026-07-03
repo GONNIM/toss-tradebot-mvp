@@ -34,30 +34,47 @@ def _format_alert(
     meta,
     volume,
 ) -> str:
-    """Markdown 메시지 생성."""
-    emoji = intensity.emoji if intensity else score.emoji
+    """Markdown 메시지 생성.
+
+    헤더에 두 지표 라벨 병기 (Score BLAZING + Intensity ERUPTING) — 두 개념
+    (폭등 가능성 예측 vs 현재 상승 강도 실측) 사용자 혼동 방지.
+    """
     name = (meta.name if meta else "") or score.ticker
     market = (meta.market if meta else "?") or "?"
 
+    # 헤더 라벨 — 두 조건 모두 만족 시 병기
+    header_parts = []
+    if intensity is not None and intensity.intensity >= _ERUPTING_INTENSITY:
+        header_parts.append(f"{intensity.emoji} {intensity.label}")
+    if score.score >= _BLAZING_SCORE:
+        header_parts.append(f"{score.emoji} {score.label}")
+    if not header_parts:
+        # 임계 미만 (알림 발송 판정 미도달 — 방어 코드)
+        header_parts.append(f"{score.emoji} {score.label}")
+
     lines = [
-        f"{emoji} *{alert_type}* — {name}",
+        f"{' · '.join(header_parts)} — *{name}*",
         f"`{score.ticker}` · {market}",
-        f"Meme Score: *{score.score:.3f}* {score.emoji} {score.label}",
+        "─────────────",
+        f"Meme Score:  *{score.score:.3f}*  {score.emoji} {score.label}",
+        "             _(폭등 가능성 예측)_",
     ]
     if intensity is not None:
-        lines.append(
-            f"Intensity: *{intensity.intensity:.1f}/10* {intensity.emoji} {intensity.label}"
-        )
+        lines += [
+            f"Intensity:   *{intensity.intensity:.1f}/10*  {intensity.emoji} {intensity.label}",
+            "             _(현재 상승 강도 실측)_",
+        ]
+    lines.append("─────────────")
 
     if volume is not None and volume.close is not None:
-        market_val = market if market != "?" else ""
-        if market_val == "KRX":
+        if market == "KRX":
             price_str = f"{int(volume.close):,}원"
         else:
             price_str = f"${volume.close:.2f}"
-        lines.append(f"현재가: *{price_str}*")
+        price_line = f"현재가: *{price_str}*"
         if volume.return_1d_pct is not None:
-            lines.append(f"1D 변화: *{volume.return_1d_pct:+.1f}%*")
+            price_line += f"  ·  1D *{volume.return_1d_pct:+.1f}%*"
+        lines.append(price_line)
 
     lines += [
         "",
