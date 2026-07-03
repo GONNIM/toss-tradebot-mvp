@@ -23,8 +23,12 @@ logger = logging.getLogger(__name__)
 # 알림 임계
 _ERUPTING_INTENSITY = 8.0
 _BLAZING_SCORE = 1.0
-_COOLDOWN_HOURS = 24
+_COOLDOWN_HOURS = 8                # Phase 6-D: 24h → 8h 단축
 _TOP_N_TO_CHECK = 50
+
+# 재알림 규칙 (cooldown 안이라도 시그널 급상승 시 즉시 재발송)
+_RETRIGGER_SCORE_DELTA = 0.3
+_RETRIGGER_INTENSITY_DELTA = 3.0
 
 
 def _format_alert(
@@ -33,6 +37,8 @@ def _format_alert(
     intensity,
     meta,
     volume,
+    prev_score: Optional[float] = None,
+    prev_intensity: Optional[float] = None,
 ) -> str:
     """Markdown 메시지 생성.
 
@@ -42,28 +48,38 @@ def _format_alert(
     name = (meta.name if meta else "") or score.ticker
     market = (meta.market if meta else "?") or "?"
 
-    # 헤더 라벨 — 두 조건 모두 만족 시 병기
+    # 헤더 라벨 — 두 조건 모두 만족 시 병기 + retrigger 표시
     header_parts = []
     if intensity is not None and intensity.intensity >= _ERUPTING_INTENSITY:
         header_parts.append(f"{intensity.emoji} {intensity.label}")
     if score.score >= _BLAZING_SCORE:
         header_parts.append(f"{score.emoji} {score.label}")
     if not header_parts:
-        # 임계 미만 (알림 발송 판정 미도달 — 방어 코드)
         header_parts.append(f"{score.emoji} {score.label}")
 
+    is_retrigger = prev_score is not None or prev_intensity is not None
+    retrigger_tag = " 🔺 UP" if is_retrigger else ""
+
     lines = [
-        f"{' · '.join(header_parts)} — *{name}*",
+        f"{' · '.join(header_parts)}{retrigger_tag} — *{name}*",
         f"`{score.ticker}` · {market}",
         "─────────────",
-        f"Meme Score:  *{score.score:.3f}*  {score.emoji} {score.label}",
+        f"Meme Score:  *{score.score:.3f}*  {score.emoji} {score.label}"
+        + (f"  _(이전 {prev_score:.3f}, +{score.score - prev_score:.2f})_"
+           if prev_score is not None and is_retrigger else ""),
         "             _(폭등 가능성 예측)_",
     ]
     if intensity is not None:
-        lines += [
-            f"Intensity:   *{intensity.intensity:.1f}/10*  {intensity.emoji} {intensity.label}",
-            "             _(현재 상승 강도 실측)_",
-        ]
+        intensity_line = (
+            f"Intensity:   *{intensity.intensity:.1f}/10*  "
+            f"{intensity.emoji} {intensity.label}"
+        )
+        if prev_intensity is not None and is_retrigger:
+            intensity_line += (
+                f"  _(이전 {prev_intensity:.1f}, +{intensity.intensity - prev_intensity:.1f})_"
+            )
+        lines.append(intensity_line)
+        lines.append("             _(현재 상승 강도 실측)_")
     lines.append("─────────────")
 
     if volume is not None and volume.close is not None:
@@ -84,11 +100,16 @@ def _format_alert(
 
 
 async def check_and_send_alerts(top_n: int = _TOP_N_TO_CHECK) -> dict:
-    """Top N 종목에서 ERUPTING/BLAZING 감지 → Telegram 발송 + 이력 저장."""
+    """Top N 종목에서 ERUPTING/BLAZING 감지 → Telegram 발송 + 이력 저장.
+
+    Phase 6-D: cooldown 8h + 시그널 급상승 (Score +0.3 or Intensity +3.0) 시
+    cooldown 무시 재발송 (🔺 UP 표시).
+    """
     stats = {
         "candidates": 0,
         "eligible": 0,
-        "sent": 0,
+        "sent_new": 0,
+        "sent_retrigger": 0,
         "skipped_cooldown": 0,
         "skipped_below_threshold": 0,
         "errors": 0,
@@ -108,15 +129,22 @@ async def check_and_send_alerts(top_n: int = _TOP_N_TO_CHECK) -> dict:
     cutoff = now - timedelta(hours=_COOLDOWN_HOURS)
 
     async with get_session() as session:
-        # 최근 24h 발송된 (ticker, alert_type) 세트
+        # 최근 cooldown 시간 내 (ticker, alert_type) → payload — 상승 delta 판정
         recent_rows = (
             await session.execute(
-                select(MemeAlertHistory.ticker, MemeAlertHistory.alert_type).where(
-                    MemeAlertHistory.triggered_at >= cutoff
-                )
+                select(
+                    MemeAlertHistory.ticker,
+                    MemeAlertHistory.alert_type,
+                    MemeAlertHistory.payload,
+                ).where(MemeAlertHistory.triggered_at >= cutoff)
             )
         ).all()
-        recent_set = set((r[0], r[1]) for r in recent_rows)
+        recent_map: dict[tuple[str, str], dict] = {}
+        for tk, at, pl in recent_rows:
+            try:
+                recent_map[(tk, at)] = json.loads(pl or "{}")
+            except (ValueError, TypeError):
+                recent_map[(tk, at)] = {}
 
         for r in results:
             score = r["score"]
@@ -124,7 +152,6 @@ async def check_and_send_alerts(top_n: int = _TOP_N_TO_CHECK) -> dict:
             meta = r.get("meta")
             volume = r.get("volume")
 
-            # 임계 판정 — ERUPTING 우선 (더 강한 시그널)
             alert_type: Optional[str] = None
             if intensity is not None and intensity.intensity >= _ERUPTING_INTENSITY:
                 alert_type = "ERUPTING"
@@ -136,11 +163,41 @@ async def check_and_send_alerts(top_n: int = _TOP_N_TO_CHECK) -> dict:
 
             stats["eligible"] += 1
             key = (score.ticker, alert_type)
-            if key in recent_set:
-                stats["skipped_cooldown"] += 1
-                continue
 
-            text = _format_alert(alert_type, score, intensity, meta, volume)
+            # cooldown 판정 — 이전 발송 있으면 상승 delta 확인
+            prev_score: Optional[float] = None
+            prev_intensity: Optional[float] = None
+            is_retrigger = False
+            if key in recent_map:
+                prev = recent_map[key]
+                prev_score = prev.get("score")
+                prev_intensity = prev.get("intensity")
+                # 상승 delta 계산
+                score_up = (
+                    score.score - prev_score if prev_score is not None else 0.0
+                )
+                intensity_up = (
+                    (intensity.intensity if intensity else 0.0)
+                    - (prev_intensity if prev_intensity is not None else 0.0)
+                )
+                if (
+                    score_up >= _RETRIGGER_SCORE_DELTA
+                    or intensity_up >= _RETRIGGER_INTENSITY_DELTA
+                ):
+                    is_retrigger = True
+                else:
+                    stats["skipped_cooldown"] += 1
+                    continue
+
+            text = _format_alert(
+                alert_type,
+                score,
+                intensity,
+                meta,
+                volume,
+                prev_score=prev_score if is_retrigger else None,
+                prev_intensity=prev_intensity if is_retrigger else None,
+            )
             try:
                 sent = await send_message(text)
             except Exception as e:
@@ -162,12 +219,16 @@ async def check_and_send_alerts(top_n: int = _TOP_N_TO_CHECK) -> dict:
                                 ),
                                 "name": (meta.name if meta else None),
                                 "market": (meta.market if meta else None),
+                                "retrigger": is_retrigger,
                             },
                             ensure_ascii=False,
                         ),
                     )
                 )
-                stats["sent"] += 1
+                if is_retrigger:
+                    stats["sent_retrigger"] += 1
+                else:
+                    stats["sent_new"] += 1
 
         await session.commit()
 
