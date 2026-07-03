@@ -415,6 +415,18 @@ class MemeSignalContributionResponse(BaseModel):
     detail: str
 
 
+class MemeIntensityResponse(BaseModel):
+    """Meme Intensity Index (Phase 3-E) — 현재 폭등 강도 0~10."""
+    intensity: float
+    label: str      # ERUPTING / SURGING / RISING / STABILIZING / FLAT
+    emoji: str      # 🌋 / 🚀 / 📈 / 〰️ / 💤
+    return_1d: Optional[float] = None
+    return_5d: Optional[float] = None
+    acceleration: Optional[float] = None
+    volume_ratio: Optional[float] = None
+    sample_days: int = 0
+
+
 class MemeScoreResponse(BaseModel):
     ticker: str
     name: Optional[str] = None
@@ -435,6 +447,9 @@ class MemeScoreResponse(BaseModel):
     # Phase 3-D — 가격 (일봉 마지막 close). US=USD, KRX=원.
     current_price: Optional[float] = None
     return_1d_pct: Optional[float] = None
+
+    # Phase 3-E — 상승 강도
+    intensity: Optional[MemeIntensityResponse] = None
 
 
 class MemeWatchTopResponse(BaseModel):

@@ -17,6 +17,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from backend.discovery.meme_watch.catalyst_signal import get_catalyst_scores
 from backend.discovery.meme_watch.confluence import MemeScore, compute_meme_score
 from backend.discovery.meme_watch.filters import is_blacklisted
+from backend.discovery.meme_watch.intensity import compute_intensity
 from backend.services.db import get_session
 from backend.services.models import (
     MemeSocialSignal,
@@ -204,4 +205,11 @@ async def compute_top_memes(
             if r.get("meta") is not None and r["meta"].market == market
         ]
 
-    return results[:top_n]
+    top_slice = results[:top_n]
+
+    # Intensity 계산 — top_slice 만 (전체 계산 부담 회피, Phase 3-E)
+    async with get_session() as session:
+        for r in top_slice:
+            r["intensity"] = await compute_intensity(session, r["score"].ticker)
+
+    return top_slice

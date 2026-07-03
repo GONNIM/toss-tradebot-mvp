@@ -20,6 +20,37 @@ const LABEL_COLORS: Record<string, string> = {
     "text-zinc-600 dark:text-zinc-400 border-zinc-500/40 bg-zinc-500/10",
 };
 
+function MetricCell({
+  label,
+  value,
+  format,
+}: {
+  label: string;
+  value: number | null | undefined;
+  format: "pct" | "x";
+}) {
+  const valStr =
+    value == null
+      ? "—"
+      : format === "pct"
+        ? `${value >= 0 ? "+" : ""}${value.toFixed(1)}%`
+        : `${value.toFixed(2)}×`;
+  const cls =
+    value == null
+      ? "text-zinc-500 dark:text-zinc-500"
+      : format === "pct" && value < 0
+        ? "text-rose-700 dark:text-rose-300"
+        : value == null || value <= 0
+          ? "text-zinc-600 dark:text-zinc-400"
+          : "text-emerald-700 dark:text-emerald-300 font-semibold";
+  return (
+    <div className="rounded bg-muted/40 border border-border px-2 py-1.5 text-center">
+      <div className="text-zinc-600 dark:text-zinc-400 text-[10px]">{label}</div>
+      <div className={cn("font-mono text-sm mt-0.5", cls)}>{valStr}</div>
+    </div>
+  );
+}
+
 function formatPrice(price: number | null | undefined, market: string | null | undefined): string {
   if (price == null) return "—";
   if (market === "KRX") return `${Math.round(price).toLocaleString("ko-KR")}원`;
@@ -133,6 +164,52 @@ export function MemeDetailModal({
               </div>
             </div>
           </div>
+
+          {/* Intensity Index (Phase 3-E) */}
+          {item.intensity && (
+            <div className="rounded-xl border border-cyan-500/40 bg-cyan-500/10 p-4">
+              <div className="flex items-baseline justify-between mb-2">
+                <div className="text-sm font-bold text-zinc-900 dark:text-zinc-50">
+                  🌡️ 현재 폭등 강도 (Intensity Index)
+                </div>
+                <div className="text-3xl">{item.intensity.emoji}</div>
+              </div>
+              <div className="flex items-baseline gap-3">
+                <div className="font-mono text-4xl font-bold text-zinc-900 dark:text-zinc-50">
+                  {item.intensity.intensity.toFixed(1)}
+                </div>
+                <div className="text-sm text-zinc-600 dark:text-zinc-400">/ 10</div>
+                <div className="text-lg font-bold text-cyan-700 dark:text-cyan-300 ml-2">
+                  {item.intensity.label}
+                </div>
+              </div>
+              <div className="grid grid-cols-4 gap-2 mt-3 text-xs">
+                <MetricCell
+                  label="1D"
+                  value={item.intensity.return_1d}
+                  format="pct"
+                />
+                <MetricCell
+                  label="5D 누적"
+                  value={item.intensity.return_5d}
+                  format="pct"
+                />
+                <MetricCell
+                  label="가속도"
+                  value={item.intensity.acceleration}
+                  format="pct"
+                />
+                <MetricCell
+                  label="거래량 배수"
+                  value={item.intensity.volume_ratio}
+                  format="x"
+                />
+              </div>
+              <div className="text-xs text-zinc-500 dark:text-zinc-500 mt-2">
+                샘플 {item.intensity.sample_days}일. 이력 누적 시 정확도 ↑.
+              </div>
+            </div>
+          )}
 
           {/* Score 요약 3-grid */}
           <div className="grid grid-cols-3 gap-3 text-center">

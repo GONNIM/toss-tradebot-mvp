@@ -15,6 +15,14 @@ const LABEL_COLORS: Record<string, string> = {
   SLEEP: "text-zinc-500 dark:text-zinc-400",
 };
 
+const INTENSITY_COLORS: Record<string, string> = {
+  ERUPTING: "text-rose-700 dark:text-rose-300 font-bold",
+  SURGING: "text-orange-700 dark:text-orange-300 font-bold",
+  RISING: "text-amber-700 dark:text-amber-300",
+  STABILIZING: "text-cyan-700 dark:text-cyan-300",
+  FLAT: "text-zinc-500 dark:text-zinc-400",
+};
+
 const STRONGEST_LABELS: Record<string, string> = {
   social: "소셜",
   volume: "거래량",
@@ -50,6 +58,9 @@ export function MemeWatchTable({ items }: { items: MemeScoreItem[] }) {
               <th className="px-3 py-3">종목</th>
               <th className="px-3 py-3 text-right">Score</th>
               <th className="px-3 py-3 text-center">라벨</th>
+              <th className="px-3 py-3 text-center" title="현재 폭등 강도 (0~10)">
+                Intensity
+              </th>
               <th className="px-3 py-3 text-right">현재가</th>
               <th className="px-3 py-3 text-right">1D</th>
               <th className="px-3 py-3 text-center">활성</th>
@@ -97,6 +108,25 @@ export function MemeWatchTable({ items }: { items: MemeScoreItem[] }) {
                   >
                     <span className="mr-1">{it.emoji}</span>
                     {it.label}
+                  </td>
+                  <td
+                    className={cn(
+                      "px-3 py-2.5 text-center whitespace-nowrap",
+                      it.intensity
+                        ? INTENSITY_COLORS[it.intensity.label] || ""
+                        : "text-muted-foreground",
+                    )}
+                  >
+                    {it.intensity ? (
+                      <>
+                        <span className="mr-1">{it.intensity.emoji}</span>
+                        <span className="font-mono">
+                          {it.intensity.intensity.toFixed(1)}
+                        </span>
+                      </>
+                    ) : (
+                      "—"
+                    )}
                   </td>
                   <td className="px-3 py-2.5 text-right font-mono text-foreground">
                     {formatPrice(it.current_price, it.market)}

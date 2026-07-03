@@ -484,6 +484,17 @@ export interface MemeSignalContribution {
   detail: string;
 }
 
+export interface MemeIntensity {
+  intensity: number;
+  label: string;   // ERUPTING / SURGING / RISING / STABILIZING / FLAT
+  emoji: string;   // 🌋 / 🚀 / 📈 / 〰️ / 💤
+  return_1d: number | null;
+  return_5d: number | null;
+  acceleration: number | null;
+  volume_ratio: number | null;
+  sample_days: number;
+}
+
 export interface MemeScoreItem {
   ticker: string;
   name: string | null;
@@ -502,6 +513,7 @@ export interface MemeScoreItem {
   contributions: MemeSignalContribution[];
   current_price: number | null;
   return_1d_pct: number | null;
+  intensity: MemeIntensity | null;
 }
 
 export interface MemeWatchTopResponse {

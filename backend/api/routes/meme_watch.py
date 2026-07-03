@@ -12,6 +12,7 @@ from fastapi import APIRouter, Query
 from sqlalchemy import desc, select
 
 from backend.api.schemas import (
+    MemeIntensityResponse,
     MemeScoreResponse,
     MemeSignalContributionResponse,
     MemeWatchTopResponse,
@@ -91,6 +92,20 @@ async def get_top_memes(
                 ],
                 current_price=(vol.close if vol else None),
                 return_1d_pct=(vol.return_1d_pct if vol else None),
+                intensity=(
+                    MemeIntensityResponse(
+                        intensity=r["intensity"].intensity,
+                        label=r["intensity"].label,
+                        emoji=r["intensity"].emoji,
+                        return_1d=r["intensity"].return_1d,
+                        return_5d=r["intensity"].return_5d,
+                        acceleration=r["intensity"].acceleration,
+                        volume_ratio=r["intensity"].volume_ratio,
+                        sample_days=r["intensity"].sample_days,
+                    )
+                    if r.get("intensity")
+                    else None
+                ),
             )
         )
 
