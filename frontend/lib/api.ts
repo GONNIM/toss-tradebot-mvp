@@ -468,6 +468,10 @@ export const api = {
       if (market) q.set("market", market);
       return get<MemeWatchTopResponse>(`/meme-watch/top?${q.toString()}`);
     },
+    scoreHistory: (ticker: string, hours = 24) =>
+      get<MemeScoreHistoryResponse>(
+        `/meme-watch/tickers/${encodeURIComponent(ticker)}/history?hours=${hours}`,
+      ),
   },
 };
 
@@ -492,9 +496,23 @@ export interface MemeIntensity {
   return_5d: number | null;
   acceleration: number | null;
   volume_ratio: number | null;
-  score_delta_24h: number | null;   // Phase 4
-  time_in_blazing_7d: number;        // Phase 4
+  score_delta_24h: number | null;
+  time_in_blazing_7d: number;
+  mention_velocity_30m: number | null;    // Phase 5
   sample_days: number;
+}
+
+export interface MemeScoreHistoryPoint {
+  snapshot_at: string;   // ISO
+  score: number;
+  label: string;
+  active_signals: number;
+}
+
+export interface MemeScoreHistoryResponse {
+  ticker: string;
+  points: MemeScoreHistoryPoint[];
+  hours: number;
 }
 
 export interface MemeScoreItem {

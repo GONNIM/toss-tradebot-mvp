@@ -23,7 +23,7 @@ from typing import Optional
 from sqlalchemy import desc, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from backend.services.models import MemeVolumeSnapshot
+from backend.services.models import MemeSocialSignal, MemeVolumeSnapshot
 
 logger = logging.getLogger(__name__)
 
@@ -40,7 +40,8 @@ class IntensityScore:
     acceleration: Optional[float]
     volume_ratio: Optional[float]
     score_delta_24h: Optional[float]  # Phase 4
-    time_in_blazing_7d: int           # Phase 4 — 최근 7일 BLAZING/HOT 카운트
+    time_in_blazing_7d: int           # Phase 4
+    mention_velocity_30m: Optional[float]  # Phase 5 — apewisdom 30분 증가율
     sample_days: int
 
 
@@ -147,6 +148,61 @@ def _norm_score_delta(d: Optional[float]) -> Optional[float]:
     return 0.0
 
 
+def _norm_mention_velocity(v: Optional[float]) -> Optional[float]:
+    """30분 mention 증가율 → 0~10.
+
+    +100% (2배 증가) = 10 / +50% = 8 / +20% = 6 / +5% = 4 / 0% = 2 / 음수 = 0.
+    """
+    if v is None:
+        return None
+    if v >= 1.0:
+        return 10.0
+    if v >= 0.5:
+        return 8.0
+    if v >= 0.2:
+        return 6.0
+    if v >= 0.05:
+        return 4.0
+    if v >= 0:
+        return 2.0
+    return 0.0
+
+
+async def get_mention_velocity(
+    session: AsyncSession, ticker: str, minutes: int = 30
+) -> Optional[float]:
+    """apewisdom N분 mention 증가율 (Phase 5).
+
+    Returns: (current − past) / past. past=0 or 이력 부재 시 None.
+    """
+    from datetime import datetime, timedelta
+
+    cutoff = datetime.now() - timedelta(minutes=minutes)
+    rows = (
+        await session.execute(
+            select(MemeSocialSignal.mention_count, MemeSocialSignal.fetched_at)
+            .where(
+                MemeSocialSignal.ticker == ticker,
+                MemeSocialSignal.source == "apewisdom",
+            )
+            .order_by(desc(MemeSocialSignal.fetched_at))
+            .limit(20)
+        )
+    ).all()
+    if len(rows) < 2:
+        return None
+
+    current = rows[0][0]
+    past: Optional[int] = None
+    for cnt, at in rows[1:]:
+        if at <= cutoff:
+            past = cnt
+            break
+    if past is None or past <= 0:
+        return None
+    return (current - past) / past
+
+
 async def get_snapshot_history(
     session: AsyncSession, ticker: str, limit: int = 10
 ) -> list[MemeVolumeSnapshot]:
@@ -210,12 +266,17 @@ async def compute_intensity(
         score_delta = await get_score_delta_24h(session, ticker, current_score)
     time_in_blazing = await get_time_in_blazing(session, ticker, days=7)
 
+    # Phase 5 — apewisdom 30분 mention 증가율
+    mention_vel = await get_mention_velocity(session, ticker, minutes=30)
+
+    # 6지표 가중치 (Phase 5 완성): 0.20 + 0.20 + 0.10 + 0.15 + 0.20 + 0.15 = 1.00
     values = {
-        "return_1d": (_norm_1d_return(today_r1d), 0.25),
-        "acceleration": (_norm_acceleration(accel), 0.25),
-        "return_5d": (_norm_5d_cumulative(r_5d), 0.15),
+        "return_1d": (_norm_1d_return(today_r1d), 0.20),
+        "acceleration": (_norm_acceleration(accel), 0.20),
+        "return_5d": (_norm_5d_cumulative(r_5d), 0.10),
         "volume_ratio": (_norm_volume_ratio(today_ratio), 0.15),
         "score_delta": (_norm_score_delta(score_delta), 0.20),
+        "mention_velocity": (_norm_mention_velocity(mention_vel), 0.15),
     }
 
     weighted_sum = 0.0
@@ -244,5 +305,6 @@ async def compute_intensity(
         volume_ratio=today_ratio,
         score_delta_24h=score_delta,
         time_in_blazing_7d=time_in_blazing,
+        mention_velocity_30m=mention_vel,
         sample_days=len(snapshots),
     )

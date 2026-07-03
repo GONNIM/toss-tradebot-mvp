@@ -416,7 +416,7 @@ class MemeSignalContributionResponse(BaseModel):
 
 
 class MemeIntensityResponse(BaseModel):
-    """Meme Intensity Index (Phase 3-E + Phase 4) — 현재 폭등 강도 0~10."""
+    """Meme Intensity Index (Phase 3-E + 4 + 5) — 현재 폭등 강도 0~10."""
     intensity: float
     label: str      # ERUPTING / SURGING / RISING / STABILIZING / FLAT
     emoji: str      # 🌋 / 🚀 / 📈 / 〰️ / 💤
@@ -424,9 +424,24 @@ class MemeIntensityResponse(BaseModel):
     return_5d: Optional[float] = None
     acceleration: Optional[float] = None
     volume_ratio: Optional[float] = None
-    score_delta_24h: Optional[float] = None   # Phase 4
-    time_in_blazing_7d: int = 0                # Phase 4
+    score_delta_24h: Optional[float] = None
+    time_in_blazing_7d: int = 0
+    mention_velocity_30m: Optional[float] = None   # Phase 5
     sample_days: int = 0
+
+
+class MemeScoreHistoryPoint(BaseModel):
+    """Score 시계열 1 point (Phase 5)."""
+    snapshot_at: str      # ISO
+    score: float
+    label: str
+    active_signals: int
+
+
+class MemeScoreHistoryResponse(BaseModel):
+    ticker: str
+    points: list[MemeScoreHistoryPoint]
+    hours: int
 
 
 class MemeScoreResponse(BaseModel):

@@ -6,6 +6,7 @@ import type { MemeScoreItem } from "@/lib/api";
 import { cn } from "@/lib/utils";
 
 import { MemeRadarChart } from "./MemeRadarChart";
+import { ScoreHistoryChart } from "./ScoreHistoryChart";
 
 const LABEL_COLORS: Record<string, string> = {
   BLAZING:
@@ -211,6 +212,16 @@ export function MemeDetailModal({
                   value={item.intensity.score_delta_24h}
                   format="raw"
                 />
+                <MetricCell
+                  label="Mention Vel 30m"
+                  value={
+                    item.intensity.mention_velocity_30m !== null &&
+                    item.intensity.mention_velocity_30m !== undefined
+                      ? item.intensity.mention_velocity_30m * 100
+                      : null
+                  }
+                  format="pct"
+                />
                 <div className="rounded bg-muted/40 border border-border px-2 py-1.5 text-center">
                   <div className="text-zinc-600 dark:text-zinc-400 text-[10px]">
                     7d BLAZING/HOT
@@ -263,6 +274,17 @@ export function MemeDetailModal({
                 </div>
               )}
             </div>
+          </div>
+
+          {/* Score 시계열 (Phase 5) */}
+          <div className="rounded-xl border border-border p-4 bg-card">
+            <div className="text-sm font-bold text-zinc-900 dark:text-zinc-50 mb-1">
+              📈 Meme Score 시계열 (최근 24시간, KST)
+            </div>
+            <div className="text-xs text-zinc-500 dark:text-zinc-500 mb-2">
+              점선 임계 — 붉음 1.0 BLAZING · 주황 0.75 HOT · 노랑 0.5 WATCH
+            </div>
+            <ScoreHistoryChart ticker={item.ticker} hours={24} />
           </div>
 
           {/* 5축 레이더 */}

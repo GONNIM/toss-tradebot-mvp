@@ -13,6 +13,8 @@ from sqlalchemy import desc, select
 
 from backend.api.schemas import (
     MemeIntensityResponse,
+    MemeScoreHistoryPoint,
+    MemeScoreHistoryResponse,
     MemeScoreResponse,
     MemeSignalContributionResponse,
     MemeWatchTopResponse,
@@ -103,6 +105,7 @@ async def get_top_memes(
                         volume_ratio=r["intensity"].volume_ratio,
                         score_delta_24h=r["intensity"].score_delta_24h,
                         time_in_blazing_7d=r["intensity"].time_in_blazing_7d,
+                        mention_velocity_30m=r["intensity"].mention_velocity_30m,
                         sample_days=r["intensity"].sample_days,
                     )
                     if r.get("intensity")
@@ -116,4 +119,48 @@ async def get_top_memes(
         total=len(items),
         computed_at=datetime.utcnow().isoformat() + "Z",
         sources_status=sources,
+    )
+
+
+@router.get(
+    "/tickers/{ticker}/history",
+    response_model=MemeScoreHistoryResponse,
+)
+async def get_score_history(
+    ticker: str,
+    hours: int = Query(24, ge=1, le=168, description="조회 기간 (시간, 최대 7일)"),
+):
+    """종목별 Meme Score 시계열 (Phase 5)."""
+    from datetime import timedelta
+
+    from sqlalchemy import asc
+
+    from backend.services.models import MemeScoreHistory
+
+    cutoff = datetime.now() - timedelta(hours=hours)
+    async with get_session() as session:
+        rows = (
+            await session.execute(
+                select(MemeScoreHistory)
+                .where(
+                    MemeScoreHistory.ticker == ticker,
+                    MemeScoreHistory.snapshot_at >= cutoff,
+                )
+                .order_by(asc(MemeScoreHistory.snapshot_at))
+            )
+        ).scalars().all()
+
+    points = [
+        MemeScoreHistoryPoint(
+            snapshot_at=r.snapshot_at.isoformat(),
+            score=r.score,
+            label=r.label,
+            active_signals=r.active_signals,
+        )
+        for r in rows
+    ]
+    return MemeScoreHistoryResponse(
+        ticker=ticker,
+        points=points,
+        hours=hours,
     )
