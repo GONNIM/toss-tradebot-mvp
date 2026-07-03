@@ -18,6 +18,7 @@ import logging
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.cron import CronTrigger
 
+from backend.discovery.meme_watch.alert import check_and_send_alerts
 from backend.discovery.meme_watch.catalyst_signal import build_dart_catalyst
 from backend.discovery.meme_watch.score_history import build_score_history
 from backend.discovery.meme_watch.social_signal import (
@@ -112,6 +113,15 @@ def register_meme_jobs(scheduler: AsyncIOScheduler) -> None:
         trigger=CronTrigger(minute="3-58/5", timezone="Asia/Seoul"),
         id="meme_score_history_5min",
         name="5분마다 (3분 offset) — top 100 종목 score 이력 저장",
+        replace_existing=True,
+        misfire_grace_time=300,
+    )
+    # Telegram alert (Phase 6) — 5분 offset (score_history 후). ERUPTING/BLAZING 감지.
+    scheduler.add_job(
+        check_and_send_alerts,
+        trigger=CronTrigger(minute="4-59/5", timezone="Asia/Seoul"),
+        id="meme_alert_telegram_5min",
+        name="5분마다 (4분 offset) — Intensity ERUPTING / Score BLAZING Telegram 알림",
         replace_existing=True,
         misfire_grace_time=300,
     )

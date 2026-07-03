@@ -53,20 +53,29 @@ jobs:
       - name: Inject runtime secrets into backend/.env
         env:
           DART_API_KEY: ${{ secrets.DART_API_KEY }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
         run: |
           # GitHub Secrets → 운영 backend/.env 동기화. 빈 secret 은 skip.
-          # heredoc EOF (no quotes) 로 변수 확장 — ssh 로 ${VAR} 만 전송.
-          if [ -n "${DART_API_KEY}" ]; then
-            ssh ${{ secrets.OPTIMUS8_USER }}@${{ secrets.OPTIMUS8_HOST }} 'bash -s' << EOF
+          # 각 key 별 sed 로 기존 라인 제거 + append.
+          ssh ${{ secrets.OPTIMUS8_USER }}@${{ secrets.OPTIMUS8_HOST }} 'bash -s' << EOF
           ENV_FILE=/root/toss-tradebot-mvp/backend/.env
-          sed -i '/^DART_API_KEY=/d' "\$ENV_FILE" 2>/dev/null || true
-          echo "DART_API_KEY=${DART_API_KEY}" >> "\$ENV_FILE"
+          update_env() {
+            local key="\$1"
+            local val="\$2"
+            if [ -n "\$val" ]; then
+              sed -i "/^\${key}=/d" "\$ENV_FILE" 2>/dev/null || true
+              echo "\${key}=\${val}" >> "\$ENV_FILE"
+              echo "✓ \$key synced"
+            else
+              echo "⚠️ \$key secret 미설정 — skip (기존 값 유지)"
+            fi
+          }
+          update_env DART_API_KEY "${DART_API_KEY}"
+          update_env TELEGRAM_BOT_TOKEN "${TELEGRAM_BOT_TOKEN}"
+          update_env TELEGRAM_CHAT_ID "${TELEGRAM_CHAT_ID}"
           chmod 600 "\$ENV_FILE"
-          echo "✓ DART_API_KEY synced to .env"
           EOF
-          else
-            echo "⚠️ DART_API_KEY secret 미설정 — skip"
-          fi
 
       - name: Deploy to optimus8
         run: |

@@ -535,6 +535,19 @@ class MemeShortInterest(Base):
     # "finra" / "krx" / "yahoo_estimate"
 
 
+class MemeAlertHistory(Base):
+    """Telegram alert 발송 이력 (Phase 6) — 종목별 24h 중복 방지."""
+
+    __tablename__ = "meme_alert_history"
+
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    ticker: Mapped[str] = mapped_column(String(20), index=True)
+    alert_type: Mapped[str] = mapped_column(String(30))
+    # "ERUPTING" (Intensity ≥ 8.0) / "BLAZING" (Score ≥ 1.0)
+    triggered_at: Mapped[datetime] = mapped_column(DateTime, index=True)
+    payload: Mapped[Optional[str]] = mapped_column(Text)  # JSON
+
+
 class MemeScoreHistory(Base):
     """Meme Score 5분 batch 이력 (Phase 4).
 
