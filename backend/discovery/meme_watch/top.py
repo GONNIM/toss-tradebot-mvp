@@ -13,6 +13,7 @@ from typing import Optional
 from sqlalchemy import desc, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+
 from backend.discovery.meme_watch.catalyst_signal import get_catalyst_scores
 from backend.discovery.meme_watch.confluence import MemeScore, compute_meme_score
 from backend.discovery.meme_watch.filters import is_blacklisted
@@ -129,11 +130,14 @@ async def _universe_meta(
     return {r.ticker: r for r in rows}
 
 
-async def compute_top_memes(top_n: int = 20) -> list[dict]:
+async def compute_top_memes(
+    top_n: int = 20, market: Optional[str] = None
+) -> list[dict]:
     """US (apewisdom + volume) + KRX (volume only) → score → 상위 N.
 
     Phase 2-C — KRX universe 종목도 score 산출 대상 (social 시그널 부재 →
     가중치 동적 재정규화: volume 0.625 / momentum 0.375).
+    Phase 3-D fix — market 필터는 score 산출 후 정렬 전 적용 (정확한 top N).
     """
     async with get_session() as session:
         social = await _latest_apewisdom_snapshot(session)
@@ -192,4 +196,12 @@ async def compute_top_memes(top_n: int = 20) -> list[dict]:
         results.append({"score": score, "meta": meta, "volume": vol})
 
     results.sort(key=lambda r: r["score"].score, reverse=True)
+
+    # market 필터 — 정렬 후 필터 → 정확한 top N (전체 candidate 대비)
+    if market:
+        results = [
+            r for r in results
+            if r.get("meta") is not None and r["meta"].market == market
+        ]
+
     return results[:top_n]
