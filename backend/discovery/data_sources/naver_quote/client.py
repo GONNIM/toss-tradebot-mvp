@@ -325,6 +325,25 @@ async def fetch_daily_kr_batch(
     return result
 
 
+async def _fetch_us_with_fallback(
+    rc: str, days_back: int, client: httpx.AsyncClient
+) -> Optional[pd.DataFrame]:
+    """1차 시도 실패 시 .O suffix 자동 재시도.
+
+    네이버 marketValue endpoint 는 일부 NASDAQ 종목 (Wendy's WEN 등) 을
+    suffix 없이 반환. 실제 chart API 는 .O 만 지원 → 매핑 불일치 자동 해소.
+    """
+    df = await _fetch_daily_naver("foreign", rc, days_back, client)
+    if df is not None and not df.empty:
+        return df
+    # suffix 없는 ticker 만 .O fallback 시도
+    if "." not in rc:
+        df = await _fetch_daily_naver("foreign", f"{rc}.O", days_back, client)
+        if df is not None and not df.empty:
+            return df
+    return None
+
+
 async def fetch_daily_us_batch(
     reuters_codes: list[str], days_back: int = 90, concurrency: int = 10
 ) -> dict[str, pd.DataFrame]:
@@ -337,7 +356,7 @@ async def fetch_daily_us_batch(
     async with httpx.AsyncClient() as client:
         async def bounded(rc: str) -> tuple[str, Optional[pd.DataFrame]]:
             async with sem:
-                df = await _fetch_daily_naver("foreign", rc, days_back, client)
+                df = await _fetch_us_with_fallback(rc, days_back, client)
                 return rc, df
 
         tasks = [bounded(rc) for rc in reuters_codes]

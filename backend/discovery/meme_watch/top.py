@@ -115,12 +115,15 @@ async def _latest_volume_snapshots(
 async def _universe_meta(
     session: AsyncSession, tickers: list[str]
 ) -> dict[str, MemeUniverse]:
-    """ticker → MemeUniverse row (name/market/sector/market_cap)."""
+    """ticker → MemeUniverse row (active 종목만 — deactivated 노출 방지)."""
     if not tickers:
         return {}
     rows = (
         await session.execute(
-            select(MemeUniverse).where(MemeUniverse.ticker.in_(tickers))
+            select(MemeUniverse).where(
+                MemeUniverse.ticker.in_(tickers),
+                MemeUniverse.is_active.is_(True),
+            )
         )
     ).scalars().all()
     return {r.ticker: r for r in rows}
