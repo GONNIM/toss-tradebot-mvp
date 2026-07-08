@@ -47,6 +47,24 @@ grep 'public key' ~/.config/sops/age/keys.txt
 
 ⚠️ **백업**: `keys.txt` 를 1Password 등에 사본 보관. 분실 시 모든 secret 접근 불가 · 복구 불가.
 
+### 2.2.1 SOPS 가 key 를 찾도록 환경변수 설정 (macOS 필수)
+
+macOS 의 SOPS 기본 탐색 경로는 `~/Library/Application Support/sops/age/keys.txt` 라
+`~/.config/sops/age/keys.txt` 를 자동으로 찾지 못한다. 아래 명령으로 shell rc 에 export 추가:
+
+```bash
+# zsh
+echo 'export SOPS_AGE_KEY_FILE="$HOME/.config/sops/age/keys.txt"' >> ~/.zshrc
+source ~/.zshrc
+
+# bash 사용자라면 ~/.bashrc 에 동일하게 추가.
+
+# 확인
+sops -d backend/.env.sops.yaml >/dev/null && echo "✓ decrypt OK" || echo "✗ 여전히 실패"
+```
+
+CI (GitHub Actions) 는 workflow 가 `SOPS_AGE_KEY` env 를 직접 주입하므로 별도 설정 불필요.
+
 ### 2.3 `.sops.yaml` 에 public key 등록
 
 리포 루트 `.sops.yaml` 의 `REPLACE_ME_WITH_AGE_PUBLIC_KEY` 를 방금 생성한 public key 로 교체:

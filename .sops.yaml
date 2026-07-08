@@ -17,7 +17,7 @@ creation_rules:
     # 모든 top-level 스칼라 값을 암호화 (키 이름은 diff 편의 위해 평문 노출)
     encrypted_regex: '.*'
     age: >-
-      REPLACE_ME_WITH_AGE_PUBLIC_KEY
+      age1c0jxe9gcfa3hf2vpn3nvwd4lt8xe3gexr0xhcteqafy5agk39egqew0vul
 
 # ─── 추가 recipient (팀 확장 시) ────────────────────────
 # 여러 명의 age public key 를 콤마 구분으로 추가하면 각 개인 키로 복호화 가능:
