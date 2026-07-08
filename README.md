@@ -97,7 +97,7 @@ cp .env.example .env  # 자격증명 본인 입력 (chmod 600)
 cd frontend
 npm install
 cp .env.example .env.local  # 자격증명 본인 입력
-npm run dev  # http://localhost:3000
+npm run dev  # http://localhost:5000 (PORT=5000 npm run dev, 또는 npm run start)
 ```
 
 ## 🔒 보안 가이드 (글로벌 가드레일 준수)
