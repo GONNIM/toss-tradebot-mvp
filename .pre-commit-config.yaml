@@ -1,0 +1,17 @@
+# pre-commit hooks — 커밋 직전 자격증명 스캔 (글로벌 §1.5 권장)
+#
+# 셋업 (한 번만):
+#   pip install pre-commit           # 또는 brew install pre-commit
+#   pre-commit install                # .git/hooks/pre-commit 활성화
+#
+# 수동 실행:
+#   pre-commit run --all-files
+#   pre-commit run gitleaks --all-files
+
+repos:
+  - repo: https://github.com/gitleaks/gitleaks
+    rev: v8.28.0
+    hooks:
+      - id: gitleaks
+        # 커스텀 룰: SOPS 로 암호화된 파일은 이미 안전 — 스캔 제외
+        args: ["--config=.gitleaks.toml"]

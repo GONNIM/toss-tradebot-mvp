@@ -9,12 +9,21 @@ __pycache__/
 BKUP/
 data/
 
-# Environment
+# Environment — 평문 자격증명 절대 커밋 금지 (글로벌 §1)
 .env
+.env.local
+.env.*.local
+backend/.env
+backend/.env.local
+frontend/.env.local
+# ── SOPS 로 암호화된 파일은 예외적으로 커밋 허용 (평문 노출 없음)
+!.env.sops.yaml
+!backend/.env.sops.yaml
+!.env.sops.json
+!backend/.env.sops.json
 .venv/
 venv/
 env/
-.env.local
 .streamlit
 .claudeignore
 .clauderc

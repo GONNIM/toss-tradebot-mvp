@@ -1,0 +1,27 @@
+# SOPS creation rules — 파일 경로 패턴별 age recipient 지정
+#
+# 로컬 개인 키:   ~/.config/sops/age/keys.txt          (git 추적 X · 사용자 백업 필수)
+# CI 개인 키:     GitHub Secret SOPS_AGE_KEY            (workflow 에 주입)
+#
+# ⚠️ age recipient(공개키) 는 커밋 안전 — 이 파일에 그대로 저장.
+# ⚠️ private key 는 절대 여기에 넣지 말 것.
+#
+# 사용법:
+#   sops edit backend/.env.sops.yaml        # 평문 편집 → 저장 시 자동 재암호화
+#   sops -d backend/.env.sops.yaml          # 복호화 (stdout, .env 변환 시)
+#
+# 상세 절차: docs/operations/secrets-management.md
+
+creation_rules:
+  - path_regex: (^|/)\.env\.sops\.yaml$
+    # 모든 top-level 스칼라 값을 암호화 (키 이름은 diff 편의 위해 평문 노출)
+    encrypted_regex: '.*'
+    age: >-
+      REPLACE_ME_WITH_AGE_PUBLIC_KEY
+
+# ─── 추가 recipient (팀 확장 시) ────────────────────────
+# 여러 명의 age public key 를 콤마 구분으로 추가하면 각 개인 키로 복호화 가능:
+#     age: >-
+#       age1abc...,
+#       age1def...,
+#       age1ghi...

@@ -1,0 +1,51 @@
+# gitleaks 커스텀 룰 (기본 룰 확장)
+#
+# 커밋·스캔 시:
+#   gitleaks protect --staged --config .gitleaks.toml
+#   gitleaks detect --config .gitleaks.toml
+#
+# pre-commit 훅으로도 자동 실행 (.pre-commit-config.yaml).
+
+title = "toss-tradebot-mvp gitleaks config"
+
+# 기본 gitleaks 룰(AWS/GitHub/Slack/Stripe/…) 그대로 활용 + 아래 allowlist 로 예외 처리.
+[extend]
+useDefault = true
+
+[allowlist]
+description = "SOPS 로 암호화된 파일 · 예시 템플릿은 이미 안전"
+
+paths = [
+    # SOPS 파일 (ciphertext 만 저장) — 스캔 대상 아님
+    '''backend/\.env\.sops\.yaml$''',
+    '''(^|/)\.env\.sops\.yaml$''',
+    '''(^|/)\.env\.sops\.json$''',
+    # 예시 템플릿 — placeholder 만
+    '''\.env\.example$''',
+    '''\.env\.sops\.yaml\.example$''',
+    # SOPS recipient 정의 (public key 만)
+    '''(^|/)\.sops\.yaml$''',
+    # 문서
+    '''docs/.*\.md$''',
+    '''\.pre-commit-config\.yaml$''',
+    '''\.gitleaks\.toml$''',
+    # 로컬 전용 파일 (.gitignore 로 커밋 차단됨 — 스캔 노이즈만 유발)
+    '''(^|/)\.env\.local$''',
+    '''(^|/)\.env(\..*)?$''',
+    # Next.js 빌드 산출물 (내부 encryptionKey 등 자동 생성 · 커밋 안 됨)
+    '''(^|/)frontend/\.next/''',
+    '''(^|/)\.next/''',
+    # Python 캐시·빌드
+    '''__pycache__/''',
+    '''\.venv/''',
+]
+
+# 오탐 완화 — SOPS 암호문·age recipient·GitHub Actions 문법 등은 정상 통과
+regexes = [
+    # age recipient (공개키) — 안전
+    '''age1[0-9a-z]{58}''',
+    # SOPS metadata blocks
+    '''sops:.*version''',
+    # GitHub Actions secret reference
+    '''\$\{\{\s*secrets\..+?\s*\}\}''',
+]
