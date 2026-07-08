@@ -76,6 +76,30 @@ tests/       # 단위/통합 테스트
 
 **⚠️ 사용자 승인 없이 다음 단계 진행 금지**
 
+### 배포 규칙 — 자동화 선확인 (2026-07-08~)
+
+**서버 배포·재시작 계획 수립 시 최초 확인**:
+
+```bash
+ls .github/workflows/               # workflow 파일 존재 여부
+grep -l "push:\|workflow_dispatch:" .github/workflows/*.yml  # 트리거 파악
+```
+
+**본 프로젝트 자동 배포 실체** — `.github/workflows/deploy.yml`:
+- 트리거: `push: branches: [main]` (자동) + `workflow_dispatch` (수동)
+- 절차: validate (backend 문법·frontend json) → deploy (ssh git reset --hard + build + systemctl/pm2) → verify (health curl 3회 재시도)
+- 소요: 약 2m 20s
+- 검증: `gh run list --workflow=deploy.yml --limit 3` / `gh run watch`
+
+**배포 판단 흐름**:
+1. `.github/workflows/` 존재 + push 트리거 있음 → `git push origin main` 만으로 배포 완료. SSH 접속 불필요.
+2. workflow 없거나 실패 시에만 → 수동 SSH 배포 (메모리 `reference_tossbot_deploy` fallback)
+3. auto-mode classifier 가 prod SSH 를 차단하면 → 자동화 존재 조사 먼저
+
+**메모리 시점 편향 주의**: `reference_*deploy` 형태의 메모리는 몇 주 전 관측이라 자동화가 나중에 추가됐을 수 있음. 반드시 workflow 파일과 대조.
+
+참조: `.claude/lessons-learned.md` 교훈 #1, 메모리 `feedback_workflow_first_before_manual_deploy`
+
 ### 멀티 Phase 작업 배포 규칙
 
 - 모든 Phase 로컬 완성 후 **단일 배포** (Phase별 부분 배포 금지)
@@ -145,5 +169,5 @@ tests/       # 단위/통합 테스트
 
 ---
 
-**마지막 업데이트**: 2026-06-16
-**버전**: 0.1 (메타 자산 초기 셋업 — 기획 단계 진입 전)
+**마지막 업데이트**: 2026-07-08
+**버전**: 0.2 (배포 규칙 — 자동화 선확인 조항 추가)
