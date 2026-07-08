@@ -1,17 +1,16 @@
 """VIP 알림 포맷팅 — 기존 [[TelegramNotifier]] send_info 재활용.
 
-프리픽스: [VIP-WEN · <이벤트>]  (기존 밈주 봇 채널 공유)
+프리픽스: [VIP-{TAG} · <이벤트>]  (기존 밈주 봇 채널 공유)
 """
 from __future__ import annotations
 
 import logging
-from typing import Optional
 
 from backend.services.notifier import TelegramNotifier
 
+from .activist_tracker import Filing
 from .config import VipConfig
 from .position import Event
-from .trian_tracker import Filing
 
 logger = logging.getLogger(__name__)
 
@@ -21,7 +20,7 @@ _EVENT_ICON = {
     "STOP_APPROACH": "🛑",
     "TRAIL_ARMED": "🔒",
     "TRAIL_GIVEBACK": "📉",
-    "TRIAN_FILING": "🕵️",
+    "ACTIVIST_FILING": "🕵️",
 }
 
 _EVENT_HINT = {
@@ -30,7 +29,7 @@ _EVENT_HINT = {
     "STOP_APPROACH": "손절 라인 접근",
     "TRAIL_ARMED": "trailing stop 활성 — peak 추적 시작",
     "TRAIL_GIVEBACK": "peak 대비 giveback 발생 · 잠금 검토",
-    "TRIAN_FILING": "Trian Partners 신규 필링 감지",
+    "ACTIVIST_FILING": "액티비스트 신규 필링 감지",
 }
 
 
@@ -49,7 +48,10 @@ async def send_position_event(
     cfg: VipConfig,
 ) -> bool:
     icon = _EVENT_ICON.get(event.name, "📣")
-    title = f"{icon} [VIP-WEN · {event.name}] Wendy's {_fmt_price(event.current_price)} USD ({_fmt_pct(event.pnl)})"
+    title = (
+        f"{icon} [VIP-{cfg.tag} · {event.name}] {cfg.company_name} "
+        f"{_fmt_price(event.current_price)} USD ({_fmt_pct(event.pnl)})"
+    )
     lines = [
         f"진입 {_fmt_price(cfg.avg_price)} → 현재 {_fmt_price(event.current_price)}",
         f"P&L {_fmt_pct(event.pnl)}",
@@ -64,22 +66,24 @@ async def send_position_event(
     return await notifier.send_info(title, body)
 
 
-async def send_trian_filing(
+async def send_activist_filing(
     notifier: TelegramNotifier,
     filing: Filing,
+    cfg: VipConfig,
 ) -> bool:
-    icon = _EVENT_ICON["TRIAN_FILING"]
+    icon = _EVENT_ICON["ACTIVIST_FILING"]
+    actor = cfg.activist_name or "Activist"
     title = (
-        f"{icon} [VIP-WEN · TRIAN_FILING] {filing.form} · {filing.filing_date}"
+        f"{icon} [VIP-{cfg.tag} · ACTIVIST_FILING] {filing.form} · {filing.filing_date}"
     )
     body = "\n".join(
         [
-            f"Trian Fund Management L.P. 신규 필링 감지",
+            f"{actor} 신규 필링 감지 ({cfg.company_name} 관련)",
             f"Form: {filing.form}",
             f"Accession: {filing.accession}",
             f"Doc: {filing.primary_doc}",
             f"Desc: {filing.primary_desc}",
-            f"→ {_EVENT_HINT['TRIAN_FILING']}",
+            f"→ {_EVENT_HINT['ACTIVIST_FILING']}",
         ]
     )
     return await notifier.send_info(title, body)

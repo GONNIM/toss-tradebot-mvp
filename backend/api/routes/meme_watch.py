@@ -9,6 +9,7 @@ from datetime import datetime
 from typing import Optional
 
 from fastapi import APIRouter, Query
+from pydantic import BaseModel
 from sqlalchemy import desc, select
 
 from backend.api.schemas import (
@@ -167,17 +168,49 @@ async def get_score_history(
 
 
 # ─────────────────────────────────────────────
-# VIP 채널 (P-A · WEN)
+# VIP 채널 (P-A · 종목 파라미터화 · 2026-07-08)
 # ─────────────────────────────────────────────
 
 
-@router.get("/vip/wen/status")
-async def get_wen_vip_status():
-    """WEN VIP 감시 스냅샷 — 활성 여부·현재가·P&L·최근 이벤트·Trian 최신 accession.
+@router.get("/vip/status")
+async def get_vip_status():
+    """VIP 감시 스냅샷 — 활성 여부·현재가·P&L·최근 이벤트·activist 최신 필링.
 
-    감시 비활성(env WEN_VIP_ENABLED=false or WEN_VIP_AVG_PRICE=0) 시 quote 필드 없이
-    thresholds 만 반환.
+    감시 비활성(env VIP_ENABLED=false or VIP_AVG_PRICE=0) 시 quote·activist.latest
+    필드 없이 thresholds·activist 설정만 반환.
     """
-    from backend.discovery.vip.wen_watch import get_status
+    from backend.discovery.vip.vip_watch import get_status
 
     return await get_status()
+
+
+@router.get("/vip/config")
+def get_vip_config():
+    """편집 UI 용 — 현재 파라미터(ticker·company_name·tag·activist) + overrides 상태."""
+    from backend.discovery.vip.vip_watch import get_config
+
+    return get_config()
+
+
+class _VipActivistPatch(BaseModel):
+    enabled: Optional[bool] = None
+    cik: Optional[str] = None
+    name: Optional[str] = None
+    keywords: Optional[list[str]] = None
+
+
+class _VipConfigPatch(BaseModel):
+    activist: Optional[_VipActivistPatch] = None
+
+
+@router.patch("/vip/config")
+def patch_vip_config(patch: _VipConfigPatch):
+    """activist 설정 override — data/vip_overrides.json 에 저장. 재시작 없이 반영.
+
+    허용 필드: activist.enabled / cik / name / keywords.
+    빈 문자열·빈 리스트를 넘기면 해당 키 override 삭제(env 기본값 복귀).
+    """
+    from backend.discovery.vip.vip_watch import patch_config
+
+    payload = patch.model_dump(exclude_none=True)
+    return patch_config(payload)

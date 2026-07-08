@@ -16,6 +16,19 @@ async function get<T>(path: string): Promise<T> {
   return res.json();
 }
 
+async function patch<T>(path: string, body: unknown): Promise<T> {
+  const res = await fetch(`${BASE}${path}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+    cache: "no-store",
+  });
+  if (!res.ok) {
+    throw new Error(`API PATCH ${path} failed: ${res.status}`);
+  }
+  return res.json();
+}
+
 // ─────────────────────────────────────────────
 // 타입
 // ─────────────────────────────────────────────
@@ -482,8 +495,102 @@ export const api = {
       get<MemeScoreHistoryResponse>(
         `/meme-watch/tickers/${encodeURIComponent(ticker)}/history?hours=${hours}`,
       ),
+    vip: {
+      status: () => get<VipStatus>(`/meme-watch/vip/status`),
+      getConfig: () => get<VipConfig>(`/meme-watch/vip/config`),
+      patchConfig: (body: VipConfigPatch) =>
+        patch<VipConfigPatchResponse>(`/meme-watch/vip/config`, body),
+    },
   },
 };
+
+// ─── VIP (P-A) ─────────────────────────────────────────────
+
+export interface VipThresholds {
+  tp1_pct: number;
+  tp2_pct: number;
+  stop_pct: number;
+  trail_arm_pct: number;
+  trail_giveback_pct: number;
+}
+
+export interface VipQuote {
+  close_price: number;
+  fluctuations_ratio: number;
+  market_status: string;
+  over_market_ratio: number | null;
+  local_traded_at: string | null;
+}
+
+export interface VipActivistFiling {
+  accession: string;
+  form: string;
+  filing_date: string;
+  primary_desc: string;
+  primary_doc: string;
+}
+
+export interface VipActivistRecent {
+  form: string;
+  date: string;
+  accession: string;
+  desc: string;
+}
+
+export interface VipActivistSection {
+  enabled: boolean;
+  cik: string;
+  name: string;
+  keywords: string[];
+  latest_target?: VipActivistFiling | null;
+  recent_forms?: VipActivistRecent[];
+}
+
+export interface VipStatus {
+  active: boolean;
+  activist_active: boolean;
+  ticker: string;
+  company_name: string;
+  tag: string;
+  avg_price: number;
+  qty: number;
+  thresholds: VipThresholds;
+  trail_armed_at: number | null;
+  trail_peak_pnl: number | null;
+  sent_events: Record<string, number>;
+  activist_last_accession: string | null;
+  is_us_regular_hours: boolean;
+  quote?: VipQuote;
+  pnl?: number;
+  activist: VipActivistSection;
+}
+
+export interface VipConfig {
+  ticker: string;
+  company_name: string;
+  tag: string;
+  activist: {
+    enabled: boolean;
+    cik: string;
+    name: string;
+    keywords: string[];
+  };
+  overrides: Record<string, unknown>;
+}
+
+export interface VipConfigPatch {
+  activist?: {
+    enabled?: boolean;
+    cik?: string;
+    name?: string;
+    keywords?: string[];
+  };
+}
+
+export interface VipConfigPatchResponse {
+  overrides: Record<string, unknown>;
+  config: VipConfig;
+}
 
 // ─── Meme Watch (Phase 1e) ────────────────────────────────────
 

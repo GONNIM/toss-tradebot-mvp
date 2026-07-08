@@ -283,3 +283,72 @@ curl -sS "https://www.cboe.com/us/options/market_statistics/daily/?dt=<YYYY-MM-D
 - Telegram 미설정 상태에서는 Trian dedup 이 걸리지 않아 5분마다 재감지 (배포 시 `TELEGRAM_*` 반드시 설정)
 - `data/vip_wen_state.json` 은 프로세스 재시작에도 살아남지만 `data/` 는 `.gitignore` 등재됨
 - 30s / 300s job 은 `WEN_VIP_ENABLED=false` 라도 tick 진입 후 첫 줄에서 조기 return — 상시 등록해도 부하 미미 (config load + skip 만)
+
+---
+
+## 11. P-A+ 리팩터 — 종목 파라미터화 + UI 편집기 (2026-07-08 오후)
+
+**계기**: 사용자 요청 — "VIP 종목은 추후 바뀔 수 있다. 고려하여 구현" + "activist 내용을 화면에서 보기·수정".
+
+### 사용자 결정 (Step 0-b)
+| 항목 | 채택 |
+|------|------|
+| 접두어 | **전면 리네임 (A)** — `WEN_VIP_*` 완전 삭제, `VIP_*` 통일 |
+| Activist | env 기반 선택적 활성 (`VIP_ACTIVIST_ENABLED`) |
+| UI 범위 | **백엔드 override + 프론트 `/vip` 페이지 (조회+편집) 전체** |
+
+### 스키마 변경 (요약)
+- env 접두어: `WEN_VIP_*` → `VIP_*` (기존 하위 호환 없음 — 서버에 실 값 아직 없음)
+- 신규 env: `VIP_COMPANY_NAME`, `VIP_TAG` (미지정 시 티커에서 자동), `VIP_ACTIVIST_ENABLED`, `VIP_ACTIVIST_CIK`, `VIP_ACTIVIST_NAME`, `VIP_ACTIVIST_KEYWORDS`
+- 파일 리네임: `wen_watch.py` → `vip_watch.py`, `trian_tracker.py` → `activist_tracker.py`
+- state 파일: `data/vip_{ticker_slug}_state.json` (예: `vip_WEN_O_state.json`) — 티커별 격리
+- 이벤트: `TRIAN_FILING` → `ACTIVIST_FILING`
+- 태그: `[VIP-WEN · …]` → `[VIP-{TAG} · …]` (env·티커에서 파생)
+- 스케줄러 job id: `wen_vip_*` → `vip_*`
+- API: `/vip/wen/status` → `/vip/status` + `/vip/config` (GET·PATCH)
+- `--once` 인자: `wen_vip_*` → `vip_*` (`vip_config` 추가)
+
+### JSON override 시스템
+- 파일: `data/vip_overrides.json`
+- 허용 키: `activist_enabled`, `activist_cik`, `activist_name`, `activist_keywords`
+- 로드 순서: `.env` (기본) → `data/vip_overrides.json` (런타임 override, tick 마다 재로드)
+- 프로세스 재시작 없이 UI 편집 반영 → 사용자가 activist CIK·키워드를 즉시 바꿔서 실험 가능
+- 빈 문자열/빈 리스트 저장 → 해당 키 override 삭제(env 기본값 복귀)
+
+### API 확장
+- `GET /api/v1/meme-watch/vip/status` — 실시간 quote·P&L·최근 이벤트·activist 최신 대상 필링·최근 10건 이력
+- `GET /api/v1/meme-watch/vip/config` — 편집 폼용 스냅샷 (env + overrides merged)
+- `PATCH /api/v1/meme-watch/vip/config` — `activist.{enabled,cik,name,keywords}` override 저장
+
+### Frontend `/vip` (신규)
+- `frontend/app/vip/page.tsx` — App Router 페이지, TanStack Query 30s refetch
+- 네비 진입: layout `NAV` 배열에 `🕵️ VIP 감시` 링크 추가
+- 카드 구성:
+  - **Quote Card**: 현재가·정규장/AH 등락률·매수가 대비 P&L·손익 USD
+  - **Thresholds Card**: TP1/TP2/STOP/TRAIL 임계값 (읽기 전용, 편집은 서버 .env)
+  - **Activist Card**: enabled·CIK·name·keywords + 최신 대상 필링 + 최근 10건 이력(펼침)
+  - **Sent Events Log**: 24h cooldown 상태 (event: last_sent_at)
+- **Activist Editor Modal**: enabled 토글, CIK·name·keywords 편집 → PATCH → 즉시 반영
+- override 초기화 버튼 (env 기본값 복귀)
+
+### 로컬 재검증 (오후)
+- `py_compile` ✅ 9개 파일
+- import smoke ✅ · `--once vip_status` 정상 (`active/activist_active/quote/pnl/activist.recent_forms` 완비)
+- `--once vip_activist` — Trian 최신 SC 13D/A `2023-08-23` 감지 유지 ✅ (오래된 desc 매치 · 최근 SCHEDULE 13D/A 는 desc 비어 매치 실패 → 별건 개선 사항)
+- `--once vip_config` — env + overrides merge 응답 ✅
+- Frontend `npx tsc --noEmit` ✅ 0 오류
+
+### 종목 전환 절차 (다른 종목으로 바꿀 때)
+1. 서버 `.env` 편집:
+   - `VIP_TICKER=<새 티커>` (네이버 reuters code, 예: `AAPL`)
+   - `VIP_COMPANY_NAME=<회사명>`
+   - `VIP_AVG_PRICE=<새 평균가>`, `VIP_QTY=<수량>`
+2. Activist 감시 필요/불필요에 따라:
+   - 필요: `VIP_ACTIVIST_*` env 또는 UI `/vip` 편집기에서 CIK·키워드 설정
+   - 불필요: `VIP_ACTIVIST_ENABLED=false` (또는 UI 에서 토글)
+3. `systemctl restart tradebot-cron` — state 파일이 티커별로 분리돼 이전 종목 상태와 섞이지 않음
+4. `/vip` 페이지에서 활성 확인
+
+### 알려진 개선 여지 (P-A+β)
+- Trian 최근 SCHEDULE 13D/A 필링이 `primaryDocDescription` 비어있어 keyword 매치 실패. 해결안: filing 상세 페이지에서 subject company 재추출, 또는 관심 폼 확대 후 사용자에게 "확인 필요" 태그로 발송. 별건 스코프.
+- `data/vip_overrides.json` 편집 UI 는 activist 만 지원. TP·STOP 등 임계값 UI 편집도 원하면 스키마 확장 (지금은 env 편집 + 재시작).
