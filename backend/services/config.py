@@ -76,3 +76,23 @@ def customs_endpoint() -> str:
         "CUSTOM_END_POINT",
         "https://apis.data.go.kr/1220000/cntyMmUtPrviExpAcrs",
     ) or "https://apis.data.go.kr/1220000/cntyMmUtPrviExpAcrs"
+
+
+# CORS 화이트리스트 기본값 — 개발(localhost 4000) + 운영(optimus8)
+# 프론트 포트 변경 시 CORS_ORIGINS 환경변수만 갱신하면 코드 수정 불필요.
+_DEFAULT_CORS_ORIGINS = (
+    "http://localhost:3000,"
+    "http://localhost:4000,"
+    "http://localhost:5000,"
+    "http://127.0.0.1:4000,"
+    "https://optimus8.cafe24.com"
+)
+
+
+def cors_origins() -> list[str]:
+    """CORS 허용 origin 목록 — 쉼표 구분 CSV → list.
+
+    환경변수 CORS_ORIGINS 미설정 시 기본값 사용. 값 앞뒤 공백 자동 제거.
+    """
+    raw = get("CORS_ORIGINS", _DEFAULT_CORS_ORIGINS) or _DEFAULT_CORS_ORIGINS
+    return [o.strip() for o in raw.split(",") if o.strip()]

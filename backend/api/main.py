@@ -30,6 +30,7 @@ from backend.api.routes import (
     sector_leaders,
     settings,
 )
+from backend.services import config
 from backend.services.db import init_db
 
 logger = logging.getLogger(__name__)
@@ -68,9 +69,11 @@ app = FastAPI(
 )
 
 # CORS — Next.js 프론트엔드
+# 허용 origin 은 CORS_ORIGINS 환경변수(쉼표 구분) 로 제어. 미설정 시 기본값 사용.
+# 프론트 포트 변경 시 코드 수정 없이 .env 만 갱신 → 재기동으로 반영.
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000", "https://optimus8.cafe24.com"],
+    allow_origins=config.cors_origins(),
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
