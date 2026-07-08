@@ -164,3 +164,20 @@ async def get_score_history(
         points=points,
         hours=hours,
     )
+
+
+# ─────────────────────────────────────────────
+# VIP 채널 (P-A · WEN)
+# ─────────────────────────────────────────────
+
+
+@router.get("/vip/wen/status")
+async def get_wen_vip_status():
+    """WEN VIP 감시 스냅샷 — 활성 여부·현재가·P&L·최근 이벤트·Trian 최신 accession.
+
+    감시 비활성(env WEN_VIP_ENABLED=false or WEN_VIP_AVG_PRICE=0) 시 quote 필드 없이
+    thresholds 만 반환.
+    """
+    from backend.discovery.vip.wen_watch import get_status
+
+    return await get_status()

@@ -26,6 +26,7 @@ from typing import Optional
 
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.cron import CronTrigger
+from apscheduler.triggers.interval import IntervalTrigger
 
 logger = logging.getLogger(__name__)
 
@@ -530,6 +531,71 @@ async def job_sector_leaders_alert_1705():
 
 
 # ─────────────────────────────────────────────
+# WEN VIP 감시 (밈주 워치 P-A · 2026-07-08)
+# 상세: docs/plans/meme-stock-discovery/05-wen-vip-watch.md
+# ─────────────────────────────────────────────
+
+
+async def job_wen_vip_price_regular():
+    """정규장(NYSE/NASDAQ) 시간대 30초 폴러. 정규장 아니면 skip (AH job 담당)."""
+    from backend.discovery.vip.wen_watch import (
+        is_us_regular_hours,
+        run_price_tick,
+    )
+
+    if not is_us_regular_hours():
+        return
+    try:
+        result = await run_price_tick()
+        if not result.get("skipped"):
+            sent = result.get("sent") or []
+            if sent:
+                logger.info(
+                    f"[cron.vip.price.regular] sent={sent} "
+                    f"pnl={result.get('pnl'):+.4f}"
+                )
+    except Exception as e:
+        logger.error(f"[cron.vip.price.regular] failed: {e}", exc_info=True)
+
+
+async def job_wen_vip_price_after():
+    """정규장 외(AH·PM·주말·마감) 300초 폴러. 정규장이면 skip."""
+    from backend.discovery.vip.wen_watch import (
+        is_us_regular_hours,
+        run_price_tick,
+    )
+
+    if is_us_regular_hours():
+        return
+    try:
+        result = await run_price_tick()
+        if not result.get("skipped"):
+            sent = result.get("sent") or []
+            if sent:
+                logger.info(
+                    f"[cron.vip.price.after] sent={sent} "
+                    f"pnl={result.get('pnl'):+.4f}"
+                )
+    except Exception as e:
+        logger.error(f"[cron.vip.price.after] failed: {e}", exc_info=True)
+
+
+async def job_wen_vip_trian():
+    """SEC EDGAR Trian 필링 폴러 — 5분 간격."""
+    from backend.discovery.vip.wen_watch import run_trian_tick
+
+    try:
+        result = await run_trian_tick()
+        if not result.get("skipped") and result.get("sent"):
+            logger.info(
+                f"[cron.vip.trian] sent acc={result.get('accession')} "
+                f"form={result.get('form')}"
+            )
+    except Exception as e:
+        logger.error(f"[cron.vip.trian] failed: {e}", exc_info=True)
+
+
+# ─────────────────────────────────────────────
 # Scheduler + entry
 # ─────────────────────────────────────────────
 
@@ -550,6 +616,34 @@ def build_scheduler() -> AsyncIOScheduler:
                       id="sector_leaders_alert_1705",
                       name="Sector Leaders Top — 17:05 KST (정규장 마감 후)",
                       replace_existing=True)
+    # WEN VIP (env WEN_VIP_ENABLED=true 일 때만 실효 — tick 내부에서 skip)
+    scheduler.add_job(
+        job_wen_vip_price_regular,
+        IntervalTrigger(seconds=30),
+        id="wen_vip_price_regular",
+        name="WEN VIP 정규장 30s 폴러",
+        replace_existing=True,
+        max_instances=1,
+        coalesce=True,
+    )
+    scheduler.add_job(
+        job_wen_vip_price_after,
+        IntervalTrigger(seconds=300),
+        id="wen_vip_price_after",
+        name="WEN VIP AH/PM 300s 폴러",
+        replace_existing=True,
+        max_instances=1,
+        coalesce=True,
+    )
+    scheduler.add_job(
+        job_wen_vip_trian,
+        IntervalTrigger(seconds=300),
+        id="wen_vip_trian",
+        name="WEN VIP Trian SEC 필링 폴러 (300s)",
+        replace_existing=True,
+        max_instances=1,
+        coalesce=True,
+    )
     return scheduler
 
 
@@ -585,6 +679,21 @@ async def main_once(target: str):
     elif target == "sector_leaders":
         n = await run_sector_leaders_alert_job(slot="manual")
         print(f"✅ Sector Leaders Alert: Top {n} 발송")
+    elif target == "wen_vip_price":
+        from backend.discovery.vip.wen_watch import run_price_tick
+
+        result = await run_price_tick()
+        print(f"✅ WEN VIP price tick: {result}")
+    elif target == "wen_vip_trian":
+        from backend.discovery.vip.wen_watch import run_trian_tick
+
+        result = await run_trian_tick()
+        print(f"✅ WEN VIP trian tick: {result}")
+    elif target == "wen_vip_status":
+        from backend.discovery.vip.wen_watch import get_status
+
+        result = await get_status()
+        print(f"✅ WEN VIP status: {result}")
     else:
         print(f"❌ unknown target: {target}")
 
@@ -595,8 +704,14 @@ if __name__ == "__main__":
         format="%(asctime)s [%(name)s] %(levelname)s: %(message)s",
     )
     parser = argparse.ArgumentParser()
-    parser.add_argument("--once", choices=["universe", "crazy", "moonshot", "sector_leaders"],
-                        help="1회 즉시 실행 (수동 검증). 미지정 시 데몬 모드.")
+    parser.add_argument(
+        "--once",
+        choices=[
+            "universe", "crazy", "moonshot", "sector_leaders",
+            "wen_vip_price", "wen_vip_trian", "wen_vip_status",
+        ],
+        help="1회 즉시 실행 (수동 검증). 미지정 시 데몬 모드.",
+    )
     args = parser.parse_args()
 
     if args.once:

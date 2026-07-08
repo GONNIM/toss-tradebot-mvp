@@ -1,0 +1,70 @@
+"""매수가 기반 이벤트 판정.
+
+이벤트:
+    TP1              — 현재가 ≥ 매수가 × (1 + tp1_pct)
+    TP2              — 현재가 ≥ 매수가 × (1 + tp2_pct)
+    STOP_APPROACH    — 현재가 ≤ 매수가 × (1 + stop_pct)   (stop_pct 는 음수)
+    TRAIL_ARMED      — 최초 pnl ≥ trail_arm_pct 도달 시 armed
+    TRAIL_GIVEBACK   — armed 이후 peak - 현재 pnl ≥ trail_giveback_pct
+
+각 이벤트는 [[state]] 의 24h cooldown 통과 시에만 발송 대상. TRAIL 은 별도로
+armed 상태에서 peak 를 추적하며, giveback 발송 후 재-arm 은 하지 않음 (P-A 스코프).
+"""
+from __future__ import annotations
+
+from dataclasses import dataclass
+from typing import List, Optional
+
+from .config import VipConfig
+from .state import VipState
+
+
+@dataclass(frozen=True)
+class Event:
+    name: str          # TP1, TP2, STOP_APPROACH, TRAIL_ARMED, TRAIL_GIVEBACK
+    pnl: float         # 발생 시점 P&L (매수가 대비 %)
+    current_price: float
+
+
+def compute_pnl(current_price: float, avg_price: float) -> float:
+    """매수가 대비 P&L (fraction, +0.07 = +7%). avg_price ≤ 0 이면 0.0."""
+    if avg_price <= 0.0:
+        return 0.0
+    return (current_price - avg_price) / avg_price
+
+
+def evaluate(
+    current_price: float, cfg: VipConfig, state: VipState
+) -> List[Event]:
+    """현재가·설정·상태를 근거로 발송 후보 이벤트 리스트 반환.
+
+    - cooldown 통과 여부는 판정 안 함 (호출자가 [[state.can_send]] 로 확인).
+    - 상태 변경(armed, peak) 은 여기서 반영 — 발송 여부와 무관하게 peak 추적 필요.
+    """
+    events: List[Event] = []
+    pnl = compute_pnl(current_price, cfg.avg_price)
+
+    if pnl >= cfg.tp1_pct:
+        events.append(Event("TP1", pnl, current_price))
+    if pnl >= cfg.tp2_pct:
+        events.append(Event("TP2", pnl, current_price))
+    if pnl <= cfg.stop_pct:
+        events.append(Event("STOP_APPROACH", pnl, current_price))
+
+    # Trailing: 최초 arm
+    if state.trail_armed_at is None and pnl >= cfg.trail_arm_pct:
+        state.arm_trail(pnl)
+        events.append(Event("TRAIL_ARMED", pnl, current_price))
+    else:
+        # 이미 armed → peak 갱신
+        state.update_peak(pnl)
+
+    # Trailing: giveback
+    if (
+        state.trail_armed_at is not None
+        and state.trail_peak_pnl is not None
+        and (state.trail_peak_pnl - pnl) >= cfg.trail_giveback_pct
+    ):
+        events.append(Event("TRAIL_GIVEBACK", pnl, current_price))
+
+    return events
