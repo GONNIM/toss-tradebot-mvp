@@ -4,7 +4,7 @@
 |---|---|
 | 서버 | optimus8.cafe24.com |
 | Backend | FastAPI · uvicorn · 127.0.0.1:8001 |
-| Frontend | Next.js · 127.0.0.1:5000 |
+| Frontend | Next.js · 127.0.0.1:4000 |
 | 시스템 | systemd 2개 service (`tossbot-backend`, `tossbot-frontend`) |
 | 트리거 | 로컬 alias `deploy-tossbot` → ssh → /root/deploy-tossbot.sh |
 
@@ -78,7 +78,7 @@ type deploy-tossbot   # 확인
 ### 7. nginx reverse proxy (선택)
 
 도메인으로 접근 시 nginx 설정 별도 — 본 가이드 범위 외. 기본은
-`http://optimus8.cafe24.com:5000` 직접 접근 또는 SSH 터널.
+`http://optimus8.cafe24.com:4000` 직접 접근 또는 SSH 터널.
 
 ---
 
