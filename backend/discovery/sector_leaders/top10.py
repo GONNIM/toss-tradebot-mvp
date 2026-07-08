@@ -5,9 +5,11 @@
   · 신뢰도: |best_r| (0~1)
   · R/R: min(ratio / 3.0, 1.0) — 3:1 이상이면 만점
 
-진입가 = min(현재가, 점추정 × 0.9)
-  · 현재가 ≤ 점추정×0.9 → 지금 매수 가능
-  · 현재가 > 점추정×0.9 → 조정 대기
+진입가 v2.0 (2026-07-08~) — entry_price.py 로 위임
+  · 52W 위치 + ATR14 + 200MA 이격도 기반 과열 판정
+  · 과열(52W ≥85% or MA200 ≥+25%): entry_price=None, 🔴 관망
+  · 정상: entry_price = 현재가 − 1.0 × ATR14 (변동성 조정)
+  · 상세: docs/plans/sector-leaders-top10-entry-refinement/plan.md §5
 """
 from __future__ import annotations
 
@@ -20,6 +22,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from backend.discovery.data_sources.customs_interim import yoy_for_period
 from backend.discovery.data_sources.naver_quote import fetch_quotes
 from backend.discovery.sector_leaders.confluence import compute_confluence
+from backend.discovery.sector_leaders.entry_price import compute_entry_price
 from backend.discovery.sector_leaders.forecast import (
     compute_rr_ratio,
     historical_quantiles,
@@ -47,9 +50,9 @@ class Top10Item:
     market_cap_krw: Optional[float]
 
     current_price: float
-    entry_price: float
-    entry_status: str           # "🟢 지금 매수 가능" / "🟡 조정 X.X% 대기"
-    entry_gap_pct: float        # 현재가 대비 진입가 차이 (%, 음수면 조정 대기)
+    entry_price: Optional[float]  # v2.0: 과열 시 None
+    entry_status: str             # 🟢 / 🟡 / 🔴 + 설명
+    entry_gap_pct: Optional[float]  # v2.0: 과열 시 None
 
     point_price: float          # 예측수익가
     point_pct: float            # 수익률
@@ -71,6 +74,16 @@ class Top10Item:
     price_source: str           # "live" | "fallback"
     price_at: Optional[str]     # ISO timestamp (live) 또는 None (fallback)
     price_market_status: Optional[str]  # OPEN / CLOSE / None
+
+    # v2.0 진입가 근거 (2026-07-08~) — plan.md §5-3
+    high_52w: float             # 52주 최고 종가
+    low_52w: float              # 52주 최저 종가
+    pos_52w: float              # 0.0 (52W 저) ~ 1.0 (52W 고)
+    atr14: float                # 14일 ATR (변동성)
+    ma200: Optional[float]      # 200MA — 250일 미만이면 None
+    ma200_deviation: Optional[float]  # 200MA 이격도 (소수)
+    overheat: bool              # 과열 여부 (52W ≥85% or MA200 ≥+25%)
+    entry_method: str = "v2.0-atr"
 
 
 # ─────────────────────────────────────────────────────────────────
@@ -128,7 +141,7 @@ async def compute_top10(
     # 실시간 현재가 일괄 fetch (60초 캐시, 외부 실패 시 last_close fallback)
     live_quotes = await fetch_quotes([leader.ticker for leader in leaders])
 
-    # 일봉 → 종목별 월말 종가/수익률
+    # 일봉 → 종목별 월말 종가/수익률 + OHLC 시계열 (진입가 v2.0)
     prices = (
         await session.execute(
             select(KrxDailyCandle).order_by(
@@ -137,8 +150,11 @@ async def compute_top10(
         )
     ).scalars().all()
     daily_by_ticker: dict[str, list[tuple[str, float]]] = {}
+    # v2.0: (high, low, close) 시계열 — entry_price 계산용 (오래된→최근)
+    ohlc_by_ticker: dict[str, list[tuple[float, float, float]]] = {}
     for p in prices:
         daily_by_ticker.setdefault(p.ticker, []).append((p.date, p.close))
+        ohlc_by_ticker.setdefault(p.ticker, []).append((p.high, p.low, p.close))
     monthly_by_ticker: dict[str, tuple[dict[str, float], dict[str, float]]] = {
         t: daily_to_monthly(d) for t, d in daily_by_ticker.items()
     }
@@ -275,19 +291,14 @@ async def compute_top10(
             rr.ratio if rr else None,
         )
 
-        # 점추정 가격
+        # 점추정 가격 (참고용 — 진입가 산출과 무관, 예측수익가로만 노출)
         point_price = current_price * (1 + horizon.point_estimate_pct / 100)
-        # 진입가
-        entry_price_raw = min(current_price, point_price * 0.9)
-        # 점추정이 현재가 이하면 entry 의미 없음 → 현재가 그대로
-        entry_price = max(entry_price_raw, 0.0)
-        if entry_price >= current_price * 0.99:
-            entry_status = "🟢 지금 매수 가능"
-            entry_gap_pct = 0.0
-        else:
-            gap = (entry_price / current_price - 1) * 100
-            entry_status = f"🟡 {abs(gap):.1f}% 조정 대기"
-            entry_gap_pct = gap
+
+        # 진입가 v2.0 — 52W 위치 + ATR14 + 200MA 이격도 기반
+        entry_result = compute_entry_price(
+            current_price=current_price,
+            ohlc=ohlc_by_ticker.get(ticker, []),
+        )
 
         stars, conf_label = _stars_from_r(leader.best_r)
 
@@ -299,9 +310,9 @@ async def compute_top10(
                 item=item,
                 market_cap_krw=leader.market_cap_krw,
                 current_price=current_price,
-                entry_price=entry_price,
-                entry_status=entry_status,
-                entry_gap_pct=entry_gap_pct,
+                entry_price=entry_result.entry_price,
+                entry_status=entry_result.entry_status,
+                entry_gap_pct=entry_result.entry_gap_pct,
                 point_price=point_price,
                 point_pct=horizon.point_estimate_pct,
                 stop_price=(st.stop_price if st else None),
@@ -318,6 +329,15 @@ async def compute_top10(
                 price_source=price_source,
                 price_at=price_at,
                 price_market_status=price_market_status,
+                # v2.0 진입가 근거
+                high_52w=entry_result.high_52w,
+                low_52w=entry_result.low_52w,
+                pos_52w=entry_result.pos_52w,
+                atr14=entry_result.atr14,
+                ma200=entry_result.ma200,
+                ma200_deviation=entry_result.ma200_deviation,
+                overheat=entry_result.overheat,
+                entry_method=entry_result.entry_method,
             )
         )
 

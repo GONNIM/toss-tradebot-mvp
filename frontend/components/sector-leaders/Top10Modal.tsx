@@ -4,7 +4,9 @@
  * 🏆 투자 종목 Top 10 모달 (B-2j).
  *
  * 매력도 점수(Confluence 0.5 + 신뢰도 0.3 + R/R 0.2) 상위 10 종목.
- * 진입가 = min(현재가, 점추정 × 0.9).
+ * 진입가 v2.0 (2026-07-08~): 52W 위치 + ATR14 완충 + 200MA 이격도 기반 과열 판정.
+ *   - 과열 (52W ≥85% or MA200 ≥+25%): 🔴 관망
+ *   - 정상: 현재가 − 1.0 × ATR14 → 🟢 지금 or 🟡 조정 대기
  */
 import { useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
@@ -161,14 +163,15 @@ function Top10Table({ items, computedAt }: { items: Top10Item[]; computedAt: str
       </div>
 
       <div className="text-xs text-zinc-200 rounded-lg border border-cyan-500/30 bg-cyan-500/10 p-3">
-        <div className="font-semibold text-cyan-200 mb-1.5 text-sm">💡 사용 가이드</div>
+        <div className="font-semibold text-cyan-200 mb-1.5 text-sm">💡 사용 가이드 (진입가 v2.0)</div>
         <ul className="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-1 list-disc list-inside">
           <li><strong className="text-cyan-200">매력도</strong>: 0~1, 0.6 이상이면 강한 시그널</li>
-          <li><strong className="text-cyan-200">진입가</strong>: 현재가가 점추정 90% 이하면 지금 매수 가능</li>
+          <li><strong className="text-rose-300">🔴 과열 관망</strong>: 52W 위치 ≥85% 또는 200MA 이격 ≥+25% (매수 자제)</li>
+          <li><strong className="text-emerald-300">🟢 지금 매수</strong>: 현재가가 (현재가 − 1×ATR14) ± 0.5% 이내</li>
+          <li><strong className="text-amber-300">🟡 조정 대기</strong>: 진입가는 현재가 − 1×ATR14 (변동성 조정)</li>
           <li><strong className="text-cyan-200">예측수익가</strong>: 종목별 best_lag horizon 회귀 점추정</li>
           <li><strong className="text-cyan-200">Stop / Take</strong>: 24M P10 또는 -30% / 점추정 80%</li>
-          <li><strong className="text-cyan-200">Conf · ★</strong>: 5종 시그널 통합 점수 + 신뢰도 별</li>
-          <li className="text-amber-300">⚠️ 보조 신호 — 투자 권유 아님</li>
+          <li className="text-amber-300 md:col-span-2">⚠️ 보조 신호 — 투자 권유 아님</li>
         </ul>
       </div>
     </div>
@@ -176,18 +179,38 @@ function Top10Table({ items, computedAt }: { items: Top10Item[]; computedAt: str
 }
 
 function Row({ it }: { it: Top10Item }) {
-  const isOk = it.entry_status.startsWith("🟢");
   const formatKRW = (n: number) => Math.round(n).toLocaleString("ko-KR");
-  // 간결 entry 상태 — "🟢 지금" / "🟡 -3.5%"
-  const entryShort = isOk
-    ? "🟢 지금"
-    : `🟡 ${it.entry_gap_pct.toFixed(1)}%`;
   const confColor =
     it.confluence_score > 0.4 ? "text-emerald-400" :
     it.confluence_score > -0.4 ? "text-amber-400" : "text-rose-400";
   const starColor =
     it.confidence_label === "strong" ? "text-emerald-400" :
     it.confidence_label === "medium" ? "text-cyan-400" : "text-muted-foreground";
+
+  // v2.0 진입가 상태 3분기
+  const isOverheat = it.overheat;
+  const isReady = !isOverheat && it.entry_status.startsWith("🟢");
+  const entryPriceLabel = it.entry_price !== null ? formatKRW(it.entry_price) : "—";
+  const entryStatusShort = isOverheat
+    ? "🔴 과열 관망"
+    : isReady
+      ? "🟢 지금"
+      : `🟡 ${it.entry_gap_pct !== null ? it.entry_gap_pct.toFixed(1) : "?"}%`;
+  const entryStatusColor = isOverheat
+    ? "text-rose-300"
+    : isReady
+      ? "text-emerald-300"
+      : "text-amber-300";
+  // 근거 배지: "52W 92% · MA200 +32%" 또는 "52W 45% · ATR 20K"
+  const pos52wPct = Math.round(it.pos_52w * 100);
+  const ma200Badge = it.ma200_deviation !== null
+    ? `MA200 ${it.ma200_deviation >= 0 ? "+" : ""}${(it.ma200_deviation * 100).toFixed(1)}%`
+    : null;
+  const atrBadge = `ATR ${formatKRW(it.atr14)}`;
+  const rationale = isOverheat
+    ? [`52W ${pos52wPct}%`, ma200Badge].filter(Boolean).join(" · ")
+    : `52W ${pos52wPct}% · ${atrBadge}`;
+
   return (
     <tr className="border-b border-border/40 hover:bg-muted/30 whitespace-nowrap">
       <td className="px-2.5 py-2 font-bold text-cyan-300 text-base">#{it.rank}</td>
@@ -208,11 +231,16 @@ function Row({ it }: { it: Top10Item }) {
         />
       </td>
       <td className="px-2.5 py-2 text-right">
-        <div className="font-mono font-semibold text-zinc-50 leading-tight">
-          {formatKRW(it.entry_price)}
+        <div
+          className={`font-mono font-semibold leading-tight ${isOverheat ? "text-zinc-500" : "text-zinc-50"}`}
+        >
+          {entryPriceLabel}
         </div>
-        <div className={`text-xs leading-tight mt-0.5 ${isOk ? "text-emerald-300" : "text-amber-300"}`}>
-          {entryShort}
+        <div className={`text-xs leading-tight mt-0.5 ${entryStatusColor}`}>
+          {entryStatusShort}
+        </div>
+        <div className="text-[10px] text-zinc-400 font-mono leading-tight mt-0.5">
+          {rationale}
         </div>
       </td>
       <td className="px-2.5 py-2 text-right">

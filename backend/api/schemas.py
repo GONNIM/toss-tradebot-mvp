@@ -342,9 +342,9 @@ class Top10ItemResponse(BaseModel):
     market_cap_krw: Optional[float] = None
 
     current_price: float
-    entry_price: float
+    entry_price: Optional[float] = None  # v2.0: 과열 시 None
     entry_status: str
-    entry_gap_pct: float
+    entry_gap_pct: Optional[float] = None  # v2.0: 과열 시 None
 
     point_price: float
     point_pct: float
@@ -365,6 +365,16 @@ class Top10ItemResponse(BaseModel):
     price_source: str = "fallback"
     price_at: Optional[str] = None
     price_market_status: Optional[str] = None
+
+    # v2.0 진입가 근거 (2026-07-08~)
+    high_52w: float = 0.0
+    low_52w: float = 0.0
+    pos_52w: float = 0.5
+    atr14: float = 0.0
+    ma200: Optional[float] = None
+    ma200_deviation: Optional[float] = None
+    overheat: bool = False
+    entry_method: str = "v2.0-atr"
 
 
 class Top10Response(BaseModel):

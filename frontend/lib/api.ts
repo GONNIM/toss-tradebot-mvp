@@ -335,9 +335,9 @@ export interface Top10Item {
   market_cap_krw: number | null;
 
   current_price: number;
-  entry_price: number;
+  entry_price: number | null;      // v2.0: 과열 시 null
   entry_status: string;
-  entry_gap_pct: number;
+  entry_gap_pct: number | null;    // v2.0: 과열 시 null
 
   point_price: number;
   point_pct: number;
@@ -358,6 +358,16 @@ export interface Top10Item {
   price_source: "live" | "fallback";
   price_at: string | null;
   price_market_status: string | null;
+
+  // v2.0 진입가 근거 (2026-07-08~)
+  high_52w: number;
+  low_52w: number;
+  pos_52w: number;                 // 0.0 ~ 1.0
+  atr14: number;
+  ma200: number | null;
+  ma200_deviation: number | null;
+  overheat: boolean;
+  entry_method: string;
 }
 
 export interface Top10Response {
