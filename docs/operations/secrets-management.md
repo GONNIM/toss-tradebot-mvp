@@ -158,45 +158,50 @@ gh run watch <run-id>
 
 ---
 
-## 4. GitHub Actions 통합 (별도 커밋 대기 상태)
+## 4. GitHub Actions 통합 (완료)
 
-**⚠️ 현재 상태**: 스캐폴딩만 완료. workflow 는 아직 SOPS 를 사용하지 않고 기존 방식(개별 GitHub Secret 3개 inject) 유지. 아래 절차를 사용자가 준비 완료한 뒤 별도 커밋으로 workflow 를 SOPS 방식으로 교체할 예정.
+**✅ 현재 상태**: workflow `.github/workflows/deploy.yml` 에 SOPS 통합 완료 (커밋 `905984d`).
+`backend/.env.sops.yaml` 존재 여부에 따라 자동 전환:
 
-### 준비 완료 체크리스트
-- [ ] `brew install sops age` 완료
-- [ ] `age-keygen` 실행 → private key 백업 (1Password)
-- [ ] `.sops.yaml` 에 public key 등록
-- [ ] `backend/.env.sops.yaml` 실 값 입력 완료 (평문 편집 → 자동 재암호화)
-- [ ] `gh secret set SOPS_AGE_KEY` 등록 완료
-- [ ] `pre-commit install` 완료
+- **커밋에 SOPS 파일 있음** → SOPS 방식 (Setup SOPS + Sync backend/.env via SOPS)
+- **커밋에 SOPS 파일 없음** → Legacy fallback (기존 개별 secret inject 유지)
 
-### workflow 변경안 (준비 완료 후 적용)
+즉 사용자가 `sops edit backend/.env.sops.yaml` 로 실 값 입력 후 커밋하는 순간 자동 전환.
 
-`.github/workflows/deploy.yml` 의 "Inject runtime secrets into backend/.env" 스텝을 다음으로 대체:
+### 셋업 체크리스트 (완료 상태)
+- [x] `brew install sops age` (sops 3.13.2 · age 1.3.1)
+- [x] `age-keygen` → `~/.config/sops/age/keys.txt`
+- [x] `.sops.yaml` 에 public key 등록 (`age1c0jxe9g...ew0vul`)
+- [x] `backend/.env.sops.yaml` 초기 파일 생성 (스키마 상태 · 실 값 미입력)
+- [x] `gh secret set SOPS_AGE_KEY` 등록
+- [x] `pre-commit install`
+- [x] `.github/workflows/deploy.yml` SOPS 스텝 통합
+- [ ] **사용자 후속**: `~/.zshrc` 에 `SOPS_AGE_KEY_FILE` export (§2.2.1)
+- [ ] **사용자 후속**: `sops edit backend/.env.sops.yaml` 실 값 입력
+- [ ] **사용자 후속**: `keys.txt` 를 1Password 등에 백업
+- [ ] **사용자 후속**: SOPS 파일 커밋 → push → workflow 자동 SOPS 전환
 
-```yaml
-- name: Setup SOPS + age
-  run: |
-    curl -sSfL https://github.com/getsops/sops/releases/latest/download/sops-v3.9.0.linux.amd64 \
-      -o /usr/local/bin/sops
-    chmod +x /usr/local/bin/sops
-    curl -sSfL https://github.com/FiloSottile/age/releases/latest/download/age-v1.2.1-linux-amd64.tar.gz \
-      | tar xz -C /tmp && sudo mv /tmp/age/age* /usr/local/bin/
-    mkdir -p ~/.config/sops/age
-    echo "${{ secrets.SOPS_AGE_KEY }}" > ~/.config/sops/age/keys.txt
-    chmod 600 ~/.config/sops/age/keys.txt
+### workflow 실행 흐름 (SOPS 파일 커밋 후)
 
-- name: Decrypt .env and push to server
-  run: |
-    # SOPS → dotenv 로 변환 (YAML → KEY=VALUE)
-    sops -d --output-type=dotenv backend/.env.sops.yaml > /tmp/backend.env
-    scp -o StrictHostKeyChecking=no /tmp/backend.env \
-        ${{ secrets.OPTIMUS8_USER }}@${{ secrets.OPTIMUS8_HOST }}:/root/toss-tradebot-mvp/backend/.env
-    ssh ${{ secrets.OPTIMUS8_USER }}@${{ secrets.OPTIMUS8_HOST }} 'chmod 600 /root/toss-tradebot-mvp/backend/.env'
-    shred -u /tmp/backend.env
 ```
-
-이 스텝을 **checkout 뒤 · Deploy to optimus8 앞** 에 삽입하고, 기존 개별 secret inject 스텝은 삭제한다.
+push → validate → deploy:
+  ├─ Setup SSH (key-based)
+  ├─ Add host fingerprint
+  ├─ Setup SOPS + age (신규 · 조건부)
+  │   ├─ sops v3.13.2 binary 설치
+  │   ├─ age v1.2.1 binary 설치
+  │   └─ SOPS_AGE_KEY → ~/.config/sops/age/keys.txt
+  ├─ Sync backend/.env via SOPS (신규 · 조건부)
+  │   ├─ sops -d --output-type=dotenv → /tmp/backend.env
+  │   ├─ scp → 서버 backend/.env.new
+  │   ├─ SSH: cp .env .env.bak.YYYYMMDD-HHMMSS
+  │   ├─ SSH: mv .env.new .env · chmod 600
+  │   ├─ SSH: 오래된 .env.bak.* 자동 정리 (최근 10개 유지)
+  │   └─ shred -u /tmp/backend.env
+  ├─ Legacy inject (조건부 · 지금은 이것만 실행)
+  ├─ Deploy to optimus8 (git reset + deps + build + restart)
+  └─ Verify deployment
+```
 
 ---
 
