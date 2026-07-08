@@ -56,14 +56,66 @@ jobs:
           mkdir -p ~/.ssh
           ssh-keyscan -H ${{ secrets.OPTIMUS8_HOST }} >> ~/.ssh/known_hosts 2>/dev/null
 
-      - name: Inject runtime secrets into backend/.env
+      # ────────────────────────────────────────────────────────────
+      # backend/.env sync — SOPS 우선, 미셋업 시 legacy inject fallback
+      # 상세: docs/operations/secrets-management.md
+      # ────────────────────────────────────────────────────────────
+
+      - name: Setup SOPS + age (only when backend/.env.sops.yaml exists)
+        if: hashFiles('backend/.env.sops.yaml') != ''
+        run: |
+          set -e
+          SOPS_VERSION="v3.13.2"
+          AGE_VERSION="v1.2.1"
+          echo "→ install sops ${SOPS_VERSION} · age ${AGE_VERSION}"
+          sudo curl -sSfL \
+            "https://github.com/getsops/sops/releases/download/${SOPS_VERSION}/sops-${SOPS_VERSION}.linux.amd64" \
+            -o /usr/local/bin/sops
+          sudo chmod +x /usr/local/bin/sops
+          curl -sSfL \
+            "https://github.com/FiloSottile/age/releases/download/${AGE_VERSION}/age-${AGE_VERSION}-linux-amd64.tar.gz" \
+            | tar xz -C /tmp
+          sudo mv /tmp/age/age /tmp/age/age-keygen /usr/local/bin/
+          sops --version
+          age --version
+          mkdir -p ~/.config/sops/age
+          echo "${{ secrets.SOPS_AGE_KEY }}" > ~/.config/sops/age/keys.txt
+          chmod 600 ~/.config/sops/age/keys.txt
+
+      - name: Sync backend/.env via SOPS
+        if: hashFiles('backend/.env.sops.yaml') != ''
+        env:
+          SOPS_AGE_KEY_FILE: /home/runner/.config/sops/age/keys.txt
+        run: |
+          set -e
+          echo "→ decrypt SOPS → dotenv (임시 파일)"
+          sops -d --output-type=dotenv backend/.env.sops.yaml > /tmp/backend.env
+          chmod 600 /tmp/backend.env
+          echo "→ 서버에 원자적 반영 (.env.new → mv .env, 기존 .env 자동 백업)"
+          scp -o StrictHostKeyChecking=no /tmp/backend.env \
+              ${{ secrets.OPTIMUS8_USER }}@${{ secrets.OPTIMUS8_HOST }}:/root/toss-tradebot-mvp/backend/.env.new
+          ssh ${{ secrets.OPTIMUS8_USER }}@${{ secrets.OPTIMUS8_HOST }} 'bash -s' << 'REMOTE_EOF'
+          set -e
+          cd /root/toss-tradebot-mvp/backend
+          if [ -f .env ]; then
+            cp .env ".env.bak.$(date +%Y%m%d-%H%M%S)"
+          fi
+          mv .env.new .env
+          chmod 600 .env
+          # .env.bak.* 는 최근 10개만 유지
+          ls -1t .env.bak.* 2>/dev/null | tail -n +11 | xargs -r rm -f
+          echo "✓ backend/.env replaced from SOPS"
+          REMOTE_EOF
+          shred -u /tmp/backend.env 2>/dev/null || rm -f /tmp/backend.env
+
+      - name: Legacy inject (fallback — SOPS 파일 없을 때만)
+        if: hashFiles('backend/.env.sops.yaml') == ''
         env:
           DART_API_KEY: ${{ secrets.DART_API_KEY }}
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
         run: |
-          # GitHub Secrets → 운영 backend/.env 동기화. 빈 secret 은 skip.
-          # 각 key 별 sed 로 기존 라인 제거 + append.
+          # SOPS 방식 완전 전환 후 이 스텝은 자동 skip.
           ssh ${{ secrets.OPTIMUS8_USER }}@${{ secrets.OPTIMUS8_HOST }} 'bash -s' << EOF
           ENV_FILE=/root/toss-tradebot-mvp/backend/.env
           update_env() {
