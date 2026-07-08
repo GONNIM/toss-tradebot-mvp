@@ -376,7 +376,7 @@ function Loading() {
 function ErrBox() {
   return (
     <div className="rounded-lg border border-red-500/30 bg-red-500/10 p-4 text-sm text-red-400">
-      API 호출 실패. backend (포트 8001) 가동 여부를 확인하세요.
+      API 호출 실패. backend (포트 4001) 가동 여부를 확인하세요.
     </div>
   );
 }
