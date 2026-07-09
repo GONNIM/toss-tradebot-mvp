@@ -22,6 +22,12 @@ from typing import List, Tuple
 from .state import ActivistEvent, ActivistState
 from .universe import Activist
 
+# type-checking only import 회피
+try:
+    from backend.discovery.data_sources.dart.client import DartMajorStock
+except ImportError:   # pragma: no cover
+    DartMajorStock = None  # type: ignore
+
 
 _BASE_FORM_SCORE = {
     # 미국 SEC
@@ -54,6 +60,45 @@ def _label(score: int) -> str:
     if score >= 40:
         return "WATCH"
     return "NOTE"
+
+
+def kr_majorstock_bonus(m, direction: str) -> int:
+    """DART majorstock 정밀 필드 → 강도 보정.
+
+    지분율 (stkrt) · 증감 (stkrt_irds) · 방향 (BUY/SELL/NEW).
+    최종 score 에 더한다 (base × tier × wolf 위에 추가 조정).
+    """
+    if m is None:
+        return 0
+    bonus = 0
+    # 지분율 수준
+    if m.stkrt is not None:
+        if m.stkrt >= 10.0:
+            bonus += 15    # 10% 초과 = 경영권 실질 위협
+        elif m.stkrt >= 7.0:
+            bonus += 8
+        elif m.stkrt >= 5.0:
+            bonus += 3
+    # 지분율 증감 (momentum)
+    if m.stkrt_irds is not None:
+        if m.stkrt_irds >= 3.0:
+            bonus += 15   # 급증
+        elif m.stkrt_irds >= 1.5:
+            bonus += 10
+        elif m.stkrt_irds >= 0.5:
+            bonus += 5
+        elif m.stkrt_irds <= -1.5:
+            bonus -= 10   # 대량 매도
+        elif m.stkrt_irds <= -0.5:
+            bonus -= 5
+    # 방향
+    if direction == "BUY":
+        bonus += 5
+    elif direction == "SELL":
+        bonus -= 10
+    elif direction == "NEW":
+        bonus += 10
+    return bonus
 
 
 def _is_regime_change(prior_forms: List[str], current_form: str) -> bool:

@@ -16,6 +16,8 @@ from typing import List, Optional
 
 from backend.discovery.data_sources.dart.client import (
     DartDisclosure,
+    DartMajorStock,
+    fetch_majorstock,
     fetch_recent_disclosures,
     is_configured,
 )
@@ -26,6 +28,27 @@ from .universe import Activist
 logger = logging.getLogger(__name__)
 
 _DAYS_BACK = 7  # 최근 N일 조회
+
+
+def _classify_report_resn(resn: str) -> str:
+    """report_resn (보고사유) → 방향 판정.
+
+    Returns: "BUY" | "SELL" | "NEW" | "MIXED" | "UNKNOWN"
+    """
+    if not resn:
+        return "UNKNOWN"
+    text = resn.strip()
+    has_buy = ("매수" in text) or ("취득" in text)
+    has_sell = ("매도" in text) or ("처분" in text)
+    if has_buy and has_sell:
+        return "MIXED"
+    if has_buy:
+        return "BUY"
+    if has_sell:
+        return "SELL"
+    if "신규" in text:
+        return "NEW"
+    return "UNKNOWN"
 
 
 def _guess_purpose(report_nm: str) -> str:
@@ -50,7 +73,10 @@ def _guess_purpose(report_nm: str) -> str:
 class KrActivistDisclosure:
     activist: Activist
     disclosure: DartDisclosure
-    purpose: str   # MANAGEMENT | PASSIVE | UNKNOWN
+    purpose: str                    # MANAGEMENT | PASSIVE | UNKNOWN (report_nm 근사)
+    # ─── majorstock 정밀 필드 (없으면 None) ───
+    majorstock: Optional[DartMajorStock] = None
+    direction: str = "UNKNOWN"      # BUY | SELL | NEW | MIXED | UNKNOWN (report_resn 기반)
 
 
 async def poll_new_disclosures(
@@ -81,6 +107,9 @@ async def poll_new_disclosures(
         return []
 
     matched: List[KrActivistDisclosure] = []
+    # 동일 corp_code 반복 fetch 방지 (한 tick 내 캐시)
+    majorstock_cache: dict[str, List[DartMajorStock]] = {}
+
     for d in disclosures:
         key = kr_normalizer.match_activist_key(d.flr_nm)
         if not key:
@@ -92,9 +121,28 @@ async def poll_new_disclosures(
             continue
         if is_seen_fn(activist.key, d.rcept_no):
             continue
+
+        # ─── 정밀 필드 조회 (majorstock.json) ───
+        ms_entry: Optional[DartMajorStock] = None
+        direction = "UNKNOWN"
+        if d.corp_code:
+            if d.corp_code not in majorstock_cache:
+                try:
+                    majorstock_cache[d.corp_code] = await fetch_majorstock(d.corp_code)
+                except Exception as e:
+                    logger.warning(f"[activist.kr] majorstock {d.corp_code} 실패: {e}")
+                    majorstock_cache[d.corp_code] = []
+            for ms in majorstock_cache[d.corp_code]:
+                if ms.rcept_no == d.rcept_no:
+                    ms_entry = ms
+                    direction = _classify_report_resn(ms.report_resn)
+                    break
+
         matched.append(KrActivistDisclosure(
             activist=activist,
             disclosure=d,
             purpose=_guess_purpose(d.report_nm),
+            majorstock=ms_entry,
+            direction=direction,
         ))
     return matched

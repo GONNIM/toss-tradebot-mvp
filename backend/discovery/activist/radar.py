@@ -186,8 +186,7 @@ async def run_kr_tick(
     now = time.time()
 
     for m in matched:
-        form_key = f"KR_D001_{m.purpose}"   # scoring 에서 사용
-        # 강도 스코어링 (스코어링 함수는 form 문자열 하나만 받으므로 form_key 로)
+        form_key = f"KR_D001_{m.purpose}"
         prior_forms = [
             e.form for e in state.events
             if e.filer_key == m.activist.key
@@ -200,16 +199,35 @@ async def run_kr_tick(
             state,
             prior_forms_by_this_filer_on_target=prior_forms,
         )
+        # ─── majorstock 정밀 필드 반영 ───
+        ms_bonus = scoring.kr_majorstock_bonus(m.majorstock, m.direction)
+        score = max(0, min(100, score + ms_bonus))
+        label = scoring._label(score) if label != "REGIME_CHANGE" else label
+
+        # form / target_desc 에 정밀 정보 반영
+        form_label = f"대량보유 ({m.purpose})"
+        if m.majorstock and m.majorstock.stkrt is not None:
+            form_label += f" · {m.majorstock.stkrt:.2f}%"
+            if m.majorstock.stkrt_irds is not None:
+                sign = "▲" if m.majorstock.stkrt_irds >= 0 else "▼"
+                form_label += f" {sign}{abs(m.majorstock.stkrt_irds):.2f}%"
+
+        desc_parts = [f"{m.disclosure.corp_name} — {m.disclosure.report_nm}"]
+        if m.majorstock:
+            if m.majorstock.report_tp:
+                desc_parts.append(f"보고구분: {m.majorstock.report_tp}")
+            if m.majorstock.report_resn:
+                desc_parts.append(f"사유: {m.majorstock.report_resn}")
 
         evt = ActivistEvent(
             id=f"kr:{m.activist.key}:{m.disclosure.rcept_no}",
             country="KR",
             filer_key=m.activist.key,
             filer_name=m.activist.name,
-            form=f"대량보유 ({m.purpose})",
+            form=form_label,
             accession=m.disclosure.rcept_no,
             filing_date=(m.disclosure.rcept_dt[:4] + "-" + m.disclosure.rcept_dt[4:6] + "-" + m.disclosure.rcept_dt[6:8]) if len(m.disclosure.rcept_dt) == 8 else m.disclosure.rcept_dt,
-            target_desc=f"{m.disclosure.corp_name} — {m.disclosure.report_nm}",
+            target_desc=" · ".join(desc_parts),
             target_ticker=m.disclosure.stock_code,
             score=score,
             intensity_label=label,

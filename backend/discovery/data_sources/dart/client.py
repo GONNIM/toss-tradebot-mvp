@@ -113,6 +113,81 @@ async def fetch_corp_codes() -> list[CorpCodeEntry]:
     return out
 
 
+@dataclass(frozen=True)
+class DartMajorStock:
+    """DART 대량보유상황보고 상세 (majorstock.json)."""
+    rcept_no: str
+    rcept_dt: str
+    corp_code: str
+    corp_name: str
+    report_tp: str          # 신규보고 · 변동보고 · 변경보고
+    repror: str             # 대표보고자
+    stkqy: Optional[float]         # 보유주식수
+    stkqy_irds: Optional[float]    # 보유주식 증감
+    stkrt: Optional[float]         # 보유비율 (%)
+    stkrt_irds: Optional[float]    # 보유비율 증감 (%)
+    ctr_stkqy: Optional[float]     # 주요체결 주식수
+    ctr_stkrt: Optional[float]     # 주요체결 비율
+    report_resn: str        # 보고사유 (예: 장내매수 · 장내매도 · 신규보고)
+
+
+def _to_float(v) -> Optional[float]:
+    if v is None or v == "":
+        return None
+    try:
+        return float(str(v).replace(",", ""))
+    except (TypeError, ValueError):
+        return None
+
+
+async def fetch_majorstock(corp_code: str) -> list[DartMajorStock]:
+    """DART 대량보유상황보고 상세 목록 (회사 전체 이력).
+
+    Args:
+        corp_code: DART 회사코드 (8자리)
+    Returns:
+        DartMajorStock 리스트 (최신순)
+    """
+    if not corp_code:
+        return []
+    params = {"crtfc_key": _api_key(), "corp_code": corp_code}
+    async with httpx.AsyncClient() as client:
+        try:
+            resp = await client.get(
+                f"{_BASE}/majorstock.json", params=params, timeout=_TIMEOUT_SEC
+            )
+            resp.raise_for_status()
+            data = resp.json()
+        except Exception as e:
+            logger.warning(f"[dart] majorstock {corp_code} 실패: {e}")
+            return []
+
+    status = data.get("status")
+    if status != "000":
+        if status != "013":
+            logger.warning(f"[dart] majorstock API status={status}: {data.get('message', '')}")
+        return []
+
+    out: list[DartMajorStock] = []
+    for item in data.get("list", []):
+        out.append(DartMajorStock(
+            rcept_no=item.get("rcept_no", ""),
+            rcept_dt=item.get("rcept_dt", ""),
+            corp_code=item.get("corp_code", ""),
+            corp_name=item.get("corp_name", ""),
+            report_tp=(item.get("report_tp") or "").strip(),
+            repror=(item.get("repror") or "").strip(),
+            stkqy=_to_float(item.get("stkqy")),
+            stkqy_irds=_to_float(item.get("stkqy_irds")),
+            stkrt=_to_float(item.get("stkrt")),
+            stkrt_irds=_to_float(item.get("stkrt_irds")),
+            ctr_stkqy=_to_float(item.get("ctr_stkqy")),
+            ctr_stkrt=_to_float(item.get("ctr_stkrt")),
+            report_resn=(item.get("report_resn") or "").strip(),
+        ))
+    return out
+
+
 async def fetch_recent_disclosures(
     bgn_de: Optional[date] = None,
     end_de: Optional[date] = None,
