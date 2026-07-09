@@ -517,9 +517,42 @@ export interface VipThresholds {
 export interface VipQuote {
   close_price: number;
   fluctuations_ratio: number;
+  compare_to_prev_close: number | null;
   market_status: string;
   over_market_ratio: number | null;
   local_traded_at: string | null;
+  stock_name_kor: string | null;
+  stock_name_eng: string | null;
+  item_logo_url: string | null;
+  exchange_name: string | null;
+}
+
+export interface VipMarketStats {
+  base_price?: string;
+  open_price?: string;
+  high_price?: string;
+  low_price?: string;
+  accumulated_trading_volume?: string;
+  accumulated_trading_value?: string;
+  market_value?: string;
+  industry_group_kor?: string;
+  high_52w?: string;
+  low_52w?: string;
+  per?: string;
+  eps?: string;
+  pbr?: string;
+  bps?: string;
+  dividend?: string;
+  dividend_yield_ratio?: string;
+  dividend_at?: string;
+  ex_dividend_at?: string;
+}
+
+export interface VipUsdKrw {
+  rate: number;
+  fluctuations_ratio: number;
+  source: string;
+  fetched_at: number;
 }
 
 export interface VipActivistFiling {
@@ -561,6 +594,8 @@ export interface VipStatus {
   activist_last_accession: string | null;
   is_us_regular_hours: boolean;
   quote?: VipQuote;
+  market_stats?: VipMarketStats;
+  usd_krw?: VipUsdKrw;
   pnl?: number;
   activist: VipActivistSection;
 }

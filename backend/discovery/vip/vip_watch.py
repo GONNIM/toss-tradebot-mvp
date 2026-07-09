@@ -20,6 +20,7 @@ from backend.services.notifier import TelegramNotifier
 
 from . import activist_tracker
 from . import config as cfg_mod
+from . import exchange_client
 from . import notifier as vip_notifier
 from . import overrides as vip_overrides
 from . import position, price_client, state as state_mod
@@ -156,11 +157,30 @@ async def get_status() -> Dict[str, Any]:
             snap["quote"] = {
                 "close_price": quote.close_price,
                 "fluctuations_ratio": quote.fluctuations_ratio,
+                "compare_to_prev_close": quote.compare_to_prev_close,
                 "market_status": quote.market_status,
                 "over_market_ratio": quote.over_market_ratio,
                 "local_traded_at": quote.local_traded_at,
+                "stock_name_kor": quote.stock_name_kor,
+                "stock_name_eng": quote.stock_name_eng,
+                "item_logo_url": quote.item_logo_url,
+                "exchange_name": quote.exchange_name,
             }
+            if quote.market_stats is not None:
+                snap["market_stats"] = {
+                    k: v for k, v in quote.market_stats.__dict__.items() if v is not None
+                }
             snap["pnl"] = position.compute_pnl(quote.close_price, cfg.avg_price)
+
+    # 환율 (USD→KRW · 하루 1회 캐시)
+    fx = await exchange_client.fetch_usd_krw()
+    if fx is not None:
+        snap["usd_krw"] = {
+            "rate": fx.rate,
+            "fluctuations_ratio": fx.fluctuations_ratio,
+            "source": fx.source,
+            "fetched_at": fx.fetched_at,
+        }
 
     # activist 상세
     snap["activist"] = {
