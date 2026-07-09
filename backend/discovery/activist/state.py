@@ -60,11 +60,12 @@ class ActivistEvent:
     filing_date: str
     target_desc: str
     target_ticker: Optional[str] = None
+    target_cik: Optional[str] = None      # Phase F · subject company CIK (US)
     score: int = 0
-    intensity_label: str = "WATCH"       # REGIME_CHANGE | CRITICAL | STRONG | WATCH | NOTE | INSIDER
+    intensity_label: str = "WATCH"       # REGIME_CHANGE | CRITICAL | STRONG | INSIDER | WATCH | NOTE
     wolf_pack: List[str] = field(default_factory=list)
     detected_at: float = 0.0
-    event_type: str = "ACTIVIST"         # ACTIVIST (Phase A/B) | REGIME_CHANGE (Phase D) | INSIDER (Phase E)
+    event_type: str = "ACTIVIST"         # ACTIVIST | REGIME_CHANGE | INSIDER
 
 
 @dataclass
@@ -148,7 +149,7 @@ class ActivistState:
         for e in self.events:
             if e.country != "KR":
                 continue
-            if e.event_type != "ACTIVIST":   # activism 원 이벤트만 (INSIDER 자기참조 방지)
+            if e.event_type != "ACTIVIST":
                 continue
             if e.detected_at < since_ts:
                 continue
@@ -157,3 +158,23 @@ class ActivistState:
             if e.target_ticker not in seen:
                 seen.append(e.target_ticker)
         return seen
+
+    # ─── Phase F · US Insider Watchlist ────
+    def us_insider_watchlist(self, since_ts: float) -> List[dict]:
+        """최근 US activism 이벤트에서 (ticker, cik) 페어 unique 리스트."""
+        seen_cik: set = set()
+        out: List[dict] = []
+        for e in self.events:
+            if e.country != "US":
+                continue
+            if e.event_type != "ACTIVIST":
+                continue
+            if e.detected_at < since_ts:
+                continue
+            if not e.target_cik or not e.target_ticker:
+                continue
+            if e.target_cik in seen_cik:
+                continue
+            seen_cik.add(e.target_cik)
+            out.append({"ticker": e.target_ticker, "cik": e.target_cik, "name": e.target_desc.split(" - ")[0]})
+        return out

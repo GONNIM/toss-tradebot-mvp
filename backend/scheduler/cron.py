@@ -640,6 +640,31 @@ async def job_activist_kr():
         logger.error(f"[cron.activist.kr] failed: {e}", exc_info=True)
 
 
+async def job_activist_us_form4():
+    """US Insider Watchlist Form 4 폴러 (Phase F) — 10분 간격 (Form 4 부담 고려)."""
+    from backend.discovery.activist.radar import run_us_form4_tick
+
+    try:
+        result = await run_us_form4_tick()
+        if result.get("skipped"):
+            return
+        if result.get("backfill"):
+            logger.info(
+                f"[cron.activist.us_form4] baseline set · watchlist={result.get('watchlist_size')} "
+                f"detected={result.get('detected')}"
+            )
+            return
+        detected = result.get("detected", 0)
+        sent = result.get("sent", 0)
+        if detected or sent:
+            logger.info(
+                f"[cron.activist.us_form4] watchlist={result.get('watchlist_size')} "
+                f"detected={detected} sent={sent}"
+            )
+    except Exception as e:
+        logger.error(f"[cron.activist.us_form4] failed: {e}", exc_info=True)
+
+
 # ─────────────────────────────────────────────
 # Scheduler + entry
 # ─────────────────────────────────────────────
@@ -709,6 +734,16 @@ def build_scheduler() -> AsyncIOScheduler:
         max_instances=1,
         coalesce=True,
     )
+    # Activist Radar US Form 4 (Phase F) — 10분 (Watchlist 회사별 fetch · 부담 고려)
+    scheduler.add_job(
+        job_activist_us_form4,
+        IntervalTrigger(seconds=600),
+        id="activist_us_form4",
+        name="Activist Radar US Form 4 폴러 (600s · Insider Watchlist)",
+        replace_existing=True,
+        max_instances=1,
+        coalesce=True,
+    )
     return scheduler
 
 
@@ -774,6 +809,11 @@ async def main_once(target: str):
 
         result = await run_kr_tick()
         print(f"✅ activist KR tick: {result}")
+    elif target == "activist_us_form4":
+        from backend.discovery.activist.radar import run_us_form4_tick
+
+        result = await run_us_form4_tick()
+        print(f"✅ activist US Form 4 tick: {result}")
     elif target == "activist_status":
         from backend.discovery.activist.radar import get_status
 
@@ -794,7 +834,7 @@ if __name__ == "__main__":
         choices=[
             "universe", "crazy", "moonshot", "sector_leaders",
             "vip_price", "vip_activist", "vip_status", "vip_config",
-            "activist_us", "activist_kr", "activist_status",
+            "activist_us", "activist_kr", "activist_us_form4", "activist_status",
         ],
         help="1회 즉시 실행 (수동 검증). 미지정 시 데몬 모드.",
     )

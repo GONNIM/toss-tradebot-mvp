@@ -534,12 +534,19 @@ export interface ActivistEventItem {
   event_type?: "ACTIVIST" | "REGIME_CHANGE" | "INSIDER";
 }
 
+export interface UsInsiderWatchEntry {
+  ticker: string;
+  cik: string;
+  name: string;
+}
+
 export interface ActivistStatusResponse {
   universe_size: number;
   universe_us: number;
   universe_kr: number;
   events_total: number;
   insider_watchlist_kr?: string[];
+  insider_watchlist_us?: UsInsiderWatchEntry[];
   buckets: Record<ActivistIntensity, ActivistEventItem[]>;
 }
 

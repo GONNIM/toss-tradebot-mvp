@@ -20,11 +20,13 @@ from backend.services.notifier import TelegramNotifier
 from . import notifier as activist_notifier
 from . import overrides as universe_overrides
 from . import scoring
+from . import subject_resolver
 from .dart_poller import KrActivistDisclosure, poll_new_disclosures
 from .dart_d002_poller import KrInsiderDisclosure, poll_new_insider_reports
 from .sec_poller import poll_new_filings
 from .state import ActivistEvent, ActivistState
 from .universe import Activist, all_including_disabled, load as load_universe
+from .us_form4_poller import Form4Filing, poll_new_form4
 
 _INSIDER_WATCH_DAYS = 90  # activism 진입 후 이 기간 임원 매매 감시
 
@@ -81,6 +83,9 @@ async def run_us_tick(
             state.mark_seen(nf.activist.key, nf.filing.accession)
             stale_marked += 1
             continue
+
+        # Phase F · subject company resolve (target_cik/ticker 자동 저장)
+        subject = await subject_resolver.resolve(nf.filing.primary_desc or "", cfg.sec_ua)
         # 강도 스코어링 (같은 filer 가 이전에 낸 filing form 이력 참조)
         prior_forms = [
             e.form for e in state.events
@@ -104,7 +109,8 @@ async def run_us_tick(
             accession=nf.filing.accession,
             filing_date=nf.filing.filing_date,
             target_desc=nf.filing.primary_desc or "",
-            target_ticker=None,
+            target_ticker=subject.ticker if subject else None,
+            target_cik=subject.cik if subject else None,
             score=score,
             intensity_label=label,
             wolf_pack=wolf_pack,
@@ -248,6 +254,111 @@ async def run_kr_tick(
     }
 
 
+async def run_us_form4_tick(
+    notifier: TelegramNotifier | None = None,
+) -> Dict[str, Any]:
+    """Phase F · US Insider Watchlist Form 4 폴러 (별 job).
+
+    최근 90일 US activism 진입 회사의 CIK 리스트 유지 → 각 회사 Form 4 신규 감지.
+    parse_xml=True 로 방향(매수/매도) 자동 파싱.
+    """
+    cfg = vip_config.load()
+    state = ActivistState.load()
+
+    watchlist = state.us_insider_watchlist(time.time() - _INSIDER_WATCH_DAYS * 86400)
+    if not watchlist:
+        return {"skipped": True, "reason": "empty_watchlist"}
+
+    # 첫 tick baseline: watchlist 어떤 회사도 seen 이력 없으면 baseline
+    first_run = not any(
+        state.filer_last_seen.get(f"form4_us:{w['cik']}") for w in watchlist
+    )
+
+    # Form 4 polling · dedup key 는 filer_last_seen 에 "form4_us:{cik}" 로 저장
+    def _is_seen(cik: str, accession: str) -> bool:
+        return state.has_seen(f"form4_us:{cik}", accession)
+
+    filings = await poll_new_form4(
+        watchlist, cfg.sec_ua, _is_seen, parse_xml=(not first_run),
+    )
+    if not filings:
+        return {"skipped": False, "detected": 0, "watchlist_size": len(watchlist), "backfill": first_run}
+
+    if first_run:
+        for f in filings:
+            state.mark_seen(f"form4_us:{f.subject_cik}", f.accession)
+        state.save()
+        return {
+            "skipped": False,
+            "detected": len(filings),
+            "watchlist_size": len(watchlist),
+            "backfill": True,
+            "sent": 0,
+            "reason": "form4_baseline",
+        }
+
+    notifier = notifier or TelegramNotifier()
+    sent = 0
+    events: List[Dict[str, Any]] = []
+    now = time.time()
+
+    for f in filings:
+        # 방향에 따라 form 표기
+        form_label = f"Form 4 ({f.direction})"
+        # 스코어링: 매수(A)=STRONG 75, 매도(D)=WATCH 45, 그 외=WATCH 50
+        if f.direction == "A":
+            score, label = 75, "INSIDER"
+        elif f.direction == "D":
+            score, label = 45, "WATCH"
+        else:
+            score, label = 50, "INSIDER"
+
+        evt = ActivistEvent(
+            id=f"form4_us:{f.subject_cik}:{f.accession}",
+            country="US",
+            filer_key=f"form4_us:{f.subject_ticker}",
+            filer_name=f"임원·주주 ({f.reporter_name or f.subject_ticker})",
+            form=form_label,
+            accession=f.accession,
+            filing_date=f.filing_date,
+            target_desc=f"{f.subject_ticker} · {f.subject_name}"
+            + (f" · ${f.total_value_usd:,.0f}" if f.total_value_usd else ""),
+            target_ticker=f.subject_ticker,
+            target_cik=f.subject_cik,
+            score=score,
+            intensity_label=label,
+            wolf_pack=[],
+            detected_at=now,
+            event_type="INSIDER",
+        )
+        state.mark_seen(f"form4_us:{f.subject_cik}", f.accession)
+        state.add_event(evt)
+
+        if label in ("INSIDER", "STRONG", "CRITICAL", "REGIME_CHANGE"):
+            ok = await activist_notifier.send_event(notifier, evt)
+            if ok:
+                sent += 1
+        events.append({
+            "id": evt.id,
+            "form": form_label,
+            "target_ticker": f.subject_ticker,
+            "direction": f.direction,
+            "reporter": f.reporter_name,
+            "value": f.total_value_usd,
+            "score": score,
+            "label": label,
+        })
+
+    state.save()
+    return {
+        "skipped": False,
+        "detected": len(filings),
+        "sent": sent,
+        "watchlist_size": len(watchlist),
+        "events": events,
+    }
+
+
 async def _process_kr_insider(
     state: ActivistState,
     notifier: TelegramNotifier,
@@ -338,15 +449,17 @@ async def get_status() -> Dict[str, Any]:
             "event_type": e.event_type,
         })
     universe = load_universe()
-    # Phase E · KR insider watchlist 크기
     from time import time as _now
-    kr_watchlist = state.kr_insider_watchlist(_now() - _INSIDER_WATCH_DAYS * 86400)
+    since = _now() - _INSIDER_WATCH_DAYS * 86400
+    kr_watchlist = state.kr_insider_watchlist(since)
+    us_watchlist = state.us_insider_watchlist(since)
     return {
         "universe_size": len(universe),
         "universe_us": sum(1 for a in universe if a.country == "US"),
         "universe_kr": sum(1 for a in universe if a.country == "KR"),
         "events_total": len(state.events),
         "insider_watchlist_kr": kr_watchlist,
+        "insider_watchlist_us": us_watchlist,
         "buckets": by_label,
     }
 

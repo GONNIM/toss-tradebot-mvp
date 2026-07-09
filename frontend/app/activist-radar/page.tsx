@@ -260,6 +260,29 @@ export default function ActivistRadarPage() {
               </div>
             </div>
           )}
+          {(s.insider_watchlist_us || []).length > 0 && (
+            <div className="rounded-lg border border-cyan-500/40 bg-cyan-500/5 p-3 text-sm">
+              <div className="mb-1 font-medium text-cyan-300">
+                👤 US Insider Watchlist ({s.insider_watchlist_us!.length} 회사 · 최근 90일 activism 진입 자동 추적)
+              </div>
+              <div className="flex flex-col gap-1 text-xs">
+                {s.insider_watchlist_us!.map((w) => (
+                  <div key={w.cik} className="flex gap-2 items-baseline">
+                    <span className="rounded bg-cyan-500/20 px-2 py-0.5 font-mono font-semibold">
+                      {w.ticker}
+                    </span>
+                    <span className="text-muted-foreground truncate">{w.name}</span>
+                    <span className="ml-auto font-mono text-[10px] text-muted-foreground">
+                      CIK {w.cik}
+                    </span>
+                  </div>
+                ))}
+              </div>
+              <div className="mt-1 text-xs text-muted-foreground">
+                이 회사들의 SEC Form 4 (임원·주요주주 매매) 를 10분 폴링 · 방향(A 매수 / D 매도) XML 파싱 · 👤 INSIDER 이벤트
+              </div>
+            </div>
+          )}
         </>
       )}
 
