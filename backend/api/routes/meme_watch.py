@@ -229,6 +229,14 @@ async def get_activist_status():
     return await get_status()
 
 
+@router.get("/activist/wolf-packs")
+async def get_activist_wolf_packs():
+    """Wolf Pack 그룹 리스트 — 종목별 30일 window 활동주주 진입."""
+    from backend.discovery.activist.radar import get_wolf_packs
+
+    return await get_wolf_packs()
+
+
 @router.get("/activist/universe")
 def get_activist_universe():
     """Universe 전체 · 활성/비활성 모두 · UI 편집 폼용."""

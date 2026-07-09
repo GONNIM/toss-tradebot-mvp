@@ -11,6 +11,8 @@ import {
   ActivistStatusResponse,
   ActivistUniverseResponse,
   ActivistUpsert,
+  ActivistWolfPacksResponse,
+  WolfPackGroup,
 } from "@/lib/api";
 
 // ─────────────────────────────────────────────
@@ -110,6 +112,175 @@ function EventRow({ e }: { e: ActivistEventItem }) {
           Filing 상세 ↗
         </a>
       </div>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────
+// Wolf Pack 시각화
+// ─────────────────────────────────────────────
+
+const PACK_STYLE: Record<
+  WolfPackGroup["intensity_label"],
+  { icon: string; label: string; className: string }
+> = {
+  CRITICAL_PACK: {
+    icon: "🐺🐺",
+    label: "CRITICAL PACK",
+    className: "border-pink-500/60 bg-pink-500/10 ring-2 ring-pink-500/50",
+  },
+  STRONG_PACK: {
+    icon: "🐺",
+    label: "STRONG PACK",
+    className: "border-orange-500/50 bg-orange-500/10",
+  },
+  PACK: {
+    icon: "🐺",
+    label: "PACK",
+    className: "border-yellow-500/40 bg-yellow-500/5",
+  },
+};
+
+function TierBadge({ tier }: { tier: number }) {
+  const color =
+    tier === 1
+      ? "bg-emerald-500/20 text-emerald-300"
+      : tier === 2
+      ? "bg-sky-500/20 text-sky-300"
+      : "bg-muted text-muted-foreground";
+  return (
+    <span className={`rounded px-1.5 py-0.5 text-[10px] font-mono ${color}`}>
+      T{tier}
+    </span>
+  );
+}
+
+function WolfPackEntryRow({
+  e,
+  isFirst,
+  isLast,
+}: {
+  e: WolfPackGroup["entries"][number];
+  isFirst: boolean;
+  isLast: boolean;
+}) {
+  return (
+    <div className="relative flex gap-3">
+      <div className="flex flex-col items-center">
+        <div className="h-3 w-3 rounded-full bg-pink-500 ring-2 ring-background" />
+        {!isLast && <div className="w-px flex-1 bg-pink-500/40" />}
+      </div>
+      <div className="mb-3 flex-1 pb-2">
+        <div className="flex items-baseline gap-2 flex-wrap">
+          <TierBadge tier={e.tier} />
+          <span className="font-medium">{e.filer_name}</span>
+          <span className="rounded bg-amber-500/20 px-2 py-0.5 text-xs font-mono text-amber-400">
+            {e.form}
+          </span>
+          {isFirst && (
+            <span className="text-xs text-muted-foreground">🩸 최초 진입</span>
+          )}
+          {isLast && !isFirst && (
+            <span className="text-xs text-pink-400">⚡ 최신 진입</span>
+          )}
+        </div>
+        <div className="mt-0.5 text-xs text-muted-foreground">
+          Filing {e.filing_date} · Accession{" "}
+          <span className="font-mono">{e.accession}</span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function WolfPackCard({ g }: { g: WolfPackGroup }) {
+  const style = PACK_STYLE[g.intensity_label];
+  const yahooTicker = g.target_ticker;
+  return (
+    <div className={`rounded-lg border p-4 ${style.className}`}>
+      <div className="mb-3 flex items-start justify-between flex-wrap gap-2">
+        <div>
+          <div className="flex items-baseline gap-2 flex-wrap">
+            <span className="text-2xl">{style.icon}</span>
+            <span className="rounded bg-pink-500/30 px-2 py-0.5 text-xs font-mono font-semibold text-pink-100">
+              {g.country}
+            </span>
+            <span className="text-xl font-bold font-mono">{g.target_ticker}</span>
+            <span className="text-xs text-muted-foreground">
+              · {g.target_desc.split(" · ")[0].split(" - ")[0].slice(0, 50)}
+            </span>
+          </div>
+          <div className="mt-1 text-xs">
+            <span className="mr-2 font-semibold">{style.label}</span>
+            <span className="text-muted-foreground">
+              score {g.intensity_score} · {g.activist_count}명 activist ({g.tier1_count} T1)
+              · {g.days_span}일 span
+            </span>
+          </div>
+        </div>
+        <div className="flex gap-1 text-xs">
+          {g.country === "US" && (
+            <a
+              href={`https://finance.yahoo.com/quote/${yahooTicker}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="rounded border border-border bg-background/50 px-2 py-1 hover:bg-muted"
+            >
+              Yahoo ↗
+            </a>
+          )}
+          {g.target_cik && g.country === "US" && (
+            <a
+              href={`https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=${g.target_cik}&type=SC+13`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="rounded border border-border bg-background/50 px-2 py-1 hover:bg-muted"
+            >
+              SEC ↗
+            </a>
+          )}
+        </div>
+      </div>
+
+      <div className="mt-2">
+        <div className="mb-2 text-xs font-medium text-muted-foreground">
+          진입 타임라인 (오래된 순)
+        </div>
+        {g.entries.map((e, i) => (
+          <WolfPackEntryRow
+            key={e.filer_key}
+            e={e}
+            isFirst={i === 0}
+            isLast={i === g.entries.length - 1}
+          />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function WolfPackSection({ data }: { data: ActivistWolfPacksResponse }) {
+  if (data.total === 0) {
+    return (
+      <div className="rounded-lg border border-border bg-card p-4 text-sm text-muted-foreground">
+        🐺 Wolf Pack — 최근 30일 안에 서로 다른 activist 가 2명 이상 진입한 종목이 아직
+        없습니다. Universe activism 이 감지되면 자동 그룹핑됩니다.
+      </div>
+    );
+  }
+  return (
+    <div className="space-y-2">
+      <div className="flex items-baseline justify-between flex-wrap gap-2">
+        <h2 className="text-lg font-semibold">
+          🐺 Wolf Pack — 30일 window 종목별 다중 activist 진입
+        </h2>
+        <div className="text-xs text-muted-foreground">
+          총 {data.total} · CRITICAL {data.critical_count} · STRONG {data.strong_count}
+        </div>
+      </div>
+      {data.groups.map((g) => (
+        <WolfPackCard key={g.target_ticker} g={g} />
+      ))}
     </div>
   );
 }
@@ -439,6 +610,11 @@ export default function ActivistRadarPage() {
     queryFn: () => api.memeWatch.activist.status(),
     refetchInterval: 60_000,
   });
+  const wolfPacksQ = useQuery({
+    queryKey: ["activist", "wolf-packs"],
+    queryFn: () => api.memeWatch.activist.wolfPacks(),
+    refetchInterval: 60_000,
+  });
   const universeQ = useQuery({
     queryKey: ["activist", "universe"],
     queryFn: () => api.memeWatch.activist.universe(),
@@ -514,6 +690,9 @@ export default function ActivistRadarPage() {
           />
         </div>
       )}
+
+      {/* 🐺 Wolf Pack — 최상단 강조 */}
+      {wolfPacksQ.data && <WolfPackSection data={wolfPacksQ.data} />}
 
       {s && (
         <>

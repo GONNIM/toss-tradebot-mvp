@@ -503,6 +503,7 @@ export const api = {
     },
     activist: {
       status: () => get<ActivistStatusResponse>(`/meme-watch/activist/status`),
+      wolfPacks: () => get<ActivistWolfPacksResponse>(`/meme-watch/activist/wolf-packs`),
       universe: () => get<ActivistUniverseResponse>(`/meme-watch/activist/universe`),
       patchUniverse: (entry: ActivistUpsert) =>
         patch<ActivistUniverseMutateResponse>(`/meme-watch/activist/universe`, entry),
@@ -533,6 +534,41 @@ export interface ActivistUpsert {
 export interface ActivistUniverseMutateResponse {
   overrides: Record<string, unknown>;
   universe: ActivistUniverseResponse;
+}
+
+// ─── Wolf Pack 그룹 ──────────────────────
+
+export interface WolfPackEntry {
+  filer_key: string;
+  filer_name: string;
+  tier: number;
+  form: string;
+  filing_date: string;
+  detected_at: number;
+  accession: string;
+  intensity_label: string;
+}
+
+export interface WolfPackGroup {
+  target_ticker: string;
+  target_desc: string;
+  target_cik: string | null;
+  country: string;
+  activist_count: number;
+  tier1_count: number;
+  days_span: number;
+  first_entry_at: number;
+  latest_entry_at: number;
+  intensity_score: number;
+  intensity_label: "CRITICAL_PACK" | "STRONG_PACK" | "PACK";
+  entries: WolfPackEntry[];
+}
+
+export interface ActivistWolfPacksResponse {
+  total: number;
+  critical_count: number;
+  strong_count: number;
+  groups: WolfPackGroup[];
 }
 
 // ─── Activist Radar ──────────────────────────────────

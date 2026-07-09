@@ -21,6 +21,7 @@ from . import notifier as activist_notifier
 from . import overrides as universe_overrides
 from . import scoring
 from . import subject_resolver
+from . import wolf_pack as wolf_pack_mod
 from .dart_poller import KrActivistDisclosure, poll_new_disclosures
 from .dart_d002_poller import KrInsiderDisclosure, poll_new_insider_reports
 from .sec_poller import poll_new_filings
@@ -573,6 +574,18 @@ async def get_status() -> Dict[str, Any]:
         "insider_watchlist_kr": kr_watchlist,
         "insider_watchlist_us": us_watchlist,
         "buckets": by_label,
+    }
+
+
+async def get_wolf_packs() -> Dict[str, Any]:
+    """API /activist/wolf-packs — 30일 window Wolf Pack 그룹 리스트."""
+    state = ActivistState.load()
+    groups = wolf_pack_mod.extract_groups(state)
+    return {
+        "total": len(groups),
+        "critical_count": sum(1 for g in groups if g.intensity_label == "CRITICAL_PACK"),
+        "strong_count": sum(1 for g in groups if g.intensity_label == "STRONG_PACK"),
+        "groups": [wolf_pack_mod.to_dict(g) for g in groups],
     }
 
 
