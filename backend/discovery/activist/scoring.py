@@ -1,6 +1,6 @@
-"""강도 스코어링 · Wolf Pack 감지 · Phase C.
+"""강도 스코어링 · Wolf Pack 감지 · 13G→13D 전환 명시 · Phase C + D.
 
-공식 (기획서 [[00-vision-and-signal-taxonomy]] §4):
+공식:
     score = base_form_score
           × activist_tier_multiplier
           × market_cap_bonus         # 아직 데이터 없음 (기본 1.0)
@@ -8,6 +8,7 @@
           × momentum_bonus           # 지분 증가 속도 (기본 1.0)
 
 임계값:
+    REGIME_CHANGE → 13G→13D 태세 전환 (Phase D · CRITICAL 100 강제)
     80+  → CRITICAL   (즉시 Telegram + UI 최상단)
     60~79 → STRONG    (Telegram)
     40~59 → WATCH     (UI 만)
@@ -55,6 +56,19 @@ def _label(score: int) -> str:
     return "NOTE"
 
 
+def _is_regime_change(prior_forms: List[str], current_form: str) -> bool:
+    """13G/A 이력이 있는 filer 가 이번에 13D 계열을 낸 경우 (passive → active 전환).
+
+    prior_forms: 같은 filer 가 이 대상에 대해 이전에 낸 form 이력
+    current_form: 이번 신규 form
+    """
+    if not prior_forms:
+        return False
+    had_13g = any(("13G" in p) for p in prior_forms)
+    is_13d_now = ("13D" in current_form) and ("G" not in current_form)
+    return had_13g and is_13d_now
+
+
 def detect_wolf_pack(
     state: ActivistState, target_desc: str, current_filer_key: str
 ) -> List[str]:
@@ -77,15 +91,17 @@ def score_event(
     state: ActivistState,
     prior_forms_by_this_filer_on_target: List[str] = None,
 ) -> Tuple[int, str, List[str]]:
-    """이벤트 강도 계산 · (score, label, wolf_pack) 반환."""
-    base = _BASE_FORM_SCORE.get(form, 30)
+    """이벤트 강도 계산 · (score, label, wolf_pack) 반환.
 
-    # 13G → 13D 전환 boost
+    Phase D: 13G→13D 전환은 별도 REGIME_CHANGE 라벨로 승격 (score 100).
+    """
+    base = _BASE_FORM_SCORE.get(form, 30)
     prior = prior_forms_by_this_filer_on_target or []
-    was_13g = any("13G" in p for p in prior)
-    is_13d = "13D" in form and "G" not in form
-    if was_13g and is_13d:
-        base += 30  # 태세 변경 — CRITICAL 초과 가능
+
+    # ── Phase D · 13G→13D 태세 전환 감지 (명시적 라벨) ──
+    if _is_regime_change(prior, form):
+        wolf_pack = detect_wolf_pack(state, target_desc, activist.key)
+        return 100, "REGIME_CHANGE", wolf_pack
 
     tier_mult = _TIER_MULTIPLIER.get(activist.tier, 1.0)
 
@@ -95,8 +111,8 @@ def score_event(
     if n_others >= 2:
         wolf_mult = _WOLF_BONUS.get(min(n_others + 1, 4), 1.7)
     elif n_others == 1:
-        wolf_mult = 1.15  # 두 번째 activist 진입
+        wolf_mult = 1.15
 
     score = int(round(base * tier_mult * wolf_mult))
-    score = max(0, min(100, score))  # clamp
+    score = max(0, min(100, score))
     return score, _label(score), wolf_pack

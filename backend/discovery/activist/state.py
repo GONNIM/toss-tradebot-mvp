@@ -61,9 +61,10 @@ class ActivistEvent:
     target_desc: str
     target_ticker: Optional[str] = None
     score: int = 0
-    intensity_label: str = "WATCH"       # CRITICAL | STRONG | WATCH | NOTE
+    intensity_label: str = "WATCH"       # REGIME_CHANGE | CRITICAL | STRONG | WATCH | NOTE | INSIDER
     wolf_pack: List[str] = field(default_factory=list)
     detected_at: float = 0.0
+    event_type: str = "ACTIVIST"         # ACTIVIST (Phase A/B) | REGIME_CHANGE (Phase D) | INSIDER (Phase E)
 
 
 @dataclass
@@ -139,3 +140,20 @@ class ActivistState:
             if target_desc.upper() in (e.target_desc or "").upper()
             and e.detected_at >= since_ts
         ]
+
+    # ─── Phase E · Insider Watchlist (activism 진입 종목 자동 추적) ────
+    def kr_insider_watchlist(self, since_ts: float) -> List[str]:
+        """최근 KR activism 이벤트에서 target_ticker(stock_code) 자동 추출 · unique 리스트."""
+        seen: List[str] = []
+        for e in self.events:
+            if e.country != "KR":
+                continue
+            if e.event_type != "ACTIVIST":   # activism 원 이벤트만 (INSIDER 자기참조 방지)
+                continue
+            if e.detected_at < since_ts:
+                continue
+            if not e.target_ticker:
+                continue
+            if e.target_ticker not in seen:
+                seen.append(e.target_ticker)
+        return seen

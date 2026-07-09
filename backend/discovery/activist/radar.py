@@ -21,9 +21,12 @@ from . import notifier as activist_notifier
 from . import overrides as universe_overrides
 from . import scoring
 from .dart_poller import KrActivistDisclosure, poll_new_disclosures
+from .dart_d002_poller import KrInsiderDisclosure, poll_new_insider_reports
 from .sec_poller import poll_new_filings
 from .state import ActivistEvent, ActivistState
 from .universe import Activist, all_including_disabled, load as load_universe
+
+_INSIDER_WATCH_DAYS = 90  # activism 진입 후 이 기간 임원 매매 감시
 
 logger = logging.getLogger(__name__)
 
@@ -111,8 +114,8 @@ async def run_us_tick(
         state.mark_seen(nf.activist.key, nf.filing.accession)
         state.add_event(evt)
 
-        # 알림: STRONG 이상만
-        if label in ("CRITICAL", "STRONG"):
+        # 알림: REGIME_CHANGE / CRITICAL / STRONG 발송
+        if label in ("REGIME_CHANGE", "CRITICAL", "STRONG"):
             ok = await activist_notifier.send_event(notifier, evt)
             if ok:
                 sent_count += 1
@@ -210,7 +213,7 @@ async def run_kr_tick(
         state.mark_seen(m.activist.key, m.disclosure.rcept_no)
         state.add_event(evt)
 
-        if label in ("CRITICAL", "STRONG"):
+        if label in ("REGIME_CHANGE", "CRITICAL", "STRONG"):
             ok = await activist_notifier.send_event(notifier, evt)
             if ok:
                 sent_count += 1
@@ -225,12 +228,88 @@ async def run_kr_tick(
             "target_ticker": m.disclosure.stock_code,
         })
 
+    # ── Phase E · KR insider watchlist 통합 (D002 임원 매매) ──
+    insider_result = await _process_kr_insider(state, notifier)
+    for k, v in insider_result.items():
+        if k == "events":
+            events_created.extend(v)
+        elif k in ("detected", "sent"):
+            # merge counts (KR 폴러와 insider 폴러 합산)
+            pass
+
     state.save()
     return {
         "skipped": False,
         "detected": len(matched),
         "sent": sent_count,
+        "insider_detected": insider_result.get("detected", 0),
+        "insider_sent": insider_result.get("sent", 0),
         "events": events_created,
+    }
+
+
+async def _process_kr_insider(
+    state: ActivistState,
+    notifier: TelegramNotifier,
+) -> Dict[str, Any]:
+    """Phase E: KR insider watchlist D002 폴링 → INSIDER 이벤트 생성.
+
+    watchlist 자동 유지: 최근 90일 KR ACTIVIST 이벤트에서 stock_code 추출.
+    """
+    since = time.time() - (_INSIDER_WATCH_DAYS * 86400)
+    watchlist = state.kr_insider_watchlist(since)
+    if not watchlist:
+        return {"detected": 0, "sent": 0, "events": [], "reason": "empty_watchlist"}
+
+    matched = await poll_new_insider_reports(watchlist, state.has_seen)
+    if not matched:
+        return {"detected": 0, "sent": 0, "events": [], "watchlist_size": len(watchlist)}
+
+    sent = 0
+    events: List[Dict[str, Any]] = []
+    now = time.time()
+    for m in matched:
+        d = m.disclosure
+        filing_date = (
+            f"{d.rcept_dt[:4]}-{d.rcept_dt[4:6]}-{d.rcept_dt[6:8]}"
+            if len(d.rcept_dt) == 8 else d.rcept_dt
+        )
+        evt = ActivistEvent(
+            id=f"insider_kr:{d.stock_code}:{d.rcept_no}",
+            country="KR",
+            filer_key="insider_kr",
+            filer_name=f"임원·주요주주 ({d.corp_name})",
+            form=f"D002 ({m.direction})",
+            accession=d.rcept_no,
+            filing_date=filing_date,
+            target_desc=f"{d.corp_name} — {d.report_nm}",
+            target_ticker=d.stock_code,
+            score=70,   # INSIDER 는 고정 STRONG 급
+            intensity_label="INSIDER",
+            wolf_pack=[],
+            detected_at=now,
+            event_type="INSIDER",
+        )
+        state.mark_seen("insider_kr", d.rcept_no)
+        state.add_event(evt)
+
+        ok = await activist_notifier.send_event(notifier, evt)
+        if ok:
+            sent += 1
+        events.append({
+            "id": evt.id,
+            "form": evt.form,
+            "target_ticker": d.stock_code,
+            "target_desc": evt.target_desc,
+            "score": evt.score,
+            "label": evt.intensity_label,
+        })
+
+    return {
+        "detected": len(matched),
+        "sent": sent,
+        "events": events,
+        "watchlist_size": len(watchlist),
     }
 
 
@@ -239,7 +318,8 @@ async def get_status() -> Dict[str, Any]:
     state = ActivistState.load()
     recent = state.recent_events(50)
     by_label: Dict[str, List[Dict[str, Any]]] = {
-        "CRITICAL": [], "STRONG": [], "WATCH": [], "NOTE": [],
+        "REGIME_CHANGE": [], "CRITICAL": [], "STRONG": [],
+        "INSIDER": [], "WATCH": [], "NOTE": [],
     }
     for e in recent:
         by_label.setdefault(e.intensity_label, []).append({
@@ -255,13 +335,18 @@ async def get_status() -> Dict[str, Any]:
             "score": e.score,
             "wolf_pack": e.wolf_pack,
             "detected_at": e.detected_at,
+            "event_type": e.event_type,
         })
     universe = load_universe()
+    # Phase E · KR insider watchlist 크기
+    from time import time as _now
+    kr_watchlist = state.kr_insider_watchlist(_now() - _INSIDER_WATCH_DAYS * 86400)
     return {
         "universe_size": len(universe),
         "universe_us": sum(1 for a in universe if a.country == "US"),
         "universe_kr": sum(1 for a in universe if a.country == "KR"),
         "events_total": len(state.events),
+        "insider_watchlist_kr": kr_watchlist,
         "buckets": by_label,
     }
 

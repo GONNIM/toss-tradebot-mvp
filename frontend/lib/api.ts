@@ -510,7 +510,13 @@ export const api = {
 
 // ─── Activist Radar ──────────────────────────────────
 
-export type ActivistIntensity = "CRITICAL" | "STRONG" | "WATCH" | "NOTE";
+export type ActivistIntensity =
+  | "REGIME_CHANGE"   // Phase D · 13G→13D 태세 전환
+  | "CRITICAL"
+  | "STRONG"
+  | "INSIDER"          // Phase E · 임원 매매
+  | "WATCH"
+  | "NOTE";
 
 export interface ActivistEventItem {
   id: string;
@@ -525,6 +531,7 @@ export interface ActivistEventItem {
   score: number;
   wolf_pack: string[];
   detected_at: number;
+  event_type?: "ACTIVIST" | "REGIME_CHANGE" | "INSIDER";
 }
 
 export interface ActivistStatusResponse {
@@ -532,6 +539,7 @@ export interface ActivistStatusResponse {
   universe_us: number;
   universe_kr: number;
   events_total: number;
+  insider_watchlist_kr?: string[];
   buckets: Record<ActivistIntensity, ActivistEventItem[]>;
 }
 

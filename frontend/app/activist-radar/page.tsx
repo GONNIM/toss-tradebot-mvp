@@ -27,6 +27,12 @@ const INTENSITY_META: Record<
   ActivistIntensity,
   { icon: string; label: string; hint: string; className: string }
 > = {
+  REGIME_CHANGE: {
+    icon: "🚨",
+    label: "REGIME CHANGE (13G→13D 전환)",
+    hint: "passive → active 태세 전환 · 최상 신호 · 즉시 검토",
+    className: "border-pink-500/60 bg-pink-500/20 text-pink-200 ring-2 ring-pink-500/50",
+  },
   CRITICAL: {
     icon: "🌋",
     label: "CRITICAL",
@@ -38,6 +44,12 @@ const INTENSITY_META: Record<
     label: "STRONG",
     hint: "관심 · 지분 변동·수정본",
     className: "border-amber-500/50 bg-amber-500/10 text-amber-300",
+  },
+  INSIDER: {
+    icon: "👤",
+    label: "INSIDER (임원 매매)",
+    hint: "activism 진입 종목의 임원·주요주주 매매 · 동조/이탈 방향 확인",
+    className: "border-cyan-500/50 bg-cyan-500/10 text-cyan-300",
   },
   WATCH: {
     icon: "⚠️",
@@ -226,9 +238,28 @@ export default function ActivistRadarPage() {
 
       {s && (
         <>
+          <BucketCard intensity="REGIME_CHANGE" events={s.buckets.REGIME_CHANGE || []} />
           <BucketCard intensity="CRITICAL" events={s.buckets.CRITICAL || []} />
           <BucketCard intensity="STRONG" events={s.buckets.STRONG || []} />
+          <BucketCard intensity="INSIDER" events={s.buckets.INSIDER || []} />
           <BucketCard intensity="WATCH" events={s.buckets.WATCH || []} />
+          {(s.insider_watchlist_kr || []).length > 0 && (
+            <div className="rounded-lg border border-cyan-500/40 bg-cyan-500/5 p-3 text-sm">
+              <div className="mb-1 font-medium text-cyan-300">
+                👤 KR Insider Watchlist ({s.insider_watchlist_kr!.length} 종목 · 최근 90일 activism 진입 자동 추적)
+              </div>
+              <div className="flex flex-wrap gap-1 font-mono text-xs">
+                {s.insider_watchlist_kr!.map((code) => (
+                  <span key={code} className="rounded bg-cyan-500/20 px-2 py-0.5">
+                    {code}
+                  </span>
+                ))}
+              </div>
+              <div className="mt-1 text-xs text-muted-foreground">
+                이 종목들의 임원·주요주주 소유상황보고서(D002) 를 5분 폴링 · 신규 감지 시 👤 INSIDER 이벤트로 기록
+              </div>
+            </div>
+          )}
         </>
       )}
 
@@ -247,11 +278,18 @@ export default function ActivistRadarPage() {
         </summary>
         <div className="mt-3 space-y-2 text-sm">
           <div>
-            <strong>🌋 CRITICAL (score 80+)</strong> — 신규 SC 13D · 13G→13D 전환 · Wolf Pack.
-            매수 결정 가장 강한 근거.
+            <strong>🚨 REGIME CHANGE (score 100)</strong> — 같은 filer 가 이전에 13G(passive) 를
+            낸 대상에 이번에 13D(active) 를 낸 케이스. <em>가장 강한 초기 신호.</em>
+          </div>
+          <div>
+            <strong>🌋 CRITICAL (80+)</strong> — 신규 SC 13D · Wolf Pack (Tier 1 activist × wolf bonus).
           </div>
           <div>
             <strong>🔥 STRONG (60~79)</strong> — SC 13D/A 지분 변동·수정본 · Tier 1 activist.
+          </div>
+          <div>
+            <strong>👤 INSIDER (Phase E)</strong> — activism 진입 종목 (최근 90일 KR)의
+            임원·주요주주 매매(D002). 동조/이탈 방향 판단용.
           </div>
           <div>
             <strong>⚠️ WATCH (40~59)</strong> — SC 13G (passive) · 참고 신호.
@@ -265,6 +303,9 @@ export default function ActivistRadarPage() {
           </div>
           <div>
             <strong>/A 접미</strong> — Amendment (수정본 · 지분 변동)
+          </div>
+          <div>
+            <strong>D001 · D002</strong> — 한국 DART · 대량보유(경영권) · 임원주주소유상황(insider)
           </div>
           <div className="rounded border border-amber-500/50 bg-amber-500/10 p-2 text-xs text-amber-400">
             ⚠️ 참고 신호이며 자동 매매 아님. 매매 결정은 사용자 판단.

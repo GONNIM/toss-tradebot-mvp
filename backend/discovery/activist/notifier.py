@@ -14,6 +14,8 @@ from .universe import Activist
 logger = logging.getLogger(__name__)
 
 _INTENSITY_ICON = {
+    "REGIME_CHANGE": "🚨",  # Phase D · 13G→13D 전환
+    "INSIDER": "👤",         # Phase E · 임원 매매 (activism 진입 종목)
     "CRITICAL": "🌋",
     "STRONG": "🔥",
     "WATCH": "⚠️",
@@ -46,10 +48,12 @@ async def send_event(
         lines.append(f"🐺 Wolf Pack (30d): {', '.join(evt.wolf_pack)}")
 
     hint = {
-        "CRITICAL": "→ 즉시 검토 · Wolf Pack 또는 신규 SC 13D 강 신호",
-        "STRONG":   "→ 관심 · 지분 변동·수정본",
-        "WATCH":    "→ 참고 · passive 성 · 저강도",
-        "NOTE":     "→ 기록",
+        "REGIME_CHANGE": "→ 🚨 passive → active 태세 전환 · 최상 신호 · 즉시 검토",
+        "INSIDER":       "→ 👤 activism 진입 종목의 임원 매매 · 동조/이탈 방향 상세 확인",
+        "CRITICAL":      "→ 즉시 검토 · Wolf Pack 또는 신규 SC 13D 강 신호",
+        "STRONG":        "→ 관심 · 지분 변동·수정본",
+        "WATCH":         "→ 참고 · passive 성 · 저강도",
+        "NOTE":          "→ 기록",
     }.get(evt.intensity_label)
     if hint:
         lines.append(hint)
