@@ -56,6 +56,11 @@ SEED_ACTIVISTS: List[Activist] = [
     Activist("oasis_management",            "Oasis Management Co Ltd.",              "US", 2, cik="0001317904"),
     Activist("casablanca_capital",          "Casablanca Capital LLC",                "US", 2, cik="0001511181"),
     Activist("barington_capital",           "Barington Companies Equity Partners LP","US", 2, cik="0001107149"),
+    # ── US Tier 1/2 추가 확보 (2026-07-09 · 2차 실측) ──
+    Activist("carl_icahn",                  "Carl C. Icahn",                         "US", 1, cik="0000921669"),
+    Activist("land_buildings",              "Land & Buildings Investment Management","US", 2, cik="0001536520"),
+    Activist("silver_lake",                 "Silver Lake Group, L.L.C.",             "US", 1, cik="0001418226"),
+    Activist("va_partners",                 "VA Partners I (ValueAct GP)",           "US", 1, cik="0001418812"),
 
     # ── KR (Phase B · 2026-07-09) ──
     # DART flr_nm 매칭 — corp_code 없이 이름 정규화로 감지 ([[kr_normalizer]]).
