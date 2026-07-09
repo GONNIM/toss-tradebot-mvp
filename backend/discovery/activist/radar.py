@@ -321,15 +321,9 @@ async def run_us_form4_tick(
     now = time.time()
 
     for f in filings:
-        # 방향에 따라 form 표기
-        form_label = f"Form 4 ({f.direction})"
-        # 스코어링: 매수(A)=STRONG 75, 매도(D)=WATCH 45, 그 외=WATCH 50
-        if f.direction == "A":
-            score, label = 75, "INSIDER"
-        elif f.direction == "D":
-            score, label = 45, "WATCH"
-        else:
-            score, label = 50, "INSIDER"
+        score, label = _score_form4(f)
+        form_label = _form4_label(f)
+        desc = _form4_desc(f)
 
         evt = ActivistEvent(
             id=f"form4_us:{f.subject_cik}:{f.accession}",
@@ -339,8 +333,7 @@ async def run_us_form4_tick(
             form=form_label,
             accession=f.accession,
             filing_date=f.filing_date,
-            target_desc=f"{f.subject_ticker} · {f.subject_name}"
-            + (f" · ${f.total_value_usd:,.0f}" if f.total_value_usd else ""),
+            target_desc=desc,
             target_ticker=f.subject_ticker,
             target_cik=f.subject_cik,
             score=score,
@@ -352,7 +345,8 @@ async def run_us_form4_tick(
         state.mark_seen(f"form4_us:{f.subject_cik}", f.accession)
         state.add_event(evt)
 
-        if label in ("INSIDER", "STRONG", "CRITICAL", "REGIME_CHANGE"):
+        # 알림 조건: NON_TRADE 는 skip · UNKNOWN 은 INSIDER 로 알림
+        if label in ("REGIME_CHANGE", "CRITICAL", "STRONG", "INSIDER"):
             ok = await activist_notifier.send_event(notifier, evt)
             if ok:
                 sent += 1
@@ -360,9 +354,15 @@ async def run_us_form4_tick(
             "id": evt.id,
             "form": form_label,
             "target_ticker": f.subject_ticker,
+            "tx_type": f.tx_type,
             "direction": f.direction,
             "reporter": f.reporter_name,
+            "reporter_title": f.reporter_title,
+            "is_officer": f.is_officer,
+            "is_director": f.is_director,
+            "is_ten_pct": f.is_ten_percent_owner,
             "value": f.total_value_usd,
+            "shares_signed": f.total_shares,
             "score": score,
             "label": label,
         })
@@ -375,6 +375,100 @@ async def run_us_form4_tick(
         "watchlist_size": len(watchlist),
         "events": events,
     }
+
+
+_CEO_KEYWORDS = ("CEO", "CHIEF EXECUTIVE", "CFO", "CHIEF FINANCIAL",
+                 "COO", "CHIEF OPERATING", "PRESIDENT", "CHAIRMAN", "CHAIRPERSON")
+
+
+def _score_form4(f: Form4Filing) -> tuple[int, str]:
+    """Form 4 → (score, label). 튜닝된 판정 (2026-07-09 실측 반영).
+
+    tx_type NON_TRADE (M/A/G/F 등 옵션·수여·증여) → NOTE 30 · 알림 skip.
+    실 매매 (BUY/SELL/MIXED) 는 방향 + 금액 + 직책 boost.
+    """
+    if f.tx_type == "NON_TRADE":
+        return 30, "NOTE"
+
+    if f.direction == "BUY":
+        base = 75
+    elif f.direction == "SELL":
+        base = 45
+    elif f.direction == "MIXED":
+        base = 55
+    else:
+        base = 50  # UNKNOWN
+
+    val = f.total_value_usd or 0
+    # 금액 boost (매수)
+    if f.direction == "BUY":
+        if val >= 1_000_000:
+            base += 15
+        elif val >= 500_000:
+            base += 10
+        elif val >= 100_000:
+            base += 5
+    # 매도 대량 = 반대 신호 강화
+    elif f.direction == "SELL":
+        if val >= 1_000_000:
+            base -= 5
+
+    # 직책 boost
+    title_up = (f.reporter_title or "").upper()
+    if f.is_ten_percent_owner:
+        base += 10
+    if any(k in title_up for k in _CEO_KEYWORDS):
+        base += 10
+    elif f.is_director:
+        base += 5
+
+    base = max(0, min(100, base))
+    if base >= 80:
+        label = "CRITICAL"
+    elif base >= 60:
+        label = "STRONG"
+    elif base >= 40:
+        label = "INSIDER"
+    else:
+        label = "NOTE"
+    return base, label
+
+
+def _form4_label(f: Form4Filing) -> str:
+    """Telegram/UI 표기용 form 라벨."""
+    if f.tx_type == "NON_TRADE":
+        return "Form 4 · non-trade (옵션·수여·증여)"
+    direction_kor = {"BUY": "매수", "SELL": "매도", "MIXED": "혼합"}.get(f.direction, "미확정")
+    parts = [f"Form 4 · {direction_kor}"]
+    if f.total_value_usd:
+        v = f.total_value_usd
+        if v >= 1_000_000:
+            parts.append(f"${v/1_000_000:.1f}M")
+        elif v >= 1_000:
+            parts.append(f"${v/1_000:.0f}K")
+        else:
+            parts.append(f"${v:.0f}")
+    return " · ".join(parts)
+
+
+def _form4_desc(f: Form4Filing) -> str:
+    """target_desc 확장 — reporter 정보 포함."""
+    parts = [f"{f.subject_ticker} · {f.subject_name}"]
+    if f.reporter_name:
+        role_bits = []
+        if f.is_ten_percent_owner:
+            role_bits.append("10%+ owner")
+        if f.reporter_title:
+            role_bits.append(f.reporter_title)
+        elif f.is_officer:
+            role_bits.append("Officer")
+        if f.is_director:
+            role_bits.append("Director")
+        role_str = f" ({', '.join(role_bits)})" if role_bits else ""
+        parts.append(f"보고자: {f.reporter_name}{role_str}")
+    if f.tx_type != "NON_TRADE" and f.total_value_usd:
+        parts.append(f"매매액: ${f.total_value_usd:,.0f}")
+    return " · ".join(parts)
 
 
 async def _process_kr_insider(
