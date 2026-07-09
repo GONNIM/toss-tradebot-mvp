@@ -1,13 +1,16 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
+import { useState } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import {
   api,
+  ActivistEntry,
   ActivistEventItem,
   ActivistIntensity,
   ActivistStatusResponse,
   ActivistUniverseResponse,
+  ActivistUpsert,
 } from "@/lib/api";
 
 // ─────────────────────────────────────────────
@@ -140,47 +143,297 @@ function BucketCard({
   );
 }
 
-function UniverseCard({ u }: { u: ActivistUniverseResponse }) {
+function UniverseCard({
+  u,
+  onEdit,
+  onAdd,
+  onDelete,
+}: {
+  u: ActivistUniverseResponse;
+  onEdit: (a: ActivistEntry) => void;
+  onAdd: () => void;
+  onDelete: (a: ActivistEntry) => void;
+}) {
   const active = u.activists.filter((a) => a.enabled);
   const inactive = u.activists.filter((a) => !a.enabled);
+  const [filter, setFilter] = useState<"all" | "US" | "KR">("all");
+  const filtered = u.activists.filter(
+    (a) => filter === "all" || a.country === filter,
+  );
+
   return (
     <div className="rounded-lg border border-border bg-card p-4">
-      <h2 className="mb-2 text-lg font-semibold">
-        🎯 감시 Universe ({active.length} active
-        {inactive.length > 0 ? ` · ${inactive.length} inactive` : ""})
-      </h2>
-      <details>
-        <summary className="cursor-pointer text-sm text-muted-foreground">
-          전체 리스트 펼치기
-        </summary>
-        <div className="mt-3 grid grid-cols-1 gap-1 text-xs sm:grid-cols-2">
-          {u.activists.map((a) => (
-            <div
-              key={a.key}
-              className={`flex justify-between rounded border border-border/60 px-2 py-1 ${
-                a.enabled ? "" : "opacity-50"
-              }`}
-            >
-              <span className="truncate">
-                <span className="mr-1 rounded bg-muted px-1 text-[10px]">
-                  T{a.tier}
-                </span>
-                {a.name}
-              </span>
-              <span className="font-mono text-muted-foreground">{a.cik || a.corp_code || "—"}</span>
-            </div>
-          ))}
+      <div className="mb-3 flex items-center justify-between flex-wrap gap-2">
+        <h2 className="text-lg font-semibold">
+          🎯 감시 Universe ({active.length} active
+          {inactive.length > 0 ? ` · ${inactive.length} inactive` : ""})
+        </h2>
+        <div className="flex items-center gap-2">
+          <div className="flex overflow-hidden rounded border border-border text-xs">
+            {(["all", "US", "KR"] as const).map((f) => (
+              <button
+                key={f}
+                onClick={() => setFilter(f)}
+                className={`px-2 py-1 ${
+                  filter === f ? "bg-primary text-primary-foreground" : "hover:bg-muted"
+                }`}
+              >
+                {f === "all" ? "전체" : f}
+              </button>
+            ))}
+          </div>
+          <button
+            onClick={onAdd}
+            className="rounded bg-emerald-600 px-3 py-1 text-xs font-medium text-white hover:bg-emerald-700"
+          >
+            + Activist 추가
+          </button>
         </div>
-      </details>
-      <p className="mt-2 text-xs text-muted-foreground">
-        Universe 편집 API: <code>PATCH /api/v1/meme-watch/activist/universe</code> ·{" "}
-        <code>DELETE /api/v1/meme-watch/activist/universe/{"{key}"}</code>
-      </p>
+      </div>
+
+      <div className="grid grid-cols-1 gap-1 text-xs">
+        {filtered.map((a) => (
+          <div
+            key={a.key}
+            className={`flex items-center gap-2 rounded border border-border/60 px-2 py-1.5 ${
+              a.enabled ? "" : "opacity-50"
+            }`}
+          >
+            <span className="rounded bg-muted px-1.5 py-0.5 text-[10px] font-mono">
+              {a.country}·T{a.tier}
+            </span>
+            <span className="flex-1 truncate">{a.name}</span>
+            <span className="hidden sm:inline font-mono text-[10px] text-muted-foreground">
+              {a.cik || a.corp_code || "—"}
+            </span>
+            <button
+              onClick={() => onEdit(a)}
+              className="rounded border border-border bg-background px-2 py-0.5 hover:bg-muted"
+            >
+              편집
+            </button>
+            <button
+              onClick={() => onDelete(a)}
+              className="rounded border border-rose-500/50 bg-rose-500/10 px-2 py-0.5 text-rose-400 hover:bg-rose-500/20"
+            >
+              삭제
+            </button>
+          </div>
+        ))}
+      </div>
+
+      {filtered.length === 0 && (
+        <div className="mt-2 text-xs text-muted-foreground">필터 조건 항목 없음.</div>
+      )}
+    </div>
+  );
+}
+
+function UniverseEditor({
+  initial,
+  isNew,
+  onClose,
+  onSaved,
+}: {
+  initial: ActivistEntry | null;
+  isNew: boolean;
+  onClose: () => void;
+  onSaved: () => void;
+}) {
+  const [key, setKey] = useState(initial?.key ?? "");
+  const [name, setName] = useState(initial?.name ?? "");
+  const [country, setCountry] = useState<"US" | "KR">(
+    (initial?.country as "US" | "KR") ?? "US",
+  );
+  const [tier, setTier] = useState<number>(initial?.tier ?? 2);
+  const [cik, setCik] = useState(initial?.cik ?? "");
+  const [corpCode, setCorpCode] = useState(initial?.corp_code ?? "");
+  const [keywords, setKeywords] = useState((initial?.keywords ?? []).join(", "));
+  const [enabled, setEnabled] = useState<boolean>(initial?.enabled ?? true);
+  const [saveError, setSaveError] = useState<string | null>(null);
+
+  const mut = useMutation({
+    mutationFn: (body: ActivistUpsert) => api.memeWatch.activist.patchUniverse(body),
+    onSuccess: () => {
+      onSaved();
+    },
+    onError: (err: Error) => setSaveError(err.message),
+  });
+
+  const submit = () => {
+    setSaveError(null);
+    const trimmedKey = key.trim();
+    if (!trimmedKey) {
+      setSaveError("key 는 필수입니다 (snake_case 안정 식별자)");
+      return;
+    }
+    const kw = keywords.split(",").map((s) => s.trim()).filter(Boolean);
+    mut.mutate({
+      key: trimmedKey,
+      name: name.trim() || trimmedKey,
+      country,
+      tier,
+      cik: country === "US" ? cik.trim().padStart(10, "0") : undefined,
+      corp_code: country === "KR" ? corpCode.trim() : undefined,
+      keywords: kw,
+      enabled,
+    });
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
+      <div className="w-full max-w-lg rounded-lg border border-border bg-card p-5">
+        <div className="mb-4 flex items-center justify-between">
+          <h3 className="text-lg font-semibold">
+            {isNew ? "신규 Activist 추가" : `편집: ${initial?.name ?? ""}`}
+          </h3>
+          <button
+            onClick={onClose}
+            className="rounded border border-border px-2 py-1 text-xs hover:bg-muted"
+          >
+            닫기
+          </button>
+        </div>
+
+        <div className="space-y-3">
+          <div>
+            <label className="text-xs text-muted-foreground">
+              key (snake_case 안정 식별자 · 필수)
+            </label>
+            <input
+              type="text"
+              value={key}
+              onChange={(e) => setKey(e.target.value)}
+              placeholder="예: elliott_investment_mgmt"
+              disabled={!isNew}
+              className="mt-1 w-full rounded border border-border bg-background px-2 py-1 text-sm font-mono disabled:opacity-60"
+            />
+          </div>
+
+          <div>
+            <label className="text-xs text-muted-foreground">이름 (알림 표기)</label>
+            <input
+              type="text"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="예: Elliott Investment Management L.P."
+              className="mt-1 w-full rounded border border-border bg-background px-2 py-1 text-sm"
+            />
+          </div>
+
+          <div className="grid grid-cols-2 gap-2">
+            <div>
+              <label className="text-xs text-muted-foreground">국가</label>
+              <select
+                value={country}
+                onChange={(e) => setCountry(e.target.value as "US" | "KR")}
+                className="mt-1 w-full rounded border border-border bg-background px-2 py-1 text-sm"
+              >
+                <option value="US">US · SEC</option>
+                <option value="KR">KR · DART</option>
+              </select>
+            </div>
+            <div>
+              <label className="text-xs text-muted-foreground">Tier</label>
+              <select
+                value={tier}
+                onChange={(e) => setTier(Number(e.target.value))}
+                className="mt-1 w-full rounded border border-border bg-background px-2 py-1 text-sm"
+              >
+                <option value={1}>1 · 실행력 최상위</option>
+                <option value={2}>2 · 중간</option>
+                <option value={3}>3 · 소형·특화</option>
+              </select>
+            </div>
+          </div>
+
+          {country === "US" && (
+            <div>
+              <label className="text-xs text-muted-foreground">SEC CIK (10자리 zero-padding 자동)</label>
+              <input
+                type="text"
+                value={cik}
+                onChange={(e) => setCik(e.target.value)}
+                placeholder="예: 0001345471"
+                className="mt-1 w-full rounded border border-border bg-background px-2 py-1 text-sm font-mono"
+              />
+              <p className="mt-1 text-xs text-muted-foreground">
+                data.sec.gov/submissions/CIK{"{cik}"}.json 폴링에 사용됨
+              </p>
+            </div>
+          )}
+
+          {country === "KR" && (
+            <div>
+              <label className="text-xs text-muted-foreground">DART corp_code (8자리 · 선택)</label>
+              <input
+                type="text"
+                value={corpCode}
+                onChange={(e) => setCorpCode(e.target.value)}
+                placeholder="예: 00126380"
+                className="mt-1 w-full rounded border border-border bg-background px-2 py-1 text-sm font-mono"
+              />
+              <p className="mt-1 text-xs text-muted-foreground">
+                이름 정규화 매칭 우선 · corp_code 는 참고용
+              </p>
+            </div>
+          )}
+
+          <div>
+            <label className="text-xs text-muted-foreground">
+              대상 키워드 (콤마 구분 · 선택)
+            </label>
+            <input
+              type="text"
+              value={keywords}
+              onChange={(e) => setKeywords(e.target.value)}
+              placeholder="예: WEN, WENDY"
+              className="mt-1 w-full rounded border border-border bg-background px-2 py-1 text-sm font-mono"
+            />
+          </div>
+
+          <label className="flex items-center gap-2 text-sm">
+            <input
+              type="checkbox"
+              checked={enabled}
+              onChange={(e) => setEnabled(e.target.checked)}
+            />
+            <span>활성 (감시 대상)</span>
+          </label>
+
+          {saveError && (
+            <div className="rounded border border-rose-500/50 bg-rose-500/10 p-2 text-xs text-rose-400">
+              저장 실패: {saveError}
+            </div>
+          )}
+        </div>
+
+        <div className="mt-5 flex justify-end gap-2">
+          <button
+            onClick={onClose}
+            className="rounded border border-border px-3 py-1.5 text-sm hover:bg-muted"
+          >
+            취소
+          </button>
+          <button
+            onClick={submit}
+            disabled={mut.isPending}
+            className="rounded bg-emerald-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-emerald-700 disabled:opacity-50"
+          >
+            {mut.isPending ? "저장 중…" : "저장"}
+          </button>
+        </div>
+      </div>
     </div>
   );
 }
 
 export default function ActivistRadarPage() {
+  const qc = useQueryClient();
+  const [editorTarget, setEditorTarget] = useState<ActivistEntry | null>(null);
+  const [editorIsNew, setEditorIsNew] = useState(false);
+  const [editorOpen, setEditorOpen] = useState(false);
+
   const statusQ = useQuery({
     queryKey: ["activist", "status"],
     queryFn: () => api.memeWatch.activist.status(),
@@ -190,6 +443,32 @@ export default function ActivistRadarPage() {
     queryKey: ["activist", "universe"],
     queryFn: () => api.memeWatch.activist.universe(),
   });
+
+  const deleteMut = useMutation({
+    mutationFn: (key: string) => api.memeWatch.activist.deleteUniverse(key),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["activist", "universe"] });
+      qc.invalidateQueries({ queryKey: ["activist", "status"] });
+    },
+  });
+
+  const openEdit = (a: ActivistEntry) => {
+    setEditorTarget(a);
+    setEditorIsNew(false);
+    setEditorOpen(true);
+  };
+
+  const openNew = () => {
+    setEditorTarget(null);
+    setEditorIsNew(true);
+    setEditorOpen(true);
+  };
+
+  const requestDelete = (a: ActivistEntry) => {
+    if (confirm(`Universe 에서 "${a.name}" (${a.key}) 를 제거할까요? 감시 목록에서 완전 삭제됩니다.`)) {
+      deleteMut.mutate(a.key);
+    }
+  };
 
   const s = statusQ.data;
 
@@ -293,7 +572,27 @@ export default function ActivistRadarPage() {
         </div>
       )}
 
-      {universeQ.data && <UniverseCard u={universeQ.data} />}
+      {universeQ.data && (
+        <UniverseCard
+          u={universeQ.data}
+          onEdit={openEdit}
+          onAdd={openNew}
+          onDelete={requestDelete}
+        />
+      )}
+
+      {editorOpen && (
+        <UniverseEditor
+          initial={editorTarget}
+          isNew={editorIsNew}
+          onClose={() => setEditorOpen(false)}
+          onSaved={() => {
+            setEditorOpen(false);
+            qc.invalidateQueries({ queryKey: ["activist", "universe"] });
+            qc.invalidateQueries({ queryKey: ["activist", "status"] });
+          }}
+        />
+      )}
 
       <details className="rounded-lg border border-border bg-card p-4">
         <summary className="cursor-pointer text-lg font-semibold">

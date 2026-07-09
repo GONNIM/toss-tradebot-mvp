@@ -504,9 +504,36 @@ export const api = {
     activist: {
       status: () => get<ActivistStatusResponse>(`/meme-watch/activist/status`),
       universe: () => get<ActivistUniverseResponse>(`/meme-watch/activist/universe`),
+      patchUniverse: (entry: ActivistUpsert) =>
+        patch<ActivistUniverseMutateResponse>(`/meme-watch/activist/universe`, entry),
+      deleteUniverse: async (key: string) => {
+        const res = await fetch(`${BASE}/meme-watch/activist/universe/${encodeURIComponent(key)}`, {
+          method: "DELETE",
+          headers: { "Content-Type": "application/json" },
+          cache: "no-store",
+        });
+        if (!res.ok) throw new Error(`DELETE universe/${key} failed: ${res.status}`);
+        return res.json() as Promise<ActivistUniverseMutateResponse>;
+      },
     },
   },
 };
+
+export interface ActivistUpsert {
+  key: string;
+  name?: string;
+  country?: string;
+  tier?: number;
+  cik?: string;
+  corp_code?: string;
+  keywords?: string[];
+  enabled?: boolean;
+}
+
+export interface ActivistUniverseMutateResponse {
+  overrides: Record<string, unknown>;
+  universe: ActivistUniverseResponse;
+}
 
 // ─── Activist Radar ──────────────────────────────────
 
