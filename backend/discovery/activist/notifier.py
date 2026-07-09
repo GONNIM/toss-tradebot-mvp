@@ -60,3 +60,56 @@ async def send_event(
 
     body = "\n".join(lines)
     return await notifier.send_info(title, body)
+
+
+async def send_wolf_pack(
+    notifier: TelegramNotifier,
+    group,   # wolf_pack.WolfPackGroup
+    is_new: bool,
+    new_filer_name: str = "",
+) -> bool:
+    """Wolf Pack 형성·강화 알림 전용 포맷.
+
+    is_new=True: 첫 형성 (2번째 activist 진입)
+    is_new=False: 강화 (activist 추가 진입)
+    """
+    style_icon = {
+        "CRITICAL_PACK": "🐺🐺🌋",
+        "STRONG_PACK":   "🐺🔥",
+        "PACK":          "🐺",
+    }.get(group.intensity_label, "🐺")
+
+    kind = "형성" if is_new else "강화"
+    title = (
+        f"{style_icon} [WOLF PACK · {group.country} · {group.target_ticker}] "
+        f"{group.intensity_label} ({group.intensity_score}) {kind}"
+    )
+
+    first = group.entries[0] if group.entries else None
+    last = group.entries[-1] if group.entries else None
+
+    lines = [
+        f"🎯 {(group.target_desc or '')[:60]} ({group.target_ticker})",
+        f"👥 {group.activist_count}명 activist · Tier1 {group.tier1_count}명 · {group.days_span}일 span",
+    ]
+    if first:
+        lines.append(
+            f"🥇 최초: T{first.tier} {first.filer_name} · {first.form} · {first.filing_date}"
+        )
+    if last and last.filer_key != (first.filer_key if first else ""):
+        lines.append(
+            f"⚡ 최신: T{last.tier} {last.filer_name} · {last.form} · {last.filing_date}"
+        )
+    if new_filer_name and new_filer_name != (last.filer_name if last else ""):
+        lines.append(f"➕ 이번 추가: {new_filer_name}")
+
+    hint = {
+        "CRITICAL_PACK": "→ 🌋 Tier1 3명+ 동시 진입 · 매매 개시 확률 최상",
+        "STRONG_PACK":   "→ 🔥 다중 activist 동시 · 확신 강 신호",
+        "PACK":          "→ ⚠️ 관심 · 2명 이상 activist 동시 진입",
+    }.get(group.intensity_label)
+    if hint:
+        lines.append(hint)
+
+    body = "\n".join(lines)
+    return await notifier.send_info(title, body)

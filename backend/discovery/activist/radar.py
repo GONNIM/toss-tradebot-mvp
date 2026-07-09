@@ -136,6 +136,17 @@ async def run_us_tick(
             "wolf_pack": wolf_pack,
         })
 
+    # Wolf Pack 알림 — 새 이벤트 반영 후 그룹 재계산 · count 증가 시 알림
+    wolf_sent = await _process_wolf_pack_alerts(
+        state, notifier,
+        new_tickers={events_created[i].get("target_ticker") for i in range(len(events_created)) if events_created[i].get("target_ticker")}
+        if events_created else set(),
+        new_filer_names={
+            (e.get("filer_key", ""), e.get("target_ticker", ""))
+            for e in events_created if e.get("target_ticker")
+        },
+    )
+
     state.save()
 
     return {
@@ -144,8 +155,51 @@ async def run_us_tick(
         "stale_marked": stale_marked,
         "recent_processed": len(events_created),
         "sent": sent_count,
+        "wolf_pack_sent": wolf_sent,
         "events": events_created,
     }
+
+
+async def _process_wolf_pack_alerts(
+    state: ActivistState,
+    notifier: TelegramNotifier,
+    new_tickers: set,
+    new_filer_names: set,
+) -> int:
+    """이번 tick 에 저장된 새 이벤트 이후 Wolf Pack 그룹 재계산 → count 증가 시 알림.
+
+    dedup: state.wolf_pack_last_notified[ticker] < 현재 activist_count 일 때만 발송.
+    """
+    if not new_tickers:
+        return 0
+
+    groups = wolf_pack_mod.extract_groups(state)
+    sent = 0
+    for g in groups:
+        if g.target_ticker not in new_tickers:
+            continue
+        prev = state.wolf_pack_last_notified.get(g.target_ticker, 0)
+        if g.activist_count <= prev:
+            continue
+        # 이번 tick 에 이 종목에 추가된 filer 이름
+        added = ""
+        for filer_key, ticker in new_filer_names:
+            if ticker == g.target_ticker:
+                for e in g.entries:
+                    if e.filer_key == filer_key:
+                        added = e.filer_name
+                        break
+        try:
+            ok = await activist_notifier.send_wolf_pack(
+                notifier, g, is_new=(prev == 0), new_filer_name=added,
+            )
+        except Exception as e:
+            logger.warning(f"[wolf_pack.alert] send 실패 {g.target_ticker}: {e}")
+            ok = False
+        if ok:
+            state.wolf_pack_last_notified[g.target_ticker] = g.activist_count
+            sent += 1
+    return sent
 
 
 async def run_kr_tick(
@@ -259,8 +313,12 @@ async def run_kr_tick(
         if k == "events":
             events_created.extend(v)
         elif k in ("detected", "sent"):
-            # merge counts (KR 폴러와 insider 폴러 합산)
             pass
+
+    # Wolf Pack 알림 (KR ACTIVIST 이벤트 tickers 만 · INSIDER 제외)
+    kr_tickers = {m.disclosure.stock_code for m in matched if m.disclosure.stock_code}
+    kr_filer_names = {(m.activist.key, m.disclosure.stock_code) for m in matched if m.disclosure.stock_code}
+    wolf_sent = await _process_wolf_pack_alerts(state, notifier, kr_tickers, kr_filer_names)
 
     state.save()
     return {
@@ -269,6 +327,7 @@ async def run_kr_tick(
         "sent": sent_count,
         "insider_detected": insider_result.get("detected", 0),
         "insider_sent": insider_result.get("sent", 0),
+        "wolf_pack_sent": wolf_sent,
         "events": events_created,
     }
 

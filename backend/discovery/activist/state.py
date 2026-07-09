@@ -72,6 +72,7 @@ class ActivistEvent:
 class ActivistState:
     filer_last_seen: Dict[str, List[str]] = field(default_factory=dict)
     events: List[ActivistEvent] = field(default_factory=list)
+    wolf_pack_last_notified: Dict[str, int] = field(default_factory=dict)  # ticker → last activist_count
 
     @classmethod
     def load(cls) -> "ActivistState":
@@ -81,6 +82,7 @@ class ActivistState:
             return cls(
                 filer_last_seen=dict(raw.get("filer_last_seen") or {}),
                 events=[ActivistEvent(**e) for e in (raw.get("events") or [])],
+                wolf_pack_last_notified=dict(raw.get("wolf_pack_last_notified") or {}),
             )
         except FileNotFoundError:
             return cls()
@@ -104,6 +106,7 @@ class ActivistState:
                     {
                         "filer_last_seen": self.filer_last_seen,
                         "events": [asdict(e) for e in self.events],
+                        "wolf_pack_last_notified": self.wolf_pack_last_notified,
                     },
                     f,
                     ensure_ascii=False,
