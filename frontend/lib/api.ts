@@ -501,8 +501,55 @@ export const api = {
       patchConfig: (body: VipConfigPatch) =>
         patch<VipConfigPatchResponse>(`/meme-watch/vip/config`, body),
     },
+    activist: {
+      status: () => get<ActivistStatusResponse>(`/meme-watch/activist/status`),
+      universe: () => get<ActivistUniverseResponse>(`/meme-watch/activist/universe`),
+    },
   },
 };
+
+// ─── Activist Radar ──────────────────────────────────
+
+export type ActivistIntensity = "CRITICAL" | "STRONG" | "WATCH" | "NOTE";
+
+export interface ActivistEventItem {
+  id: string;
+  country: string;
+  filer_key: string;
+  filer_name: string;
+  form: string;
+  accession: string;
+  filing_date: string;
+  target_desc: string;
+  target_ticker: string | null;
+  score: number;
+  wolf_pack: string[];
+  detected_at: number;
+}
+
+export interface ActivistStatusResponse {
+  universe_size: number;
+  universe_us: number;
+  universe_kr: number;
+  events_total: number;
+  buckets: Record<ActivistIntensity, ActivistEventItem[]>;
+}
+
+export interface ActivistEntry {
+  key: string;
+  name: string;
+  country: string;
+  tier: number;
+  cik: string | null;
+  corp_code: string | null;
+  keywords: string[];
+  enabled: boolean;
+}
+
+export interface ActivistUniverseResponse {
+  activists: ActivistEntry[];
+  overrides: Record<string, unknown>;
+}
 
 // ─── VIP (P-A) ─────────────────────────────────────────────
 

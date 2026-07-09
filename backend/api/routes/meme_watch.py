@@ -214,3 +214,51 @@ def patch_vip_config(patch: _VipConfigPatch):
 
     payload = patch.model_dump(exclude_none=True)
     return patch_config(payload)
+
+
+# ─────────────────────────────────────────────
+# Activist Radar (Phase A~C · 2026-07-09~)
+# ─────────────────────────────────────────────
+
+
+@router.get("/activist/status")
+async def get_activist_status():
+    """Activist Radar 최근 이벤트 스냅샷 · 강도 별 버킷."""
+    from backend.discovery.activist.radar import get_status
+
+    return await get_status()
+
+
+@router.get("/activist/universe")
+def get_activist_universe():
+    """Universe 전체 · 활성/비활성 모두 · UI 편집 폼용."""
+    from backend.discovery.activist.radar import get_universe
+
+    return get_universe()
+
+
+class _ActivistUpsert(BaseModel):
+    key: str
+    name: Optional[str] = None
+    country: Optional[str] = None
+    tier: Optional[int] = None
+    cik: Optional[str] = None
+    corp_code: Optional[str] = None
+    keywords: Optional[list[str]] = None
+    enabled: Optional[bool] = None
+
+
+@router.patch("/activist/universe")
+def patch_activist_universe(entry: _ActivistUpsert):
+    """Universe upsert — key 기준. seed 항목은 override 되고 신규는 추가."""
+    from backend.discovery.activist.radar import patch_universe
+
+    return patch_universe(entry.model_dump(exclude_none=True))
+
+
+@router.delete("/activist/universe/{key}")
+def delete_activist_universe(key: str):
+    """Universe 에서 완전 제거 (disabled_keys 등재)."""
+    from backend.discovery.activist.radar import delete_universe
+
+    return delete_universe(key)

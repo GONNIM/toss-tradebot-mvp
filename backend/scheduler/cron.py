@@ -596,6 +596,32 @@ async def job_vip_activist():
 
 
 # ─────────────────────────────────────────────
+# Activist Radar (2026-07-09~) — 헤지펀드 경영권 매수 초기 신호
+# 기획: docs/plans/activist-radar/
+# ─────────────────────────────────────────────
+
+
+async def job_activist_us():
+    """미국 SC 13D/G 폴러 (Phase A) — 5분 간격. Universe 22 CIK 순회."""
+    from backend.discovery.activist.radar import run_us_tick
+
+    try:
+        result = await run_us_tick()
+        if result.get("backfill"):
+            logger.info(f"[cron.activist.us] baseline set · detected={result.get('detected')}")
+            return
+        recent = result.get("recent_processed", 0)
+        sent = result.get("sent", 0)
+        if recent or sent:
+            logger.info(
+                f"[cron.activist.us] recent={recent} sent={sent} "
+                f"stale_marked={result.get('stale_marked', 0)}"
+            )
+    except Exception as e:
+        logger.error(f"[cron.activist.us] failed: {e}", exc_info=True)
+
+
+# ─────────────────────────────────────────────
 # Scheduler + entry
 # ─────────────────────────────────────────────
 
@@ -640,6 +666,16 @@ def build_scheduler() -> AsyncIOScheduler:
         IntervalTrigger(seconds=300),
         id="vip_activist",
         name="VIP Activist SEC 필링 폴러 (300s)",
+        replace_existing=True,
+        max_instances=1,
+        coalesce=True,
+    )
+    # Activist Radar — 22 CIK 순회 (5분)
+    scheduler.add_job(
+        job_activist_us,
+        IntervalTrigger(seconds=300),
+        id="activist_us",
+        name="Activist Radar US SC 13D/G 폴러 (300s)",
         replace_existing=True,
         max_instances=1,
         coalesce=True,
@@ -699,6 +735,16 @@ async def main_once(target: str):
 
         result = get_config()
         print(f"✅ VIP config: {result}")
+    elif target == "activist_us":
+        from backend.discovery.activist.radar import run_us_tick
+
+        result = await run_us_tick()
+        print(f"✅ activist US tick: {result}")
+    elif target == "activist_status":
+        from backend.discovery.activist.radar import get_status
+
+        result = await get_status()
+        print(f"✅ activist status: universe={result.get('universe_size')}, events={result.get('events_total')}, buckets={ {k: len(v) for k,v in result['buckets'].items()} }")
     else:
         print(f"❌ unknown target: {target}")
 
@@ -714,6 +760,7 @@ if __name__ == "__main__":
         choices=[
             "universe", "crazy", "moonshot", "sector_leaders",
             "vip_price", "vip_activist", "vip_status", "vip_config",
+            "activist_us", "activist_status",
         ],
         help="1회 즉시 실행 (수동 검증). 미지정 시 데몬 모드.",
     )
