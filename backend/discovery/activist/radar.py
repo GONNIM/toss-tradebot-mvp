@@ -121,11 +121,10 @@ async def run_us_tick(
         state.mark_seen(nf.activist.key, nf.filing.accession)
         state.add_event(evt)
 
-        # 알림: REGIME_CHANGE / CRITICAL / STRONG 발송
-        if label in ("REGIME_CHANGE", "CRITICAL", "STRONG"):
-            ok = await activist_notifier.send_event(notifier, evt)
-            if ok:
-                sent_count += 1
+        # 알림: 우선순위 필터 (send_event 내부 판정)
+        ok = await activist_notifier.send_event(notifier, evt)
+        if ok:
+            sent_count += 1
 
         events_created.append({
             "id": evt.id,
@@ -292,10 +291,10 @@ async def run_kr_tick(
         state.mark_seen(m.activist.key, m.disclosure.rcept_no)
         state.add_event(evt)
 
-        if label in ("REGIME_CHANGE", "CRITICAL", "STRONG"):
-            ok = await activist_notifier.send_event(notifier, evt)
-            if ok:
-                sent_count += 1
+        # KR direction (BUY/SELL/NEW 등) 전달로 INSIDER 세분화 유도
+        ok = await activist_notifier.send_event(notifier, evt, direction=m.direction or "")
+        if ok:
+            sent_count += 1
 
         events_created.append({
             "id": evt.id,
@@ -405,11 +404,10 @@ async def run_us_form4_tick(
         state.mark_seen(f"form4_us:{f.subject_cik}", f.accession)
         state.add_event(evt)
 
-        # 알림 조건: NON_TRADE 는 skip · UNKNOWN 은 INSIDER 로 알림
-        if label in ("REGIME_CHANGE", "CRITICAL", "STRONG", "INSIDER"):
-            ok = await activist_notifier.send_event(notifier, evt)
-            if ok:
-                sent += 1
+        # 알림: Form 4 direction (BUY/SELL 등) 전달 → INSIDER 매수/매도 세분화
+        ok = await activist_notifier.send_event(notifier, evt, direction=f.direction or "")
+        if ok:
+            sent += 1
         events.append({
             "id": evt.id,
             "form": form_label,
@@ -576,6 +574,7 @@ async def _process_kr_insider(
         state.mark_seen("insider_kr", d.rcept_no)
         state.add_event(evt)
 
+        # KR D002 임원 매매 · direction 정보 없음 (INSIDER NORMAL priority)
         ok = await activist_notifier.send_event(notifier, evt)
         if ok:
             sent += 1

@@ -8,6 +8,7 @@ import logging
 
 from backend.services.notifier import TelegramNotifier
 
+from . import alerts as alert_priority
 from .state import ActivistEvent
 from .universe import Activist
 
@@ -30,10 +31,17 @@ def _short(name: str, limit: int = 20) -> str:
 async def send_event(
     notifier: TelegramNotifier,
     evt: ActivistEvent,
+    direction: str = "",   # INSIDER 세분화용
 ) -> bool:
+    """우선순위 판정 후 발송. min_level 미달 시 skip (False 반환)."""
+    priority = alert_priority.intensity_to_priority(evt.intensity_label, direction)
+    if not alert_priority.should_send(priority):
+        return False
+
     icon = _INTENSITY_ICON.get(evt.intensity_label, "📣")
+    p_icon = alert_priority.PRIORITY_ICON.get(priority, "")
     tag = f"[ACTIVIST-{evt.country} · {_short(evt.filer_name, 18)} · {evt.form}]"
-    title = f"{icon} {tag} {evt.intensity_label} ({evt.score})"
+    title = f"{p_icon}{icon} {tag} {evt.intensity_label} ({evt.score})"
 
     lines = [
         f"Filer: {evt.filer_name}",
@@ -68,20 +76,25 @@ async def send_wolf_pack(
     is_new: bool,
     new_filer_name: str = "",
 ) -> bool:
-    """Wolf Pack 형성·강화 알림 전용 포맷.
+    """Wolf Pack 형성·강화 알림 전용 포맷 · 우선순위 판정.
 
     is_new=True: 첫 형성 (2번째 activist 진입)
     is_new=False: 강화 (activist 추가 진입)
     """
+    priority = alert_priority.intensity_to_priority(group.intensity_label)
+    if not alert_priority.should_send(priority):
+        return False
+
     style_icon = {
         "CRITICAL_PACK": "🐺🐺🌋",
         "STRONG_PACK":   "🐺🔥",
         "PACK":          "🐺",
     }.get(group.intensity_label, "🐺")
+    p_icon = alert_priority.PRIORITY_ICON.get(priority, "")
 
     kind = "형성" if is_new else "강화"
     title = (
-        f"{style_icon} [WOLF PACK · {group.country} · {group.target_ticker}] "
+        f"{p_icon}{style_icon} [WOLF PACK · {group.country} · {group.target_ticker}] "
         f"{group.intensity_label} ({group.intensity_score}) {kind}"
     )
 
