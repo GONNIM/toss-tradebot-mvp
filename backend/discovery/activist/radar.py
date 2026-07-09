@@ -20,6 +20,7 @@ from backend.services.notifier import TelegramNotifier
 from . import notifier as activist_notifier
 from . import overrides as universe_overrides
 from . import scoring
+from .dart_poller import KrActivistDisclosure, poll_new_disclosures
 from .sec_poller import poll_new_filings
 from .state import ActivistEvent, ActivistState
 from .universe import Activist, all_including_disabled, load as load_universe
@@ -140,8 +141,97 @@ async def run_us_tick(
 async def run_kr_tick(
     notifier: TelegramNotifier | None = None,
 ) -> Dict[str, Any]:
-    """한국 DART 폴러 — Phase B 예정."""
-    return {"skipped": True, "reason": "phase_b_pending"}
+    """한국 DART 대량보유공시 폴러 (Phase B).
+
+    첫 tick backfill 방어: filer_last_seen 에 KR filer 없으면 baseline 모드.
+    보유목적 근사: report_nm "일반/변동" → MANAGEMENT (강) / "약식" → PASSIVE (약).
+    """
+    universe = [a for a in load_universe() if a.country == "KR"]
+    if not universe:
+        return {"skipped": True, "reason": "empty_kr_universe"}
+
+    state = ActivistState.load()
+    # KR baseline 판정: KR filer 중 하나라도 last_seen 있으면 안 baseline
+    kr_keys = {a.key for a in universe}
+    kr_first_run = not any(k in state.filer_last_seen for k in kr_keys)
+
+    matched = await poll_new_disclosures(universe, state.has_seen)
+    if not matched:
+        return {"skipped": False, "detected": 0, "backfill": kr_first_run}
+
+    if kr_first_run:
+        for m in matched:
+            state.mark_seen(m.activist.key, m.disclosure.rcept_no)
+        state.save()
+        return {
+            "skipped": False,
+            "detected": len(matched),
+            "backfill": True,
+            "sent": 0,
+            "reason": "kr_first_run_baseline",
+        }
+
+    notifier = notifier or TelegramNotifier()
+    sent_count = 0
+    events_created: List[Dict[str, Any]] = []
+    now = time.time()
+
+    for m in matched:
+        form_key = f"KR_D001_{m.purpose}"   # scoring 에서 사용
+        # 강도 스코어링 (스코어링 함수는 form 문자열 하나만 받으므로 form_key 로)
+        prior_forms = [
+            e.form for e in state.events
+            if e.filer_key == m.activist.key
+            and (m.disclosure.corp_name or "").upper() in (e.target_desc or "").upper()
+        ]
+        score, label, wolf_pack = scoring.score_event(
+            m.activist,
+            form_key,
+            m.disclosure.corp_name or m.disclosure.report_nm,
+            state,
+            prior_forms_by_this_filer_on_target=prior_forms,
+        )
+
+        evt = ActivistEvent(
+            id=f"kr:{m.activist.key}:{m.disclosure.rcept_no}",
+            country="KR",
+            filer_key=m.activist.key,
+            filer_name=m.activist.name,
+            form=f"대량보유 ({m.purpose})",
+            accession=m.disclosure.rcept_no,
+            filing_date=(m.disclosure.rcept_dt[:4] + "-" + m.disclosure.rcept_dt[4:6] + "-" + m.disclosure.rcept_dt[6:8]) if len(m.disclosure.rcept_dt) == 8 else m.disclosure.rcept_dt,
+            target_desc=f"{m.disclosure.corp_name} — {m.disclosure.report_nm}",
+            target_ticker=m.disclosure.stock_code,
+            score=score,
+            intensity_label=label,
+            wolf_pack=wolf_pack,
+            detected_at=now,
+        )
+        state.mark_seen(m.activist.key, m.disclosure.rcept_no)
+        state.add_event(evt)
+
+        if label in ("CRITICAL", "STRONG"):
+            ok = await activist_notifier.send_event(notifier, evt)
+            if ok:
+                sent_count += 1
+
+        events_created.append({
+            "id": evt.id,
+            "filer_key": evt.filer_key,
+            "form": evt.form,
+            "score": score,
+            "label": label,
+            "wolf_pack": wolf_pack,
+            "target_ticker": m.disclosure.stock_code,
+        })
+
+    state.save()
+    return {
+        "skipped": False,
+        "detected": len(matched),
+        "sent": sent_count,
+        "events": events_created,
+    }
 
 
 async def get_status() -> Dict[str, Any]:

@@ -602,7 +602,7 @@ async def job_vip_activist():
 
 
 async def job_activist_us():
-    """미국 SC 13D/G 폴러 (Phase A) — 5분 간격. Universe 22 CIK 순회."""
+    """미국 SC 13D/G 폴러 (Phase A) — 5분 간격. Universe US 22 CIK 순회."""
     from backend.discovery.activist.radar import run_us_tick
 
     try:
@@ -619,6 +619,25 @@ async def job_activist_us():
             )
     except Exception as e:
         logger.error(f"[cron.activist.us] failed: {e}", exc_info=True)
+
+
+async def job_activist_kr():
+    """한국 DART 대량보유공시 폴러 (Phase B) — 5분 간격. Universe KR 15 filer 이름 매칭."""
+    from backend.discovery.activist.radar import run_kr_tick
+
+    try:
+        result = await run_kr_tick()
+        if result.get("skipped"):
+            return
+        if result.get("backfill"):
+            logger.info(f"[cron.activist.kr] baseline set · detected={result.get('detected')}")
+            return
+        detected = result.get("detected", 0)
+        sent = result.get("sent", 0)
+        if detected or sent:
+            logger.info(f"[cron.activist.kr] detected={detected} sent={sent}")
+    except Exception as e:
+        logger.error(f"[cron.activist.kr] failed: {e}", exc_info=True)
 
 
 # ─────────────────────────────────────────────
@@ -676,6 +695,16 @@ def build_scheduler() -> AsyncIOScheduler:
         IntervalTrigger(seconds=300),
         id="activist_us",
         name="Activist Radar US SC 13D/G 폴러 (300s)",
+        replace_existing=True,
+        max_instances=1,
+        coalesce=True,
+    )
+    # Activist Radar KR — DART 대량보유공시 (5분)
+    scheduler.add_job(
+        job_activist_kr,
+        IntervalTrigger(seconds=300),
+        id="activist_kr",
+        name="Activist Radar KR DART D001 폴러 (300s)",
         replace_existing=True,
         max_instances=1,
         coalesce=True,
@@ -740,6 +769,11 @@ async def main_once(target: str):
 
         result = await run_us_tick()
         print(f"✅ activist US tick: {result}")
+    elif target == "activist_kr":
+        from backend.discovery.activist.radar import run_kr_tick
+
+        result = await run_kr_tick()
+        print(f"✅ activist KR tick: {result}")
     elif target == "activist_status":
         from backend.discovery.activist.radar import get_status
 
@@ -760,7 +794,7 @@ if __name__ == "__main__":
         choices=[
             "universe", "crazy", "moonshot", "sector_leaders",
             "vip_price", "vip_activist", "vip_status", "vip_config",
-            "activist_us", "activist_status",
+            "activist_us", "activist_kr", "activist_status",
         ],
         help="1회 즉시 실행 (수동 검증). 미지정 시 데몬 모드.",
     )

@@ -56,7 +56,25 @@ SEED_ACTIVISTS: List[Activist] = [
     Activist("oasis_management",            "Oasis Management Co Ltd.",              "US", 2, cik="0001317904"),
     Activist("casablanca_capital",          "Casablanca Capital LLC",                "US", 2, cik="0001511181"),
     Activist("barington_capital",           "Barington Companies Equity Partners LP","US", 2, cik="0001107149"),
-    # KR 하드코딩은 Phase B 에서 확정 (지금은 빈 리스트 유지 → override 로 초기 추가 가능)
+
+    # ── KR (Phase B · 2026-07-09) ──
+    # DART flr_nm 매칭 — corp_code 없이 이름 정규화로 감지 ([[kr_normalizer]]).
+    Activist("align_partners",              "얼라인파트너스자산운용",                "KR", 1),
+    Activist("kcgi",                        "KCGI (강성부)",                         "KR", 1),
+    Activist("vip_asset",                   "VIP자산운용",                           "KR", 1),
+    Activist("truston_asset",               "트러스톤자산운용",                      "KR", 1),
+    Activist("korea_investment_value",      "한국투자밸류자산운용",                  "KR", 2),
+    Activist("cha_partners",                "차파트너스자산운용",                    "KR", 2),
+    Activist("value_partners_kr",           "밸류파트너스자산운용",                  "KR", 2),
+    Activist("cgcg",                        "좋은기업지배구조연구소 (CGCG)",         "KR", 3),
+    Activist("anda_asset",                  "안다자산운용",                          "KR", 2),
+    Activist("petra_asset",                 "페트라자산운용",                        "KR", 3),
+    # 외국계 (KR 활동) — 한국 신고 시 별도 entry
+    Activist("elliott_kr",                  "Elliott (한국 활동)",                   "KR", 1),
+    Activist("palliser_kr",                 "Palliser Capital (한국 활동)",          "KR", 1),
+    Activist("silchester_kr",               "Silchester International (한국 활동)",  "KR", 2),
+    Activist("dalton_kr",                   "Dalton Investments (한국 활동)",        "KR", 2),
+    Activist("oasis_kr",                    "Oasis Management (한국 활동)",          "KR", 2),
 ]
 
 

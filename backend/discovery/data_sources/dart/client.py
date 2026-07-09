@@ -42,6 +42,7 @@ class DartDisclosure:
     report_nm: str          # 공시 제목
     pblntf_ty: str          # 공시 유형 (A~J)
     corp_cls: str           # Y(유가)/K(코스닥)/N(코넥스)
+    flr_nm: str = ""        # 제출인 (activist 매칭용 · Phase B 활용)
 
 
 @dataclass(frozen=True)
@@ -116,6 +117,7 @@ async def fetch_recent_disclosures(
     bgn_de: Optional[date] = None,
     end_de: Optional[date] = None,
     pblntf_ty: str = "B",   # 주요사항보고 — catalyst 가장 강함
+    pblntf_detail_ty: Optional[str] = None,  # 세부 (예: "D001" 대량보유상황보고서)
     only_listed: bool = True,
 ) -> list[DartDisclosure]:
     """DART 공시 검색 — 기본 최근 1일 + 주요사항보고.
@@ -124,6 +126,7 @@ async def fetch_recent_disclosures(
         bgn_de: 시작일 (None → 어제)
         end_de: 종료일 (None → 오늘)
         pblntf_ty: 공시 유형 ("B" 주요사항 / "C" 발행 / "D" 지분 / "I" 거래소)
+        pblntf_detail_ty: 세부 (예: "D001" 대량보유·"D002" 임원주요주주)
         only_listed: stock_code 있는 종목만 (비상장 제외)
     """
     if bgn_de is None or end_de is None:
@@ -137,6 +140,8 @@ async def fetch_recent_disclosures(
         "pblntf_ty": pblntf_ty,
         "page_count": _PAGE_COUNT,
     }
+    if pblntf_detail_ty:
+        base_params["pblntf_detail_ty"] = pblntf_detail_ty
 
     results: list[DartDisclosure] = []
     async with httpx.AsyncClient() as client:
@@ -175,6 +180,7 @@ async def fetch_recent_disclosures(
                         report_nm=item.get("report_nm", ""),
                         pblntf_ty=item.get("pblntf_ty", ""),
                         corp_cls=item.get("corp_cls", ""),
+                        flr_nm=(item.get("flr_nm") or "").strip(),
                     )
                 )
 

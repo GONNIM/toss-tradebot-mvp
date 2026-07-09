@@ -23,6 +23,7 @@ from .universe import Activist
 
 
 _BASE_FORM_SCORE = {
+    # 미국 SEC
     "SC 13D": 80,           # 신규 SC 13D — 강 신호
     "SCHEDULE 13D": 80,
     "SC 13D/A": 60,         # 수정 (지분 변동)
@@ -32,6 +33,11 @@ _BASE_FORM_SCORE = {
     "SC 13G/A": 45,
     "SCHEDULE 13G/A": 45,
     # 13G → 13D 전환은 별도 로직에서 +30 boost
+
+    # 한국 DART · report_nm 문자열 매칭
+    "KR_D001_MANAGEMENT": 80,   # 대량보유(일반/변동보고) — 경영참여
+    "KR_D001_PASSIVE": 45,      # 대량보유(약식) — 단순투자
+    "KR_D001_UNKNOWN": 55,      # 판정 실패 · 중간 (사용자 확인 필요)
 }
 
 _TIER_MULTIPLIER = {1: 1.2, 2: 1.0, 3: 0.9}
