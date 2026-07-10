@@ -601,6 +601,18 @@ export interface ActivistEventItem {
   event_type?: "ACTIVIST" | "REGIME_CHANGE" | "INSIDER";
   filing_detail_url?: string;
   filer_search_url?: string;
+  details?: {
+    issuer_name?: string;
+    issuer_cik?: string;
+    issuer_cusip?: string;
+    securities_class_title?: string;
+    percent_of_class?: number | null;
+    aggregate_amount_owned?: number | null;
+    amendment_no?: number | null;
+    date_of_event?: string;
+    transaction_purpose?: string;
+    reporting_persons_count?: number;
+  };
 }
 
 export interface UsInsiderWatchEntry {

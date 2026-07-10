@@ -21,6 +21,7 @@ from . import hints
 from . import notifier as activist_notifier
 from . import overrides as universe_overrides
 from . import scoring
+from . import sec_filing_details
 from . import subject_resolver
 from . import wolf_pack as wolf_pack_mod
 from .dart_poller import KrActivistDisclosure, poll_new_disclosures
@@ -88,6 +89,34 @@ async def run_us_tick(
 
         # Phase F · subject company resolve (target_cik/ticker 자동 저장)
         subject = await subject_resolver.resolve(nf.filing.primary_desc or "", cfg.sec_ua)
+
+        # SC 13D/G primary_doc.xml 파싱 (감지 시점 1회 · 지분율·이슈어 등 핵심)
+        sc_details = None
+        if nf.filing.form in ("SC 13D", "SC 13D/A", "SC 13G", "SC 13G/A",
+                               "SCHEDULE 13D", "SCHEDULE 13D/A",
+                               "SCHEDULE 13G", "SCHEDULE 13G/A"):
+            sc_details = await sec_filing_details.fetch_and_parse(
+                nf.activist.cik or "", nf.filing.accession, cfg.sec_ua,
+            )
+        details_dict = {}
+        # XML 파싱 성공 시 이슈어 정보로 subject 보강 (subject_resolver 실패 대체)
+        if sc_details:
+            details_dict = {
+                "issuer_name": sc_details.issuer_name,
+                "issuer_cik": sc_details.issuer_cik,
+                "issuer_cusip": sc_details.issuer_cusip,
+                "securities_class_title": sc_details.securities_class_title,
+                "percent_of_class": sc_details.percent_of_class,
+                "aggregate_amount_owned": sc_details.aggregate_amount_owned,
+                "amendment_no": sc_details.amendment_no,
+                "date_of_event": sc_details.date_of_event,
+                "transaction_purpose": sc_details.transaction_purpose,
+                "reporting_persons_count": sc_details.reporting_persons_count,
+            }
+            # subject 없으면 XML issuer 로 폴백
+            if not subject and sc_details.issuer_name:
+                # ticker 룩업 (subject_resolver 는 이름 기반이라 재사용)
+                subject = await subject_resolver.resolve(sc_details.issuer_name, cfg.sec_ua)
         # 강도 스코어링 (같은 filer 가 이전에 낸 filing form 이력 참조)
         prior_forms = [
             e.form for e in state.events
@@ -102,6 +131,11 @@ async def run_us_tick(
             prior_forms_by_this_filer_on_target=prior_forms,
         )
 
+        # target_desc 강화: primary_desc 비어있고 XML 에 issuer_name 있으면 그것 사용
+        eff_desc = nf.filing.primary_desc or ""
+        if not eff_desc and sc_details and sc_details.issuer_name:
+            eff_desc = sc_details.issuer_name
+
         evt = ActivistEvent(
             id=_make_event_id("US", nf.activist.cik or "", nf.filing.accession),
             country="US",
@@ -110,13 +144,14 @@ async def run_us_tick(
             form=nf.filing.form,
             accession=nf.filing.accession,
             filing_date=nf.filing.filing_date,
-            target_desc=nf.filing.primary_desc or "",
+            target_desc=eff_desc,
             target_ticker=subject.ticker if subject else None,
             target_cik=subject.cik if subject else None,
             score=score,
             intensity_label=label,
             wolf_pack=wolf_pack,
             detected_at=now,
+            details=details_dict,
         )
 
         state.mark_seen(nf.activist.key, nf.filing.accession)
@@ -596,10 +631,59 @@ async def _process_kr_insider(
     }
 
 
+_SC13_FORMS = {
+    "SC 13D", "SC 13D/A", "SC 13G", "SC 13G/A",
+    "SCHEDULE 13D", "SCHEDULE 13D/A", "SCHEDULE 13G", "SCHEDULE 13G/A",
+}
+
+
 async def get_status() -> Dict[str, Any]:
-    """API /activist/status 스냅샷 — 최근 이벤트 강도 순 정렬."""
+    """API /activist/status 스냅샷 — 최근 이벤트 강도 순 정렬.
+
+    SC 13D 계열 이벤트에 details 미보유 시 lazy backfill (최대 8개 · 감지 이전 저장분 대응).
+    """
     state = ActivistState.load()
     recent = state.recent_events(50)
+
+    # ── Lazy backfill (details 비어있고 SC 13D 계열 US 이벤트만 · 상한 8) ──
+    cfg = vip_config.load()
+    _u_by_key_bf = {a.key: a for a in load_universe()}
+    backfilled = 0
+    for e in recent:
+        if backfilled >= 8:
+            break
+        if e.details or e.country != "US":
+            continue
+        if e.form not in _SC13_FORMS:
+            continue
+        act = _u_by_key_bf.get(e.filer_key)
+        if not act or not act.cik:
+            continue
+        try:
+            det = await sec_filing_details.fetch_and_parse(act.cik, e.accession, cfg.sec_ua)
+        except Exception:
+            det = None
+        if not det:
+            e.details = {"backfill_attempted": True}
+            continue
+        e.details = {
+            "issuer_name": det.issuer_name,
+            "issuer_cik": det.issuer_cik,
+            "issuer_cusip": det.issuer_cusip,
+            "securities_class_title": det.securities_class_title,
+            "percent_of_class": det.percent_of_class,
+            "aggregate_amount_owned": det.aggregate_amount_owned,
+            "amendment_no": det.amendment_no,
+            "date_of_event": det.date_of_event,
+            "transaction_purpose": det.transaction_purpose,
+            "reporting_persons_count": det.reporting_persons_count,
+        }
+        # target_desc 보강
+        if not e.target_desc and det.issuer_name:
+            e.target_desc = det.issuer_name
+        backfilled += 1
+    if backfilled:
+        state.save()
     by_label: Dict[str, List[Dict[str, Any]]] = {
         "REGIME_CHANGE": [], "CRITICAL": [], "STRONG": [],
         "INSIDER": [], "WATCH": [], "NOTE": [],
@@ -637,6 +721,7 @@ async def get_status() -> Dict[str, Any]:
             "event_type": e.event_type,
             "filing_detail_url": filing_url,
             "filer_search_url": filer_url,
+            "details": e.details or {},
         })
     universe = load_universe()
     from time import time as _now

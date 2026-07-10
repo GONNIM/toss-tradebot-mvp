@@ -66,6 +66,8 @@ class ActivistEvent:
     wolf_pack: List[str] = field(default_factory=list)
     detected_at: float = 0.0
     event_type: str = "ACTIVIST"         # ACTIVIST | REGIME_CHANGE | INSIDER
+    # ── SC 13D/G XML 상세 (감지 시점 1회 fetch · 미확보 시 빈 dict) ──
+    details: dict = field(default_factory=dict)
 
 
 @dataclass

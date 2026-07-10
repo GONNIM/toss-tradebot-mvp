@@ -131,23 +131,83 @@ function EventRow({ e }: { e: ActivistEventItem }) {
         <span className="font-mono">{e.accession}</span> · 감지 {relTime(e.detected_at)}
       </div>
 
-      {/* 대상 회사·종목 */}
+      {/* 대상 회사·종목 · 지분 상세 (XML 파싱 결과) */}
       <div className="mt-2 rounded bg-muted/40 p-2 text-sm">
-        <div className="text-xs text-muted-foreground">🎯 대상</div>
-        <div className="mt-0.5">
+        <div className="text-xs text-muted-foreground">🎯 대상 종목</div>
+        <div className="mt-0.5 flex items-baseline gap-2 flex-wrap">
           {e.target_ticker && (
-            <span className="mr-2 rounded bg-primary/30 px-1.5 py-0.5 font-mono text-xs font-semibold">
+            <span className="rounded bg-primary/30 px-1.5 py-0.5 font-mono text-xs font-semibold">
               {e.target_ticker}
             </span>
           )}
-          {e.target_desc ? (
-            <span>{e.target_desc}</span>
-          ) : (
-            <span className="text-muted-foreground italic">
-              SEC 응답에 회사명 없음 — 원문 링크에서 확인 필요
+          <span className="font-medium">
+            {e.details?.issuer_name || e.target_desc || (
+              <span className="text-muted-foreground italic">
+                회사명 미확인 — 원문 링크 확인 필요
+              </span>
+            )}
+          </span>
+          {e.details?.issuer_cik && (
+            <span className="text-[10px] font-mono text-muted-foreground">
+              issuer CIK {e.details.issuer_cik}
+              {e.details.issuer_cusip && ` · CUSIP ${e.details.issuer_cusip}`}
             </span>
           )}
         </div>
+
+        {/* 지분 상세 grid */}
+        {(e.details?.percent_of_class || e.details?.aggregate_amount_owned) && (
+          <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-4">
+            {e.details.percent_of_class !== null &&
+             e.details.percent_of_class !== undefined && (
+              <div className="rounded bg-background/50 p-1.5">
+                <div className="text-[10px] text-muted-foreground">지분율</div>
+                <div className="text-lg font-bold text-primary">
+                  {e.details.percent_of_class.toFixed(1)}%
+                </div>
+              </div>
+            )}
+            {e.details.aggregate_amount_owned !== null &&
+             e.details.aggregate_amount_owned !== undefined && (
+              <div className="rounded bg-background/50 p-1.5">
+                <div className="text-[10px] text-muted-foreground">보유 주식</div>
+                <div className="text-sm font-mono">
+                  {e.details.aggregate_amount_owned.toLocaleString()}
+                </div>
+              </div>
+            )}
+            {e.details.amendment_no !== null &&
+             e.details.amendment_no !== undefined && (
+              <div className="rounded bg-background/50 p-1.5">
+                <div className="text-[10px] text-muted-foreground">수정 차수</div>
+                <div className="text-sm">Amendment #{e.details.amendment_no}</div>
+              </div>
+            )}
+            {e.details.date_of_event && (
+              <div className="rounded bg-background/50 p-1.5">
+                <div className="text-[10px] text-muted-foreground">이벤트 발생일</div>
+                <div className="text-sm">{e.details.date_of_event}</div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {e.details?.securities_class_title && (
+          <div className="mt-2 text-xs text-muted-foreground">
+            증권 클래스: {e.details.securities_class_title}
+          </div>
+        )}
+
+        {e.details?.transaction_purpose && (
+          <details className="mt-2 text-xs">
+            <summary className="cursor-pointer text-muted-foreground">
+              📝 Item 4 — 거래 목적/사유 (원문 발췌)
+            </summary>
+            <div className="mt-1 whitespace-pre-wrap rounded bg-background/60 p-2 font-mono text-[11px]">
+              {e.details.transaction_purpose}
+            </div>
+          </details>
+        )}
       </div>
 
       {/* 액션 힌트 */}
