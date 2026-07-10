@@ -477,6 +477,49 @@ class AuditTrade(Base):
 
 
 # ─────────────────────────────────────────────────────────────────
+# Execution Layer 감사 로그 (v2 트랙 C · Phase 1)
+#   스펙: docs/plans/tradebot-mvp-v2/02-omi-interface-spec.md §9
+# ─────────────────────────────────────────────────────────────────
+
+
+class OrderAudit(Base):
+    """OMI 주문 감사 로그 — Paper/Toss 어댑터 공통.
+
+    audit_trades (기존 Golden Cross 시절) 와는 별개.
+    Order (Phase K 초기) 와도 다름 — order_uuid PRIMARY KEY 기반.
+    """
+
+    __tablename__ = "order_audit"
+
+    order_uuid: Mapped[str] = mapped_column(String(36), primary_key=True)
+    broker_kind: Mapped[str] = mapped_column(String(10))          # paper | toss
+    broker_order_id: Mapped[Optional[str]] = mapped_column(String(64))
+    ticker: Mapped[str] = mapped_column(String(20))
+    side: Mapped[str] = mapped_column(String(4))                  # buy | sell
+    order_type: Mapped[str] = mapped_column(String(10))           # market | limit
+    qty: Mapped[int]
+    price: Mapped[Optional[float]]
+    signal_source: Mapped[Optional[str]] = mapped_column(String(30))
+    signal_id: Mapped[Optional[str]] = mapped_column(String(64))
+    status: Mapped[str] = mapped_column(String(15))               # OrderStatus 값
+    filled_qty: Mapped[int] = mapped_column(default=0)
+    avg_fill_price: Mapped[Optional[float]]
+    total_fee: Mapped[float] = mapped_column(default=0.0)
+    error_code: Mapped[Optional[str]] = mapped_column(String(50))
+    error_message: Mapped[Optional[str]] = mapped_column(Text)
+    submitted_at: Mapped[Optional[datetime]] = mapped_column(DateTime)
+    completed_at: Mapped[Optional[datetime]] = mapped_column(DateTime)
+    raw_response: Mapped[Optional[str]] = mapped_column(Text)     # JSON dump
+    created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
+
+    __table_args__ = (
+        Index("ix_order_audit_ticker_created", "ticker", "created_at"),
+        Index("ix_order_audit_signal", "signal_source", "signal_id"),
+        Index("ix_order_audit_broker_created", "broker_kind", "created_at"),
+    )
+
+
+# ─────────────────────────────────────────────────────────────────
 # Meme Watch 모듈 테이블 (Phase 1a — 화끈한 밈주 찾기)
 #   설계: docs/plans/meme-stock-discovery/01-signal-sources.md
 # ─────────────────────────────────────────────────────────────────

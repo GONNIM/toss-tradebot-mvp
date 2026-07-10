@@ -474,13 +474,19 @@ backend/tests/execution/
 
 ---
 
-## 12. Open Questions (사용자 확인 대기)
+## 12. 확정 결정 (2026-07-10 사용자 승인 · 자유도 리뷰 반영)
 
-1. **Paper 초기 자본**: `PAPER_INITIAL_CASH=10000000` (1천만 원) 적정 여부
-2. **감사 로그 DB 분리 여부**: 기존 `tradebot.db` 확장 vs. `execution.db` 별도 파일
-3. **Signal Router 호출 시점**: 시그널 엔진에서 알림 직후 vs. 알림 큐 소비 시점
-4. **Kill Switch 텔레그램 채널**: 기존 봇 재활용 vs. 별도 URGENT 전용 봇
-5. **조건주문 활용 범위**: Phase 3 Super Signal에서 익절+손절을 OCO로 자동 세팅할지 · 단순 시장가 매수만 자동화하고 매도는 알림만 할지
+**설계 원칙**: `feedback_configurability_first` — 하드코딩 default 대신 실시간 소스 동기화 + UI 편집 override 우선.
+
+| # | 항목 | 결정 |
+|---|---|---|
+| 1 | Paper 초기 자본 | **Toss API 실계좌 sync (buying-power + holdings) → `data/paper_balance.json` 저장.** 사용자 UI에서 `재싱크` 버튼으로 재동기화. Toss API 실패 시 `PAPER_INITIAL_CASH` env fallback (기본 10_000_000). 자동 주기 sync 없음. |
+| 2 | 감사 로그 DB | 기존 `backend/data/tradebot.db` 확장 · `order_audit` 테이블 신설 |
+| 3 | Signal Router 호출 시점 | 시그널 감지 직후 (텔레그램 알림과 병행 · 동기 호출) |
+| 4 | Kill Switch 알림 | 기존 텔레그램 봇에 `🚨 URGENT` 태그로 발송 (프로파일 무관) |
+| 5 | 조건주문 활용 범위 (Phase 3) | Super Signal 매수 진입 시 OCO 로 익절+손절 원자 세팅 |
+| 6 | **파라미터 override 계층** | 3층: 종목별 > 시그널별 > global > env fallback. `backend/data/execution_params.json` 파일 기반 · hot reload · UI 편집. |
+| 7 | **`/execution/params` UI 스코프** | **Phase 1**: 익절(TP) · 손절(SL) · 트레일링(arm/giveback) 3개 임계값 × 3개 탭(global · 종목별 · 시그널별). 리스크 예산(per_ticker_max_pct · daily_loss_limit · ticker_dd_limit)은 Phase 3에서 UI 노출 (Phase 1은 JSON 직접 편집만). |
 
 ---
 
