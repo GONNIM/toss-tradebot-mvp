@@ -17,6 +17,7 @@ from typing import Any, Dict, List, Optional
 from backend.discovery.vip import config as vip_config
 from backend.services.notifier import TelegramNotifier
 
+from . import hints
 from . import notifier as activist_notifier
 from . import overrides as universe_overrides
 from . import scoring
@@ -603,13 +604,29 @@ async def get_status() -> Dict[str, Any]:
         "REGIME_CHANGE": [], "CRITICAL": [], "STRONG": [],
         "INSIDER": [], "WATCH": [], "NOTE": [],
     }
+    # Universe 조회 캐시 (filer_cik/tier 룩업)
+    _u_by_key = {a.key: a for a in load_universe()}
     for e in recent:
+        act = _u_by_key.get(e.filer_key)
+        filer_cik = act.cik if act else None
+        filer_tier = act.tier if act else None
+        # URL 조립 (KR 은 rcept_no 활용)
+        if e.country == "US":
+            filing_url = hints.sec_filing_detail_url(filer_cik, e.accession)
+            filer_url = hints.sec_filer_search_url(filer_cik)
+        else:
+            filing_url = hints.dart_filing_detail_url(e.accession)
+            filer_url = hints.dart_filer_search_url(e.filer_name)
         by_label.setdefault(e.intensity_label, []).append({
             "id": e.id,
             "country": e.country,
             "filer_key": e.filer_key,
             "filer_name": e.filer_name,
+            "filer_cik": filer_cik,
+            "filer_tier": filer_tier,
             "form": e.form,
+            "form_hint": hints.form_hint(e.form),
+            "action_hint": hints.action_hint(e.intensity_label),
             "accession": e.accession,
             "filing_date": e.filing_date,
             "target_desc": e.target_desc,
@@ -618,6 +635,8 @@ async def get_status() -> Dict[str, Any]:
             "wolf_pack": e.wolf_pack,
             "detected_at": e.detected_at,
             "event_type": e.event_type,
+            "filing_detail_url": filing_url,
+            "filer_search_url": filer_url,
         })
     universe = load_universe()
     from time import time as _now

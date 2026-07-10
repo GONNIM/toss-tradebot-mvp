@@ -71,45 +71,129 @@ const INTENSITY_META: Record<
 };
 
 function EventRow({ e }: { e: ActivistEventItem }) {
+  const filerUrl = e.filer_search_url;
+  const filingUrl = e.filing_detail_url;
+  const searchQuery = e.target_desc || e.form;
+  const websearchUrl = e.country === "KR"
+    ? `https://search.naver.com/search.naver?query=${encodeURIComponent(searchQuery)}`
+    : `https://www.google.com/search?q=${encodeURIComponent(searchQuery + " SEC filing")}`;
+
   return (
     <div className="rounded border border-border/60 p-3 text-sm">
+      {/* 헤더 · 폼 배지 + 힌트 + 발신자 */}
       <div className="flex items-baseline gap-2 flex-wrap">
-        <span className="rounded bg-amber-500/20 px-2 py-0.5 font-mono text-xs text-amber-400">
+        <span
+          className="rounded bg-amber-500/20 px-2 py-0.5 font-mono text-xs text-amber-400"
+          title={e.form_hint || undefined}
+        >
           {e.form}
         </span>
-        <span className="font-medium">{e.filer_name}</span>
+        {e.form_hint && (
+          <span className="text-xs text-muted-foreground italic">
+            {e.form_hint}
+          </span>
+        )}
         <span className="ml-auto text-xs font-mono text-muted-foreground">
           score {e.score}
         </span>
       </div>
+
+      {/* Filer 이름 + Tier + country */}
+      <div className="mt-1.5 flex items-baseline gap-2 flex-wrap">
+        {e.filer_tier && (
+          <span
+            className={
+              "rounded px-1.5 py-0.5 text-[10px] font-mono " +
+              (e.filer_tier === 1
+                ? "bg-emerald-500/20 text-emerald-300"
+                : e.filer_tier === 2
+                ? "bg-sky-500/20 text-sky-300"
+                : "bg-muted text-muted-foreground")
+            }
+          >
+            T{e.filer_tier}
+          </span>
+        )}
+        <span className="rounded bg-muted px-1.5 py-0.5 text-[10px] font-mono">
+          {e.country}
+        </span>
+        <span className="font-medium">{e.filer_name}</span>
+        {e.filer_cik && (
+          <span className="text-[10px] font-mono text-muted-foreground">
+            CIK {e.filer_cik}
+          </span>
+        )}
+      </div>
+
+      {/* 메타 */}
       <div className="mt-1 text-xs text-muted-foreground">
-        Filing: {e.filing_date} · Accession:{" "}
+        Filing {e.filing_date} · Accession{" "}
         <span className="font-mono">{e.accession}</span> · 감지 {relTime(e.detected_at)}
       </div>
-      <div className="mt-1 text-sm">
-        Target: <span>{e.target_desc || "(desc 없음)"}</span>
+
+      {/* 대상 회사·종목 */}
+      <div className="mt-2 rounded bg-muted/40 p-2 text-sm">
+        <div className="text-xs text-muted-foreground">🎯 대상</div>
+        <div className="mt-0.5">
+          {e.target_ticker && (
+            <span className="mr-2 rounded bg-primary/30 px-1.5 py-0.5 font-mono text-xs font-semibold">
+              {e.target_ticker}
+            </span>
+          )}
+          {e.target_desc ? (
+            <span>{e.target_desc}</span>
+          ) : (
+            <span className="text-muted-foreground italic">
+              SEC 응답에 회사명 없음 — 원문 링크에서 확인 필요
+            </span>
+          )}
+        </div>
       </div>
-      {e.wolf_pack.length > 0 && (
-        <div className="mt-2 rounded border border-rose-500/50 bg-rose-500/10 p-1.5 text-xs text-rose-400">
-          🐺 Wolf Pack (30d): {e.wolf_pack.join(", ")}
+
+      {/* 액션 힌트 */}
+      {e.action_hint && (
+        <div className="mt-2 rounded bg-primary/10 p-2 text-xs">
+          <strong>추천 액션:</strong> {e.action_hint}
         </div>
       )}
-      <div className="mt-2 flex gap-2 text-xs">
+
+      {/* Wolf Pack */}
+      {e.wolf_pack.length > 0 && (
+        <div className="mt-2 rounded border border-rose-500/50 bg-rose-500/10 p-1.5 text-xs text-rose-400">
+          🐺 Wolf Pack (30d): 다른 activist {e.wolf_pack.length}명 동일 종목 진입 —{" "}
+          {e.wolf_pack.join(", ")}
+        </div>
+      )}
+
+      {/* 링크 */}
+      <div className="mt-2 flex gap-2 text-xs flex-wrap">
+        {filingUrl && (
+          <a
+            href={filingUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="rounded border border-border bg-background px-2 py-0.5 hover:bg-muted"
+          >
+            📄 원문 필링 ↗
+          </a>
+        )}
+        {filerUrl && (
+          <a
+            href={filerUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="rounded border border-border bg-background px-2 py-0.5 hover:bg-muted"
+          >
+            🔍 {e.filer_name.split(" ")[0]} 다른 필링 ↗
+          </a>
+        )}
         <a
-          href={`https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=${e.filer_key}&type=SC+13`}
+          href={websearchUrl}
           target="_blank"
           rel="noopener noreferrer"
           className="rounded border border-border bg-background px-2 py-0.5 hover:bg-muted"
         >
-          Filer EDGAR ↗
-        </a>
-        <a
-          href={`https://www.sec.gov/Archives/edgar/data/${(e.accession || "").split("-")[0]?.replace(/^0+/, "")}/${(e.accession || "").replace(/-/g, "")}/`}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="rounded border border-border bg-background px-2 py-0.5 hover:bg-muted"
-        >
-          Filing 상세 ↗
+          {e.country === "KR" ? "🇰🇷" : "🌐"} 웹 검색 ↗
         </a>
       </div>
     </div>

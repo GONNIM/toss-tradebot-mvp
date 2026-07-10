@@ -586,7 +586,11 @@ export interface ActivistEventItem {
   country: string;
   filer_key: string;
   filer_name: string;
+  filer_cik?: string | null;
+  filer_tier?: number | null;
   form: string;
+  form_hint?: string;
+  action_hint?: string;
   accession: string;
   filing_date: string;
   target_desc: string;
@@ -595,6 +599,8 @@ export interface ActivistEventItem {
   wolf_pack: string[];
   detected_at: number;
   event_type?: "ACTIVIST" | "REGIME_CHANGE" | "INSIDER";
+  filing_detail_url?: string;
+  filer_search_url?: string;
 }
 
 export interface UsInsiderWatchEntry {
