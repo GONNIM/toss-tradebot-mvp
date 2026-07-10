@@ -30,43 +30,49 @@ function relTime(unixSec: number): string {
 
 const INTENSITY_META: Record<
   ActivistIntensity,
-  { icon: string; label: string; hint: string; className: string }
+  { icon: string; label: string; hint: string; className: string; headerColor: string }
 > = {
   REGIME_CHANGE: {
     icon: "🚨",
     label: "REGIME CHANGE (13G→13D 전환)",
     hint: "passive → active 태세 전환 · 최상 신호 · 즉시 검토",
-    className: "border-pink-500/60 bg-pink-500/20 text-pink-200 ring-2 ring-pink-500/50",
+    className: "border-pink-500/60 bg-pink-950/30 ring-2 ring-pink-500/50",
+    headerColor: "text-pink-300",
   },
   CRITICAL: {
     icon: "🌋",
     label: "CRITICAL",
     hint: "즉시 검토 · 신규 SC 13D 또는 Wolf Pack",
-    className: "border-rose-500/50 bg-rose-500/10 text-rose-300",
+    className: "border-rose-500/50 bg-rose-950/30",
+    headerColor: "text-rose-300",
   },
   STRONG: {
     icon: "🔥",
     label: "STRONG",
     hint: "관심 · 지분 변동·수정본",
-    className: "border-amber-500/50 bg-amber-500/10 text-amber-300",
+    className: "border-amber-500/50 bg-amber-950/30",
+    headerColor: "text-amber-300",
   },
   INSIDER: {
     icon: "👤",
     label: "INSIDER (임원 매매)",
     hint: "activism 진입 종목의 임원·주요주주 매매 · 동조/이탈 방향 확인",
-    className: "border-cyan-500/50 bg-cyan-500/10 text-cyan-300",
+    className: "border-cyan-500/50 bg-cyan-950/30",
+    headerColor: "text-cyan-300",
   },
   WATCH: {
     icon: "⚠️",
     label: "WATCH",
     hint: "참고 · passive 성 필링",
-    className: "border-indigo-500/50 bg-indigo-500/10 text-indigo-300",
+    className: "border-indigo-500/50 bg-indigo-950/30",
+    headerColor: "text-indigo-300",
   },
   NOTE: {
     icon: "📝",
     label: "NOTE",
     hint: "기록만",
-    className: "border-border bg-muted text-muted-foreground",
+    className: "border-slate-600/50 bg-slate-900/40",
+    headerColor: "text-slate-400",
   },
 };
 
@@ -79,56 +85,59 @@ function EventRow({ e }: { e: ActivistEventItem }) {
     : `https://www.google.com/search?q=${encodeURIComponent(searchQuery + " SEC filing")}`;
 
   return (
-    <div className="rounded border border-border/60 p-3 text-sm">
-      {/* 헤더 · 폼 배지 + 힌트 + 발신자 */}
+    <div className="rounded-lg border border-slate-700/60 bg-slate-900/70 p-3 text-sm text-slate-100 shadow">
+      {/* 헤더 · 폼 배지 + 힌트 + 점수 */}
       <div className="flex items-baseline gap-2 flex-wrap">
         <span
-          className="rounded bg-amber-500/20 px-2 py-0.5 font-mono text-xs text-amber-400"
+          className="rounded bg-amber-500 px-2 py-0.5 font-mono text-xs font-bold text-slate-900 shadow"
           title={e.form_hint || undefined}
         >
           {e.form}
         </span>
         {e.form_hint && (
-          <span className="text-xs text-muted-foreground italic">
+          <span className="text-xs font-medium text-amber-200">
             {e.form_hint}
           </span>
         )}
-        <span className="ml-auto text-xs font-mono text-muted-foreground">
+        <span className="ml-auto rounded bg-slate-800 px-2 py-0.5 text-xs font-mono font-bold text-white">
           score {e.score}
         </span>
       </div>
 
       {/* Filer 이름 + Tier + country */}
-      <div className="mt-1.5 flex items-baseline gap-2 flex-wrap">
+      <div className="mt-2 flex items-baseline gap-2 flex-wrap">
         {e.filer_tier && (
           <span
             className={
-              "rounded px-1.5 py-0.5 text-[10px] font-mono " +
+              "rounded px-1.5 py-0.5 text-[10px] font-mono font-bold " +
               (e.filer_tier === 1
-                ? "bg-emerald-500/20 text-emerald-300"
+                ? "bg-emerald-500 text-white"
                 : e.filer_tier === 2
-                ? "bg-sky-500/20 text-sky-300"
-                : "bg-muted text-muted-foreground")
+                ? "bg-sky-500 text-white"
+                : "bg-slate-600 text-slate-100")
             }
           >
             T{e.filer_tier}
           </span>
         )}
-        <span className="rounded bg-muted px-1.5 py-0.5 text-[10px] font-mono">
+        <span className="rounded bg-slate-700 px-1.5 py-0.5 text-[10px] font-mono font-bold text-slate-100">
           {e.country}
         </span>
-        <span className="font-medium">{e.filer_name}</span>
+        <span className="font-bold text-white">{e.filer_name}</span>
         {e.filer_cik && (
-          <span className="text-[10px] font-mono text-muted-foreground">
+          <span className="text-[10px] font-mono text-slate-400">
             CIK {e.filer_cik}
           </span>
         )}
       </div>
 
       {/* 메타 */}
-      <div className="mt-1 text-xs text-muted-foreground">
-        Filing {e.filing_date} · Accession{" "}
-        <span className="font-mono">{e.accession}</span> · 감지 {relTime(e.detected_at)}
+      <div className="mt-1.5 text-xs text-slate-400">
+        <span className="text-slate-300">Filing</span>{" "}
+        <span className="font-mono text-slate-200">{e.filing_date}</span>{" "}
+        · <span className="text-slate-300">Accession</span>{" "}
+        <span className="font-mono text-slate-200">{e.accession}</span>{" "}
+        · 감지 <span className="text-slate-200">{relTime(e.detected_at)}</span>
       </div>
 
       {/* 대상 회사·종목 · 지분 상세 (XML 파싱 결과) · 강한 대비 */}
@@ -234,27 +243,31 @@ function EventRow({ e }: { e: ActivistEventItem }) {
 
       {/* 액션 힌트 */}
       {e.action_hint && (
-        <div className="mt-2 rounded bg-primary/10 p-2 text-xs">
-          <strong>추천 액션:</strong> {e.action_hint}
+        <div className="mt-3 rounded-lg border border-blue-400/50 bg-blue-500/15 p-2 text-sm">
+          <span className="mr-1 text-xs font-bold uppercase tracking-wide text-blue-300">
+            추천 액션
+          </span>
+          <span className="text-blue-100 font-medium">{e.action_hint}</span>
         </div>
       )}
 
       {/* Wolf Pack */}
       {e.wolf_pack.length > 0 && (
-        <div className="mt-2 rounded border border-rose-500/50 bg-rose-500/10 p-1.5 text-xs text-rose-400">
-          🐺 Wolf Pack (30d): 다른 activist {e.wolf_pack.length}명 동일 종목 진입 —{" "}
-          {e.wolf_pack.join(", ")}
+        <div className="mt-2 rounded-lg border-2 border-rose-500/60 bg-rose-950/50 p-2 text-xs font-medium text-rose-100">
+          🐺 <span className="font-bold">Wolf Pack (30d)</span>: 다른 activist{" "}
+          <span className="text-rose-300 font-bold">{e.wolf_pack.length}명</span> 동일 종목 진입 —{" "}
+          <span className="text-rose-200">{e.wolf_pack.join(", ")}</span>
         </div>
       )}
 
       {/* 링크 */}
-      <div className="mt-2 flex gap-2 text-xs flex-wrap">
+      <div className="mt-3 flex gap-2 text-xs flex-wrap">
         {filingUrl && (
           <a
             href={filingUrl}
             target="_blank"
             rel="noopener noreferrer"
-            className="rounded border border-border bg-background px-2 py-0.5 hover:bg-muted"
+            className="rounded-md border border-slate-600 bg-slate-800 px-3 py-1 font-medium text-slate-100 hover:bg-slate-700 hover:text-white"
           >
             📄 원문 필링 ↗
           </a>
@@ -264,7 +277,7 @@ function EventRow({ e }: { e: ActivistEventItem }) {
             href={filerUrl}
             target="_blank"
             rel="noopener noreferrer"
-            className="rounded border border-border bg-background px-2 py-0.5 hover:bg-muted"
+            className="rounded-md border border-slate-600 bg-slate-800 px-3 py-1 font-medium text-slate-100 hover:bg-slate-700 hover:text-white"
           >
             🔍 {e.filer_name.split(" ")[0]} 다른 필링 ↗
           </a>
@@ -273,7 +286,7 @@ function EventRow({ e }: { e: ActivistEventItem }) {
           href={websearchUrl}
           target="_blank"
           rel="noopener noreferrer"
-          className="rounded border border-border bg-background px-2 py-0.5 hover:bg-muted"
+          className="rounded-md border border-slate-600 bg-slate-800 px-3 py-1 font-medium text-slate-100 hover:bg-slate-700 hover:text-white"
         >
           {e.country === "KR" ? "🇰🇷" : "🌐"} 웹 검색 ↗
         </a>
@@ -462,14 +475,14 @@ function BucketCard({
   if (!events || events.length === 0) return null;
   return (
     <div className={`rounded-lg border p-4 ${meta.className}`}>
-      <div className="mb-2 flex items-baseline gap-2">
-        <h2 className="text-lg font-bold">
+      <div className="mb-3 flex items-baseline gap-2 flex-wrap">
+        <h2 className={`text-lg font-bold ${meta.headerColor}`}>
           {meta.icon} {meta.label}
         </h2>
-        <span className="rounded-full bg-background px-2 py-0.5 text-xs font-medium">
+        <span className={`rounded-full bg-slate-900/70 px-2 py-0.5 text-xs font-bold ${meta.headerColor}`}>
           {events.length}
         </span>
-        <span className="text-xs">{meta.hint}</span>
+        <span className={`text-xs ${meta.headerColor} opacity-80`}>{meta.hint}</span>
       </div>
       <div className="space-y-2">
         {events.map((e) => (
