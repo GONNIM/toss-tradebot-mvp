@@ -190,21 +190,56 @@ async def get_status() -> Dict[str, Any]:
         "keywords": cfg.activist_keywords,
     }
     if cfg.is_activist_active:
+        # activist-radar 수준 정보 재활용 (URL·힌트·SC 13D 정형 파싱)
+        from backend.discovery.activist import hints as activist_hints
+        from backend.discovery.activist import sec_filing_details
+
         filings = await activist_tracker.fetch_recent(cfg.activist_cik, cfg.sec_ua)
         latest = activist_tracker.latest_target_filing(filings, cfg.activist_keywords)
-        snap["activist"]["latest_target"] = (
-            {
+
+        # activist 자체 EDGAR 필링 검색 링크
+        snap["activist"]["filer_search_url"] = activist_hints.sec_filer_search_url(cfg.activist_cik)
+
+        if latest is not None:
+            # SC 13D primary_doc.xml 파싱 (지분율·이슈어·수정차수 등)
+            details = None
+            if any(f in latest.form for f in ("13D", "13G", "SCHEDULE 13")):
+                details = await sec_filing_details.fetch_and_parse(
+                    cfg.activist_cik, latest.accession, cfg.sec_ua,
+                )
+            snap["activist"]["latest_target"] = {
                 "accession": latest.accession,
                 "form": latest.form,
+                "form_hint": activist_hints.form_hint(latest.form),
                 "filing_date": latest.filing_date,
                 "primary_desc": latest.primary_desc,
                 "primary_doc": latest.primary_doc,
+                "filing_detail_url": activist_hints.sec_filing_detail_url(cfg.activist_cik, latest.accession),
+                "details": {
+                    "issuer_name": details.issuer_name if details else "",
+                    "issuer_cik": details.issuer_cik if details else "",
+                    "issuer_cusip": details.issuer_cusip if details else "",
+                    "securities_class_title": details.securities_class_title if details else "",
+                    "percent_of_class": details.percent_of_class if details else None,
+                    "aggregate_amount_owned": details.aggregate_amount_owned if details else None,
+                    "amendment_no": details.amendment_no if details else None,
+                    "date_of_event": details.date_of_event if details else "",
+                    "transaction_purpose": details.transaction_purpose if details else "",
+                    "reporting_persons_count": details.reporting_persons_count if details else 0,
+                } if details else {},
             }
-            if latest
-            else None
-        )
+        else:
+            snap["activist"]["latest_target"] = None
+
         snap["activist"]["recent_forms"] = [
-            {"form": f.form, "date": f.filing_date, "accession": f.accession, "desc": f.primary_desc}
+            {
+                "form": f.form,
+                "form_hint": activist_hints.form_hint(f.form),
+                "date": f.filing_date,
+                "accession": f.accession,
+                "desc": f.primary_desc,
+                "filing_detail_url": activist_hints.sec_filing_detail_url(cfg.activist_cik, f.accession),
+            }
             for f in filings[:10]
         ]
     return snap

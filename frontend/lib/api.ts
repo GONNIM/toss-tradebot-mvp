@@ -698,19 +698,37 @@ export interface VipUsdKrw {
   fetched_at: number;
 }
 
+export interface VipActivistFilingDetails {
+  issuer_name?: string;
+  issuer_cik?: string;
+  issuer_cusip?: string;
+  securities_class_title?: string;
+  percent_of_class?: number | null;
+  aggregate_amount_owned?: number | null;
+  amendment_no?: number | null;
+  date_of_event?: string;
+  transaction_purpose?: string;
+  reporting_persons_count?: number;
+}
+
 export interface VipActivistFiling {
   accession: string;
   form: string;
+  form_hint?: string;
   filing_date: string;
   primary_desc: string;
   primary_doc: string;
+  filing_detail_url?: string;
+  details?: VipActivistFilingDetails;
 }
 
 export interface VipActivistRecent {
   form: string;
+  form_hint?: string;
   date: string;
   accession: string;
   desc: string;
+  filing_detail_url?: string;
 }
 
 export interface VipActivistSection {
@@ -718,6 +736,7 @@ export interface VipActivistSection {
   cik: string;
   name: string;
   keywords: string[];
+  filer_search_url?: string;
   latest_target?: VipActivistFiling | null;
   recent_forms?: VipActivistRecent[];
 }
