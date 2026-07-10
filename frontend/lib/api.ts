@@ -596,6 +596,18 @@ export const api = {
       const qs = q.toString();
       return get<OrderAuditRow[]>(`/execution/audit${qs ? `?${qs}` : ""}`);
     },
+    market: {
+      status: () => get<MarketStatus>(`/execution/market/status`),
+    },
+    orders: {
+      pending: () => get<{ orders: unknown[]; request_id: string | null }>(
+        `/execution/orders/pending`,
+      ),
+      cancel: (orderId: string) =>
+        post<{ ok: boolean; result: unknown; request_id: string | null }>(
+          `/execution/orders/${encodeURIComponent(orderId)}/cancel`,
+        ),
+    },
   },
 };
 
@@ -655,6 +667,23 @@ export interface PaperState {
   order_seq: number;
   synced_at: string | null;
   synced_from: string;
+}
+
+export interface MarketWindow {
+  start: string;
+  end: string;
+}
+
+export interface MarketWindowSet {
+  state: "closed" | "pre_market" | "regular" | "after_hours" | "halt";
+  pre_market: MarketWindow | null;
+  regular_market: MarketWindow | null;
+  after_market: MarketWindow | null;
+}
+
+export interface MarketStatus {
+  KR: MarketWindowSet;
+  US: MarketWindowSet;
 }
 
 export interface OrderAuditRow {

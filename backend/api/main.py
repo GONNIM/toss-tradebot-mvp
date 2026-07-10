@@ -52,6 +52,25 @@ async def lifespan(app: FastAPI):
     scheduler = AsyncIOScheduler(timezone="Asia/Seoul")
     register_monthly_jobs(scheduler)
     register_meme_jobs(scheduler)
+
+    # Execution Layer — TossAdapter 사용 시 미체결 주문 30초 주기 reconcile (Phase 2)
+    import os as _os
+    if (
+        _os.environ.get("EXECUTION_ENABLED", "").lower() in {"1", "true", "yes", "on"}
+        and _os.environ.get("EXECUTION_BROKER", "paper").lower() == "toss"
+    ):
+        from backend.execution.reconciler import reconcile_pending_orders
+
+        scheduler.add_job(
+            reconcile_pending_orders,
+            "interval",
+            seconds=30,
+            id="execution_reconcile",
+            max_instances=1,
+            coalesce=True,
+        )
+        logger.info("[FastAPI] Execution reconciler 30초 주기 · Toss 미체결 주문 폴링")
+
     scheduler.start()
     app.state.scheduler = scheduler
     logger.info("[FastAPI] APScheduler started — sector_leaders(3) + meme_watch(1) jobs registered")

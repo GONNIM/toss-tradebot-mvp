@@ -250,15 +250,22 @@ def get_signal_router() -> Optional[SignalRouter]:
     if not _env_bool("EXECUTION_ENABLED", default=False):
         # 비활성 시 초기화 자체 스킵 (Toss API 호출 방지)
         return None
-    # 지연 초기화: 기본 어댑터 = PaperAdapter (Phase 1)
-    # Phase 2에서 EXECUTION_BROKER 로 분기
     broker = os.environ.get("EXECUTION_BROKER", "paper").lower()
     if broker == "paper":
         from .brokers.paper_adapter import PaperAdapter
 
         om: OrderManager = PaperAdapter()
+    elif broker == "toss":
+        from .brokers.toss_adapter import TossAdapter
+
+        om = TossAdapter()
+        logger.warning(
+            "⚠️ EXECUTION_BROKER=toss — 실전 어댑터 활성 (실 자본 위험). "
+            "EXECUTION_MAX_ORDER_AMOUNT=%s 원 하드 상한 확인.",
+            os.environ.get("EXECUTION_MAX_ORDER_AMOUNT", "100000"),
+        )
     else:
-        logger.warning("EXECUTION_BROKER=%s 미지원 (Phase 2 예정) · Paper 대체", broker)
+        logger.warning("EXECUTION_BROKER=%s 미지원 · Paper 대체", broker)
         from .brokers.paper_adapter import PaperAdapter
 
         om = PaperAdapter()

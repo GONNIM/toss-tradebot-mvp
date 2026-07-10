@@ -16,6 +16,7 @@ from __future__ import annotations
 import json
 import logging
 import time
+from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Optional
@@ -26,12 +27,31 @@ from backend.services import config
 
 from ..exceptions import (
     BrokerCommunicationError,
+    DuplicateOrderError,
     ExecutionError,
     InsufficientBalance,
     MarketClosed,
+    OrderNotFound,
     OrderRejected,
     RateLimitExceeded,
 )
+
+
+@dataclass
+class TossEnvelope:
+    """Toss API 응답 · result + 메타(request_id · rate limit 헤더)."""
+    result: Any
+    request_id: Optional[str] = None
+    rate_limit: dict[str, str] = field(default_factory=dict)
+    status_code: int = 200
+
+
+def _extract_rate_headers(resp: httpx.Response) -> dict[str, str]:
+    return {
+        k: v
+        for k, v in resp.headers.items()
+        if k.lower() in {"x-ratelimit-limit", "x-ratelimit-remaining", "x-ratelimit-reset", "retry-after"}
+    }
 
 logger = logging.getLogger(__name__)
 
@@ -43,6 +63,8 @@ _DEFAULT_TOKEN_CACHE = _PROJECT_ROOT / "backend" / "data" / "toss_token.json"
 # HTTP → 예외 매핑 (03-toss-openapi-integration.md §7-2)
 _INSUFFICIENT = {"insufficient-buying-power", "insufficient-sellable-quantity"}
 _MARKET_CLOSED = {"order-hours-closed", "amount-order-outside-regular-hours"}
+_ALREADY = {"already-filled", "already-canceled", "already-modified", "already-rejected"}
+_NOT_FOUND = {"order-not-found", "stock-not-found"}
 
 
 class TossClient:
@@ -71,6 +93,9 @@ class TossClient:
         if not self._client_id or not self._client_secret:
             raise ExecutionError("TOSS_CLIENT_ID/SECRET 미설정 (SOPS 복호화 확인)")
         logger.info("POST /oauth2/token")
+        # AUTH 그룹 rate limit 준수
+        from .rate_limiter import get_rate_limiter
+        get_rate_limiter().acquire("/oauth2/token")
         with httpx.Client(timeout=_TIMEOUT_SEC) as client:
             resp = client.post(
                 f"{_BASE_URL}/oauth2/token",
@@ -165,6 +190,10 @@ class TossClient:
             raise InsufficientBalance(code, message, raw_response=body)
         if resp.status_code == 422 and code in _MARKET_CLOSED:
             raise MarketClosed(code, message, raw_response=body)
+        if resp.status_code == 422 and code == "idempotency-key-conflict":
+            raise DuplicateOrderError(f"[{code}] {message}", raw_response=body)
+        if resp.status_code == 404 and code in _NOT_FOUND:
+            raise OrderNotFound(f"[{code}] {message}", raw_response=body)
         if 400 <= resp.status_code < 500:
             raise OrderRejected(code or f"http-{resp.status_code}", message or resp.text[:200], raw_response=body)
         if resp.status_code >= 500:
@@ -181,6 +210,8 @@ class TossClient:
         use_account_header: bool = True,
     ) -> Any:
         """인증된 GET · 성공 응답 result 언랩 후 반환."""
+        from .rate_limiter import get_rate_limiter
+        get_rate_limiter().acquire(path)
         with httpx.Client(timeout=_TIMEOUT_SEC) as client:
             resp = client.get(
                 f"{_BASE_URL}{path}",
@@ -205,6 +236,8 @@ class TossClient:
         use_account_header: bool = True,
     ) -> Any:
         """인증된 POST · 성공 응답 result 언랩 후 반환. (Phase 2 주문 API 대비)"""
+        from .rate_limiter import get_rate_limiter
+        get_rate_limiter().acquire(path)
         with httpx.Client(timeout=_TIMEOUT_SEC) as client:
             resp = client.post(
                 f"{_BASE_URL}{path}",
@@ -241,6 +274,86 @@ class TossClient:
 
     def accounts(self) -> list[dict]:
         return self.get("/api/v1/accounts", use_account_header=False) or []
+
+    # ─── Envelope 반환 (주문 API · X-Request-Id 필수) ────
+    def request_envelope(
+        self,
+        method: str,
+        path: str,
+        *,
+        params: Optional[dict[str, Any]] = None,
+        json_body: Optional[dict[str, Any]] = None,
+        use_account_header: bool = True,
+    ) -> TossEnvelope:
+        """주문 API 등 감사 로깅이 필요한 호출용. X-Request-Id + Rate Limit 헤더 반환."""
+        from .rate_limiter import get_rate_limiter
+        get_rate_limiter().acquire(path)
+
+        headers = self._headers(use_account_header=use_account_header)
+        if json_body is not None:
+            headers["Content-Type"] = "application/json"
+
+        with httpx.Client(timeout=_TIMEOUT_SEC) as client:
+            if method.upper() == "GET":
+                resp = client.get(f"{_BASE_URL}{path}", headers=headers, params=params)
+            elif method.upper() == "POST":
+                resp = client.post(f"{_BASE_URL}{path}", headers=headers, json=json_body, params=params)
+            elif method.upper() == "DELETE":
+                resp = client.delete(f"{_BASE_URL}{path}", headers=headers, params=params)
+            else:
+                raise ExecutionError(f"미지원 method: {method}")
+
+        request_id = resp.headers.get("X-Request-Id") or resp.headers.get("x-amz-cf-id")
+        rate_limit = _extract_rate_headers(resp)
+
+        if resp.status_code not in {200, 201}:
+            # 예외 발생 시에도 request_id 는 로그에 남기도록 재구성
+            body = self._safe_json(resp) or {}
+            err = body.get("error", {}) if isinstance(body, dict) else {}
+            logger.warning(
+                "Toss API 실패 · %s %s · code=%s requestId=%s",
+                method, path, err.get("code", "-"), request_id or "-",
+            )
+            self._raise_from_response(resp)
+
+        body = self._safe_json(resp)
+        if isinstance(body, dict) and "result" in body:
+            result = body["result"]
+        else:
+            result = body
+        return TossEnvelope(result=result, request_id=request_id, rate_limit=rate_limit, status_code=resp.status_code)
+
+    # ─── 주문 API (Phase 2 실전 어댑터 · TossAdapter 전용) ───
+    def create_order(self, body: dict) -> TossEnvelope:
+        """POST /api/v1/orders."""
+        return self.request_envelope("POST", "/api/v1/orders", json_body=body)
+
+    def cancel_order(self, order_id: str) -> TossEnvelope:
+        """POST /api/v1/orders/{orderId}/cancel."""
+        return self.request_envelope("POST", f"/api/v1/orders/{order_id}/cancel")
+
+    def modify_order(self, order_id: str, body: dict) -> TossEnvelope:
+        """POST /api/v1/orders/{orderId}/modify."""
+        return self.request_envelope("POST", f"/api/v1/orders/{order_id}/modify", json_body=body)
+
+    def get_order(self, order_id: str) -> TossEnvelope:
+        """GET /api/v1/orders/{orderId}."""
+        return self.request_envelope("GET", f"/api/v1/orders/{order_id}")
+
+    def list_orders(self, status: str = "OPEN") -> TossEnvelope:
+        """GET /api/v1/orders?status=OPEN|CLOSED.
+
+        ⚠️ status 는 **그룹 라벨** (개별 orders[].status 와 값 체계 다름).
+        - OPEN: {PENDING, PARTIAL_FILLED, PENDING_CANCEL, PENDING_REPLACE}
+        - CLOSED: {FILLED, CANCELED, REJECTED, REPLACED, ...}
+        """
+        return self.request_envelope("GET", "/api/v1/orders", params={"status": status})
+
+    def market_calendar(self, market: str) -> TossEnvelope:
+        """GET /api/v1/market-calendar/{KR|US}."""
+        return self.request_envelope(
+            "GET", f"/api/v1/market-calendar/{market.upper()}", use_account_header=False
+        )
 
 
 _shared: Optional[TossClient] = None

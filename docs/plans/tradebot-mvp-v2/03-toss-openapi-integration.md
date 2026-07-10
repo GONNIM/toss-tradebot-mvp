@@ -95,9 +95,12 @@ Content-Type: application/json
 - 이미 체결·취소·정정된 주문 대상은 `409 already-*` 반환
 
 ### 3-3. 주문 조회
-- `GET /api/v1/orders?status=PENDING` — 대기중 목록
-- `GET /api/v1/orders?status=CLOSED` — 종료 목록
-- `GET /api/v1/orders/{orderId}` — 단일 상세
+⚠️ **status 는 개별 상태가 아닌 그룹 라벨** (2026-07-10 실측):
+- `GET /api/v1/orders?status=OPEN` — 진행 중 그룹 (`PENDING · PARTIAL_FILLED · PENDING_CANCEL · PENDING_REPLACE`)
+- `GET /api/v1/orders?status=CLOSED` — 종료 그룹 (`FILLED · CANCELED · REJECTED · REPLACED · CANCEL_REJECTED · REPLACE_REJECTED`)
+- `status` 는 **필수** · 값이 `PENDING` 등 개별 상태이면 400 `invalid-request`
+- `GET /api/v1/orders/{orderId}` — 단일 상세 (개별 `status` 반환)
+- 부가 쿼리: `symbol` · `from`/`to` (KST date) · `cursor` (CLOSED 만) · `limit` (CLOSED 만, 기본 20 최대 100)
 
 ### 3-4. OrderStatus (10종 · unknown 허용 필수)
 

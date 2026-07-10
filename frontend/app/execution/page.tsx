@@ -10,6 +10,7 @@ import {
   api,
   ExecutionParams,
   KillSwitchStatus,
+  MarketStatus,
   OrderAuditRow,
   PaperState,
   ThresholdSet,
@@ -82,11 +83,197 @@ export default function ExecutionPage() {
         </p>
       </header>
       <StatusPanel />
+      <MarketStatusPanel />
       <KillSwitchPanel />
+      <PendingOrdersPanel />
       <PaperPanel />
       <ParamsEditor />
       <AuditPanel />
     </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════
+// Market Status (KR / US)
+// ═══════════════════════════════════════════════════════════════
+function MarketStatusPanel() {
+  const q = useQuery<MarketStatus>({
+    queryKey: ["execution", "market"],
+    queryFn: api.execution.market.status,
+    refetchInterval: 30_000,
+  });
+
+  const label: Record<string, string> = {
+    regular: "정규장",
+    pre_market: "프리마켓",
+    after_hours: "애프터",
+    closed: "휴장",
+    halt: "거래정지",
+  };
+  const tone = (state: string) =>
+    state === "regular"
+      ? "bg-emerald-100 text-emerald-700"
+      : state === "pre_market" || state === "after_hours"
+      ? "bg-sky-100 text-sky-700"
+      : "bg-slate-200 text-slate-600";
+
+  return (
+    <section className="rounded border border-border bg-card p-4">
+      <h2 className="mb-3 text-sm font-semibold text-muted-foreground">🗓 Market Calendar</h2>
+      {q.isLoading ? (
+        <p className="text-sm">로드 중…</p>
+      ) : q.data ? (
+        <div className="grid grid-cols-2 gap-4">
+          {(["KR", "US"] as const).map((mk) => {
+            const w = q.data![mk];
+            return (
+              <div key={mk} className="rounded border border-border p-3">
+                <div className="mb-2 flex items-center justify-between">
+                  <span className="font-semibold">{mk === "KR" ? "🇰🇷 KR (KRX)" : "🇺🇸 US"}</span>
+                  <span
+                    className={`inline-flex items-center rounded px-2 py-0.5 text-xs font-semibold ${tone(
+                      w.state,
+                    )}`}
+                  >
+                    {label[w.state] ?? w.state}
+                  </span>
+                </div>
+                <div className="space-y-1 text-xs text-muted-foreground">
+                  {w.regular_market && (
+                    <p>
+                      정규장 · {fmtKst(w.regular_market.start)} ~ {fmtKst(w.regular_market.end)}
+                    </p>
+                  )}
+                  {w.pre_market && (
+                    <p>
+                      프리 · {fmtKst(w.pre_market.start)} ~ {fmtKst(w.pre_market.end)}
+                    </p>
+                  )}
+                  {w.after_market && (
+                    <p>
+                      애프터 · {fmtKst(w.after_market.start)} ~ {fmtKst(w.after_market.end)}
+                    </p>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      ) : null}
+    </section>
+  );
+}
+
+function fmtKst(iso: string): string {
+  try {
+    const d = new Date(iso);
+    return d.toLocaleTimeString("ko-KR", {
+      hour: "2-digit",
+      minute: "2-digit",
+      timeZone: "Asia/Seoul",
+    });
+  } catch {
+    return iso;
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════
+// Pending Orders (Toss)
+// ═══════════════════════════════════════════════════════════════
+type TossOrder = {
+  orderId?: string;
+  symbol?: string;
+  side?: string;
+  orderType?: string;
+  status?: string;
+  price?: string;
+  quantity?: string;
+  orderedAt?: string;
+};
+
+function PendingOrdersPanel() {
+  const qc = useQueryClient();
+  const q = useQuery<{ orders: TossOrder[]; request_id: string | null }>({
+    queryKey: ["execution", "pending"],
+    queryFn: () =>
+      api.execution.orders.pending() as Promise<{
+        orders: TossOrder[];
+        request_id: string | null;
+      }>,
+    refetchInterval: 10_000,
+    retry: false,
+  });
+  const cancel = useMutation({
+    mutationFn: (orderId: string) => api.execution.orders.cancel(orderId),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["execution", "pending"] }),
+  });
+
+  return (
+    <section className="rounded border border-border bg-card p-4">
+      <h2 className="mb-3 text-sm font-semibold text-muted-foreground">
+        🕒 미체결 주문 (Toss · OPEN 그룹)
+      </h2>
+      {q.isLoading ? (
+        <p className="text-sm">로드 중…</p>
+      ) : q.error ? (
+        <p className="text-xs text-red-500">
+          조회 실패: {(q.error as Error).message} (Toss 미연동 시 정상)
+        </p>
+      ) : q.data && q.data.orders.length > 0 ? (
+        <div className="space-y-2">
+          <table className="w-full text-xs">
+            <thead>
+              <tr className="border-b border-border text-left">
+                <th className="py-1">orderId</th>
+                <th className="py-1">티커</th>
+                <th className="py-1">방향</th>
+                <th className="py-1">타입</th>
+                <th className="py-1 text-right">수량</th>
+                <th className="py-1 text-right">가격</th>
+                <th className="py-1">상태</th>
+                <th className="py-1">액션</th>
+              </tr>
+            </thead>
+            <tbody>
+              {q.data.orders.map((o, i) => (
+                <tr key={o.orderId || i} className="border-b border-border/60">
+                  <td className="py-1 font-mono">{o.orderId ?? "—"}</td>
+                  <td className="py-1 font-semibold">{o.symbol ?? "—"}</td>
+                  <td
+                    className={`py-1 ${
+                      o.side === "BUY" ? "text-emerald-600" : "text-red-600"
+                    }`}
+                  >
+                    {o.side ?? "—"}
+                  </td>
+                  <td className="py-1">{o.orderType ?? "—"}</td>
+                  <td className="py-1 text-right">{o.quantity ?? "—"}</td>
+                  <td className="py-1 text-right">{o.price ?? "—"}</td>
+                  <td className="py-1">{o.status ?? "—"}</td>
+                  <td className="py-1">
+                    {o.orderId && (
+                      <button
+                        type="button"
+                        onClick={() => cancel.mutate(o.orderId!)}
+                        disabled={cancel.isPending}
+                        className="rounded bg-red-500/20 px-2 py-0.5 text-xs text-red-600 hover:bg-red-500/30 disabled:opacity-50"
+                      >
+                        {cancel.isPending ? "취소 중…" : "취소"}
+                      </button>
+                    )}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          <p className="text-xs text-muted-foreground">
+            request_id: <code>{q.data.request_id ?? "—"}</code>
+          </p>
+        </div>
+      ) : (
+        <p className="text-xs text-muted-foreground">미체결 주문 없음</p>
+      )}
+    </section>
   );
 }
 

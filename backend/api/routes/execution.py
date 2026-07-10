@@ -22,7 +22,10 @@ from fastapi import APIRouter, Body, HTTPException, Query
 
 from backend.execution.audit import list_recent_audits
 from backend.execution.brokers.paper_adapter import PaperAdapter
+from backend.execution.brokers.toss_client import get_toss_client
+from backend.execution.exceptions import ExecutionError
 from backend.execution.kill_switch import get_kill_switch
+from backend.execution.market_calendar import get_market_calendar
 from backend.execution.params import (
     ExecutionParams,
     RiskBudget,
@@ -195,6 +198,53 @@ async def paper_reset(cash_krw: Optional[float] = Body(None, embed=True)):
     state = _get_paper().reset(cash_krw=cash_krw)
     _reset_paper_cache()
     return {"ok": True, "cash_krw": state.cash_krw, "synced_from": state.synced_from}
+
+
+# ═══════════════════════════════════════════════════════════════
+# Toss 미체결 주문 · 시장 상태
+# ═══════════════════════════════════════════════════════════════
+@router.get("/market/status")
+async def market_status():
+    cal = get_market_calendar()
+    kr = cal.windows("KR")
+    us = cal.windows("US")
+
+    def _win(w):
+        if not w:
+            return None
+        return {"start": w[0].isoformat(), "end": w[1].isoformat()}
+
+    def _serialize(windows):
+        return {
+            "state": windows.state().value,
+            "pre_market": _win(windows.pre_market),
+            "regular_market": _win(windows.regular_market),
+            "after_market": _win(windows.after_market),
+        }
+
+    return {"KR": _serialize(kr), "US": _serialize(us)}
+
+
+@router.get("/orders/pending")
+async def orders_pending():
+    """Toss 미체결 주문 목록 (Toss API 직접 조회 · status=OPEN 그룹)."""
+    try:
+        env = get_toss_client().list_orders(status="OPEN")
+    except ExecutionError as exc:
+        raise HTTPException(status_code=502, detail=f"Toss list_orders 실패: {exc}") from exc
+    result = env.result
+    orders = result if isinstance(result, list) else (result.get("orders") if isinstance(result, dict) else [])
+    return {"orders": orders or [], "request_id": env.request_id}
+
+
+@router.post("/orders/{order_id}/cancel")
+async def orders_cancel(order_id: str):
+    """미체결 주문 취소 (Toss API 직접 호출)."""
+    try:
+        env = get_toss_client().cancel_order(order_id)
+    except ExecutionError as exc:
+        raise HTTPException(status_code=502, detail=f"cancel 실패: {exc}") from exc
+    return {"ok": True, "result": env.result, "request_id": env.request_id}
 
 
 # ═══════════════════════════════════════════════════════════════
