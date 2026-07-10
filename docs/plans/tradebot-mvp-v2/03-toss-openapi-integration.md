@@ -171,6 +171,33 @@ Content-Type: application/json
 
 ---
 
+## 4-3. ⚠️ 응답 래퍼 통일 계약 (2026-07-10 실측)
+
+**OpenAPI JSON 원문 재확인 결과 — 성공 응답은 전 엔드포인트가 `{ "result": ... }` 래퍼로 통일** (29개 중 28개, `ApiResponse` allOf 상속).
+
+```jsonc
+// GET /api/v1/accounts 실측
+{
+  "result": [
+    { "accountNo": "16901022098", "accountSeq": 1, "accountType": "BROKERAGE" }
+  ]
+}
+```
+
+- **모든 파서는 `body["result"]` 로 접근**해야 하며, 리스트 반환 엔드포인트도 동일 (예: `accounts.result` 는 배열).
+- 실패 응답만 `error` 필드 (§7-1) · `result` 와 동시 등장 안 함.
+- TossAdapter 구현 시 공통 응답 언랩퍼 필수.
+
+## 4-4. 자산 조회 쿼리 파라미터 (2026-07-10 실측 · 스펙 재확인)
+
+| 엔드포인트 | 필수 쿼리 | 선택 쿼리 | 실측 오류 예시 |
+|---|---|---|---|
+| `GET /api/v1/buying-power` | **`currency=KRW\|USD`** | — | 400 `invalid-request { field: "currency" }` 미전달 시 |
+| `GET /api/v1/holdings` | — | `symbol` | — |
+| `GET /api/v1/sellable-quantity` | `X-Tossinvest-Account` 헤더 + `symbol` 쿼리 | — | — |
+
+**교훈**: 스펙 문서 요약본만 신뢰하지 말고 OpenAPI JSON 원문(`openapi.json`)의 `parameters[].required` 를 반드시 확인. 메모리 `reference_toss_open_api` 갱신 완료.
+
 ## 5. 시세·계좌 조회 (실시간성)
 
 토스 API는 **WebSocket 미지원** — Phase 4 실시간 진입은 **REST 폴링** 로 구현.
