@@ -131,79 +131,101 @@ function EventRow({ e }: { e: ActivistEventItem }) {
         <span className="font-mono">{e.accession}</span> · 감지 {relTime(e.detected_at)}
       </div>
 
-      {/* 대상 회사·종목 · 지분 상세 (XML 파싱 결과) */}
-      <div className="mt-2 rounded bg-muted/40 p-2 text-sm">
-        <div className="text-xs text-muted-foreground">🎯 대상 종목</div>
-        <div className="mt-0.5 flex items-baseline gap-2 flex-wrap">
-          {e.target_ticker && (
-            <span className="rounded bg-primary/30 px-1.5 py-0.5 font-mono text-xs font-semibold">
-              {e.target_ticker}
-            </span>
-          )}
-          <span className="font-medium">
-            {e.details?.issuer_name || e.target_desc || (
-              <span className="text-muted-foreground italic">
-                회사명 미확인 — 원문 링크 확인 필요
-              </span>
-            )}
+      {/* 대상 회사·종목 · 지분 상세 (XML 파싱 결과) · 강한 대비 */}
+      <div className="mt-3 rounded-lg border-2 border-cyan-500/60 bg-slate-950/70 p-3 text-sm shadow-lg">
+        <div className="mb-2 flex items-center gap-2">
+          <span className="text-xs font-bold uppercase tracking-wider text-cyan-300">
+            🎯 대상 종목
           </span>
           {e.details?.issuer_cik && (
-            <span className="text-[10px] font-mono text-muted-foreground">
+            <span className="ml-auto text-[10px] font-mono text-slate-400">
               issuer CIK {e.details.issuer_cik}
               {e.details.issuer_cusip && ` · CUSIP ${e.details.issuer_cusip}`}
             </span>
           )}
         </div>
 
-        {/* 지분 상세 grid */}
-        {(e.details?.percent_of_class || e.details?.aggregate_amount_owned) && (
-          <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-4">
-            {e.details.percent_of_class !== null &&
-             e.details.percent_of_class !== undefined && (
-              <div className="rounded bg-background/50 p-1.5">
-                <div className="text-[10px] text-muted-foreground">지분율</div>
-                <div className="text-lg font-bold text-primary">
-                  {e.details.percent_of_class.toFixed(1)}%
+        <div className="flex items-baseline gap-2 flex-wrap">
+          {e.target_ticker && (
+            <span className="rounded-md bg-cyan-500 px-2.5 py-1 font-mono text-sm font-bold text-white shadow">
+              {e.target_ticker}
+            </span>
+          )}
+          <span className="text-lg font-bold text-white">
+            {e.details?.issuer_name || e.target_desc || (
+              <span className="text-slate-400 italic font-normal">
+                회사명 미확인 — 원문 링크 확인 필요
+              </span>
+            )}
+          </span>
+        </div>
+
+        {/* 지분 상세 grid — 컬러 톤 · 큰 폰트 · 강한 대비 */}
+        {(e.details?.percent_of_class !== undefined ||
+          e.details?.aggregate_amount_owned !== undefined ||
+          e.details?.amendment_no !== undefined ||
+          e.details?.date_of_event) && (
+          <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
+            {e.details?.percent_of_class !== null &&
+             e.details?.percent_of_class !== undefined && (
+              <div className="rounded-lg border border-cyan-400/50 bg-cyan-500/15 p-2">
+                <div className="text-[10px] font-semibold uppercase tracking-wide text-cyan-300">
+                  지분율
+                </div>
+                <div className="mt-0.5 text-3xl font-black leading-none text-cyan-100">
+                  {e.details.percent_of_class.toFixed(1)}
+                  <span className="text-xl">%</span>
                 </div>
               </div>
             )}
-            {e.details.aggregate_amount_owned !== null &&
-             e.details.aggregate_amount_owned !== undefined && (
-              <div className="rounded bg-background/50 p-1.5">
-                <div className="text-[10px] text-muted-foreground">보유 주식</div>
-                <div className="text-sm font-mono">
+            {e.details?.aggregate_amount_owned !== null &&
+             e.details?.aggregate_amount_owned !== undefined && (
+              <div className="rounded-lg border border-emerald-400/50 bg-emerald-500/15 p-2">
+                <div className="text-[10px] font-semibold uppercase tracking-wide text-emerald-300">
+                  보유 주식
+                </div>
+                <div className="mt-0.5 text-base font-bold font-mono text-emerald-100">
                   {e.details.aggregate_amount_owned.toLocaleString()}
                 </div>
               </div>
             )}
-            {e.details.amendment_no !== null &&
-             e.details.amendment_no !== undefined && (
-              <div className="rounded bg-background/50 p-1.5">
-                <div className="text-[10px] text-muted-foreground">수정 차수</div>
-                <div className="text-sm">Amendment #{e.details.amendment_no}</div>
+            {e.details?.amendment_no !== null &&
+             e.details?.amendment_no !== undefined && (
+              <div className="rounded-lg border border-fuchsia-400/50 bg-fuchsia-500/15 p-2">
+                <div className="text-[10px] font-semibold uppercase tracking-wide text-fuchsia-300">
+                  수정 차수
+                </div>
+                <div className="mt-0.5 text-base font-bold text-fuchsia-100">
+                  Amendment #{e.details.amendment_no}
+                </div>
               </div>
             )}
-            {e.details.date_of_event && (
-              <div className="rounded bg-background/50 p-1.5">
-                <div className="text-[10px] text-muted-foreground">이벤트 발생일</div>
-                <div className="text-sm">{e.details.date_of_event}</div>
+            {e.details?.date_of_event && (
+              <div className="rounded-lg border border-indigo-400/50 bg-indigo-500/15 p-2">
+                <div className="text-[10px] font-semibold uppercase tracking-wide text-indigo-300">
+                  이벤트 발생일
+                </div>
+                <div className="mt-0.5 text-base font-bold text-indigo-100">
+                  {e.details.date_of_event}
+                </div>
               </div>
             )}
           </div>
         )}
 
         {e.details?.securities_class_title && (
-          <div className="mt-2 text-xs text-muted-foreground">
-            증권 클래스: {e.details.securities_class_title}
+          <div className="mt-3 rounded bg-slate-800/70 px-2 py-1 text-xs text-slate-200">
+            <span className="font-semibold text-slate-400">증권 클래스:</span>{" "}
+            {e.details.securities_class_title}
           </div>
         )}
 
         {e.details?.transaction_purpose && (
-          <details className="mt-2 text-xs">
-            <summary className="cursor-pointer text-muted-foreground">
-              📝 Item 4 — 거래 목적/사유 (원문 발췌)
+          <details className="mt-3 rounded border border-slate-700 bg-slate-900/60">
+            <summary className="cursor-pointer px-2 py-1 text-xs font-semibold text-amber-300 hover:bg-slate-800/50">
+              📝 Item 4 — 거래 목적/사유 (원문 발췌 · 클릭 펼치기)
             </summary>
-            <div className="mt-1 whitespace-pre-wrap rounded bg-background/60 p-2 font-mono text-[11px]">
+            <div className="whitespace-pre-wrap border-t border-slate-700 p-2 font-mono text-[11px] text-slate-100">
               {e.details.transaction_purpose}
             </div>
           </details>
