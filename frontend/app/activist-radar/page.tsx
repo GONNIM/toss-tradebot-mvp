@@ -488,8 +488,8 @@ function BucketCard({
   if (!events || events.length === 0) return null;
   return (
     <div className={`overflow-hidden rounded-lg border ${meta.className}`}>
-      {/* 헤더 밴드 — 어두운 슬레이트 배경 + 실색 배지 · 카운트 · 힌트 */}
-      <div className="flex items-center gap-2 flex-wrap bg-slate-950/70 px-4 py-2.5 border-b border-slate-700/50">
+      {/* 헤더 밴드 — 완전 불투명 슬레이트 배경 · 부모 색상 배어남 방지 */}
+      <div className="flex items-center gap-2 flex-wrap bg-slate-950 px-4 py-2.5 border-b border-slate-700">
         <span
           className={`inline-flex items-center gap-1.5 rounded-md px-2.5 py-1 text-sm font-bold shadow ${meta.badgeBg}`}
         >
