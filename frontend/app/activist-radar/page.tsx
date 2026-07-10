@@ -30,49 +30,62 @@ function relTime(unixSec: number): string {
 
 const INTENSITY_META: Record<
   ActivistIntensity,
-  { icon: string; label: string; hint: string; className: string; headerColor: string }
+  {
+    icon: string;
+    label: string;
+    hint: string;
+    className: string;
+    badgeBg: string;      // 라벨 배지 실색 배경
+    countBg: string;      // 카운트 배지 색상
+  }
 > = {
   REGIME_CHANGE: {
     icon: "🚨",
-    label: "REGIME CHANGE (13G→13D 전환)",
-    hint: "passive → active 태세 전환 · 최상 신호 · 즉시 검토",
+    label: "REGIME CHANGE",
+    hint: "13G→13D 전환 · passive → active 태세 전환 · 최상 신호 · 즉시 검토",
     className: "border-pink-500/60 bg-pink-950/30 ring-2 ring-pink-500/50",
-    headerColor: "text-pink-300",
+    badgeBg: "bg-pink-500 text-white",
+    countBg: "bg-pink-400 text-slate-900",
   },
   CRITICAL: {
     icon: "🌋",
     label: "CRITICAL",
     hint: "즉시 검토 · 신규 SC 13D 또는 Wolf Pack",
     className: "border-rose-500/50 bg-rose-950/30",
-    headerColor: "text-rose-300",
+    badgeBg: "bg-rose-500 text-white",
+    countBg: "bg-rose-400 text-slate-900",
   },
   STRONG: {
     icon: "🔥",
     label: "STRONG",
     hint: "관심 · 지분 변동·수정본",
     className: "border-amber-500/50 bg-amber-950/30",
-    headerColor: "text-amber-300",
+    badgeBg: "bg-amber-500 text-slate-900",
+    countBg: "bg-amber-300 text-slate-900",
   },
   INSIDER: {
     icon: "👤",
-    label: "INSIDER (임원 매매)",
-    hint: "activism 진입 종목의 임원·주요주주 매매 · 동조/이탈 방향 확인",
+    label: "INSIDER",
+    hint: "임원 매매 · activism 진입 종목의 동조/이탈 방향",
     className: "border-cyan-500/50 bg-cyan-950/30",
-    headerColor: "text-cyan-300",
+    badgeBg: "bg-cyan-500 text-white",
+    countBg: "bg-cyan-300 text-slate-900",
   },
   WATCH: {
     icon: "⚠️",
     label: "WATCH",
     hint: "참고 · passive 성 필링",
     className: "border-indigo-500/50 bg-indigo-950/30",
-    headerColor: "text-indigo-300",
+    badgeBg: "bg-indigo-500 text-white",
+    countBg: "bg-indigo-300 text-slate-900",
   },
   NOTE: {
     icon: "📝",
     label: "NOTE",
     hint: "기록만",
     className: "border-slate-600/50 bg-slate-900/40",
-    headerColor: "text-slate-400",
+    badgeBg: "bg-slate-600 text-white",
+    countBg: "bg-slate-500 text-white",
   },
 };
 
@@ -474,17 +487,26 @@ function BucketCard({
   const meta = INTENSITY_META[intensity];
   if (!events || events.length === 0) return null;
   return (
-    <div className={`rounded-lg border p-4 ${meta.className}`}>
-      <div className="mb-3 flex items-baseline gap-2 flex-wrap">
-        <h2 className={`text-lg font-bold ${meta.headerColor}`}>
-          {meta.icon} {meta.label}
-        </h2>
-        <span className={`rounded-full bg-slate-900/70 px-2 py-0.5 text-xs font-bold ${meta.headerColor}`}>
+    <div className={`overflow-hidden rounded-lg border ${meta.className}`}>
+      {/* 헤더 밴드 — 어두운 슬레이트 배경 + 실색 배지 · 카운트 · 힌트 */}
+      <div className="flex items-center gap-2 flex-wrap bg-slate-950/70 px-4 py-2.5 border-b border-slate-700/50">
+        <span
+          className={`inline-flex items-center gap-1.5 rounded-md px-2.5 py-1 text-sm font-bold shadow ${meta.badgeBg}`}
+        >
+          <span className="text-base">{meta.icon}</span>
+          {meta.label}
+        </span>
+        <span
+          className={`inline-flex min-w-[24px] items-center justify-center rounded-full px-2 py-0.5 text-xs font-black shadow ${meta.countBg}`}
+        >
           {events.length}
         </span>
-        <span className={`text-xs ${meta.headerColor} opacity-80`}>{meta.hint}</span>
+        <span className="text-sm text-slate-100 font-medium">
+          {meta.hint}
+        </span>
       </div>
-      <div className="space-y-2">
+      {/* 이벤트 리스트 */}
+      <div className="space-y-2 p-3">
         {events.map((e) => (
           <EventRow key={e.id} e={e} />
         ))}
