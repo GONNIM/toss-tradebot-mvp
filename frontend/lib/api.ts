@@ -29,6 +29,44 @@ async function patch<T>(path: string, body: unknown): Promise<T> {
   return res.json();
 }
 
+async function put<T>(path: string, body: unknown): Promise<T> {
+  const res = await fetch(`${BASE}${path}`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+    cache: "no-store",
+  });
+  if (!res.ok) {
+    throw new Error(`API PUT ${path} failed: ${res.status}`);
+  }
+  return res.json();
+}
+
+async function post<T>(path: string, body?: unknown): Promise<T> {
+  const res = await fetch(`${BASE}${path}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: body ? JSON.stringify(body) : undefined,
+    cache: "no-store",
+  });
+  if (!res.ok) {
+    throw new Error(`API POST ${path} failed: ${res.status}`);
+  }
+  return res.json();
+}
+
+async function del<T>(path: string): Promise<T> {
+  const res = await fetch(`${BASE}${path}`, {
+    method: "DELETE",
+    headers: { "Content-Type": "application/json" },
+    cache: "no-store",
+  });
+  if (!res.ok) {
+    throw new Error(`API DELETE ${path} failed: ${res.status}`);
+  }
+  return res.json();
+}
+
 // ─────────────────────────────────────────────
 // 타입
 // ─────────────────────────────────────────────
@@ -518,7 +556,128 @@ export const api = {
       },
     },
   },
+  execution: {
+    status: () => get<ExecutionStatus>(`/execution/status`),
+    killSwitch: {
+      status: () => get<KillSwitchStatus>(`/execution/kill-switch/status`),
+      activate: (reason: string, actor = "user:manual") =>
+        post<{ active: boolean; reason: string; activated_by: string }>(
+          `/execution/kill-switch`,
+          { reason, actor },
+        ),
+      deactivate: (actor = "user:manual") =>
+        del<{ active: boolean; deactivated_by: string }>(
+          `/execution/kill-switch?actor=${encodeURIComponent(actor)}`,
+        ),
+    },
+    params: {
+      get: () => get<ExecutionParams>(`/execution/params`),
+      put: (body: ExecutionParams) =>
+        put<{ ok: boolean; saved: boolean }>(`/execution/params`, body),
+    },
+    paper: {
+      state: () => get<PaperState>(`/execution/paper/state`),
+      resync: () =>
+        post<{ ok: boolean; synced_from: string; synced_at: string }>(
+          `/execution/paper/resync`,
+        ),
+      reset: (cash_krw?: number) =>
+        post<{ ok: boolean; cash_krw: number; synced_from: string }>(
+          `/execution/paper/reset`,
+          cash_krw !== undefined ? { cash_krw } : {},
+        ),
+    },
+    audit: (opts?: { ticker?: string; broker?: string; signal_source?: string; limit?: number }) => {
+      const q = new URLSearchParams();
+      if (opts?.ticker) q.set("ticker", opts.ticker);
+      if (opts?.broker) q.set("broker", opts.broker);
+      if (opts?.signal_source) q.set("signal_source", opts.signal_source);
+      if (opts?.limit) q.set("limit", String(opts.limit));
+      const qs = q.toString();
+      return get<OrderAuditRow[]>(`/execution/audit${qs ? `?${qs}` : ""}`);
+    },
+  },
 };
+
+// ─────────────────────────────────────────────
+// Execution Layer 타입 (v2 트랙 C · Phase 1)
+// ─────────────────────────────────────────────
+
+export interface ThresholdSet {
+  take_profit_pct: number | null;
+  stop_loss_pct: number | null;
+  trailing_arm_pct: number | null;
+  trailing_giveback_pct: number | null;
+}
+
+export interface RiskBudget {
+  per_ticker_max_pct: number;
+  daily_loss_limit: number;
+  ticker_dd_limit: number;
+}
+
+export interface ExecutionParams {
+  global: ThresholdSet;
+  risk_budget: RiskBudget;
+  tickers: Record<string, ThresholdSet>;
+  signals: Record<string, ThresholdSet>;
+}
+
+export interface KillSwitchStatus {
+  active: boolean;
+  reason: string | null;
+  activated_at: string | null;
+  activated_by: string | null;
+  deactivated_at: string | null;
+  deactivated_by: string | null;
+}
+
+export interface ExecutionStatus {
+  execution_enabled: boolean;
+  broker: string;
+  kill_switch: KillSwitchStatus;
+}
+
+export interface PaperPosition {
+  qty: number;
+  avg_price: number;
+  currency: string;
+}
+
+export interface PaperState {
+  cash_krw: number;
+  cash_usd: number;
+  fx_usd_krw: number;
+  positions: Record<string, PaperPosition>;
+  pending_orders: Record<string, unknown>;
+  filled_orders: Record<string, unknown>;
+  idempotency: Record<string, unknown>;
+  order_seq: number;
+  synced_at: string | null;
+  synced_from: string;
+}
+
+export interface OrderAuditRow {
+  order_uuid: string;
+  broker_kind: string;
+  broker_order_id: string | null;
+  ticker: string;
+  side: string;
+  order_type: string;
+  qty: number;
+  price: number | null;
+  signal_source: string | null;
+  signal_id: string | null;
+  status: string;
+  filled_qty: number;
+  avg_fill_price: number | null;
+  total_fee: number;
+  error_code: string | null;
+  error_message: string | null;
+  submitted_at: string | null;
+  completed_at: string | null;
+  created_at: string | null;
+}
 
 export interface ActivistUpsert {
   key: string;

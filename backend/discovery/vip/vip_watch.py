@@ -59,6 +59,14 @@ async def run_price_tick(
     state = state_mod.VipState.load(cfg.ticker)
     events = position.evaluate(quote.close_price, cfg, state)
 
+    # VIP 이벤트 → Execution 시그널 매핑 (v2 트랙 C · Phase 1)
+    _VIP_SELL_STRENGTH = {
+        "TP1": 60,               # 1차 부분 익절
+        "TP2": 80,               # 2차 익절
+        "STOP_APPROACH": 100,    # 손절 접근 · 최우선
+        "TRAIL_GIVEBACK": 90,    # trailing 되돌림
+    }
+
     sent: list[str] = []
     if events:
         notifier = notifier or TelegramNotifier()
@@ -69,6 +77,35 @@ async def run_price_tick(
             if ok:
                 state.mark_sent(evt.name)
                 sent.append(evt.name)
+
+                # ─── Execution Layer 라우팅 ───
+                # TP/STOP 이벤트만 매도 시그널 · TRAIL_ARMED/ACTIVIST 는 정보성
+                strength = _VIP_SELL_STRENGTH.get(evt.name)
+                if strength is not None:
+                    try:
+                        from backend.execution.signal_router import (
+                            SignalEvent,
+                            get_signal_router,
+                        )
+                        router = get_signal_router()
+                        if router:
+                            await router.route(
+                                SignalEvent(
+                                    ticker=cfg.ticker,
+                                    action="sell",
+                                    strength=strength,
+                                    source="vip",
+                                    signal_id=f"vip-{cfg.tag}-{evt.name}-{datetime.now(timezone.utc).strftime('%Y%m%d%H%M')}",
+                                    metadata={
+                                        "event": evt.name,
+                                        "current_price": evt.current_price,
+                                        "pnl": evt.pnl,
+                                        "vip_tag": cfg.tag,
+                                    },
+                                )
+                            )
+                    except Exception as exc:  # noqa: BLE001
+                        logger.warning("[vip] router 실패 — %s", exc)
 
     state.save()
     pnl = position.compute_pnl(quote.close_price, cfg.avg_price)

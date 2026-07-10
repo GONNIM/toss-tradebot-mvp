@@ -33,7 +33,6 @@ from ..exceptions import (
     KillSwitchActive,
     OrderNotFound,
 )
-from ..idempotency import find_cached_result
 from ..kill_switch import KillSwitch, get_kill_switch
 from ..models import (
     Balance,
@@ -68,6 +67,7 @@ class _PaperState:
     positions: dict[str, dict] = field(default_factory=dict)   # ticker → {qty, avg_price, currency}
     pending_orders: dict[str, dict] = field(default_factory=dict)  # broker_order_id → order snapshot
     filled_orders: dict[str, dict] = field(default_factory=dict)   # broker_order_id → result snapshot
+    idempotency: dict[str, dict] = field(default_factory=dict)  # order_uuid → OrderResult snapshot (sync 캐시)
     order_seq: int = 0
     synced_at: Optional[str] = None
     synced_from: str = "env-fallback"
@@ -106,6 +106,7 @@ class PaperAdapter(OrderManager):
                         positions=raw.get("positions") or {},
                         pending_orders=raw.get("pending_orders") or {},
                         filled_orders=raw.get("filled_orders") or {},
+                        idempotency=raw.get("idempotency") or {},
                         order_seq=int(raw.get("order_seq", 0)),
                         synced_at=raw.get("synced_at"),
                         synced_from=raw.get("synced_from", "env-fallback"),
@@ -237,21 +238,13 @@ class PaperAdapter(OrderManager):
         if self._ks.is_active():
             raise KillSwitchActive(self._ks.status().reason or "kill switch active")
 
-        # 2) idempotency — 이전 결과 재사용
-        import asyncio
-
-        try:
-            loop = asyncio.get_running_loop()
-        except RuntimeError:
-            loop = None
-        if loop is None:
-            cached = asyncio.run(find_cached_result(req.order_uuid))
-        else:
-            # 이미 이벤트 루프 안이면 별도 처리 필요 · Phase 1은 동기 라우터 가정
-            cached = None
+        # 2) idempotency — in-process 캐시 우선 (sync 컨텍스트 안전)
+        cached = self._state.idempotency.get(req.order_uuid)
         if cached is not None:
-            logger.info("idempotency hit · uuid=%s · status=%s", req.order_uuid[:8], cached.status.value)
-            return cached
+            logger.info(
+                "idempotency hit · uuid=%s · status=%s", req.order_uuid[:8], cached.get("status")
+            )
+            return self._restore_from_snapshot(req.order_uuid, cached)
 
         with self._lock:
             self._state.order_seq += 1
@@ -263,6 +256,15 @@ class PaperAdapter(OrderManager):
 
             # ─── MARKET → 즉시 체결 ───
             if req.order_type == OrderType.MARKET:
+                # SELL 은 시세 조회 전 포지션 존재 여부 우선 검증
+                if req.side == OrderSide.SELL:
+                    held = self._state.positions.get(req.ticker)
+                    if not held or held.get("qty", 0) < req.qty:
+                        have = held.get("qty", 0) if held else 0
+                        raise InsufficientBalance(
+                            "insufficient-position",
+                            f"매도 필요 {req.qty}주 > 보유 {have}주 ({req.ticker})",
+                        )
                 price = self._current_price(req.ticker)
                 if price is None:
                     return OrderResult(
@@ -299,8 +301,7 @@ class PaperAdapter(OrderManager):
                     "submitted_at": now.isoformat(),
                 }
                 self._state.pending_orders[broker_order_id] = snapshot
-                self._persist()
-                return OrderResult(
+                result = OrderResult(
                     order_uuid=req.order_uuid,
                     broker_order_id=broker_order_id,
                     status=OrderStatus.ACCEPTED,
@@ -308,6 +309,9 @@ class PaperAdapter(OrderManager):
                     submitted_at=now,
                     raw_response={"paper": True, "reason": "limit-pending"},
                 )
+                self._cache_idempotency(result)
+                self._persist()
+                return result
 
             raise ExecutionError(f"미지원 order_type: {req.order_type}")
 
@@ -371,8 +375,61 @@ class PaperAdapter(OrderManager):
             "fee": fee,
             "completed_at": now.isoformat(),
         }
+        self._cache_idempotency(result)
         self._persist()
         return result
+
+    def _cache_idempotency(self, result: OrderResult) -> None:
+        """OrderResult → 스냅샷 dict (JSON 직렬화 가능한 형태로)."""
+        self._state.idempotency[result.order_uuid] = {
+            "broker_order_id": result.broker_order_id,
+            "status": result.status.value,
+            "avg_fill_price": result.avg_fill_price,
+            "filled_qty": result.filled_qty,
+            "remaining_qty": result.remaining_qty,
+            "error_code": result.error_code,
+            "error_message": result.error_message,
+            "submitted_at": result.submitted_at.isoformat() if result.submitted_at else None,
+            "completed_at": result.completed_at.isoformat() if result.completed_at else None,
+            "fills": [
+                {
+                    "price": f.price,
+                    "qty": f.qty,
+                    "executed_at": f.executed_at.isoformat(),
+                    "fee": f.fee,
+                }
+                for f in result.fills
+            ],
+        }
+
+    def _restore_from_snapshot(self, order_uuid: str, snap: dict) -> OrderResult:
+        from datetime import datetime as _dt
+
+        def _parse(s):
+            return _dt.fromisoformat(s) if s else None
+
+        fills = [
+            Fill(
+                price=f["price"],
+                qty=f["qty"],
+                executed_at=_parse(f["executed_at"]),
+                fee=f.get("fee", 0.0),
+            )
+            for f in snap.get("fills", [])
+        ]
+        return OrderResult(
+            order_uuid=order_uuid,
+            broker_order_id=snap.get("broker_order_id"),
+            status=OrderStatus(snap.get("status", "error")),
+            fills=fills,
+            avg_fill_price=snap.get("avg_fill_price"),
+            filled_qty=snap.get("filled_qty", 0),
+            remaining_qty=snap.get("remaining_qty", 0),
+            error_code=snap.get("error_code"),
+            error_message=snap.get("error_message"),
+            submitted_at=_parse(snap.get("submitted_at")),
+            completed_at=_parse(snap.get("completed_at")),
+        )
 
     def _apply_buy(self, ticker: str, qty: int, price: float, currency: str) -> None:
         pos = self._state.positions.get(ticker)

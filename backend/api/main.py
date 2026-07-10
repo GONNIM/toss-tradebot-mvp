@@ -23,6 +23,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from backend.api.routes import (
     crazy,
     dashboard,
+    execution,
     logs,
     meme_watch,
     moonshot,
@@ -96,6 +97,11 @@ app.include_router(
     meme_watch.router,
     prefix="/api/v1/meme-watch",
     tags=["meme-watch"],
+)
+app.include_router(
+    execution.router,
+    prefix="/api/v1/execution",
+    tags=["execution"],
 )
 
 

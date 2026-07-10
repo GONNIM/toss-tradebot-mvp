@@ -67,7 +67,45 @@ async def send_event(
         lines.append(hint)
 
     body = "\n".join(lines)
-    return await notifier.send_info(title, body)
+    ok = await notifier.send_info(title, body)
+
+    # ─── Execution Layer 라우팅 (v2 트랙 C · Phase 1) ───
+    # CRITICAL/REGIME_CHANGE/STRONG 만 매수 시그널 · WATCH/NOTE 는 정보성
+    _INTENSITY_STRENGTH = {
+        "REGIME_CHANGE": 95,
+        "CRITICAL":      90,
+        "STRONG":        70,
+        "INSIDER":       60 if direction == "buy" else 40,
+    }
+    if ok and evt.target_ticker:
+        strength = _INTENSITY_STRENGTH.get(evt.intensity_label)
+        if strength is not None:
+            try:
+                from backend.execution.signal_router import (
+                    SignalEvent as _SignalEvent,
+                    get_signal_router,
+                )
+                router = get_signal_router()
+                if router:
+                    await router.route(
+                        _SignalEvent(
+                            ticker=evt.target_ticker,
+                            action="buy",
+                            strength=strength,
+                            source="activist",
+                            signal_id=f"activist-{evt.country}-{evt.accession}-{evt.form}",
+                            metadata={
+                                "filer": evt.filer_name,
+                                "form": evt.form,
+                                "intensity": evt.intensity_label,
+                                "filing_date": evt.filing_date,
+                                "insider_direction": direction,
+                            },
+                        )
+                    )
+            except Exception as exc:  # noqa: BLE001
+                logger.warning("[activist] router 실패 — %s", exc)
+    return ok
 
 
 async def send_wolf_pack(
@@ -125,4 +163,42 @@ async def send_wolf_pack(
         lines.append(hint)
 
     body = "\n".join(lines)
-    return await notifier.send_info(title, body)
+    ok = await notifier.send_info(title, body)
+
+    # ─── Execution Layer 라우팅 (v2 트랙 C · Phase 1) ───
+    # Wolf Pack 형성/강화 시 매수 시그널 · CRITICAL_PACK 이 최고 강도
+    _PACK_STRENGTH = {
+        "CRITICAL_PACK": 100,
+        "STRONG_PACK":   85,
+        "PACK":          70,
+    }
+    if ok and group.target_ticker:
+        strength = _PACK_STRENGTH.get(group.intensity_label)
+        if strength is not None:
+            try:
+                from backend.execution.signal_router import (
+                    SignalEvent as _SignalEvent,
+                    get_signal_router,
+                )
+                router = get_signal_router()
+                if router:
+                    await router.route(
+                        _SignalEvent(
+                            ticker=group.target_ticker,
+                            action="buy",
+                            strength=strength,
+                            source="activist",
+                            signal_id=f"wolf-{group.country}-{group.target_ticker}-{kind}-{group.days_span}",
+                            metadata={
+                                "wolf_pack": True,
+                                "intensity": group.intensity_label,
+                                "activist_count": group.activist_count,
+                                "tier1_count": group.tier1_count,
+                                "days_span": group.days_span,
+                                "kind": kind,
+                            },
+                        )
+                    )
+            except Exception as exc:  # noqa: BLE001
+                logger.warning("[activist·wolf] router 실패 — %s", exc)
+    return ok

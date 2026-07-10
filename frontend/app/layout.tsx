@@ -14,6 +14,7 @@ const NAV = [
   { href: "/meme-watch", label: "🔥 밈주 워치" },
   { href: "/vip", label: "🕵️ VIP 감시" },
   { href: "/activist-radar", label: "🐺 Activist Radar" },
+  { href: "/execution", label: "⚙️ 실행" },
   // { href: "/crazy", label: "Crazy Picks" },        // 한국 주식 전환으로 숨김 (라우트 유지)
   // { href: "/moonshot", label: "Moonshot" },        // 한국 주식 전환으로 숨김 (라우트 유지)
   { href: "/dashboard", label: "대시보드" },

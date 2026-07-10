@@ -230,6 +230,40 @@ async def check_and_send_alerts(top_n: int = _TOP_N_TO_CHECK) -> dict:
                 else:
                     stats["sent_new"] += 1
 
+                # ─── Execution Layer 라우팅 (v2 트랙 C · Phase 1) ───
+                # EXECUTION_ENABLED=false 시 get_signal_router() 가 None 반환 → skip
+                try:
+                    from backend.execution.signal_router import (
+                        SignalEvent,
+                        get_signal_router,
+                    )
+                    router = get_signal_router()
+                    if router:
+                        intensity_val = (
+                            intensity.intensity if intensity is not None else 0.0
+                        )
+                        # ERUPTING 80~100 / BLAZING 50~70 강도 매핑
+                        if alert_type == "ERUPTING":
+                            strength = min(100, 80 + int(intensity_val - _ERUPTING_INTENSITY))
+                        else:
+                            strength = min(70, 50 + int((score.score - _BLAZING_SCORE) * 20))
+                        await router.route(
+                            SignalEvent(
+                                ticker=score.ticker,
+                                action="buy",
+                                strength=strength,
+                                source="meme_stock",
+                                signal_id=f"meme-{alert_type.lower()}-{score.ticker}-{now.strftime('%Y%m%d%H%M')}",
+                                metadata={
+                                    "alert_type": alert_type,
+                                    "score": score.score,
+                                    "intensity": intensity_val,
+                                },
+                            )
+                        )
+                except Exception as exc:  # noqa: BLE001
+                    logger.warning("[meme_alert] router 실패 — %s", exc)
+
         await session.commit()
 
     logger.info(f"[meme_alert] done stats={stats}")
