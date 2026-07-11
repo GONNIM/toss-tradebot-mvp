@@ -374,6 +374,48 @@ class TossClient:
             "GET", "/api/v1/conditional-orders", params={"status": status}
         )
 
+    # ─── Rankings / Orderbook / Trades (Sprint 1 · KR live tape) ───
+    def rankings(
+        self,
+        *,
+        type: str = "MARKET_TRADING_AMOUNT",
+        market: str = "KR",
+        duration: str = "realtime",
+        exclude_caution: bool = True,
+        count: int = 100,
+    ) -> TossEnvelope:
+        """GET /api/v1/rankings — 거래대금·거래량·등락률 순위 (RANKING 5/s)."""
+        return self.request_envelope(
+            "GET",
+            "/api/v1/rankings",
+            params={
+                "type": type,
+                "marketCountry": market,
+                "duration": duration,
+                "excludeInvestmentCaution": str(exclude_caution).lower(),
+                "count": count,
+            },
+            use_account_header=False,
+        )
+
+    def orderbook(self, symbol: str) -> TossEnvelope:
+        """GET /api/v1/orderbook?symbol=... (MARKET_DATA 10/s)."""
+        return self.request_envelope(
+            "GET", "/api/v1/orderbook", params={"symbol": symbol}, use_account_header=False
+        )
+
+    def recent_trades(self, symbol: str) -> TossEnvelope:
+        """GET /api/v1/trades?symbol=... (MARKET_DATA 10/s)."""
+        return self.request_envelope(
+            "GET", "/api/v1/trades", params={"symbol": symbol}, use_account_header=False
+        )
+
+    def stock_warnings(self, symbol: str) -> TossEnvelope:
+        """GET /api/v1/stocks/{symbol}/warnings — 정리매매·단기과열·VI 등 (STOCK 5/s)."""
+        return self.request_envelope(
+            "GET", f"/api/v1/stocks/{symbol}/warnings", use_account_header=False
+        )
+
 
 _shared: Optional[TossClient] = None
 

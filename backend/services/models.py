@@ -520,6 +520,74 @@ class OrderAudit(Base):
 
 
 # ─────────────────────────────────────────────────────────────────
+# 급등주 스나이퍼 · Sprint 1 (2026-07-11~)
+#   설계: docs/plans/sniper/00-sprint1-plan.md
+# ─────────────────────────────────────────────────────────────────
+
+
+class LiveTapeUniverse(Base):
+    """KOSDAQ 유니버스 · nightly 22:00 KST refresh.
+
+    필터 통과 종목만 저장. Sniper 는 이 유니버스만 스캔.
+    """
+
+    __tablename__ = "live_tape_universe"
+
+    ticker: Mapped[str] = mapped_column(String(10), primary_key=True)
+    name: Mapped[str] = mapped_column(String(100))
+    market: Mapped[str] = mapped_column(String(10), default="KOSDAQ")
+    dept: Mapped[Optional[str]] = mapped_column(String(50))          # 중견/우량/벤처/기술성장
+
+    close_price: Mapped[Optional[float]]
+    market_cap_krw: Mapped[Optional[float]]                          # 시가총액
+    shares: Mapped[Optional[int]]                                    # 발행주식수 (유통 근사)
+    amount_today: Mapped[Optional[float]]                            # 당일 거래대금
+    amount_20d_avg: Mapped[Optional[float]]                          # 20일 ADV (Sprint 1.5)
+
+    is_squeeze_candidate: Mapped[bool] = mapped_column(Boolean, default=False)
+    refreshed_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
+
+
+class LiveTapeRanking(Base):
+    """Toss rankings 폴링 스냅샷 (rank velocity 계산 원본)."""
+
+    __tablename__ = "live_tape_ranking"
+
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    ticker: Mapped[str] = mapped_column(String(10))
+    rank: Mapped[Optional[int]]
+    volume_amount: Mapped[Optional[float]]
+    price: Mapped[Optional[float]]
+    return_pct: Mapped[Optional[float]]
+    captured_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
+
+    __table_args__ = (
+        Index("ix_lt_ranking_ticker_time", "ticker", "captured_at"),
+    )
+
+
+class SniperSignal(Base):
+    """스나이퍼 진입/청산 이력. order_audit 과 연결 (order_uuid FK)."""
+
+    __tablename__ = "sniper_signal"
+
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    ticker: Mapped[str] = mapped_column(String(10), index=True)
+    detected_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
+    tape_score: Mapped[Optional[float]]
+    rank_velocity: Mapped[Optional[float]]
+    trades_intensity: Mapped[Optional[float]]
+    orderbook_imbalance: Mapped[Optional[float]]
+    entry_order_uuid: Mapped[Optional[str]] = mapped_column(String(36))
+    entry_price: Mapped[Optional[float]]
+    exit_order_uuid: Mapped[Optional[str]] = mapped_column(String(36))
+    exit_price: Mapped[Optional[float]]
+    peak_price: Mapped[Optional[float]]                              # trailing 추적용
+    pnl_pct: Mapped[Optional[float]]
+    reason: Mapped[Optional[str]] = mapped_column(String(20))        # trailing · hard_sl · force_close
+
+
+# ─────────────────────────────────────────────────────────────────
 # Super Signal 데이터 소스 (v2 트랙 C · Phase 3)
 #   설계: docs/plans/tradebot-mvp-v2/01-track-c-roadmap.md §6-1
 # ─────────────────────────────────────────────────────────────────

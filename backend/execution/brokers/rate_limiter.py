@@ -68,7 +68,7 @@ _PATH_GROUP_MAP: list[tuple[str, str]] = [
     ("/api/v1/trades", "MARKET_DATA"),
     ("/api/v1/price-limits", "MARKET_DATA"),
     ("/api/v1/candles", "MARKET_DATA_CHART"),
-    ("/api/v1/stocks", "STOCK"),
+    ("/api/v1/stocks", "STOCK"),   # /stocks/{symbol}/warnings 도 STOCK 그룹
     ("/api/v1/exchange-rate", "MARKET_INFO"),
     ("/api/v1/market-calendar", "MARKET_INFO"),
     ("/api/v1/rankings", "RANKING"),

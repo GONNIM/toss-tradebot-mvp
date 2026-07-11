@@ -15,6 +15,7 @@ import {
   PaperState,
   ThresholdSet,
 } from "@/lib/api";
+import { fmtKstHm, fmtKstTime } from "@/lib/time";
 
 // ─────────────────────────────────────────────
 // Format helpers
@@ -141,17 +142,17 @@ function MarketStatusPanel() {
                 <div className="space-y-1 text-xs text-muted-foreground">
                   {w.regular_market && (
                     <p>
-                      정규장 · {fmtKst(w.regular_market.start)} ~ {fmtKst(w.regular_market.end)}
+                      정규장 · {fmtKstHm(w.regular_market.start)} ~ {fmtKstHm(w.regular_market.end)} KST
                     </p>
                   )}
                   {w.pre_market && (
                     <p>
-                      프리 · {fmtKst(w.pre_market.start)} ~ {fmtKst(w.pre_market.end)}
+                      프리 · {fmtKstHm(w.pre_market.start)} ~ {fmtKstHm(w.pre_market.end)} KST
                     </p>
                   )}
                   {w.after_market && (
                     <p>
-                      애프터 · {fmtKst(w.after_market.start)} ~ {fmtKst(w.after_market.end)}
+                      애프터 · {fmtKstHm(w.after_market.start)} ~ {fmtKstHm(w.after_market.end)} KST
                     </p>
                   )}
                 </div>
@@ -164,18 +165,6 @@ function MarketStatusPanel() {
   );
 }
 
-function fmtKst(iso: string): string {
-  try {
-    const d = new Date(iso);
-    return d.toLocaleTimeString("ko-KR", {
-      hour: "2-digit",
-      minute: "2-digit",
-      timeZone: "Asia/Seoul",
-    });
-  } catch {
-    return iso;
-  }
-}
 
 // ═══════════════════════════════════════════════════════════════
 // Pending Orders (Toss)
@@ -853,7 +842,7 @@ function AuditPanel() {
           <table className="w-full text-xs">
             <thead>
               <tr className="border-b border-border text-left">
-                <th className="py-1">시각 (UTC)</th>
+                <th className="py-1">시각 (KST)</th>
                 <th className="py-1">티커</th>
                 <th className="py-1">방향</th>
                 <th className="py-1">타입</th>
@@ -868,7 +857,7 @@ function AuditPanel() {
               {q.data.map((r) => (
                 <tr key={r.order_uuid} className="border-b border-border/60">
                   <td className="py-1 font-mono">
-                    {r.created_at?.slice(11, 19) ?? "—"}
+                    {fmtKstTime(r.created_at)}
                   </td>
                   <td className="py-1 font-semibold">{r.ticker}</td>
                   <td

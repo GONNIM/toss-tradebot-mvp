@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { api, BacktestReport } from "@/lib/api";
+import { fmtKstDate, fmtKstFull } from "@/lib/time";
 
 // ═══════════════════════════════════════════════════════════════
 export default function BacktestPage() {
@@ -205,8 +206,8 @@ function ReportView({ report }: { report: BacktestReport }) {
           />
           <Stat label="Sharpe" value={s.sharpe.toFixed(2)} />
           <Stat
-            label="생성 시각"
-            value={new Date(report.generated_at).toLocaleTimeString("ko-KR")}
+            label="생성 시각 (KST)"
+            value={fmtKstFull(report.generated_at)}
           />
         </div>
       </section>
@@ -224,9 +225,9 @@ function ReportView({ report }: { report: BacktestReport }) {
               <tr className="border-b border-border text-left">
                 <th className="py-1">티커</th>
                 <th className="py-1">소스</th>
-                <th className="py-1">진입</th>
+                <th className="py-1">진입 (KST)</th>
                 <th className="py-1 text-right">진입가</th>
-                <th className="py-1">청산</th>
+                <th className="py-1">청산 (KST)</th>
                 <th className="py-1 text-right">청산가</th>
                 <th className="py-1 text-right">PnL</th>
                 <th className="py-1">사유</th>
@@ -238,11 +239,11 @@ function ReportView({ report }: { report: BacktestReport }) {
                   <td className="py-1 font-semibold">{t.ticker}</td>
                   <td className="py-1">{t.source}</td>
                   <td className="py-1 font-mono text-[10px]">
-                    {t.entry_at?.slice(5, 10) ?? "—"}
+                    {fmtKstDate(t.entry_at)}
                   </td>
                   <td className="py-1 text-right">{t.entry_price.toFixed(2)}</td>
                   <td className="py-1 font-mono text-[10px]">
-                    {t.exit_at?.slice(5, 10) ?? "—"}
+                    {fmtKstDate(t.exit_at)}
                   </td>
                   <td className="py-1 text-right">
                     {t.exit_price !== null ? t.exit_price.toFixed(2) : "—"}

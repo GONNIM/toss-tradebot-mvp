@@ -7,6 +7,7 @@ import {
   useQueryClient,
 } from "@tanstack/react-query";
 import { api, SignalHitRow, SuperSignalRow } from "@/lib/api";
+import { fmtKstDateTime, fmtKstTime } from "@/lib/time";
 
 // ═══════════════════════════════════════════════════════════════
 export default function SuperSignalsPage() {
@@ -96,7 +97,6 @@ function SuperSignalsList() {
 
 function SuperSignalCard({ row }: { row: SuperSignalRow }) {
   const [open, setOpen] = useState(false);
-  const promotedAt = row.promoted_at ? new Date(row.promoted_at) : null;
   const ocoStatus = row.oco_status;
   const ocoTone =
     ocoStatus === "OPEN"
@@ -137,7 +137,7 @@ function SuperSignalCard({ row }: { row: SuperSignalRow }) {
         </div>
       </div>
       <div className="mt-1 text-xs text-muted-foreground">
-        승격 {promotedAt?.toLocaleString("ko-KR") ?? "-"}
+        승격 {fmtKstDateTime(row.promoted_at)} KST
         {row.oco_id && <> · oco_id: <code>{row.oco_id}</code></>}
       </div>
       {open && (
@@ -189,7 +189,7 @@ function SuperSignalCard({ row }: { row: SuperSignalRow }) {
                       <td className="py-0.5 font-mono text-[10px]">{h.signal_id}</td>
                       <td className="py-0.5 text-right">{h.score.toFixed(2)}</td>
                       <td className="py-0.5 text-muted-foreground">
-                        {h.at ? new Date(h.at).toLocaleTimeString("ko-KR") : "-"}
+                        {fmtKstTime(h.at)}
                       </td>
                     </tr>
                   ))}
@@ -233,7 +233,7 @@ function RecentHits() {
           <table className="w-full text-xs">
             <thead>
               <tr className="border-b border-border text-left">
-                <th className="py-1">시각</th>
+                <th className="py-1">시각 (KST)</th>
                 <th className="py-1">티커</th>
                 <th className="py-1">source</th>
                 <th className="py-1">action</th>
@@ -245,7 +245,7 @@ function RecentHits() {
               {q.data.map((h) => (
                 <tr key={h.id} className="border-b border-border/60">
                   <td className="py-1 font-mono">
-                    {h.hit_at ? new Date(h.hit_at).toLocaleTimeString("ko-KR") : "-"}
+                    {fmtKstTime(h.hit_at)}
                   </td>
                   <td className="py-1 font-semibold">{h.ticker}</td>
                   <td className="py-1">{h.source}</td>
