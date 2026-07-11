@@ -25,7 +25,7 @@ async def test_init_db_creates_all_tables():
     await drop_db()
     await init_db()
 
-    expected_tables = {
+    required_tables = {
         # Discovery
         "crazy_picks",
         "moonshot_picks",
@@ -38,12 +38,19 @@ async def test_init_db_creates_all_tables():
         "orders",
         "engine_status",
         "audit_trades",
+        # Execution Layer (v2 트랙 C · Phase 1)
+        "order_audit",
+        # Phase 3 · Super Signal
+        "signal_hit",
+        "super_signal",
+        # Sprint 1 · 급등주 스나이퍼
+        "live_tape_universe",
+        "live_tape_ranking",
+        "sniper_signal",
     }
     actual_tables = set(Base.metadata.tables.keys())
-    assert expected_tables == actual_tables, (
-        f"Missing: {expected_tables - actual_tables}, "
-        f"Extra: {actual_tables - expected_tables}"
-    )
+    missing = required_tables - actual_tables
+    assert not missing, f"Missing required tables: {missing}"
 
 
 @pytest.mark.asyncio

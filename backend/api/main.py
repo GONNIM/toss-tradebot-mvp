@@ -31,6 +31,7 @@ from backend.api.routes import (
     positions,
     sector_leaders,
     settings,
+    sniper,
     super_signals,
 )
 from backend.services import config
@@ -86,6 +87,22 @@ async def lifespan(app: FastAPI):
             coalesce=True,
         )
         logger.info("[FastAPI] Super Signal 오케스트레이션 5분 주기 · 승격+OCO")
+
+    # 급등주 스나이퍼 (Sprint 1) — 5단계 loop
+    #   scan_and_enter 30초 · manage_positions 5초 · universe nightly 22:00 KST
+    if _os.environ.get("SNIPER_ENABLED", "true").lower() in {"1", "true", "yes", "on"}:
+        from backend.discovery.live_tape.sniper import register_sniper_jobs
+        from backend.discovery.live_tape.universe import refresh_universe
+
+        register_sniper_jobs(scheduler)
+        scheduler.add_job(
+            refresh_universe,
+            "cron",
+            hour=22, minute=0,
+            id="sniper_universe_refresh",
+            max_instances=1,
+        )
+        logger.info("[FastAPI] Sniper jobs 등록 완료 (기본 sniper.enabled=False · UI로 활성화)")
 
     # WATCH 프로파일 배치 · 30분 요약 발송 (Phase 3 §6-2)
     if _os.environ.get("TELEGRAM_PROFILE", "SCOUT").upper() == "WATCH":
@@ -170,6 +187,11 @@ app.include_router(
     backtest.router,
     prefix="/api/v1/backtest",
     tags=["backtest"],
+)
+app.include_router(
+    sniper.router,
+    prefix="/api/v1/sniper",
+    tags=["sniper"],
 )
 
 

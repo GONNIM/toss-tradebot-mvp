@@ -632,7 +632,74 @@ export const api = {
       stop_loss_pct?: number;
     }) => post<BacktestReport>(`/backtest/run`, opts),
   },
+  sniper: {
+    status: () => get<SniperStatus>(`/sniper/status`),
+    params: () => get<SniperParams>(`/sniper/params`),
+    universe: (opts?: { squeeze_only?: boolean; limit?: number }) => {
+      const q = new URLSearchParams();
+      if (opts?.squeeze_only) q.set("squeeze_only", "true");
+      if (opts?.limit) q.set("limit", String(opts.limit));
+      const qs = q.toString();
+      return get<{ size: number; items: SniperUniverseItem[] }>(
+        `/sniper/universe${qs ? `?${qs}` : ""}`,
+      );
+    },
+    signals: (opts?: { hours?: number; limit?: number }) => {
+      const q = new URLSearchParams();
+      if (opts?.hours) q.set("hours", String(opts.hours));
+      if (opts?.limit) q.set("limit", String(opts.limit));
+      const qs = q.toString();
+      return get<SniperSignalRow[]>(
+        `/sniper/signals/recent${qs ? `?${qs}` : ""}`,
+      );
+    },
+    candidates: (top_n = 10) =>
+      get<SniperCandidateRow[]>(`/sniper/candidates?top_n=${top_n}`),
+    updateParams: (token: string, updates: Partial<SniperParams>) =>
+      putWithToken<{ ok: boolean; params: SniperParams }>(
+        `/sniper/params`,
+        token,
+        updates,
+      ),
+    refreshUniverse: (token: string) =>
+      postWithToken<{ total: number; passed: number; squeeze: number; refreshed_at: string }>(
+        `/sniper/universe/refresh`,
+        token,
+      ),
+    manualEntry: (token: string, ticker: string, broker: "paper" | "toss" = "paper") =>
+      postWithToken<{
+        ok: boolean;
+        reason: string | null;
+        order_uuid: string | null;
+        entry_price: number | null;
+        filled_qty: number;
+        candidate_passed: boolean;
+        candidate_reject_reason: string | null;
+      }>(`/sniper/entry`, token, { ticker, broker }),
+  },
 };
+
+async function putWithToken<T>(path: string, token: string, body: unknown): Promise<T> {
+  const res = await fetch(`${BASE}${path}`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json", "X-API-Token": token },
+    body: JSON.stringify(body),
+    cache: "no-store",
+  });
+  if (!res.ok) throw new Error(`API PUT ${path} failed: ${res.status} · ${await res.text()}`);
+  return res.json();
+}
+
+async function postWithToken<T>(path: string, token: string, body?: unknown): Promise<T> {
+  const res = await fetch(`${BASE}${path}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", "X-API-Token": token },
+    body: body ? JSON.stringify(body) : undefined,
+    cache: "no-store",
+  });
+  if (!res.ok) throw new Error(`API POST ${path} failed: ${res.status} · ${await res.text()}`);
+  return res.json();
+}
 
 // ─────────────────────────────────────────────
 // Execution Layer 타입 (v2 트랙 C · Phase 1)
@@ -707,6 +774,102 @@ export interface MarketWindowSet {
 export interface MarketStatus {
   KR: MarketWindowSet;
   US: MarketWindowSet;
+}
+
+// ─────────────────────────────────────────────
+// Sniper 타입 (Sprint 1)
+// ─────────────────────────────────────────────
+export interface SniperParams {
+  seed_cap_krw: number;
+  per_order_krw: number;
+  max_concurrent_positions: number;
+  trailing_giveback_pct: number;
+  hard_stop_loss_pct: number;
+  daily_loss_limit_pct: number;
+  weekly_loss_limit_pct: number;
+  active_start_kst: string;
+  active_end_kst: string;
+  force_close_enabled: boolean;
+  force_close_kst: string;
+  universe_market_cap_min_krw: number;
+  universe_market_cap_max_krw: number;
+  universe_adv_20d_min_krw: number;
+  universe_float_max_shares: number;
+  universe_price_min_krw: number;
+  universe_squeeze_float_max: number;
+  tape_score_threshold: number;
+  rank_velocity_z_min: number;
+  trades_intensity_z_min: number;
+  orderbook_z_min: number;
+  score_weight_rank: number;
+  score_weight_trades: number;
+  score_weight_orderbook: number;
+  entry_return_min_pct: number;
+  entry_return_max_pct: number;
+  sustained_rise_min_sec: number;
+  same_ticker_daily_limit: number;
+  rank_target_min: number;
+  rank_target_max: number;
+  poll_rankings_sec: number;
+  poll_trades_sec: number;
+  poll_orderbook_sec: number;
+  poll_trailing_price_sec: number;
+  enabled: boolean;
+}
+
+export interface SniperStatus {
+  live_enabled: boolean;
+  sniper_enabled: boolean;
+  kill_switch_active: boolean;
+  universe_size: number;
+  seed_cap_krw: number;
+  per_order_krw: number;
+  max_concurrent_positions: number;
+  trailing_giveback_pct: number;
+  hard_stop_loss_pct: number;
+  active_window_kst: { start: string; end: string };
+  force_close_enabled: boolean;
+  force_close_kst: string;
+}
+
+export interface SniperUniverseItem {
+  ticker: string;
+  name: string;
+  close_price: number | null;
+  market_cap_krw: number | null;
+  shares: number | null;
+  amount_today: number | null;
+  is_squeeze: boolean;
+}
+
+export interface SniperSignalRow {
+  id: number;
+  ticker: string;
+  detected_at: string | null;
+  tape_score: number | null;
+  rank_velocity: number | null;
+  trades_intensity: number | null;
+  orderbook_imbalance: number | null;
+  entry_order_uuid: string | null;
+  entry_price: number | null;
+  exit_order_uuid: string | null;
+  exit_price: number | null;
+  peak_price: number | null;
+  pnl_pct: number | null;
+  reason: string | null;
+}
+
+export interface SniperCandidateRow {
+  ticker: string;
+  name: string;
+  tape_score: number;
+  rank_velocity_score: number;
+  trades_intensity_score: number;
+  orderbook_score: number;
+  last_price: number;
+  return_pct: number | null;
+  candidate: boolean;
+  reject_reason: string | null;
 }
 
 export interface BacktestSourceStats {
