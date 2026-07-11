@@ -61,8 +61,8 @@ _PATH_GROUP_MAP: list[tuple[str, str]] = [
     ("/api/v1/buying-power", "ORDER_INFO"),
     ("/api/v1/sellable-quantity", "ORDER_INFO"),
     ("/api/v1/commissions", "ORDER_INFO"),
+    ("/api/v1/conditional-orders", "CONDITIONAL_ORDER"),  # /orders 보다 먼저 매치
     ("/api/v1/orders", "ORDER"),
-    ("/api/v1/conditional-orders", "CONDITIONAL_ORDER"),
     ("/api/v1/prices", "MARKET_DATA"),
     ("/api/v1/orderbook", "MARKET_DATA"),
     ("/api/v1/trades", "MARKET_DATA"),

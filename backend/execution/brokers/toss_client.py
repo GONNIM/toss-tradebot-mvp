@@ -355,6 +355,25 @@ class TossClient:
             "GET", f"/api/v1/market-calendar/{market.upper()}", use_account_header=False
         )
 
+    # ─── 조건주문 API (Phase 3 Super Signal OCO) ───
+    def create_conditional_order(self, body: dict) -> TossEnvelope:
+        """POST /api/v1/conditional-orders (SINGLE/OCO/OTO)."""
+        return self.request_envelope(
+            "POST", "/api/v1/conditional-orders", json_body=body
+        )
+
+    def cancel_conditional_order(self, conditional_order_id: str) -> TossEnvelope:
+        """DELETE /api/v1/conditional-orders/{id}."""
+        return self.request_envelope(
+            "DELETE", f"/api/v1/conditional-orders/{conditional_order_id}"
+        )
+
+    def list_conditional_orders(self, status: str = "OPEN") -> TossEnvelope:
+        """GET /api/v1/conditional-orders?status=OPEN|CLOSED."""
+        return self.request_envelope(
+            "GET", "/api/v1/conditional-orders", params={"status": status}
+        )
+
 
 _shared: Optional[TossClient] = None
 

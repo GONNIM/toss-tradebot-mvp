@@ -609,6 +609,29 @@ export const api = {
         ),
     },
   },
+  superSignals: {
+    list: (limit = 30) => get<SuperSignalRow[]>(`/super-signals?limit=${limit}`),
+    hits: (opts?: { ticker?: string; days?: number; limit?: number }) => {
+      const q = new URLSearchParams();
+      if (opts?.ticker) q.set("ticker", opts.ticker);
+      if (opts?.days) q.set("days", String(opts.days));
+      if (opts?.limit) q.set("limit", String(opts.limit));
+      const qs = q.toString();
+      return get<SignalHitRow[]>(`/super-signals/hits${qs ? `?${qs}` : ""}`);
+    },
+    promote: () =>
+      post<{ count: number; results: unknown[] }>(`/super-signals/promote`),
+  },
+  backtest: {
+    run: (opts: {
+      days?: number;
+      sources?: string[];
+      tickers?: string[];
+      holding_days?: number;
+      take_profit_pct?: number;
+      stop_loss_pct?: number;
+    }) => post<BacktestReport>(`/backtest/run`, opts),
+  },
 };
 
 // ─────────────────────────────────────────────
@@ -684,6 +707,78 @@ export interface MarketWindowSet {
 export interface MarketStatus {
   KR: MarketWindowSet;
   US: MarketWindowSet;
+}
+
+export interface BacktestSourceStats {
+  trades: number;
+  wins: number;
+  losses: number;
+  win_rate: number;
+  avg_return_pct: number;
+  total_return_pct: number;
+}
+
+export interface BacktestTrade {
+  ticker: string;
+  source: string;
+  signal_id: string;
+  entry_at: string | null;
+  entry_price: number;
+  exit_at: string | null;
+  exit_price: number | null;
+  pnl_pct: number | null;
+  reason: string;
+}
+
+export interface BacktestReport {
+  config: Record<string, unknown>;
+  generated_at: string;
+  summary: {
+    total_trades: number;
+    win_rate: number;
+    avg_return_pct: number;
+    total_return_pct: number;
+    max_drawdown_pct: number;
+    sharpe: number;
+  };
+  by_source: Record<string, BacktestSourceStats>;
+  by_ticker: Record<string, BacktestSourceStats>;
+  trades: BacktestTrade[];
+}
+
+export interface SuperSignalRow {
+  id: number;
+  ticker: string;
+  intensity: number;
+  sources: string;
+  hit_count: number;
+  first_hit_at: string | null;
+  last_hit_at: string | null;
+  promoted_at: string | null;
+  order_uuid: string | null;
+  oco_id: string | null;
+  oco_status: string | null;
+  metadata: {
+    hits?: Array<{ source: string; signal_id: string; score: number; at: string | null }>;
+    oco?: {
+      tp_price: string;
+      sl_price: string;
+      tp_pct: number;
+      sl_pct: number;
+      entry_price: number;
+      request_id: string | null;
+    };
+  };
+}
+
+export interface SignalHitRow {
+  id: number;
+  ticker: string;
+  source: string;
+  signal_id: string;
+  score: number;
+  action: string;
+  hit_at: string | null;
 }
 
 export interface OrderAuditRow {

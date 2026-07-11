@@ -21,6 +21,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from backend.api.routes import (
+    backtest,
     crazy,
     dashboard,
     execution,
@@ -30,6 +31,7 @@ from backend.api.routes import (
     positions,
     sector_leaders,
     settings,
+    super_signals,
 )
 from backend.services import config
 from backend.services.db import init_db
@@ -70,6 +72,43 @@ async def lifespan(app: FastAPI):
             coalesce=True,
         )
         logger.info("[FastAPI] Execution reconciler 30초 주기 · Toss 미체결 주문 폴링")
+
+    # Super Signal — 5분 주기 승격 + OCO 실행 (Phase 3)
+    if _os.environ.get("SUPER_SIGNAL_ENABLED", "true").lower() in {"1", "true", "yes", "on"}:
+        from backend.discovery.super_signal import promote_and_execute
+
+        scheduler.add_job(
+            promote_and_execute,
+            "interval",
+            minutes=5,
+            id="super_signal_orchestration",
+            max_instances=1,
+            coalesce=True,
+        )
+        logger.info("[FastAPI] Super Signal 오케스트레이션 5분 주기 · 승격+OCO")
+
+    # WATCH 프로파일 배치 · 30분 요약 발송 (Phase 3 §6-2)
+    if _os.environ.get("TELEGRAM_PROFILE", "SCOUT").upper() == "WATCH":
+        from backend.services.notifier import Level, TelegramNotifier
+        from backend.services.notifier_profile import flush_watch_batch
+
+        _watch_notifier = TelegramNotifier()
+
+        async def _flush_watch():
+            # WATCH 배치는 profile 필터 우회 · force=True 로 직접 발송
+            return await flush_watch_batch(
+                lambda title, body: _watch_notifier.send(Level.INFO, title, body, force=True)
+            )
+
+        scheduler.add_job(
+            _flush_watch,
+            "interval",
+            minutes=30,
+            id="watch_batch_flush",
+            max_instances=1,
+            coalesce=True,
+        )
+        logger.info("[FastAPI] WATCH 프로파일 30분 배치 요약 잡 등록")
 
     scheduler.start()
     app.state.scheduler = scheduler
@@ -121,6 +160,16 @@ app.include_router(
     execution.router,
     prefix="/api/v1/execution",
     tags=["execution"],
+)
+app.include_router(
+    super_signals.router,
+    prefix="/api/v1/super-signals",
+    tags=["super-signals"],
+)
+app.include_router(
+    backtest.router,
+    prefix="/api/v1/backtest",
+    tags=["backtest"],
 )
 
 

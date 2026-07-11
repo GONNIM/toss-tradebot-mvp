@@ -89,13 +89,14 @@ async def run_price_tick(
                         )
                         router = get_signal_router()
                         if router:
+                            signal_id_v = f"vip-{cfg.tag}-{evt.name}-{datetime.now(timezone.utc).strftime('%Y%m%d%H%M')}"
                             await router.route(
                                 SignalEvent(
                                     ticker=cfg.ticker,
                                     action="sell",
                                     strength=strength,
                                     source="vip",
-                                    signal_id=f"vip-{cfg.tag}-{evt.name}-{datetime.now(timezone.utc).strftime('%Y%m%d%H%M')}",
+                                    signal_id=signal_id_v,
                                     metadata={
                                         "event": evt.name,
                                         "current_price": evt.current_price,
@@ -104,6 +105,19 @@ async def run_price_tick(
                                     },
                                 )
                             )
+                        # Super Signal 원천 (매도 이벤트도 기록 · 통계용)
+                        try:
+                            from backend.discovery.super_signal.signal_hit import record_hit
+                            await record_hit(
+                                ticker=cfg.ticker,
+                                source="vip",
+                                signal_id=f"vip-{cfg.tag}-{evt.name}-{datetime.now(timezone.utc).strftime('%Y%m%d%H%M')}",
+                                action="sell",
+                                strength=strength,
+                                metadata={"event": evt.name, "vip_tag": cfg.tag, "pnl": evt.pnl},
+                            )
+                        except Exception as exc:  # noqa: BLE001
+                            logger.debug("[vip] signal_hit 실패 — %s", exc)
                     except Exception as exc:  # noqa: BLE001
                         logger.warning("[vip] router 실패 — %s", exc)
 

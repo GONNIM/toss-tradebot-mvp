@@ -520,6 +520,61 @@ class OrderAudit(Base):
 
 
 # ─────────────────────────────────────────────────────────────────
+# Super Signal 데이터 소스 (v2 트랙 C · Phase 3)
+#   설계: docs/plans/tradebot-mvp-v2/01-track-c-roadmap.md §6-1
+# ─────────────────────────────────────────────────────────────────
+
+
+class SignalHit(Base):
+    """discovery 3채널(meme/vip/activist) 알림 성공 시 병행 INSERT.
+
+    Super Signal 병합기의 원천 데이터. 30일 window 종목별 히트 카운트/스코어 산출.
+    """
+
+    __tablename__ = "signal_hit"
+
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    ticker: Mapped[str] = mapped_column(String(20))
+    source: Mapped[str] = mapped_column(String(30))          # meme_stock | vip | activist
+    signal_id: Mapped[str] = mapped_column(String(120))      # 원 시그널 ID (감사 추적)
+    score: Mapped[float]                                     # 0.0~1.0 (원 시그널 강도 fraction)
+    action: Mapped[str] = mapped_column(String(4))           # buy | sell
+    hit_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
+    metadata_json: Mapped[Optional[str]] = mapped_column(Text)
+
+    __table_args__ = (
+        Index("ix_signal_hit_ticker_time", "ticker", "hit_at"),
+        Index("ix_signal_hit_source_time", "source", "hit_at"),
+    )
+
+
+class SuperSignal(Base):
+    """Super Signal 승격 이벤트 (2+ source hit within 30d).
+
+    OCO 조건주문 등록 · 알림 · UI 표시의 원본.
+    """
+
+    __tablename__ = "super_signal"
+
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    ticker: Mapped[str] = mapped_column(String(20), index=True)
+    intensity: Mapped[float]                                 # Σ(hit_score × source_weight)
+    sources: Mapped[str] = mapped_column(String(120))        # "meme_stock+vip+activist" (구분자 +)
+    hit_count: Mapped[int]                                   # window 내 총 히트 수
+    first_hit_at: Mapped[datetime] = mapped_column(DateTime)
+    last_hit_at: Mapped[datetime] = mapped_column(DateTime)
+    promoted_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
+    order_uuid: Mapped[Optional[str]] = mapped_column(String(36))  # SignalRouter 실행 시
+    oco_id: Mapped[Optional[str]] = mapped_column(String(120))     # Toss conditionalOrderId
+    oco_status: Mapped[Optional[str]] = mapped_column(String(20))  # OPEN·TRIGGERED·CANCELED
+    metadata_json: Mapped[Optional[str]] = mapped_column(Text)
+
+    __table_args__ = (
+        Index("ix_super_signal_ticker_time", "ticker", "promoted_at"),
+    )
+
+
+# ─────────────────────────────────────────────────────────────────
 # Meme Watch 모듈 테이블 (Phase 1a — 화끈한 밈주 찾기)
 #   설계: docs/plans/meme-stock-discovery/01-signal-sources.md
 # ─────────────────────────────────────────────────────────────────

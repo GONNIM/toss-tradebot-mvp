@@ -103,6 +103,23 @@ async def send_event(
                             },
                         )
                     )
+                # Super Signal 원천 (Router 무관 · 항상 로깅)
+                try:
+                    from backend.discovery.super_signal.signal_hit import record_hit
+                    await record_hit(
+                        ticker=evt.target_ticker,
+                        source="activist",
+                        signal_id=f"activist-{evt.country}-{evt.accession}-{evt.form}",
+                        action="buy",
+                        strength=strength,
+                        metadata={
+                            "filer": evt.filer_name,
+                            "form": evt.form,
+                            "intensity": evt.intensity_label,
+                        },
+                    )
+                except Exception as exc:  # noqa: BLE001
+                    logger.debug("[activist] signal_hit 실패 — %s", exc)
             except Exception as exc:  # noqa: BLE001
                 logger.warning("[activist] router 실패 — %s", exc)
     return ok
@@ -199,6 +216,24 @@ async def send_wolf_pack(
                             },
                         )
                     )
+                # Super Signal 원천 (Wolf Pack 은 activist 소스로 집계)
+                try:
+                    from backend.discovery.super_signal.signal_hit import record_hit
+                    await record_hit(
+                        ticker=group.target_ticker,
+                        source="activist",
+                        signal_id=f"wolf-{group.country}-{group.target_ticker}-{kind}-{group.days_span}",
+                        action="buy",
+                        strength=strength,
+                        metadata={
+                            "wolf_pack": True,
+                            "intensity": group.intensity_label,
+                            "activist_count": group.activist_count,
+                            "kind": kind,
+                        },
+                    )
+                except Exception as exc:  # noqa: BLE001
+                    logger.debug("[activist·wolf] signal_hit 실패 — %s", exc)
             except Exception as exc:  # noqa: BLE001
                 logger.warning("[activist·wolf] router 실패 — %s", exc)
     return ok

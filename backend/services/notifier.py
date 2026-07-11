@@ -88,10 +88,41 @@ class TelegramNotifier:
         body: str,
         force: bool = False,
     ) -> bool:
-        """알림 전송. dedupe 통과 시 True, skip 시 False."""
+        """알림 전송. dedupe 통과 시 True, skip 시 False.
+
+        TELEGRAM_PROFILE (SCOUT/SNIPER/WATCH) 필터 적용:
+        - SCOUT: 모두 발송
+        - SNIPER: SUPER_SIGNAL · URGENT/CRITICAL · execution/kill_switch 만
+        - WATCH: 즉시 발송 스킵, 큐잉 후 30분 배치 발송
+        """
         if not self.config.bot_token or not self.config.chat_id:
             logger.debug(f"[Notifier] credentials 없음 — skip: {title}")
             return False
+
+        # 프로파일 필터 (force=True 시 우회 · 예: Kill Switch · WATCH 배치 자체)
+        if not force:
+            try:
+                from .notifier_profile import (
+                    NotifyContext,
+                    current_profile,
+                    get_watch_queue,
+                    should_send_by_profile,
+                )
+                source = self._infer_source(title)
+                tags: tuple[str, ...] = ()
+                if "SUPER" in title.upper() or "🌟" in title:
+                    tags = ("SUPER_SIGNAL",)
+                level_str = {Level.CRITICAL: "CRITICAL", Level.WARNING: "WARNING", Level.INFO: "INFO"}[level]
+                ctx = NotifyContext(source=source, level=level_str, tags=tags)
+                if not should_send_by_profile(ctx):
+                    if current_profile() == "WATCH":
+                        get_watch_queue().enqueue(ctx, title, body)
+                        logger.debug(f"[Notifier] WATCH 큐잉: {title}")
+                    else:
+                        logger.debug(f"[Notifier] 프로파일 필터 skip: {title}")
+                    return False
+            except ImportError:
+                pass  # profile 모듈 없으면 기본 동작
 
         key = self._hash(title, body)
         if not force and not self._dedupe_check(key):
@@ -127,6 +158,24 @@ class TelegramNotifier:
 
     async def send_info(self, title: str, body: str) -> bool:
         return await self.send(Level.INFO, title, body)
+
+    @staticmethod
+    def _infer_source(title: str) -> str:
+        """title 프리픽스 → 소스 추정."""
+        t = title.upper()
+        if "SUPER" in t or "🌟" in title:
+            return "super_signal"
+        if "KILL SWITCH" in t or "🚨" in title and "URGENT" in t:
+            return "kill_switch"
+        if "VIP-" in t or "VIP " in t:
+            return "vip"
+        if "ACTIVIST" in t or "WOLF PACK" in t:
+            return "activist"
+        if "ERUPTING" in t or "BLAZING" in t or "MEME" in t or "🌋" in title or "🔥🔥" in title:
+            return "meme_stock"
+        if "EXECUTION" in t or "ORDER" in t:
+            return "execution"
+        return "unknown"
 
 
 # ─────────────────────────────────────────────

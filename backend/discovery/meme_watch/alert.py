@@ -247,13 +247,14 @@ async def check_and_send_alerts(top_n: int = _TOP_N_TO_CHECK) -> dict:
                             strength = min(100, 80 + int(intensity_val - _ERUPTING_INTENSITY))
                         else:
                             strength = min(70, 50 + int((score.score - _BLAZING_SCORE) * 20))
+                        signal_id_str = f"meme-{alert_type.lower()}-{score.ticker}-{now.strftime('%Y%m%d%H%M')}"
                         await router.route(
                             SignalEvent(
                                 ticker=score.ticker,
                                 action="buy",
                                 strength=strength,
                                 source="meme_stock",
-                                signal_id=f"meme-{alert_type.lower()}-{score.ticker}-{now.strftime('%Y%m%d%H%M')}",
+                                signal_id=signal_id_str,
                                 metadata={
                                     "alert_type": alert_type,
                                     "score": score.score,
@@ -261,6 +262,23 @@ async def check_and_send_alerts(top_n: int = _TOP_N_TO_CHECK) -> dict:
                                 },
                             )
                         )
+                    # Super Signal 원천 · Router 무관 (EXECUTION_ENABLED=false 시에도 로깅)
+                    try:
+                        from backend.discovery.super_signal.signal_hit import record_hit
+                        await record_hit(
+                            ticker=score.ticker,
+                            source="meme_stock",
+                            signal_id=f"meme-{alert_type.lower()}-{score.ticker}-{now.strftime('%Y%m%d%H%M')}",
+                            action="buy",
+                            strength=(
+                                min(100, 80 + int((intensity.intensity if intensity else 0.0) - _ERUPTING_INTENSITY))
+                                if alert_type == "ERUPTING"
+                                else min(70, 50 + int((score.score - _BLAZING_SCORE) * 20))
+                            ),
+                            metadata={"alert_type": alert_type, "score": score.score},
+                        )
+                    except Exception as exc:  # noqa: BLE001
+                        logger.debug("[meme_alert] signal_hit 실패 — %s", exc)
                 except Exception as exc:  # noqa: BLE001
                     logger.warning("[meme_alert] router 실패 — %s", exc)
 
