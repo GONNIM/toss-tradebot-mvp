@@ -75,6 +75,51 @@ export function fmtKstDateTime(iso: string | null | undefined): string {
   return `${date} ${time}`;
 }
 
+/** 한국식 원화 금액 · 조/억/만 단위 자동 (시총·거래대금 등) */
+export function fmtKrw(v: number | null | undefined): string {
+  if (v === null || v === undefined || Number.isNaN(v)) return "—";
+  const abs = Math.abs(v);
+  const sign = v < 0 ? "-" : "";
+  if (abs >= 1e12) return `${sign}${(abs / 1e12).toFixed(2)}조`;
+  if (abs >= 1e8) return `${sign}${(abs / 1e8).toFixed(0)}억`;
+  if (abs >= 1e4) return `${sign}${(abs / 1e4).toFixed(0)}만`;
+  return `${sign}${Math.round(abs).toLocaleString("ko-KR")}`;
+}
+
+/** KRX 개별 종목 가격 · 정수 · 쉼표 · "원" (예: 72,700원) */
+export function fmtKrwPrice(v: number | null | undefined): string {
+  if (v === null || v === undefined || Number.isNaN(v)) return "—";
+  return `${Math.round(v).toLocaleString("ko-KR")}원`;
+}
+
+/** US 개별 종목 가격 · 소수 2자리 · "$" (예: $50.20) */
+export function fmtUsdPrice(v: number | null | undefined): string {
+  if (v === null || v === undefined || Number.isNaN(v)) return "—";
+  return `$${v.toFixed(2)}`;
+}
+
+/** 티커 형식으로 자동 판정 (KRX 6자리 숫자 → 원 · 그 외 → USD) */
+export function fmtPriceForTicker(ticker: string, v: number | null | undefined): string {
+  const isKrx = /^\d{6}$/.test(ticker);
+  return isKrx ? fmtKrwPrice(v) : fmtUsdPrice(v);
+}
+
+/** 발행주식수 · 만/억 단위 (예: 2,697만주) */
+export function fmtShares(v: number | null | undefined): string {
+  if (v === null || v === undefined || Number.isNaN(v)) return "—";
+  const abs = Math.abs(v);
+  if (abs >= 1e8) return `${(abs / 1e8).toFixed(2)}억주`;
+  if (abs >= 1e4) return `${(abs / 1e4).toFixed(0)}만주`;
+  return `${abs.toLocaleString("ko-KR")}주`;
+}
+
+/** % 표시 · 부호 명시 · 소수 2자리 (예: +3.25%) */
+export function fmtPct(v: number | null | undefined, digits = 2): string {
+  if (v === null || v === undefined || Number.isNaN(v)) return "—";
+  const sign = v >= 0 ? "+" : "";
+  return `${sign}${(v * 100).toFixed(digits)}%`;
+}
+
 /** "2026-07-11 14:32:05 KST" (풀 포맷 · 툴팁·상세용) */
 export function fmtKstFull(iso: string | null | undefined): string {
   const d = parseServerIso(iso);
