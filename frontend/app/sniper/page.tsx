@@ -583,6 +583,7 @@ function UniversePanel({ token }: { token: string }) {
     mutationFn: () => api.sniper.refreshUniverse(token),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["sniper", "universe"] }),
   });
+  const size = q.data?.size ?? 0;
   return (
     <section className="rounded border border-border bg-card p-4">
       <div className="mb-3 flex items-center justify-between">
@@ -601,6 +602,27 @@ function UniversePanel({ token }: { token: string }) {
           {refresh.isPending ? "재싱크 중…" : "🔄 지금 재싱크 (토큰 필요)"}
         </button>
       </div>
+      {refresh.error && (
+        <div className="mb-3 rounded border border-red-300 bg-red-50 p-2 text-xs text-red-700 dark:border-red-900 dark:bg-red-950">
+          <p className="font-semibold">재싱크 실패</p>
+          <p className="mt-1 font-mono text-[10px]">{(refresh.error as Error).message}</p>
+          <p className="mt-1">
+            403이면 토큰 정확한지 확인 · 401이면 헤더 미부착 · 500이면 서버 SNIPER_API_TOKEN
+            미설정. Auto mode 응답이 실패해도 브라우저 콘솔에 상세 로그 확인 가능.
+          </p>
+        </div>
+      )}
+      {refresh.data && (
+        <p className="mb-2 text-xs text-emerald-600">
+          ✓ 재싱크 완료 · {new Date(refresh.data.refreshed_at).toLocaleTimeString("ko-KR")} ·{" "}
+          {refresh.data.passed} 종목 통과
+        </p>
+      )}
+      {size === 0 && !q.isLoading && (
+        <p className="mb-2 rounded bg-amber-50 p-2 text-xs text-amber-700 dark:bg-amber-950 dark:text-amber-200">
+          ⚠️ 유니버스 비어있음 · 위 "🔄 지금 재싱크" 버튼 눌러 초기 로드 필요 · 이후 매일 22:00 KST 자동 재싱크
+        </p>
+      )}
       {q.isLoading ? (
         <p className="text-sm">로드 중…</p>
       ) : q.data && q.data.items.length > 0 ? (

@@ -26,7 +26,11 @@ from typing import Optional
 from fastapi import APIRouter, Body, Depends, HTTPException, Query
 from sqlalchemy import select
 
-from backend.api.auth import is_sniper_live_enabled, require_sniper_token
+from backend.api.auth import (
+    is_sniper_live_enabled,
+    require_sniper_live_token,
+    require_sniper_token,
+)
 from backend.discovery.live_tape.entry import execute_entry
 from backend.discovery.live_tape.params import (
     SniperParams,
@@ -183,7 +187,7 @@ async def universe_refresh():
     return stats
 
 
-@router.post("/entry", dependencies=[Depends(require_sniper_token)])
+@router.post("/entry", dependencies=[Depends(require_sniper_live_token)])
 async def manual_entry(
     ticker: str = Body(..., embed=True),
     broker: str = Body("paper", embed=True),
