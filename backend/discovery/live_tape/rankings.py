@@ -174,6 +174,25 @@ async def top_rank_movers(window_sec: int = 300, min_delta: int = 20) -> list[di
     return movers
 
 
+async def tickers_with_snapshots(window_sec: int = 600) -> list[str]:
+    """최근 window 내 rankings 스냅샷이 있는 티커 목록 (스냅샷 개수 desc).
+
+    scan_and_enter · candidates API 가 스캔 대상 선정에 사용.
+    시총 정렬이 아닌 실제 rankings 매치 종목만 대상 → rank_velocity 유효.
+    """
+    since = datetime.now(tz=timezone.utc) - timedelta(seconds=window_sec)
+    from sqlalchemy import func as _func
+    async with get_session() as session:
+        stmt = (
+            select(LiveTapeRanking.ticker, _func.count().label("cnt"))
+            .where(LiveTapeRanking.captured_at >= since)
+            .group_by(LiveTapeRanking.ticker)
+            .order_by(_func.count().desc())
+        )
+        rows = (await session.execute(stmt)).all()
+    return [r[0] for r in rows]
+
+
 async def cleanup_old_snapshots(keep_hours: int = 6) -> int:
     """오래된 스냅샷 정리 · 오늘 세션만 유지 (하루 최대 3600 * 6 = 21,600건 상한 근사)."""
     cutoff = datetime.now(tz=timezone.utc) - timedelta(hours=keep_hours)

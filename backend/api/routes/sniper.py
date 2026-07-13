@@ -179,17 +179,31 @@ async def debug_rankings():
 
 @router.get("/candidates")
 async def scan_candidates(top_n: int = Query(10, ge=1, le=50)):
-    """유니버스 상위 종목 대상 즉시 스캔 · 인증 없음 (수동 확인용).
+    """실시간 스캔 · rankings 매치 티커 우선 · 인증 없음 (수동 확인용).
+
+    스캔 대상 선정 우선순위:
+    1. 최근 10분 rankings 스냅샷 있는 티커 (rank_velocity 유효)
+    2. 부족하면 시총 상위로 보충
 
     실주문 트리거 아님. 결과만 반환.
     """
-    universe = await list_universe(limit=top_n)
+    from backend.discovery.live_tape.rankings import tickers_with_snapshots
+
+    universe_map = {u["ticker"]: u for u in await list_universe(limit=500)}
+    ranked_tickers = await tickers_with_snapshots(window_sec=600)
+    # rankings 매치 우선 · 부족분은 시총 상위로 보충
+    scan_tickers: list[str] = [t for t in ranked_tickers if t in universe_map][:top_n]
+    if len(scan_tickers) < top_n:
+        extra = [t for t in universe_map if t not in scan_tickers][: top_n - len(scan_tickers)]
+        scan_tickers.extend(extra)
+
     results = []
-    for u in universe:
-        sig = await score_ticker(u["ticker"])
+    for ticker in scan_tickers:
+        sig = await score_ticker(ticker)
         if sig is None:
             continue
         ok, reason = is_candidate(sig)
+        u = universe_map.get(ticker, {})
         results.append(
             {
                 "ticker": sig.ticker,
@@ -202,6 +216,7 @@ async def scan_candidates(top_n: int = Query(10, ge=1, le=50)):
                 "return_pct": sig.return_pct,
                 "candidate": ok,
                 "reject_reason": reason,
+                "in_rankings": ticker in ranked_tickers,
             }
         )
     results.sort(key=lambda x: -x["tape_score"])

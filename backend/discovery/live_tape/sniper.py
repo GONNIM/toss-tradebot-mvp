@@ -24,7 +24,7 @@ from backend.execution.order_manager import OrderManager
 from .entry import execute_entry
 from .exit import execute_exit
 from .params import get_sniper_params
-from .rankings import cleanup_old_snapshots, poll_rankings
+from .rankings import cleanup_old_snapshots, poll_rankings, tickers_with_snapshots
 from .scoring import is_candidate, score_ticker
 from .trailing_stop import open_positions, poll_trailing
 from .universe import list_universe
@@ -54,19 +54,25 @@ async def scan_and_enter(top_n: Optional[int] = None) -> dict:
         return {"skipped": True, "reason": "sniper_disabled"}
 
     n = top_n or 30
-    universe = await list_universe(limit=n)
-    if not universe:
+    # rankings 매치 티커 우선 · 부족분은 유니버스 시총 상위로 보충
+    universe_map = {u["ticker"]: u for u in await list_universe(limit=500)}
+    if not universe_map:
         return {"skipped": True, "reason": "empty_universe"}
+    ranked = await tickers_with_snapshots(window_sec=600)
+    scan_tickers = [t for t in ranked if t in universe_map][:n]
+    if len(scan_tickers) < n:
+        extra = [t for t in universe_map if t not in scan_tickers][: n - len(scan_tickers)]
+        scan_tickers.extend(extra)
 
     order_manager = _resolve_order_manager()
-    stats = {"scanned": 0, "candidates": 0, "entered": 0, "rejects": {}}
+    stats = {"scanned": 0, "candidates": 0, "entered": 0, "rejects": {}, "ranked_pool": len(ranked)}
 
-    for u in universe:
+    for ticker in scan_tickers:
         stats["scanned"] += 1
         try:
-            sig = await score_ticker(u["ticker"])
+            sig = await score_ticker(ticker)
         except Exception as exc:  # noqa: BLE001
-            logger.warning("score_ticker 실패 · %s · %s", u["ticker"], exc)
+            logger.warning("score_ticker 실패 · %s · %s", ticker, exc)
             continue
         if sig is None:
             continue
