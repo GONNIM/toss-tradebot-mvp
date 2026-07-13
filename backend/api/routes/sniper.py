@@ -131,6 +131,52 @@ async def recent_signals(
     ]
 
 
+@router.get("/debug/rankings")
+async def debug_rankings():
+    """진단용 · rankings 스냅샷 상태.
+
+    - 최근 10분 스냅샷 수
+    - 유니버스 매치 티커별 스냅샷 개수
+    """
+    from datetime import datetime, timedelta, timezone
+    from sqlalchemy import func as _func, select as _select
+    from backend.services.models import LiveTapeRanking, LiveTapeUniverse
+
+    since = datetime.now(tz=timezone.utc) - timedelta(minutes=10)
+    async with get_session() as session:
+        total = int((await session.execute(
+            _select(_func.count()).select_from(LiveTapeRanking).where(LiveTapeRanking.captured_at >= since)
+        )).scalar() or 0)
+        distinct = int((await session.execute(
+            _select(_func.count(_func.distinct(LiveTapeRanking.ticker))).where(LiveTapeRanking.captured_at >= since)
+        )).scalar() or 0)
+        top_stmt = (
+            _select(LiveTapeRanking.ticker, _func.count().label("cnt"))
+            .where(LiveTapeRanking.captured_at >= since)
+            .group_by(LiveTapeRanking.ticker)
+            .order_by(_func.count().desc())
+            .limit(20)
+        )
+        top_rows = (await session.execute(top_stmt)).all()
+        latest = (await session.execute(
+            _select(LiveTapeRanking).order_by(LiveTapeRanking.captured_at.desc()).limit(5)
+        )).scalars().all()
+    return {
+        "window_minutes": 10,
+        "total_snapshots": total,
+        "distinct_tickers": distinct,
+        "top_matched_tickers": [{"ticker": t, "snapshots": c} for t, c in top_rows],
+        "latest_5_captures": [
+            {
+                "ticker": r.ticker,
+                "rank": r.rank,
+                "captured_at": r.captured_at.isoformat() if r.captured_at else None,
+            }
+            for r in latest
+        ],
+    }
+
+
 @router.get("/candidates")
 async def scan_candidates(top_n: int = Query(10, ge=1, le=50)):
     """유니버스 상위 종목 대상 즉시 스캔 · 인증 없음 (수동 확인용).

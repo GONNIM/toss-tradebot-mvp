@@ -34,54 +34,86 @@ class RankingSnapshot:
     captured_at: datetime
 
 
+_RANKING_TYPES = (
+    "MARKET_TRADING_AMOUNT",   # KR 거래대금 상위 (KOSPI 대형주 편중)
+    "TOP_GAINERS",             # KR 등락률 상위 (급등주 · KOSDAQ 진앙지 정합)
+    "MARKET_TRADING_VOLUME",   # KR 거래량 상위 (저가주·회전율 활발)
+)
+
+
 async def poll_rankings(toss_client: Optional[TossClient] = None) -> dict:
-    """단일 폴 · rankings 조회 · 유니버스 교차 · DB 저장.
+    """단일 폴 · 3개 rankings 타입 조회 · 유니버스 교차 · DB 저장.
+
+    급등주 정체성 정합:
+    - MARKET_TRADING_AMOUNT 만으로는 KOSDAQ 중견주 매치 낮음 (KOSPI 대형주 편중)
+    - TOP_GAINERS 추가: 급등 초기 KOSDAQ 종목 즉시 포착
+    - MARKET_TRADING_VOLUME 추가: 회전율 활발 종목 (저가주·squeeze 후보)
+
+    각 타입에서 rank 별도 저장 · 최적 rank(=최소값) 만 사용 (in-memory dedup).
 
     Returns:
-        {"total_ranked": N, "universe_matched": M, "saved": K, "captured_at": iso}
+        {"total_ranked": N, "universe_matched": M, "saved": K, "per_type": {...}}
     """
     client = toss_client or get_toss_client()
     now = datetime.now(tz=timezone.utc)
 
-    # 1) rankings 조회
-    env = client.rankings(count=100)
-    result = env.result if isinstance(env.result, dict) else {}
-    items = result.get("rankings") or []
-
-    # 2) 유니버스 티커 집합 로드
+    # 1) 유니버스 티커 집합
     async with get_session() as session:
-        rows = (await session.execute(select(LiveTapeUniverse.ticker))).all()
-        universe = {r[0] for r in rows}
+        urows = (await session.execute(select(LiveTapeUniverse.ticker))).all()
+        universe = {r[0] for r in urows}
 
-    # 3) 교차 필터 후 저장
-    saved = 0
-    async with get_session() as session:
+    # 2) 3개 타입 조회 · 티커별 최적 rank 산출
+    per_type: dict[str, int] = {}
+    best: dict[str, dict] = {}   # ticker → {rank, volume_amount, price, return_pct}
+    for rtype in _RANKING_TYPES:
+        try:
+            env = client.rankings(type=rtype, count=100)
+        except Exception as exc:  # noqa: BLE001
+            logger.warning("rankings(%s) 실패 · %s", rtype, exc)
+            per_type[rtype] = 0
+            continue
+        result = env.result if isinstance(env.result, dict) else {}
+        items = result.get("rankings") or []
+        matched = 0
         for item in items:
             ticker = item.get("symbol")
             if not ticker or ticker not in universe:
                 continue
+            matched += 1
             price = item.get("price") or {}
+            new_rank = int(item.get("rank")) if item.get("rank") else 999
+            prev = best.get(ticker)
+            if prev is None or new_rank < prev["rank"]:
+                best[ticker] = {
+                    "rank": new_rank,
+                    "volume_amount": float(item.get("tradingAmount", 0) or 0),
+                    "price": float(price.get("lastPrice", 0) or 0) or None,
+                    "return_pct": float(price.get("changeRate", 0) or 0) or None,
+                }
+        per_type[rtype] = matched
+
+    # 3) DB 저장 (티커당 1건 · 최적 rank)
+    saved = 0
+    async with get_session() as session:
+        for ticker, info in best.items():
             entry = LiveTapeRanking(
                 ticker=ticker,
-                rank=int(item.get("rank")) if item.get("rank") else None,
-                volume_amount=float(item.get("tradingAmount", 0) or 0),
-                price=float(price.get("lastPrice", 0) or 0) or None,
-                return_pct=float(price.get("changeRate", 0) or 0) or None,
+                rank=info["rank"],
+                volume_amount=info["volume_amount"],
+                price=info["price"],
+                return_pct=info["return_pct"],
                 captured_at=now,
             )
             session.add(entry)
             saved += 1
 
     stats = {
-        "total_ranked": len(items),
-        "universe_matched": saved,
+        "per_type": per_type,
+        "universe_matched": len(best),
         "saved": saved,
         "captured_at": now.isoformat(),
     }
-    logger.info(
-        "rankings poll · %d/100 유니버스 매치 · rankedAt=%s",
-        saved, result.get("rankedAt"),
-    )
+    logger.info("rankings poll · types=%s · saved=%d", per_type, saved)
     return stats
 
 
