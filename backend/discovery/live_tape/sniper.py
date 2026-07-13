@@ -24,6 +24,7 @@ from backend.execution.order_manager import OrderManager
 from .entry import execute_entry
 from .exit import execute_exit
 from .params import get_sniper_params
+from .rankings import cleanup_old_snapshots, poll_rankings
 from .scoring import is_candidate, score_ticker
 from .trailing_stop import open_positions, poll_trailing
 from .universe import list_universe
@@ -160,11 +161,38 @@ async def manage_positions() -> dict:
 
 
 # ─── APScheduler 등록 헬퍼 ────────────────────────────
+async def poll_rankings_job() -> dict:
+    """rankings 폴링 잡 (10초 주기).
+
+    sniper.enabled=False 여도 항상 실행 (rank_velocity 계산 원본 축적).
+    유니버스가 있어야 유효 · 없으면 no-op.
+    """
+    try:
+        return await poll_rankings()
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("poll_rankings_job 실패 · %s", exc)
+        return {"error": str(exc)}
+
+
+async def cleanup_snapshots_job() -> dict:
+    """rankings 스냅샷 청소 잡 (1시간 주기).
+
+    6시간 이전 스냅샷 자동 삭제 (DB 크기 관리).
+    """
+    try:
+        deleted = await cleanup_old_snapshots(keep_hours=6)
+        return {"deleted": deleted}
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("cleanup_snapshots_job 실패 · %s", exc)
+        return {"error": str(exc)}
+
+
 def register_sniper_jobs(scheduler) -> None:
     """main.py lifespan 에서 호출. 파라미터 store enabled=True 시 자동 실행."""
     params = get_sniper_params()
     scan_sec = 30
     manage_sec = max(3, params.poll_trailing_price_sec)
+    rankings_sec = max(5, params.poll_rankings_sec)
 
     scheduler.add_job(
         scan_and_enter,
@@ -182,7 +210,25 @@ def register_sniper_jobs(scheduler) -> None:
         max_instances=1,
         coalesce=True,
     )
+    # rankings 폴러 · sniper.enabled 무관 · 상시 축적 (rank_velocity 원본)
+    scheduler.add_job(
+        poll_rankings_job,
+        "interval",
+        seconds=rankings_sec,
+        id="sniper_rankings",
+        max_instances=1,
+        coalesce=True,
+    )
+    # 스냅샷 청소 · 1시간마다
+    scheduler.add_job(
+        cleanup_snapshots_job,
+        "interval",
+        hours=1,
+        id="sniper_cleanup",
+        max_instances=1,
+        coalesce=True,
+    )
     logger.info(
-        "[sniper] jobs 등록 · scan=%ds · manage=%ds · sniper.enabled=%s",
-        scan_sec, manage_sec, params.enabled,
+        "[sniper] jobs 등록 · scan=%ds · manage=%ds · rankings=%ds · cleanup=1h · sniper.enabled=%s",
+        scan_sec, manage_sec, rankings_sec, params.enabled,
     )
