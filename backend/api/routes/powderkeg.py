@@ -195,6 +195,33 @@ async def get_expiry() -> dict[str, Any]:
 # ═══════════════════════════════════════════════════════════════
 # 편집·실행 (X-API-Token 필수)
 # ═══════════════════════════════════════════════════════════════
+# ─── 수동 스키마 마이그레이션 · SQLite ALTER TABLE 누락 대응 ─
+@router.post("/admin/migrate-schema", dependencies=[Depends(require_sniper_token)])
+async def migrate_schema() -> dict[str, Any]:
+    """SQLite create_all 은 기존 테이블에 신규 컬럼 추가 안됨.
+    · 필요 시 여기서 ALTER TABLE 수동 실행.
+    · 이미 존재하는 컬럼은 무시.
+    """
+    from sqlalchemy import text
+    changes: list[str] = []
+    errors: list[str] = []
+    # 추가 대상 컬럼들 (schema-drift 시 여기 추가)
+    alter_stmts = [
+        ("powderkeg_krx_snapshot", "name", "VARCHAR(100)"),
+    ]
+    async with get_session() as session:
+        for table, col, col_type in alter_stmts:
+            try:
+                await session.execute(text(f"ALTER TABLE {table} ADD COLUMN {col} {col_type}"))
+                changes.append(f"{table}.{col}")
+            except Exception as exc:  # noqa: BLE001
+                msg = str(exc)
+                if "duplicate column name" in msg.lower() or "already" in msg.lower():
+                    continue    # 이미 존재
+                errors.append(f"{table}.{col}: {msg[:100]}")
+    return {"applied": changes, "errors": errors}
+
+
 # ─── Collectors 트리거 (인증 필수 · 외부 API 호출 · 부하 유의) ─
 @router.post("/collectors/ftc-refresh", dependencies=[Depends(require_sniper_token)])
 async def trigger_ftc_refresh(year: int = Body(2026, embed=True)) -> dict[str, Any]:
