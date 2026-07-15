@@ -100,6 +100,75 @@ def test_aggregate_missing_stock_knd_defaults_common():
     assert major == pytest.approx(0.40)
 
 
+def test_aggregate_skips_summary_rows():
+    """DART 응답의 "계" (합계) 행 skip · 중복 합산 방지 (효성 케이스 재현)."""
+    rows = [
+        _row("조현준", "본인", 41.02),
+        _row("조현상", "친인척", 14.06),
+        _row("(학)동양학원", "재단", 1.43),
+        _row("계", "", 57.76),   # DART 합계 · skip 대상
+    ]
+    major, related = _aggregate_shareholders(rows)
+    assert major == pytest.approx(0.4102)
+    assert related == pytest.approx(0.1549, abs=0.001)   # 14.06 + 1.43 = 15.49
+    assert major + related < 1.0    # 100% 이하 · "계" 중복 카운트 없음
+
+
+def test_aggregate_skips_summary_row_변형():
+    """"계" 외 · "합계" · "총계" · 공백 nm 도 skip."""
+    for summary_nm in ("계", " 계 ", "합계", "총계", ""):
+        rows = [
+            _row("회장", "본인", 30.0),
+            _row(summary_nm, "", 40.0),
+        ]
+        major, related = _aggregate_shareholders(rows)
+        assert major == pytest.approx(0.30)
+        assert related == pytest.approx(0.0), f"failed for nm={summary_nm!r}"
+
+
+def test_aggregate_최대주주_relate_treated_as_major():
+    """영풍 케이스 · relate="최대주주" 도 major 로 인정."""
+    rows = [
+        _row("장 세 준", "최대주주", 16.89),
+        _row("장 세 환", "친인척", 11.83),
+        _row("영풍개발㈜", "계열회사", 15.53),
+        _row("영풍정밀㈜", "계열회사", 4.39),
+        _row("계", "", 64.18),   # 합계 · skip
+    ]
+    major, related = _aggregate_shareholders(rows)
+    assert major == pytest.approx(0.1689)
+    assert related == pytest.approx(0.3175, abs=0.001)   # 11.83 + 15.53 + 4.39 = 31.75
+    assert major + related < 1.0    # 정확한 개별 합
+
+
+def test_aggregate_영풍_케이스_전체_시나리오():
+    """실 프로덕션 데이터 재현 · 영풍 shareholders."""
+    rows = [
+        _row("장 세 준", "최대주주", 16.89),
+        _row("최 윤 범", "계열회사 임원", 0.0),
+        _row("유 중 근", "계열회사 임원", 0.21),
+        _row("(재)경원문화재단", "공익법인", 0.76),
+        _row("영풍개발㈜", "계열회사", 15.53),
+        _row("영풍정밀㈜", "계열회사", 4.39),
+        _row("씨케이(유)", "계열회사", 6.45),
+        _row("에이치씨(유)", "계열회사", 1.38),
+        _row("장 형 진", "친인척", 0.0),
+        _row("장 세 환", "친인척", 11.83),
+        _row("장 혜 선", "친인척", 0.52),
+        _row("김 혜 경", "친인척", 0.05),
+        _row("최 창 걸", "계열회사 임원", 0.27),
+        _row("최 창 영", "계열회사 임원", 0.0),
+        _row("최 창 근", "계열회사 임원", 3.04),
+        _row("최 창 규", "계열회사 임원", 2.85),
+        _row("계", "", 64.18),
+    ]
+    major, related = _aggregate_shareholders(rows)
+    assert major == pytest.approx(0.1689)
+    total = major + related
+    # DART 합계 64.18% (미미한 반올림 허용)
+    assert total == pytest.approx(0.6418, abs=0.005)
+
+
 def test_aggregate_empty():
     assert _aggregate_shareholders([]) == (0.0, 0.0)
 

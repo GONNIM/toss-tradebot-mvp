@@ -53,6 +53,12 @@ def _reference_date(bsns_year: int, reprt_code: str) -> Optional[str]:
 
 _NORMAL_STOCK_KINDS = ("보통주", "보통주식", "의결권있는 주식", "의결권있는주식")
 
+# 최대주주(본인) 로 인정되는 relate 표기
+_MAJOR_RELATE_LABELS = ("본인", "본인/자기주식", "최대주주")
+
+# DART 응답에 포함된 합계·계 행 (특수관계인 총합 · 이미 개별 행 합산했으므로 중복 방지 위해 skip)
+_SUMMARY_NM_TOKENS = ("계",)
+
 
 def _is_common_stock(stock_knd: str) -> bool:
     """보통주 · 의결권 주식 여부. 지주회사 지분율 판단 표준."""
@@ -63,13 +69,26 @@ def _is_common_stock(stock_knd: str) -> bool:
     return any(s.startswith(k) for k in _NORMAL_STOCK_KINDS)
 
 
+def _is_summary_row(nm: str, relate: str) -> bool:
+    """DART "계" (합계) 행 판별. 중복 합산 방지 위해 skip."""
+    nm_clean = (nm or "").strip().replace(" ", "")
+    if not nm_clean:
+        return True
+    if not (relate or "").strip():
+        # relate 비어있고 · nm 이 "계"/"합계" · 명백한 요약 행
+        return nm_clean in _SUMMARY_NM_TOKENS or nm_clean in ("합계", "총계")
+    # relate 있는 정상 행이라도 · nm 이 "계" 이면 요약 (드문 케이스)
+    return nm_clean in _SUMMARY_NM_TOKENS
+
+
 def _aggregate_shareholders(rows: list[DartMajorShareholderRow]) -> tuple[float, float]:
-    """rows → (major_pct 본인, related_pct 특수관계인 합산).
+    """rows → (major_pct 최대주주 본인, related_pct 특수관계인 합산).
 
     지분율 산정 원칙 (실무 표준 · 오너 경영권 판단):
-      · 보통주 지분율 만 취급 (의결권 기준)
-      · 우선주 · 상환우선주 등은 무시 (중복 카운트 방지)
-      · 같은 (nm, relate) 조합 · 다수 행 있으면 최대값 (보통주 종류 여러가지 대응)
+      1. 보통주 지분율 만 취급 (의결권 기준 · 우선주 배제)
+      2. "계" (합계) 행 · 요약 행 skip (개별 shareholder 이미 합산 · 중복 방지)
+      3. 최대주주 relate 다양성 지원 · "본인" · "최대주주" 등
+      4. 같은 (nm, relate) 다수 행 · 최대값 채택 (보통주 종류 여러가지 대응)
 
     Returns 값 · 소수 (0.35 = 35%).
     """
@@ -77,6 +96,8 @@ def _aggregate_shareholders(rows: list[DartMajorShareholderRow]) -> tuple[float,
     related_by_key: dict[tuple[str, str], float] = {}
 
     for r in rows:
+        if _is_summary_row(r.nm, r.relate):
+            continue
         if not _is_common_stock(r.stock_knd):
             continue
         rt = r.trmend_posesn_stock_qota_rt or r.bsis_posesn_stock_qota_rt
@@ -84,8 +105,8 @@ def _aggregate_shareholders(rows: list[DartMajorShareholderRow]) -> tuple[float,
             continue
         pct = float(rt) / 100.0
         key = (r.nm.strip(), r.relate.strip())
-        target = major_by_key if r.relate.strip() in ("본인", "본인/자기주식") else related_by_key
-        # 같은 인물 · 여러 행 (드묾) · 최대값 채택
+        is_major = r.relate.strip() in _MAJOR_RELATE_LABELS
+        target = major_by_key if is_major else related_by_key
         target[key] = max(target.get(key, 0.0), pct)
 
     major = max(major_by_key.values(), default=0.0)
