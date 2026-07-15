@@ -215,6 +215,47 @@ async def get_corp_code(ticker: str) -> dict[str, Optional[str]]:
     return {"ticker": ticker, "corp_code": cc}
 
 
+@router.post("/admin/list/remove", dependencies=[Depends(require_sniper_token)])
+async def admin_remove_from_list(
+    ticker: str = Body(..., embed=True),
+    run_id: Optional[str] = Body(None, embed=True, description="None = 최신 run"),
+    reason: Optional[str] = Body(None, embed=True),
+) -> dict[str, Any]:
+    """수동 · 화약고 리스트에서 특정 종목 제거 (감사 로그 남김).
+
+    용도: cash_suspect · 지주회사 특성 · 사용자 판단으로 리스트에서 배제.
+    """
+    from sqlalchemy import delete as _delete
+    async with get_session() as session:
+        if run_id is None:
+            run_id = (await session.execute(
+                select(PowderKegList.run_id)
+                .order_by(PowderKegList.created_at.desc()).limit(1)
+            )).scalar_one_or_none()
+        if run_id is None:
+            raise HTTPException(status_code=404, detail="no runs exist")
+        # 감사 로그 · 삭제 전 스냅샷
+        stmt = select(PowderKegList).where(
+            PowderKegList.run_id == run_id, PowderKegList.ticker == ticker,
+        )
+        row = (await session.execute(stmt)).scalar_one_or_none()
+        if row is None:
+            raise HTTPException(status_code=404, detail=f"ticker {ticker} not in run {run_id}")
+        snapshot = {
+            "ticker": row.ticker, "name": row.name, "status": row.status,
+            "pbr": row.pbr, "net_cash_ratio": row.net_cash_ratio,
+            "owner_pct": row.owner_pct, "reason_removed": reason,
+        }
+        result = await session.execute(
+            _delete(PowderKegList).where(
+                PowderKegList.run_id == run_id, PowderKegList.ticker == ticker,
+            )
+        )
+    logger.info("[powderkeg.admin] removed · ticker=%s run=%s reason=%s snapshot=%s",
+                ticker, run_id, reason, snapshot)
+    return {"deleted": int(result.rowcount or 0), "run_id": run_id, "snapshot": snapshot}
+
+
 # ─── 수동 스키마 마이그레이션 · SQLite CREATE / ALTER ─
 @router.post("/admin/migrate-schema", dependencies=[Depends(require_sniper_token)])
 async def migrate_schema() -> dict[str, Any]:
