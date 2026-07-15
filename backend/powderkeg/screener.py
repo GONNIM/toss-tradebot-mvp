@@ -148,12 +148,17 @@ async def screen_ticker(
         result.reject_reasons.append("no_market_data")
         return result
 
-    # ── 조건 1 · PBR ────────────────────────
-    result.pbr = market.pbr
-    c1 = market.pbr is not None and market.pbr < t.pbr_max
+    # ── 조건 1 · PBR (KRX 값 우선 · None 이면 자체 계산 fallback) ─
+    #    FDR StockListing 은 PBR 미제공 (KOSPI/KOSDAQ 전체) · book value 로 계산.
+    pbr_effective = market.pbr
+    if pbr_effective is None and fin_latest.total_equity and market.market_cap:
+        if fin_latest.total_equity > 0:
+            pbr_effective = market.market_cap / fin_latest.total_equity
+    result.pbr = pbr_effective
+    c1 = pbr_effective is not None and pbr_effective < t.pbr_max
     result.conditions["1_pbr"] = c1
     if not c1:
-        result.reject_reasons.append(f"pbr>={t.pbr_max}({market.pbr})")
+        result.reject_reasons.append(f"pbr>={t.pbr_max}({pbr_effective})")
 
     # ── 조건 2 · 순현금 / 시총 ────────────
     cash = (fin_latest.cash_and_equivalents or 0) + (fin_latest.short_term_investments or 0)

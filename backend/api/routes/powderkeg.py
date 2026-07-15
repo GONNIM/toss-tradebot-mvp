@@ -293,47 +293,68 @@ async def get_kosdaq_low_pbr_candidates(
     limit: int = Query(100, ge=1, le=500),
     market: str = Query("KOSDAQ", description="KOSPI/KOSDAQ · KOSDAQ 은 FDR PBR 결측 다수"),
 ) -> dict[str, Any]:
-    """KRX 스냅샷 필터 · 저PBR 후보 종목 리스트.
+    """KRX 스냅샷 · FinancialSnapshot 조인 · 저PBR 후보 종목 리스트.
 
-    스크리너 batch 대상 선정용. 데이터 수집 전 pre-filter.
-    market=KOSDAQ · FDR StockListing 에서 PBR 결측 종목 다수 · KOSPI 로 확대 권장.
+    PBR = market_cap / total_equity 자체 계산 (FDR PBR 컬럼 결측 대응).
+    FinancialSnapshot 있는 종목만 pre-filter · 유니버스 확대 실용.
     """
-    from backend.services.models import KrxMarketSnapshot
+    from backend.services.models import FinancialSnapshot, KrxMarketSnapshot
     async with get_session() as session:
-        # 최신 snapshot_date
         latest_date = (await session.execute(
             select(KrxMarketSnapshot.snapshot_date)
             .order_by(KrxMarketSnapshot.snapshot_date.desc()).limit(1)
         )).scalar_one_or_none()
         if not latest_date:
             return {"count": 0, "items": []}
+
+        # KRX 스냅샷 · 시총·market 필터
         stmt = (
             select(KrxMarketSnapshot)
             .where(
                 KrxMarketSnapshot.snapshot_date == latest_date,
                 KrxMarketSnapshot.market == market,
-                KrxMarketSnapshot.pbr.is_not(None),
-                KrxMarketSnapshot.pbr < max_pbr,
-                KrxMarketSnapshot.pbr > 0,
                 KrxMarketSnapshot.market_cap.is_not(None),
                 KrxMarketSnapshot.market_cap >= min_market_cap,
                 KrxMarketSnapshot.market_cap <= max_market_cap,
             )
             .order_by(KrxMarketSnapshot.market_cap.desc())
-            .limit(limit)
+            .limit(500)   # 후처리 filter 위해 넉넉히
         )
-        rows = (await session.execute(stmt)).scalars().all()
+        krx_rows = (await session.execute(stmt)).scalars().all()
+
+        # 각 종목 · FinancialSnapshot.total_equity 조인 · PBR 계산
+        candidates: list[dict] = []
+        for r in krx_rows:
+            fin_stmt = (
+                select(FinancialSnapshot.total_equity)
+                .where(
+                    FinancialSnapshot.ticker == r.ticker,
+                    FinancialSnapshot.report_code == "11011",
+                )
+                .order_by(FinancialSnapshot.reference_date.desc())
+                .limit(1)
+            )
+            equity = (await session.execute(fin_stmt)).scalar_one_or_none()
+            pbr = None
+            if r.pbr is not None:
+                pbr = r.pbr
+            elif equity and equity > 0:
+                pbr = r.market_cap / equity
+            if pbr is None or pbr <= 0 or pbr >= max_pbr:
+                continue
+            candidates.append({
+                "ticker": r.ticker, "name": r.name, "pbr": round(pbr, 3),
+                "market_cap": r.market_cap, "close_price": r.close_price,
+                "pbr_source": "krx" if r.pbr is not None else "computed",
+            })
+            if len(candidates) >= limit:
+                break
+
     return {
-        "count": len(rows),
+        "count": len(candidates),
         "snapshot_date": latest_date,
         "filter": {"market": market, "max_pbr": max_pbr, "min_market_cap": min_market_cap, "max_market_cap": max_market_cap},
-        "items": [
-            {
-                "ticker": r.ticker, "name": r.name, "pbr": r.pbr,
-                "market_cap": r.market_cap, "close_price": r.close_price,
-            }
-            for r in rows
-        ],
+        "items": candidates,
     }
 
 
