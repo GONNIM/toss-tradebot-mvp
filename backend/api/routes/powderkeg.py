@@ -215,17 +215,29 @@ async def get_corp_code(ticker: str) -> dict[str, Optional[str]]:
     return {"ticker": ticker, "corp_code": cc}
 
 
-# ─── 수동 스키마 마이그레이션 · SQLite ALTER TABLE 누락 대응 ─
+# ─── 수동 스키마 마이그레이션 · SQLite CREATE / ALTER ─
 @router.post("/admin/migrate-schema", dependencies=[Depends(require_sniper_token)])
 async def migrate_schema() -> dict[str, Any]:
-    """SQLite create_all 은 기존 테이블에 신규 컬럼 추가 안됨.
-    · 필요 시 여기서 ALTER TABLE 수동 실행.
-    · 이미 존재하는 컬럼은 무시.
+    """스키마 마이그레이션:
+    1. Base.metadata.create_all · 미존재 테이블 생성 (신규 모델 반영)
+    2. ALTER TABLE ADD COLUMN · 기존 테이블 컬럼 추가 (SQLite 제약 우회)
     """
     from sqlalchemy import text
+    from backend.services.db import engine
+    from backend.services.models import Base
+
     changes: list[str] = []
     errors: list[str] = []
-    # 추가 대상 컬럼들 (schema-drift 시 여기 추가)
+
+    # 1. create_all (idempotent · 이미 있는 테이블은 skip)
+    try:
+        async with engine.begin() as conn:
+            await conn.run_sync(Base.metadata.create_all)
+        changes.append("create_all")
+    except Exception as exc:  # noqa: BLE001
+        errors.append(f"create_all: {str(exc)[:200]}")
+
+    # 2. ALTER TABLE (schema-drift 시 여기 추가)
     alter_stmts = [
         ("powderkeg_krx_snapshot", "name", "VARCHAR(100)"),
     ]
@@ -237,7 +249,7 @@ async def migrate_schema() -> dict[str, Any]:
             except Exception as exc:  # noqa: BLE001
                 msg = str(exc)
                 if "duplicate column name" in msg.lower() or "already" in msg.lower():
-                    continue    # 이미 존재
+                    continue
                 errors.append(f"{table}.{col}: {msg[:100]}")
     return {"applied": changes, "errors": errors}
 
