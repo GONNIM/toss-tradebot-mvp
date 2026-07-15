@@ -285,6 +285,56 @@ async def trigger_ftc_refresh(year: int = Body(2026, embed=True)) -> dict[str, A
     return await refresh_from_seed(year)
 
 
+@router.get("/candidates/kosdaq-low-pbr")
+async def get_kosdaq_low_pbr_candidates(
+    max_pbr: float = Query(0.7, description="PBR 상한"),
+    min_market_cap: float = Query(30_000_000_000, description="시총 하한 (원)"),
+    max_market_cap: float = Query(1_000_000_000_000_000, description="시총 상한"),
+    limit: int = Query(100, ge=1, le=500),
+) -> dict[str, Any]:
+    """KRX 스냅샷 필터 · KOSDAQ 저PBR 후보 종목 리스트.
+
+    스크리너 batch 대상 선정용. 데이터 수집 전 pre-filter.
+    """
+    from backend.services.models import KrxMarketSnapshot
+    async with get_session() as session:
+        # 최신 snapshot_date
+        latest_date = (await session.execute(
+            select(KrxMarketSnapshot.snapshot_date)
+            .order_by(KrxMarketSnapshot.snapshot_date.desc()).limit(1)
+        )).scalar_one_or_none()
+        if not latest_date:
+            return {"count": 0, "items": []}
+        stmt = (
+            select(KrxMarketSnapshot)
+            .where(
+                KrxMarketSnapshot.snapshot_date == latest_date,
+                KrxMarketSnapshot.market == "KOSDAQ",
+                KrxMarketSnapshot.pbr.is_not(None),
+                KrxMarketSnapshot.pbr < max_pbr,
+                KrxMarketSnapshot.pbr > 0,
+                KrxMarketSnapshot.market_cap.is_not(None),
+                KrxMarketSnapshot.market_cap >= min_market_cap,
+                KrxMarketSnapshot.market_cap <= max_market_cap,
+            )
+            .order_by(KrxMarketSnapshot.market_cap.desc())
+            .limit(limit)
+        )
+        rows = (await session.execute(stmt)).scalars().all()
+    return {
+        "count": len(rows),
+        "snapshot_date": latest_date,
+        "filter": {"max_pbr": max_pbr, "min_market_cap": min_market_cap, "max_market_cap": max_market_cap},
+        "items": [
+            {
+                "ticker": r.ticker, "name": r.name, "pbr": r.pbr,
+                "market_cap": r.market_cap, "close_price": r.close_price,
+            }
+            for r in rows
+        ],
+    }
+
+
 @router.get("/big-biz")
 async def get_big_biz(year: int = Query(2026)) -> dict[str, Any]:
     """대기업집단 목록 조회 (디버그·UI 검증용)."""
