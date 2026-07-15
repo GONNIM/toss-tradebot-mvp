@@ -46,6 +46,7 @@ class ScreenResult:
     ticker: str
     passed_all: bool
     status: str                            # passed / rejected / cash_suspect
+    name: Optional[str] = None             # KRX/유니버스 이름
     conditions: dict[str, bool] = field(default_factory=dict)
     reject_reasons: list[str] = field(default_factory=list)
     # 서브스코어
@@ -91,6 +92,28 @@ async def _latest_market(ticker: str) -> Optional[KrxMarketSnapshot]:
         return (await session.execute(stmt)).scalar_one_or_none()
 
 
+async def _resolve_name(ticker: str) -> Optional[str]:
+    """종목명 해결 순서: KrxMarketSnapshot (최신) → LiveTapeUniverse (KOSDAQ) → None."""
+    from backend.services.models import LiveTapeUniverse
+    async with get_session() as session:
+        # 1. KRX 스냅샷 (전 KOSPI+KOSDAQ 2700+ 종목)
+        stmt = (
+            select(KrxMarketSnapshot.name)
+            .where(KrxMarketSnapshot.ticker == ticker, KrxMarketSnapshot.name.is_not(None))
+            .order_by(KrxMarketSnapshot.snapshot_date.desc())
+            .limit(1)
+        )
+        n = (await session.execute(stmt)).scalar_one_or_none()
+        if n:
+            return n
+        # 2. Sniper LiveTape KOSDAQ 유니버스 fallback
+        stmt = select(LiveTapeUniverse.name).where(LiveTapeUniverse.ticker == ticker).limit(1)
+        n = (await session.execute(stmt)).scalar_one_or_none()
+        if n:
+            return n
+    return None
+
+
 async def _latest_shareholder(ticker: str) -> Optional[MajorShareholder]:
     async with get_session() as session:
         stmt = (
@@ -115,6 +138,7 @@ async def screen_ticker(
     fin_all = await _all_financials(ticker)
     market = await _latest_market(ticker)
     holder = await _latest_shareholder(ticker)
+    result.name = await _resolve_name(ticker)
 
     # 데이터 부재 방어
     if fin_latest is None:
@@ -279,6 +303,7 @@ async def run_screener(
 
             session.add(PowderKegList(
                 run_id=run_id, ticker=ticker,
+                name=r.name,
                 status=r.status,
                 net_cash_ratio=r.net_cash_ratio,
                 piotroski_f_score=r.piotroski_f_score,

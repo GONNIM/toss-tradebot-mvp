@@ -65,6 +65,7 @@ async def collect_market_snapshot(
                 continue
             rows.append({
                 "ticker": code,
+                "name": str(r.get("Name") or "").strip() or None,
                 "market": market,
                 "close_price": _f(r.get("Close")),
                 "market_cap": _f(r.get("Marcap")),
@@ -113,6 +114,7 @@ async def collect_market_snapshot(
                     ticker=ticker, snapshot_date=snapshot_date,
                 )
                 session.add(existing)
+            existing.name = row["name"]
             existing.market = row["market"]
             existing.close_price = row["close_price"]
             existing.market_cap = row["market_cap"]

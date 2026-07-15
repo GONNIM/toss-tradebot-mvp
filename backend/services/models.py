@@ -902,6 +902,7 @@ class KrxMarketSnapshot(Base):
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
     ticker: Mapped[str] = mapped_column(String(10), index=True)
     snapshot_date: Mapped[str] = mapped_column(String(10), index=True)   # YYYY-MM-DD
+    name: Mapped[Optional[str]] = mapped_column(String(100))             # 종목명 (FDR StockListing)
     market: Mapped[Optional[str]] = mapped_column(String(10))            # KOSPI / KOSDAQ
     close_price: Mapped[Optional[float]]
     market_cap: Mapped[Optional[float]]

@@ -59,11 +59,11 @@ def _patch_fdr(monkeypatch, kospi_rows, kosdaq_rows, adv60_series=None):
 @pytest.mark.asyncio
 async def test_collect_upserts_kospi_and_kosdaq(monkeypatch):
     kospi_rows = [
-        {"Code": "005930", "Close": 72700, "Marcap": 430_000_000_000_000, "PBR": 0.45},
-        {"Code": "000660", "Close": 195000, "Marcap": 141_000_000_000_000, "PBR": 1.20},
+        {"Code": "005930", "Name": "삼성전자", "Close": 72700, "Marcap": 430_000_000_000_000, "PBR": 0.45},
+        {"Code": "000660", "Name": "SK하이닉스", "Close": 195000, "Marcap": 141_000_000_000_000, "PBR": 1.20},
     ]
     kosdaq_rows = [
-        {"Code": "042700", "Close": 55000, "Marcap": 5_000_000_000_000, "PBR": 3.5},
+        {"Code": "042700", "Name": "한미반도체", "Close": 55000, "Marcap": 5_000_000_000_000, "PBR": 3.5},
     ]
     _patch_fdr(monkeypatch, kospi_rows, kosdaq_rows)
 
@@ -77,6 +77,7 @@ async def test_collect_upserts_kospi_and_kosdaq(monkeypatch):
     assert tickers == {"005930", "000660", "042700"}
     samsung = next(r for r in rows if r.ticker == "005930")
     assert samsung.market == "KOSPI"
+    assert samsung.name == "삼성전자"
     assert samsung.close_price == 72700
     assert samsung.pbr == 0.45
 

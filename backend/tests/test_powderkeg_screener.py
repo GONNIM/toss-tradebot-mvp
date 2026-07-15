@@ -98,6 +98,8 @@ async def test_screen_ticker_passes_all_10_conditions():
     r = await screen_ticker(TRADE_TICKER)
     assert r.status == "passed", f"reject_reasons={r.reject_reasons} conds={r.conditions}"
     assert r.passed_all is True
+    # name 은 LiveTapeUniverse 에 seed 되어 있지 않지만 · fallback None 허용 (KRX 스냅샷도 name 없음)
+    # 실 프로덕션 · KRX 스냅샷 name 은 collector 갱신으로 채워짐
     # 서브스코어 채워짐
     assert r.pbr == 0.3
     assert r.net_cash_ratio == pytest.approx(0.46)
