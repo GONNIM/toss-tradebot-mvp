@@ -871,6 +871,16 @@ class FinancialSnapshot(Base):
     operating_income: Mapped[Optional[float]]                  # 영업이익
     net_income: Mapped[Optional[float]]                        # 당기순이익
     interest_income: Mapped[Optional[float]]                   # 이자수익
+    revenue: Mapped[Optional[float]]                           # 매출액 (Piotroski §8-9)
+    gross_profit: Mapped[Optional[float]]                      # 매출총이익
+    # 재무상태표 추가 (Piotroski + 부채비율)
+    total_assets: Mapped[Optional[float]]                      # 자산총계
+    current_assets: Mapped[Optional[float]]                    # 유동자산
+    current_liabilities: Mapped[Optional[float]]               # 유동부채
+    # 현금흐름표
+    cash_flow_from_operations: Mapped[Optional[float]]         # 영업활동현금흐름 (Piotroski §2,4)
+    # 발행주식수 (Piotroski §7 · 유상증자 여부)
+    shares_outstanding: Mapped[Optional[float]]
     # 감사의견 · "적정" / "한정" / "부적정" / "의견거절"
     audit_opinion: Mapped[Optional[str]] = mapped_column(String(20))
     raw_json: Mapped[Optional[str]] = mapped_column(Text)      # 원문 응답 보존 (감사·튜닝)

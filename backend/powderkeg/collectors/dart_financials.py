@@ -44,11 +44,18 @@ _MAPPING_ID: dict[str, str] = {
     "ifrs-full_CurrentInvestments": "short_term_investments",       # 유동금융자산 근사
     "ifrs-full_Equity": "total_equity",
     "ifrs-full_RetainedEarnings": "retained_earnings",
+    "ifrs-full_Assets": "total_assets",
+    "ifrs-full_CurrentAssets": "current_assets",
+    "ifrs-full_CurrentLiabilities": "current_liabilities",
     # 손익계산서
+    "ifrs-full_Revenue": "revenue",
+    "ifrs-full_GrossProfit": "gross_profit",
     "ifrs-full_ProfitLossFromOperatingActivities": "operating_income",
     "dart_OperatingIncomeLoss": "operating_income",
     "ifrs-full_ProfitLoss": "net_income",
     "ifrs-full_FinanceIncome": "interest_income",   # 금융수익 근사
+    # 현금흐름표
+    "ifrs-full_CashFlowsFromUsedInOperatingActivities": "cash_flow_from_operations",
 }
 
 _MAPPING_NM_KEYWORDS: dict[str, tuple[str, ...]] = {
@@ -57,9 +64,15 @@ _MAPPING_NM_KEYWORDS: dict[str, tuple[str, ...]] = {
     "short_term_investments": ("단기금융상품", "당기손익-공정가치 측정 금융자산"),
     "total_equity": ("자본총계",),
     "retained_earnings": ("이익잉여금", "결손금"),
+    "total_assets": ("자산총계",),
+    "current_assets": ("유동자산",),
+    "current_liabilities": ("유동부채",),
+    "revenue": ("매출액", "수익(매출액)", "영업수익"),
+    "gross_profit": ("매출총이익",),
     "operating_income": ("영업이익",),          # 영업이익(손실) 포함
     "net_income": ("당기순이익",),               # 당기순이익(손실) 포함
     "interest_income": ("이자수익",),
+    "cash_flow_from_operations": ("영업활동현금흐름", "영업활동으로 인한 현금흐름"),
     # 총차입금 별도 로직 (여러 계정 합산)
 }
 
@@ -80,9 +93,15 @@ class ParsedFinancials:
     total_debt: Optional[float] = None
     total_equity: Optional[float] = None
     retained_earnings: Optional[float] = None
+    total_assets: Optional[float] = None
+    current_assets: Optional[float] = None
+    current_liabilities: Optional[float] = None
+    revenue: Optional[float] = None
+    gross_profit: Optional[float] = None
     operating_income: Optional[float] = None
     net_income: Optional[float] = None
     interest_income: Optional[float] = None
+    cash_flow_from_operations: Optional[float] = None
     matched_items: dict[str, str] = field(default_factory=dict)   # field → account_nm 매칭 로그
 
 
@@ -110,12 +129,22 @@ def parse_financial_items(items: list[DartFinancialItem]) -> ParsedFinancials:
                     break
 
         if field_name is not None:
-            # BS 항목은 BS 만 · IS 항목은 IS 만 (섞임 방지)
-            if field_name in ("cash_and_equivalents", "short_term_investments",
-                              "total_equity", "retained_earnings") and item.sj_div != "BS":
+            # BS 항목은 BS 만 · IS 항목은 IS 만 · CF 는 CF 만 (섞임 방지)
+            bs_fields = {
+                "cash_and_equivalents", "short_term_investments",
+                "total_equity", "retained_earnings",
+                "total_assets", "current_assets", "current_liabilities",
+            }
+            is_fields = {
+                "operating_income", "net_income", "interest_income",
+                "revenue", "gross_profit",
+            }
+            cf_fields = {"cash_flow_from_operations"}
+            if field_name in bs_fields and item.sj_div != "BS":
                 continue
-            if field_name in ("operating_income", "net_income", "interest_income") \
-               and item.sj_div not in ("IS", "CIS"):
+            if field_name in is_fields and item.sj_div not in ("IS", "CIS"):
+                continue
+            if field_name in cf_fields and item.sj_div != "CF":
                 continue
             # 첫 매칭만 채택 (총계 vs 세부 혼동 방지)
             if getattr(result, field_name) is None:
@@ -236,9 +265,15 @@ async def collect_financial_snapshot(
         row.total_debt = parsed.total_debt
         row.total_equity = parsed.total_equity
         row.retained_earnings = parsed.retained_earnings
+        row.total_assets = parsed.total_assets
+        row.current_assets = parsed.current_assets
+        row.current_liabilities = parsed.current_liabilities
+        row.revenue = parsed.revenue
+        row.gross_profit = parsed.gross_profit
         row.operating_income = parsed.operating_income
         row.net_income = parsed.net_income
         row.interest_income = parsed.interest_income
+        row.cash_flow_from_operations = parsed.cash_flow_from_operations
         row.audit_opinion = audit_opinion
         row.raw_json = raw_json
         await session.flush()
