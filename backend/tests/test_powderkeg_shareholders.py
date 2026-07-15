@@ -141,6 +141,32 @@ def test_aggregate_최대주주_relate_treated_as_major():
     assert major + related < 1.0    # 정확한 개별 합
 
 
+def test_aggregate_trmend_zero_uses_zero_not_bsis():
+    """trmend=0 (지분 매도) · bsis 로 fallback 되면 안됨 (Python `or` bug fix).
+
+    실 케이스 (효성 조석래): trmend=0.0%, bsis=10.14% → 최종 pct=0% (현재 지분 없음).
+    """
+    row = DartMajorShareholderRow(
+        nm="조석래", relate="친인척", stock_knd="보통주",
+        bsis_posesn_stock_co=None, bsis_posesn_stock_qota_rt=10.14,
+        trmend_posesn_stock_co=None, trmend_posesn_stock_qota_rt=0.0,
+    )
+    major, related = _aggregate_shareholders([row])
+    assert major == 0.0
+    assert related == 0.0     # trmend=0 · 매도됨 · bsis 값(10.14) 잘못 사용 방지
+
+
+def test_aggregate_trmend_none_falls_back_to_bsis():
+    """trmend 결측 (None) · bsis 사용 · 정상 fallback."""
+    row = DartMajorShareholderRow(
+        nm="회장", relate="본인", stock_knd="보통주",
+        bsis_posesn_stock_co=None, bsis_posesn_stock_qota_rt=25.0,
+        trmend_posesn_stock_co=None, trmend_posesn_stock_qota_rt=None,
+    )
+    major, related = _aggregate_shareholders([row])
+    assert major == pytest.approx(0.25)
+
+
 def test_aggregate_최대주주_본인_공백_포함():
     """삼성전자 · 알테오젠 케이스 · relate="최대주주 본인" (공백 있음)."""
     rows = [

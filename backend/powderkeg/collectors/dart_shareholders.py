@@ -116,7 +116,11 @@ def _aggregate_shareholders(rows: list[DartMajorShareholderRow]) -> tuple[float,
             continue
         if not _is_common_stock(r.stock_knd):
             continue
-        rt = r.trmend_posesn_stock_qota_rt or r.bsis_posesn_stock_qota_rt
+        # 기말 우선 · 결측 (None) 시에만 기초 fallback.
+        # 주의: 0.0 은 유효 값 (지분 매도로 실 0%) · Python `or` 는 falsy 라 오사용 방지.
+        rt = r.trmend_posesn_stock_qota_rt
+        if rt is None:
+            rt = r.bsis_posesn_stock_qota_rt
         if rt is None:
             continue
         pct = float(rt) / 100.0
