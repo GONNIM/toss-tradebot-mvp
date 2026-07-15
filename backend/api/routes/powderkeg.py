@@ -229,15 +229,39 @@ async def migrate_schema() -> dict[str, Any]:
     changes: list[str] = []
     errors: list[str] = []
 
-    # 1. create_all (idempotent · 이미 있는 테이블은 skip)
+    # 1. WAL 모드 활성 · 동시 read/write 완화 · create_all 락 회피 도움
     try:
-        async with engine.begin() as conn:
-            await conn.run_sync(Base.metadata.create_all)
-        changes.append("create_all")
+        async with get_session() as session:
+            r = await session.execute(text("PRAGMA journal_mode=WAL"))
+            changes.append(f"journal_mode={r.scalar()}")
     except Exception as exc:  # noqa: BLE001
-        errors.append(f"create_all: {str(exc)[:200]}")
+        errors.append(f"wal: {str(exc)[:150]}")
 
-    # 2. ALTER TABLE (schema-drift 시 여기 추가)
+    # 2. 직접 CREATE TABLE IF NOT EXISTS · SQLAlchemy PRAGMA lookup 우회
+    #    신규 모델 추가 시 여기 append (컬럼 정의는 models.py 와 일치 유지)
+    direct_creates = [
+        ("powderkeg_dart_corp_code", """
+            CREATE TABLE IF NOT EXISTS powderkeg_dart_corp_code (
+                corp_code VARCHAR(8) NOT NULL PRIMARY KEY,
+                corp_name VARCHAR(200) NOT NULL,
+                stock_code VARCHAR(10),
+                modify_date VARCHAR(10),
+                refreshed_at DATETIME DEFAULT CURRENT_TIMESTAMP
+            )
+        """),
+        ("ix_powderkeg_dart_corp_code_stock",
+         "CREATE INDEX IF NOT EXISTS ix_powderkeg_dart_corp_code_stock "
+         "ON powderkeg_dart_corp_code (stock_code)"),
+    ]
+    async with get_session() as session:
+        for name, ddl in direct_creates:
+            try:
+                await session.execute(text(ddl))
+                changes.append(f"create:{name}")
+            except Exception as exc:  # noqa: BLE001
+                errors.append(f"{name}: {str(exc)[:150]}")
+
+    # 3. ALTER TABLE ADD COLUMN (기존 테이블 · schema drift)
     alter_stmts = [
         ("powderkeg_krx_snapshot", "name", "VARCHAR(100)"),
     ]
@@ -245,7 +269,7 @@ async def migrate_schema() -> dict[str, Any]:
         for table, col, col_type in alter_stmts:
             try:
                 await session.execute(text(f"ALTER TABLE {table} ADD COLUMN {col} {col_type}"))
-                changes.append(f"{table}.{col}")
+                changes.append(f"alter:{table}.{col}")
             except Exception as exc:  # noqa: BLE001
                 msg = str(exc)
                 if "duplicate column name" in msg.lower() or "already" in msg.lower():
