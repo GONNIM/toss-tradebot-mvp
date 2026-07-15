@@ -141,6 +141,43 @@ def test_aggregate_최대주주_relate_treated_as_major():
     assert major + related < 1.0    # 정확한 개별 합
 
 
+def test_aggregate_최대주주_본인_공백_포함():
+    """삼성전자 · 알테오젠 케이스 · relate="최대주주 본인" (공백 있음)."""
+    rows = [
+        _row("삼성생명보험㈜", "최대주주 본인", 8.51),
+        _row("홍라희", "최대주주의 특수관계인", 1.64),
+    ]
+    major, related = _aggregate_shareholders(rows)
+    assert major == pytest.approx(0.0851)
+    assert related == pytest.approx(0.0164)
+
+
+def test_aggregate_의결권_있는_주식_공백():
+    """SK하이닉스 케이스 · stock_knd="의결권 있는 주식" (공백 있음)."""
+    rows = [
+        _row("SK스퀘어㈜", "최대주주", 20.07, stock_knd="의결권 있는 주식"),
+    ]
+    major, related = _aggregate_shareholders(rows)
+    assert major == pytest.approx(0.2007)
+
+
+def test_aggregate_삼성전자_실_시나리오():
+    """실 프로덕션 · 삼성전자 shareholders 재현."""
+    rows = [
+        _row("삼성생명보험㈜", "최대주주 본인", 8.51),
+        _row("홍라희", "최대주주의 특수관계인", 1.64),
+        _row("홍라희", "최대주주의 특수관계인", 0.03, stock_knd="우선주"),   # 배제
+        _row("이재용", "최대주주의 특수관계인", 1.63),
+        _row("이재용", "최대주주의 특수관계인", 0.02, stock_knd="우선주"),   # 배제
+        _row("이부진", "계열회사 임원", 0.80),
+        _row("이서현", "계열회사 임원", 0.79),
+    ]
+    major, related = _aggregate_shareholders(rows)
+    assert major == pytest.approx(0.0851)
+    # 관계인 합: 1.64 + 1.63 + 0.80 + 0.79 = 4.86%
+    assert related == pytest.approx(0.0486, abs=0.001)
+
+
 def test_aggregate_영풍_케이스_전체_시나리오():
     """실 프로덕션 데이터 재현 · 영풍 shareholders."""
     rows = [

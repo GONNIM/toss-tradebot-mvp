@@ -51,22 +51,38 @@ def _reference_date(bsns_year: int, reprt_code: str) -> Optional[str]:
     return f"{bsns_year:04d}-{m:02d}-{d:02d}"
 
 
-_NORMAL_STOCK_KINDS = ("보통주", "보통주식", "의결권있는 주식", "의결권있는주식")
+_NORMAL_STOCK_KINDS = ("보통주", "보통주식", "의결권있는주식")
 
-# 최대주주(본인) 로 인정되는 relate 표기
-_MAJOR_RELATE_LABELS = ("본인", "본인/자기주식", "최대주주")
+# 최대주주(본인) 로 인정되는 relate 표기 · 공백/구두점 제거 후 매칭
+# DART 실 예시: "본인" · "본인/자기주식" · "최대주주" · "최대주주 본인"
+_MAJOR_RELATE_LABELS_NORMALIZED = {
+    "본인",
+    "본인/자기주식",
+    "최대주주",
+    "최대주주본인",   # "최대주주 본인" 공백 제거
+}
 
 # DART 응답에 포함된 합계·계 행 (특수관계인 총합 · 이미 개별 행 합산했으므로 중복 방지 위해 skip)
 _SUMMARY_NM_TOKENS = ("계",)
 
 
 def _is_common_stock(stock_knd: str) -> bool:
-    """보통주 · 의결권 주식 여부. 지주회사 지분율 판단 표준."""
-    s = (stock_knd or "").strip()
+    """보통주 · 의결권 주식 여부. 지주회사 지분율 판단 표준.
+
+    공백/구두점 tolerant. 실 DART 예시:
+      "보통주" · "보통주식" · "의결권있는 주식" · "의결권 있는 주식"
+    """
+    s = (stock_knd or "").strip().replace(" ", "")
     if not s:
         # DART 응답에서 stock_knd 결측 시 · 보통주 가정 (오래된 보고서 대응)
         return True
     return any(s.startswith(k) for k in _NORMAL_STOCK_KINDS)
+
+
+def _is_major_relate(relate: str) -> bool:
+    """본인/최대주주 판별 · 공백 tolerant."""
+    r = (relate or "").strip().replace(" ", "")
+    return r in _MAJOR_RELATE_LABELS_NORMALIZED
 
 
 def _is_summary_row(nm: str, relate: str) -> bool:
@@ -105,8 +121,7 @@ def _aggregate_shareholders(rows: list[DartMajorShareholderRow]) -> tuple[float,
             continue
         pct = float(rt) / 100.0
         key = (r.nm.strip(), r.relate.strip())
-        is_major = r.relate.strip() in _MAJOR_RELATE_LABELS
-        target = major_by_key if is_major else related_by_key
+        target = major_by_key if _is_major_relate(r.relate) else related_by_key
         target[key] = max(target.get(key, 0.0), pct)
 
     major = max(major_by_key.values(), default=0.0)
