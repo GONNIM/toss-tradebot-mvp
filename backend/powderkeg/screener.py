@@ -198,8 +198,16 @@ async def screen_ticker(
         result.reject_reasons.append("big_biz_group")
 
     # ── 조건 5 · 감사의견 적정 (최근 2년) ──
+    #    DART 실 응답 · "적정의견" 반환 · substring 매치 (한정/부적정 명시 포함 방지).
     audits = [fs.audit_opinion for fs in fin_all[:2] if fs.audit_opinion]
-    c5 = len(audits) >= 2 and all(op == "적정" for op in audits[:2])
+    def _is_적정(op: str) -> bool:
+        op = (op or "").strip()
+        if not op:
+            return False
+        if any(bad in op for bad in ("한정", "부적정", "의견거절")):
+            return False
+        return "적정" in op   # "적정의견" · "적정" 모두 포함
+    c5 = len(audits) >= 2 and all(_is_적정(op) for op in audits[:2])
     result.conditions["5_audit_opinion"] = c5
     if not c5:
         if len(audits) < 2:

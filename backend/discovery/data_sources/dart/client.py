@@ -298,12 +298,15 @@ async def fetch_audit_opinion(
     if not items:
         return None
     item = items[0]
+    # 실 DART 응답 필드명: adt_opinion (문서 표기 adt_reprt_opinion 은 부정확).
+    # 후방 호환 · 두 필드 모두 시도.
+    opinion = (item.get("adt_opinion") or item.get("adt_reprt_opinion") or "").strip()
     return DartAuditOpinion(
         bsns_year=str(item.get("bsns_year", "")),
         adtor=(item.get("adtor") or "").strip(),
-        adt_reprt_opinion=(item.get("adt_reprt_opinion") or "").strip(),
+        adt_reprt_opinion=opinion,
         emphs_matter=(item.get("emphs_matter") or "").strip() or None,
-        core_report_matter=(item.get("core_report_matter") or "").strip() or None,
+        core_report_matter=(item.get("core_adt_matter") or item.get("core_report_matter") or "").strip() or None,
     )
 
 
