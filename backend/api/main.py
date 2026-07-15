@@ -113,6 +113,13 @@ async def lifespan(app: FastAPI):
         register_watchlist_jobs(scheduler)
         logger.info("[FastAPI] Watchlist 야간 신호 수집 잡 등록 완료 (Sprint 2 Week 1)")
 
+    # Powder Keg 이벤트 자동 감시 (Phase 7-3) — DART 폴링 30m + 액션 처리 5m
+    if _os.environ.get("POWDERKEG_ENABLED", "true").lower() in {"1", "true", "yes", "on"}:
+        from backend.powderkeg.scheduler import register_powderkeg_jobs
+
+        register_powderkeg_jobs(scheduler)
+        logger.info("[FastAPI] Powder Keg 이벤트 자동 감시 잡 등록 완료 (Phase 7-3)")
+
     # WATCH 프로파일 배치 · 30분 요약 발송 (Phase 3 §6-2)
     if _os.environ.get("TELEGRAM_PROFILE", "SCOUT").upper() == "WATCH":
         from backend.services.notifier import Level, TelegramNotifier
