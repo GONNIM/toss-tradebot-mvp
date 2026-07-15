@@ -304,9 +304,21 @@ async def run_screener(
     if run_id is None:
         run_id = datetime.now(tz=timezone.utc).strftime("%Y%m%d-%H%M%S")
 
+    # locked=True 인 전 종목 union · 사용자가 lock 걸어둔 종목은 유니버스에 없어도 항상 재평가
+    #   (스케줄러 자동 실행에서도 수동 추가 종목이 orphan 안 되도록 보장)
+    input_set = list(dict.fromkeys(tickers))   # dedupe · 순서 유지
+    async with get_session() as session:
+        locked_tickers = list((await session.execute(
+            select(PowderKegList.ticker).where(PowderKegList.locked == True).distinct()   # noqa: E712
+        )).scalars().all())
+    extra = [t for t in locked_tickers if t not in input_set]
+    if extra:
+        logger.info("[screener.run] locked union · %d extra tickers: %s", len(extra), extra)
+        input_set = input_set + extra
+
     stats = {"run_id": run_id, "total": 0, "passed": 0, "rejected": 0, "cash_suspect": 0}
     async with get_session() as session:
-        for ticker in tickers:
+        for ticker in input_set:
             stats["total"] += 1
             try:
                 r = await screen_ticker(ticker, thresholds, year)
