@@ -291,10 +291,12 @@ async def get_kosdaq_low_pbr_candidates(
     min_market_cap: float = Query(30_000_000_000, description="시총 하한 (원)"),
     max_market_cap: float = Query(1_000_000_000_000_000, description="시총 상한"),
     limit: int = Query(100, ge=1, le=500),
+    market: str = Query("KOSDAQ", description="KOSPI/KOSDAQ · KOSDAQ 은 FDR PBR 결측 다수"),
 ) -> dict[str, Any]:
-    """KRX 스냅샷 필터 · KOSDAQ 저PBR 후보 종목 리스트.
+    """KRX 스냅샷 필터 · 저PBR 후보 종목 리스트.
 
     스크리너 batch 대상 선정용. 데이터 수집 전 pre-filter.
+    market=KOSDAQ · FDR StockListing 에서 PBR 결측 종목 다수 · KOSPI 로 확대 권장.
     """
     from backend.services.models import KrxMarketSnapshot
     async with get_session() as session:
@@ -309,7 +311,7 @@ async def get_kosdaq_low_pbr_candidates(
             select(KrxMarketSnapshot)
             .where(
                 KrxMarketSnapshot.snapshot_date == latest_date,
-                KrxMarketSnapshot.market == "KOSDAQ",
+                KrxMarketSnapshot.market == market,
                 KrxMarketSnapshot.pbr.is_not(None),
                 KrxMarketSnapshot.pbr < max_pbr,
                 KrxMarketSnapshot.pbr > 0,
@@ -324,7 +326,7 @@ async def get_kosdaq_low_pbr_candidates(
     return {
         "count": len(rows),
         "snapshot_date": latest_date,
-        "filter": {"max_pbr": max_pbr, "min_market_cap": min_market_cap, "max_market_cap": max_market_cap},
+        "filter": {"market": market, "max_pbr": max_pbr, "min_market_cap": min_market_cap, "max_market_cap": max_market_cap},
         "items": [
             {
                 "ticker": r.ticker, "name": r.name, "pbr": r.pbr,
