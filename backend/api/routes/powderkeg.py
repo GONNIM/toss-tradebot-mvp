@@ -27,6 +27,7 @@ from sqlalchemy import select
 from backend.api.auth import require_sniper_token
 from backend.powderkeg.backtest import run_backtest_for_event_type
 from backend.powderkeg.collectors.dart_financials import collect_batch as dart_collect_batch
+from backend.powderkeg.collectors.dart_shareholders import collect_batch as sh_collect_batch
 from backend.powderkeg.collectors.events import poll_powderkeg_events
 from backend.powderkeg.collectors.ftc_big_biz import list_all as list_big_biz, refresh_from_seed
 from backend.powderkeg.collectors.krx_market import collect_market_snapshot
@@ -265,6 +266,24 @@ async def trigger_dart_financials(
     if not pairs:
         raise HTTPException(status_code=400, detail="valid (ticker, corp_code) required")
     return await dart_collect_batch(pairs, bsns_year=bsns_year, reprt_code=reprt_code)
+
+
+@router.post("/collectors/dart-shareholders", dependencies=[Depends(require_sniper_token)])
+async def trigger_dart_shareholders(
+    targets: list[dict[str, str]] = Body(...),
+    bsns_year: int = Body(2025, embed=True),
+    reprt_code: str = Body("11011", embed=True),
+) -> dict[str, Any]:
+    """DART 최대주주 현황 + 자기주식 batch 수집.
+
+    targets: [{"ticker": "...", "corp_code": "..."}, ...]
+    """
+    if not targets:
+        raise HTTPException(status_code=400, detail="targets required")
+    pairs = [(t["ticker"], t["corp_code"]) for t in targets if t.get("ticker") and t.get("corp_code")]
+    if not pairs:
+        raise HTTPException(status_code=400, detail="valid (ticker, corp_code) required")
+    return await sh_collect_batch(pairs, bsns_year=bsns_year, reprt_code=reprt_code)
 
 
 @router.post("/collectors/events-poll", dependencies=[Depends(require_sniper_token)])

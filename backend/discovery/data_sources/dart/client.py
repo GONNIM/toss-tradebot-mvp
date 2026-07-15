@@ -307,6 +307,118 @@ async def fetch_audit_opinion(
     )
 
 
+# ─── 최대주주 현황 · 자기주식 (Phase 7-1f Powder Keg) ─────
+@dataclass(frozen=True)
+class DartMajorShareholderRow:
+    """사업보고서 최대주주 현황 (hyslrSttus.json) 단일 항목."""
+    nm: str                     # 성명 (또는 법인명)
+    relate: str                 # 최대주주와의 관계 (본인 · 특수관계인 등)
+    stock_knd: str              # 주식 종류
+    bsis_posesn_stock_co: Optional[float]     # 기초 소유주식수
+    bsis_posesn_stock_qota_rt: Optional[float]  # 기초 소유주식 지분율(%)
+    trmend_posesn_stock_co: Optional[float]   # 기말 소유주식수
+    trmend_posesn_stock_qota_rt: Optional[float]  # 기말 소유주식 지분율(%)
+
+
+async def fetch_major_shareholder_status(
+    corp_code: str,
+    bsns_year: int,
+    reprt_code: str = "11011",
+) -> list[DartMajorShareholderRow]:
+    """사업보고서 최대주주 현황 (hyslrSttus.json).
+
+    Docs: https://opendart.fss.or.kr/guide/detail.do?apiGrpCd=DS002&apiId=2019004
+    반환: 본인 + 특수관계인 모두 포함.
+    """
+    if not corp_code:
+        return []
+    params = {
+        "crtfc_key": _api_key(),
+        "corp_code": corp_code,
+        "bsns_year": str(bsns_year),
+        "reprt_code": reprt_code,
+    }
+    async with httpx.AsyncClient() as client:
+        try:
+            resp = await client.get(
+                f"{_BASE}/hyslrSttus.json", params=params, timeout=_TIMEOUT_SEC,
+            )
+            resp.raise_for_status()
+            data = resp.json()
+        except Exception as e:
+            logger.warning(f"[dart] hyslrSttus {corp_code}/{bsns_year} 실패: {e}")
+            return []
+
+    status = data.get("status")
+    if status != "000":
+        return []
+
+    out: list[DartMajorShareholderRow] = []
+    for item in data.get("list", []):
+        out.append(DartMajorShareholderRow(
+            nm=(item.get("nm") or "").strip(),
+            relate=(item.get("relate") or "").strip(),
+            stock_knd=(item.get("stock_knd") or "").strip(),
+            bsis_posesn_stock_co=_to_float(item.get("bsis_posesn_stock_co")),
+            bsis_posesn_stock_qota_rt=_to_float(item.get("bsis_posesn_stock_qota_rt")),
+            trmend_posesn_stock_co=_to_float(item.get("trmend_posesn_stock_co")),
+            trmend_posesn_stock_qota_rt=_to_float(item.get("trmend_posesn_stock_qota_rt")),
+        ))
+    return out
+
+
+@dataclass(frozen=True)
+class DartTreasuryStockRow:
+    """자기주식 취득·처분 현황 (tesstkAcqsDspsSttus.json)."""
+    stock_knd: str
+    acqs_mth1: str              # 취득방법
+    stock_co: Optional[float]   # 주식수
+    stock_pnc: Optional[float]  # 지분율(%)
+
+
+async def fetch_treasury_stock(
+    corp_code: str,
+    bsns_year: int,
+    reprt_code: str = "11011",
+) -> list[DartTreasuryStockRow]:
+    """자기주식 취득·처분 현황 (tesstkAcqsDspsSttus.json).
+
+    Docs: https://opendart.fss.or.kr/guide/detail.do?apiGrpCd=DS002&apiId=2019005
+    """
+    if not corp_code:
+        return []
+    params = {
+        "crtfc_key": _api_key(),
+        "corp_code": corp_code,
+        "bsns_year": str(bsns_year),
+        "reprt_code": reprt_code,
+    }
+    async with httpx.AsyncClient() as client:
+        try:
+            resp = await client.get(
+                f"{_BASE}/tesstkAcqsDspsSttus.json", params=params, timeout=_TIMEOUT_SEC,
+            )
+            resp.raise_for_status()
+            data = resp.json()
+        except Exception as e:
+            logger.warning(f"[dart] tesstkSttus {corp_code}/{bsns_year} 실패: {e}")
+            return []
+
+    status = data.get("status")
+    if status != "000":
+        return []
+
+    out: list[DartTreasuryStockRow] = []
+    for item in data.get("list", []):
+        out.append(DartTreasuryStockRow(
+            stock_knd=(item.get("stock_knd") or "").strip(),
+            acqs_mth1=(item.get("acqs_mth1") or "").strip(),
+            stock_co=_to_float(item.get("stock_co")),
+            stock_pnc=_to_float(item.get("stock_pnc")),
+        ))
+    return out
+
+
 async def fetch_recent_disclosures(
     bgn_de: Optional[date] = None,
     end_de: Optional[date] = None,
