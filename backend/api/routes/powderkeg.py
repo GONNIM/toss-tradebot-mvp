@@ -26,6 +26,11 @@ from sqlalchemy import select
 
 from backend.api.auth import require_sniper_token
 from backend.powderkeg.backtest import run_backtest_for_event_type
+from backend.powderkeg.collectors.corp_codes import (
+    refresh_corp_codes,
+    resolve_corp_code,
+    resolve_many,
+)
 from backend.powderkeg.collectors.dart_financials import collect_batch as dart_collect_batch
 from backend.powderkeg.collectors.dart_shareholders import collect_batch as sh_collect_batch
 from backend.powderkeg.collectors.events import poll_powderkeg_events
@@ -196,6 +201,20 @@ async def get_expiry() -> dict[str, Any]:
 # ═══════════════════════════════════════════════════════════════
 # 편집·실행 (X-API-Token 필수)
 # ═══════════════════════════════════════════════════════════════
+# ─── corp_code 매핑 (Phase 7-1g) ────────────────
+@router.post("/collectors/corp-codes-refresh", dependencies=[Depends(require_sniper_token)])
+async def trigger_corp_codes_refresh() -> dict[str, Any]:
+    """DART fetch_corp_codes → DartCorpCodeMap 갱신 (월 1회 권장)."""
+    return await refresh_corp_codes()
+
+
+@router.get("/corp-code/{ticker}")
+async def get_corp_code(ticker: str) -> dict[str, Optional[str]]:
+    """KRX 6자리 → corp_code 조회 · UI 확인용."""
+    cc = await resolve_corp_code(ticker)
+    return {"ticker": ticker, "corp_code": cc}
+
+
 # ─── 수동 스키마 마이그레이션 · SQLite ALTER TABLE 누락 대응 ─
 @router.post("/admin/migrate-schema", dependencies=[Depends(require_sniper_token)])
 async def migrate_schema() -> dict[str, Any]:
@@ -251,38 +270,54 @@ async def trigger_krx_snapshot(
 
 @router.post("/collectors/dart-financials", dependencies=[Depends(require_sniper_token)])
 async def trigger_dart_financials(
-    targets: list[dict[str, str]] = Body(...),
+    tickers: Optional[list[str]] = Body(None, embed=True),
+    targets: Optional[list[dict[str, str]]] = Body(None, embed=True),
     bsns_year: int = Body(2026, embed=True),
     reprt_code: str = Body("11011", embed=True),
 ) -> dict[str, Any]:
     """DART 재무제표 batch 수집.
 
-    targets: [{"ticker": "005930", "corp_code": "00126380"}, ...]
+    입력 방식 (하나만):
+      tickers: ["005930", "000660", ...] · corp_code 자동 해결 (DartCorpCodeMap 필요)
+      targets: [{"ticker": ..., "corp_code": ...}, ...] · 직접 지정
+
     reprt_code: 11011(사업)·11012(반기)·11013(1분기)·11014(3분기)
     """
-    if not targets:
-        raise HTTPException(status_code=400, detail="targets required")
-    pairs = [(t["ticker"], t["corp_code"]) for t in targets if t.get("ticker") and t.get("corp_code")]
+    pairs = await _resolve_pairs(tickers, targets)
     if not pairs:
-        raise HTTPException(status_code=400, detail="valid (ticker, corp_code) required")
+        raise HTTPException(status_code=400, detail="no valid (ticker,corp_code) resolved")
     return await dart_collect_batch(pairs, bsns_year=bsns_year, reprt_code=reprt_code)
+
+
+async def _resolve_pairs(
+    tickers: Optional[list[str]], targets: Optional[list[dict[str, str]]],
+) -> list[tuple[str, str]]:
+    """tickers → corp_codes 자동 해결 · targets 직접 지정 · 하나 이상 필수."""
+    if targets:
+        return [(t["ticker"], t["corp_code"]) for t in targets
+                if t.get("ticker") and t.get("corp_code")]
+    if tickers:
+        cc_map = await resolve_many(tickers)
+        return [(tk, cc_map[tk]) for tk in tickers if cc_map.get(tk)]
+    return []
 
 
 @router.post("/collectors/dart-shareholders", dependencies=[Depends(require_sniper_token)])
 async def trigger_dart_shareholders(
-    targets: list[dict[str, str]] = Body(...),
+    tickers: Optional[list[str]] = Body(None, embed=True),
+    targets: Optional[list[dict[str, str]]] = Body(None, embed=True),
     bsns_year: int = Body(2025, embed=True),
     reprt_code: str = Body("11011", embed=True),
 ) -> dict[str, Any]:
-    """DART 최대주주 현황 + 자기주식 batch 수집.
+    """DART 최대주주 현황 + 자기주식 batch.
 
-    targets: [{"ticker": "...", "corp_code": "..."}, ...]
+    입력 방식 (하나만):
+      tickers: 티커 리스트 · corp_code 자동 해결
+      targets: 직접 지정
     """
-    if not targets:
-        raise HTTPException(status_code=400, detail="targets required")
-    pairs = [(t["ticker"], t["corp_code"]) for t in targets if t.get("ticker") and t.get("corp_code")]
+    pairs = await _resolve_pairs(tickers, targets)
     if not pairs:
-        raise HTTPException(status_code=400, detail="valid (ticker, corp_code) required")
+        raise HTTPException(status_code=400, detail="no valid (ticker,corp_code) resolved")
     return await sh_collect_batch(pairs, bsns_year=bsns_year, reprt_code=reprt_code)
 
 

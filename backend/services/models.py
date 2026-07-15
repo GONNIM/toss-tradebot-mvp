@@ -1015,6 +1015,22 @@ class PowderKegEvent(Base):
     )
 
 
+class DartCorpCodeMap(Base):
+    """DART corp_code ↔ KRX stock_code 매핑 · Phase 7-1g.
+
+    fetch_corp_codes 로 월 1회 갱신 · 100k+ 항목 (상장·비상장 포함).
+    수집기가 ticker → corp_code 해결 시 사용.
+    """
+
+    __tablename__ = "powderkeg_dart_corp_code"
+
+    corp_code: Mapped[str] = mapped_column(String(8), primary_key=True)
+    corp_name: Mapped[str] = mapped_column(String(200))
+    stock_code: Mapped[Optional[str]] = mapped_column(String(10), index=True)
+    modify_date: Mapped[Optional[str]] = mapped_column(String(10))
+    refreshed_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
+
+
 class PowderKegOrderTicket(Base):
     """반자동 주문 티켓 · Phase 7-5 · 1클릭 승인 필수.
 
