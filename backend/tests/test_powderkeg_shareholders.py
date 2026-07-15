@@ -34,9 +34,9 @@ async def _clean_db():
     yield
 
 
-def _row(nm, relate, pct):
+def _row(nm, relate, pct, stock_knd="보통주"):
     return DartMajorShareholderRow(
-        nm=nm, relate=relate, stock_knd="보통주",
+        nm=nm, relate=relate, stock_knd=stock_knd,
         bsis_posesn_stock_co=None, bsis_posesn_stock_qota_rt=None,
         trmend_posesn_stock_co=None, trmend_posesn_stock_qota_rt=pct,
     )
@@ -62,14 +62,42 @@ def test_aggregate_본인_and_특수관계인():
     assert related == pytest.approx(0.12)   # 5+3+4=12%
 
 
-def test_aggregate_max_주식종류():
-    """같은 인물 · 보통주+우선주 → 최대값."""
+def test_aggregate_보통주만_우선주_배제():
+    """지주회사 · 오너 우선주 지분은 무시 (경영권 판단 표준)."""
     rows = [
-        _row("회장", "본인", 20.0),
-        _row("회장", "본인", 25.0),   # 우선주 지분 · 더 높음
+        _row("회장", "본인", 20.0, stock_knd="보통주"),
+        _row("회장", "본인", 25.0, stock_knd="우선주"),   # 무시
     ]
     major, related = _aggregate_shareholders(rows)
-    assert major == pytest.approx(0.25)
+    assert major == pytest.approx(0.20)
+
+
+def test_aggregate_holding_company_no_over_100():
+    """지주회사 유형 시나리오 · 여러 특수관계인 · 우선주 중복 방지.
+
+    이전 버그 · 우선주 중복 카운트 → 지분율 100%+.
+    Fix · 보통주만 계산 → 정확.
+    """
+    rows = [
+        _row("회장", "본인", 30.0, stock_knd="보통주"),
+        _row("회장", "본인", 40.0, stock_knd="우선주"),   # 무시
+        _row("배우자", "배우자", 5.0, stock_knd="보통주"),
+        _row("배우자", "배우자", 8.0, stock_knd="우선주"),   # 무시
+        _row("자녀A", "자녀", 3.0, stock_knd="보통주"),
+        _row("자녀B", "자녀", 2.0, stock_knd="보통주"),
+        _row("자녀A", "자녀", 5.0, stock_knd="우선주"),   # 무시
+    ]
+    major, related = _aggregate_shareholders(rows)
+    assert major == pytest.approx(0.30)
+    assert related == pytest.approx(0.10)   # 5+3+2=10% · 우선주 제외
+    assert major + related <= 1.0            # 100% 이하 보장
+
+
+def test_aggregate_missing_stock_knd_defaults_common():
+    """오래된 보고서 · stock_knd 결측 시 보통주로 가정."""
+    rows = [_row("회장", "본인", 40.0, stock_knd="")]
+    major, related = _aggregate_shareholders(rows)
+    assert major == pytest.approx(0.40)
 
 
 def test_aggregate_empty():

@@ -51,24 +51,45 @@ def _reference_date(bsns_year: int, reprt_code: str) -> Optional[str]:
     return f"{bsns_year:04d}-{m:02d}-{d:02d}"
 
 
+_NORMAL_STOCK_KINDS = ("보통주", "보통주식", "의결권있는 주식", "의결권있는주식")
+
+
+def _is_common_stock(stock_knd: str) -> bool:
+    """보통주 · 의결권 주식 여부. 지주회사 지분율 판단 표준."""
+    s = (stock_knd or "").strip()
+    if not s:
+        # DART 응답에서 stock_knd 결측 시 · 보통주 가정 (오래된 보고서 대응)
+        return True
+    return any(s.startswith(k) for k in _NORMAL_STOCK_KINDS)
+
+
 def _aggregate_shareholders(rows: list[DartMajorShareholderRow]) -> tuple[float, float]:
     """rows → (major_pct 본인, related_pct 특수관계인 합산).
 
+    지분율 산정 원칙 (실무 표준 · 오너 경영권 판단):
+      · 보통주 지분율 만 취급 (의결권 기준)
+      · 우선주 · 상환우선주 등은 무시 (중복 카운트 방지)
+      · 같은 (nm, relate) 조합 · 다수 행 있으면 최대값 (보통주 종류 여러가지 대응)
+
     Returns 값 · 소수 (0.35 = 35%).
     """
-    major = 0.0
-    related = 0.0
+    major_by_key: dict[tuple[str, str], float] = {}
+    related_by_key: dict[tuple[str, str], float] = {}
+
     for r in rows:
+        if not _is_common_stock(r.stock_knd):
+            continue
         rt = r.trmend_posesn_stock_qota_rt or r.bsis_posesn_stock_qota_rt
         if rt is None:
             continue
-        pct = float(rt) / 100.0   # DART 는 % 단위 · 우리는 fraction
-        # relate 정확 표기 다양 · "본인" 우선 · 그 외 특수관계인
-        if r.relate.strip() in ("본인", "본인/자기주식"):
-            # 여러 종류 주식 (보통주+우선주) 있을 수 있음 · 지분율 최대값 채택
-            major = max(major, pct)
-        else:
-            related += pct
+        pct = float(rt) / 100.0
+        key = (r.nm.strip(), r.relate.strip())
+        target = major_by_key if r.relate.strip() in ("본인", "본인/자기주식") else related_by_key
+        # 같은 인물 · 여러 행 (드묾) · 최대값 채택
+        target[key] = max(target.get(key, 0.0), pct)
+
+    major = max(major_by_key.values(), default=0.0)
+    related = sum(related_by_key.values())
     return major, related
 
 
