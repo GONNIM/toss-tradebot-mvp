@@ -19,6 +19,7 @@ from backend.discovery.live_tape.universe import list_universe
 from backend.services.db import get_session
 from backend.services.models import Watchlist
 
+from .matcher import get_matcher
 from .scoring import score_signals
 from .store import next_trade_date, signals_for_date
 
@@ -51,8 +52,12 @@ async def finalize_watchlist(
     signals = await signals_for_date(trade_date)
     ticker_scores = score_signals(signals)
 
-    # 유니버스 name 매핑
-    universe_names = {u["ticker"]: u["name"] for u in await list_universe(limit=1000)}
+    # name 매핑 · matcher (KOSDAQ + KOSPI 350종목) 우선 · 유니버스 fallback
+    matcher = get_matcher()
+    await matcher.ensure_loaded()
+    universe_names: dict[str, str] = {e.ticker: e.name for e in matcher.entries()}
+    for u in await list_universe(limit=1000):
+        universe_names.setdefault(u["ticker"], u["name"])
 
     # 기존 locked=True 항목 유지 (사용자 수동 lock)
     async with get_session() as session:

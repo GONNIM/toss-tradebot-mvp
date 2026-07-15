@@ -157,11 +157,18 @@ async def add_manual(
 
     resolved_name = name
     if resolved_name is None:
-        universe = await list_universe(limit=1000)
-        for u in universe:
-            if u["ticker"] == ticker:
-                resolved_name = u.get("name")
+        from backend.discovery.watchlist.matcher import get_matcher
+        matcher = get_matcher()
+        await matcher.ensure_loaded()
+        for e in matcher.entries():
+            if e.ticker == ticker:
+                resolved_name = e.name
                 break
+        if resolved_name is None:
+            for u in await list_universe(limit=1000):
+                if u["ticker"] == ticker:
+                    resolved_name = u.get("name")
+                    break
 
     async with get_session() as session:
         stmt = select(Watchlist).where(
