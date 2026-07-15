@@ -725,6 +725,51 @@ export const api = {
     report: (days = 30) =>
       get<WatchlistReport>(`/watchlist/report?days=${days}`),
   },
+  powderkeg: {
+    disclaimer: () => get<{ disclaimer: string }>(`/powderkeg/disclaimer`),
+    list: (opts: { run_id?: string; status?: string; limit?: number } = {}) => {
+      const q = new URLSearchParams();
+      if (opts.run_id) q.set("run_id", opts.run_id);
+      if (opts.status) q.set("status", opts.status);
+      if (opts.limit) q.set("limit", String(opts.limit));
+      const qs = q.toString();
+      return get<PowderKegListResponse>(`/powderkeg/list${qs ? `?${qs}` : ""}`);
+    },
+    events: (opts: { ticker?: string; event_type?: string; hours?: number; limit?: number } = {}) => {
+      const q = new URLSearchParams();
+      if (opts.ticker) q.set("ticker", opts.ticker);
+      if (opts.event_type) q.set("event_type", opts.event_type);
+      if (opts.hours) q.set("hours", String(opts.hours));
+      if (opts.limit) q.set("limit", String(opts.limit));
+      const qs = q.toString();
+      return get<PowderKegEventsResponse>(`/powderkeg/events${qs ? `?${qs}` : ""}`);
+    },
+    report: (event_type: string) =>
+      get<PowderKegReport>(`/powderkeg/report/${event_type}`),
+    tickets: (opts: { status?: string; limit?: number } = {}) => {
+      const q = new URLSearchParams();
+      if (opts.status) q.set("status", opts.status);
+      if (opts.limit) q.set("limit", String(opts.limit));
+      const qs = q.toString();
+      return get<PowderKegTicketsResponse>(`/powderkeg/tickets${qs ? `?${qs}` : ""}`);
+    },
+    runScreener: (token: string, tickers: string[], year = 2026) =>
+      postWithToken<{ run_id: string; total: number; passed: number; rejected: number }>(
+        `/powderkeg/screener/run`, token, { tickers, year },
+      ),
+    processTriggers: (token: string) =>
+      postWithToken<Record<string, number>>(`/powderkeg/triggers/process`, token),
+    runBacktest: (token: string, event_type: string) =>
+      postWithToken<PowderKegReport>(`/powderkeg/backtest/${event_type}`, token),
+    approveTicket: (token: string, id: number, approver: string) =>
+      patchWithToken<{ id: number; status: string }>(
+        `/powderkeg/ticket/${id}/approve`, token, { approver },
+      ),
+    rejectTicket: (token: string, id: number, reason: string) =>
+      patchWithToken<{ id: number; status: string }>(
+        `/powderkeg/ticket/${id}/reject`, token, { reason },
+      ),
+  },
 };
 
 async function putWithToken<T>(path: string, token: string, body: unknown): Promise<T> {
@@ -1441,4 +1486,107 @@ export interface WatchlistReport {
   };
   checks: WatchlistReportCheck[];
   total_pass: boolean;
+}
+
+// ─────────────────────────────────────────────
+// Powder Keg 타입 (Phase 7 · 화약고 스크리너)
+// ─────────────────────────────────────────────
+export interface PowderKegListItem {
+  id: number;
+  ticker: string;
+  name: string | null;
+  status: string;                // passed / rejected / cash_suspect
+  net_cash_ratio: number | null;
+  piotroski_f_score: number | null;
+  owner_pct: number | null;
+  treasury_pct: number | null;
+  pbr: number | null;
+  dividend_payout: number | null;
+  conditions: Record<string, boolean> | null;
+  reject_reasons: string | null;
+  created_at: string | null;
+}
+
+export interface PowderKegListResponse {
+  disclaimer: string;
+  run_id: string | null;
+  count: number;
+  items: PowderKegListItem[];
+}
+
+export interface PowderKegEventItem {
+  id: number;
+  ticker: string;
+  event_type: string;            // A1~A6 · B1~B3
+  kind: "A" | "B";
+  source: string;
+  source_id: string | null;
+  title: string;
+  url: string | null;
+  detected_at: string | null;
+  release_date: string | null;
+  confidence: number | null;
+  needs_human_review: boolean;
+  action_taken: string | null;
+  validated: boolean;
+}
+
+export interface PowderKegEventsResponse {
+  disclaimer: string;
+  count: number;
+  items: PowderKegEventItem[];
+}
+
+export interface PowderKegWindowStats {
+  label: string;
+  n: number;
+  mean_return: number;
+  median_return: number;
+  win_rate: number;
+  std: number;
+  t_stat: number;
+  max_return: number;
+  min_return: number;
+}
+
+export interface PowderKegReport {
+  disclaimer: string;
+  event_type: string;
+  aggregate: {
+    event_type: string;
+    total_events: number;
+    valid_events: number;
+    per_window: Record<string, PowderKegWindowStats>;
+    error_counts: Record<string, number>;
+  };
+  decision: {
+    event_type: string;
+    validated: boolean;
+    reasons: string[];
+    tested_windows: string[];
+    passing_window: string | null;
+  };
+  updated_rows: number;
+}
+
+export interface PowderKegTicket {
+  id: number;
+  event_id: number;
+  ticker: string;
+  proposed_qty: number;
+  proposed_price: number | null;
+  invalidation_price: number;
+  invalidation_logic: string;
+  status: string;               // pending/approved/rejected/executed
+  approver: string | null;
+  approved_at: string | null;
+  created_at: string | null;
+  holding_days_max: number;
+  executed_order_uuid: string | null;
+}
+
+export interface PowderKegTicketsResponse {
+  disclaimer: string;
+  count: number;
+  items: PowderKegTicket[];
 }

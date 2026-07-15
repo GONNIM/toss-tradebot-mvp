@@ -29,6 +29,7 @@ from backend.api.routes import (
     meme_watch,
     moonshot,
     positions,
+    powderkeg,
     sector_leaders,
     settings,
     sniper,
@@ -205,6 +206,11 @@ app.include_router(
     watchlist.router,
     prefix="/api/v1/watchlist",
     tags=["watchlist"],
+)
+app.include_router(
+    powderkeg.router,
+    prefix="/api/v1/powderkeg",
+    tags=["powderkeg"],
 )
 
 
