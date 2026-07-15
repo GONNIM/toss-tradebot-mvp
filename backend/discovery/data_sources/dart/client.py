@@ -188,6 +188,125 @@ async def fetch_majorstock(corp_code: str) -> list[DartMajorStock]:
     return out
 
 
+# ─── 재무제표·감사의견 (Phase 7-1b Powder Keg) ─────────────
+@dataclass(frozen=True)
+class DartFinancialItem:
+    """단일 회계 항목 · fnlttSinglAcntAll.json 응답 파싱."""
+    account_id: str          # ifrs-full_CashAndCashEquivalents 등 표준 ID
+    account_nm: str          # "현금및현금성자산" 등 한글명
+    sj_div: str              # BS / IS / CIS / CF / SCE
+    fs_div: str              # CFS(연결) / OFS(별도)
+    fs_nm: str               # "연결재무제표" / "재무제표"
+    thstrm_amount: Optional[float]   # 당기금액
+    frmtrm_amount: Optional[float]   # 전기금액
+    ord: Optional[int]               # 정렬 순서
+
+
+async def fetch_financial_statement(
+    corp_code: str,
+    bsns_year: int,
+    reprt_code: str,       # 11011(사업)·11012(반기)·11013(1분기)·11014(3분기)
+    fs_div: str = "CFS",   # CFS(연결) 우선 · 미제출 시 OFS(별도) fallback 필요
+) -> list[DartFinancialItem]:
+    """DART 단일회사 전체 재무제표 (fnlttSinglAcntAll.json).
+
+    Docs: https://opendart.fss.or.kr/guide/detail.do?apiGrpCd=DS003&apiId=2019020
+    """
+    if not corp_code:
+        return []
+    params = {
+        "crtfc_key": _api_key(),
+        "corp_code": corp_code,
+        "bsns_year": str(bsns_year),
+        "reprt_code": reprt_code,
+        "fs_div": fs_div,
+    }
+    async with httpx.AsyncClient() as client:
+        try:
+            resp = await client.get(
+                f"{_BASE}/fnlttSinglAcntAll.json", params=params, timeout=_TIMEOUT_SEC
+            )
+            resp.raise_for_status()
+            data = resp.json()
+        except Exception as e:
+            logger.warning(f"[dart] fnlttSingl {corp_code}/{bsns_year}/{reprt_code} 실패: {e}")
+            return []
+
+    status = data.get("status")
+    if status != "000":
+        if status != "013":  # 013 = no data (연결/별도 미제출)
+            logger.warning(f"[dart] fnlttSingl status={status} · {data.get('message', '')}")
+        return []
+
+    out: list[DartFinancialItem] = []
+    for item in data.get("list", []):
+        out.append(DartFinancialItem(
+            account_id=(item.get("account_id") or "").strip(),
+            account_nm=(item.get("account_nm") or "").strip(),
+            sj_div=(item.get("sj_div") or "").strip(),
+            fs_div=(item.get("fs_div") or "").strip(),
+            fs_nm=(item.get("fs_nm") or "").strip(),
+            thstrm_amount=_to_float(item.get("thstrm_amount")),
+            frmtrm_amount=_to_float(item.get("frmtrm_amount")),
+            ord=int(item["ord"]) if str(item.get("ord", "")).isdigit() else None,
+        ))
+    return out
+
+
+@dataclass(frozen=True)
+class DartAuditOpinion:
+    """감사의견 · accnutAdtorNmNdAdtOpinion.json 응답."""
+    bsns_year: str
+    adtor: str                      # 감사인 명칭
+    adt_reprt_opinion: str          # 감사보고서 감사의견 (적정 / 한정 / 부적정 / 의견거절)
+    emphs_matter: Optional[str]     # 강조사항 등
+    core_report_matter: Optional[str]   # 핵심감사사항
+
+
+async def fetch_audit_opinion(
+    corp_code: str,
+    bsns_year: int,
+    reprt_code: str = "11011",   # 사업보고서 기준 감사의견
+) -> Optional[DartAuditOpinion]:
+    """DART 감사인의 명칭 및 감사의견 (accnutAdtorNmNdAdtOpinion.json).
+
+    Docs: https://opendart.fss.or.kr/guide/detail.do?apiGrpCd=DS002&apiId=2019013
+    """
+    if not corp_code:
+        return None
+    params = {
+        "crtfc_key": _api_key(),
+        "corp_code": corp_code,
+        "bsns_year": str(bsns_year),
+        "reprt_code": reprt_code,
+    }
+    async with httpx.AsyncClient() as client:
+        try:
+            resp = await client.get(
+                f"{_BASE}/accnutAdtorNmNdAdtOpinion.json", params=params, timeout=_TIMEOUT_SEC,
+            )
+            resp.raise_for_status()
+            data = resp.json()
+        except Exception as e:
+            logger.warning(f"[dart] adtOpinion {corp_code}/{bsns_year} 실패: {e}")
+            return None
+
+    status = data.get("status")
+    if status != "000":
+        return None
+    items = data.get("list") or []
+    if not items:
+        return None
+    item = items[0]
+    return DartAuditOpinion(
+        bsns_year=str(item.get("bsns_year", "")),
+        adtor=(item.get("adtor") or "").strip(),
+        adt_reprt_opinion=(item.get("adt_reprt_opinion") or "").strip(),
+        emphs_matter=(item.get("emphs_matter") or "").strip() or None,
+        core_report_matter=(item.get("core_report_matter") or "").strip() or None,
+    )
+
+
 async def fetch_recent_disclosures(
     bgn_de: Optional[date] = None,
     end_de: Optional[date] = None,

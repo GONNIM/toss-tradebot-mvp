@@ -837,3 +837,202 @@ class Watchlist(Base):
         Index("ix_watchlist_date_ticker", "trade_date", "ticker", unique=True),
         Index("ix_watchlist_date_rank", "trade_date", "rank"),
     )
+
+
+# ─────────────────────────────────────────────────────────────────
+# Powder Keg Screener (Phase 7 · 화약고 스크리너)
+#   지시서: docs/plans/powderkeg-screener/phase7-powderkeg-screener.md
+#   원칙: hypothesis 상태 유지 · 자동매매 절대 연결 금지
+# ─────────────────────────────────────────────────────────────────
+
+
+class FinancialSnapshot(Base):
+    """DART 재무제표 스냅샷 · Phase 7-1b.
+
+    reference_date (보고 대상 기간) vs release_date (공시 접수일) 분리 저장 · as-of 규약 준수.
+    unique(ticker, reference_date, report_code) — 같은 기간의 정정보고서는 최신 release_date 우선.
+    """
+
+    __tablename__ = "powderkeg_financial_snapshot"
+
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    ticker: Mapped[str] = mapped_column(String(10), index=True)
+    corp_code: Mapped[str] = mapped_column(String(8), index=True)
+    reference_date: Mapped[str] = mapped_column(String(10))    # 회계 기말 YYYY-MM-DD
+    release_date: Mapped[datetime] = mapped_column(DateTime, index=True)   # 공시 접수일시
+    report_code: Mapped[str] = mapped_column(String(5))        # 11011(사업)·11012(반기)·11013(1분기)·11014(3분기)
+    # 재무상태표
+    cash_and_equivalents: Mapped[Optional[float]]              # 현금및현금성자산
+    short_term_investments: Mapped[Optional[float]]            # 단기금융상품
+    total_debt: Mapped[Optional[float]]                        # 총차입금 (단기+장기)
+    total_equity: Mapped[Optional[float]]                      # 자본총계
+    retained_earnings: Mapped[Optional[float]]                 # 이익잉여금
+    # 손익계산서
+    operating_income: Mapped[Optional[float]]                  # 영업이익
+    net_income: Mapped[Optional[float]]                        # 당기순이익
+    interest_income: Mapped[Optional[float]]                   # 이자수익
+    revenue: Mapped[Optional[float]]                           # 매출액 (Piotroski §8-9)
+    gross_profit: Mapped[Optional[float]]                      # 매출총이익
+    # 재무상태표 추가 (Piotroski + 부채비율)
+    total_assets: Mapped[Optional[float]]                      # 자산총계
+    current_assets: Mapped[Optional[float]]                    # 유동자산
+    current_liabilities: Mapped[Optional[float]]               # 유동부채
+    # 현금흐름표
+    cash_flow_from_operations: Mapped[Optional[float]]         # 영업활동현금흐름 (Piotroski §2,4)
+    # 발행주식수 (Piotroski §7 · 유상증자 여부)
+    shares_outstanding: Mapped[Optional[float]]
+    # 감사의견 · "적정" / "한정" / "부적정" / "의견거절"
+    audit_opinion: Mapped[Optional[str]] = mapped_column(String(20))
+    raw_json: Mapped[Optional[str]] = mapped_column(Text)      # 원문 응답 보존 (감사·튜닝)
+    collected_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
+
+    __table_args__ = (
+        Index("ix_pk_fin_ticker_ref", "ticker", "reference_date", "report_code", unique=True),
+    )
+
+
+class KrxMarketSnapshot(Base):
+    """KRX 시장 데이터 · Phase 7-1c.
+
+    일일 갱신 · 시가총액·PBR·거래대금·상장시장.
+    """
+
+    __tablename__ = "powderkeg_krx_snapshot"
+
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    ticker: Mapped[str] = mapped_column(String(10), index=True)
+    snapshot_date: Mapped[str] = mapped_column(String(10), index=True)   # YYYY-MM-DD
+    market: Mapped[Optional[str]] = mapped_column(String(10))            # KOSPI / KOSDAQ
+    close_price: Mapped[Optional[float]]
+    market_cap: Mapped[Optional[float]]
+    pbr: Mapped[Optional[float]]
+    avg_daily_amount_60d: Mapped[Optional[float]]                        # 60일 평균 거래대금
+
+    __table_args__ = (
+        Index("ix_pk_krx_ticker_date", "ticker", "snapshot_date", unique=True),
+    )
+
+
+class BigBusinessGroup(Base):
+    """공정위 공시대상기업집단 명단 · Phase 7-1d.
+
+    연 1회 갱신 · 대기업집단 소속 종목 배제용 필터.
+    """
+
+    __tablename__ = "powderkeg_big_biz_group"
+
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    year: Mapped[int] = mapped_column(index=True)
+    group_name: Mapped[str] = mapped_column(String(100))        # 예: "삼성", "SK"
+    corp_name: Mapped[str] = mapped_column(String(100))         # 계열사 명
+    corp_id: Mapped[Optional[str]] = mapped_column(String(20))  # 사업자등록번호 등
+    ticker: Mapped[Optional[str]] = mapped_column(String(10), index=True)
+
+    __table_args__ = (
+        Index("ix_pk_big_biz_year_ticker", "year", "ticker"),
+    )
+
+
+class MajorShareholder(Base):
+    """최대주주 및 특수관계인 지분율 · Phase 7-1b.
+
+    DART fetch_majorstock 로 축적 · 분기~반기 주기 갱신.
+    """
+
+    __tablename__ = "powderkeg_major_shareholder"
+
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    ticker: Mapped[str] = mapped_column(String(10), index=True)
+    reference_date: Mapped[str] = mapped_column(String(10))       # 지분율 기준 시점
+    release_date: Mapped[datetime] = mapped_column(DateTime)
+    major_pct: Mapped[float]                                      # 최대주주 지분율 (총계)
+    related_pct: Mapped[float]                                    # 특수관계인 총계
+    treasury_pct: Mapped[Optional[float]]                         # 자기주식 비율
+    raw_json: Mapped[Optional[str]] = mapped_column(Text)
+
+    __table_args__ = (
+        Index("ix_pk_major_ticker_ref", "ticker", "reference_date", unique=True),
+    )
+
+
+class PowderKegList(Base):
+    """스크리닝 결과 (화약고 리스트) · Phase 7-2.
+
+    분기 1회 + 수동 트리거 실행 · run_id 로 히스토리 유지.
+    """
+
+    __tablename__ = "powderkeg_list"
+
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    run_id: Mapped[str] = mapped_column(String(20), index=True)   # YYYYMMDD-HHMMSS
+    ticker: Mapped[str] = mapped_column(String(10), index=True)
+    name: Mapped[Optional[str]] = mapped_column(String(100))
+    status: Mapped[str] = mapped_column(String(20))               # passed / rejected / cash_suspect
+    # 서브스코어 (§7-2 마지막 문단)
+    net_cash_ratio: Mapped[Optional[float]]                       # 순현금 / 시총
+    piotroski_f_score: Mapped[Optional[int]]
+    owner_pct: Mapped[Optional[float]]                            # 최대+특수관계인
+    treasury_pct: Mapped[Optional[float]]                         # 자사주 비율
+    pbr: Mapped[Optional[float]]
+    dividend_payout: Mapped[Optional[float]]                      # 배당성향
+    # 조건별 통과/탈락 상세 (JSON: {"pbr":true, "net_cash":false, ...})
+    conditions_json: Mapped[Optional[str]] = mapped_column(Text)
+    reject_reasons: Mapped[Optional[str]] = mapped_column(Text)   # 콤마 분리
+    created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
+
+    __table_args__ = (
+        Index("ix_pk_list_run_ticker", "run_id", "ticker", unique=True),
+    )
+
+
+class PowderKegEvent(Base):
+    """이벤트 트리거 로그 · Phase 7-3.
+
+    Type A/B 분류 · LLM classifier 결과 포함 · needs_human_review 플래그.
+    """
+
+    __tablename__ = "powderkeg_event"
+
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    ticker: Mapped[str] = mapped_column(String(10), index=True)
+    event_type: Mapped[str] = mapped_column(String(10))           # A1/A2/.../B1/B2/B3
+    source: Mapped[str] = mapped_column(String(20))               # dart / news_xxx
+    source_id: Mapped[Optional[str]] = mapped_column(String(50))  # DART rcept_no · 뉴스 URL 해시
+    title: Mapped[str] = mapped_column(Text)
+    url: Mapped[Optional[str]] = mapped_column(Text)
+    detected_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now(), index=True)
+    release_date: Mapped[Optional[datetime]] = mapped_column(DateTime)   # 공시/기사 원본 시각
+    llm_classification: Mapped[Optional[str]] = mapped_column(Text)      # JSON: {label, confidence, rationale}
+    confidence: Mapped[Optional[float]]
+    needs_human_review: Mapped[bool] = mapped_column(Boolean, default=False)
+    action_taken: Mapped[Optional[str]] = mapped_column(String(30))       # notified / list_removed / order_ticket_created
+    validated: Mapped[bool] = mapped_column(Boolean, default=False)        # 백테스트 통과 시 True
+
+    __table_args__ = (
+        Index("ix_pk_event_ticker_time", "ticker", "detected_at"),
+        Index("ix_pk_event_source_id", "source", "source_id"),
+    )
+
+
+class PowderKegOrderTicket(Base):
+    """반자동 주문 티켓 · Phase 7-5 · 1클릭 승인 필수.
+
+    validated 트리거만 티켓 생성 가능 · 무효화 조건 미입력 시 차단.
+    """
+
+    __tablename__ = "powderkeg_order_ticket"
+
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    event_id: Mapped[int] = mapped_column(index=True)
+    ticker: Mapped[str] = mapped_column(String(10), index=True)
+    proposed_qty: Mapped[int]
+    proposed_price: Mapped[Optional[float]]                             # 지정가 or None(시장가)
+    invalidation_price: Mapped[float]                                   # 필수 · 가격 무효화 (예: -15%)
+    invalidation_logic: Mapped[str] = mapped_column(Text)               # 필수 · 논리 무효화 (예: 무혐의 확정)
+    holding_days_max: Mapped[int] = mapped_column(default=365)          # 보유 상한 (기본 12개월)
+    status: Mapped[str] = mapped_column(String(20), default="pending")  # pending/approved/rejected/executed
+    approver: Mapped[Optional[str]] = mapped_column(String(50))
+    approved_at: Mapped[Optional[datetime]] = mapped_column(DateTime)
+    executed_order_uuid: Mapped[Optional[str]] = mapped_column(String(36))
+    created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
+
