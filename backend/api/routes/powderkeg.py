@@ -26,6 +26,10 @@ from sqlalchemy import select
 
 from backend.api.auth import require_sniper_token
 from backend.powderkeg.backtest import run_backtest_for_event_type
+from backend.powderkeg.collectors.dart_financials import collect_batch as dart_collect_batch
+from backend.powderkeg.collectors.events import poll_powderkeg_events
+from backend.powderkeg.collectors.ftc_big_biz import list_all as list_big_biz, refresh_from_seed
+from backend.powderkeg.collectors.krx_market import collect_market_snapshot
 from backend.powderkeg.orders import (
     TicketCreateRequest,
     TicketValidationError,
@@ -191,6 +195,66 @@ async def get_expiry() -> dict[str, Any]:
 # ═══════════════════════════════════════════════════════════════
 # 편집·실행 (X-API-Token 필수)
 # ═══════════════════════════════════════════════════════════════
+# ─── Collectors 트리거 (인증 필수 · 외부 API 호출 · 부하 유의) ─
+@router.post("/collectors/ftc-refresh", dependencies=[Depends(require_sniper_token)])
+async def trigger_ftc_refresh(year: int = Body(2026, embed=True)) -> dict[str, Any]:
+    """공정위 대기업집단 seed → BigBusinessGroup 재적재."""
+    return await refresh_from_seed(year)
+
+
+@router.get("/big-biz")
+async def get_big_biz(year: int = Query(2026)) -> dict[str, Any]:
+    """대기업집단 목록 조회 (디버그·UI 검증용)."""
+    items = await list_big_biz(year)
+    return {"year": year, "count": len(items), "items": items}
+
+
+@router.post("/collectors/krx-snapshot", dependencies=[Depends(require_sniper_token)])
+async def trigger_krx_snapshot(
+    tickers: Optional[list[str]] = Body(None, embed=True),
+    include_adv60: bool = Body(False, embed=True),
+) -> dict[str, Any]:
+    """KRX 시장 스냅샷 (KOSPI+KOSDAQ 전체 또는 tickers 지정)."""
+    return await collect_market_snapshot(
+        tickers=set(tickers) if tickers else None,
+        include_adv60=include_adv60,
+    )
+
+
+@router.post("/collectors/dart-financials", dependencies=[Depends(require_sniper_token)])
+async def trigger_dart_financials(
+    targets: list[dict[str, str]] = Body(...),
+    bsns_year: int = Body(2026, embed=True),
+    reprt_code: str = Body("11011", embed=True),
+) -> dict[str, Any]:
+    """DART 재무제표 batch 수집.
+
+    targets: [{"ticker": "005930", "corp_code": "00126380"}, ...]
+    reprt_code: 11011(사업)·11012(반기)·11013(1분기)·11014(3분기)
+    """
+    if not targets:
+        raise HTTPException(status_code=400, detail="targets required")
+    pairs = [(t["ticker"], t["corp_code"]) for t in targets if t.get("ticker") and t.get("corp_code")]
+    if not pairs:
+        raise HTTPException(status_code=400, detail="valid (ticker, corp_code) required")
+    return await dart_collect_batch(pairs, bsns_year=bsns_year, reprt_code=reprt_code)
+
+
+@router.post("/collectors/events-poll", dependencies=[Depends(require_sniper_token)])
+async def trigger_events_poll(
+    lookback_days: int = Body(1, embed=True),
+    watched_tickers: Optional[list[str]] = Body(None, embed=True),
+) -> dict[str, Any]:
+    """DART 공시 이벤트 폴링 · Type A/B 분류 후 PowderKegEvent 저장.
+
+    watched_tickers None = 모든 매칭 저장 · list = 감시 대상만.
+    """
+    return await poll_powderkeg_events(
+        lookback_days=lookback_days,
+        watched_tickers=set(watched_tickers) if watched_tickers else None,
+    )
+
+
 @router.post("/screener/run", dependencies=[Depends(require_sniper_token)])
 async def trigger_screener(
     tickers: list[str] = Body(..., embed=True),
