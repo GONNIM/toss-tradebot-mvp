@@ -33,6 +33,7 @@ from backend.api.routes import (
     settings,
     sniper,
     super_signals,
+    watchlist,
 )
 from backend.services import config
 from backend.services.db import init_db
@@ -103,6 +104,13 @@ async def lifespan(app: FastAPI):
             max_instances=1,
         )
         logger.info("[FastAPI] Sniper jobs 등록 완료 (기본 sniper.enabled=False · UI로 활성화)")
+
+    # Watchlist 야간 신호 수집 (Sprint 2) — 뉴스·종토방·유튜브·국회·정부
+    if _os.environ.get("WATCHLIST_ENABLED", "true").lower() in {"1", "true", "yes", "on"}:
+        from backend.discovery.watchlist.scheduler import register_watchlist_jobs
+
+        register_watchlist_jobs(scheduler)
+        logger.info("[FastAPI] Watchlist 야간 신호 수집 잡 등록 완료 (Sprint 2 Week 1)")
 
     # WATCH 프로파일 배치 · 30분 요약 발송 (Phase 3 §6-2)
     if _os.environ.get("TELEGRAM_PROFILE", "SCOUT").upper() == "WATCH":
@@ -192,6 +200,11 @@ app.include_router(
     sniper.router,
     prefix="/api/v1/sniper",
     tags=["sniper"],
+)
+app.include_router(
+    watchlist.router,
+    prefix="/api/v1/watchlist",
+    tags=["watchlist"],
 )
 
 

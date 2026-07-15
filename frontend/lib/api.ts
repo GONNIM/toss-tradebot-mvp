@@ -677,6 +677,54 @@ export const api = {
         candidate_reject_reason: string | null;
       }>(`/sniper/entry`, token, { ticker, broker }),
   },
+  watchlist: {
+    list: (trade_date?: string) => {
+      const qs = trade_date ? `?trade_date=${encodeURIComponent(trade_date)}` : "";
+      return get<{ trade_date: string; size: number; items: WatchlistItem[] }>(
+        `/watchlist${qs}`,
+      );
+    },
+    signals: (opts: { trade_date?: string; hours?: number; limit?: number } = {}) => {
+      const q = new URLSearchParams();
+      if (opts.trade_date) q.set("trade_date", opts.trade_date);
+      if (opts.hours) q.set("hours", String(opts.hours));
+      if (opts.limit) q.set("limit", String(opts.limit));
+      const qs = q.toString();
+      return get<{ count: number; items: WatchlistSignal[] }>(
+        `/watchlist/signals${qs ? `?${qs}` : ""}`,
+      );
+    },
+    dates: () => get<string[]>(`/watchlist/dates`),
+    finalize: (token: string, opts: { trade_date?: string; top_n?: number } = {}) =>
+      postWithToken<{
+        trade_date: string;
+        signals_read: number;
+        candidates_scored: number;
+        locked_kept: number;
+        auto_picked: number;
+        written: number;
+        top_n: number;
+      }>(`/watchlist/finalize`, token, opts),
+    addManual: (
+      token: string,
+      opts: { ticker: string; trade_date?: string; name?: string },
+    ) =>
+      postWithToken<{ id: number; ticker: string; trade_date: string; locked: boolean }>(
+        `/watchlist/manual`,
+        token,
+        opts,
+      ),
+    toggleLock: (token: string, id: number, locked: boolean) =>
+      patchWithToken<{ id: number; locked: boolean }>(
+        `/watchlist/${id}/lock`,
+        token,
+        { locked },
+      ),
+    remove: (token: string, id: number) =>
+      delWithToken<{ deleted: boolean; id: number }>(`/watchlist/${id}`, token),
+    report: (days = 30) =>
+      get<WatchlistReport>(`/watchlist/report?days=${days}`),
+  },
 };
 
 async function putWithToken<T>(path: string, token: string, body: unknown): Promise<T> {
@@ -687,6 +735,27 @@ async function putWithToken<T>(path: string, token: string, body: unknown): Prom
     cache: "no-store",
   });
   if (!res.ok) throw new Error(`API PUT ${path} failed: ${res.status} · ${await res.text()}`);
+  return res.json();
+}
+
+async function patchWithToken<T>(path: string, token: string, body: unknown): Promise<T> {
+  const res = await fetch(`${BASE}${path}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json", "X-API-Token": token },
+    body: JSON.stringify(body),
+    cache: "no-store",
+  });
+  if (!res.ok) throw new Error(`API PATCH ${path} failed: ${res.status} · ${await res.text()}`);
+  return res.json();
+}
+
+async function delWithToken<T>(path: string, token: string): Promise<T> {
+  const res = await fetch(`${BASE}${path}`, {
+    method: "DELETE",
+    headers: { "Content-Type": "application/json", "X-API-Token": token },
+    cache: "no-store",
+  });
+  if (!res.ok) throw new Error(`API DELETE ${path} failed: ${res.status} · ${await res.text()}`);
   return res.json();
 }
 
@@ -830,6 +899,15 @@ export interface SniperStatus {
   active_window_kst: { start: string; end: string };
   force_close_enabled: boolean;
   force_close_kst: string;
+  watchlist_execute?: {
+    enabled: boolean;
+    start_kst: string;
+    end_kst: string;
+    gap_min_pct: number;
+    gap_max_pct: number;
+    min_composite_score: number;
+    use_rankings_confirm: boolean;
+  };
 }
 
 export interface SniperUniverseItem {
@@ -1301,4 +1379,66 @@ export interface MemeWatchTopResponse {
   total: number;
   computed_at: string;
   sources_status: Record<string, string>;  // {"apewisdom":"ok",...}
+}
+
+// ─────────────────────────────────────────────
+// Watchlist 타입 (Sprint 2 · 마감후 예측)
+// ─────────────────────────────────────────────
+export interface WatchlistItem {
+  id: number;
+  trade_date: string;      // YYYY-MM-DD
+  ticker: string;
+  name: string | null;
+  rank: number;
+  composite_score: number;
+  news_score: number;
+  board_score: number;
+  youtube_score: number;
+  event_score: number;
+  prev_day_score: number;
+  source_breakdown: Record<string, { count: number; intensity_sum: number }> | null;
+  locked: boolean;
+  added_by: string;        // "auto" | "user"
+  created_at: string | null;
+  updated_at: string | null;
+}
+
+export interface WatchlistSignal {
+  id: number;
+  ticker: string;
+  source: string;          // news_yhap · board_naver · youtube_shuka 등
+  signal_type: string;     // headline · board_post_velocity · video_upload 등
+  intensity: number;
+  payload: Record<string, unknown> | null;
+  detected_at: string | null;
+  trade_date: string;
+}
+
+export interface WatchlistReportCheck {
+  name: string;
+  target: string;
+  actual: string;
+  passed: boolean;
+}
+
+export interface WatchlistReport {
+  since: string;
+  window_days: number;
+  closed_trades: number;
+  metrics: {
+    total_trades: number;
+    wins: number;
+    losses: number;
+    win_rate: number;
+    avg_pnl_pct: number;
+    avg_win_pct: number;
+    avg_loss_pct: number;
+    max_win_pct: number;
+    max_loss_pct: number;
+    mdd_pct: number;
+    r_r_ratio: number;
+    reason_breakdown: Record<string, number>;
+  };
+  checks: WatchlistReportCheck[];
+  total_pass: boolean;
 }

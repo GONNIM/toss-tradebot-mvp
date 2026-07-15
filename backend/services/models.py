@@ -771,3 +771,69 @@ class MemeVolumeSnapshot(Base):
     rsi_14: Mapped[Optional[float]]
     halt_triggered: Mapped[bool] = mapped_column(Boolean, default=False)
     close: Mapped[Optional[float]]  # Phase 3-D: 일봉 마지막 종가 (UI current_price)
+
+
+# ─────────────────────────────────────────────────────────────────
+# Watchlist Signal (Sprint 2 · 야간 축적 신호)
+#   설계: docs/plans/sniper/03-sprint2-week1-tasks.md T58
+# ─────────────────────────────────────────────────────────────────
+
+
+class WatchlistSignal(Base):
+    """마감 후 야간 축적 신호. 다음날 Watchlist 승격의 원천 데이터.
+
+    source 별 예시:
+      · news_yhap · news_edaily · news_fnnews · news_herald · news_sedaily
+      · board_naver
+      · youtube_hantoo · youtube_shuka · youtube_jungpro · youtube_sampro
+      · assembly · motie_rss · msit_rss · moef_rss · molit_rss
+      · prev_day_derivative
+    """
+
+    __tablename__ = "watchlist_signal"
+
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    ticker: Mapped[str] = mapped_column(String(10), index=True)
+    source: Mapped[str] = mapped_column(String(20), index=True)
+    signal_type: Mapped[str] = mapped_column(String(30))
+    intensity: Mapped[float]
+    payload_json: Mapped[Optional[str]] = mapped_column(Text)
+    detected_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
+    trade_date: Mapped[str] = mapped_column(String(10), index=True)
+
+    __table_args__ = (
+        Index("ix_watchlist_signal_ticker_date", "ticker", "trade_date"),
+        Index("ix_watchlist_signal_source_time", "source", "detected_at"),
+    )
+
+
+class Watchlist(Base):
+    """개장 전 확정된 Top 30 Watchlist · Sprint 2 Week 2 T60.
+
+    unique(trade_date, ticker) · finalize 잡이 매일 08:30 KST 재생성.
+    locked=True 항목은 finalize 시 유지 (사용자 수동 lock).
+    """
+
+    __tablename__ = "watchlist"
+
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    trade_date: Mapped[str] = mapped_column(String(10), index=True)   # YYYY-MM-DD
+    ticker: Mapped[str] = mapped_column(String(10), index=True)
+    name: Mapped[Optional[str]] = mapped_column(String(100))
+    rank: Mapped[int]                                                  # 1 = top
+    composite_score: Mapped[float]
+    news_score: Mapped[float] = mapped_column(Float, default=0.0)
+    board_score: Mapped[float] = mapped_column(Float, default=0.0)
+    youtube_score: Mapped[float] = mapped_column(Float, default=0.0)
+    event_score: Mapped[float] = mapped_column(Float, default=0.0)
+    prev_day_score: Mapped[float] = mapped_column(Float, default=0.0)
+    source_breakdown: Mapped[Optional[str]] = mapped_column(Text)      # JSON: {source: {count, intensity_sum}}
+    locked: Mapped[bool] = mapped_column(Boolean, default=False)       # 사용자 수동 lock
+    added_by: Mapped[str] = mapped_column(String(10), default="auto")  # auto | user
+    created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now(), onupdate=func.now())
+
+    __table_args__ = (
+        Index("ix_watchlist_date_ticker", "trade_date", "ticker", unique=True),
+        Index("ix_watchlist_date_rank", "trade_date", "rank"),
+    )

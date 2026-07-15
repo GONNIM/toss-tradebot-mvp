@@ -14,6 +14,7 @@ const NAV = [
   { href: "/meme-watch", label: "🔥 밈주 워치" },
   { href: "/vip", label: "🕵️ VIP 감시" },
   { href: "/activist-radar", label: "🐺 Activist Radar" },
+  { href: "/watchlist", label: "🌙 Watchlist (마감후 예측)" },
   { href: "/sniper", label: "🚀 급등주 스나이퍼" },
   // 아래 3개 메뉴는 정체성 재정의(급등주 사전 예측)에 따라 네비에서 제거.
   // 코드/라우트는 백업 목적으로 유지 · 직접 URL 접근은 여전히 가능.

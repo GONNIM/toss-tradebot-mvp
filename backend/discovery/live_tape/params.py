@@ -83,6 +83,17 @@ class SniperParams:
     # ─── 활성화 스위치 ─────────────────
     enabled: bool = False                          # 기본 비활성 (안전)
 
+    # ─── Watchlist 개장 실행 (Sprint 2 Week 3) ───
+    # 09:00~09:30 KST · Watchlist 종목 시가 근처 진입
+    watchlist_execute_enabled: bool = False        # 기본 비활성 (안전 · 검증 후 On)
+    watchlist_execute_start_kst: str = "09:00"     # 개장 즉시
+    watchlist_execute_end_kst: str = "09:30"       # 초반 30분만
+    watchlist_gap_min_pct: float = 0.005           # 갭업 최소 +0.5%
+    watchlist_gap_max_pct: float = 0.05            # 갭업 최대 +5% (상투 회피)
+    watchlist_min_composite_score: float = 1.0     # composite_score >= 1.0 만
+    watchlist_use_rankings_confirm: bool = False   # rankings 매치 확인 (v1 off · v2 on)
+    watchlist_execute_poll_sec: int = 30           # 30초마다 스캔
+
 
 class SniperParamsStore:
     """파일 기반 파라미터 스토어 · hot reload · thread-safe."""

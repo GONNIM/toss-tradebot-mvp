@@ -77,6 +77,15 @@ async def sniper_status():
         },
         "force_close_enabled": params.force_close_enabled,
         "force_close_kst": params.force_close_kst,
+        "watchlist_execute": {
+            "enabled": params.watchlist_execute_enabled,
+            "start_kst": params.watchlist_execute_start_kst,
+            "end_kst": params.watchlist_execute_end_kst,
+            "gap_min_pct": params.watchlist_gap_min_pct,
+            "gap_max_pct": params.watchlist_gap_max_pct,
+            "min_composite_score": params.watchlist_min_composite_score,
+            "use_rankings_confirm": params.watchlist_use_rankings_confirm,
+        },
     }
 
 
