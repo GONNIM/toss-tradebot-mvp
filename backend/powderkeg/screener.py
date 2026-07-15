@@ -314,6 +314,13 @@ async def run_screener(
                 logger.exception("[screener] %s 실패 · %s", ticker, exc)
                 continue
 
+            # locked 상태 유지 · 이전 run 에서 사용자가 lock 한 종목은 lock 유지·added_by=user 보존
+            prev_locked = (await session.execute(
+                select(PowderKegList).where(
+                    PowderKegList.ticker == ticker,
+                    PowderKegList.locked == True,   # noqa: E712
+                ).limit(1)
+            )).scalar_one_or_none()
             session.add(PowderKegList(
                 run_id=run_id, ticker=ticker,
                 name=r.name,
@@ -326,6 +333,9 @@ async def run_screener(
                 dividend_payout=None,   # v1 · 배당성향 데이터 없음
                 conditions_json=json.dumps(r.conditions, ensure_ascii=False),
                 reject_reasons=",".join(r.reject_reasons) if r.reject_reasons else None,
+                locked=bool(prev_locked),
+                added_by=prev_locked.added_by if prev_locked else "auto",
+                user_note=prev_locked.user_note if prev_locked else None,
             ))
             stats[r.status] = stats.get(r.status, 0) + 1
 

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   api,
   PowderKegEventItem,
@@ -101,6 +101,7 @@ function Disclaimer() {
 // ═══════════════════════════════════════════════════════════════
 function ListTab({ token }: { token: string }) {
   const [statusFilter, setStatusFilter] = useState<string>("");
+  const qc = useQueryClient();
   const q = useQuery({
     queryKey: ["powderkeg", "list", statusFilter],
     queryFn: () =>
@@ -108,6 +109,22 @@ function ListTab({ token }: { token: string }) {
     refetchInterval: 60_000,
   });
   const items: PowderKegListItem[] = q.data?.items || [];
+
+  const toggleLock = useMutation({
+    mutationFn: ({ id, locked }: { id: number; locked: boolean }) =>
+      api.powderkeg.toggleListLock(token, id, locked),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["powderkeg", "list"] }),
+  });
+  const remove = useMutation({
+    mutationFn: ({ ticker, reason }: { ticker: string; reason: string }) =>
+      api.powderkeg.removeListItem(token, ticker, reason, q.data?.run_id || undefined),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["powderkeg", "list"] }),
+  });
+  const saveNote = useMutation({
+    mutationFn: ({ id, note }: { id: number; note: string }) =>
+      api.powderkeg.setListNote(token, id, note),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["powderkeg", "list"] }),
+  });
 
   return (
     <section className="space-y-3 rounded border p-4">
@@ -127,6 +144,7 @@ function ListTab({ token }: { token: string }) {
           <option value="cash_suspect">⚠️ cash_suspect</option>
         </select>
       </div>
+      <ManualAddForm token={token} runId={q.data?.run_id || undefined} />
       {q.isLoading ? (
         <div className="text-xs text-muted-foreground">불러오는 중...</div>
       ) : items.length === 0 ? (
@@ -150,14 +168,38 @@ function ListTab({ token }: { token: string }) {
                 <th className="p-2 text-right">PBR</th>
                 <th className="p-2 text-right">자사주</th>
                 <th className="p-2 text-left">사유</th>
+                <th className="p-2 text-center">액션</th>
               </tr>
             </thead>
             <tbody>
               {items.map((it) => (
-                <tr key={it.id} className="border-b hover:bg-sky-50/30">
+                <tr key={it.id} className={`border-b hover:bg-sky-50/30 ${it.locked ? "bg-amber-50/40 dark:bg-amber-950/20" : ""}`}>
                   <td className="p-2">
-                    <div className="font-medium">{it.name || "-"}</div>
+                    <div className="flex items-center gap-1">
+                      <span className="font-medium">{it.name || "-"}</span>
+                      {it.locked ? (
+                        <span
+                          title={`🔒 lock · added_by=${it.added_by}`}
+                          className="rounded bg-amber-200 px-1 py-0.5 text-[9px] text-amber-900"
+                        >
+                          🔒
+                        </span>
+                      ) : null}
+                      {it.added_by === "user" ? (
+                        <span
+                          title="사용자 수동 추가"
+                          className="rounded bg-sky-100 px-1 py-0.5 text-[9px] text-sky-800"
+                        >
+                          user
+                        </span>
+                      ) : null}
+                    </div>
                     <div className="text-[10px] text-muted-foreground">{it.ticker}</div>
+                    <NoteInput
+                      item={it}
+                      onSave={(note) => saveNote.mutate({ id: it.id, note })}
+                      disabled={!token || saveNote.isPending}
+                    />
                   </td>
                   <td className="p-2 text-center">
                     <StatusBadge status={it.status} />
@@ -174,6 +216,42 @@ function ListTab({ token }: { token: string }) {
                   <td className="p-2 text-[10px] text-muted-foreground">
                     {it.reject_reasons || "-"}
                   </td>
+                  <td className="p-2 text-center">
+                    <div className="flex flex-col gap-1">
+                      <button
+                        type="button"
+                        disabled={!token || toggleLock.isPending}
+                        onClick={() =>
+                          toggleLock.mutate({ id: it.id, locked: !it.locked })
+                        }
+                        className="rounded border px-1.5 py-0.5 text-[10px] hover:bg-amber-50 disabled:opacity-30"
+                        title={
+                          it.locked
+                            ? "unlock (다음 screener run 시 재평가)"
+                            : "lock (다음 screener run 후에도 유지)"
+                        }
+                      >
+                        {it.locked ? "🔓 unlock" : "🔒 lock"}
+                      </button>
+                      <button
+                        type="button"
+                        disabled={!token || remove.isPending}
+                        onClick={() => {
+                          const reason = prompt(
+                            `삭제 · ${it.ticker} ${it.name || ""}\n사유 (감사 로그):`,
+                            it.status === "cash_suspect" ? "cash_suspect · 사용자 판단 배제" : "",
+                          );
+                          if (reason !== null) {
+                            remove.mutate({ ticker: it.ticker, reason });
+                          }
+                        }}
+                        className="rounded border border-red-300 px-1.5 py-0.5 text-[10px] text-red-700 hover:bg-red-50 disabled:opacity-30"
+                        title="화약고 리스트에서 완전 삭제 (snapshot 감사 저장)"
+                      >
+                        × 삭제
+                      </button>
+                    </div>
+                  </td>
                 </tr>
               ))}
             </tbody>
@@ -181,6 +259,100 @@ function ListTab({ token }: { token: string }) {
         </div>
       )}
     </section>
+  );
+}
+
+function NoteInput({
+  item,
+  onSave,
+  disabled,
+}: {
+  item: PowderKegListItem;
+  onSave: (note: string) => void;
+  disabled: boolean;
+}) {
+  const [val, setVal] = useState<string>(item.user_note || "");
+  const dirty = val !== (item.user_note || "");
+  return (
+    <div className="mt-1 flex items-center gap-1">
+      <input
+        type="text"
+        value={val}
+        onChange={(e) => setVal(e.target.value)}
+        placeholder="분석 노트..."
+        className="w-40 rounded border px-1 py-0.5 text-[10px]"
+      />
+      {dirty ? (
+        <button
+          type="button"
+          disabled={disabled}
+          onClick={() => onSave(val)}
+          className="rounded bg-sky-600 px-1.5 py-0.5 text-[9px] text-white disabled:opacity-30"
+        >
+          저장
+        </button>
+      ) : null}
+    </div>
+  );
+}
+
+function ManualAddForm({ token, runId }: { token: string; runId?: string }) {
+  const qc = useQueryClient();
+  const [ticker, setTicker] = useState("");
+  const [note, setNote] = useState("");
+  const add = useMutation({
+    mutationFn: () =>
+      api.powderkeg.addManualToList(token, {
+        ticker,
+        note: note || undefined,
+        run_id: runId,
+      }),
+    onSuccess: () => {
+      setTicker("");
+      setNote("");
+      qc.invalidateQueries({ queryKey: ["powderkeg", "list"] });
+    },
+  });
+  return (
+    <div className="rounded border border-dashed border-sky-300 bg-sky-50 p-2 text-xs dark:border-sky-900 dark:bg-sky-950">
+      <div className="mb-1 font-bold text-sky-900 dark:text-sky-100">
+        ➕ 수동 추가 (사용자 판단 · locked=True)
+      </div>
+      <div className="flex flex-wrap items-center gap-1">
+        <input
+          type="text"
+          value={ticker}
+          onChange={(e) => setTicker(e.target.value.trim())}
+          placeholder="티커 (예: 035890)"
+          className="rounded border px-2 py-1 text-xs"
+        />
+        <input
+          type="text"
+          value={note}
+          onChange={(e) => setNote(e.target.value)}
+          placeholder="분석 노트 (선택)"
+          className="w-64 rounded border px-2 py-1 text-xs"
+        />
+        <button
+          type="button"
+          disabled={!token || !ticker || add.isPending}
+          onClick={() => add.mutate()}
+          className="rounded bg-emerald-600 px-3 py-1 text-xs text-white disabled:opacity-40"
+        >
+          {add.isPending ? "추가 중..." : "🔒 추가 + lock"}
+        </button>
+        {add.data ? (
+          <span className="text-xs text-emerald-700">
+            ✅ {add.data.ticker} {add.data.name} 추가됨
+          </span>
+        ) : null}
+        {add.error ? (
+          <span className="text-xs text-red-700">
+            ⛔ {String((add.error as Error).message)}
+          </span>
+        ) : null}
+      </div>
+    </div>
   );
 }
 

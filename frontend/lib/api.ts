@@ -769,6 +769,27 @@ export const api = {
       patchWithToken<{ id: number; status: string }>(
         `/powderkeg/ticket/${id}/reject`, token, { reason },
       ),
+    // 리스트 편집 (P7-2 UI 편집)
+    toggleListLock: (token: string, id: number, locked: boolean) =>
+      patchWithToken<{ id: number; locked: boolean }>(
+        `/powderkeg/list/${id}/lock`, token, { locked },
+      ),
+    setListNote: (token: string, id: number, note: string) =>
+      patchWithToken<{ id: number; user_note: string | null }>(
+        `/powderkeg/list/${id}/note`, token, { note },
+      ),
+    removeListItem: (token: string, ticker: string, reason: string, run_id?: string) =>
+      postWithToken<{ deleted: number; run_id: string; snapshot: Record<string, unknown> }>(
+        `/powderkeg/admin/list/remove`, token, { ticker, reason, run_id },
+      ),
+    addManualToList: (token: string, opts: { ticker: string; note?: string; run_id?: string }) =>
+      postWithToken<{ id: number; ticker: string; name: string; run_id: string; locked: boolean }>(
+        `/powderkeg/list/manual`, token, opts,
+      ),
+    migrateSchema: (token: string) =>
+      postWithToken<{ applied: string[]; errors: string[] }>(
+        `/powderkeg/admin/migrate-schema`, token,
+      ),
   },
 };
 
@@ -1504,6 +1525,9 @@ export interface PowderKegListItem {
   dividend_payout: number | null;
   conditions: Record<string, boolean> | null;
   reject_reasons: string | null;
+  locked: boolean;
+  added_by: string;                // auto | user
+  user_note: string | null;
   created_at: string | null;
 }
 

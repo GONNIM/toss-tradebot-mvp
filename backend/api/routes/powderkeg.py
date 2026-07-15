@@ -105,6 +105,9 @@ async def get_list(
                 "pbr": r.pbr, "dividend_payout": r.dividend_payout,
                 "conditions": json.loads(r.conditions_json) if r.conditions_json else None,
                 "reject_reasons": r.reject_reasons,
+                "locked": getattr(r, "locked", False) or False,
+                "added_by": getattr(r, "added_by", "auto") or "auto",
+                "user_note": getattr(r, "user_note", None),
                 "created_at": r.created_at.isoformat() if r.created_at else None,
             }
             for r in rows
@@ -215,6 +218,86 @@ async def get_corp_code(ticker: str) -> dict[str, Optional[str]]:
     return {"ticker": ticker, "corp_code": cc}
 
 
+@router.patch("/list/{item_id}/lock", dependencies=[Depends(require_sniper_token)])
+async def toggle_list_lock(item_id: int, locked: bool = Body(..., embed=True)) -> dict[str, Any]:
+    """리스트 항목 lock 토글 · locked=True 는 스크리너 재실행 후에도 유지 (Watchlist 패턴)."""
+    async with get_session() as session:
+        row = (await session.execute(
+            select(PowderKegList).where(PowderKegList.id == item_id)
+        )).scalar_one_or_none()
+        if row is None:
+            raise HTTPException(status_code=404, detail=f"item {item_id} not found")
+        row.locked = bool(locked)
+        if locked:
+            row.added_by = "user"
+    return {"id": item_id, "locked": bool(locked)}
+
+
+@router.patch("/list/{item_id}/note", dependencies=[Depends(require_sniper_token)])
+async def update_list_note(item_id: int, note: str = Body("", embed=True)) -> dict[str, Any]:
+    """사용자 코멘트 저장 (분석 노트 · 사유 등)."""
+    async with get_session() as session:
+        row = (await session.execute(
+            select(PowderKegList).where(PowderKegList.id == item_id)
+        )).scalar_one_or_none()
+        if row is None:
+            raise HTTPException(status_code=404, detail=f"item {item_id} not found")
+        row.user_note = note.strip() or None
+    return {"id": item_id, "user_note": note.strip() or None}
+
+
+@router.post("/list/manual", dependencies=[Depends(require_sniper_token)])
+async def add_manual_to_list(
+    ticker: str = Body(..., embed=True),
+    run_id: Optional[str] = Body(None, embed=True),
+    note: Optional[str] = Body(None, embed=True),
+) -> dict[str, Any]:
+    """사용자 수동 추가 · locked=True · added_by='user' · 스크리너 후에도 유지."""
+    ticker = ticker.strip()
+    if not ticker:
+        raise HTTPException(status_code=400, detail="ticker required")
+    from backend.powderkeg.collectors.corp_codes import resolve_corp_code
+    from backend.services.models import KrxMarketSnapshot as KRX
+    async with get_session() as session:
+        if run_id is None:
+            run_id = (await session.execute(
+                select(PowderKegList.run_id)
+                .order_by(PowderKegList.created_at.desc()).limit(1)
+            )).scalar_one_or_none()
+        if run_id is None:
+            run_id = datetime.now(tz=timezone.utc).strftime("%Y%m%d-%H%M%S")
+        # name 자동 해결 (KRX 스냅샷)
+        stmt = (
+            select(KRX.name)
+            .where(KRX.ticker == ticker, KRX.name.is_not(None))
+            .order_by(KRX.snapshot_date.desc()).limit(1)
+        )
+        name = (await session.execute(stmt)).scalar_one_or_none() or ticker
+        # 이미 있으면 lock+note 만 갱신
+        existing = (await session.execute(
+            select(PowderKegList).where(
+                PowderKegList.run_id == run_id, PowderKegList.ticker == ticker,
+            )
+        )).scalar_one_or_none()
+        if existing:
+            existing.locked = True
+            existing.added_by = "user"
+            if note:
+                existing.user_note = note
+            item_id = existing.id
+        else:
+            row = PowderKegList(
+                run_id=run_id, ticker=ticker, name=name,
+                status="passed", locked=True, added_by="user",
+                user_note=note,
+            )
+            session.add(row)
+            await session.flush()
+            item_id = row.id
+    logger.info("[powderkeg.manual_add] ticker=%s run=%s note=%s", ticker, run_id, note)
+    return {"id": item_id, "ticker": ticker, "name": name, "run_id": run_id, "locked": True}
+
+
 @router.post("/admin/list/remove", dependencies=[Depends(require_sniper_token)])
 async def admin_remove_from_list(
     ticker: str = Body(..., embed=True),
@@ -305,6 +388,10 @@ async def migrate_schema() -> dict[str, Any]:
     # 3. ALTER TABLE ADD COLUMN (기존 테이블 · schema drift)
     alter_stmts = [
         ("powderkeg_krx_snapshot", "name", "VARCHAR(100)"),
+        # Phase 7-2 UI 편집 (locked/added_by/user_note)
+        ("powderkeg_list", "locked", "BOOLEAN DEFAULT 0"),
+        ("powderkeg_list", "added_by", "VARCHAR(10) DEFAULT 'auto'"),
+        ("powderkeg_list", "user_note", "TEXT"),
     ]
     async with get_session() as session:
         for table, col, col_type in alter_stmts:

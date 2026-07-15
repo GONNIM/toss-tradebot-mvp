@@ -979,6 +979,10 @@ class PowderKegList(Base):
     # 조건별 통과/탈락 상세 (JSON: {"pbr":true, "net_cash":false, ...})
     conditions_json: Mapped[Optional[str]] = mapped_column(Text)
     reject_reasons: Mapped[Optional[str]] = mapped_column(Text)   # 콤마 분리
+    # 사용자 편집 (Phase 7-2 · UI)
+    locked: Mapped[bool] = mapped_column(Boolean, default=False)          # 스크리너 재실행 후에도 유지
+    added_by: Mapped[str] = mapped_column(String(10), default="auto")     # auto | user
+    user_note: Mapped[Optional[str]] = mapped_column(Text)                # 사용자 코멘트
     created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
 
     __table_args__ = (
