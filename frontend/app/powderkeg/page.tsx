@@ -191,6 +191,7 @@ function ListTab({ token }: { token: string }) {
 
   return (
     <section className="space-y-3 rounded border p-4">
+      <UsageGuideCard />
       <FunnelCard runId={q.data?.run_id || null} />
       <LowPbrDiscoveryCard token={token} />
       <ReScreenGuide token={token} runId={q.data?.run_id || null} count={q.data?.count || 0} />
@@ -563,6 +564,99 @@ function EventTypeBadge({ event_type, kind }: { event_type: string; kind: "A" | 
       {kind === "B" ? "🚨 " : ""}
       {event_type}
     </span>
+  );
+}
+
+/** 사용법 가이드 카드 · v1.22 · 사용자가 리스트를 어떻게 활용할지 안내.
+ *   티어별 액션 · 이벤트 대응 · 일일 워크플로우.
+ */
+function UsageGuideCard() {
+  const KEY = "powderkeg_usage_guide_dismissed";
+  const [dismissed, setDismissed] = useState(false);
+  const [open, setOpen] = useState(true);
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      setDismissed(!!localStorage.getItem(KEY));
+    }
+  }, []);
+  if (dismissed) return null;
+  return (
+    <section className="rounded border-2 border-purple-300 bg-gradient-to-r from-purple-50 to-pink-50 p-3 text-xs dark:border-purple-800 dark:from-purple-950 dark:to-pink-950">
+      <div className="flex items-center justify-between">
+        <button
+          type="button"
+          onClick={() => setOpen(!open)}
+          className="font-bold text-purple-900 hover:underline dark:text-purple-100"
+        >
+          {open ? "▼" : "▶"} 📖 이 리스트를 어떻게 활용하나요?
+        </button>
+        <button
+          type="button"
+          onClick={() => {
+            localStorage.setItem(KEY, "1");
+            setDismissed(true);
+          }}
+          className="rounded border border-purple-300 px-2 py-0.5 text-[11px] text-purple-700 hover:bg-purple-100"
+        >
+          다시 안 보기
+        </button>
+      </div>
+      {open && (
+        <div className="mt-2 space-y-2">
+          <div className="rounded border bg-white p-2 dark:bg-slate-900">
+            <div className="mb-1 font-bold">🎯 티어별 액션</div>
+            <ul className="space-y-1">
+              <li>
+                <b className="text-amber-900 dark:text-amber-100">🥇 Tier 1 (10/10 통과)</b> ·
+                <b>최상위 관찰 대상</b>. 이벤트 발생 시 (담보제공 등) Telegram 알림 도착 · 알림 확인 후 개별 판단.
+                <span className="text-[10px] text-red-700"> ⚠️ 자동매매 X · 사용자 최종 결정</span>
+              </li>
+              <li>
+                <b className="text-slate-800 dark:text-slate-100">🥈 Tier 2 (8~9/10)</b> ·
+                <b>승격 후보 관찰</b>. 병목 조건 (예: F-Score) 개선 시 Tier 1 승격 가능. 다음 분기 사업보고서 공개 후 재평가 확인.
+              </li>
+              <li>
+                <b className="text-orange-800 dark:text-orange-100">🥉 Tier 3 (7/10)</b> ·
+                <b>지속 관찰</b>. 여러 조건 병목 · 개선 여지 낮음 · 참고용.
+              </li>
+              <li>
+                <b className="text-yellow-800 dark:text-yellow-100">⚠️ 현금 의심</b> ·
+                <b>분식 의심 · 회피</b>. 이자수익 부족 · 재무 신뢰도 낮음.
+              </li>
+              <li>
+                <b className="text-slate-600">❌ 탈락</b> ·
+                <b>이 카테고리 종목 아님</b>. 무시.
+              </li>
+            </ul>
+          </div>
+          <div className="rounded border bg-white p-2 dark:bg-slate-900">
+            <div className="mb-1 font-bold">🔔 이벤트 발생 시 (자동 3분 주기 감시)</div>
+            <ul className="space-y-1">
+              <li>· <b>Type A</b> (담보제공 · 상속 · 배당 확대 등) · Tier 1/2 종목 이벤트 → Telegram 알림 · 매수 후보 or 관찰</li>
+              <li>· <b>Type A · 백테스트 음수</b> (예: A3 담보제공 · 12M -11.7%) → 🔬 [관찰 후보 · 백테스트 음수] 라벨 · 신중 검토</li>
+              <li>· <b>Type B</b> (횡령 · 감사비적정 · 거래정지) · 🚫 <b>DO NOT TOUCH</b> · 리스트 자동 제거 · 매수 금지</li>
+            </ul>
+          </div>
+          <div className="rounded border bg-white p-2 dark:bg-slate-900">
+            <div className="mb-1 font-bold">📅 일일/주간 사용 흐름</div>
+            <ol className="space-y-1 pl-4" style={{ listStyleType: "decimal" }}>
+              <li><b>매일 · Telegram 알림 확인</b> · Type A 매수 후보 · Type B DO NOT TOUCH</li>
+              <li><b>주 1회 · 리스트 확인</b> · Tier 1 · Tier 2 변화 · 이벤트 이력 (탭 2 · 🔥 불꽃 피드)</li>
+              <li><b>분기 1회 · 재평가</b> · 사업보고서 공개 (5·8·11·2월) 후 · 🔄 지금 재평가 버튼</li>
+              <li><b>매수 결정 전</b> · 백테스트 리포트 (탭 3) 확인 · 강건성 뱃지 (🔴 위험 = 임계 코앞 · 신중)</li>
+              <li><b>매수 후</b> · 무효화 조건 필수 (가격 -15% or 논리 무효 · 예: 담보 해제)</li>
+            </ol>
+          </div>
+          <div className="rounded border-2 border-red-200 bg-red-50 p-2 text-red-900 dark:bg-red-950 dark:text-red-100">
+            <b>⚠️ 중요</b> · 본 리스트는 <b>매수 추천 아님</b>. 관찰 후보만 제공. 최종 판단은 사용자 몫.
+            자동매매 연결 안 됨 (hypothesis 모드).
+            <a href="/docs/powderkeg-user-guide" className="ml-1 text-sky-700 underline hover:text-sky-500">
+              📖 상세 사용법 문서 →
+            </a>
+          </div>
+        </div>
+      )}
+    </section>
   );
 }
 
