@@ -379,16 +379,29 @@ async def run_screener(
         _kst = timezone(timedelta(hours=9))
         run_id = datetime.now(tz=_kst).strftime("%Y%m%d-%H%M%SK")
 
-    # locked=True 인 전 종목 union · 사용자가 lock 걸어둔 종목은 유니버스에 없어도 항상 재평가
+    # locked=True 인 종목 union · 사용자가 lock 걸어둔 종목은 유니버스에 없어도 항상 재평가
     #   (스케줄러 자동 실행에서도 수동 추가 종목이 orphan 안 되도록 보장)
+    # v1.17 (버그 fix): 이전 · 모든 run 의 locked=True 검색 → 삭제 후에도 재승격 발생.
+    #                   지금 · 최신 run 의 locked=True 만 참조 · 삭제 흔적은 배제.
     input_set = list(dict.fromkeys(tickers))   # dedupe · 순서 유지
     async with get_session() as session:
-        locked_tickers = list((await session.execute(
-            select(PowderKegList.ticker).where(PowderKegList.locked == True).distinct()   # noqa: E712
-        )).scalars().all())
+        latest_run = (await session.execute(
+            select(PowderKegList.run_id).order_by(PowderKegList.created_at.desc()).limit(1)
+        )).scalar_one_or_none()
+        locked_tickers: list[str] = []
+        if latest_run is not None:
+            locked_tickers = list((await session.execute(
+                select(PowderKegList.ticker).where(
+                    PowderKegList.run_id == latest_run,
+                    PowderKegList.locked == True,   # noqa: E712
+                ).distinct()
+            )).scalars().all())
     extra = [t for t in locked_tickers if t not in input_set]
     if extra:
-        logger.info("[screener.run] locked union · %d extra tickers: %s", len(extra), extra)
+        logger.info(
+            "[screener.run] locked union (latest run %s) · %d extra tickers: %s",
+            latest_run, len(extra), extra,
+        )
         input_set = input_set + extra
 
     stats = {"run_id": run_id, "total": 0, "passed": 0, "rejected": 0, "cash_suspect": 0}

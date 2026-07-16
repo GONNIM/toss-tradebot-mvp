@@ -341,11 +341,15 @@ async def admin_remove_from_list(
     run_id: Optional[str] = Body(None, embed=True, description="None = 최신 run"),
     reason: Optional[str] = Body(None, embed=True),
 ) -> dict[str, Any]:
-    """수동 · 화약고 리스트에서 특정 종목 제거 (감사 로그 남김).
+    """수동 · 화약고 리스트에서 특정 종목 완전 제거 (감사 로그 + lock 해제).
+
+    v1.17 (2026-07-16 · 버그 fix):
+      · 삭제 후 재평가 시 · 과거 run 에 남아있는 locked=True 흔적으로 재승격되는 문제 fix
+      · 모든 run 에서 해당 ticker · locked=False 로 갱신 · union 재승격 차단
 
     용도: cash_suspect · 지주회사 특성 · 사용자 판단으로 리스트에서 배제.
     """
-    from sqlalchemy import delete as _delete
+    from sqlalchemy import delete as _delete, update as _update
     async with get_session() as session:
         if run_id is None:
             run_id = (await session.execute(
@@ -366,14 +370,26 @@ async def admin_remove_from_list(
             "pbr": row.pbr, "net_cash_ratio": row.net_cash_ratio,
             "owner_pct": row.owner_pct, "reason_removed": reason,
         }
+        # (a) 최신 run 에서 삭제
         result = await session.execute(
             _delete(PowderKegList).where(
                 PowderKegList.run_id == run_id, PowderKegList.ticker == ticker,
             )
         )
-    logger.info("[powderkeg.admin] removed · ticker=%s run=%s reason=%s snapshot=%s",
-                ticker, run_id, reason, snapshot)
-    return {"deleted": int(result.rowcount or 0), "run_id": run_id, "snapshot": snapshot}
+        # (b) v1.17 · 모든 run 에서 lock 해제 · 재승격 차단
+        unlock_result = await session.execute(
+            _update(PowderKegList).where(
+                PowderKegList.ticker == ticker,
+                PowderKegList.locked == True,   # noqa: E712
+            ).values(locked=False)
+        )
+    logger.info("[powderkeg.admin] removed · ticker=%s run=%s reason=%s unlocked_runs=%d snapshot=%s",
+                ticker, run_id, reason, int(unlock_result.rowcount or 0), snapshot)
+    return {
+        "deleted": int(result.rowcount or 0),
+        "unlocked_runs": int(unlock_result.rowcount or 0),
+        "run_id": run_id, "snapshot": snapshot,
+    }
 
 
 # ─── 수동 스키마 마이그레이션 · SQLite CREATE / ALTER ─

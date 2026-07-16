@@ -105,7 +105,10 @@ function IdentityBanner() {
         ⚠️ 이 화면은 백테스트 검증 전 hypothesis 상태입니다.
       </div>
       <ul className="mt-1 space-y-0.5 text-red-800 dark:text-red-200">
-        <li>· validated=true 이벤트만 반자동 티켓 생성 가능 (백테스트 t-stat &gt; 2 · 표본 ≥ 50)</li>
+        <li>
+          · <b>validated</b>=true 이벤트만 반자동 티켓 생성 가능
+          <span className="text-[10px]"> · 게이트 4조건 · 표본 ≥ 50 · t-stat &gt; 2 · 승률 &gt; 50% · 평균 수익 &gt; 0</span>
+        </li>
         <li>· 오너 개인 이벤트 표기는 공시/기사 원문 링크만 · 판단 문구 표시 X (§7-6-3 명예훼손 방지)</li>
         <li>· Type B (횡령·감사부적정·거래정지) 발생 시 자동 리스트 제거 + 최우선 알림</li>
       </ul>
