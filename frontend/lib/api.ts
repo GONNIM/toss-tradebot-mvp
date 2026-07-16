@@ -1529,6 +1529,10 @@ export interface PowderKegListItem {
   added_by: string;                // auto | user
   user_note: string | null;
   created_at: string | null;
+  // v1.14 · 강건성 (리뷰어 지적 #5)
+  robustness_score?: number | null;      // 0.0 ~ 1.0 · min margin
+  robustness_grade?: string | null;      // strong / moderate / borderline / at_risk
+  condition_margins?: Record<string, number>;
 }
 
 export interface PowderKegListResponse {

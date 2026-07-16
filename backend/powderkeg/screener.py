@@ -56,6 +56,66 @@ class ScreenResult:
     treasury_pct: Optional[float] = None
     pbr: Optional[float] = None
     dividend_payout: Optional[float] = None
+    # v1.14 · 강건성 (리뷰어 지적 #5)
+    robustness_score: Optional[float] = None    # 0.0 ~ 1.0 · min margin 정규화
+    robustness_grade: Optional[str] = None      # strong / moderate / borderline / at_risk
+    condition_margins: dict[str, float] = field(default_factory=dict)   # 조건별 임계 대비 여유
+
+
+def _compute_robustness(
+    conditions_passed: dict[str, bool],
+    thresholds,
+    pbr: Optional[float],
+    net_cash_ratio: Optional[float],
+    owner_pct: Optional[float],
+    piotroski_f_score: Optional[int],
+) -> tuple[Optional[float], Optional[str], dict[str, float]]:
+    """조건별 임계 여유 계산 · 최소 margin = robustness_score.
+
+    v1.14 (리뷰어 지적 #5): 서희건설 · PBR 0.476 (임계 0.5) · net_cash 40.6% (임계 40%)
+      경계선 통과 · 시총 1.5% 변동 시 탈락 · 강건성 명시 필요.
+
+    Margin 정의 (모두 정규화):
+      · c1 pbr < 0.5      → (0.5 - pbr) / 0.5
+      · c2 net_cash > 40% → (net_cash - 0.4) / 0.4
+      · c3 owner >= 40%   → (owner - 0.4) / 0.4
+      · c8 fscore >= 6    → (fscore - 6) / 6
+
+    Grade (min margin 기준):
+      · ≥ 0.20 · strong     🟢
+      · ≥ 0.10 · moderate   🟡
+      · ≥ 0.05 · borderline 🟠
+      · <  0.05 · at_risk   🔴
+    """
+    margins: dict[str, float] = {}
+    if pbr is not None and pbr > 0:
+        margins["1_pbr"] = round((thresholds.pbr_max - pbr) / thresholds.pbr_max, 4)
+    if net_cash_ratio is not None:
+        margins["2_net_cash"] = round((net_cash_ratio - thresholds.net_cash_ratio_min) / thresholds.net_cash_ratio_min, 4)
+    if owner_pct is not None:
+        margins["3_owner"] = round((owner_pct - thresholds.major_shareholder_pct_min) / thresholds.major_shareholder_pct_min, 4)
+    if piotroski_f_score is not None:
+        margins["8_fscore"] = round((piotroski_f_score - thresholds.piotroski_f_score_min) / thresholds.piotroski_f_score_min, 4)
+
+    if not margins:
+        return None, None, {}
+
+    # passed_all=True 상태에서만 의미 있음 · rejected 는 음수 margin
+    positive_margins = [m for m in margins.values() if m >= 0]
+    if not positive_margins:
+        return None, None, margins
+    score = min(positive_margins)
+
+    if score >= 0.20:
+        grade = "strong"
+    elif score >= 0.10:
+        grade = "moderate"
+    elif score >= 0.05:
+        grade = "borderline"
+    else:
+        grade = "at_risk"
+
+    return score, grade, margins
 
 
 async def _latest_financial(ticker: str, report_code: str = "11011") -> Optional[FinancialSnapshot]:
@@ -274,6 +334,19 @@ async def screen_ticker(
     else:
         result.status = "rejected"
 
+    # v1.14 · 강건성 스코어 (리뷰어 지적 #5)
+    score, grade, margins = _compute_robustness(
+        conditions_passed=result.conditions,
+        thresholds=t,
+        pbr=result.pbr,
+        net_cash_ratio=result.net_cash_ratio,
+        owner_pct=result.owner_pct,
+        piotroski_f_score=result.piotroski_f_score,
+    )
+    result.robustness_score = score
+    result.robustness_grade = grade
+    result.condition_margins = margins
+
     return result
 
 
@@ -333,6 +406,13 @@ async def run_screener(
                     PowderKegList.locked == True,   # noqa: E712
                 ).limit(1)
             )).scalar_one_or_none()
+            # v1.14 · conditions_json 에 robustness meta 병기
+            conditions_with_meta = dict(r.conditions)
+            conditions_with_meta["_robustness"] = {
+                "score": r.robustness_score,
+                "grade": r.robustness_grade,
+                "margins": r.condition_margins,
+            }
             session.add(PowderKegList(
                 run_id=run_id, ticker=ticker,
                 name=r.name,
@@ -343,7 +423,7 @@ async def run_screener(
                 treasury_pct=r.treasury_pct,
                 pbr=r.pbr,
                 dividend_payout=None,   # v1 · 배당성향 데이터 없음
-                conditions_json=json.dumps(r.conditions, ensure_ascii=False),
+                conditions_json=json.dumps(conditions_with_meta, ensure_ascii=False),
                 reject_reasons=",".join(r.reject_reasons) if r.reject_reasons else None,
                 locked=bool(prev_locked),
                 added_by=prev_locked.added_by if prev_locked else "auto",

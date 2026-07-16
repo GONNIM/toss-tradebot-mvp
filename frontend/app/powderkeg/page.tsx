@@ -204,6 +204,7 @@ function ListTab({ token }: { token: string }) {
                           user
                         </span>
                       ) : null}
+                      <RobustnessBadge score={it.robustness_score} grade={it.robustness_grade} />
                     </div>
                     <div className="text-[10px] text-muted-foreground">{it.ticker}</div>
                     <NoteInput
@@ -494,6 +495,29 @@ function DoNotTouchBadge() {
   return (
     <span className="rounded bg-red-800 px-1.5 py-0.5 text-[10px] font-bold text-white shadow-sm">
       🚫 DO NOT TOUCH
+    </span>
+  );
+}
+
+/** 강건성 뱃지 · v1.14 · 리뷰어 지적 #5 · 임계 여유 표시.
+ *   strong 🟢 ≥20% · moderate 🟡 ≥10% · borderline 🟠 ≥5% · at_risk 🔴 <5%
+ */
+function RobustnessBadge({ score, grade }: { score?: number | null; grade?: string | null }) {
+  if (score == null || !grade) return null;
+  const pct = (score * 100).toFixed(1);
+  const map: Record<string, { icon: string; cls: string; label: string }> = {
+    strong:     { icon: "🟢", cls: "bg-emerald-100 text-emerald-800 dark:bg-emerald-900 dark:text-emerald-100", label: "강건" },
+    moderate:   { icon: "🟡", cls: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-100", label: "보통" },
+    borderline: { icon: "🟠", cls: "bg-orange-100 text-orange-900 dark:bg-orange-900 dark:text-orange-100", label: "경계선" },
+    at_risk:    { icon: "🔴", cls: "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-100", label: "위험" },
+  };
+  const m = map[grade] || { icon: "⚪", cls: "bg-slate-100 text-slate-800", label: grade };
+  return (
+    <span
+      className={`rounded px-1.5 py-0.5 text-[10px] font-bold ${m.cls}`}
+      title={`강건성 · ${grade} · margin ${pct}% · 임계 대비 최소 여유`}
+    >
+      {m.icon} {m.label} {pct}%
     </span>
   );
 }

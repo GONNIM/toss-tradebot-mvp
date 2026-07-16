@@ -92,26 +92,50 @@ async def get_list(
         stmt = stmt.order_by(PowderKegList.net_cash_ratio.desc().nulls_last()).limit(limit)
         rows = (await session.execute(stmt)).scalars().all()
 
+    def _extract_robustness(cond_json_str: Optional[str]) -> dict:
+        """v1.14 · conditions_json 에서 _robustness meta 추출."""
+        if not cond_json_str:
+            return {}
+        try:
+            data = json.loads(cond_json_str)
+        except Exception:  # noqa: BLE001
+            return {}
+        if isinstance(data, dict) and "_robustness" in data:
+            r = data["_robustness"]
+            return {
+                "robustness_score": r.get("score"),
+                "robustness_grade": r.get("grade"),
+                "condition_margins": r.get("margins", {}),
+            }
+        return {}
+
+    items = []
+    for r in rows:
+        cond = json.loads(r.conditions_json) if r.conditions_json else None
+        # UI 는 boolean 조건만 필요 · _robustness 필드 제거 후 반환
+        if isinstance(cond, dict) and "_robustness" in cond:
+            cond = {k: v for k, v in cond.items() if k != "_robustness"}
+        rob = _extract_robustness(r.conditions_json)
+        items.append({
+            "id": r.id, "ticker": r.ticker, "name": r.name,
+            "status": r.status, "net_cash_ratio": r.net_cash_ratio,
+            "piotroski_f_score": r.piotroski_f_score,
+            "owner_pct": r.owner_pct, "treasury_pct": r.treasury_pct,
+            "pbr": r.pbr, "dividend_payout": r.dividend_payout,
+            "conditions": cond,
+            "reject_reasons": r.reject_reasons,
+            "locked": getattr(r, "locked", False) or False,
+            "added_by": getattr(r, "added_by", "auto") or "auto",
+            "user_note": getattr(r, "user_note", None),
+            "created_at": r.created_at.isoformat() if r.created_at else None,
+            **rob,
+        })
+
     return {
         "disclaimer": DISCLAIMER,
         "run_id": run_id,
         "count": len(rows),
-        "items": [
-            {
-                "id": r.id, "ticker": r.ticker, "name": r.name,
-                "status": r.status, "net_cash_ratio": r.net_cash_ratio,
-                "piotroski_f_score": r.piotroski_f_score,
-                "owner_pct": r.owner_pct, "treasury_pct": r.treasury_pct,
-                "pbr": r.pbr, "dividend_payout": r.dividend_payout,
-                "conditions": json.loads(r.conditions_json) if r.conditions_json else None,
-                "reject_reasons": r.reject_reasons,
-                "locked": getattr(r, "locked", False) or False,
-                "added_by": getattr(r, "added_by", "auto") or "auto",
-                "user_note": getattr(r, "user_note", None),
-                "created_at": r.created_at.isoformat() if r.created_at else None,
-            }
-            for r in rows
-        ],
+        "items": items,
     }
 
 
