@@ -484,13 +484,56 @@ async def _get_empirical_direction(event_type: str) -> str:
 
 - ~~1. A3 액션 정책 재검토~~ · ✅ **완료** (본 §13)
 - 2. 완료보고서 §10-3 표 수치 정합화 · 재캐시 반영 (부분 완료)
-- 3. release_date 실제 접수일 채우기 · DART list.json rcept_dt 조회
+- ~~3. release_date 실제 접수일 채우기~~ · ✅ **완료** (§14 참조 · v1.6)
 - 4. 뉴스 크롤링 (§7-1-4) 구현 · A1/A2/A6 표본
 - 5. §7-3 5분 스펙 준수 · 폴링 30m → 5m or push 훅
 
 ---
 
-## 14. 학습 및 교훈
+## 14. release_date 실제 접수일 정합 (v1.6 · 2026-07-16)
+
+### 14-1. 리뷰 지적 사항
+> "release_date 는 실제로 `collected_at` 대체 (dart_financials.py:226) — DART list.json 별도 조회 미구현. Phase 0 as-of 규약 look-ahead 리스크"
+
+### 14-2. Fix 실체 · fetch_report_receipt_date + collect_financial_snapshot 자동 조회
+
+**dart/client.py 신규 함수** · `fetch_report_receipt_date(corp_code, bsns_year, reprt_code)`:
+- DART list.json 조회 (pblntf_ty=A 정기공시)
+- reprt_code 별 접수 창구 매핑:
+  - 11011 사업보고서 · YYYY+1 년 1~4월
+  - 11012 반기보고서 · YYYY 년 7~9월
+  - 11013 1분기 · YYYY 년 4~6월 (title "1분기" 필터)
+  - 11014 3분기 · YYYY 년 10~12월 (title "3분기" 필터)
+- title/bsns_year 매칭 · 정정공시도 최신 rcept_dt 우선
+- 매칭 실패 시 None (호출자 fallback)
+
+**dart_financials.py:collect_financial_snapshot 갱신**:
+```python
+if release_date is not None:
+    release_dt = release_date
+else:
+    rcept_d = await fetch_report_receipt_date(corp_code, bsns_year, reprt_code)
+    if rcept_d is not None:
+        release_dt = datetime(rcept_d.year, rcept_d.month, rcept_d.day, tzinfo=timezone.utc)
+    else:
+        release_dt = datetime.now(tz=timezone.utc)   # fallback (기존 동작)
+```
+
+### 14-3. Phase 0 as-of 규약 정합
+- **이전** (v1.5-): reference_date=2025-12-31 · release_date=`2026-07-16` (collected_at) · 5년 backfill 시 모든 재무가 오늘 접수된 것으로 표기 · **look-ahead 위험**
+- **이후** (v1.6+): reference_date=2025-12-31 · release_date=`2026-03-XX` (실제 사업보고서 접수일) · 백테스트에서 정확한 as-of 시점 사용 가능
+
+### 14-4. 기존 데이터
+- 이미 저장된 400+ 재무 스냅샷은 collected_at 시점 그대로 보존 (재수집 없이 fallback)
+- **신규 수집·재수집 시** 자동으로 실제 접수일 채워짐
+- backfill 재실행 옵션 · POST /collectors/dart-financials 재호출 · unique 제약 처리 (기존 release_date 보다 새 값이 이전이면 skip · 이후면 갱신)
+
+### 14-5. as-of 위반 시나리오 방어
+- 2026 년에 조회하는 2022 년 사업보고서는 실제 2023-03 접수 · 백테스트에서 2023-03 이후 이벤트만 해당 재무 사용 · look-ahead 없음
+
+---
+
+## 15. 학습 및 교훈
 
 ### 데이터 정확성 우선주의
 - 초기 스펙 (지시서·DART 문서) 기반 코드 → 실 응답에서 다수 field/format 차이 발견
@@ -513,7 +556,7 @@ async def _get_empirical_direction(event_type: str) -> str:
 
 ---
 
-## 15. 참고 문서
+## 16. 참고 문서
 
 **Phase 7 계열**
 - [`phase7-powderkeg-screener.md`](./phase7-powderkeg-screener.md) · 원 지시서
@@ -552,4 +595,5 @@ async def _get_empirical_direction(event_type: str) -> str:
 | 2026-07-16 | v1.2 | §9-1 백테스트 정밀화 완결 · 5년 backfill 실행 · A3/B1/B2/B3 표본 ≥ 50 확보 · §10 신설 (실측 CAR + 가설 재검증) | `d0d1b5c` |
 | 2026-07-16 | v1.3 | §9-2 리스크·VIP 감시 연동 완결 · holding_expiry_job 스케줄러 + approve_ticket VIP 훅 자동 호출 + Telegram · §11 신설 | `c594e4b` |
 | 2026-07-16 | v1.4 | §9-3 UI 정합성 완결 · DO NOT TOUCH 뱃지 + CarChart recharts BarChart · §12 신설 · TypeScript 0 error 검증 | `408dd4b` |
-| 2026-07-16 | v1.5 | 전문가 리뷰 반영 · **A3 액션 정책 재검토** · triggers.py 실증 방향성 기반 알림 title/body (validated/observed_negative/observing) · notified_negative action_taken 신설 | (본 커밋) |
+| 2026-07-16 | v1.5 | 전문가 리뷰 반영 · **A3 액션 정책 재검토** · triggers.py 실증 방향성 기반 알림 title/body (validated/observed_negative/observing) · notified_negative action_taken 신설 | `21e5856` |
+| 2026-07-16 | v1.6 | 전문가 리뷰 반영 · **release_date 실제 접수일** · dart/client.py fetch_report_receipt_date + dart_financials.py 자동 조회 · Phase 0 as-of 규약 정합 · §14 신설 | (본 커밋) |

@@ -7,7 +7,8 @@
 
 as-of 규약 (§7-1):
   - reference_date · 회계 기말 (bsns_year + 분기 종결)
-  - release_date · 공시 접수일 (list.json 별도 조회 · 여기선 collected_at 기록 · 실제 접수는 별도 fetch)
+  - release_date · 공시 실제 접수일 (rcept_dt · v1.6 · fetch_report_receipt_date 조회)
+    · 조회 실패 시 fallback = datetime.now() (기존 동작 유지 · 데이터 부재 방어)
   - 정정 재보고 시 unique 제약으로 최신 release_date 우선
 
 fs_div (연결 vs 별도):
@@ -29,6 +30,7 @@ from backend.discovery.data_sources.dart.client import (
     DartFinancialItem,
     fetch_audit_opinion,
     fetch_financial_statement,
+    fetch_report_receipt_date,
 )
 from backend.services.db import get_session
 from backend.services.models import FinancialSnapshot
@@ -223,7 +225,20 @@ async def collect_financial_snapshot(
     reference_date = _reference_date(bsns_year, reprt_code)
     if reference_date is None:
         return None
-    release_dt = release_date or datetime.now(tz=timezone.utc)
+    # v1.6 · release_date 실제 접수일 (rcept_dt) 조회 · Phase 0 as-of 규약 정합
+    if release_date is not None:
+        release_dt = release_date
+    else:
+        rcept_d = await fetch_report_receipt_date(corp_code, bsns_year, reprt_code)
+        if rcept_d is not None:
+            release_dt = datetime(rcept_d.year, rcept_d.month, rcept_d.day, tzinfo=timezone.utc)
+        else:
+            # fallback · list.json 조회 실패 시 collected_at (기존 동작)
+            release_dt = datetime.now(tz=timezone.utc)
+            logger.info(
+                "[dart_fin] %s/%s/%s · rcept_dt 조회 실패 · collected_at fallback",
+                ticker, bsns_year, reprt_code,
+            )
 
     raw_json = json.dumps({
         "fs_div_used": used_fs_div,

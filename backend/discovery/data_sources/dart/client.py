@@ -422,6 +422,92 @@ async def fetch_treasury_stock(
     return out
 
 
+async def fetch_report_receipt_date(
+    corp_code: str,
+    bsns_year: int,
+    reprt_code: str,
+) -> Optional[date]:
+    """DART list.json · 특정 회사의 특정 사업/반기/분기 보고서 실제 접수일 조회.
+
+    지시서 §7-1 · Phase 0 as-of 규약 · release_date 는 실제 접수일 (rcept_dt) 이어야 함.
+    수집 시 datetime.now() 로 대체하던 근사를 실제 값으로 정정.
+
+    reprt_code (DART 정의):
+      · 11011 = 사업보고서 (연간) · YYYY+1 년 1~3월 접수
+      · 11012 = 반기보고서 (2Q) · YYYY 년 7~8월 접수
+      · 11013 = 1분기 · YYYY 년 4~5월 접수
+      · 11014 = 3분기 · YYYY 년 10~11월 접수
+
+    Returns: rcept_dt (date) · 매칭 실패 시 None (호출자가 fallback).
+    """
+    if not corp_code:
+        return None
+
+    # 접수 예상 창구 (넉넉하게)
+    report_titles: dict[str, tuple[str, str, str]] = {
+        # reprt_code : (title_keyword, bgn_month, end_month) · end 는 다음해까지 확장 가능
+        "11011": ("사업보고서", "0101", "0430"),          # 사업 · 익년 1~4월
+        "11012": ("반기보고서", "0701", "0930"),          # 반기 · 당년 7~9월
+        "11013": ("분기보고서", "0401", "0630"),          # 1Q · 당년 4~6월 (title 에 "1분기" 확인)
+        "11014": ("분기보고서", "1001", "1231"),          # 3Q · 당년 10~12월 (title 에 "3분기" 확인)
+    }
+    spec = report_titles.get(reprt_code)
+    if spec is None:
+        return None
+    title_kw, bgn_md, end_md = spec
+
+    # 사업보고서만 bsns_year+1 년 접수 · 나머지는 bsns_year 당해
+    year_shift = 1 if reprt_code == "11011" else 0
+    yr = bsns_year + year_shift
+    try:
+        bgn_de = date(yr, int(bgn_md[:2]), int(bgn_md[2:]))
+        end_de = date(yr, int(end_md[:2]), int(end_md[2:]))
+    except ValueError:
+        return None
+
+    params = {
+        "crtfc_key": _api_key(),
+        "corp_code": corp_code,
+        "bgn_de": bgn_de.strftime("%Y%m%d"),
+        "end_de": end_de.strftime("%Y%m%d"),
+        "pblntf_ty": "A",       # 정기공시
+        "page_count": _PAGE_COUNT,
+    }
+
+    async with httpx.AsyncClient() as client:
+        try:
+            resp = await client.get(f"{_BASE}/list.json", params=params, timeout=_TIMEOUT_SEC)
+            resp.raise_for_status()
+            data = resp.json()
+        except Exception as e:
+            logger.info(f"[dart] receipt_date lookup failed {corp_code}/{bsns_year}/{reprt_code}: {e}")
+            return None
+
+    if data.get("status") != "000":
+        return None
+
+    # 세부 매칭 · reprt_code 별 title 상세 필터
+    for item in data.get("list", []):
+        report_nm = item.get("report_nm", "")
+        if title_kw not in report_nm:
+            continue
+        # 분기 세부 확인
+        if reprt_code == "11013" and "1분기" not in report_nm:
+            continue
+        if reprt_code == "11014" and "3분기" not in report_nm:
+            continue
+        # bsns_year 명시 (사업보고서 title 은 "사업보고서 (YYYY.12)" 형식)
+        if str(bsns_year) not in report_nm:
+            continue
+        rcept_dt_str = item.get("rcept_dt", "")
+        if len(rcept_dt_str) == 8:
+            try:
+                return date(int(rcept_dt_str[:4]), int(rcept_dt_str[4:6]), int(rcept_dt_str[6:8]))
+            except ValueError:
+                continue
+    return None
+
+
 async def fetch_recent_disclosures(
     bgn_de: Optional[date] = None,
     end_de: Optional[date] = None,
