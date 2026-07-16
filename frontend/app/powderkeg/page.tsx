@@ -34,19 +34,48 @@ export default function PowderKegPage() {
     }
   }, []);
 
+  const [guideNonce, setGuideNonce] = useState(0);
+  const resetGuides = () => {
+    if (typeof window !== "undefined") {
+      localStorage.removeItem("powderkeg_onboarding_dismissed");
+      localStorage.removeItem("powderkeg_usage_guide_dismissed");
+      setGuideNonce(n => n + 1);
+    }
+  };
   return (
     <div className="space-y-4">
-      <header className="space-y-1">
-        <h1 className="text-2xl font-bold">🧨 화약고 스크리너</h1>
-        <p className="text-sm text-muted-foreground">
-          딥밸류 (그레이엄 net-net + 피오트로스키) × 지배구조 카탈리스트 (그린블라트 특수상황) ·
-          hypothesis 모드 · 자동매매 미연결
-        </p>
+      <header className="flex items-start justify-between gap-2">
+        <div className="space-y-1">
+          <h1 className="text-2xl font-bold">🧨 화약고 스크리너</h1>
+          <p className="text-sm text-muted-foreground">
+            딥밸류 (그레이엄 net-net + 피오트로스키) × 지배구조 카탈리스트 (그린블라트 특수상황) ·
+            hypothesis 모드 · 자동매매 미연결
+          </p>
+        </div>
+        <div className="flex gap-1">
+          <button
+            type="button"
+            onClick={resetGuides}
+            className="rounded border border-purple-300 bg-purple-50 px-2 py-1 text-xs text-purple-800 hover:bg-purple-100 dark:border-purple-800 dark:bg-purple-950 dark:text-purple-100"
+            title="숨긴 가이드 카드 다시 보기"
+          >
+            📖 가이드 다시 보기
+          </button>
+          <a
+            href="https://github.com/GONNIM/toss-tradebot-mvp/blob/main/docs/plans/powderkeg-screener/user-guide.md"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="rounded border border-sky-300 bg-sky-50 px-2 py-1 text-xs text-sky-800 hover:bg-sky-100 dark:border-sky-800 dark:bg-sky-950 dark:text-sky-100"
+            title="GitHub 에서 상세 가이드 문서 보기"
+          >
+            📄 상세 문서 →
+          </a>
+        </div>
       </header>
-      <OnboardingBanner />
+      <OnboardingBanner key={`ob-${guideNonce}`} />
       <IdentityBanner />
       <Tabs tab={tab} setTab={setTab} />
-      {tab === "list" && <ListTab token={token} />}
+      {tab === "list" && <ListTab token={token} guideNonce={guideNonce} />}
       {tab === "events" && <EventsTab />}
       {tab === "report" && <ReportTab token={token} />}
       <Disclaimer />
@@ -158,7 +187,7 @@ function Disclaimer() {
 // ═══════════════════════════════════════════════════════════════
 // 탭 1 · 화약고 리스트
 // ═══════════════════════════════════════════════════════════════
-function ListTab({ token }: { token: string }) {
+function ListTab({ token, guideNonce = 0 }: { token: string; guideNonce?: number }) {
   const [statusFilter, setStatusFilter] = useState<string>("");
   const [tierFilter, setTierFilter] = useState<string>("");
   const qc = useQueryClient();
@@ -191,7 +220,7 @@ function ListTab({ token }: { token: string }) {
 
   return (
     <section className="space-y-3 rounded border p-4">
-      <UsageGuideCard />
+      <UsageGuideCard key={`ug-${guideNonce}`} />
       <FunnelCard runId={q.data?.run_id || null} />
       <LowPbrDiscoveryCard token={token} />
       <ReScreenGuide token={token} runId={q.data?.run_id || null} count={q.data?.count || 0} />
