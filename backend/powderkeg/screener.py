@@ -19,7 +19,7 @@ from __future__ import annotations
 import json
 import logging
 from dataclasses import asdict, dataclass, field
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from typing import Any, Iterable, Optional
 
 from sqlalchemy import select
@@ -375,7 +375,9 @@ async def run_screener(
     Returns: {"run_id", "total", "passed", "rejected", "cash_suspect"}
     """
     if run_id is None:
-        run_id = datetime.now(tz=timezone.utc).strftime("%Y%m%d-%H%M%S")
+        # v1.15 · KST 시간 (Asia/Seoul UTC+9) 명시 · UI 표시 정합
+        _kst = timezone(timedelta(hours=9))
+        run_id = datetime.now(tz=_kst).strftime("%Y%m%d-%H%M%SK")
 
     # locked=True 인 전 종목 union · 사용자가 lock 걸어둔 종목은 유니버스에 없어도 항상 재평가
     #   (스케줄러 자동 실행에서도 수동 추가 종목이 orphan 안 되도록 보장)
