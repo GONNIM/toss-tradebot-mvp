@@ -160,6 +160,7 @@ function Disclaimer() {
 // ═══════════════════════════════════════════════════════════════
 function ListTab({ token }: { token: string }) {
   const [statusFilter, setStatusFilter] = useState<string>("");
+  const [tierFilter, setTierFilter] = useState<string>("");
   const qc = useQueryClient();
   const q = useQuery({
     queryKey: ["powderkeg", "list", statusFilter],
@@ -167,7 +168,10 @@ function ListTab({ token }: { token: string }) {
       api.powderkeg.list({ status: statusFilter || undefined, limit: 200 }),
     refetchInterval: 60_000,
   });
-  const items: PowderKegListItem[] = q.data?.items || [];
+  const rawItems: PowderKegListItem[] = q.data?.items || [];
+  const items: PowderKegListItem[] = tierFilter
+    ? rawItems.filter(it => it.tier === tierFilter)
+    : rawItems;
 
   const toggleLock = useMutation({
     mutationFn: ({ id, locked }: { id: number; locked: boolean }) =>
@@ -200,17 +204,30 @@ function ListTab({ token }: { token: string }) {
             · {q.data?.count || 0} 종목
           </span>
         </div>
-        <select
-          value={statusFilter}
-          onChange={(e) => setStatusFilter(e.target.value)}
-          className="rounded border px-2 py-1 text-xs"
-          title="상태별 필터 · 전체 / 매수 후보 / 탈락 / 현금 의심"
-        >
-          <option value="">🔍 전체</option>
-          <option value="passed">✅ 매수 후보 (10/10 통과)</option>
-          <option value="rejected">❌ 탈락</option>
-          <option value="cash_suspect">⚠️ 현금 의심 (분식 가능)</option>
-        </select>
+        <div className="flex gap-1">
+          <select
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value)}
+            className="rounded border px-2 py-1 text-xs"
+            title="상태별 필터 · 전체 / 매수 후보 / 탈락 / 현금 의심"
+          >
+            <option value="">🔍 전체 상태</option>
+            <option value="passed">✅ 매수 후보 (10/10 통과)</option>
+            <option value="rejected">❌ 탈락</option>
+            <option value="cash_suspect">⚠️ 현금 의심 (분식 가능)</option>
+          </select>
+          <select
+            value={tierFilter}
+            onChange={(e) => setTierFilter(e.target.value)}
+            className="rounded border px-2 py-1 text-xs"
+            title="티어별 필터 · v1.20 · 8~9/10 경계선 후보 발굴"
+          >
+            <option value="">🎖 전체 티어</option>
+            <option value="tier_1_passed">🥇 Tier 1 · 10/10</option>
+            <option value="tier_2_near">🥈 Tier 2 · 8~9/10</option>
+            <option value="tier_3_watch">🥉 Tier 3 · 7/10</option>
+          </select>
+        </div>
       </div>
       <ManualAddForm token={token} runId={q.data?.run_id || undefined} />
       {q.isLoading ? (
@@ -258,7 +275,13 @@ function ListTab({ token }: { token: string }) {
                         </span>
                       ) : null}
                       <RobustnessBadge score={it.robustness_score} grade={it.robustness_grade} />
+                      <TierBadge tier={it.tier} passed={it.conditions_passed} />
                     </div>
+                    {it.tier === "tier_2_near" || it.tier === "tier_3_watch" ? (
+                      <div className="mt-0.5 text-[9px] text-orange-700 dark:text-orange-300">
+                        📌 병목 · {(it.failed_conditions || []).map(f => CONDITION_LABEL_SHORT[f] || f).join(" · ")}
+                      </div>
+                    ) : null}
                     <div className="text-[10px] text-muted-foreground">{it.ticker}</div>
                     <NoteInput
                       item={it}
@@ -542,6 +565,41 @@ function EventTypeBadge({ event_type, kind }: { event_type: string; kind: "A" | 
     </span>
   );
 }
+
+/** Tier 뱃지 · v1.20 · 리뷰어 Priority 4 · 8~9/10 경계선 후보 노출. */
+function TierBadge({ tier, passed }: { tier?: string; passed?: number }) {
+  if (!tier) return null;
+  const cfg: Record<string, { icon: string; label: string; cls: string }> = {
+    tier_1_passed: { icon: "🥇", label: "Tier 1", cls: "bg-amber-100 text-amber-900 dark:bg-amber-900 dark:text-amber-100" },
+    tier_2_near:   { icon: "🥈", label: "Tier 2", cls: "bg-slate-200 text-slate-900 dark:bg-slate-700 dark:text-slate-100" },
+    tier_3_watch:  { icon: "🥉", label: "Tier 3", cls: "bg-orange-100 text-orange-900 dark:bg-orange-900 dark:text-orange-100" },
+    cash_suspect:  { icon: "⚠️", label: "현금 의심", cls: "bg-yellow-100 text-yellow-900 dark:bg-yellow-900 dark:text-yellow-100" },
+    rejected:      { icon: "❌", label: "탈락", cls: "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300" },
+  };
+  const m = cfg[tier] || cfg.rejected;
+  return (
+    <span
+      title={passed != null ? `조건 통과: ${passed}/10` : tier}
+      className={`rounded px-1.5 py-0.5 text-[10px] font-bold ${m.cls}`}
+    >
+      {m.icon} {m.label} · {passed}/10
+    </span>
+  );
+}
+
+/** 조건별 라벨 매핑 · UI 병목 표시 · Tier 2 실패 조건 안내. */
+const CONDITION_LABEL_SHORT: Record<string, string> = {
+  "1_pbr": "PBR",
+  "2_net_cash_ratio": "순현금",
+  "3_owner_pct": "지분율",
+  "4_not_big_biz": "비재벌",
+  "5_audit_opinion": "감사의견",
+  "6_cash_reality": "이자수익",
+  "7_operating_profit": "영업흑자",
+  "8_fscore": "F-Score",
+  "9_adv60": "거래대금",
+  "10_no_bad_history": "관리종목",
+};
 
 /** 저PBR 후보 발굴·대량 스크리닝 카드 · v1.19 · 리뷰어 Priority 2.
  *   "화약고 서식지는 KOSPI 중소형 + KOSDAQ 중형 · 지금은 반대 방향으로 편향"

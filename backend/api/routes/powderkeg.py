@@ -189,6 +189,31 @@ async def get_list(
             }
         return {}
 
+    def _compute_tier(cond: Optional[dict], status: str) -> tuple[str, int, list[str]]:
+        """v1.20 · 티어제 · 리뷰어 Priority 4.
+
+        · tier_1_passed · 10/10 통과 (매수 후보)
+        · tier_2_near · 8~9/10 통과 (경계선 관찰)
+        · tier_3_watch · 7/10 통과 (관찰만)
+        · cash_suspect · 기존 status
+        · rejected · 그 외
+
+        Returns: (tier, conditions_passed, failed_condition_ids)
+        """
+        if not isinstance(cond, dict):
+            return ("rejected", 0, [])
+        passed = sum(1 for k, v in cond.items() if k != "_robustness" and v is True)
+        failed = [k for k, v in cond.items() if k != "_robustness" and v is False]
+        if status == "cash_suspect":
+            return ("cash_suspect", passed, failed)
+        if passed >= 10:
+            return ("tier_1_passed", passed, failed)
+        if passed >= 8:
+            return ("tier_2_near", passed, failed)
+        if passed >= 7:
+            return ("tier_3_watch", passed, failed)
+        return ("rejected", passed, failed)
+
     items = []
     for r in rows:
         cond = json.loads(r.conditions_json) if r.conditions_json else None
@@ -196,6 +221,7 @@ async def get_list(
         if isinstance(cond, dict) and "_robustness" in cond:
             cond = {k: v for k, v in cond.items() if k != "_robustness"}
         rob = _extract_robustness(r.conditions_json)
+        tier, cond_passed, failed_ids = _compute_tier(cond, r.status)
         items.append({
             "id": r.id, "ticker": r.ticker, "name": r.name,
             "status": r.status, "net_cash_ratio": r.net_cash_ratio,
@@ -208,6 +234,10 @@ async def get_list(
             "added_by": getattr(r, "added_by", "auto") or "auto",
             "user_note": getattr(r, "user_note", None),
             "created_at": r.created_at.isoformat() if r.created_at else None,
+            # v1.20 · 티어제
+            "tier": tier,
+            "conditions_passed": cond_passed,
+            "failed_conditions": failed_ids,
             **rob,
         })
 
