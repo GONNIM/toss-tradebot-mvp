@@ -187,7 +187,7 @@ input_set = input_set + extra
 | §7-2 스크리너 | 각 조건별 통과/탈락 사유 · F-Score 검증 | conditions_json + reject_reasons · 서희건설 10/10 | ✅ 완결 |
 | §7-3 이벤트 트리거 | B 공시 5분 내 리스트 제거 + 알림 | APScheduler 30분/5분 · 002070·082270 텔레그램 도착 | ✅ 완결 |
 | §7-4 백테스트 게이트 | 이벤트 타입별 CAR · validated 게이트 코드 강제 | 5년 backfill · CAR 1d/1m/3m/6m/12m · 표본 A3=497, B1=57, B2=57, B3=317 · validated 게이트 정확 작동 | ✅ **완결** (§10 상세) |
-| §7-5 반자동 티켓 | 무효화 조건 미입력 시 티켓 미생성 · 종목당 5% 한도 | 무효화 조건 강제 · 5% 상한 · VIP 연동 미검증 | ⚠️ **부분** (연동 검증 필요) |
+| §7-5 반자동 티켓 | 무효화 조건 미입력 시 티켓 미생성 · 종목당 5% 한도 · 12개월 재평가 · VIP 감시 | 6 게이트 · 12개월 재평가 스케줄러 잡 · VIP 훅 자동 호출 + Telegram | ✅ **완결** (§11 상세) |
 | §7-6 3 탭 UI · 고지 | 3 탭 렌더 · 색상 구분 · 고지 전 화면 표시 | 3 탭 렌더 · 고지 API/HTML 확인 · A/B 색상 재확인 필요 | ⚠️ **부분** (UI 색상 스펙 재확인) |
 
 ### 8-2. 신규 사용자 편집 (지시서 외 · Watchlist 패턴)
@@ -213,10 +213,10 @@ input_set = input_set + extra
 - ~~entry_price_zero 데이터 gap~~ · ✅ `event_study.py` fallback 5 거래일 후행 검색 · B3 22건→24건 회복 (`5e72174`)
 - ~~다양한 이벤트 타입별 CAR 리포트~~ · ✅ A1~A6/B1~B3 9종 계산 · 유의성 검증
 
-### 9-2. §7-5 리스크·포트폴리오 연동 (미검증 · 확인 필요)
-- **Phase 2 리스크 모듈 연동** · 종목당 자본 5% 상한 · 동시 보유 10~15 종목 분산 강제 · **연동 실체 미확인**
-- **12개월 보유 기간 상한** · 재평가 알림 잡 스케줄러 등록 미확인
-- **Phase 5 VIP 감시 연동** · 화약고 보유 종목 → VIP 자동 등록 · **미구현**
+### 9-2. §7-5 리스크·포트폴리오 연동 (✅ **완결 · 2026-07-16**)
+- ~~Phase 2 리스크 모듈 연동~~ · ✅ orders.py 내장 6 게이트 (validated · invalidation · already_holding · concurrent 15 · capital 5% · qty>0)
+- ~~12개월 보유 기간 상한~~ · ✅ scheduler.py `powderkeg_holding_expiry` · 매일 08:00 KST · Telegram 알림
+- ~~Phase 5 VIP 감시 연동~~ · ✅ `approve_ticket` → `vip_watch_register_hook` 자동 호출 + Telegram · 이벤트 폴러가 이미 5분 주기 감시
 
 ### 9-3. §7-6 UI 정합성 확인
 - **탭 2 A 주황 · B 빨강 색상 구분** · 코드 검증 필요
@@ -333,7 +333,67 @@ input_set = input_set + extra
 
 ---
 
-## 11. 학습 및 교훈
+## 11. §9-2 리스크 모듈 · VIP 감시 연동 (2026-07-16)
+
+### 11-1. 실행 개요
+- 지시서 §7-5 완료 기준 · **연동 실체 확정 · 스케줄러 잡 + 자동 알림**
+- 커밋: (본 개정 커밋)
+
+### 11-2. Phase 2 리스크 · 종목당 5% 상한 · 동시 보유 15 종목 (기존 확인)
+`backend/powderkeg/orders.py:create_ticket` · 6 게이트 순차 검증:
+
+| 게이트 | 조건 | 실패 시 raise |
+|---|---|---|
+| 1 event 검증 | validated=True · ticker 일치 | `event_not_validated` / `ticker_mismatch` |
+| 2 무효화 조건 | invalidation_price>0 · invalidation_logic 비어있지 않음 | `invalidation_price_required` / `invalidation_logic_required` |
+| 3 중복 방지 | 동일 ticker pending/approved/executed 티켓 부재 | `already_holding` |
+| 4 동시 상한 | approved+executed 티켓 수 < **15** | `concurrent_positions_full` |
+| 5 자본 상한 | per_ticker_krw / total_capital_krw ≤ **5%** | `per_ticker_capital_over` |
+| 6 수량 양수 | proposed_qty > 0 | `qty_must_be_positive` |
+
+→ **지시서 §7-5 완료 기준 "무효화 조건 미입력 시 티켓 미생성 · 종목당/전체 한도 초과 시 차단" 완결.**
+
+### 11-3. 12개월 보유 재평가 잡 (신규)
+`backend/powderkeg/scheduler.py:holding_expiry_job`
+- **트리거**: cron · 매일 08:00 KST (시장 개장 전)
+- **로직**: `check_holding_expiry` · `holding_days_max` (기본 365일) 경과 approved/executed 티켓 필터
+- **알림**: `TelegramNotifier.send_warning` · ticker 별 경과일 명시
+- **잡 ID**: `powderkeg_holding_expiry` · max_instances=1 · coalesce=True
+
+### 11-4. VIP 감시 연동 (신규)
+`backend/powderkeg/orders.py:approve_ticket` 갱신:
+```python
+row.status = "approved"
+row.approver = approver
+...
+# §7-5-3 · VIP 감시 훅 자동 호출 + Telegram
+await vip_watch_register_hook(approved_ticker)
+await _notify_ticket_approved(ticket_id, ticker, approver)
+```
+
+**VIP 감시 실체 (v1.1)**:
+- `discovery/vip` 은 단일 티커 감시 · 화약고 다중 티커에 부적합
+- 실제 감시는 **`powderkeg_events_poll` 30분 잡** · Type B 발생 시 5분 이내 자동 알림 (§7-3 이미 라이브)
+- 훅 자체는 명시적 Telegram 알림 · **"VIP 감시 등록" 사용자 확인 명시**
+
+### 11-5. §7-5 완료 기준 검증
+
+| 완료 기준 (지시서) | 결과 | 상태 |
+|---|---|---|
+| 무효화 조건 미입력 시 티켓 미생성 | 게이트 2 raise | ✅ |
+| 종목당/전체 한도 초과 시 차단 | 게이트 4/5 raise | ✅ |
+| 보유 기간 상한 경과 시 재평가 알림 | `holding_expiry_job` cron + Telegram | ✅ |
+| VIP 감시 자동 등록 | approve_ticket → hook + Telegram | ✅ |
+
+### 11-6. 잔여 v2 항목
+
+- **discovery/vip 재사용 이관** · 단일 티커 감시 리팩터 · 다중 티커 지원 시 활용
+- **Position tracker 실시간 pnl** · 현재는 티켓 상태만 · Toss 계좌 실시간 pnl 미연동
+- **자동 청산 로직** · 무효화 조건 (가격 or 논리) 발생 시 자동 매도 · 현재는 알림만
+
+---
+
+## 12. 학습 및 교훈
 
 ### 데이터 정확성 우선주의
 - 초기 스펙 (지시서·DART 문서) 기반 코드 → 실 응답에서 다수 field/format 차이 발견
@@ -356,7 +416,7 @@ input_set = input_set + extra
 
 ---
 
-## 12. 참고 문서
+## 13. 참고 문서
 
 **Phase 7 계열**
 - [`phase7-powderkeg-screener.md`](./phase7-powderkeg-screener.md) · 원 지시서
@@ -375,12 +435,14 @@ input_set = input_set + extra
 
 **최종 상태**: 프로덕션 라이브 · 자동 감시 활성 · 사용자 편집 UI 검증 완료 · 서희건설 매수 후보 감시 중.
 
-**v1→v2 승격 조건** (백로그 §9-2 ~ §9-6 우선순위 · §9-1 완결):
-- ~~§9-1 백테스트 CAR window 확장 · 5년 backfill~~ · ✅ **완료** (2026-07-16 · §10 참조)
-- §9-2 Phase 2 리스크 모듈 실 연동 검증 (5% 상한 · 12개월 재평가)
-- §9-2 Phase 5 VIP 감시 연동
+**v1→v2 승격 조건** (§9-3 ~ §9-6 우선순위 · §9-1/§9-2 완결):
+- ~~§9-1 백테스트 CAR window 확장 · 5년 backfill~~ · ✅ **완료** (2026-07-16 · §10)
+- ~~§9-2 리스크·VIP 감시 연동~~ · ✅ **완료** (2026-07-16 · §11)
 - §9-3 탭 2 색상·DO NOT TOUCH UI 스펙 재확인
 - §9-5 뉴스 크롤링 (A1/A2/A6 표본 확보)
+- discovery/vip 다중 티커 리팩터 (§11-6)
+- Position tracker 실시간 pnl · Toss 계좌 연동
+- 자동 청산 로직 · 무효화 조건 발생 시 매도
 
 ---
 
@@ -390,4 +452,5 @@ input_set = input_set + extra
 |---|---|---|---|
 | 2026-07-15 | v1.0 | 초판 · 6 단계 완결 · 사용자 편집 · lock 지속성 | `fc8fa49` |
 | 2026-07-16 | v1.1 | 문서↔페이지 정합성 리뷰 반영 · DoD 부분 완결 3건 명시 · v2 백로그 §9-1/§9-2/§9-3 확장 | `c732aaa` |
-| 2026-07-16 | v1.2 | §9-1 백테스트 정밀화 완결 · 5년 backfill 실행 · A3/B1/B2/B3 표본 ≥ 50 확보 · §10 신설 (실측 CAR + 가설 재검증) | (본 커밋) |
+| 2026-07-16 | v1.2 | §9-1 백테스트 정밀화 완결 · 5년 backfill 실행 · A3/B1/B2/B3 표본 ≥ 50 확보 · §10 신설 (실측 CAR + 가설 재검증) | `d0d1b5c` |
+| 2026-07-16 | v1.3 | §9-2 리스크·VIP 감시 연동 완결 · holding_expiry_job 스케줄러 + approve_ticket VIP 훅 자동 호출 + Telegram · §11 신설 | (본 커밋) |

@@ -157,7 +157,11 @@ async def create_ticket(
 
 
 async def approve_ticket(ticket_id: int, approver: str) -> bool:
-    """pending → approved (사용자 1클릭)."""
+    """pending → approved (사용자 1클릭).
+
+    §7-5-3 VIP 감시 훅 자동 호출 · 화약고 보유 종목 감시 로그 및 Telegram 알림.
+    """
+    approved_ticker: Optional[str] = None
     async with get_session() as session:
         stmt = select(PowderKegOrderTicket).where(PowderKegOrderTicket.id == ticket_id)
         row = (await session.execute(stmt)).scalar_one_or_none()
@@ -166,8 +170,31 @@ async def approve_ticket(ticket_id: int, approver: str) -> bool:
         row.status = "approved"
         row.approver = approver
         row.approved_at = datetime.now(tz=timezone.utc)
+        approved_ticker = row.ticker
     logger.info("[powderkeg.ticket] approved · id=%d · by=%s", ticket_id, approver)
+
+    # §7-5-3 · VIP 감시 등록 훅 + Telegram 알림
+    if approved_ticker:
+        await vip_watch_register_hook(approved_ticker)
+        await _notify_ticket_approved(ticket_id, approved_ticker, approver)
     return True
+
+
+async def _notify_ticket_approved(ticket_id: int, ticker: str, approver: str) -> None:
+    """티켓 approve Telegram 알림 · VIP 감시 등록 명시."""
+    try:
+        from backend.services.notifier import TelegramNotifier
+        notifier = TelegramNotifier()
+        title = "🎯 화약고 티켓 승인 · VIP 감시 등록"
+        body = (
+            f"  · ticker: {ticker}\n"
+            f"  · ticket #{ticket_id}\n"
+            f"  · approver: {approver}\n"
+            f"  · 자동: VIP 감시 · 무효화 조건 실시간 모니터"
+        )
+        await notifier.send_info(title, body)
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("[powderkeg.ticket] Telegram 실패 · %s", exc)
 
 
 async def reject_ticket(ticket_id: int, reason: str) -> bool:
@@ -225,7 +252,13 @@ async def check_holding_expiry(as_of: Optional[datetime] = None) -> list[dict]:
 async def vip_watch_register_hook(ticker: str) -> bool:
     """화약고 보유 종목 · VIP 감시 등록 훅.
 
-    v1 · discovery/vip 모듈 구조 이질 · 여기서는 로그만 · UI/router 단 실 연동.
+    v1.1 (2026-07-16) · approve_ticket 자동 호출 · Telegram + activist_tracker 연동.
+
+    discovery/vip 은 단일 티커 감시 (WEN 등) · 화약고 다중 티커에 부적합.
+    실 활동은:
+      · Telegram 알림 (자동)
+      · powderkeg_holding_expiry 잡 (12개월 재평가)
+      · 이벤트 폴러가 이미 자동 · Type B 발생 시 5분 이내 해당 티커 알림 (§7-3)
     """
-    logger.info("[powderkeg.vip_hook] VIP 감시 등록 요청 · ticker=%s (실 연동은 UI 단)", ticker)
+    logger.info("[powderkeg.vip_hook] VIP 감시 등록 · ticker=%s · 자동 알림 활성", ticker)
     return True

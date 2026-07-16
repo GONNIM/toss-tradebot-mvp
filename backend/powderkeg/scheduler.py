@@ -38,6 +38,37 @@ async def process_triggers_job() -> dict[str, Any]:
         return {"error": str(exc)[:200]}
 
 
+async def holding_expiry_job() -> dict[str, Any]:
+    """일 1회 · holding_days_max (기본 365일) 경과 티켓 재평가 알림.
+
+    지시서 §7-5 · 보유 기간 상한(기본 12개월) 경과 시 재평가 알림.
+    """
+    from .orders import check_holding_expiry
+    try:
+        expired = await check_holding_expiry()
+        if expired:
+            await _notify_expiry(expired)
+        return {"expired_count": len(expired), "items": expired}
+    except Exception as exc:  # noqa: BLE001
+        logger.exception("[powderkeg.holding_expiry] 실패 · %s", exc)
+        return {"error": str(exc)[:200]}
+
+
+async def _notify_expiry(expired: list[dict]) -> None:
+    """만료 티켓 Telegram 알림 (§7-5 재평가)."""
+    try:
+        from backend.services.notifier import TelegramNotifier
+        notifier = TelegramNotifier()
+        title = "🕐 화약고 보유 재평가 (12개월 경과)"
+        lines = [
+            f"  · {e['ticker']} · {e['age_days']}일 경과 (ticket #{e['ticket_id']})"
+            for e in expired
+        ]
+        await notifier.send_warning(title, "\n".join(lines))
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("[powderkeg.holding_expiry] Telegram 실패 · %s", exc)
+
+
 def register_powderkeg_jobs(scheduler) -> None:
     """FastAPI lifespan 에서 호출."""
     scheduler.add_job(
@@ -52,7 +83,13 @@ def register_powderkeg_jobs(scheduler) -> None:
         id="powderkeg_triggers",
         max_instances=1, coalesce=True,
     )
+    scheduler.add_job(
+        holding_expiry_job, "cron",
+        hour=8, minute=0, timezone="Asia/Seoul",
+        id="powderkeg_holding_expiry",
+        max_instances=1, coalesce=True,
+    )
     logger.info(
         "[powderkeg] jobs 등록 · events_poll=30m · triggers=5m "
-        "(Type B 발생 시 리스트 즉시 제거)"
+        "· holding_expiry=daily 08:00 KST (§7-5 12개월 재평가)"
     )
