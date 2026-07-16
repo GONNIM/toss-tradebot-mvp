@@ -790,6 +790,19 @@ export const api = {
       postWithToken<{ applied: string[]; errors: string[] }>(
         `/powderkeg/admin/migrate-schema`, token,
       ),
+    listFunnel: (run_id?: string) => {
+      const qs = run_id ? `?run_id=${encodeURIComponent(run_id)}` : "";
+      return get<{
+        run_id: string | null;
+        universe_size: number;
+        data_incomplete: number;
+        evaluable: number;
+        per_condition: { id: string; label: string; passed: number }[];
+        final_passed: number;
+        cash_suspect: number;
+        rejected: number;
+      }>(`/powderkeg/list/funnel${qs}`);
+    },
   },
 };
 

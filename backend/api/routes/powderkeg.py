@@ -71,6 +71,86 @@ async def get_disclaimer() -> dict[str, str]:
     return {"disclaimer": DISCLAIMER}
 
 
+@router.get("/list/funnel")
+async def get_list_funnel(
+    run_id: Optional[str] = Query(None, description="특정 run · None = 최신"),
+) -> dict[str, Any]:
+    """퍼널 워터폴 · v1.18 · 리뷰어 진단 대응.
+
+    "1개는 시장의 답이 아니라 파이프라인의 답" · 각 단계 통과 수 표시.
+
+    반환:
+      · universe_size · 이 run 에서 스크린된 종목 수
+      · data_incomplete · 재무·시장·최대주주 결측 · 실 탈락 X
+      · per_condition · 조건별 통과 수 (파이프라인 병목 파악)
+      · final_passed · 10/10 최종 통과
+    """
+    async with get_session() as session:
+        if run_id is None:
+            run_id = (await session.execute(
+                select(PowderKegList.run_id)
+                .order_by(PowderKegList.created_at.desc()).limit(1)
+            )).scalar_one_or_none()
+        if run_id is None:
+            return {"disclaimer": DISCLAIMER, "run_id": None, "universe_size": 0}
+        rows = (await session.execute(
+            select(PowderKegList).where(PowderKegList.run_id == run_id)
+        )).scalars().all()
+
+    # 조건 label · 한국어
+    CONDITION_LABELS = {
+        "1_pbr": "① PBR < 0.5 (저평가)",
+        "2_net_cash_ratio": "② 순현금/시총 > 40% (현금 부자)",
+        "3_owner_pct": "③ 최대주주 지분 ≥ 40%",
+        "4_not_big_biz": "④ 공정위 대기업집단 아님",
+        "5_audit_opinion": "⑤ 감사의견 적정 (2년)",
+        "6_cash_reality": "⑥ 이자수익 정합 (분식 X)",
+        "7_operating_profit": "⑦ 영업이익 3년 중 2년 흑자",
+        "8_fscore": "⑧ F-Score ≥ 6",
+        "9_adv60": "⑨ 60일 일평균 거래대금 ≥ 1억",
+        "10_no_bad_history": "⑩ 관리종목 이력 없음 (v1 근사)",
+    }
+
+    universe_size = len(rows)
+    data_incomplete = 0
+    per_condition: dict[str, int] = {k: 0 for k in CONDITION_LABELS}
+
+    for r in rows:
+        # 결측 · reject_reasons 에 no_financial_data / no_market_data / no_shareholder_data
+        reasons = (r.reject_reasons or "")
+        if any(k in reasons for k in ("no_financial_data", "no_market_data")):
+            data_incomplete += 1
+            continue
+        # conditions_json 파싱
+        try:
+            conds = json.loads(r.conditions_json) if r.conditions_json else {}
+        except Exception:  # noqa: BLE001
+            continue
+        for k in per_condition:
+            v = conds.get(k)
+            if v is True:
+                per_condition[k] += 1
+
+    final_passed = sum(1 for r in rows if r.status == "passed")
+    cash_suspect = sum(1 for r in rows if r.status == "cash_suspect")
+    rejected = sum(1 for r in rows if r.status == "rejected")
+
+    return {
+        "disclaimer": DISCLAIMER,
+        "run_id": run_id,
+        "universe_size": universe_size,
+        "data_incomplete": data_incomplete,
+        "evaluable": universe_size - data_incomplete,
+        "per_condition": [
+            {"id": k, "label": CONDITION_LABELS[k], "passed": per_condition[k]}
+            for k in CONDITION_LABELS
+        ],
+        "final_passed": final_passed,
+        "cash_suspect": cash_suspect,
+        "rejected": rejected,
+    }
+
+
 @router.get("/list")
 async def get_list(
     run_id: Optional[str] = Query(None, description="특정 run · None = 최신"),

@@ -187,6 +187,7 @@ function ListTab({ token }: { token: string }) {
 
   return (
     <section className="space-y-3 rounded border p-4">
+      <FunnelCard runId={q.data?.run_id || null} />
       <ReScreenGuide token={token} runId={q.data?.run_id || null} count={q.data?.count || 0} />
       <div className="flex items-center justify-between">
         <div className="text-sm">
@@ -538,6 +539,80 @@ function EventTypeBadge({ event_type, kind }: { event_type: string; kind: "A" | 
       {kind === "B" ? "🚨 " : ""}
       {event_type}
     </span>
+  );
+}
+
+/** 퍼널 워터폴 카드 · v1.18 · 리뷰어 진단 · "1개는 파이프라인의 답" 관측성.
+ *   각 조건별 통과 수 표시 · 데이터 결측 분리 · 커버리지 명시.
+ */
+function FunnelCard({ runId }: { runId: string | null }) {
+  const [open, setOpen] = useState(true);
+  const q = useQuery({
+    queryKey: ["powderkeg", "funnel", runId],
+    queryFn: () => api.powderkeg.listFunnel(runId || undefined),
+    enabled: !!runId,
+  });
+  const d = q.data;
+  if (!runId || !d) return null;
+  const maxPassed = Math.max(1, ...d.per_condition.map(c => c.passed));
+  return (
+    <section className="rounded border-2 border-amber-200 bg-amber-50 p-3 dark:border-amber-900 dark:bg-amber-950">
+      <button
+        type="button"
+        onClick={() => setOpen(!open)}
+        className="flex w-full items-center justify-between text-left"
+      >
+        <div className="text-sm font-bold text-amber-900 dark:text-amber-100">
+          📊 퍼널 워터폴 · 왜 {d.final_passed}개인가?
+        </div>
+        <div className="text-xs text-amber-700 dark:text-amber-300">{open ? "▼" : "▶"}</div>
+      </button>
+      {open && (
+        <div className="mt-2 space-y-1 text-xs">
+          <div className="rounded border border-sky-300 bg-sky-50 p-1.5 dark:border-sky-700 dark:bg-sky-950">
+            🎯 <b>이 런에서 스크리닝된 종목:</b> {d.universe_size} · 그 중 <b>{d.evaluable}개</b> 평가 가능 ·
+            <span className="ml-1 text-orange-700 dark:text-orange-300">
+              📊 데이터 결측 (미평가): {d.data_incomplete}개
+            </span>
+          </div>
+          <div className="mt-2 space-y-0.5 rounded border bg-white p-2 dark:bg-slate-900">
+            <div className="mb-1 text-[10px] font-semibold text-muted-foreground">조건별 통과 (총 {d.evaluable}개 대비)</div>
+            {d.per_condition.map((c) => {
+              const pct = d.evaluable > 0 ? Math.round((c.passed / d.evaluable) * 100) : 0;
+              const barPct = Math.round((c.passed / maxPassed) * 100);
+              return (
+                <div key={c.id} className="flex items-center gap-2">
+                  <div className="w-52 truncate text-[10px]">{c.label}</div>
+                  <div className="flex-1 rounded bg-slate-100 dark:bg-slate-800">
+                    <div
+                      className="h-3 rounded bg-emerald-400 dark:bg-emerald-600"
+                      style={{ width: `${barPct}%` }}
+                    />
+                  </div>
+                  <div className="w-20 text-right font-mono text-[10px]">
+                    {c.passed} <span className="text-muted-foreground">({pct}%)</span>
+                  </div>
+                </div>
+              );
+            })}
+            <div className="mt-2 flex items-center justify-between rounded border-t pt-1 font-bold">
+              <span className="text-emerald-800 dark:text-emerald-100">✅ 10/10 최종 통과</span>
+              <span className="font-mono">{d.final_passed} 개</span>
+            </div>
+            {d.cash_suspect > 0 || d.rejected > 0 ? (
+              <div className="mt-1 flex justify-between text-[10px] text-muted-foreground">
+                <span>⚠️ 현금 의심: {d.cash_suspect}</span>
+                <span>❌ 탈락: {d.rejected}</span>
+              </div>
+            ) : null}
+          </div>
+          <div className="mt-1 text-[10px] text-amber-800 dark:text-amber-300">
+            💡 병목이 있는 조건 · 데이터 커버리지 or 임계 재검토 후보. {d.data_incomplete > 0
+              ? `데이터 결측 ${d.data_incomplete}개 · 재무·시장·최대주주 미수집.` : ""}
+          </div>
+        </div>
+      )}
+    </section>
   );
 }
 
