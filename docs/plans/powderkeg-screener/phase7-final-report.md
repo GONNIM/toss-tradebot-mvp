@@ -435,7 +435,62 @@ await _notify_ticket_approved(ticket_id, ticker, approver)
 
 ---
 
-## 13. 학습 및 교훈
+## 13. 전문가 리뷰 반영 · A3 액션 정책 재검토 (v1.5 · 2026-07-16)
+
+### 13-1. 리뷰 지적 사항
+> "지시서는 A3 담보제공을 매수 후보 트리거로 정의했는데 실측 12M -11.67%, t=-5.42, 승률 24% — 명백히 회피 시그널. 그런데 프로덕션 알림 title 은 여전히 `🎯 [매수 후보 · A3]`"
+
+### 13-2. Fix 실체 · triggers.py 실증 방향성 기반 재라벨
+
+**하드코딩 A3 회피 · 캐시 backtest 기반 데이터 판정** · 다른 event_type 도 자동 적용.
+
+```python
+async def _get_empirical_direction(event_type: str) -> str:
+    """PowderKegBacktestReport 캐시 → 실증 방향성.
+
+    "buy_candidate"     · validated=True (§7-4 게이트 통과)
+    "observed_negative" · n≥50 · 12M mean < -5%
+    "observing"         · 표본 부족 or 불명확
+    """
+```
+
+**알림 title 매핑** (실증 방향성별):
+
+| 방향성 | Title | action_taken |
+|---|---|---|
+| buy_candidate | 🎯 [매수 후보 · **VALIDATED** · X] | notified |
+| observed_negative | 🔬 [관찰 후보 · **백테스트 음수** · X] | **notified_negative** |
+| observing | 📊 [관찰 후보 · X] | notified |
+
+**Body 캐비어트** · 음수 방향성 시 필수 경고:
+> ⚠️ 실증 캐비어트 · 이 이벤트 타입은 백테스트 5년 표본에서 12M CAR 이 통계 유의 음수 (mean < -5%, n ≥ 50). 매수 판단 시 화약고 10 조건 등 다른 필터와 조합 후 검토.
+
+### 13-3. 현재 캐시 기반 자동 재분류 결과
+
+| Type | 12M mean | n | direction | 새 라벨 |
+|---|---|---|---|---|
+| A1 오너 사법 | +1.5% | 41 | observing | 📊 [관찰 후보 · A1] |
+| **A3 담보제공** | **-11.7%** | **1550** | **observed_negative** | 🔬 [관찰 후보 · 백테스트 음수 · A3] |
+| A5 자사주 소각 | -34% | 4 | observing (표본 부족) | 📊 [관찰 후보 · A5] |
+
+**A3 · 매수 후보 라벨 제거 완료** · 리뷰 지적 시정.
+
+### 13-4. 원칙 · 데이터 우선주의
+- 지시서 가설 (매수 후보) 은 code 프리셋으로 하드코딩 배제 · 오직 **캐시된 백테스트 실측 데이터**로 판정
+- 향후 backfill 확대 · 새로운 이벤트 발생 · 자동으로 방향성 재평가 (재캐시 시 즉시 반영)
+- 표본이 부족한 A5/A2/A4/A6 는 "observing" 으로 안전한 중립 표기
+
+### 13-5. 남은 v2 항목 (리뷰 권장 조치)
+
+- ~~1. A3 액션 정책 재검토~~ · ✅ **완료** (본 §13)
+- 2. 완료보고서 §10-3 표 수치 정합화 · 재캐시 반영 (부분 완료)
+- 3. release_date 실제 접수일 채우기 · DART list.json rcept_dt 조회
+- 4. 뉴스 크롤링 (§7-1-4) 구현 · A1/A2/A6 표본
+- 5. §7-3 5분 스펙 준수 · 폴링 30m → 5m or push 훅
+
+---
+
+## 14. 학습 및 교훈
 
 ### 데이터 정확성 우선주의
 - 초기 스펙 (지시서·DART 문서) 기반 코드 → 실 응답에서 다수 field/format 차이 발견
@@ -458,7 +513,7 @@ await _notify_ticket_approved(ticket_id, ticker, approver)
 
 ---
 
-## 14. 참고 문서
+## 15. 참고 문서
 
 **Phase 7 계열**
 - [`phase7-powderkeg-screener.md`](./phase7-powderkeg-screener.md) · 원 지시서
@@ -496,4 +551,5 @@ await _notify_ticket_approved(ticket_id, ticker, approver)
 | 2026-07-16 | v1.1 | 문서↔페이지 정합성 리뷰 반영 · DoD 부분 완결 3건 명시 · v2 백로그 §9-1/§9-2/§9-3 확장 | `c732aaa` |
 | 2026-07-16 | v1.2 | §9-1 백테스트 정밀화 완결 · 5년 backfill 실행 · A3/B1/B2/B3 표본 ≥ 50 확보 · §10 신설 (실측 CAR + 가설 재검증) | `d0d1b5c` |
 | 2026-07-16 | v1.3 | §9-2 리스크·VIP 감시 연동 완결 · holding_expiry_job 스케줄러 + approve_ticket VIP 훅 자동 호출 + Telegram · §11 신설 | `c594e4b` |
-| 2026-07-16 | v1.4 | §9-3 UI 정합성 완결 · DO NOT TOUCH 뱃지 + CarChart recharts BarChart · §12 신설 · TypeScript 0 error 검증 | (본 커밋) |
+| 2026-07-16 | v1.4 | §9-3 UI 정합성 완결 · DO NOT TOUCH 뱃지 + CarChart recharts BarChart · §12 신설 · TypeScript 0 error 검증 | `408dd4b` |
+| 2026-07-16 | v1.5 | 전문가 리뷰 반영 · **A3 액션 정책 재검토** · triggers.py 실증 방향성 기반 알림 title/body (validated/observed_negative/observing) · notified_negative action_taken 신설 | (본 커밋) |

@@ -15,8 +15,12 @@
               · label="personal_only" → 진입 후보 알림 (needs_human_review=False)
               · label="company_related" → Type B 로 격상 · 리스트 제거
               · label="unclear" or confidence<0.8 → needs_human_review 알림
-        → A2~A6: 일반 알림 (매수 후보 · 관찰)
-        → action_taken="notified" / "needs_human_review" / "list_removed"
+        → A2~A6: 일반 알림
+        → 알림 title/body 는 캐시된 backtest 실증 방향성 반영 (v1.5 · 2026-07-16):
+              · validated=True         → 🎯 [매수 후보 · VALIDATED · X]
+              · n≥50, 12M mean<-5%     → 🔬 [관찰 후보 · 백테스트 음수 · X] · action=notified_negative
+              · 그 외                   → 📊 [관찰 후보 · X]
+        → action_taken="notified" / "notified_negative" / "needs_human_review" / "list_removed"
 
     A/B 동시 발생 시 · B 우선 (지시서 §7-3 규칙 명시).
 """
@@ -30,11 +34,71 @@ from typing import Any, Optional
 from sqlalchemy import delete, select
 
 from backend.services.db import get_session
-from backend.services.models import PowderKegEvent, PowderKegList
+from backend.services.models import PowderKegBacktestReport, PowderKegEvent, PowderKegList
 
 from .llm_classifier import LLMClassification, classify_owner_event
 
 logger = logging.getLogger(__name__)
+
+
+# ─── 실증 방향성 판정 (v1.5 · 2026-07-16) ────
+# A3 실측 12M -11.7% · t=-5.4 (승률 24%) 이 명백한 회피 시그널로 나오는데
+# "매수 후보" 로 알림 나가는 오류 방지 · 캐시된 백테스트로 empirical 재라벨.
+_EMPIRICAL_NEGATIVE_THRESHOLD = -0.05    # 12M mean_return < -5% 이면 음의 방향
+_EMPIRICAL_MIN_SAMPLE = 50               # 지시서 §7-4 게이트와 동일
+
+
+async def _get_empirical_direction(event_type: str) -> str:
+    """캐시된 backtest 로 실증 방향성 재판정.
+
+    Returns:
+        "buy_candidate"   · validated=True (게이트 통과)
+        "observed_negative" · n≥50 · 12M mean < -5% (음의 방향 유의)
+        "observing"       · 표본 부족 or 방향 불명확
+    """
+    import json as _json
+    async with get_session() as session:
+        row = (await session.execute(
+            select(PowderKegBacktestReport).where(PowderKegBacktestReport.event_type == event_type)
+        )).scalar_one_or_none()
+    if row is None:
+        return "observing"
+    if row.validated:
+        return "buy_candidate"
+    try:
+        agg = _json.loads(row.aggregate_json)
+    except Exception:  # noqa: BLE001
+        return "observing"
+    m12 = agg.get("per_window", {}).get("12m", {})
+    n = m12.get("n", 0)
+    mean = m12.get("mean_return", 0.0)
+    if n >= _EMPIRICAL_MIN_SAMPLE and mean < _EMPIRICAL_NEGATIVE_THRESHOLD:
+        return "observed_negative"
+    return "observing"
+
+
+def _title_for_direction(direction: str, event_type: str, ticker: str, suffix: str = "") -> str:
+    """알림 title · 실증 방향성 반영."""
+    if direction == "buy_candidate":
+        prefix = "🎯 [매수 후보 · VALIDATED"
+    elif direction == "observed_negative":
+        prefix = "🔬 [관찰 후보 · 백테스트 음수"
+    else:
+        prefix = "📊 [관찰 후보"
+    return f"{prefix} · {event_type}{suffix}] {ticker}"
+
+
+def _body_for_direction(direction: str, base_body: str) -> str:
+    """알림 body · 실증 방향성 캐비어트."""
+    if direction == "observed_negative":
+        return (
+            f"{base_body}\n\n"
+            f"⚠️ 실증 캐비어트 · 이 이벤트 타입은 백테스트 5년 표본에서 12M CAR 이 통계 유의 음수 "
+            f"(mean < -5%, n ≥ 50). 매수 판단 시 화약고 10 조건 등 다른 필터와 조합 후 검토."
+        )
+    if direction == "buy_candidate":
+        return f"{base_body}\n\n✅ 백테스트 게이트 통과 (validated · t>2 · 승률≥50%)."
+    return f"{base_body}\n\n📊 표본 부족 or 방향 불명확 · hypothesis."
 
 
 # ─── notifier 얇은 wrapper · 테스트 monkeypatch 편의 ─
@@ -138,23 +202,27 @@ async def process_type_a(event: PowderKegEvent) -> ActionResult:
                 event_id=event.id, action_taken="needs_human_review",
                 notification_sent=sent, llm_result=llm_result,
             )
-        # 확실히 personal_only · 진입 후보 알림
-        title = f"🎯 [매수 후보 · A1] {event.ticker} · 오너 개인 사법"
-        body = f"{event.title}\nLLM: {llm_result.rationale}"
+        # personal_only · 실증 방향성 반영 알림
+        direction = await _get_empirical_direction("A1")
+        title = _title_for_direction(direction, "A1", event.ticker, " · 오너 개인 사법")
+        body = _body_for_direction(direction, f"{event.title}\nLLM: {llm_result.rationale}")
         sent = await _send_notification(title, body, urgent=False)
-        await _mark_event(event.id, action="notified", llm=llm_result)
+        action_label = "notified" if direction != "observed_negative" else "notified_negative"
+        await _mark_event(event.id, action=action_label, llm=llm_result)
         return ActionResult(
-            event_id=event.id, action_taken="notified",
+            event_id=event.id, action_taken=action_label,
             notification_sent=sent, llm_result=llm_result,
         )
 
-    # A2~A6 · 일반 알림
-    title = f"🎯 [매수 후보 · {event.event_type}] {event.ticker}"
-    body = f"{event.title}\n원문: {event.url or 'N/A'}"
+    # A2~A6 · 실증 방향성 반영 알림
+    direction = await _get_empirical_direction(event.event_type)
+    title = _title_for_direction(direction, event.event_type, event.ticker)
+    body = _body_for_direction(direction, f"{event.title}\n원문: {event.url or 'N/A'}")
     sent = await _send_notification(title, body, urgent=False)
-    await _mark_event(event.id, action="notified")
+    action_label = "notified" if direction != "observed_negative" else "notified_negative"
+    await _mark_event(event.id, action=action_label)
     return ActionResult(
-        event_id=event.id, action_taken="notified",
+        event_id=event.id, action_taken=action_label,
         notification_sent=sent,
     )
 
