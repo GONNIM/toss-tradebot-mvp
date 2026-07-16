@@ -679,7 +679,12 @@ function UsageGuideCard() {
           <div className="rounded border-2 border-red-200 bg-red-50 p-2 text-red-900 dark:bg-red-950 dark:text-red-100">
             <b>⚠️ 중요</b> · 본 리스트는 <b>매수 추천 아님</b>. 관찰 후보만 제공. 최종 판단은 사용자 몫.
             자동매매 연결 안 됨 (hypothesis 모드).
-            <a href="/docs/powderkeg-user-guide" className="ml-1 text-sky-700 underline hover:text-sky-500">
+            <a
+              href="https://github.com/GONNIM/toss-tradebot-mvp/blob/main/docs/plans/powderkeg-screener/user-guide.md"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="ml-1 text-sky-700 underline hover:text-sky-500"
+            >
               📖 상세 사용법 문서 →
             </a>
           </div>
