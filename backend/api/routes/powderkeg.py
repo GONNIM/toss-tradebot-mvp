@@ -562,6 +562,25 @@ async def trigger_ftc_refresh(year: int = Body(2026, embed=True)) -> dict[str, A
     return await refresh_from_seed(year)
 
 
+@router.get("/candidates/low-pbr")
+async def get_low_pbr_candidates(
+    max_pbr: float = Query(0.7, description="PBR 상한"),
+    min_market_cap: float = Query(30_000_000_000, description="시총 하한 (원)"),
+    max_market_cap: float = Query(1_000_000_000_000_000, description="시총 상한"),
+    limit: int = Query(500, ge=1, le=2000),
+    market: str = Query("ALL", description="KOSPI/KOSDAQ/ALL · ALL 은 KOSPI+KOSDAQ 통합 (v1.19)"),
+) -> dict[str, Any]:
+    """v1.19 · 저PBR 후보 통합 · KOSPI+KOSDAQ · 리뷰어 지적 대응.
+
+    "화약고 서식지는 KOSPI 중소형 + KOSDAQ 중형의 비재벌 현금부자 -
+     정확히 수집 안 된 구간이다"
+
+    market="ALL" 시 두 시장 모두 필터 · 저PBR 유니버스 대량 확보.
+    """
+    result = await _low_pbr_impl(max_pbr, min_market_cap, max_market_cap, limit, market)
+    return result
+
+
 @router.get("/candidates/kosdaq-low-pbr")
 async def get_kosdaq_low_pbr_candidates(
     max_pbr: float = Query(0.7, description="PBR 상한"),
@@ -575,6 +594,14 @@ async def get_kosdaq_low_pbr_candidates(
     PBR = market_cap / total_equity 자체 계산 (FDR PBR 컬럼 결측 대응).
     FinancialSnapshot 있는 종목만 pre-filter · 유니버스 확대 실용.
     """
+    return await _low_pbr_impl(max_pbr, min_market_cap, max_market_cap, limit, market)
+
+
+async def _low_pbr_impl(
+    max_pbr: float, min_market_cap: float, max_market_cap: float,
+    limit: int, market: str,
+) -> dict[str, Any]:
+    """공통 · 저PBR 후보 조회 (KOSPI/KOSDAQ/ALL)."""
     from backend.services.models import FinancialSnapshot, KrxMarketSnapshot
     async with get_session() as session:
         latest_date = (await session.execute(
@@ -584,18 +611,22 @@ async def get_kosdaq_low_pbr_candidates(
         if not latest_date:
             return {"count": 0, "items": []}
 
-        # KRX 스냅샷 · 시총·market 필터
+        # v1.19 · market="ALL" 지원 · KOSPI+KOSDAQ 통합
+        where_clauses = [
+            KrxMarketSnapshot.snapshot_date == latest_date,
+            KrxMarketSnapshot.market_cap.is_not(None),
+            KrxMarketSnapshot.market_cap >= min_market_cap,
+            KrxMarketSnapshot.market_cap <= max_market_cap,
+        ]
+        if market.upper() != "ALL":
+            where_clauses.append(KrxMarketSnapshot.market == market)
+        # ALL 시 · 자동으로 필터 없음 · KOSPI + KOSDAQ 모두 포함
+
         stmt = (
             select(KrxMarketSnapshot)
-            .where(
-                KrxMarketSnapshot.snapshot_date == latest_date,
-                KrxMarketSnapshot.market == market,
-                KrxMarketSnapshot.market_cap.is_not(None),
-                KrxMarketSnapshot.market_cap >= min_market_cap,
-                KrxMarketSnapshot.market_cap <= max_market_cap,
-            )
+            .where(*where_clauses)
             .order_by(KrxMarketSnapshot.market_cap.desc())
-            .limit(500)   # 후처리 filter 위해 넉넉히
+            .limit(2000 if market.upper() == "ALL" else 500)
         )
         krx_rows = (await session.execute(stmt)).scalars().all()
 

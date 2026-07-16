@@ -188,6 +188,7 @@ function ListTab({ token }: { token: string }) {
   return (
     <section className="space-y-3 rounded border p-4">
       <FunnelCard runId={q.data?.run_id || null} />
+      <LowPbrDiscoveryCard token={token} />
       <ReScreenGuide token={token} runId={q.data?.run_id || null} count={q.data?.count || 0} />
       <div className="flex items-center justify-between">
         <div className="text-sm">
@@ -539,6 +540,143 @@ function EventTypeBadge({ event_type, kind }: { event_type: string; kind: "A" | 
       {kind === "B" ? "🚨 " : ""}
       {event_type}
     </span>
+  );
+}
+
+/** 저PBR 후보 발굴·대량 스크리닝 카드 · v1.19 · 리뷰어 Priority 2.
+ *   "화약고 서식지는 KOSPI 중소형 + KOSDAQ 중형 · 지금은 반대 방향으로 편향"
+ *   → KRX 스냅샷의 저PBR (< 0.5) 종목 대량 발굴 · 스크리너 원클릭 실행.
+ */
+function LowPbrDiscoveryCard({ token }: { token: string }) {
+  const [open, setOpen] = useState(false);
+  const [maxPbr, setMaxPbr] = useState<number>(0.5);
+  const [market, setMarket] = useState<string>("ALL");
+  const [minCapEok, setMinCapEok] = useState<number>(300);   // 300억
+  const qc = useQueryClient();
+  const candidates = useQuery({
+    queryKey: ["powderkeg", "low_pbr", maxPbr, market, minCapEok],
+    queryFn: () => api.powderkeg.lowPbrCandidates({
+      max_pbr: maxPbr, market, min_market_cap: minCapEok * 100_000_000,
+      limit: 1000,
+    }),
+    enabled: open,
+  });
+  const runBulk = useMutation({
+    mutationFn: async () => {
+      const tks = candidates.data?.items.map(x => x.ticker) || [];
+      if (tks.length === 0) throw new Error("발굴된 저PBR 후보가 없습니다");
+      return await api.powderkeg.runScreener(token, tks);
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["powderkeg", "list"] });
+      qc.invalidateQueries({ queryKey: ["powderkeg", "funnel"] });
+    },
+  });
+  return (
+    <section className="rounded border-2 border-emerald-200 bg-emerald-50 p-3 text-xs dark:border-emerald-900 dark:bg-emerald-950">
+      <button
+        type="button"
+        onClick={() => setOpen(!open)}
+        className="flex w-full items-center justify-between text-left"
+      >
+        <div className="font-bold text-emerald-900 dark:text-emerald-100">
+          🔎 저PBR 후보 대량 발굴 · 스크리닝 <span className="text-[10px] text-emerald-700 dark:text-emerald-300">(리뷰어 Priority 2)</span>
+        </div>
+        <div className="text-emerald-700">{open ? "▼" : "▶"}</div>
+      </button>
+      {open && (
+        <div className="mt-2 space-y-2">
+          <div className="text-emerald-800 dark:text-emerald-200">
+            💡 <b>화약고 서식지</b> · KOSPI 중소형 + KOSDAQ 중형 · 저PBR 대상 · 유니버스 전환.
+          </div>
+          <div className="flex flex-wrap items-end gap-2">
+            <label className="text-[11px]">
+              <div className="font-semibold">PBR 상한</div>
+              <input
+                type="number" step="0.05" min="0.1" max="1.0"
+                value={maxPbr}
+                onChange={(e) => setMaxPbr(Number(e.target.value))}
+                className="w-16 rounded border px-1 py-0.5"
+              />
+            </label>
+            <label className="text-[11px]">
+              <div className="font-semibold">시장</div>
+              <select
+                value={market}
+                onChange={(e) => setMarket(e.target.value)}
+                className="rounded border px-1 py-0.5"
+              >
+                <option value="ALL">전체</option>
+                <option value="KOSPI">KOSPI</option>
+                <option value="KOSDAQ">KOSDAQ</option>
+              </select>
+            </label>
+            <label className="text-[11px]">
+              <div className="font-semibold">시총 하한 (억원)</div>
+              <input
+                type="number" step="50" min="50" max="10000"
+                value={minCapEok}
+                onChange={(e) => setMinCapEok(Number(e.target.value))}
+                className="w-20 rounded border px-1 py-0.5"
+              />
+            </label>
+            <button
+              type="button"
+              onClick={() => candidates.refetch()}
+              disabled={!open || candidates.isFetching}
+              className="rounded border border-emerald-300 bg-white px-2 py-1 text-[11px] hover:bg-emerald-100 disabled:opacity-30"
+            >
+              🔎 후보 다시 발굴
+            </button>
+          </div>
+          {candidates.isLoading ? (
+            <div className="text-emerald-700">불러오는 중...</div>
+          ) : candidates.data ? (
+            <div className="rounded border bg-white p-2 dark:bg-slate-900">
+              <div className="flex items-center justify-between">
+                <div className="text-[11px]">
+                  📊 발굴 종목 · <b>{candidates.data.count}</b>개
+                  <span className="ml-1 text-muted-foreground">({candidates.data.snapshot_date})</span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => runBulk.mutate()}
+                  disabled={!token || runBulk.isPending || candidates.data.count === 0}
+                  className="rounded bg-emerald-600 px-2 py-1 text-[11px] font-bold text-white hover:bg-emerald-700 disabled:bg-emerald-300"
+                  title={`${candidates.data.count}개 종목을 화약고 10 조건으로 대량 스크리닝`}
+                >
+                  {runBulk.isPending ? "⏳ 스크리닝 중..." : `🧨 이 ${candidates.data.count}개 스크리닝`}
+                </button>
+              </div>
+              {candidates.data.items.length > 0 && (
+                <div className="mt-1 max-h-40 overflow-y-auto text-[10px]">
+                  <div className="grid grid-cols-3 gap-1 font-mono">
+                    {candidates.data.items.slice(0, 30).map((c) => (
+                      <div key={c.ticker} className="truncate rounded bg-emerald-50 px-1 py-0.5 dark:bg-emerald-900">
+                        {c.ticker} <span className="text-muted-foreground">PBR {c.pbr}</span>
+                      </div>
+                    ))}
+                  </div>
+                  {candidates.data.items.length > 30 && (
+                    <div className="mt-1 text-muted-foreground">...외 {candidates.data.items.length - 30}개</div>
+                  )}
+                </div>
+              )}
+            </div>
+          ) : null}
+          {runBulk.isSuccess && runBulk.data ? (
+            <div className="rounded bg-emerald-100 px-2 py-1 text-[11px] font-bold text-emerald-900 dark:bg-emerald-900 dark:text-emerald-100">
+              ✅ 스크리닝 완료 · 통과 {runBulk.data.passed} · 탈락 {runBulk.data.rejected} · 현금 의심 {runBulk.data.cash_suspect ?? 0}
+            </div>
+          ) : null}
+          {runBulk.isError ? (
+            <div className="rounded bg-red-100 px-2 py-1 text-[11px] text-red-900 dark:bg-red-900 dark:text-red-100">
+              ❌ 스크리닝 실패 · {String((runBulk.error as Error)?.message)}
+            </div>
+          ) : null}
+        </div>
+      )}
+    </section>
   );
 }
 

@@ -790,6 +790,20 @@ export const api = {
       postWithToken<{ applied: string[]; errors: string[] }>(
         `/powderkeg/admin/migrate-schema`, token,
       ),
+    lowPbrCandidates: (opts: { max_pbr?: number; market?: string; min_market_cap?: number; max_market_cap?: number; limit?: number } = {}) => {
+      const q = new URLSearchParams();
+      if (opts.max_pbr != null) q.set("max_pbr", String(opts.max_pbr));
+      if (opts.market) q.set("market", opts.market);
+      if (opts.min_market_cap != null) q.set("min_market_cap", String(opts.min_market_cap));
+      if (opts.max_market_cap != null) q.set("max_market_cap", String(opts.max_market_cap));
+      if (opts.limit != null) q.set("limit", String(opts.limit));
+      const qs = q.toString();
+      return get<{
+        count: number;
+        snapshot_date: string;
+        items: { ticker: string; name: string; pbr: number; market_cap: number; pbr_source: string }[];
+      }>(`/powderkeg/candidates/low-pbr${qs ? `?${qs}` : ""}`);
+    },
     listFunnel: (run_id?: string) => {
       const qs = run_id ? `?run_id=${encodeURIComponent(run_id)}` : "";
       return get<{
