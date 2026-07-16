@@ -3,6 +3,17 @@
 import { useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
+  Bar,
+  BarChart,
+  CartesianGrid,
+  Cell,
+  ReferenceLine,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from "recharts";
+import {
   api,
   PowderKegEventItem,
   PowderKegListItem,
@@ -418,6 +429,7 @@ function EventsTab() {
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <EventTypeBadge event_type={e.event_type} kind={e.kind} />
+                  {e.kind === "B" ? <DoNotTouchBadge /> : null}
                   <span className="font-bold">{e.ticker}</span>
                   {e.needs_human_review ? (
                     <span className="rounded bg-amber-200 px-1 py-0.5 text-[10px] text-amber-900">
@@ -477,6 +489,15 @@ function EventTypeBadge({ event_type, kind }: { event_type: string; kind: "A" | 
   );
 }
 
+/** DO NOT TOUCH 뱃지 · 지시서 §7-3-B1 do_not_touch 라벨 · B 타입 (즉시 제외) 전반 표기. */
+function DoNotTouchBadge() {
+  return (
+    <span className="rounded bg-red-800 px-1.5 py-0.5 text-[10px] font-bold text-white shadow-sm">
+      🚫 DO NOT TOUCH
+    </span>
+  );
+}
+
 // ═══════════════════════════════════════════════════════════════
 // 탭 3 · 백테스트 리포트
 // ═══════════════════════════════════════════════════════════════
@@ -529,6 +550,7 @@ function ReportTab({ token }: { token: string }) {
               value={r.decision.validated ? "PASS · " + (r.decision.passing_window || "") : "미달"}
             />
           </div>
+          <CarChart perWindow={r.aggregate.per_window} />
           <div className="mt-3 overflow-x-auto">
             <table className="w-full text-xs">
               <thead>
@@ -581,6 +603,59 @@ function Stat({ label, value }: { label: string; value: string }) {
     <div className="flex justify-between rounded border bg-slate-50 px-2 py-1 dark:bg-slate-900">
       <span className="text-muted-foreground">{label}</span>
       <span className="font-mono font-bold">{value}</span>
+    </div>
+  );
+}
+
+/**
+ * CAR 곡선 · 지시서 §7-4 window 스펙 · 1d/1m/3m/6m/12m 평균 수익률 시각화.
+ * 양(+): 초록 · 음(-): 빨강 · 0 기준선 표시.
+ */
+function CarChart({ perWindow }: { perWindow: PowderKegReport["aggregate"]["per_window"] }) {
+  const ORDER = ["1d", "1m", "3m", "6m", "12m"] as const;
+  const data = ORDER.filter((k) => perWindow[k]).map((k) => {
+    const w = perWindow[k];
+    return {
+      window: k,
+      mean_pct: +(w.mean_return * 100).toFixed(2),
+      n: w.n,
+      t_stat: w.t_stat,
+    };
+  });
+  if (data.length === 0) return null;
+  return (
+    <div className="mt-3 rounded border p-2">
+      <div className="mb-1 text-[11px] font-bold text-muted-foreground">
+        📈 CAR 곡선 · window 별 평균 수익률 (%)
+      </div>
+      <div style={{ width: "100%", height: 200 }}>
+        <ResponsiveContainer>
+          <BarChart data={data} margin={{ top: 8, right: 8, bottom: 8, left: 0 }}>
+            <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
+            <XAxis dataKey="window" tick={{ fontSize: 11 }} />
+            <YAxis
+              tick={{ fontSize: 11 }}
+              tickFormatter={(v: number) => `${v}%`}
+            />
+            <Tooltip
+              contentStyle={{ fontSize: 11 }}
+              formatter={(v: number, _n, item) => {
+                const d = item.payload as (typeof data)[number];
+                return [`${v}% (n=${d.n} · t=${d.t_stat.toFixed(2)})`, "mean"];
+              }}
+            />
+            <ReferenceLine y={0} stroke="#666" strokeDasharray="3 3" />
+            <Bar dataKey="mean_pct">
+              {data.map((d, i) => (
+                <Cell
+                  key={`c-${i}`}
+                  fill={d.mean_pct >= 0 ? "#10b981" : "#ef4444"}
+                />
+              ))}
+            </Bar>
+          </BarChart>
+        </ResponsiveContainer>
+      </div>
     </div>
   );
 }

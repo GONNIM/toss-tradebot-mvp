@@ -188,7 +188,7 @@ input_set = input_set + extra
 | §7-3 이벤트 트리거 | B 공시 5분 내 리스트 제거 + 알림 | APScheduler 30분/5분 · 002070·082270 텔레그램 도착 | ✅ 완결 |
 | §7-4 백테스트 게이트 | 이벤트 타입별 CAR · validated 게이트 코드 강제 | 5년 backfill · CAR 1d/1m/3m/6m/12m · 표본 A3=497, B1=57, B2=57, B3=317 · validated 게이트 정확 작동 | ✅ **완결** (§10 상세) |
 | §7-5 반자동 티켓 | 무효화 조건 미입력 시 티켓 미생성 · 종목당 5% 한도 · 12개월 재평가 · VIP 감시 | 6 게이트 · 12개월 재평가 스케줄러 잡 · VIP 훅 자동 호출 + Telegram | ✅ **완결** (§11 상세) |
-| §7-6 3 탭 UI · 고지 | 3 탭 렌더 · 색상 구분 · 고지 전 화면 표시 | 3 탭 렌더 · 고지 API/HTML 확인 · A/B 색상 재확인 필요 | ⚠️ **부분** (UI 색상 스펙 재확인) |
+| §7-6 3 탭 UI · 고지 | 3 탭 렌더 · 색상 구분 · 고지 전 화면 표시 | 3 탭 렌더 · A 주황/B 빨강 · DO NOT TOUCH 뱃지 · CAR 곡선 · 고지 | ✅ **완결** (§12 상세) |
 
 ### 8-2. 신규 사용자 편집 (지시서 외 · Watchlist 패턴)
 
@@ -218,10 +218,10 @@ input_set = input_set + extra
 - ~~12개월 보유 기간 상한~~ · ✅ scheduler.py `powderkeg_holding_expiry` · 매일 08:00 KST · Telegram 알림
 - ~~Phase 5 VIP 감시 연동~~ · ✅ `approve_ticket` → `vip_watch_register_hook` 자동 호출 + Telegram · 이벤트 폴러가 이미 5분 주기 감시
 
-### 9-3. §7-6 UI 정합성 확인
-- **탭 2 A 주황 · B 빨강 색상 구분** · 코드 검증 필요
-- **DO NOT TOUCH 뱃지** · B 타입 표기 코드 검증 필요
-- **탭 3 CAR 곡선 렌더** · 1개월/3개월/6개월/12개월 확장 후 UI 반영
+### 9-3. §7-6 UI 정합성 (✅ **완결 · 2026-07-16**)
+- ~~탭 2 A 주황 · B 빨강 색상 구분~~ · ✅ EventTypeBadge · 기존 구현 완결 · 코드 검증 완료
+- ~~DO NOT TOUCH 뱃지~~ · ✅ `DoNotTouchBadge` 신규 · B 타입 자동 표시 · 지시서 §7-3-B1 정합
+- ~~탭 3 CAR 곡선 렌더~~ · ✅ `CarChart` recharts BarChart 신규 · 1d/1m/3m/6m/12m · 양수 초록/음수 빨강 · 0 기준선
 
 ### 9-4. 데이터 정밀화 (기존)
 - **지주회사 지분율 cap** · 순환출자 시 100% 초과 방지 로직
@@ -393,7 +393,49 @@ await _notify_ticket_approved(ticket_id, ticker, approver)
 
 ---
 
-## 12. 학습 및 교훈
+## 12. §9-3 UI 정합성 · 실측 검증 (2026-07-16)
+
+### 12-1. 탭 2 · 불꽃 피드 (`EventsTab`)
+
+| 지시서 §7-6 요구 | 실체 | 상태 |
+|---|---|---|
+| A는 주황 · B는 빨강 색상 구분 | `eventBg` · `border-orange/red` 배경 · `EventTypeBadge` · `bg-orange-500/red-600` | ✅ 기존 구현 완결 (재확인) |
+| DO NOT TOUCH 표기 | 신규 `DoNotTouchBadge` · `kind === "B"` 자동 렌더 · `🚫 DO NOT TOUCH` 뱃지 | ✅ 신규 완결 |
+| 타임라인 (역순) | detected_at 정렬 · 최신 우선 | ✅ |
+| 오너 사건 표기 (§7-6-3) | 원문 링크만 · 판단 문구 없음 | ✅ |
+
+### 12-2. 탭 3 · 백테스트 리포트 (`ReportTab` + `CarChart`)
+
+| 지시서 §7-6 요구 | 실체 | 상태 |
+|---|---|---|
+| 이벤트 타입별 CAR 곡선 | 신규 `CarChart` · recharts BarChart · window 별 mean_return | ✅ 신규 완결 |
+| CAR 곡선 · 1/3/6/12 개월 | ORDER=["1d","1m","3m","6m","12m"] 자동 정렬 · 존재 window 만 렌더 | ✅ |
+| validated/hypothesis 상태 | 상단 badge · emerald/slate | ✅ 기존 |
+| 상세 통계 표 | n / mean / median / win_rate / std / t-stat | ✅ 기존 (곡선과 병기) |
+| 게이트 조건 명시 | 표본 ≥ 50 · t-stat > 2 · win_rate ≥ 50% · mean_return > 0 | ✅ 기존 |
+| 에러 카운트 | entry_price_zero 등 사유 표시 | ✅ 기존 |
+
+### 12-3. CarChart 시각 스펙
+- **y=0 기준선** · dashed gray
+- **양수 (수익)** · `#10b981` (초록)
+- **음수 (손실)** · `#ef4444` (빨강)
+- **Tooltip** · `{v}% (n={N} · t={T})` · 표본 크기 + 유의성 즉시 확인
+- **높이** · 200px · CartesianGrid · 반응형 (ResponsiveContainer)
+
+### 12-4. §7-6 UI 완료 기준 검증
+
+| 완료 기준 (지시서) | 결과 | 상태 |
+|---|---|---|
+| 세 탭 렌더링 · 이벤트 색상 구분 동작 | 3 탭 활성 · A 주황 · B 빨강 · 🚫 DO NOT TOUCH | ✅ |
+| 고지 문구 전 화면 표시 | disclaimer API + 상단 배너 (기존 완결) | ✅ |
+
+### 12-5. TypeScript 검증
+- `npx tsc --noEmit` · 0 error
+- recharts import 유형 정합 · `Bar/BarChart/Cell/ReferenceLine/ResponsiveContainer/Tooltip/XAxis/YAxis`
+
+---
+
+## 13. 학습 및 교훈
 
 ### 데이터 정확성 우선주의
 - 초기 스펙 (지시서·DART 문서) 기반 코드 → 실 응답에서 다수 field/format 차이 발견
@@ -416,7 +458,7 @@ await _notify_ticket_approved(ticket_id, ticker, approver)
 
 ---
 
-## 13. 참고 문서
+## 14. 참고 문서
 
 **Phase 7 계열**
 - [`phase7-powderkeg-screener.md`](./phase7-powderkeg-screener.md) · 원 지시서
@@ -435,10 +477,10 @@ await _notify_ticket_approved(ticket_id, ticker, approver)
 
 **최종 상태**: 프로덕션 라이브 · 자동 감시 활성 · 사용자 편집 UI 검증 완료 · 서희건설 매수 후보 감시 중.
 
-**v1→v2 승격 조건** (§9-3 ~ §9-6 우선순위 · §9-1/§9-2 완결):
+**v1→v2 승격 조건** (§9-1/§9-2/§9-3 완결 · 나머지 v2):
 - ~~§9-1 백테스트 CAR window 확장 · 5년 backfill~~ · ✅ **완료** (2026-07-16 · §10)
 - ~~§9-2 리스크·VIP 감시 연동~~ · ✅ **완료** (2026-07-16 · §11)
-- §9-3 탭 2 색상·DO NOT TOUCH UI 스펙 재확인
+- ~~§9-3 UI 정합성 · A/B 색상 · DO NOT TOUCH · CAR 곡선~~ · ✅ **완료** (2026-07-16 · §12)
 - §9-5 뉴스 크롤링 (A1/A2/A6 표본 확보)
 - discovery/vip 다중 티커 리팩터 (§11-6)
 - Position tracker 실시간 pnl · Toss 계좌 연동
@@ -453,4 +495,5 @@ await _notify_ticket_approved(ticket_id, ticker, approver)
 | 2026-07-15 | v1.0 | 초판 · 6 단계 완결 · 사용자 편집 · lock 지속성 | `fc8fa49` |
 | 2026-07-16 | v1.1 | 문서↔페이지 정합성 리뷰 반영 · DoD 부분 완결 3건 명시 · v2 백로그 §9-1/§9-2/§9-3 확장 | `c732aaa` |
 | 2026-07-16 | v1.2 | §9-1 백테스트 정밀화 완결 · 5년 backfill 실행 · A3/B1/B2/B3 표본 ≥ 50 확보 · §10 신설 (실측 CAR + 가설 재검증) | `d0d1b5c` |
-| 2026-07-16 | v1.3 | §9-2 리스크·VIP 감시 연동 완결 · holding_expiry_job 스케줄러 + approve_ticket VIP 훅 자동 호출 + Telegram · §11 신설 | (본 커밋) |
+| 2026-07-16 | v1.3 | §9-2 리스크·VIP 감시 연동 완결 · holding_expiry_job 스케줄러 + approve_ticket VIP 훅 자동 호출 + Telegram · §11 신설 | `c594e4b` |
+| 2026-07-16 | v1.4 | §9-3 UI 정합성 완결 · DO NOT TOUCH 뱃지 + CarChart recharts BarChart · §12 신설 · TypeScript 0 error 검증 | (본 커밋) |
