@@ -573,6 +573,16 @@ async def trigger_events_poll(
     )
 
 
+@router.post("/admin/holding-expiry-run", dependencies=[Depends(require_sniper_token)])
+async def trigger_holding_expiry() -> dict[str, Any]:
+    """수동 실행 · powderkeg_holding_expiry 잡 (§7-5 12개월 재평가).
+
+    스케줄러 잡 (매일 08:00 KST) 과 동일 로직 · 검증·수동 트리거 용도.
+    """
+    from backend.powderkeg.scheduler import holding_expiry_job
+    return await holding_expiry_job()
+
+
 @router.post("/collectors/events-backfill", dependencies=[Depends(require_sniper_token)])
 async def trigger_events_backfill(
     start_date: str = Body(..., embed=True, description="YYYY-MM-DD"),
