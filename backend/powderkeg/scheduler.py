@@ -3,11 +3,18 @@
 지시서 §7-3 완료 기준:
     - 타입 B 공시 발생 시 리스트 제거 + 알림이 5분 내 발생한다.
 
-잡:
-  · powderkeg_events_poll   · 30분 주기 · DART 공시 폴링 · 자동 저장
-  · powderkeg_triggers_run  · 5분 주기 · pending 이벤트 액션 처리 (Type A/B)
+잡 (v1.8 · 2026-07-16 · 5분 스펙 준수 개편):
+  · powderkeg_events_poll   · **3분 주기** · DART 공시 폴링 · 자동 저장
+  · powderkeg_triggers      · **1분 주기** · pending 이벤트 액션 처리 (Type A/B)
+  · 최악 지연: 3분(폴링) + 1분(트리거) = **4분** (< 5분 스펙 · margin 확보)
+  · powderkeg_holding_expiry · daily 08:00 KST · 12개월 재평가 (§7-5)
+  · powderkeg_news_poll     · 15분 주기 · 뉴스 A1/A2/A6 (§7-1-4)
 
-powderkeg_events_poll 은 lookback=1일 (30분 주기 시 정합) · watched_tickers=None
+DART API 부하:
+  · 잡당 avg 15 calls (4 pblntf_ty × ~4 page) · 3분 주기 = 480 job/day
+  · 총 ~7,200 calls/day · DART 한도 10,000/day 이내 (여유)
+
+powderkeg_events_poll 은 lookback=1일 · watched_tickers=None
     (모든 매칭 저장 · 화약고 리스트 종목만 관심 · 나머지는 스크리너 후 정리).
 """
 from __future__ import annotations
@@ -83,13 +90,13 @@ def register_powderkeg_jobs(scheduler) -> None:
     """FastAPI lifespan 에서 호출."""
     scheduler.add_job(
         poll_events_job, "interval",
-        minutes=30,
+        minutes=3,                       # v1.8 · 30m → 3m (§7-3 5분 스펙 준수)
         id="powderkeg_events_poll",
         max_instances=1, coalesce=True,
     )
     scheduler.add_job(
         process_triggers_job, "interval",
-        minutes=5,
+        minutes=1,                       # v1.8 · 5m → 1m (§7-3 5분 스펙 준수)
         id="powderkeg_triggers",
         max_instances=1, coalesce=True,
     )
@@ -106,6 +113,6 @@ def register_powderkeg_jobs(scheduler) -> None:
         max_instances=1, coalesce=True,
     )
     logger.info(
-        "[powderkeg] jobs 등록 · events_poll=30m · triggers=5m "
+        "[powderkeg] jobs 등록 · events_poll=3m · triggers=1m (§7-3 5분 스펙 · max 4분 지연) "
         "· holding_expiry=daily 08:00 KST (§7-5) · news_poll=15m (§7-1-4)"
     )

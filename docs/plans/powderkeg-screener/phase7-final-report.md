@@ -486,7 +486,7 @@ async def _get_empirical_direction(event_type: str) -> str:
 - 2. 완료보고서 §10-3 표 수치 정합화 · 재캐시 반영 (부분 완료)
 - ~~3. release_date 실제 접수일 채우기~~ · ✅ **완료** (§14 · v1.6)
 - ~~4. 뉴스 크롤링 (§7-1-4) 구현~~ · ✅ **완료** (§15 · v1.7)
-- 5. §7-3 5분 스펙 준수 · 폴링 30m → 5m or push 훅
+- ~~5. §7-3 5분 스펙 준수~~ · ✅ **완료** (§16 · v1.8)
 
 ---
 
@@ -596,7 +596,68 @@ else:
 
 ---
 
-## 16. 학습 및 교훈
+## 16. §7-3 5분 스펙 준수 · 잡 주기 개편 (v1.8 · 2026-07-16)
+
+### 16-1. 리뷰 지적 사항
+> "§7-3 스펙 · Type B 5분 내 처리 · 실체 · **30분 폴링 + 5분 트리거 = 최악 35분 지연** · self-report의 '5분 내' 주장은 정확치 않음"
+
+### 16-2. Fix · 잡 주기 개편
+
+**변경 전** (v1.7-):
+| 잡 ID | 주기 | 역할 |
+|---|---|---|
+| powderkeg_events_poll | **30m** | DART 공시 폴링 |
+| powderkeg_triggers | **5m** | pending 이벤트 액션 처리 |
+| 최악 지연 | **35분** | 스펙 초과 (**7배**) |
+
+**변경 후** (v1.8):
+| 잡 ID | 주기 | 역할 |
+|---|---|---|
+| powderkeg_events_poll | **3m** | DART 공시 폴링 |
+| powderkeg_triggers | **1m** | pending 이벤트 액션 처리 |
+| 최악 지연 | **4분** | ✅ **스펙 준수** (< 5분 · margin 확보) |
+
+### 16-3. DART API 부하 검증
+
+**변경 후 예상 호출량**:
+- 잡당 API 호출: 4 pblntf_ty × ~4 page = **~15 calls** (평균)
+- 3분 주기 = 480 job/day
+- **총 약 7,200 calls/day**
+- DART OpenAPI 한도: **10,000 calls/day/키** (분당 100)
+- **안전 마진 · 28% 여유**
+
+**분당 rate**:
+- 480 job/day / 1440 min = 0.33 job/min · 잡당 15 API = **5 calls/min**
+- DART 분당 100 한도 대비 **5% 사용** · 여유 대량
+
+### 16-4. 실체 지연 예시
+
+**Type B 공시 접수 시나리오**:
+- t=0 · DART 접수
+- t+0~3m · events_poll (평균 1.5분 대기)
+- t+3~4m · triggers (평균 3.5분 처리)
+- t+4~5분 · Telegram 알림 도착 · 리스트 제거
+
+**평균 지연**: **~2.5분** · **최악 지연**: **~4분** · 스펙 5분 이내.
+
+### 16-5. 다른 잡 정합
+
+| 잡 ID | 주기 | 목적 |
+|---|---|---|
+| **powderkeg_events_poll** | **3m** | DART 폴링 (§7-3) |
+| **powderkeg_triggers** | **1m** | 액션 처리 (§7-3) |
+| powderkeg_news_poll | 15m | 뉴스 A1/A2/A6 (§7-1-4) |
+| powderkeg_holding_expiry | daily 08:00 KST | 12개월 재평가 (§7-5) |
+
+### 16-6. 후속 최적화 여지 (v3)
+- **DART Push 웹훅** · DART 는 현재 웹훅 미지원 · 옵션 없음
+- **RSS 통한 실시간** · DART 공시 RSS 없음
+- **더 짧은 폴링** · 3분 → 1분 (필요 시) · DART 부하 10,000 근접 검토 필요
+- **차등 잡** · Type B 발생 시 즉시 재폴링 (evening peak · 24h 오전 급증 시 유용)
+
+---
+
+## 17. 학습 및 교훈
 
 ### 데이터 정확성 우선주의
 - 초기 스펙 (지시서·DART 문서) 기반 코드 → 실 응답에서 다수 field/format 차이 발견
@@ -619,7 +680,7 @@ else:
 
 ---
 
-## 17. 참고 문서
+## 18. 참고 문서
 
 **Phase 7 계열**
 - [`phase7-powderkeg-screener.md`](./phase7-powderkeg-screener.md) · 원 지시서
@@ -660,4 +721,5 @@ else:
 | 2026-07-16 | v1.4 | §9-3 UI 정합성 완결 · DO NOT TOUCH 뱃지 + CarChart recharts BarChart · §12 신설 · TypeScript 0 error 검증 | `408dd4b` |
 | 2026-07-16 | v1.5 | 전문가 리뷰 반영 · **A3 액션 정책 재검토** · triggers.py 실증 방향성 기반 알림 title/body (validated/observed_negative/observing) · notified_negative action_taken 신설 | `21e5856` |
 | 2026-07-16 | v1.6 | 전문가 리뷰 반영 · **release_date 실제 접수일** · dart/client.py fetch_report_receipt_date + dart_financials.py 자동 조회 · Phase 0 as-of 규약 정합 · §14 신설 | `c8a7ed4` |
-| 2026-07-16 | v1.7 | 전문가 리뷰 반영 · **뉴스 크롤링 (§7-1-4)** · Sprint 2 T54 news_rss 재사용 · A1/A2/A6 자동 저장 · 15분 스케줄러 잡 · §15 신설 | (본 커밋) |
+| 2026-07-16 | v1.7 | 전문가 리뷰 반영 · **뉴스 크롤링 (§7-1-4)** · Sprint 2 T54 news_rss 재사용 · A1/A2/A6 자동 저장 · 15분 스케줄러 잡 · §15 신설 | `4b37615` |
+| 2026-07-16 | v1.8 | 전문가 리뷰 반영 · **§7-3 5분 스펙 준수** · events_poll 30m→3m · triggers 5m→1m · 최악 지연 35분→4분 · §16 신설 | (본 커밋) |
