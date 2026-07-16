@@ -43,6 +43,7 @@ export default function PowderKegPage() {
           hypothesis 모드 · 자동매매 미연결
         </p>
       </header>
+      <OnboardingBanner />
       <IdentityBanner />
       <Tabs tab={tab} setTab={setTab} />
       {tab === "list" && <ListTab token={token} />}
@@ -50,6 +51,50 @@ export default function PowderKegPage() {
       {tab === "report" && <ReportTab token={token} />}
       <Disclaimer />
     </div>
+  );
+}
+
+function OnboardingBanner() {
+  const KEY = "powderkeg_onboarding_dismissed";
+  const [dismissed, setDismissed] = useState(false);
+  const [open, setOpen] = useState(true);
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      setDismissed(!!localStorage.getItem(KEY));
+    }
+  }, []);
+  if (dismissed) return null;
+  return (
+    <section className="rounded border-2 border-sky-300 bg-sky-50 p-3 text-sm dark:border-sky-800 dark:bg-sky-950">
+      <div className="flex items-center justify-between">
+        <button
+          type="button"
+          onClick={() => setOpen(!open)}
+          className="font-bold text-sky-900 dark:text-sky-100 hover:underline"
+        >
+          {open ? "▼" : "▶"} 🧨 이 페이지는 무엇인가요?
+        </button>
+        <button
+          type="button"
+          onClick={() => {
+            localStorage.setItem(KEY, "1");
+            setDismissed(true);
+          }}
+          className="rounded border border-sky-300 px-2 py-0.5 text-[11px] text-sky-700 hover:bg-sky-100"
+        >
+          다시 안 보기
+        </button>
+      </div>
+      {open && (
+        <ul className="mt-2 space-y-1 text-xs text-sky-900 dark:text-sky-100">
+          <li>· <b>화약고 종목</b> · 재무·공시 데이터로 자동 발굴한 매수 관찰 후보</li>
+          <li>· <b>왜 화약고?</b> · 오너에게 현금이 급해질 신호 (담보제공·상속·경영권분쟁) 가 나타난 저평가 종목</li>
+          <li>· <b>이 페이지의 역할</b> · <b>실전 매매 X</b> · 관찰 후보만 제공 · 최종 결정은 사용자</li>
+          <li>· <b>언제 재평가?</b> · 매 분기 사업보고서 공개 후 (5월 · 8월 · 11월 · 2월)</li>
+          <li>· <b>탭 안내</b> · 🧨 리스트 (후보 종목) · 🔥 피드 (이벤트 알림) · 📊 리포트 (백테스트 결과)</li>
+        </ul>
+      )}
+    </section>
   );
 }
 
@@ -139,20 +184,27 @@ function ListTab({ token }: { token: string }) {
 
   return (
     <section className="space-y-3 rounded border p-4">
+      <ReScreenGuide token={token} runId={q.data?.run_id || null} count={q.data?.count || 0} />
       <div className="flex items-center justify-between">
         <div className="text-sm">
-          <span className="font-bold">Run: {q.data?.run_id || "-"}</span>
-          <span className="ml-2 text-muted-foreground">· {q.data?.count || 0} 종목</span>
+          <span className="font-bold">마지막 갱신 · {fmtRunIdKst(q.data?.run_id)}</span>
+          <span
+            className="ml-2 text-muted-foreground"
+            title="이 리스트에 담긴 종목 수"
+          >
+            · {q.data?.count || 0} 종목
+          </span>
         </div>
         <select
           value={statusFilter}
           onChange={(e) => setStatusFilter(e.target.value)}
           className="rounded border px-2 py-1 text-xs"
+          title="상태별 필터 · 전체 / 매수 후보 / 탈락 / 현금 의심"
         >
-          <option value="">전체</option>
-          <option value="passed">✅ passed</option>
-          <option value="rejected">❌ rejected</option>
-          <option value="cash_suspect">⚠️ cash_suspect</option>
+          <option value="">🔍 전체</option>
+          <option value="passed">✅ 매수 후보 (10/10 통과)</option>
+          <option value="rejected">❌ 탈락</option>
+          <option value="cash_suspect">⚠️ 현금 의심 (분식 가능)</option>
         </select>
       </div>
       <ManualAddForm token={token} runId={q.data?.run_id || undefined} />
@@ -160,11 +212,7 @@ function ListTab({ token }: { token: string }) {
         <div className="text-xs text-muted-foreground">불러오는 중...</div>
       ) : items.length === 0 ? (
         <div className="rounded border-2 border-dashed p-6 text-center text-xs text-muted-foreground">
-          화약고 리스트가 비어있음. Screener 를 실행하려면{" "}
-          <code className="rounded bg-slate-100 px-1 dark:bg-slate-800">
-            POST /api/v1/powderkeg/screener/run
-          </code>{" "}
-          (X-API-Token 필요).
+          매수 후보 종목 리스트가 비어있습니다. 상단 <b>🔄 지금 재평가</b> 버튼을 눌러 최신 데이터로 리스트를 만들어 보세요.
         </div>
       ) : (
         <div className="overflow-x-auto">
@@ -487,6 +535,86 @@ function EventTypeBadge({ event_type, kind }: { event_type: string; kind: "A" | 
       {kind === "B" ? "🚨 " : ""}
       {event_type}
     </span>
+  );
+}
+
+/** run_id "20260716-145255K" 또는 "20260716-055255" (UTC) 를 사용자 친화 KST 문자열로 변환. */
+function fmtRunIdKst(runId?: string | null): string {
+  if (!runId) return "아직 실행 안 됨";
+  const m = runId.match(/^(\d{4})(\d{2})(\d{2})-(\d{2})(\d{2})(\d{2})(K?)$/);
+  if (!m) return runId;
+  const [, y, mo, d, h, mi, s, k] = m;
+  if (k === "K") {
+    return `${y}-${mo}-${d} ${h}:${mi}:${s} KST`;
+  }
+  // UTC · +9 hr 변환
+  const dt = new Date(Date.UTC(+y, +mo - 1, +d, +h, +mi, +s));
+  const kst = new Date(dt.getTime() + 9 * 3600 * 1000);
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${kst.getUTCFullYear()}-${pad(kst.getUTCMonth() + 1)}-${pad(kst.getUTCDate())} ${pad(kst.getUTCHours())}:${pad(kst.getUTCMinutes())}:${pad(kst.getUTCSeconds())} KST`;
+}
+
+/** 리스트 강제 재평가 가이드 카드 · 리뷰어 UX 지적 대응. */
+function ReScreenGuide({ token, runId, count }: { token: string; runId: string | null; count: number }) {
+  const qc = useQueryClient();
+  // 기본 유니버스 · 사용자가 입력 안 하면 화약고 리스트 + 서희건설 (부트스트랩)
+  const [tickers, setTickers] = useState<string>("035890");
+  const runScreener = useMutation({
+    mutationFn: async () => {
+      const arr = tickers.split(/[,\s]+/).map(t => t.trim()).filter(Boolean);
+      if (arr.length === 0) throw new Error("종목 티커를 최소 1개 입력하세요");
+      return await api.powderkeg.runScreener(token, arr);
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["powderkeg", "list"] });
+    },
+  });
+  const disabled = !token || runScreener.isPending;
+  return (
+    <section className="rounded border-2 border-sky-200 bg-gradient-to-r from-sky-50 to-blue-50 p-3 text-xs dark:border-sky-800 dark:from-sky-950 dark:to-blue-950">
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex-1 space-y-0.5">
+          <div className="font-bold text-sky-900 dark:text-sky-100">
+            🔄 리스트 강제 재평가
+          </div>
+          <div className="text-sky-800 dark:text-sky-200">
+            마지막 갱신 · <b>{fmtRunIdKst(runId)}</b> · 현재 {count}개 종목
+          </div>
+          <div className="text-[10px] text-sky-700 dark:text-sky-300">
+            💡 언제? · 사업보고서 공개 (5·8·11·2월) · 새 KRX 데이터 · 시장 급변 후
+          </div>
+        </div>
+        <div className="flex flex-col gap-1">
+          <input
+            type="text"
+            value={tickers}
+            onChange={(e) => setTickers(e.target.value)}
+            placeholder="종목코드 (콤마·공백)"
+            className="w-56 rounded border px-2 py-1 text-xs"
+            title="예: 035890 또는 035890,032190,003800"
+          />
+          <button
+            type="button"
+            onClick={() => runScreener.mutate()}
+            disabled={disabled}
+            className="rounded bg-sky-600 px-2 py-1 text-xs font-bold text-white hover:bg-sky-700 disabled:bg-sky-300"
+            title="입력한 종목을 10 조건으로 재평가 · X-API-Token 필요"
+          >
+            {runScreener.isPending ? "⏳ 계산 중..." : "🔄 지금 재평가"}
+          </button>
+        </div>
+      </div>
+      {runScreener.isSuccess && runScreener.data ? (
+        <div className="mt-2 rounded bg-emerald-100 px-2 py-1 text-[11px] text-emerald-900 dark:bg-emerald-900 dark:text-emerald-100">
+          ✅ 재평가 완료 · 통과 {String(runScreener.data.passed ?? "?")} · 탈락 {String(runScreener.data.rejected ?? "?")} · 현금 의심 {String(runScreener.data.cash_suspect ?? "?")}
+        </div>
+      ) : null}
+      {runScreener.isError ? (
+        <div className="mt-2 rounded bg-red-100 px-2 py-1 text-[11px] text-red-900 dark:bg-red-900 dark:text-red-100">
+          ❌ 재평가 실패 · {String((runScreener.error as Error)?.message || runScreener.error || "unknown")}
+        </div>
+      ) : null}
+    </section>
   );
 }
 

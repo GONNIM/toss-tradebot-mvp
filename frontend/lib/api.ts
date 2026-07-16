@@ -754,7 +754,7 @@ export const api = {
       return get<PowderKegTicketsResponse>(`/powderkeg/tickets${qs ? `?${qs}` : ""}`);
     },
     runScreener: (token: string, tickers: string[], year = 2026) =>
-      postWithToken<{ run_id: string; total: number; passed: number; rejected: number }>(
+      postWithToken<{ run_id: string; total: number; passed: number; rejected: number; cash_suspect?: number }>(
         `/powderkeg/screener/run`, token, { tickers, year },
       ),
     processTriggers: (token: string) =>
