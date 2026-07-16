@@ -38,6 +38,16 @@ async def process_triggers_job() -> dict[str, Any]:
         return {"error": str(exc)[:200]}
 
 
+async def news_poll_job() -> dict[str, Any]:
+    """15분 주기 · 뉴스 크롤링 (§7-1-4 · A1/A2/A6 보완)."""
+    from .collectors.news_crawler import poll_powderkeg_news
+    try:
+        return await poll_powderkeg_news(lookback_hours=1, only_watched=True)
+    except Exception as exc:  # noqa: BLE001
+        logger.exception("[powderkeg.news_poll] 실패 · %s", exc)
+        return {"error": str(exc)[:200]}
+
+
 async def holding_expiry_job() -> dict[str, Any]:
     """일 1회 · holding_days_max (기본 365일) 경과 티켓 재평가 알림.
 
@@ -89,7 +99,13 @@ def register_powderkeg_jobs(scheduler) -> None:
         id="powderkeg_holding_expiry",
         max_instances=1, coalesce=True,
     )
+    scheduler.add_job(
+        news_poll_job, "interval",
+        minutes=15,
+        id="powderkeg_news_poll",
+        max_instances=1, coalesce=True,
+    )
     logger.info(
         "[powderkeg] jobs 등록 · events_poll=30m · triggers=5m "
-        "· holding_expiry=daily 08:00 KST (§7-5 12개월 재평가)"
+        "· holding_expiry=daily 08:00 KST (§7-5) · news_poll=15m (§7-1-4)"
     )

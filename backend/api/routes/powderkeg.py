@@ -612,6 +612,19 @@ async def trigger_holding_expiry() -> dict[str, Any]:
     return await holding_expiry_job()
 
 
+@router.post("/collectors/news-poll", dependencies=[Depends(require_sniper_token)])
+async def trigger_news_poll(
+    lookback_hours: int = Body(24, embed=True),
+    only_watched: bool = Body(True, embed=True),
+) -> dict[str, Any]:
+    """뉴스 크롤링 · A1/A2/A6 · 5 RSS 소스 (§7-1-4).
+
+    only_watched=True (기본) · 화약고 리스트 종목만 저장 (스팸 방지).
+    """
+    from backend.powderkeg.collectors.news_crawler import poll_powderkeg_news
+    return await poll_powderkeg_news(lookback_hours=lookback_hours, only_watched=only_watched)
+
+
 @router.post("/collectors/events-backfill", dependencies=[Depends(require_sniper_token)])
 async def trigger_events_backfill(
     start_date: str = Body(..., embed=True, description="YYYY-MM-DD"),

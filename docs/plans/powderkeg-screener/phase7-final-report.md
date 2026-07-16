@@ -484,8 +484,8 @@ async def _get_empirical_direction(event_type: str) -> str:
 
 - ~~1. A3 액션 정책 재검토~~ · ✅ **완료** (본 §13)
 - 2. 완료보고서 §10-3 표 수치 정합화 · 재캐시 반영 (부분 완료)
-- ~~3. release_date 실제 접수일 채우기~~ · ✅ **완료** (§14 참조 · v1.6)
-- 4. 뉴스 크롤링 (§7-1-4) 구현 · A1/A2/A6 표본
+- ~~3. release_date 실제 접수일 채우기~~ · ✅ **완료** (§14 · v1.6)
+- ~~4. 뉴스 크롤링 (§7-1-4) 구현~~ · ✅ **완료** (§15 · v1.7)
 - 5. §7-3 5분 스펙 준수 · 폴링 30m → 5m or push 훅
 
 ---
@@ -533,7 +533,70 @@ else:
 
 ---
 
-## 15. 학습 및 교훈
+## 15. 뉴스 크롤링 · §7-1-4 두 번째 항목 (v1.7 · 2026-07-16)
+
+### 15-1. 리뷰 지적 사항
+> "뉴스 크롤링(§7-1-4) 부재로 A1/A2/A6 표본 미확보 · §7-4 게이트 영구 hypothesis"
+
+### 15-2. Fix 실체 · Sprint 2 T54 재사용 + Phase 7 어댑터
+
+**`backend/powderkeg/collectors/news_crawler.py` 신규** · Sprint 2 `discovery/watchlist/news_rss.py` 3 함수 재사용:
+- `RSS_SOURCES` · 5 언론 (연합인포맥스·이데일리·파이낸셜뉴스·한국경제·연합뉴스)
+- `_fetch` · httpx 병렬 fetch
+- `_parse_entries` · feedparser
+- `_entry_time` · published_parsed → datetime
+
+**Phase 7 특화 로직**:
+- `_classify_news_title` · A1/A2/A6 키워드만 (A3~A5/B1~B3 는 DART 공시 커버)
+- `_get_watched_tickers` · 최신 화약고 리스트만 · 스팸 방지
+- `_save_news_event` · PowderKegEvent 저장 · source="news_yhap/edaily/..." · source_id="rss:md5(url)"
+
+### 15-3. 스케줄러 잡 등록
+
+**`scheduler.py:news_poll_job`** · 15분 주기:
+- lookback_hours=1 (최근 1시간)
+- only_watched=True (화약고 리스트만)
+- 잡 ID `powderkeg_news_poll`
+
+**전체 잡 4 종**:
+| 잡 ID | 주기 | 목적 |
+|---|---|---|
+| powderkeg_events_poll | 30m | DART 공시 폴링 |
+| powderkeg_triggers | 5m | pending 이벤트 처리 |
+| powderkeg_holding_expiry | daily 08:00 KST | 12개월 재평가 |
+| **powderkeg_news_poll** | **15m** | **뉴스 A1/A2/A6 보완** |
+
+### 15-4. API endpoint (수동 트리거)
+
+`POST /powderkeg/collectors/news-poll` · X-API-Token
+```json
+{"lookback_hours": 24, "only_watched": true}
+```
+- 첫 실행 시 lookback_hours=24 로 넉넉하게 seed
+- 이후 스케줄러가 자동 (lookback=1h)
+
+### 15-5. Phase 7-3 트리거 연동
+- 뉴스 저장 이벤트도 기존 `process_pending_events` 5분 잡이 자동 처리
+- A1 뉴스 · LLM classifier 자동 판정 (personal_only / company_related / unclear)
+- 실증 방향성 재라벨 (v1.5 §13) 자동 적용
+
+### 15-6. 스펙 vs 실체 정합
+
+| 지시서 §7-1-4 요구 | v1.7 구현 |
+|---|---|
+| 뉴스 크롤링 (선택) | ✅ 5 RSS 소스 (Sprint 2 재사용) |
+| "구속·기소·검찰·압수수색·별세·상속" 키워드 | ✅ KEYWORDS_TYPE_A A1/A2 그대로 |
+| 화약고 리스트 종목명 매칭 | ✅ matcher (Sprint 2 T60 재사용) + watched 필터 |
+| 뉴스 소스·주기 config | ✅ RSS_SOURCES · env override 기존 지원 |
+
+### 15-7. 남은 고려 사항
+- **저작권/robots** · 지시서 명시된 리스크 · RSS 는 언론사 공개 배포 · 원문 링크만 표시 (본문 크롤링 X)
+- **오탐 관리** · 종목명 유사 · matcher confidence 개선 여지 (Sprint 2 T60 이미 다층 매칭)
+- **A6 저PBR 압박** · 정책 발표 · 정부 RSS 도 유용 (gov_press.py 재사용 잠재)
+
+---
+
+## 16. 학습 및 교훈
 
 ### 데이터 정확성 우선주의
 - 초기 스펙 (지시서·DART 문서) 기반 코드 → 실 응답에서 다수 field/format 차이 발견
@@ -556,7 +619,7 @@ else:
 
 ---
 
-## 16. 참고 문서
+## 17. 참고 문서
 
 **Phase 7 계열**
 - [`phase7-powderkeg-screener.md`](./phase7-powderkeg-screener.md) · 원 지시서
@@ -596,4 +659,5 @@ else:
 | 2026-07-16 | v1.3 | §9-2 리스크·VIP 감시 연동 완결 · holding_expiry_job 스케줄러 + approve_ticket VIP 훅 자동 호출 + Telegram · §11 신설 | `c594e4b` |
 | 2026-07-16 | v1.4 | §9-3 UI 정합성 완결 · DO NOT TOUCH 뱃지 + CarChart recharts BarChart · §12 신설 · TypeScript 0 error 검증 | `408dd4b` |
 | 2026-07-16 | v1.5 | 전문가 리뷰 반영 · **A3 액션 정책 재검토** · triggers.py 실증 방향성 기반 알림 title/body (validated/observed_negative/observing) · notified_negative action_taken 신설 | `21e5856` |
-| 2026-07-16 | v1.6 | 전문가 리뷰 반영 · **release_date 실제 접수일** · dart/client.py fetch_report_receipt_date + dart_financials.py 자동 조회 · Phase 0 as-of 규약 정합 · §14 신설 | (본 커밋) |
+| 2026-07-16 | v1.6 | 전문가 리뷰 반영 · **release_date 실제 접수일** · dart/client.py fetch_report_receipt_date + dart_financials.py 자동 조회 · Phase 0 as-of 규약 정합 · §14 신설 | `c8a7ed4` |
+| 2026-07-16 | v1.7 | 전문가 리뷰 반영 · **뉴스 크롤링 (§7-1-4)** · Sprint 2 T54 news_rss 재사용 · A1/A2/A6 자동 저장 · 15분 스케줄러 잡 · §15 신설 | (본 커밋) |
