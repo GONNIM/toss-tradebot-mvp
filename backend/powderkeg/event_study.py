@@ -168,6 +168,12 @@ class WindowStats:
     t_stat: float                  # mean / (std / sqrt(n))
     max_return: float
     min_return: float
+    # 이중 리포트 · 상폐 -100% imputation (v1.10 · 2026-07-16 · 생존 편향 fix)
+    n_imputed: int = 0                             # imputed 표본 (survived + delisted)
+    delisted_count: int = 0                        # -1.0 imputation 대상
+    mean_return_imputed: float = 0.0               # 상폐 -100% 포함
+    win_rate_imputed: float = 0.0
+    t_stat_imputed: float = 0.0
 
 
 @dataclass
@@ -177,6 +183,17 @@ class AggregatedResult:
     valid_events: int              # 가격 데이터 있어 계산 가능
     per_window: dict[str, WindowStats] = field(default_factory=dict)
     error_counts: dict[str, int] = field(default_factory=dict)
+    imputed_events: int = 0        # 상폐 imputation 대상 (delisted proxy)
+
+
+# 상폐 proxy · 이 error 종류는 -100% imputation 대상
+# (지시서 §7-4 · 백테스트 게이트 정확성 · 리뷰어 생존 편향 지적 대응)
+_DELISTING_PROXIES = frozenset({
+    "entry_price_zero_within_5d_fallback",   # 5일 fallback 후에도 시가 0 · 대부분 상폐
+    "no_next_trading_day",                    # event 이후 거래일 부재 · 상폐
+    "no_price_data",                          # FDR 응답 empty · 티커 존재 안함
+})
+_IMPUTED_RETURN = -1.0                        # 상폐 -100% (원금 전액 손실 가정 · 보수적)
 
 
 def aggregate_returns(
@@ -184,13 +201,18 @@ def aggregate_returns(
     returns: list[SingleEventReturn],
     windows: dict[str, int] = WINDOW_DAYS,
 ) -> AggregatedResult:
-    """이벤트 반환들을 window 별 통계로 집계."""
+    """이벤트 반환들을 window 별 통계로 집계 · 상폐 imputation 이중 리포트.
+
+    v1.10 (2026-07-16 · 리뷰어 지적):
+      "-100%에 수렴한 최악의 1,318건이 표본에서 통째로 빠진 채 살아남은 종목만으로 계산한 평균"
+      → 상폐 proxy error 를 -1.0 imputation · window별 두 개 통계 병기.
+    """
     result = AggregatedResult(event_type=event_type, total_events=len(returns), valid_events=0)
-    # 에러 카운트
     for r in returns:
         if r.error:
             result.error_counts[r.error] = result.error_counts.get(r.error, 0) + 1
     result.valid_events = sum(1 for r in returns if r.entry_price is not None)
+    result.imputed_events = sum(1 for r in returns if r.error in _DELISTING_PROXIES)
 
     for label in windows:
         vals = [r.per_window_returns.get(label) for r in returns if r.entry_price is not None]
@@ -203,10 +225,24 @@ def aggregate_returns(
         win_rate = sum(1 for v in vals if v > 0) / n
         std = statistics.pstdev(vals) if n > 1 else 0.0
         t_stat = (mean_ret / (std / math.sqrt(n))) if std > 0 else 0.0
+
+        # imputed · 상폐 proxy 를 -1.0 로 포함
+        vals_imputed = list(vals) + [_IMPUTED_RETURN] * result.imputed_events
+        n_i = len(vals_imputed)
+        mean_i = statistics.mean(vals_imputed)
+        win_i = sum(1 for v in vals_imputed if v > 0) / n_i
+        std_i = statistics.pstdev(vals_imputed) if n_i > 1 else 0.0
+        t_i = (mean_i / (std_i / math.sqrt(n_i))) if std_i > 0 else 0.0
+
         result.per_window[label] = WindowStats(
             label=label, n=n, mean_return=round(mean_ret, 5),
             median_return=round(median_ret, 5), win_rate=round(win_rate, 4),
             std=round(std, 5), t_stat=round(t_stat, 3),
             max_return=round(max(vals), 5), min_return=round(min(vals), 5),
+            n_imputed=n_i,
+            delisted_count=result.imputed_events,
+            mean_return_imputed=round(mean_i, 5),
+            win_rate_imputed=round(win_i, 4),
+            t_stat_imputed=round(t_i, 3),
         )
     return result

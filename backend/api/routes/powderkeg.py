@@ -612,6 +612,23 @@ async def trigger_holding_expiry() -> dict[str, Any]:
     return await holding_expiry_job()
 
 
+@router.post("/backtest/stratified/{event_type}", dependencies=[Depends(require_sniper_token)])
+async def trigger_stratified_backtest(
+    event_type: str,
+    stratum: str = Body("powderkeg_passed", embed=True),
+) -> dict[str, Any]:
+    """화약고 층화 백테스트 · v1.10 (§10-5 층화 · 리뷰어 지적 대응).
+
+    stratum:
+      · powderkeg_passed · 화약고 리스트 status=passed 종목만 (교집합 검증)
+      · all              · 전체 시장 (대조군)
+
+    결과는 event_type__stratum 키로 캐시 저장 · GET /report/{event_type}__{stratum} 로 조회.
+    """
+    from backend.powderkeg.backtest import run_stratified_backtest
+    return await run_stratified_backtest(event_type=event_type, stratum=stratum)
+
+
 @router.post("/collectors/news-poll", dependencies=[Depends(require_sniper_token)])
 async def trigger_news_poll(
     lookback_hours: int = Body(24, embed=True),

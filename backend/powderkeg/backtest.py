@@ -57,12 +57,14 @@ async def run_event_study_from_db(
     event_type: str,
     since: Optional[date] = None,
     windows: dict = WINDOW_DAYS,
+    ticker_filter: Optional[set[str]] = None,
 ) -> AggregatedResult:
     """DB PowderKegEvent 에서 event_type 인 것들을 로드 → CAR 집계.
 
     Args:
         event_type: "A1" · "A3" · "B1" 등
         since: 이 날짜 이후 이벤트만 · None 이면 전체
+        ticker_filter: 이 종목 집합에 속한 이벤트만 (v1.10 · 화약고 층화 백테스트)
     """
     async with get_session() as session:
         stmt = select(PowderKegEvent).where(PowderKegEvent.event_type == event_type)
@@ -70,6 +72,9 @@ async def run_event_study_from_db(
             from datetime import datetime, timezone as tz
             stmt = stmt.where(PowderKegEvent.release_date >= datetime.combine(since, datetime.min.time(), tzinfo=tz.utc))
         events = list((await session.execute(stmt)).scalars().all())
+
+    if ticker_filter is not None:
+        events = [e for e in events if e.ticker in ticker_filter]
 
     returns: list[SingleEventReturn] = []
     for e in events:
@@ -80,6 +85,79 @@ async def run_event_study_from_db(
         returns.append(r)
 
     return aggregate_returns(event_type, returns, windows)
+
+
+async def run_stratified_backtest(
+    event_type: str,
+    stratum: str = "powderkeg_passed",
+    since: Optional[date] = None,
+) -> dict[str, Any]:
+    """화약고 층화 백테스트 · 지시서 §7-4 스펙 (§10-5 층화).
+
+    v1.10 · 리뷰어 지적:
+      "전체 시장의 담보제공(-11.67%)은 '일반 종목에서 담보제공=부실 신호' 증명일 뿐.
+       화약고 가설은 '10조건 통과 종목의 담보제공=현금부자 오너의 현금 수요' 교집합 명제."
+
+    stratum:
+      · powderkeg_passed · 화약고 리스트 status=passed 종목만 (교집합 검증)
+      · all              · 전체 시장 (기존 · 대조군)
+    """
+    import json as _json
+    ticker_filter: Optional[set[str]] = None
+    stratum_meta = {"name": stratum}
+    if stratum == "powderkeg_passed":
+        # 최신 run_id 의 passed 종목만 필터
+        from backend.services.models import PowderKegList
+        async with get_session() as session:
+            latest_run = (await session.execute(
+                select(PowderKegList.run_id)
+                .order_by(PowderKegList.created_at.desc()).limit(1)
+            )).scalar_one_or_none()
+            if latest_run is None:
+                return {"error": "no_powderkeg_run"}
+            tickers = (await session.execute(
+                select(PowderKegList.ticker).where(
+                    PowderKegList.run_id == latest_run,
+                    PowderKegList.status == "passed",
+                )
+            )).scalars().all()
+        ticker_filter = set(tickers)
+        stratum_meta["run_id"] = latest_run
+        stratum_meta["ticker_count"] = len(ticker_filter)
+
+    agg = await run_event_study_from_db(event_type, since=since, ticker_filter=ticker_filter)
+    decision = evaluate_validation(agg)
+
+    # 캐시 저장 (event_type_stratum 키로 별도 저장)
+    cache_key = f"{event_type}__{stratum}"
+    async with get_session() as session:
+        prev = (await session.execute(
+            select(PowderKegBacktestReport).where(PowderKegBacktestReport.event_type == cache_key)
+        )).scalar_one_or_none()
+        agg_dict = _serialize_agg(agg)
+        decision_dict = asdict(decision)
+        if prev is None:
+            session.add(PowderKegBacktestReport(
+                event_type=cache_key,
+                aggregate_json=_json.dumps(agg_dict, ensure_ascii=False),
+                decision_json=_json.dumps(decision_dict, ensure_ascii=False),
+                total_events=agg.total_events,
+                valid_events=agg.valid_events,
+                validated=decision.validated,
+            ))
+        else:
+            prev.aggregate_json = _json.dumps(agg_dict, ensure_ascii=False)
+            prev.decision_json = _json.dumps(decision_dict, ensure_ascii=False)
+            prev.total_events = agg.total_events
+            prev.valid_events = agg.valid_events
+            prev.validated = decision.validated
+
+    return {
+        "event_type": event_type,
+        "stratum": stratum_meta,
+        "aggregate": agg_dict,
+        "decision": decision_dict,
+    }
 
 
 def evaluate_validation(result: AggregatedResult) -> ValidationDecision:
