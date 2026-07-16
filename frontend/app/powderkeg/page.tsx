@@ -40,6 +40,7 @@ export default function PowderKegPage() {
       localStorage.removeItem("powderkeg_onboarding_dismissed");
       localStorage.removeItem("powderkeg_usage_guide_dismissed");
       localStorage.removeItem("powderkeg_report_onboarding_dismissed");
+      localStorage.removeItem("powderkeg_events_onboarding_dismissed");
       setGuideNonce(n => n + 1);
     }
   };
@@ -495,85 +496,248 @@ function fmtPct(v: number | null | undefined) {
 }
 
 // ═══════════════════════════════════════════════════════════════
-// 탭 2 · 불꽃 피드 (Type A/B 타임라인)
+// 탭 2 · 불꽃 피드 (Type A/B 타임라인) · v1.28 UX 개선
 // ═══════════════════════════════════════════════════════════════
 function EventsTab() {
   const [hours, setHours] = useState(72);
+  const [kindFilter, setKindFilter] = useState<string>("");   // A/B/""
+  const [tickerFilter, setTickerFilter] = useState<string>("");
   const q = useQuery({
     queryKey: ["powderkeg", "events", hours],
     queryFn: () => api.powderkeg.events({ hours, limit: 100 }),
     refetchInterval: 30_000,
   });
-  const items: PowderKegEventItem[] = q.data?.items || [];
+  const rawItems: PowderKegEventItem[] = q.data?.items || [];
+  const items = rawItems.filter(e => {
+    if (kindFilter && e.kind !== kindFilter) return false;
+    if (tickerFilter && !e.ticker.includes(tickerFilter)) return false;
+    return true;
+  });
+  const countA = rawItems.filter(e => e.kind === "A").length;
+  const countB = rawItems.filter(e => e.kind === "B").length;
 
   return (
     <section className="space-y-3 rounded border p-4">
-      <div className="flex items-center justify-between">
-        <div className="text-sm">
-          <span className="font-bold">최근 {hours}시간</span>
-          <span className="ml-2 text-muted-foreground">· {q.data?.count || 0} 건</span>
+      <EventsOnboardingCard />
+      <div className="flex flex-wrap items-center gap-2 rounded border bg-slate-50 p-2 text-xs dark:bg-slate-900">
+        <div className="flex-1 text-sm">
+          <span className="font-bold">최근 {hours < 168 ? `${hours}시간` : hours === 168 ? "7일" : "30일"}</span>
+          <span className="ml-2 text-muted-foreground">
+            · 총 <b>{q.data?.count || 0}건</b> · 🟠 매수 후보 (Type A) {countA}건 · 🔴 회피 (Type B) {countB}건
+          </span>
         </div>
         <select
           value={hours}
           onChange={(e) => setHours(Number(e.target.value))}
-          className="rounded border px-2 py-1 text-xs"
+          className="rounded border px-2 py-1"
+          title="조회 기간"
         >
-          <option value={24}>24시간</option>
-          <option value={72}>72시간</option>
-          <option value={168}>7일</option>
-          <option value={720}>30일</option>
+          <option value={24}>최근 24시간</option>
+          <option value={72}>최근 72시간</option>
+          <option value={168}>최근 7일</option>
+          <option value={720}>최근 30일</option>
         </select>
+        <select
+          value={kindFilter}
+          onChange={(e) => setKindFilter(e.target.value)}
+          className="rounded border px-2 py-1"
+          title="이벤트 종류 필터"
+        >
+          <option value="">전체 종류</option>
+          <option value="A">🟠 매수 후보만 (Type A)</option>
+          <option value="B">🔴 회피만 (Type B)</option>
+        </select>
+        <input
+          type="text"
+          value={tickerFilter}
+          onChange={(e) => setTickerFilter(e.target.value)}
+          placeholder="종목코드 필터"
+          className="w-28 rounded border px-2 py-1"
+        />
       </div>
       {q.isLoading ? (
         <div className="text-xs text-muted-foreground">불러오는 중...</div>
+      ) : rawItems.length === 0 ? (
+        <div className="rounded border-2 border-dashed p-6 text-center text-xs text-muted-foreground">
+          최근 {hours}시간 · 이벤트 없음 · 자동 감시 (3분 주기) 대기 중.
+        </div>
       ) : items.length === 0 ? (
         <div className="rounded border-2 border-dashed p-6 text-center text-xs text-muted-foreground">
-          이벤트 없음 · DART 폴링 필요.
+          필터 조건에 맞는 이벤트 없음 · 상단 필터 조정.
         </div>
       ) : (
         <ul className="space-y-2">
           {items.map((e) => (
-            <li key={e.id} className={`rounded border p-2 ${eventBg(e.kind)}`}>
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <EventTypeBadge event_type={e.event_type} kind={e.kind} />
-                  {e.kind === "B" ? <DoNotTouchBadge /> : null}
-                  <span className="font-bold">{e.ticker}</span>
-                  {e.needs_human_review ? (
-                    <span className="rounded bg-amber-200 px-1 py-0.5 text-[10px] text-amber-900">
-                      🟡 사람 확인 필요
-                    </span>
-                  ) : null}
-                  {e.validated ? (
-                    <span className="rounded bg-emerald-200 px-1 py-0.5 text-[10px] text-emerald-900">
-                      ✅ validated
-                    </span>
-                  ) : null}
-                </div>
-                <span className="text-[10px] text-muted-foreground">
-                  {e.detected_at ? fmtKstDateTime(e.detected_at) : "-"}
-                </span>
-              </div>
-              <div className="mt-1 text-sm">{e.title}</div>
-              {e.url ? (
-                <a
-                  href={e.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-[10px] text-sky-600 hover:underline"
-                >
-                  원문 →
-                </a>
-              ) : null}
-              {e.action_taken ? (
-                <div className="mt-1 text-[10px] text-muted-foreground">
-                  action: <code>{e.action_taken}</code>
-                  {e.confidence != null ? ` · confidence ${e.confidence.toFixed(2)}` : ""}
-                </div>
-              ) : null}
-            </li>
+            <EventRow key={e.id} event={e} />
           ))}
         </ul>
+      )}
+    </section>
+  );
+}
+
+/** 이벤트 행 · v1.28 · 사용자 관점 재설계. */
+function EventRow({ event }: { event: PowderKegEventItem }) {
+  const info = EVENT_TYPE_INFO[event.event_type];
+  const isTypeB = event.kind === "B";
+  const bg = isTypeB
+    ? "border-red-300 bg-red-50 dark:border-red-900 dark:bg-red-950"
+    : "border-orange-300 bg-orange-50 dark:border-orange-900 dark:bg-orange-950";
+  return (
+    <li className={`rounded border-2 p-3 ${bg}`}>
+      {/* 상단 · 판정 라벨 + 시각 */}
+      <div className="mb-1 flex items-start justify-between gap-2">
+        <div className="flex-1">
+          {isTypeB ? (
+            <div className="mb-1 rounded bg-red-800 px-2 py-1 text-sm font-bold text-white">
+              🚫 DO NOT TOUCH · 매수 금지 · 자동 리스트 제거
+            </div>
+          ) : (
+            <div className="mb-1 rounded bg-orange-500 px-2 py-1 text-sm font-bold text-white">
+              🎯 매수 후보 이벤트 · 검토 필요
+            </div>
+          )}
+        </div>
+        <span className="text-[10px] text-muted-foreground whitespace-nowrap">
+          {event.detected_at ? fmtKstDateTime(event.detected_at) : "-"}
+        </span>
+      </div>
+      {/* 종목명 + 이벤트 타입 */}
+      <div className="mb-2 flex flex-wrap items-center gap-2">
+        <span className="text-lg font-bold">{event.ticker}</span>
+        <span className={`rounded px-2 py-0.5 text-xs font-bold ${isTypeB ? "bg-red-600 text-white" : "bg-orange-500 text-white"}`}>
+          {info?.icon} {info?.short || event.event_type}
+        </span>
+        {event.validated ? (
+          <span className="rounded bg-emerald-200 px-1.5 py-0.5 text-[10px] text-emerald-900" title="백테스트 통과 · 매수 신호 사용 가능">
+            ✅ Validated
+          </span>
+        ) : null}
+        {event.needs_human_review ? (
+          <span className="rounded bg-amber-200 px-1.5 py-0.5 text-[10px] text-amber-900" title="LLM confidence < 0.8 · 사람 판단 필요">
+            🟡 사람 확인 필요
+          </span>
+        ) : null}
+      </div>
+      {/* 공시 제목 */}
+      <div className="mb-1 text-sm">{event.title}</div>
+      {info?.long ? (
+        <div className="mb-1 text-[10px] text-muted-foreground">
+          <b>이 이벤트 뜻</b>: {info.long}
+        </div>
+      ) : null}
+      {/* 원문 + 처리 결과 */}
+      <div className="mt-2 flex flex-wrap items-center gap-2 text-[10px]">
+        {event.url ? (
+          <a
+            href={event.url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="rounded bg-white px-2 py-0.5 text-sky-700 hover:bg-sky-50 dark:bg-slate-800"
+          >
+            📄 원문 공시 →
+          </a>
+        ) : null}
+        {event.action_taken ? (
+          <span className="rounded bg-white px-2 py-0.5 text-slate-700 dark:bg-slate-800 dark:text-slate-200">
+            시스템 처리 · <b>{actionToKorean(event.action_taken)}</b>
+            {event.confidence != null ? ` (신뢰도 ${(event.confidence * 100).toFixed(0)}%)` : ""}
+          </span>
+        ) : null}
+      </div>
+    </li>
+  );
+}
+
+/** action_taken 한국어화. */
+function actionToKorean(action: string): string {
+  const map: Record<string, string> = {
+    list_removed: "리스트에서 자동 제거 · 매수 금지",
+    notified: "Telegram 알림 전송 · 매수 후보 (검토)",
+    notified_negative: "Telegram 알림 · 백테스트 음수 · 신중 검토",
+    needs_human_review: "사람 판단 필요 (LLM 불명확)",
+    skip: "처리 완료 · 재처리 X",
+  };
+  return map[action] || action;
+}
+
+/** 불꽃 피드 · 온보딩 카드 · v1.28. */
+function EventsOnboardingCard() {
+  const KEY = "powderkeg_events_onboarding_dismissed";
+  const [dismissed, setDismissed] = useState(false);
+  const [open, setOpen] = useState(true);
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      setDismissed(!!localStorage.getItem(KEY));
+    }
+  }, []);
+  if (dismissed) return null;
+  return (
+    <section className="rounded border-2 border-purple-300 bg-gradient-to-r from-purple-50 to-pink-50 p-3 text-xs dark:border-purple-800 dark:from-purple-950 dark:to-pink-950">
+      <div className="flex items-center justify-between">
+        <button
+          type="button"
+          onClick={() => setOpen(!open)}
+          className="font-bold text-purple-900 hover:underline dark:text-purple-100"
+        >
+          {open ? "▼" : "▶"} 📖 이 피드가 뭐하는 건가요?
+        </button>
+        <button
+          type="button"
+          onClick={() => {
+            localStorage.setItem(KEY, "1");
+            setDismissed(true);
+          }}
+          className="rounded border border-purple-300 px-2 py-0.5 text-[10px] text-purple-700 hover:bg-purple-100"
+        >
+          다시 안 보기
+        </button>
+      </div>
+      {open && (
+        <div className="mt-2 space-y-2 text-[11px] text-purple-900 dark:text-purple-100">
+          <div className="rounded border bg-white p-2 dark:bg-slate-900">
+            <div className="mb-1 font-bold">🔥 불꽃 (Fire) 이란?</div>
+            <p>
+              화약고 종목 (Tier 1/2) 에서 <b>중요한 공시가 발생한 순간</b> · DART 자동 감시가 3분마다 검출.
+              오너에게 현금 필요한 사건 (담보제공·상속) 또는 회사 위험 신호 (횡령·거래정지) 등.
+            </p>
+          </div>
+          <div className="grid gap-2 md:grid-cols-2">
+            <div className="rounded border-2 border-orange-300 bg-orange-50 p-2 dark:border-orange-800 dark:bg-orange-950">
+              <div className="mb-1 font-bold text-orange-900 dark:text-orange-100">🟠 Type A · 매수 후보 이벤트</div>
+              <ul className="space-y-0.5 text-[10px]">
+                <li>· A1 ⚖️ 오너 사법 (구속·기소)</li>
+                <li>· A2 🕊 오너 상속 (별세)</li>
+                <li>· A3 💰 담보제공 (현금 수요)</li>
+                <li>· A4 📄 5% 보고 (경영권 압박)</li>
+                <li>· A5 💸 자사주 소각·배당</li>
+                <li>· A6 🏛 정책 압박 (저PBR)</li>
+              </ul>
+              <div className="mt-1 text-[10px]">→ Telegram 알림 · 검토 후 개별 판단</div>
+            </div>
+            <div className="rounded border-2 border-red-300 bg-red-50 p-2 dark:border-red-800 dark:bg-red-950">
+              <div className="mb-1 font-bold text-red-900 dark:text-red-100">🔴 Type B · 즉시 회피</div>
+              <ul className="space-y-0.5 text-[10px]">
+                <li>· B1 🚨 횡령·배임 혐의</li>
+                <li>· B2 🚨 감사의견 비적정</li>
+                <li>· B3 🚨 거래정지·상장폐지 심사</li>
+              </ul>
+              <div className="mt-1 rounded bg-red-800 px-1 text-[10px] font-bold text-white">
+                → 🚫 리스트 자동 제거 · 매수 금지 · 원금 60% 손실 위험
+              </div>
+            </div>
+          </div>
+          <div className="rounded border bg-white p-2 dark:bg-slate-900">
+            <div className="mb-1 font-bold">📅 어떻게 활용하나요?</div>
+            <ul className="space-y-0.5">
+              <li>· <b>Telegram 알림</b> 을 받고 이 페이지에서 원문 공시 확인</li>
+              <li>· <b>Type A</b> · 원문 공시 → 화약고 리스트 (탭 1) 종목 상태 재확인 → 매수 결정 (개별 판단)</li>
+              <li>· <b>Type B</b> · 이미 자동 처리됨. 사용자 액션 X · 확인만.</li>
+              <li>· <b>필터</b> · 종목코드 or 종류로 좁혀서 확인 가능</li>
+              <li>· <b>자동 새로고침</b> · 30초 주기</li>
+            </ul>
+          </div>
+        </div>
       )}
     </section>
   );
