@@ -1035,6 +1035,25 @@ class DartCorpCodeMap(Base):
     refreshed_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
 
 
+class PowderKegBacktestReport(Base):
+    """백테스트 리포트 캐시 · §9-1 정밀화 후 5년 표본으로 계산 시 60s 초과.
+
+    POST /backtest/{event_type} · 계산 + 저장 (upsert)
+    GET  /report/{event_type} · 캐시 읽기만 (즉시 응답)
+    """
+
+    __tablename__ = "powderkeg_backtest_report"
+
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    event_type: Mapped[str] = mapped_column(String(4), unique=True, index=True)
+    aggregate_json: Mapped[str] = mapped_column(Text)                       # AggregatedResult JSON
+    decision_json: Mapped[str] = mapped_column(Text)                        # ValidationDecision JSON
+    total_events: Mapped[int] = mapped_column(default=0)
+    valid_events: Mapped[int] = mapped_column(default=0)
+    validated: Mapped[bool] = mapped_column(Boolean, default=False)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now(), onupdate=func.now())
+
+
 class PowderKegOrderTicket(Base):
     """반자동 주문 티켓 · Phase 7-5 · 1클릭 승인 필수.
 

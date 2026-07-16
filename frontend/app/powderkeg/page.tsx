@@ -505,11 +505,17 @@ const EVENT_TYPES = ["A1", "A2", "A3", "A4", "A5", "A6", "B1", "B2", "B3"];
 
 function ReportTab({ token }: { token: string }) {
   const [type, setType] = useState<string>("A3");
+  const qc = useQueryClient();
   const q = useQuery<PowderKegReport>({
     queryKey: ["powderkeg", "report", type],
     queryFn: () => api.powderkeg.report(type),
   });
   const r = q.data;
+  const runBacktest = useMutation({
+    mutationFn: () => api.powderkeg.runBacktest(token, type),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["powderkeg", "report", type] }),
+  });
+  const noCache = r?.decision?.reasons?.includes("no_cache_run_backtest");
 
   return (
     <section className="space-y-3 rounded border p-4">
@@ -535,7 +541,24 @@ function ReportTab({ token }: { token: string }) {
             {r.decision.validated ? "✅ validated" : "hypothesis"}
           </span>
         ) : null}
+        <button
+          type="button"
+          onClick={() => runBacktest.mutate()}
+          disabled={!token || runBacktest.isPending}
+          className="ml-auto rounded border px-2 py-0.5 text-xs hover:bg-sky-50 disabled:opacity-30"
+          title="백테스트 재실행 · 5년 표본 · 최대 수 분 소요"
+        >
+          {runBacktest.isPending ? "⏳ 계산 중..." : "🔄 재계산"}
+        </button>
       </div>
+      {noCache ? (
+        <div className="rounded border-2 border-dashed border-sky-300 bg-sky-50 p-3 text-xs dark:border-sky-800 dark:bg-sky-950">
+          <div className="font-bold">📊 캐시 없음 · 백테스트 실행 필요</div>
+          <div className="mt-1 text-muted-foreground">
+            상단 재계산 버튼 클릭 · 5년 이벤트 표본으로 CAR 계산 (수 분 소요) · 결과 저장 후 자동 표시.
+          </div>
+        </div>
+      ) : null}
       {q.isLoading ? (
         <div className="text-xs text-muted-foreground">불러오는 중...</div>
       ) : !r ? (

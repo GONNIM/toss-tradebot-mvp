@@ -23,7 +23,7 @@ from typing import Any, Optional
 from sqlalchemy import select, update
 
 from backend.services.db import get_session
-from backend.services.models import PowderKegEvent
+from backend.services.models import PowderKegBacktestReport, PowderKegEvent
 
 from .event_study import (
     WINDOW_DAYS,
@@ -130,7 +130,10 @@ async def run_backtest_for_event_type(
     event_type: str,
     since: Optional[date] = None,
 ) -> dict[str, Any]:
-    """이벤트 타입 백테스트 · aggregate + validation + apply.
+    """이벤트 타입 백테스트 · aggregate + validation + apply + 캐시 저장.
+
+    §9-3 cache (2026-07-16): 결과를 PowderKegBacktestReport 에 upsert.
+    GET /report/{event_type} 는 캐시만 읽어 즉시 응답 (5년 표본 FDR fetch 60s 초과 대응).
 
     Returns:
         {
@@ -139,14 +142,57 @@ async def run_backtest_for_event_type(
           "updated_rows": N (validated=True 로 갱신된 event 수)
         }
     """
+    import json as _json
     agg = await run_event_study_from_db(event_type, since=since)
     decision = evaluate_validation(agg)
     updated = await apply_validation(event_type, decision)
+
+    agg_dict = _serialize_agg(agg)
+    decision_dict = asdict(decision)
+
+    async with get_session() as session:
+        prev = (await session.execute(
+            select(PowderKegBacktestReport).where(PowderKegBacktestReport.event_type == event_type)
+        )).scalar_one_or_none()
+        if prev is None:
+            session.add(PowderKegBacktestReport(
+                event_type=event_type,
+                aggregate_json=_json.dumps(agg_dict, ensure_ascii=False),
+                decision_json=_json.dumps(decision_dict, ensure_ascii=False),
+                total_events=agg.total_events,
+                valid_events=agg.valid_events,
+                validated=decision.validated,
+            ))
+        else:
+            prev.aggregate_json = _json.dumps(agg_dict, ensure_ascii=False)
+            prev.decision_json = _json.dumps(decision_dict, ensure_ascii=False)
+            prev.total_events = agg.total_events
+            prev.valid_events = agg.valid_events
+            prev.validated = decision.validated
+
     return {
         "event_type": event_type,
-        "aggregate": _serialize_agg(agg),
-        "decision": asdict(decision),
+        "aggregate": agg_dict,
+        "decision": decision_dict,
         "updated_rows": updated,
+    }
+
+
+async def read_cached_report(event_type: str) -> Optional[dict[str, Any]]:
+    """캐시된 백테스트 리포트 반환 · 없으면 None (GET /report/{event_type} 용)."""
+    import json as _json
+    async with get_session() as session:
+        row = (await session.execute(
+            select(PowderKegBacktestReport).where(PowderKegBacktestReport.event_type == event_type)
+        )).scalar_one_or_none()
+    if row is None:
+        return None
+    return {
+        "event_type": row.event_type,
+        "aggregate": _json.loads(row.aggregate_json),
+        "decision": _json.loads(row.decision_json),
+        "updated_rows": 0,
+        "cached_at": row.updated_at.isoformat() if row.updated_at else None,
     }
 
 

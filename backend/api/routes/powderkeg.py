@@ -157,10 +157,23 @@ async def get_events(
 
 @router.get("/report/{event_type}")
 async def get_report(event_type: str) -> dict[str, Any]:
-    """탭 3 · 백테스트 리포트 (저장 캐시 없음 · 매 호출 재계산 · v2 캐시)."""
-    report = await run_backtest_for_event_type(event_type)
-    report["disclaimer"] = DISCLAIMER
-    return report
+    """탭 3 · 백테스트 리포트 (캐시 읽기 · §9-3 · 5년 표본 60s 초과 대응).
+
+    캐시 없으면 empty 응답 · POST /backtest/{event_type} 트리거 필요.
+    """
+    from backend.powderkeg.backtest import read_cached_report
+    cached = await read_cached_report(event_type)
+    if cached is None:
+        return {
+            "event_type": event_type,
+            "aggregate": {"event_type": event_type, "total_events": 0, "valid_events": 0, "per_window": {}, "error_counts": {}},
+            "decision": {"event_type": event_type, "validated": False, "reasons": ["no_cache_run_backtest"], "tested_windows": [], "passing_window": None},
+            "updated_rows": 0,
+            "cached_at": None,
+            "disclaimer": DISCLAIMER,
+        }
+    cached["disclaimer"] = DISCLAIMER
+    return cached
 
 
 @router.get("/tickets")
@@ -376,6 +389,22 @@ async def migrate_schema() -> dict[str, Any]:
         ("ix_powderkeg_dart_corp_code_stock",
          "CREATE INDEX IF NOT EXISTS ix_powderkeg_dart_corp_code_stock "
          "ON powderkeg_dart_corp_code (stock_code)"),
+        # §9-3 backtest 캐시 (5년 표본 60s 초과 대응)
+        ("powderkeg_backtest_report", """
+            CREATE TABLE IF NOT EXISTS powderkeg_backtest_report (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                event_type VARCHAR(4) NOT NULL UNIQUE,
+                aggregate_json TEXT NOT NULL,
+                decision_json TEXT NOT NULL,
+                total_events INTEGER DEFAULT 0,
+                valid_events INTEGER DEFAULT 0,
+                validated BOOLEAN DEFAULT 0,
+                updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+            )
+        """),
+        ("ix_powderkeg_backtest_report_event_type",
+         "CREATE INDEX IF NOT EXISTS ix_powderkeg_backtest_report_event_type "
+         "ON powderkeg_backtest_report (event_type)"),
     ]
     async with get_session() as session:
         for name, ddl in direct_creates:
