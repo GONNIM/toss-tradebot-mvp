@@ -39,6 +39,7 @@ export default function PowderKegPage() {
     if (typeof window !== "undefined") {
       localStorage.removeItem("powderkeg_onboarding_dismissed");
       localStorage.removeItem("powderkeg_usage_guide_dismissed");
+      localStorage.removeItem("powderkeg_report_onboarding_dismissed");
       setGuideNonce(n => n + 1);
     }
   };
@@ -1057,8 +1058,22 @@ function RobustnessBadge({ score, grade }: { score?: number | null; grade?: stri
 // ═══════════════════════════════════════════════════════════════
 const EVENT_TYPES = ["A1", "A2", "A3", "A4", "A5", "A6", "B1", "B2", "B3"];
 
+/** 이벤트 타입 · 사용자 친화 라벨 · v1.27 · 백테스트 리포트 이해도 개선. */
+const EVENT_TYPE_INFO: Record<string, { icon: string; short: string; long: string; expected: string }> = {
+  A1: { icon: "⚖️", short: "오너 사법", long: "최대주주 개인 · 구속·기소·검찰 등", expected: "매수 후보 가설" },
+  A2: { icon: "🕊", short: "오너 상속", long: "최대주주 사망·상속 관련 공시", expected: "매수 후보 가설" },
+  A3: { icon: "💰", short: "담보제공", long: "최대주주 주식담보제공 계약 (현금 수요 신호)", expected: "매수 후보 가설 (실측 반박)" },
+  A4: { icon: "📄", short: "5% 보고", long: "행동주의 펀드 · 대량보유 5% 보고", expected: "매수 후보 가설" },
+  A5: { icon: "💸", short: "자사주 소각", long: "배당 확대 · 자기주식 소각 · 기업가치 제고", expected: "매수 후보 가설" },
+  A6: { icon: "🏛", short: "저PBR 압박", long: "정책 발표 · 상법 개정 등 정책 압박", expected: "매수 후보 가설" },
+  B1: { icon: "🚨", short: "횡령·배임", long: "횡령·배임 혐의발생 공시", expected: "즉시 회피 (검증)" },
+  B2: { icon: "🚨", short: "감사 비적정", long: "감사의견 한정·부적정·의견거절", expected: "즉시 회피" },
+  B3: { icon: "🚨", short: "거래정지", long: "거래정지·상장적격성 실질심사 대상", expected: "즉시 회피 (검증)" },
+};
+
 function ReportTab({ token }: { token: string }) {
   const [type, setType] = useState<string>("A3");
+  const [expandStats, setExpandStats] = useState(false);
   const qc = useQueryClient();
   const q = useQuery<PowderKegReport>({
     queryKey: ["powderkeg", "report", type],
@@ -1070,46 +1085,45 @@ function ReportTab({ token }: { token: string }) {
     onSuccess: () => qc.invalidateQueries({ queryKey: ["powderkeg", "report", type] }),
   });
   const noCache = r?.decision?.reasons?.includes("no_cache_run_backtest");
+  const info = EVENT_TYPE_INFO[type];
 
   return (
     <section className="space-y-3 rounded border p-4">
-      <div className="flex items-center gap-2 text-sm">
-        <span>이벤트 타입:</span>
+      <ReportOnboardingCard />
+      <div className="flex flex-wrap items-center gap-2 text-sm">
+        <span className="font-bold">이벤트 타입 선택:</span>
         <select
           value={type}
           onChange={(e) => setType(e.target.value)}
-          className="rounded border px-2 py-1 text-xs"
+          className="rounded border px-2 py-1 text-xs font-mono"
         >
           {EVENT_TYPES.map((t) => (
-            <option key={t} value={t}>{t}</option>
+            <option key={t} value={t}>
+              {EVENT_TYPE_INFO[t]?.icon} {t} · {EVENT_TYPE_INFO[t]?.short}
+            </option>
           ))}
         </select>
-        {r ? (
-          <span
-            className={`ml-3 rounded px-2 py-0.5 text-xs ${
-              r.decision.validated
-                ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-900 dark:text-emerald-100"
-                : "bg-slate-100 text-slate-800 dark:bg-slate-800 dark:text-slate-100"
-            }`}
-          >
-            {r.decision.validated ? "✅ validated" : "hypothesis"}
-          </span>
-        ) : null}
         <button
           type="button"
           onClick={() => runBacktest.mutate()}
           disabled={!token || runBacktest.isPending}
           className="ml-auto rounded border px-2 py-0.5 text-xs hover:bg-sky-50 disabled:opacity-30"
-          title="백테스트 재실행 · 5년 표본 · 최대 수 분 소요"
+          title="백테스트 재실행 · 5년 표본 · 수 분 소요"
         >
           {runBacktest.isPending ? "⏳ 계산 중..." : "🔄 재계산"}
         </button>
       </div>
+      {info && (
+        <div className="rounded border bg-slate-50 p-2 text-xs dark:bg-slate-900">
+          <div className="font-bold">{info.icon} {type} · {info.long}</div>
+          <div className="text-muted-foreground">지시서 가설: {info.expected}</div>
+        </div>
+      )}
       {noCache ? (
         <div className="rounded border-2 border-dashed border-sky-300 bg-sky-50 p-3 text-xs dark:border-sky-800 dark:bg-sky-950">
           <div className="font-bold">📊 캐시 없음 · 백테스트 실행 필요</div>
           <div className="mt-1 text-muted-foreground">
-            상단 재계산 버튼 클릭 · 5년 이벤트 표본으로 CAR 계산 (수 분 소요) · 결과 저장 후 자동 표시.
+            상단 재계산 버튼 클릭 · 5년 이벤트 표본으로 계산 (수 분 소요) · 결과 저장 후 자동 표시.
           </div>
         </div>
       ) : null}
@@ -1119,57 +1133,248 @@ function ReportTab({ token }: { token: string }) {
         <div className="text-xs text-muted-foreground">데이터 없음</div>
       ) : (
         <>
-          <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs md:grid-cols-3">
-            <Stat label="전체 이벤트" value={String(r.aggregate.total_events)} />
-            <Stat label="유효 (가격)" value={String(r.aggregate.valid_events)} />
-            <Stat
-              label="승격 결과"
-              value={r.decision.validated ? "PASS · " + (r.decision.passing_window || "") : "미달"}
-            />
-          </div>
+          <VerdictCard type={type} report={r} />
+          <PlainSummary type={type} report={r} />
           <CarChart perWindow={r.aggregate.per_window} />
-          <div className="mt-3 overflow-x-auto">
-            <table className="w-full text-xs">
-              <thead>
-                <tr className="border-b bg-slate-50 dark:bg-slate-900">
-                  <th className="p-2 text-left">Window</th>
-                  <th className="p-2 text-right">n</th>
-                  <th className="p-2 text-right">mean</th>
-                  <th className="p-2 text-right">median</th>
-                  <th className="p-2 text-right">win_rate</th>
-                  <th className="p-2 text-right">std</th>
-                  <th className="p-2 text-right">t-stat</th>
-                </tr>
-              </thead>
-              <tbody>
-                {Object.entries(r.aggregate.per_window).map(([k, w]) => (
-                  <tr key={k} className="border-b">
-                    <td className="p-2 font-mono">{k}</td>
-                    <td className="p-2 text-right font-mono">{w.n}</td>
-                    <td className="p-2 text-right font-mono">{(w.mean_return * 100).toFixed(2)}%</td>
-                    <td className="p-2 text-right font-mono">{(w.median_return * 100).toFixed(2)}%</td>
-                    <td className="p-2 text-right font-mono">{(w.win_rate * 100).toFixed(1)}%</td>
-                    <td className="p-2 text-right font-mono">{(w.std * 100).toFixed(2)}%</td>
-                    <td className="p-2 text-right font-mono">{w.t_stat.toFixed(2)}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+          <div className="rounded border bg-white p-2 text-xs dark:bg-slate-900">
+            <button
+              type="button"
+              onClick={() => setExpandStats(!expandStats)}
+              className="mb-1 flex w-full items-center justify-between font-bold hover:text-sky-600"
+            >
+              <span>📉 상세 통계 (전문가용)</span>
+              <span>{expandStats ? "▼" : "▶"}</span>
+            </button>
+            {expandStats && (
+              <div className="overflow-x-auto">
+                <table className="w-full text-[11px]">
+                  <thead>
+                    <tr className="border-b bg-slate-50 dark:bg-slate-900">
+                      <th className="p-2 text-left" title="이벤트 발생 후 며칠·개월 후 측정">기간</th>
+                      <th className="p-2 text-right" title="이 기간의 유효 표본 수 (가격 데이터 있는 케이스)">표본 n</th>
+                      <th className="p-2 text-right" title="평균 수익률 (양수=이익 · 음수=손실)">평균</th>
+                      <th className="p-2 text-right" title="중앙값 (극단값 영향 배제)">중앙값</th>
+                      <th className="p-2 text-right" title="양수 수익 케이스 비율 (승률)">승률</th>
+                      <th className="p-2 text-right" title="표준편차 (변동성)">변동성</th>
+                      <th className="p-2 text-right" title="t-통계량 · 절대값 > 2 이면 통계적 유의 · +는 양수 유의 · -는 음수 유의">t-값</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {Object.entries(r.aggregate.per_window).map(([k, w]) => (
+                      <tr key={k} className="border-b">
+                        <td className="p-2 font-mono">{k === "1d" ? "1일" : k.replace("m", "개월")}</td>
+                        <td className="p-2 text-right font-mono">{w.n}</td>
+                        <td className={`p-2 text-right font-mono ${w.mean_return >= 0 ? "text-emerald-700" : "text-red-700"}`}>
+                          {(w.mean_return * 100).toFixed(2)}%
+                        </td>
+                        <td className="p-2 text-right font-mono">{(w.median_return * 100).toFixed(2)}%</td>
+                        <td className="p-2 text-right font-mono">{(w.win_rate * 100).toFixed(1)}%</td>
+                        <td className="p-2 text-right font-mono">{(w.std * 100).toFixed(2)}%</td>
+                        <td className={`p-2 text-right font-mono ${Math.abs(w.t_stat) > 2 ? "font-bold" : ""}`}>
+                          {w.t_stat.toFixed(2)}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+                <div className="mt-2 text-[10px] text-muted-foreground">
+                  <b>매수 승격 조건 (4가지 모두 충족)</b> · 표본 ≥ 50 · t-값 &gt; 2 · 승률 &gt; 50% · 평균 수익 &gt; 0 · 대상 기간 (1개월 or 3개월)
+                </div>
+                {r.decision.reasons.length > 0 ? (
+                  <div className="mt-1 text-[10px] text-muted-foreground">
+                    <b>미달 사유</b>: {r.decision.reasons.map(reasonToKorean).join(" · ")}
+                  </div>
+                ) : null}
+                {Object.keys(r.aggregate.error_counts).length > 0 ? (
+                  <div className="mt-1 text-[10px] text-red-600">
+                    <b>데이터 gap</b>: {Object.entries(r.aggregate.error_counts).map(([k, v]) => `${errorToKorean(k)} ${v}건`).join(" · ")}
+                  </div>
+                ) : null}
+              </div>
+            )}
           </div>
-          <div className="text-[10px] text-muted-foreground">
-            게이트: 표본 ≥ 50 · t-stat &gt; 2 · win_rate ≥ 50% · mean_return &gt; 0 · window (1m or 3m)
-          </div>
-          {r.decision.reasons.length > 0 ? (
-            <div className="mt-2 text-[10px] text-muted-foreground">
-              사유: {r.decision.reasons.join(" · ")}
-            </div>
-          ) : null}
-          {Object.keys(r.aggregate.error_counts).length > 0 ? (
-            <div className="mt-2 text-[10px] text-red-600">
-              에러: {Object.entries(r.aggregate.error_counts).map(([k, v]) => `${k}(${v})`).join(" · ")}
-            </div>
-          ) : null}
         </>
+      )}
+    </section>
+  );
+}
+
+/** 판정 큰 카드 · 사용자에게 답변 · v1.27. */
+function VerdictCard({ type, report }: { type: string; report: PowderKegReport }) {
+  const passed = report.decision.validated;
+  const window12m = report.aggregate.per_window["12m"];
+  const info = EVENT_TYPE_INFO[type];
+  const isTypeB = type.startsWith("B");
+
+  let icon = "🔬";
+  let title = "가설 상태 · 매수 신호 아직 아님";
+  let color = "border-slate-300 bg-slate-50 dark:border-slate-700 dark:bg-slate-900";
+  let subtitle = "5년 데이터로 통계적으로 확인 안 됨. 자동매매 연결 불가.";
+
+  if (passed) {
+    icon = "✅";
+    title = "매수 신호로 사용 가능 (Validated)";
+    color = "border-emerald-300 bg-emerald-50 dark:border-emerald-700 dark:bg-emerald-950";
+    subtitle = "5년 통계 · 매수 후보 확인. 반자동 티켓 생성 가능.";
+  } else if (isTypeB) {
+    icon = "🚫";
+    title = "즉시 회피 · 매수 금지";
+    color = "border-red-300 bg-red-50 dark:border-red-800 dark:bg-red-950";
+    subtitle = "이 이벤트 발생 종목은 리스트에서 자동 제거 · DO NOT TOUCH.";
+  } else if (window12m && window12m.mean_return < -0.05 && window12m.n >= 50) {
+    icon = "🔬";
+    title = "관찰 후보 · 백테스트 음수 · 단독 매수 금지";
+    color = "border-orange-300 bg-orange-50 dark:border-orange-800 dark:bg-orange-950";
+    subtitle = "가설과 반대로 · 이 이벤트 발생 후 평균 손실. 다른 조건과 조합 필요.";
+  }
+
+  return (
+    <div className={`rounded border-2 p-3 text-sm ${color}`}>
+      <div className="text-lg font-bold">{icon} {title}</div>
+      <div className="mt-1 text-xs">{subtitle}</div>
+      <div className="mt-2 text-[11px] text-muted-foreground">
+        이벤트 타입 · {info?.icon} <b>{type} · {info?.long}</b>
+      </div>
+    </div>
+  );
+}
+
+/** 평이한 언어 요약 · v1.27. */
+function PlainSummary({ type, report }: { type: string; report: PowderKegReport }) {
+  const w12 = report.aggregate.per_window["12m"];
+  const w6 = report.aggregate.per_window["6m"];
+  const w1 = report.aggregate.per_window["1m"];
+  const wPrimary = w12 || w6 || w1;
+  if (!wPrimary) {
+    return (
+      <div className="rounded border bg-yellow-50 p-2 text-xs dark:bg-yellow-950">
+        📊 <b>표본 부족</b> · 이 이벤트는 5년 데이터로 계산할 수 있는 케이스가 부족합니다.
+        (전체 {report.aggregate.total_events}건 · 유효 {report.aggregate.valid_events}건)
+      </div>
+    );
+  }
+  const label12 = w12 ? "12개월" : w6 ? "6개월" : "1개월";
+  const meanPct = ((wPrimary.mean_return || 0) * 100).toFixed(1);
+  const winPct = ((wPrimary.win_rate || 0) * 100).toFixed(0);
+  const tstat = (wPrimary.t_stat || 0).toFixed(2);
+  const significance = Math.abs(wPrimary.t_stat || 0) > 2 ? "통계적으로 유의미" : "통계적으로 애매";
+  const direction = (wPrimary.mean_return || 0) >= 0 ? "이익" : "손실";
+  const info = EVENT_TYPE_INFO[type];
+
+  return (
+    <div className="grid gap-2 md:grid-cols-2">
+      <div className="rounded border bg-white p-3 text-xs dark:bg-slate-900">
+        <div className="mb-2 font-bold">📊 이 이벤트 · 5년 총계</div>
+        <ul className="space-y-1">
+          <li>· <b>{info?.short}</b> · 5년간 발생 {report.aggregate.total_events}건</li>
+          <li>· 이 중 가격 데이터 있는 케이스 · {report.aggregate.valid_events}건</li>
+          <li>· 이벤트 후 <b>{label12}</b> 평균 <b className={(wPrimary.mean_return || 0) >= 0 ? "text-emerald-700" : "text-red-700"}>{meanPct}%</b> {direction}</li>
+          <li>· 100번 중 <b>{winPct}번</b> 이익 · {100 - Number(winPct)}번 손실</li>
+          <li>· 통계 유의성 · <b>{significance}</b> (t = {tstat})</li>
+        </ul>
+      </div>
+      <div className="rounded border bg-white p-3 text-xs dark:bg-slate-900">
+        <div className="mb-2 font-bold">💡 이게 무슨 뜻인가요?</div>
+        <p className="mb-1">
+          지난 5년 · 이 이벤트가 <b>{report.aggregate.total_events}번</b> 발생.
+          만약 매번 발생 후 다음 날 매수 · <b>{label12} 뒤 정리</b>했다면:
+        </p>
+        <p>
+          평균 <b className={(wPrimary.mean_return || 0) >= 0 ? "text-emerald-700 dark:text-emerald-300" : "text-red-700 dark:text-red-300"}>{meanPct}%</b> {direction}을 봤을 것.
+          {Math.abs(wPrimary.t_stat || 0) > 2 ? (
+            <> 이 결과는 <b>우연이 아닐 가능성 큼</b> (t = {tstat} · |t| &gt; 2).</>
+          ) : (
+            <> 하지만 표본 편차 크고 · <b>결론 내리기 어려움</b> (t = {tstat}).</>
+          )}
+        </p>
+      </div>
+    </div>
+  );
+}
+
+/** 통계 게이트 미달 사유 한국어화. */
+function reasonToKorean(reason: string): string {
+  if (reason.startsWith("insufficient_samples")) {
+    const m = reason.match(/\((\d+)<(\d+)\)/);
+    return m ? `표본 부족 (${m[1]}/${m[2]})` : "표본 부족";
+  }
+  if (reason.includes("t_stat=")) {
+    const m = reason.match(/(\w+)\.t_stat=([-\d.]+)/);
+    return m ? `${m[1]} 통계 유의성 낮음 (t=${m[2]})` : reason;
+  }
+  if (reason.includes("win_rate=")) {
+    const m = reason.match(/(\w+)\.win_rate=([-\d.]+)/);
+    return m ? `${m[1]} 승률 부족 (${Math.round(Number(m[2]) * 100)}%)` : reason;
+  }
+  if (reason.includes("mean_return=")) {
+    const m = reason.match(/(\w+)\.mean_return=([-\d.]+)/);
+    return m ? `${m[1]} 평균 손실 (${(Number(m[2]) * 100).toFixed(2)}%)` : reason;
+  }
+  if (reason === "no_cache_run_backtest") return "캐시 없음 · 재계산 필요";
+  if (reason === "no_gate_window_available") return "게이트 기간 데이터 없음";
+  if (reason.startsWith("passed_on_")) return `승격 · ${reason.replace("passed_on_", "")} 통과`;
+  return reason;
+}
+
+/** 데이터 gap 에러 한국어화. */
+function errorToKorean(err: string): string {
+  if (err.includes("entry_price_zero")) return "시가 부재 (거래정지·상폐)";
+  if (err.includes("no_price_data")) return "가격 데이터 없음";
+  if (err.includes("no_next_trading_day")) return "이후 거래일 없음 (상폐)";
+  if (err.includes("fdr_")) return "가격 조회 실패";
+  return err;
+}
+
+/** 백테스트 리포트 사용법 안내 · v1.27. */
+function ReportOnboardingCard() {
+  const KEY = "powderkeg_report_onboarding_dismissed";
+  const [dismissed, setDismissed] = useState(false);
+  const [open, setOpen] = useState(true);
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      setDismissed(!!localStorage.getItem(KEY));
+    }
+  }, []);
+  if (dismissed) return null;
+  return (
+    <section className="rounded border-2 border-purple-300 bg-gradient-to-r from-purple-50 to-pink-50 p-3 text-xs dark:border-purple-800 dark:from-purple-950 dark:to-pink-950">
+      <div className="flex items-center justify-between">
+        <button
+          type="button"
+          onClick={() => setOpen(!open)}
+          className="font-bold text-purple-900 hover:underline dark:text-purple-100"
+        >
+          {open ? "▼" : "▶"} 📖 이 리포트가 뭐하는 건가요?
+        </button>
+        <button
+          type="button"
+          onClick={() => {
+            localStorage.setItem(KEY, "1");
+            setDismissed(true);
+          }}
+          className="rounded border border-purple-300 px-2 py-0.5 text-[10px] text-purple-700 hover:bg-purple-100"
+        >
+          다시 안 보기
+        </button>
+      </div>
+      {open && (
+        <ul className="mt-2 space-y-1 text-[11px] text-purple-900 dark:text-purple-100">
+          <li>
+            · <b>목적</b> · 이 이벤트 (예: <b>담보제공</b>) 가 매수 신호로 쓸 만한지 · 지난 5년 데이터로 검증.
+          </li>
+          <li>
+            · <b>계산 방법</b> · 과거 5년간 이 이벤트가 발생한 모든 케이스 수집 → 이벤트 다음 날 매수 후 1개월/3개월/6개월/12개월 뒤 수익 측정 → 평균/승률/통계 유의성 계산.
+          </li>
+          <li>
+            · <b>결과 판정</b> · <b>✅ validated</b> = 매수 신호로 쓸 수 있음 (지금은 모두 hypothesis). <b>🔬 hypothesis</b> = 아직 통계로 확인 안 됨 · 자동매매 X.
+          </li>
+          <li>
+            · <b>Type B 종목</b> (횡령·감사비적정·거래정지) · 실측 결과 · <b>매수 시 손실 확실</b> · 무조건 회피.
+          </li>
+          <li>
+            · <b>이벤트 타입 바꿔가며 확인</b> · A1~B3 상단 드롭다운에서 선택.
+          </li>
+        </ul>
       )}
     </section>
   );
