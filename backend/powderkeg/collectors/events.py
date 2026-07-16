@@ -15,6 +15,7 @@ v1 · 지시서 §7-1-4 첫 항목만 (DART 공시)
 """
 from __future__ import annotations
 
+import asyncio
 import logging
 from datetime import date, datetime, timedelta, timezone
 from typing import Optional
@@ -166,4 +167,87 @@ async def poll_powderkeg_events(
                 stats["type_b"] += 1
 
     logger.info("[powderkeg.events] %s", stats)
+    return stats
+
+
+async def backfill_powderkeg_events(
+    start_date: date,
+    end_date: date,
+    chunk_days: int = 30,
+    sleep_between_chunks: float = 1.0,
+    watched_tickers: Optional[set[str]] = None,
+) -> dict:
+    """장기 아카이브 backfill · 지시서 §7-4 5년 백테스트 표본 확보용.
+
+    청크 단위로 DART 폴링 · rate limit 완화 위해 청크 간 sleep.
+
+    Args:
+        start_date: backfill 시작일 (예: 2021-07-16)
+        end_date: 종료일 (예: 2026-07-15)
+        chunk_days: 청크 크기 (기본 30일 · DART API 페이지 부담 완화)
+        sleep_between_chunks: 청크 간 sleep 초 (기본 1.0)
+        watched_tickers: 감시 대상 · None 이면 모든 매칭 저장
+
+    Returns:
+        {"period", "chunks", "fetched", "matched", "inserted", "type_a", "type_b", "errors"}
+    """
+    if start_date > end_date:
+        return {"error": "start_date > end_date", "period": f"{start_date}~{end_date}"}
+
+    stats = {
+        "period": f"{start_date.isoformat()}~{end_date.isoformat()}",
+        "chunks": 0, "fetched": 0, "matched": 0, "inserted": 0,
+        "type_a": 0, "type_b": 0, "errors": [],
+    }
+
+    cursor = start_date
+    while cursor <= end_date:
+        chunk_end = min(cursor + timedelta(days=chunk_days - 1), end_date)
+        stats["chunks"] += 1
+
+        chunk_disclosures: list[DartDisclosure] = []
+        for ptype in _POLL_TYPES:
+            try:
+                batch = await fetch_recent_disclosures(
+                    bgn_de=cursor, end_de=chunk_end, pblntf_ty=ptype, only_listed=True,
+                )
+                chunk_disclosures.extend(batch)
+            except Exception as exc:  # noqa: BLE001
+                logger.warning(
+                    "[powderkeg.backfill] %s~%s pblntf_ty=%s 실패 · %s",
+                    cursor, chunk_end, ptype, exc,
+                )
+                stats["errors"].append(f"{cursor.isoformat()}:{ptype}:{exc}")
+
+        stats["fetched"] += len(chunk_disclosures)
+
+        for d in chunk_disclosures:
+            if not d.stock_code:
+                continue
+            if watched_tickers is not None and d.stock_code not in watched_tickers:
+                continue
+            cls = classify_disclosure(d.report_nm)
+            if cls is None:
+                continue
+            stats["matched"] += 1
+            event_type_full, matched_kw = cls
+            row_id = await _save_event(d.stock_code, event_type_full, d, matched_kw)
+            if row_id is not None:
+                stats["inserted"] += 1
+                code = _short_event_code(event_type_full)
+                if code.startswith("A"):
+                    stats["type_a"] += 1
+                elif code.startswith("B"):
+                    stats["type_b"] += 1
+
+        logger.info(
+            "[powderkeg.backfill] chunk %s~%s · fetched=%d matched=%d inserted=%d",
+            cursor, chunk_end, len(chunk_disclosures), stats["matched"], stats["inserted"],
+        )
+
+        cursor = chunk_end + timedelta(days=1)
+        if cursor <= end_date and sleep_between_chunks > 0:
+            await asyncio.sleep(sleep_between_chunks)
+
+    logger.info("[powderkeg.backfill] 완료 · %s", stats)
     return stats

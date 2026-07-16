@@ -33,7 +33,7 @@ from backend.powderkeg.collectors.corp_codes import (
 )
 from backend.powderkeg.collectors.dart_financials import collect_batch as dart_collect_batch
 from backend.powderkeg.collectors.dart_shareholders import collect_batch as sh_collect_batch
-from backend.powderkeg.collectors.events import poll_powderkeg_events
+from backend.powderkeg.collectors.events import backfill_powderkeg_events, poll_powderkeg_events
 from backend.powderkeg.collectors.ftc_big_biz import list_all as list_big_biz, refresh_from_seed
 from backend.powderkeg.collectors.krx_market import collect_market_snapshot
 from backend.powderkeg.orders import (
@@ -569,6 +569,35 @@ async def trigger_events_poll(
     """
     return await poll_powderkeg_events(
         lookback_days=lookback_days,
+        watched_tickers=set(watched_tickers) if watched_tickers else None,
+    )
+
+
+@router.post("/collectors/events-backfill", dependencies=[Depends(require_sniper_token)])
+async def trigger_events_backfill(
+    start_date: str = Body(..., embed=True, description="YYYY-MM-DD"),
+    end_date: str = Body(..., embed=True, description="YYYY-MM-DD"),
+    chunk_days: int = Body(30, embed=True, description="청크 크기 (일)"),
+    sleep_between_chunks: float = Body(1.0, embed=True),
+    watched_tickers: Optional[list[str]] = Body(None, embed=True),
+) -> dict[str, Any]:
+    """장기 아카이브 backfill · §7-4 5년 백테스트 표본 확보.
+
+    예시: start_date=2021-07-16, end_date=2026-07-15 · 5년 backfill.
+    청크당 DART 4 pblntf_ty 조회 · sleep 로 rate limit 완화.
+    """
+    from datetime import date as _date
+    try:
+        sd = _date.fromisoformat(start_date)
+        ed = _date.fromisoformat(end_date)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=f"invalid date format: {exc}")
+    if sd > ed:
+        raise HTTPException(status_code=400, detail="start_date > end_date")
+    return await backfill_powderkeg_events(
+        start_date=sd, end_date=ed,
+        chunk_days=chunk_days,
+        sleep_between_chunks=sleep_between_chunks,
         watched_tickers=set(watched_tickers) if watched_tickers else None,
     )
 

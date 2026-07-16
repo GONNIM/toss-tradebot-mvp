@@ -113,13 +113,28 @@ async def compute_event_return(
             entry_date=None, entry_price=None, error="no_next_trading_day",
         )
 
-    entry_price = float(df["Open"].iloc[entry_i])
-    entry_date_str = idx[entry_i].date().isoformat() if hasattr(idx[entry_i], "date") else str(idx[entry_i])
+    # entry_price_zero fallback · B3 (거래정지) 이벤트 시 t+1 시가 부재 필연
+    #   최대 5 거래일 후행 검색 · 첫 유효 시가 사용 (거래재개 후 진입 가정)
+    MAX_FALLBACK_DAYS = 5
+    fallback_limit = min(entry_i + MAX_FALLBACK_DAYS + 1, len(df))
+    entry_price = 0.0
+    while entry_i < fallback_limit:
+        candidate = float(df["Open"].iloc[entry_i])
+        if candidate > 0:
+            entry_price = candidate
+            break
+        entry_i += 1
+
+    entry_date_str = (
+        idx[entry_i].date().isoformat() if entry_i < len(df) and hasattr(idx[entry_i], "date")
+        else None
+    )
 
     if entry_price <= 0:
         return SingleEventReturn(
             ticker=ticker, event_date=event_date.isoformat(),
-            entry_date=entry_date_str, entry_price=None, error="entry_price_zero",
+            entry_date=entry_date_str, entry_price=None,
+            error=f"entry_price_zero_within_{MAX_FALLBACK_DAYS}d_fallback",
         )
 
     per_window: dict[str, Optional[float]] = {}
