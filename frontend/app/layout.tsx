@@ -58,6 +58,11 @@ export default function RootLayout({
             </div>
           </header>
           <main className="container mx-auto px-4 py-6">{children}</main>
+          <footer className="mt-8 border-t border-border py-3 text-center text-[11px] text-muted-foreground">
+            <span title="build sha · 배포 확증용 (3차 리뷰)">
+              build {process.env.NEXT_PUBLIC_BUILD_SHA ?? "unknown"} · {process.env.NEXT_PUBLIC_BUILD_TIME ?? "-"}
+            </span>
+          </footer>
         </Providers>
       </body>
     </html>
