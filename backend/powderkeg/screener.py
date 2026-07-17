@@ -210,15 +210,20 @@ async def screen_ticker(
 
     # ── 조건 1 · PBR (KRX 값 우선 · None 이면 자체 계산 fallback) ─
     #    FDR StockListing 은 PBR 미제공 (KOSPI/KOSDAQ 전체) · book value 로 계산.
+    #    v1.29 · 3차 리뷰 P1 · 데이터 부족(None) 과 실 실패(False) 분리.
     pbr_effective = market.pbr
     if pbr_effective is None and fin_latest.total_equity and market.market_cap:
         if fin_latest.total_equity > 0:
             pbr_effective = market.market_cap / fin_latest.total_equity
     result.pbr = pbr_effective
-    c1 = pbr_effective is not None and pbr_effective < t.pbr_max
+    if pbr_effective is None:
+        c1 = None
+        result.reject_reasons.append("pbr:no_data")
+    else:
+        c1 = pbr_effective < t.pbr_max
+        if not c1:
+            result.reject_reasons.append(f"pbr>={t.pbr_max}({pbr_effective})")
     result.conditions["1_pbr"] = c1
-    if not c1:
-        result.reject_reasons.append(f"pbr>={t.pbr_max}({pbr_effective})")
 
     # ── 조건 2 · 순현금 / 시총 ────────────
     cash = (fin_latest.cash_and_equivalents or 0) + (fin_latest.short_term_investments or 0)
@@ -227,28 +232,24 @@ async def screen_ticker(
     if market.market_cap and market.market_cap > 0:
         result.net_cash_ratio = net_cash / market.market_cap
         c2 = result.net_cash_ratio > t.net_cash_ratio_min
+        if not c2:
+            result.reject_reasons.append(f"net_cash<{t.net_cash_ratio_min}({result.net_cash_ratio:.3f})")
     else:
-        c2 = False
+        c2 = None
+        result.reject_reasons.append("net_cash:no_market_cap")
     result.conditions["2_net_cash_ratio"] = c2
-    if not c2:
-        result.reject_reasons.append(
-            f"net_cash<{t.net_cash_ratio_min}({result.net_cash_ratio:.3f})"
-            if result.net_cash_ratio is not None else "no_market_cap"
-        )
 
     # ── 조건 3 · 최대주주 지분율 ──────────
     if holder is not None:
         result.owner_pct = (holder.major_pct or 0) + (holder.related_pct or 0)
         result.treasury_pct = holder.treasury_pct
         c3 = result.owner_pct >= t.major_shareholder_pct_min
+        if not c3:
+            result.reject_reasons.append(f"owner<{t.major_shareholder_pct_min}({result.owner_pct})")
     else:
-        c3 = False
+        c3 = None
+        result.reject_reasons.append("owner:no_shareholder_data")
     result.conditions["3_owner_pct"] = c3
-    if not c3:
-        result.reject_reasons.append(
-            f"owner<{t.major_shareholder_pct_min}({result.owner_pct})"
-            if result.owner_pct is not None else "no_shareholder_data"
-        )
 
     # ── 조건 4 · 공정위 대기업집단 아님 ────
     is_big = await is_big_biz_group(ticker, year)
@@ -267,13 +268,15 @@ async def screen_ticker(
         if any(bad in op for bad in ("한정", "부적정", "의견거절")):
             return False
         return "적정" in op   # "적정의견" · "적정" 모두 포함
-    c5 = len(audits) >= 2 and all(_is_적정(op) for op in audits[:2])
-    result.conditions["5_audit_opinion"] = c5
-    if not c5:
-        if len(audits) < 2:
-            result.reject_reasons.append(f"audit<2yrs({len(audits)})")
-        else:
+    # v1.29 · 3차 리뷰 P1 · 데이터 <2년(None) 과 부적정(False) 분리.
+    if len(audits) < 2:
+        c5 = None
+        result.reject_reasons.append(f"audit:no_data<2yrs({len(audits)})")
+    else:
+        c5 = all(_is_적정(op) for op in audits[:2])
+        if not c5:
             result.reject_reasons.append(f"audit_not_적정({','.join(audits[:2])})")
+    result.conditions["5_audit_opinion"] = c5
 
     # ── 조건 6 · 이자수익 교차검증 (cash_suspect) ─
     cash_prior = None
@@ -291,14 +294,20 @@ async def screen_ticker(
         result.reject_reasons.append(f"cash_suspect:{cash_check.reason}")
 
     # ── 조건 7 · 영업이익 3년 중 2년 흑자 ─
+    # v1.29 · 3차 리뷰 P1 · 데이터 <3년(None) 과 흑자 <2년(False) 분리.
     op_incomes = [fs.operating_income for fs in fin_all[:3] if fs.operating_income is not None]
     positive = sum(1 for oi in op_incomes if oi > 0)
-    c7 = len(op_incomes) >= 3 and positive >= 2
+    if len(op_incomes) < 3:
+        c7 = None
+        result.reject_reasons.append(f"op_profit:no_data<3yrs({len(op_incomes)})")
+    else:
+        c7 = positive >= 2
+        if not c7:
+            result.reject_reasons.append(f"op_profit_history({positive}/{len(op_incomes)})")
     result.conditions["7_operating_profit"] = c7
-    if not c7:
-        result.reject_reasons.append(f"op_profit_history({positive}/{len(op_incomes)})")
 
     # ── 조건 8 · F-Score ≥ 6 ────────────────
+    # v1.29 · 3차 리뷰 P1 · 데이터 <2년(None) 과 F-Score < 임계(False) 분리.
     if len(fin_all) >= 2:
         fscore = calculate_f_score(
             current=_period_from_snapshot(fin_all[0]),
@@ -306,18 +315,24 @@ async def screen_ticker(
         )
         result.piotroski_f_score = fscore.total_score
         c8 = fscore.total_score >= t.piotroski_f_score_min
+        if not c8:
+            result.reject_reasons.append(f"fscore<{t.piotroski_f_score_min}({result.piotroski_f_score})")
     else:
-        c8 = False
+        c8 = None
         result.piotroski_f_score = None
+        result.reject_reasons.append(f"fscore:no_data<2yrs({len(fin_all)})")
     result.conditions["8_fscore"] = c8
-    if not c8:
-        result.reject_reasons.append(f"fscore<{t.piotroski_f_score_min}({result.piotroski_f_score})")
 
     # ── 조건 9 · ADV60 ≥ 1억 ────────────────
-    c9 = (market.avg_daily_amount_60d or 0) >= t.adv_60d_min_krw
+    # v1.29 · 3차 리뷰 P1 · KRX 데이터 부재(None) 와 실 <임계(False) 분리.
+    if market.avg_daily_amount_60d is None:
+        c9 = None
+        result.reject_reasons.append("adv60:no_data")
+    else:
+        c9 = market.avg_daily_amount_60d >= t.adv_60d_min_krw
+        if not c9:
+            result.reject_reasons.append(f"adv60<{t.adv_60d_min_krw:.0f}({market.avg_daily_amount_60d})")
     result.conditions["9_adv60"] = c9
-    if not c9:
-        result.reject_reasons.append(f"adv60<{t.adv_60d_min_krw:.0f}({market.avg_daily_amount_60d})")
 
     # ── 조건 10 · 관리종목·거래정지 이력 없음 ─
     # v1 · 별도 이력 수집 없음 · 감사의견 비적정 이력으로 근사
@@ -326,7 +341,8 @@ async def screen_ticker(
     result.conditions["10_no_bad_history"] = c10
 
     # ── 통합 판정 ────────────────────────
-    result.passed_all = all(result.conditions.values())
+    # v1.29 · 3차 리뷰 P1 · 명시적 True 체크 (None 은 데이터 부족 · passed 자격 없음).
+    result.passed_all = all(v is True for v in result.conditions.values())
     if result.passed_all:
         result.status = "passed"
     elif cash_check.reason.startswith("no_interest_income") or cash_check.reason.startswith("yield_below"):

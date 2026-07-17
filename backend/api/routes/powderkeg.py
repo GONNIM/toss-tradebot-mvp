@@ -189,30 +189,43 @@ async def get_list(
             }
         return {}
 
-    def _compute_tier(cond: Optional[dict], status: str) -> tuple[str, int, list[str]]:
-        """v1.20 · 티어제 · 리뷰어 Priority 4.
+    def _compute_tier(
+        cond: Optional[dict], status: str
+    ) -> tuple[str, int, list[str], list[str]]:
+        """v1.29 · 3차 리뷰 P1 · 3상태 분리 (True/False/None).
 
-        · tier_1_passed · 10/10 통과 (매수 후보)
-        · tier_2_near · 8~9/10 통과 (경계선 관찰)
-        · tier_3_watch · 7/10 통과 (관찰만)
-        · cash_suspect · 기존 status
-        · rejected · 그 외
+        · tier_1_passed      · 10/10 True                (매수 후보)
+        · tier_2_near        · 9/10 True · missing=0     (실 실패 1건 · 경계선 관찰)
+        · tier_2_needs_data  · missing≥1 · passed+missing ≥ total-1
+                                                          (데이터 채우면 통과 가능)
+        · tier_3_watch       · passed ≥ total-3 (7/10 이상, 관찰만)
+        · cash_suspect       · status 가 cash_suspect
+        · rejected           · 그 외
 
-        Returns: (tier, conditions_passed, failed_condition_ids)
+        Returns: (tier, conditions_passed, failed_condition_ids, missing_condition_ids)
         """
         if not isinstance(cond, dict):
-            return ("rejected", 0, [])
-        passed = sum(1 for k, v in cond.items() if k != "_robustness" and v is True)
-        failed = [k for k, v in cond.items() if k != "_robustness" and v is False]
+            return ("rejected", 0, [], [])
+        items = [(k, v) for k, v in cond.items() if k != "_robustness"]
+        passed = sum(1 for _, v in items if v is True)
+        failed = [k for k, v in items if v is False]
+        missing = [k for k, v in items if v is None]
+        total = len(items)
+
         if status == "cash_suspect":
-            return ("cash_suspect", passed, failed)
-        if passed >= 10:
-            return ("tier_1_passed", passed, failed)
-        if passed >= 8:
-            return ("tier_2_near", passed, failed)
-        if passed >= 7:
-            return ("tier_3_watch", passed, failed)
-        return ("rejected", passed, failed)
+            return ("cash_suspect", passed, failed, missing)
+        if passed == total:
+            return ("tier_1_passed", passed, [], [])
+        # 실 실패 1건 · 데이터 부족 없음
+        if passed == total - 1 and not missing:
+            return ("tier_2_near", passed, failed, [])
+        # 데이터 부족은 있으나 (passed + missing) 로 9/10 이상 도달 가능
+        if missing and (passed + len(missing)) >= total - 1:
+            return ("tier_2_needs_data", passed, failed, missing)
+        # 관찰 등급 · 실 통과 or 부분 부족 포함 7/10 이상
+        if passed >= total - 3:
+            return ("tier_3_watch", passed, failed, missing)
+        return ("rejected", passed, failed, missing)
 
     items = []
     for r in rows:
@@ -221,7 +234,7 @@ async def get_list(
         if isinstance(cond, dict) and "_robustness" in cond:
             cond = {k: v for k, v in cond.items() if k != "_robustness"}
         rob = _extract_robustness(r.conditions_json)
-        tier, cond_passed, failed_ids = _compute_tier(cond, r.status)
+        tier, cond_passed, failed_ids, missing_ids = _compute_tier(cond, r.status)
         items.append({
             "id": r.id, "ticker": r.ticker, "name": r.name,
             "status": r.status, "net_cash_ratio": r.net_cash_ratio,
@@ -234,10 +247,11 @@ async def get_list(
             "added_by": getattr(r, "added_by", "auto") or "auto",
             "user_note": getattr(r, "user_note", None),
             "created_at": r.created_at.isoformat() if r.created_at else None,
-            # v1.20 · 티어제
+            # v1.20 티어제 · v1.29 3차 리뷰 P1 · 3상태 분리 (missing 신규)
             "tier": tier,
             "conditions_passed": cond_passed,
             "failed_conditions": failed_ids,
+            "missing_conditions": missing_ids,
             **rob,
         })
 

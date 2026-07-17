@@ -320,11 +320,12 @@ else:
 - [ ] SSH 로 nginx `proxy_cache` 유무 확인 · 있다면 무효화 명령 제안
 
 ### P1 · v1.29 (오늘~내일)
-- [ ] `phase7-final-report.md:26` 팔림세스트 정정 (51 → 168)
-- [ ] `_compute_tier` · 3상태 분리 (passed/failed/missing)
-- [ ] `screener.py` · 데이터 부족 시 `c* = None` (False 대신)
-- [ ] 태광산업 재판정 후 UI 뱃지 검증 (기대: Tier 2)
-- [ ] 커밋 체크리스트에 §6 갱신 조항 추가
+- [x] `phase7-final-report.md:26` 팔림세스트 정정 (51 → 168) · v1.19 후속 실행 이력 §17-3 추가
+- [x] `_compute_tier` · 3상태 분리 (passed/failed/missing) · `missing_conditions` API 필드 신규
+- [x] `screener.py` · c1/c2/c3/c5/c7/c8/c9 데이터 부족 시 `c* = None` (False 대신) · `passed_all = all(v is True ...)` 명시화
+- [x] UI · TierBadge에 `tier_2_needs_data` 케이스 (🥈 데이터부족) · 필터 옵션 · 병목 표시 분리 (실패/데이터부족)
+- [x] `.claude/lessons-learned.md` 교훈 #2 · 숫자 변경 커밋 시 §6 정합 검증 규정
+- [ ] 태광산업 재판정 후 UI 뱃지 검증 (기대: Tier 2 · 배포 후 실측)
 
 ### P2 · v1.30~v1.32
 - [ ] DART 상폐사 재무 백필 (~2,700 콜 · `is_delisted` 플래그)
@@ -370,7 +371,8 @@ else:
 
 | 날짜 | 버전 | 변경 | 커밋 |
 |---|---|---|---|
-| 2026-07-16 | v1.0 | 최초 작성 · 재재반박 6항 실측 재판정 · P0 커밋 해시 SSR 푸터 + 캐시 하향 완료 · P1~P3 확정 | (pending) |
+| 2026-07-16 | v1.0 | 최초 작성 · 재재반박 6항 실측 재판정 · P0 커밋 해시 SSR 푸터 + 캐시 하향 완료 · P1~P3 확정 | `5fadff6` |
+| 2026-07-17 | v1.1 | P1 5/6 항목 로컬 완료 · §6 정정 · screener None · tier 3상태 · UI 뱃지 · 교훈 #2 · 태광 재판정만 배포 후 실측 대기 | (pending) |
 
 ---
 

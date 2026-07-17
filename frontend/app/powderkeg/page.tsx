@@ -256,7 +256,8 @@ function ListTab({ token, guideNonce = 0 }: { token: string; guideNonce?: number
           >
             <option value="">🎖 전체 티어</option>
             <option value="tier_1_passed">🥇 Tier 1 · 10/10</option>
-            <option value="tier_2_near">🥈 Tier 2 · 8~9/10</option>
+            <option value="tier_2_near">🥈 Tier 2 · 실패 1건 (경계)</option>
+            <option value="tier_2_needs_data">🥈 Tier 2 · 데이터 부족</option>
             <option value="tier_3_watch">🥉 Tier 3 · 7/10</option>
           </select>
         </div>
@@ -309,9 +310,18 @@ function ListTab({ token, guideNonce = 0 }: { token: string; guideNonce?: number
                       <RobustnessBadge score={it.robustness_score} grade={it.robustness_grade} />
                       <TierBadge tier={it.tier} passed={it.conditions_passed} />
                     </div>
-                    {it.tier === "tier_2_near" || it.tier === "tier_3_watch" ? (
-                      <div className="mt-0.5 text-[9px] text-orange-700 dark:text-orange-300">
-                        📌 병목 · {(it.failed_conditions || []).map(f => CONDITION_LABEL_SHORT[f] || f).join(" · ")}
+                    {it.tier === "tier_2_near" || it.tier === "tier_2_needs_data" || it.tier === "tier_3_watch" ? (
+                      <div className="mt-0.5 text-[9px]">
+                        {(it.failed_conditions?.length ?? 0) > 0 ? (
+                          <span className="text-orange-700 dark:text-orange-300">
+                            📌 실패 · {(it.failed_conditions || []).map(f => CONDITION_LABEL_SHORT[f] || f).join(" · ")}
+                          </span>
+                        ) : null}
+                        {(it.missing_conditions?.length ?? 0) > 0 ? (
+                          <span className="ml-1 text-slate-600 dark:text-slate-400">
+                            🕳 데이터 부족 · {(it.missing_conditions || []).map(f => CONDITION_LABEL_SHORT[f] || f).join(" · ")}
+                          </span>
+                        ) : null}
                       </div>
                     ) : null}
                     <div className="text-[10px] text-muted-foreground">{it.ticker}</div>
@@ -859,20 +869,25 @@ function UsageGuideCard() {
   );
 }
 
-/** Tier 뱃지 · v1.20 · 리뷰어 Priority 4 · 8~9/10 경계선 후보 노출. */
+/** Tier 뱃지 · v1.20 리뷰어 Priority 4 · v1.29 3차 리뷰 P1 · 3상태 분리
+ *   (True/False/None → passed/failed/missing 반영). */
 function TierBadge({ tier, passed }: { tier?: string; passed?: number }) {
   if (!tier) return null;
   const cfg: Record<string, { icon: string; label: string; cls: string }> = {
-    tier_1_passed: { icon: "🥇", label: "Tier 1", cls: "bg-amber-100 text-amber-900 dark:bg-amber-900 dark:text-amber-100" },
-    tier_2_near:   { icon: "🥈", label: "Tier 2", cls: "bg-slate-200 text-slate-900 dark:bg-slate-700 dark:text-slate-100" },
-    tier_3_watch:  { icon: "🥉", label: "Tier 3", cls: "bg-orange-100 text-orange-900 dark:bg-orange-900 dark:text-orange-100" },
-    cash_suspect:  { icon: "⚠️", label: "현금 의심", cls: "bg-yellow-100 text-yellow-900 dark:bg-yellow-900 dark:text-yellow-100" },
-    rejected:      { icon: "❌", label: "탈락", cls: "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300" },
+    tier_1_passed:     { icon: "🥇", label: "Tier 1",              cls: "bg-amber-100 text-amber-900 dark:bg-amber-900 dark:text-amber-100" },
+    tier_2_near:       { icon: "🥈", label: "Tier 2 · 경계",       cls: "bg-slate-200 text-slate-900 dark:bg-slate-700 dark:text-slate-100" },
+    tier_2_needs_data: { icon: "🥈", label: "Tier 2 · 데이터부족", cls: "bg-sky-100 text-sky-900 dark:bg-sky-900 dark:text-sky-100" },
+    tier_3_watch:      { icon: "🥉", label: "Tier 3",              cls: "bg-orange-100 text-orange-900 dark:bg-orange-900 dark:text-orange-100" },
+    cash_suspect:      { icon: "⚠️", label: "현금 의심",           cls: "bg-yellow-100 text-yellow-900 dark:bg-yellow-900 dark:text-yellow-100" },
+    rejected:          { icon: "❌", label: "탈락",                cls: "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300" },
   };
   const m = cfg[tier] || cfg.rejected;
+  const title = tier === "tier_2_needs_data"
+    ? `실 통과 ${passed ?? "-"}/10 · 데이터 부족 조건 채우면 통과 가능`
+    : passed != null ? `조건 통과: ${passed}/10` : tier;
   return (
     <span
-      title={passed != null ? `조건 통과: ${passed}/10` : tier}
+      title={title}
       className={`rounded px-1.5 py-0.5 text-[10px] font-bold ${m.cls}`}
     >
       {m.icon} {m.label} · {passed}/10

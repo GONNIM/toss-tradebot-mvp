@@ -1560,10 +1560,11 @@ export interface PowderKegListItem {
   robustness_score?: number | null;      // 0.0 ~ 1.0 · min margin
   robustness_grade?: string | null;      // strong / moderate / borderline / at_risk
   condition_margins?: Record<string, number>;
-  // v1.20 · 티어제 (리뷰어 Priority 4)
-  tier?: string;                          // tier_1_passed / tier_2_near / tier_3_watch / cash_suspect / rejected
-  conditions_passed?: number;             // 통과한 조건 수 (0-10)
-  failed_conditions?: string[];           // 실패한 조건 id 리스트
+  // v1.20 티어제 · v1.29 3차 리뷰 P1 · 3상태 분리
+  tier?: string;                          // tier_1_passed / tier_2_near / tier_2_needs_data / tier_3_watch / cash_suspect / rejected
+  conditions_passed?: number;             // True 로 판정된 조건 수 (0-10)
+  failed_conditions?: string[];           // 실 실패(False) 조건 id 리스트
+  missing_conditions?: string[];          // v1.29 · 데이터 부족(None) 조건 id 리스트
 }
 
 export interface PowderKegListResponse {
