@@ -202,6 +202,17 @@ async def screen_ticker(
     t = thresholds or get_thresholds()
     result = ScreenResult(ticker=ticker, passed_all=False, status="rejected")
 
+    # v1.34 · 4차 리뷰 P4-3 · 금융업 원천 제외
+    #   은행·증권·보험·금융지주는 net-net (순현금/시총) 논리 자체가 부적용.
+    #   기업은행 예수부채·다우데이타 지주 연결·LS증권 예수금 등 왜곡 원천 차단.
+    #   화약고 스크리너 대상에서 조기 제외 · 데이터 조회·10 조건 스킵.
+    if is_financial_industry(ticker):
+        fi = financial_industry_info(ticker)
+        result.name = fi[0] if fi else ticker
+        result.order_industry_sector = f"금융({fi[1]})" if fi else "금융"
+        result.reject_reasons.append(f"financial_industry:net_net_inapplicable · sector={result.order_industry_sector}")
+        return result
+
     fin_latest = await _latest_financial(ticker)
     fin_all = await _all_financials(ticker)
     market = await _latest_market(ticker)

@@ -36,6 +36,9 @@ from backend.powderkeg.collectors.dart_shareholders import collect_batch as sh_c
 from backend.powderkeg.collectors.events import backfill_powderkeg_events, poll_powderkeg_events
 from backend.powderkeg.collectors.ftc_big_biz import list_all as list_big_biz, refresh_from_seed
 from backend.powderkeg.collectors.krx_market import collect_market_snapshot
+from backend.powderkeg.collectors.order_industry_seed import (
+    order_industry_info, financial_industry_info,
+)
 from backend.powderkeg.orders import (
     TicketCreateRequest,
     TicketValidationError,
@@ -235,6 +238,16 @@ async def get_list(
             cond = {k: v for k, v in cond.items() if k != "_robustness"}
         rob = _extract_robustness(r.conditions_json)
         tier, cond_passed, failed_ids, missing_ids = _compute_tier(cond, r.status)
+        # v1.34 · 4차 리뷰 P4-hotfix · sector 필드 조회 시점 계산·노출
+        #   PowderKegList DB 컬럼 없이 order/financial 시드 판별로 실시간 태깅.
+        oi = order_industry_info(r.ticker)
+        fi = financial_industry_info(r.ticker)
+        if oi is not None:
+            sector = oi[1]                          # "건설"/"조선"/"플랜트"
+        elif fi is not None:
+            sector = f"금융({fi[1]})"               # "금융(은행/증권/보험)"
+        else:
+            sector = None                           # 자동 판별(cl>3%) 은 reject_reasons 문자열 참조
         items.append({
             "id": r.id, "ticker": r.ticker, "name": r.name,
             "status": r.status, "net_cash_ratio": r.net_cash_ratio,
@@ -252,6 +265,7 @@ async def get_list(
             "conditions_passed": cond_passed,
             "failed_conditions": failed_ids,
             "missing_conditions": missing_ids,
+            "order_industry_sector": sector,        # v1.34 · P4-hotfix
             **rob,
         })
 
