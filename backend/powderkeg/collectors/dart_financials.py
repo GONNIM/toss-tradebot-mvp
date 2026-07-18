@@ -85,12 +85,17 @@ _MAPPING_NM_KEYWORDS: dict[str, tuple[str, ...]] = {
 }
 
 _DEBT_KEYWORDS = (
+    # v1.31 · 3차 리뷰 P2-4b hotfix (2026-07-18)
+    #   서희건설 · 차입금 표기 "차입금등(유동)", "차입금등(비유동)" → substring 미매치.
+    #   기존 "단기차입금"·"장기차입금"만으론 놓침 → 조건 2 부풀림 (40.6% 오판 · 실제 16%).
+    #   "차입금등" · "리스부채" 를 substring 로 대체·확장.
     "단기차입금",
     "유동성장기부채",
     "유동성장기차입금",
-    "사채",
     "장기차입금",
-    "비유동성리스부채",   # 근사 (v1)
+    "차입금등",         # NEW · "차입금등(유동)", "차입금등(비유동)" · 서희 등 중소 건설사
+    "사채",
+    "리스부채",         # substring · "유동 리스부채", "비유동 리스부채", "유동성리스부채" 커버
 )
 
 
@@ -248,10 +253,27 @@ async def collect_financial_snapshot(
                 ticker, bsns_year, reprt_code,
             )
 
+    # v1.31 · P2-4b hotfix · 진단용 부채/차입/계약 관련 원 계정 sample 보관.
+    #   기존은 matched_items 만 저장 · 서희 계약부채 파싱 실패 원인 규명 불가능했음.
+    _DIAG_KEYWORDS = ("부채", "차입", "사채", "리스", "선수", "계약")
+    diag_items = [
+        {
+            "sj": it.sj_div,
+            "id": (it.account_id or "")[:80],
+            "nm": (it.account_nm or "")[:60],
+            "amt": it.thstrm_amount,
+        }
+        for it in raw_items
+        if it.sj_div == "BS"
+        and it.account_nm
+        and any(k in it.account_nm for k in _DIAG_KEYWORDS)
+    ][:60]   # 상한 60개 (용량 방어)
+
     raw_json = json.dumps({
         "fs_div_used": used_fs_div,
         "matched_items": parsed.matched_items,
         "item_count": len(raw_items),
+        "diag_bs_liab_items": diag_items,   # v1.31 · 진단 sample
     }, ensure_ascii=False)
 
     async with get_session() as session:
