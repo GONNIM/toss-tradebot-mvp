@@ -811,7 +811,7 @@ export const api = {
         universe_size: number;
         data_incomplete: number;
         evaluable: number;
-        per_condition: { id: string; label: string; passed: number }[];
+        per_condition: { id: string; label: string; passed: number; failed: number; missing: number }[];
         final_passed: number;
         cash_suspect: number;
         rejected: number;

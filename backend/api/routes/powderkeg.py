@@ -111,12 +111,15 @@ async def get_list_funnel(
         "7_operating_profit": "⑦ 영업이익 3년 중 2년 흑자",
         "8_fscore": "⑧ F-Score ≥ 6",
         "9_adv60": "⑨ 60일 일평균 거래대금 ≥ 1억",
-        "10_no_bad_history": "⑩ 관리종목 이력 없음 (v1 근사)",
+        "10_no_bad_history": "⑩ 관리종목 이력 없음 (감사 3년 근사)",
     }
 
     universe_size = len(rows)
     data_incomplete = 0
-    per_condition: dict[str, int] = {k: 0 for k in CONDITION_LABELS}
+    # v1.35 · 4차 리뷰 P4-4 · 3상태 분리 (통과/실패/결측)
+    per_condition: dict[str, dict[str, int]] = {
+        k: {"passed": 0, "failed": 0, "missing": 0} for k in CONDITION_LABELS
+    }
 
     for r in rows:
         # 결측 · reject_reasons 에 no_financial_data / no_market_data / no_shareholder_data
@@ -132,7 +135,11 @@ async def get_list_funnel(
         for k in per_condition:
             v = conds.get(k)
             if v is True:
-                per_condition[k] += 1
+                per_condition[k]["passed"] += 1
+            elif v is False:
+                per_condition[k]["failed"] += 1
+            elif v is None:
+                per_condition[k]["missing"] += 1
 
     final_passed = sum(1 for r in rows if r.status == "passed")
     cash_suspect = sum(1 for r in rows if r.status == "cash_suspect")
@@ -145,7 +152,12 @@ async def get_list_funnel(
         "data_incomplete": data_incomplete,
         "evaluable": universe_size - data_incomplete,
         "per_condition": [
-            {"id": k, "label": CONDITION_LABELS[k], "passed": per_condition[k]}
+            {
+                "id": k, "label": CONDITION_LABELS[k],
+                "passed": per_condition[k]["passed"],
+                "failed": per_condition[k]["failed"],
+                "missing": per_condition[k]["missing"],
+            }
             for k in CONDITION_LABELS
         ],
         "final_passed": final_passed,

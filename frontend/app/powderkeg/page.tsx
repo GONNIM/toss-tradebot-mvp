@@ -1080,21 +1080,37 @@ function FunnelCard({ runId }: { runId: string | null }) {
             </span>
           </div>
           <div className="mt-2 space-y-0.5 rounded border bg-white p-2 dark:bg-slate-900">
-            <div className="mb-1 text-[10px] font-semibold text-muted-foreground">조건별 통과 (총 {d.evaluable}개 대비)</div>
+            <div className="mb-1 flex items-center justify-between text-[10px] font-semibold text-muted-foreground">
+              <span>조건별 통과/실패/결측 (총 {d.evaluable}개 대비)</span>
+              <span className="flex gap-2 text-[9px] font-normal">
+                <span className="text-emerald-700">■ 통과</span>
+                <span className="text-rose-700">■ 실패</span>
+                <span className="text-slate-500">■ 결측</span>
+              </span>
+            </div>
             {d.per_condition.map((c) => {
-              const pct = d.evaluable > 0 ? Math.round((c.passed / d.evaluable) * 100) : 0;
-              const barPct = Math.round((c.passed / maxPassed) * 100);
+              const total = c.passed + (c.failed ?? 0) + (c.missing ?? 0);
+              const pctP = total > 0 ? Math.round((c.passed / total) * 100) : 0;
+              // v1.35 · 4차 리뷰 P4-4 · 3색 분리 (통과·실패·결측)
+              // 리뷰어 지적 · 결측이 실패로 합산되는 가짜 진단 해소.
+              const wP = total > 0 ? Math.round((c.passed / total) * 100) : 0;
+              const wF = total > 0 ? Math.round(((c.failed ?? 0) / total) * 100) : 0;
+              const wM = total > 0 ? Math.round(((c.missing ?? 0) / total) * 100) : 0;
               return (
                 <div key={c.id} className="flex items-center gap-2">
                   <div className="w-52 truncate text-[10px]">{c.label}</div>
-                  <div className="flex-1 rounded bg-slate-100 dark:bg-slate-800">
-                    <div
-                      className="h-3 rounded bg-emerald-400 dark:bg-emerald-600"
-                      style={{ width: `${barPct}%` }}
-                    />
+                  <div className="flex h-3 flex-1 overflow-hidden rounded bg-slate-100 dark:bg-slate-800">
+                    <div className="h-full bg-emerald-400 dark:bg-emerald-600" style={{ width: `${wP}%` }} title={`통과 ${c.passed}`} />
+                    <div className="h-full bg-rose-400 dark:bg-rose-600" style={{ width: `${wF}%` }} title={`실패 ${c.failed ?? 0}`} />
+                    <div className="h-full bg-slate-400 dark:bg-slate-500" style={{ width: `${wM}%` }} title={`결측 ${c.missing ?? 0}`} />
                   </div>
-                  <div className="w-20 text-right font-mono text-[10px]">
-                    {c.passed} <span className="text-muted-foreground">({pct}%)</span>
+                  <div className="w-32 text-right font-mono text-[9px]">
+                    <span className="text-emerald-700">{c.passed}</span>
+                    <span className="text-muted-foreground">/</span>
+                    <span className="text-rose-700">{c.failed ?? 0}</span>
+                    <span className="text-muted-foreground">/</span>
+                    <span className="text-slate-500">{c.missing ?? 0}</span>
+                    <span className="ml-1 text-muted-foreground">({pctP}%)</span>
                   </div>
                 </div>
               );

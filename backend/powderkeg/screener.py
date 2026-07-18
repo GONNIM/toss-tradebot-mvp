@@ -384,10 +384,21 @@ async def screen_ticker(
             result.reject_reasons.append(f"adv60<{t.adv_60d_min_krw:.0f}({market.avg_daily_amount_60d})")
     result.conditions["9_adv60"] = c9
 
-    # ── 조건 10 · 관리종목·거래정지 이력 없음 ─
-    # v1 · 별도 이력 수집 없음 · 감사의견 비적정 이력으로 근사
-    #     PowderKegEvent B2/B3 조회는 이벤트 수집 이후 · v2 구현 예정
-    c10 = True   # v1 · 조건 5 로 근사
+    # ── 조건 10 · 관리종목·거래정지 이력 근사 (v1.35 · 4차 리뷰 대안 B) ─
+    # 실 관리종목 API 미확보 (pykrx·FDR 미제공) · KRX 크롤링은 v2.
+    # 근사: DART 감사의견 최근 3년 · 하나라도 부적정/한정/의견거절이면 c10=False.
+    # 완전한 관리종목 판정 아니지만 v1 True 고정보다 큰 개선 (실 관리종목 상당 겹침).
+    # 데이터 3년 미만은 None (3상태 분리 · Tier 2 needs_data 로 유도).
+    audits_3y = [fs.audit_opinion for fs in fin_all[:3] if fs.audit_opinion]
+    _is_bad_audit = lambda op: any(k in (op or "") for k in ("한정", "부적정", "의견거절"))
+    if len(audits_3y) < 3:
+        c10 = None
+        result.reject_reasons.append(f"bad_history:no_audit_data<3yrs({len(audits_3y)})")
+    elif any(_is_bad_audit(op) for op in audits_3y):
+        c10 = False
+        result.reject_reasons.append(f"bad_history:audit_bad({','.join(audits_3y[:3])})")
+    else:
+        c10 = True
     result.conditions["10_no_bad_history"] = c10
 
     # ── 통합 판정 ────────────────────────
