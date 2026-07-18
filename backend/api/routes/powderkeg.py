@@ -214,6 +214,11 @@ async def get_list(
         failed = [k for k, v in items if v is False]
         missing = [k for k, v in items if v is None]
         total = len(items)
+        # v1.34 · 4차 리뷰 P4-3 hotfix · conditions 비어있으면 rejected
+        #   금융업 조기 return 시 conditions 미채움 → total==0 을 passed==total 로
+        #   오판정해 tier_1_passed 표시되던 버그 차단.
+        if total == 0:
+            return ("rejected", 0, [], [])
 
         if status == "cash_suspect":
             return ("cash_suspect", passed, failed, missing)
