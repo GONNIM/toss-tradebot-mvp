@@ -34,6 +34,7 @@ from backend.services.models import (
 
 from .cash_verifier import verify_cash_reality
 from .collectors.ftc_big_biz import is_big_biz_group
+from .collectors.order_industry_seed import is_order_industry, order_industry_info
 from .config import ScreenerThresholds, get_thresholds
 from .piotroski import FinancialPeriod, calculate_f_score
 
@@ -50,7 +51,10 @@ class ScreenResult:
     conditions: dict[str, bool] = field(default_factory=dict)
     reject_reasons: list[str] = field(default_factory=list)
     # 서브스코어
-    net_cash_ratio: Optional[float] = None
+    net_cash_ratio: Optional[float] = None            # 조건 2 판정 근거 (수주산업이면 조정 값)
+    net_cash_ratio_raw: Optional[float] = None        # v1.30 · P2 · 원 값 (계약부채 미차감) UI 병기용
+    net_cash_ratio_adj: Optional[float] = None        # v1.30 · P2 · 조정 값 (수주산업만 산출)
+    order_industry_sector: Optional[str] = None       # v1.30 · P2 · "건설"/"조선"/"플랜트" or None
     piotroski_f_score: Optional[int] = None
     owner_pct: Optional[float] = None
     treasury_pct: Optional[float] = None
@@ -226,14 +230,38 @@ async def screen_ticker(
     result.conditions["1_pbr"] = c1
 
     # ── 조건 2 · 순현금 / 시총 ────────────
+    # v1.30 · 3차 리뷰 P2 · 수주산업 계약부채 조정
+    #   조정 순현금 = cash - total_debt - contract_liabilities
+    #   서희건설·조선사·플랜트 등에 적용 (order_industry_seed.py 참조).
     cash = (fin_latest.cash_and_equivalents or 0) + (fin_latest.short_term_investments or 0)
     debt = fin_latest.total_debt or 0
-    net_cash = cash - debt
+    contract_liab = fin_latest.contract_liabilities or 0
+    net_cash_raw = cash - debt
+    order_info = order_industry_info(ticker)
+    if order_info is not None:
+        result.order_industry_sector = order_info[1]
+        net_cash_adj = cash - debt - contract_liab
+        net_cash_effective = net_cash_adj    # 조정 값으로 판정
+    else:
+        net_cash_adj = None
+        net_cash_effective = net_cash_raw
+
     if market.market_cap and market.market_cap > 0:
-        result.net_cash_ratio = net_cash / market.market_cap
+        result.net_cash_ratio_raw = net_cash_raw / market.market_cap
+        if net_cash_adj is not None:
+            result.net_cash_ratio_adj = net_cash_adj / market.market_cap
+        result.net_cash_ratio = net_cash_effective / market.market_cap
         c2 = result.net_cash_ratio > t.net_cash_ratio_min
         if not c2:
-            result.reject_reasons.append(f"net_cash<{t.net_cash_ratio_min}({result.net_cash_ratio:.3f})")
+            if order_info is not None:
+                # 조정 값이 원 값과 다를 때 사용자가 원인 이해 가능하도록 병기
+                result.reject_reasons.append(
+                    f"net_cash_adj<{t.net_cash_ratio_min}({result.net_cash_ratio:.3f})"
+                    f" · raw={result.net_cash_ratio_raw:.3f} · contract_liab={contract_liab:,.0f}"
+                    f" · sector={order_info[1]}"
+                )
+            else:
+                result.reject_reasons.append(f"net_cash<{t.net_cash_ratio_min}({result.net_cash_ratio:.3f})")
     else:
         c2 = None
         result.reject_reasons.append("net_cash:no_market_cap")

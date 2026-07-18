@@ -49,6 +49,9 @@ _MAPPING_ID: dict[str, str] = {
     "ifrs-full_Assets": "total_assets",
     "ifrs-full_CurrentAssets": "current_assets",
     "ifrs-full_CurrentLiabilities": "current_liabilities",
+    # v1.30 · 3차 리뷰 P2 · 계약부채 (수주산업 조정 net_cash)
+    "ifrs-full_ContractLiabilities": "contract_liabilities",
+    "ifrs-full_CurrentContractLiabilities": "contract_liabilities",
     # 손익계산서
     "ifrs-full_Revenue": "revenue",
     "ifrs-full_GrossProfit": "gross_profit",
@@ -69,6 +72,9 @@ _MAPPING_NM_KEYWORDS: dict[str, tuple[str, ...]] = {
     "total_assets": ("자산총계",),
     "current_assets": ("유동자산",),
     "current_liabilities": ("유동부채",),
+    # v1.30 · 3차 리뷰 P2 · 계약부채·선수금 (수주산업 조정)
+    #   K-IFRS 1115 이후 "계약부채" 표기가 표준 · 이전 "선수금" 도 함께 매칭.
+    "contract_liabilities": ("계약부채", "선수금"),
     "revenue": ("매출액", "수익(매출액)", "영업수익"),
     "gross_profit": ("매출총이익",),
     "operating_income": ("영업이익",),          # 영업이익(손실) 포함
@@ -95,6 +101,7 @@ class ParsedFinancials:
     total_debt: Optional[float] = None
     total_equity: Optional[float] = None
     retained_earnings: Optional[float] = None
+    contract_liabilities: Optional[float] = None    # v1.30 · P2 · 수주산업 조정
     total_assets: Optional[float] = None
     current_assets: Optional[float] = None
     current_liabilities: Optional[float] = None
@@ -136,6 +143,7 @@ def parse_financial_items(items: list[DartFinancialItem]) -> ParsedFinancials:
                 "cash_and_equivalents", "short_term_investments",
                 "total_equity", "retained_earnings",
                 "total_assets", "current_assets", "current_liabilities",
+                "contract_liabilities",   # v1.30 · P2
             }
             is_fields = {
                 "operating_income", "net_income", "interest_income",
@@ -283,6 +291,7 @@ async def collect_financial_snapshot(
         row.total_assets = parsed.total_assets
         row.current_assets = parsed.current_assets
         row.current_liabilities = parsed.current_liabilities
+        row.contract_liabilities = parsed.contract_liabilities   # v1.30 · P2
         row.revenue = parsed.revenue
         row.gross_profit = parsed.gross_profit
         row.operating_income = parsed.operating_income

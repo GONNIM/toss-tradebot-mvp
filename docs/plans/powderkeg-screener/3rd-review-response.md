@@ -327,11 +327,25 @@ else:
 - [x] `.claude/lessons-learned.md` 교훈 #2 · 숫자 변경 커밋 시 §6 정합 검증 규정
 - [x] **태광산업 재판정 · 웹 실측 확증** (§11 상세 · 아래)
 
-### P2 · v1.30~v1.32
-- [ ] DART 상폐사 재무 백필 (~2,700 콜 · `is_delisted` 플래그)
-- [ ] `backtest.py:run_stratified_backtest` PIT 재설계
-- [ ] `FinancialSnapshot.contract_liabilities` 컬럼 · 수집·저장
-- [ ] 서희건설 조정 net_cash 재검증 · `first-passed-result.md` v1.1
+### P2 · v1.30 (코드 · 2026-07-17 완료) + v1.31~v1.32 (실행)
+- [x] **P2-3 스키마·수집** (v1.30 코드 완결):
+  · `FinancialSnapshot.contract_liabilities`, `is_delisted`, `delisted_at` 컬럼 추가
+  · `dart_financials.py` · `_MAPPING_ID` (`ifrs-full_ContractLiabilities` 등) · `_MAPPING_NM_KEYWORDS` (`계약부채`, `선수금`) 매핑
+  · 파서 · 저장 · BS 분류 정합
+- [x] **P2-4 조정식 코드** (v1.30):
+  · `order_industry_seed.py` 신규 · 건설/조선/플랜트 18개 대표 종목 시드
+  · `screener.py:조건 2` · 수주산업이면 `net_cash_adj = cash - debt - contract_liabilities` 로 판정
+  · `net_cash_ratio_raw`/`_adj`/`order_industry_sector` 필드 병기 · reject_reasons 에도 raw+contract_liab+sector 로그
+- [x] **DB 마이그레이션 스크립트**:
+  · `backend/scripts/migrations/2026-07-17-p2-contract-liab-delisted.py` · sqlite ALTER TABLE 3건 · 멱등
+- [ ] **P2-1 상폐사 수집기** (별도 세션 · 이번 세션 컬럼만 확보):
+  · KRX/FDR/DART 상폐 목록 조회 방법 결정 필요
+- [ ] **P2 백필 실행** (마이그레이션 후 · 사용자 API 트리거):
+  · `POST /collectors/dart-financials` · 상폐 포함 재무 재수집 (~10,900 콜 · 2~3일 분할)
+- [ ] **P2-4 서희 재검증** (백필 후):
+  · `net_cash_ratio_adj` 실측 · `first-passed-result.md` v1.1
+- [ ] **P2-2 PIT 층화 재설계** (백필 후):
+  · `backtest.py:run_stratified_backtest` · as-of 조회 · 이벤트 시점 10조건 재평가
 
 ### P3 → v2 승격 · 인증 아키텍처
 - [ ] `localStorage` → httpOnly 쿠키 (Phase 6 지시서 준수)
@@ -418,7 +432,8 @@ reject_reasons: audit:no_data<2yrs(1), op_profit:no_data<3yrs(1),
 |---|---|---|---|
 | 2026-07-16 | v1.0 | 최초 작성 · 재재반박 6항 실측 재판정 · P0 커밋 해시 SSR 푸터 + 캐시 하향 완료 · P1~P3 확정 | `5fadff6` |
 | 2026-07-17 | v1.1 | P1 5/6 항목 로컬 완료 · §6 정정 · screener None · tier 3상태 · UI 뱃지 · 교훈 #2 | `b562ded` |
-| 2026-07-17 | v1.2 | P1-5 태광 웹 재판정 실측 완료 · §11 신설 · 반박문 §4 + 재재반박 §4 양측 오예측 정정 · P2 우선순위 상향 · P1 6/6 완결 | (pending) |
+| 2026-07-17 | v1.2 | P1-5 태광 웹 재판정 실측 완료 · §11 신설 · 반박문 §4 + 재재반박 §4 양측 오예측 정정 · P2 우선순위 상향 · P1 6/6 완결 | `fcc55c4` |
+| 2026-07-17 | v1.3 | P2 코드 착수 · P2-3 스키마·수집 완결 · P2-4 조정식 코드 · order_industry_seed 신규 · 마이그레이션 스크립트 · §10 P2 체크박스 상세화 | (pending) |
 
 ---
 

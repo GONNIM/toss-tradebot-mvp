@@ -867,6 +867,11 @@ class FinancialSnapshot(Base):
     total_debt: Mapped[Optional[float]]                        # 총차입금 (단기+장기)
     total_equity: Mapped[Optional[float]]                      # 자본총계
     retained_earnings: Mapped[Optional[float]]                 # 이익잉여금
+    # v1.30 · 3차 리뷰 P2 · 계약부채 (수주산업 조정 net_cash 계산용)
+    #   서희건설 등 수주산업은 선수금(=계약부채) 가 cash_and_equivalents 에 섞여
+    #   순현금 과대평가. total_debt 는 차입금·사채만이라 계약부채 미포함.
+    #   조정 순현금 = cash - total_debt - contract_liabilities.
+    contract_liabilities: Mapped[Optional[float]] = mapped_column(default=None)
     # 손익계산서
     operating_income: Mapped[Optional[float]]                  # 영업이익
     net_income: Mapped[Optional[float]]                        # 당기순이익
@@ -885,6 +890,10 @@ class FinancialSnapshot(Base):
     audit_opinion: Mapped[Optional[str]] = mapped_column(String(20))
     raw_json: Mapped[Optional[str]] = mapped_column(Text)      # 원문 응답 보존 (감사·튜닝)
     collected_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
+    # v1.30 · 3차 리뷰 P2 · 상폐사 판별 (PIT 층화 백테스트 · 생존편향 방지)
+    #   기본 False (상장 중) · P2-1 수집기가 KRX 상폐 목록 조회 후 True 로 갱신.
+    is_delisted: Mapped[Optional[bool]] = mapped_column(default=False)
+    delisted_at: Mapped[Optional[str]] = mapped_column(String(10), default=None)   # YYYY-MM-DD
 
     __table_args__ = (
         Index("ix_pk_fin_ticker_ref", "ticker", "reference_date", "report_code", unique=True),
