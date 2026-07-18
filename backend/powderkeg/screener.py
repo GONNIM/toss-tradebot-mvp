@@ -34,7 +34,11 @@ from backend.services.models import (
 
 from .cash_verifier import verify_cash_reality
 from .collectors.ftc_big_biz import is_big_biz_group
-from .collectors.order_industry_seed import is_order_industry, order_industry_info
+from .collectors.order_industry_seed import (
+    is_order_industry, order_industry_info,
+    is_financial_industry, financial_industry_info,
+    should_apply_contract_liab_adjustment,
+)
 from .config import ScreenerThresholds, get_thresholds
 from .piotroski import FinancialPeriod, calculate_f_score
 
@@ -232,19 +236,27 @@ async def screen_ticker(
     # ── 조건 2 · 순현금 / 시총 ────────────
     # v1.30 · 3차 리뷰 P2 · 수주산업 계약부채 조정
     #   조정 순현금 = cash - total_debt - contract_liabilities
-    #   서희건설·조선사·플랜트 등에 적용 (order_industry_seed.py 참조).
+    # v1.33 · 3차 리뷰 P2-4e (2026-07-18):
+    #   판별 우선순위 · 금융업(스킵) > 명시 시드 > 자동(cl/mcap > 3%)
     cash = (fin_latest.cash_and_equivalents or 0) + (fin_latest.short_term_investments or 0)
     debt = fin_latest.total_debt or 0
     contract_liab = fin_latest.contract_liabilities or 0
     net_cash_raw = cash - debt
-    order_info = order_industry_info(ticker)
-    if order_info is not None:
-        result.order_industry_sector = order_info[1]
+
+    apply_adj = should_apply_contract_liab_adjustment(ticker, contract_liab, market.market_cap or 0)
+    if apply_adj:
+        # sector 라벨 · 명시 시드 우선, 없으면 "자동"
+        oi = order_industry_info(ticker)
+        result.order_industry_sector = oi[1] if oi else "자동(cl>3%)"
         net_cash_adj = cash - debt - contract_liab
-        net_cash_effective = net_cash_adj    # 조정 값으로 판정
+        net_cash_effective = net_cash_adj
     else:
         net_cash_adj = None
         net_cash_effective = net_cash_raw
+        # 금융업 태그 (UI 참고)
+        if is_financial_industry(ticker):
+            fi = financial_industry_info(ticker)
+            result.order_industry_sector = f"금융({fi[1]})" if fi else "금융"
 
     if market.market_cap and market.market_cap > 0:
         result.net_cash_ratio_raw = net_cash_raw / market.market_cap
@@ -253,12 +265,11 @@ async def screen_ticker(
         result.net_cash_ratio = net_cash_effective / market.market_cap
         c2 = result.net_cash_ratio > t.net_cash_ratio_min
         if not c2:
-            if order_info is not None:
-                # 조정 값이 원 값과 다를 때 사용자가 원인 이해 가능하도록 병기
+            if apply_adj:
                 result.reject_reasons.append(
                     f"net_cash_adj<{t.net_cash_ratio_min}({result.net_cash_ratio:.3f})"
                     f" · raw={result.net_cash_ratio_raw:.3f} · contract_liab={contract_liab:,.0f}"
-                    f" · sector={order_info[1]}"
+                    f" · sector={result.order_industry_sector}"
                 )
             else:
                 result.reject_reasons.append(f"net_cash<{t.net_cash_ratio_min}({result.net_cash_ratio:.3f})")
