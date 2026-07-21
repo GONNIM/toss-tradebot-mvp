@@ -51,6 +51,9 @@ from backend.powderkeg.screener import run_screener
 from backend.powderkeg.triggers import process_pending_events
 from backend.services.db import get_session
 from backend.services.models import (
+    FinancialSnapshot,
+    KrxMarketSnapshot,
+    MajorShareholder,
     PowderKegEvent,
     PowderKegList,
     PowderKegOrderTicket,
@@ -247,6 +250,40 @@ async def get_list(
             return ("tier_3_watch", passed, failed, missing)
         return ("rejected", passed, failed, missing)
 
+    def _fmt_pct(v, digits=1):
+        try: return f"{v*100:.{digits}f}%"
+        except (TypeError, ValueError): return "-"
+    def _fmt_num(v, digits=3):
+        try: return f"{v:.{digits}f}"
+        except (TypeError, ValueError): return "-"
+
+    def _auto_note(tier: str, row, rob_meta: dict, sector: Optional[str]) -> Optional[str]:
+        """v1.36 · P5-1 · 자동 승격 근거 노트 (tier_1/tier_2_near 만).
+
+        서희 파싱 오류 실증 후 · 승격 근거 provenance 확보 목적.
+        user_note 와 별도 필드로 반환 · 사용자 수동 노트 침해 X.
+        """
+        if tier not in ("tier_1_passed", "tier_2_near"):
+            return None
+        parts = [f"[자동] Tier 1 승격" if tier == "tier_1_passed" else "[자동] Tier 2 경계 (9/10)"]
+        if row.net_cash_ratio is not None:
+            parts.append(f"nc={_fmt_pct(row.net_cash_ratio)}")
+        if row.pbr is not None:
+            parts.append(f"pbr={_fmt_num(row.pbr)}")
+        if row.owner_pct is not None:
+            parts.append(f"owner={_fmt_pct(row.owner_pct)}")
+        if row.piotroski_f_score is not None:
+            parts.append(f"F-Score={row.piotroski_f_score}/9")
+        grade = rob_meta.get("robustness_grade")
+        if grade:
+            parts.append(f"강건={grade}")
+        if sector:
+            parts.append(f"업종={sector}")
+        # 승격 시각 (created_at 기준 · run_id 참조)
+        if row.created_at:
+            parts.append(f"승격={row.created_at.strftime('%Y-%m-%d %H:%M')}")
+        return " · ".join(parts)
+
     items = []
     for r in rows:
         cond = json.loads(r.conditions_json) if r.conditions_json else None
@@ -265,6 +302,7 @@ async def get_list(
             sector = f"금융({fi[1]})"               # "금융(은행/증권/보험)"
         else:
             sector = None                           # 자동 판별(cl>3%) 은 reject_reasons 문자열 참조
+        auto_note = _auto_note(tier, r, rob, sector)
         items.append({
             "id": r.id, "ticker": r.ticker, "name": r.name,
             "status": r.status, "net_cash_ratio": r.net_cash_ratio,
@@ -276,6 +314,7 @@ async def get_list(
             "locked": getattr(r, "locked", False) or False,
             "added_by": getattr(r, "added_by", "auto") or "auto",
             "user_note": getattr(r, "user_note", None),
+            "auto_note": auto_note,   # v1.36 · P5-1 · 자동 승격 근거
             "created_at": r.created_at.isoformat() if r.created_at else None,
             # v1.20 티어제 · v1.29 3차 리뷰 P1 · 3상태 분리 (missing 신규)
             "tier": tier,
@@ -331,6 +370,134 @@ async def get_events(
             }
             for r in rows
         ],
+    }
+
+
+@router.get("/ticker/{ticker}/detail")
+async def get_ticker_detail(ticker: str) -> dict[str, Any]:
+    """v1.36 · P5-2 · 종목 상세 (팝업용).
+
+    포함:
+    - 리스트 최신 항목 (tier·조건·auto_note·user_note)
+    - 재무 3년 (2022·2023·2024 · 주요 지표)
+    - 최대주주 최신
+    - KRX 최신 스냅샷
+    - 이벤트 이력 (최근 20건)
+    - 외부 링크 (KRX·네이버 금융·DART)
+
+    ⚠️ 예측 없음 · 사용자 판단 근거 제공만 (지시서 · hypothesis 상태 유지 원칙).
+    """
+    async with get_session() as session:
+        # 리스트 최신 항목
+        list_row = (await session.execute(
+            select(PowderKegList)
+            .where(PowderKegList.ticker == ticker)
+            .order_by(PowderKegList.created_at.desc())
+            .limit(1)
+        )).scalar_one_or_none()
+
+        # 재무 3년
+        fin_rows = (await session.execute(
+            select(FinancialSnapshot)
+            .where(FinancialSnapshot.ticker == ticker, FinancialSnapshot.report_code == "11011")
+            .order_by(FinancialSnapshot.reference_date.desc())
+            .limit(3)
+        )).scalars().all()
+
+        # 최대주주
+        holder = (await session.execute(
+            select(MajorShareholder)
+            .where(MajorShareholder.ticker == ticker)
+            .order_by(MajorShareholder.reference_date.desc())
+            .limit(1)
+        )).scalar_one_or_none()
+
+        # KRX 최신
+        krx = (await session.execute(
+            select(KrxMarketSnapshot)
+            .where(KrxMarketSnapshot.ticker == ticker)
+            .order_by(KrxMarketSnapshot.snapshot_date.desc())
+            .limit(1)
+        )).scalar_one_or_none()
+
+        # 이벤트 이력
+        events = (await session.execute(
+            select(PowderKegEvent)
+            .where(PowderKegEvent.ticker == ticker)
+            .order_by(PowderKegEvent.detected_at.desc())
+            .limit(20)
+        )).scalars().all()
+
+    if list_row is None and krx is None:
+        raise HTTPException(status_code=404, detail=f"ticker {ticker} not found")
+
+    name = (list_row.name if list_row else None) or (krx.name if krx else ticker)
+
+    # 외부 링크 (KRX·네이버 금융·DART)
+    external_links = {
+        "krx_chart": f"http://data.krx.co.kr/contents/COM/GetIssueInfo.do?issuecode={ticker}",
+        "naver_finance": f"https://finance.naver.com/item/main.naver?code={ticker}",
+        "daum_finance": f"https://finance.daum.net/quotes/A{ticker}",
+        "dart_corp": f"https://dart.fss.or.kr/dsae001/mainY.do?selectKey={ticker}",
+    }
+
+    return {
+        "disclaimer": DISCLAIMER,
+        "ticker": ticker,
+        "name": name,
+        "list_item": {
+            "id": list_row.id,
+            "status": list_row.status,
+            "conditions": json.loads(list_row.conditions_json) if list_row.conditions_json else None,
+            "reject_reasons": list_row.reject_reasons,
+            "locked": bool(getattr(list_row, "locked", False)),
+            "user_note": getattr(list_row, "user_note", None),
+            "run_id": list_row.run_id,
+            "created_at": list_row.created_at.isoformat() if list_row.created_at else None,
+        } if list_row else None,
+        "financials_3y": [
+            {
+                "reference_date": f.reference_date,
+                "release_date": f.release_date.isoformat() if f.release_date else None,
+                "cash_and_equivalents": f.cash_and_equivalents,
+                "short_term_investments": f.short_term_investments,
+                "total_debt": f.total_debt,
+                "contract_liabilities": getattr(f, "contract_liabilities", None),
+                "total_equity": f.total_equity,
+                "revenue": f.revenue,
+                "operating_income": f.operating_income,
+                "net_income": f.net_income,
+                "interest_income": f.interest_income,
+                "audit_opinion": f.audit_opinion,
+            }
+            for f in fin_rows
+        ],
+        "shareholder": {
+            "reference_date": holder.reference_date,
+            "major_pct": holder.major_pct,
+            "related_pct": holder.related_pct,
+            "treasury_pct": holder.treasury_pct,
+        } if holder else None,
+        "market": {
+            "snapshot_date": krx.snapshot_date,
+            "market": krx.market,
+            "close_price": krx.close_price,
+            "market_cap": krx.market_cap,
+            "pbr": krx.pbr,
+            "avg_daily_amount_60d": krx.avg_daily_amount_60d,
+        } if krx else None,
+        "events": [
+            {
+                "id": e.id, "event_type": e.event_type,
+                "kind": "A" if e.event_type.startswith("A") else "B",
+                "source": e.source, "title": e.title, "url": e.url,
+                "detected_at": e.detected_at.isoformat() if e.detected_at else None,
+                "release_date": e.release_date.isoformat() if e.release_date else None,
+                "action_taken": e.action_taken,
+            }
+            for e in events
+        ],
+        "external_links": external_links,
     }
 
 

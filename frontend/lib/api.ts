@@ -746,6 +746,8 @@ export const api = {
     },
     report: (event_type: string) =>
       get<PowderKegReport>(`/powderkeg/report/${event_type}`),
+    tickerDetail: (ticker: string) =>
+      get<PowderKegTickerDetail>(`/powderkeg/ticker/${ticker}/detail`),
     tickets: (opts: { status?: string; limit?: number } = {}) => {
       const q = new URLSearchParams();
       if (opts.status) q.set("status", opts.status);
@@ -1555,6 +1557,7 @@ export interface PowderKegListItem {
   locked: boolean;
   added_by: string;                // auto | user
   user_note: string | null;
+  auto_note: string | null;    // v1.36 · P5-1 · Tier 1/2_near 자동 승격 근거
   created_at: string | null;
   // v1.14 · 강건성 (리뷰어 지적 #5)
   robustness_score?: number | null;      // 0.0 ~ 1.0 · min margin
@@ -1572,6 +1575,68 @@ export interface PowderKegListResponse {
   run_id: string | null;
   count: number;
   items: PowderKegListItem[];
+}
+
+// v1.36 · P5-2 · 종목 상세 (팝업)
+export interface PowderKegTickerDetail {
+  disclaimer: string;
+  ticker: string;
+  name: string;
+  list_item: {
+    id: number;
+    status: string;
+    conditions: Record<string, boolean | null> | null;
+    reject_reasons: string | null;
+    locked: boolean;
+    user_note: string | null;
+    run_id: string | null;
+    created_at: string | null;
+  } | null;
+  financials_3y: Array<{
+    reference_date: string;
+    release_date: string | null;
+    cash_and_equivalents: number | null;
+    short_term_investments: number | null;
+    total_debt: number | null;
+    contract_liabilities: number | null;
+    total_equity: number | null;
+    revenue: number | null;
+    operating_income: number | null;
+    net_income: number | null;
+    interest_income: number | null;
+    audit_opinion: string | null;
+  }>;
+  shareholder: {
+    reference_date: string;
+    major_pct: number | null;
+    related_pct: number | null;
+    treasury_pct: number | null;
+  } | null;
+  market: {
+    snapshot_date: string;
+    market: string | null;
+    close_price: number | null;
+    market_cap: number | null;
+    pbr: number | null;
+    avg_daily_amount_60d: number | null;
+  } | null;
+  events: Array<{
+    id: number;
+    event_type: string;
+    kind: "A" | "B";
+    source: string;
+    title: string;
+    url: string | null;
+    detected_at: string | null;
+    release_date: string | null;
+    action_taken: string | null;
+  }>;
+  external_links: {
+    krx_chart: string;
+    naver_finance: string;
+    daum_finance: string;
+    dart_corp: string;
+  };
 }
 
 export interface PowderKegEventItem {

@@ -192,6 +192,7 @@ function Disclaimer() {
 function ListTab({ token, guideNonce = 0 }: { token: string; guideNonce?: number }) {
   const [statusFilter, setStatusFilter] = useState<string>("");
   const [tierFilter, setTierFilter] = useState<string>("");
+  const [detailTicker, setDetailTicker] = useState<string | null>(null);   // v1.36 · P5-2 · 팝업
   const qc = useQueryClient();
   const q = useQuery({
     queryKey: ["powderkeg", "list", statusFilter],
@@ -290,7 +291,14 @@ function ListTab({ token, guideNonce = 0 }: { token: string; guideNonce?: number
                 <tr key={it.id} className={`border-b hover:bg-sky-50/30 ${it.locked ? "bg-amber-50/40 dark:bg-amber-950/20" : ""}`}>
                   <td className="p-2">
                     <div className="flex items-center gap-1">
-                      <span className="font-medium">{it.name || "-"}</span>
+                      <button
+                        type="button"
+                        onClick={() => setDetailTicker(it.ticker)}
+                        className="font-medium text-left hover:underline hover:text-sky-700 dark:hover:text-sky-300"
+                        title="종목 상세 팝업 열기 (재무 3년·조건·이벤트·외부 링크)"
+                      >
+                        {it.name || "-"}
+                      </button>
                       {it.locked ? (
                         <span
                           title={`🔒 lock · added_by=${it.added_by}`}
@@ -310,6 +318,11 @@ function ListTab({ token, guideNonce = 0 }: { token: string; guideNonce?: number
                       <RobustnessBadge score={it.robustness_score} grade={it.robustness_grade} />
                       <TierBadge tier={it.tier} passed={it.conditions_passed} />
                     </div>
+                    {it.auto_note ? (
+                      <div className="mt-0.5 rounded bg-emerald-50 px-1.5 py-0.5 text-[9px] text-emerald-900 dark:bg-emerald-950 dark:text-emerald-100">
+                        {it.auto_note}
+                      </div>
+                    ) : null}
                     {it.tier === "tier_2_near" || it.tier === "tier_2_needs_data" || it.tier === "tier_3_watch" ? (
                       <div className="mt-0.5 text-[9px]">
                         {(it.failed_conditions?.length ?? 0) > 0 ? (
@@ -388,6 +401,9 @@ function ListTab({ token, guideNonce = 0 }: { token: string; guideNonce?: number
           </table>
         </div>
       )}
+      {detailTicker ? (
+        <TickerDetailModal ticker={detailTicker} onClose={() => setDetailTicker(null)} />
+      ) : null}
     </section>
   );
 }
@@ -866,6 +882,209 @@ function UsageGuideCard() {
         </div>
       )}
     </section>
+  );
+}
+
+/** v1.36 · P5-2 · 종목 상세 팝업 (옵션 A · 예측 없음).
+ *   재무 3년 · 조건별 실측 · 이벤트 이력 · 외부 링크 (KRX·네이버·다음·DART).
+ *   지시서 "hypothesis 유지 · 자동매매 금지" 원칙 정합 · 사용자 판단 근거 제공만. */
+function TickerDetailModal({ ticker, onClose }: { ticker: string; onClose: () => void }) {
+  const q = useQuery({
+    queryKey: ["powderkeg", "detail", ticker],
+    queryFn: () => api.powderkeg.tickerDetail(ticker),
+  });
+  const d = q.data;
+  const fmtInt = (v: number | null | undefined) => v == null ? "-" : new Intl.NumberFormat("ko-KR").format(Math.round(v));
+  const fmtEok = (v: number | null | undefined) => v == null ? "-" : `${(v / 1e8).toFixed(1)}억`;
+  const fmtPct = (v: number | null | undefined, d = 1) => v == null ? "-" : `${(v * 100).toFixed(d)}%`;
+  const fmtNum = (v: number | null | undefined, d = 3) => v == null ? "-" : v.toFixed(d);
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
+      onClick={onClose}
+      role="dialog"
+      aria-modal="true"
+    >
+      <div
+        className="max-h-[90vh] w-full max-w-4xl overflow-y-auto rounded-lg border-2 border-slate-300 bg-white shadow-2xl dark:border-slate-700 dark:bg-slate-900"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="sticky top-0 flex items-center justify-between border-b bg-white px-4 py-3 dark:bg-slate-900">
+          <div className="flex items-center gap-2">
+            <span className="text-xl font-bold">{d?.name || ticker}</span>
+            <span className="rounded bg-slate-100 px-2 py-0.5 text-xs text-slate-700 dark:bg-slate-800 dark:text-slate-300">{ticker}</span>
+            {d?.market ? (
+              <span className="rounded bg-sky-100 px-2 py-0.5 text-xs text-sky-800 dark:bg-sky-900 dark:text-sky-100">{d.market.market}</span>
+            ) : null}
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded border px-3 py-1 text-sm hover:bg-slate-100 dark:hover:bg-slate-800"
+          >
+            ✕ 닫기
+          </button>
+        </div>
+
+        {q.isLoading ? (
+          <div className="p-6 text-center text-sm text-muted-foreground">불러오는 중...</div>
+        ) : !d ? (
+          <div className="p-6 text-center text-sm text-rose-600">데이터 로드 실패</div>
+        ) : (
+          <div className="space-y-4 p-4">
+            {/* 시장·리스트 요약 */}
+            <section className="grid grid-cols-2 gap-3 rounded border bg-sky-50 p-3 dark:bg-sky-950 md:grid-cols-4">
+              <div>
+                <div className="text-[10px] text-muted-foreground">현재가</div>
+                <div className="text-sm font-bold">{fmtInt(d.market?.close_price)}원</div>
+              </div>
+              <div>
+                <div className="text-[10px] text-muted-foreground">시가총액</div>
+                <div className="text-sm font-bold">{fmtEok(d.market?.market_cap)}</div>
+              </div>
+              <div>
+                <div className="text-[10px] text-muted-foreground">PBR</div>
+                <div className="text-sm font-bold">{fmtNum(d.market?.pbr)}</div>
+              </div>
+              <div>
+                <div className="text-[10px] text-muted-foreground">60일 거래대금</div>
+                <div className="text-sm font-bold">{fmtEok(d.market?.avg_daily_amount_60d)}</div>
+              </div>
+            </section>
+
+            {/* 리스트 상태 · 조건 */}
+            {d.list_item ? (
+              <section className="rounded border p-3">
+                <div className="mb-2 flex items-center gap-2 text-sm font-bold">
+                  🎯 화약고 스크리너 판정 <span className="text-[10px] font-normal text-muted-foreground">run {d.list_item.run_id}</span>
+                </div>
+                <div className="grid grid-cols-2 gap-1 text-xs md:grid-cols-5">
+                  {d.list_item.conditions ? Object.entries(d.list_item.conditions).map(([k, v]) => {
+                    const label = CONDITION_LABEL_SHORT[k] || k;
+                    const cls = v === true ? "bg-emerald-100 text-emerald-800"
+                      : v === false ? "bg-rose-100 text-rose-800"
+                      : "bg-slate-100 text-slate-600";
+                    const mark = v === true ? "✅" : v === false ? "❌" : "🕳";
+                    return (
+                      <div key={k} className={`rounded px-2 py-1 ${cls}`}>
+                        {mark} {label}
+                      </div>
+                    );
+                  }) : null}
+                </div>
+                {d.list_item.reject_reasons ? (
+                  <div className="mt-2 rounded bg-rose-50 p-2 text-[10px] text-rose-800 dark:bg-rose-950 dark:text-rose-100">
+                    📌 {d.list_item.reject_reasons}
+                  </div>
+                ) : null}
+                {d.list_item.user_note ? (
+                  <div className="mt-2 rounded bg-amber-50 p-2 text-[10px] text-amber-900 dark:bg-amber-950 dark:text-amber-100">
+                    📝 {d.list_item.user_note}
+                  </div>
+                ) : null}
+              </section>
+            ) : null}
+
+            {/* 재무 3년 */}
+            {d.financials_3y.length > 0 ? (
+              <section className="rounded border p-3">
+                <div className="mb-2 text-sm font-bold">📊 재무 3년 (DART 사업보고서)</div>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-xs">
+                    <thead className="bg-slate-100 dark:bg-slate-800">
+                      <tr>
+                        <th className="p-1 text-left">기준일</th>
+                        <th className="p-1 text-right">현금</th>
+                        <th className="p-1 text-right">단기금융</th>
+                        <th className="p-1 text-right">총차입금</th>
+                        <th className="p-1 text-right">계약부채</th>
+                        <th className="p-1 text-right">자본총계</th>
+                        <th className="p-1 text-right">매출</th>
+                        <th className="p-1 text-right">영업이익</th>
+                        <th className="p-1 text-right">순이익</th>
+                        <th className="p-1 text-center">감사</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {d.financials_3y.map((f) => (
+                        <tr key={f.reference_date} className="border-b">
+                          <td className="p-1">{f.reference_date}</td>
+                          <td className="p-1 text-right">{fmtEok(f.cash_and_equivalents)}</td>
+                          <td className="p-1 text-right">{fmtEok(f.short_term_investments)}</td>
+                          <td className="p-1 text-right">{fmtEok(f.total_debt)}</td>
+                          <td className="p-1 text-right">{fmtEok(f.contract_liabilities)}</td>
+                          <td className="p-1 text-right">{fmtEok(f.total_equity)}</td>
+                          <td className="p-1 text-right">{fmtEok(f.revenue)}</td>
+                          <td className={`p-1 text-right ${(f.operating_income || 0) < 0 ? "text-rose-700" : "text-emerald-700"}`}>
+                            {fmtEok(f.operating_income)}
+                          </td>
+                          <td className="p-1 text-right">{fmtEok(f.net_income)}</td>
+                          <td className="p-1 text-center text-[10px]">{f.audit_opinion || "-"}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </section>
+            ) : null}
+
+            {/* 최대주주 */}
+            {d.shareholder ? (
+              <section className="rounded border p-3">
+                <div className="mb-1 text-sm font-bold">👥 최대주주 · 지배구조 <span className="text-[10px] font-normal text-muted-foreground">{d.shareholder.reference_date}</span></div>
+                <div className="grid grid-cols-3 gap-3 text-xs">
+                  <div>최대주주: <b>{fmtPct(d.shareholder.major_pct)}</b></div>
+                  <div>특수관계인: <b>{fmtPct(d.shareholder.related_pct)}</b></div>
+                  <div>자사주: <b>{fmtPct(d.shareholder.treasury_pct)}</b></div>
+                </div>
+              </section>
+            ) : null}
+
+            {/* 이벤트 이력 */}
+            <section className="rounded border p-3">
+              <div className="mb-2 text-sm font-bold">🔥 이벤트 이력 <span className="text-[10px] font-normal text-muted-foreground">({d.events.length}건)</span></div>
+              {d.events.length === 0 ? (
+                <div className="text-xs text-muted-foreground">이벤트 없음 · Type A 트리거 대기 상태</div>
+              ) : (
+                <div className="max-h-48 space-y-1 overflow-y-auto">
+                  {d.events.map((e) => (
+                    <div key={e.id} className={`flex items-center gap-2 rounded px-2 py-1 text-[11px] ${e.kind === "A" ? "bg-orange-50 dark:bg-orange-950" : "bg-rose-50 dark:bg-rose-950"}`}>
+                      <span className="rounded bg-white/50 px-1 font-mono text-[9px]">{e.event_type}</span>
+                      <span className="text-[9px] text-muted-foreground">{e.release_date?.slice(0, 10) || e.detected_at?.slice(0, 10)}</span>
+                      {e.url ? (
+                        <a href={e.url} target="_blank" rel="noreferrer" className="flex-1 truncate hover:underline">{e.title}</a>
+                      ) : (
+                        <span className="flex-1 truncate">{e.title}</span>
+                      )}
+                      {e.action_taken ? (
+                        <span className="rounded bg-slate-200 px-1 text-[9px] text-slate-700 dark:bg-slate-700 dark:text-slate-200">{e.action_taken}</span>
+                      ) : null}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </section>
+
+            {/* 외부 링크 */}
+            <section className="rounded border-2 border-dashed border-sky-300 p-3">
+              <div className="mb-2 text-sm font-bold">🔗 외부 참조 (예측 없음 · 사용자 직접 판단)</div>
+              <div className="flex flex-wrap gap-2 text-xs">
+                <a href={d.external_links.krx_chart} target="_blank" rel="noreferrer" className="rounded border px-2 py-1 hover:bg-slate-50 dark:hover:bg-slate-800">📊 KRX 차트</a>
+                <a href={d.external_links.naver_finance} target="_blank" rel="noreferrer" className="rounded border px-2 py-1 hover:bg-slate-50 dark:hover:bg-slate-800">🟢 네이버 금융</a>
+                <a href={d.external_links.daum_finance} target="_blank" rel="noreferrer" className="rounded border px-2 py-1 hover:bg-slate-50 dark:hover:bg-slate-800">🟡 다음 금융</a>
+                <a href={d.external_links.dart_corp} target="_blank" rel="noreferrer" className="rounded border px-2 py-1 hover:bg-slate-50 dark:hover:bg-slate-800">📄 DART 공시</a>
+              </div>
+              <div className="mt-2 text-[10px] text-muted-foreground">
+                ⚠️ 이 스크리너는 매수 후보 발굴만 · 매수 판단·주가 예측 없음 · 반드시 사용자 직접 확인 후 판단.
+              </div>
+            </section>
+
+            <div className="text-[10px] text-muted-foreground">{d.disclaimer}</div>
+          </div>
+        )}
+      </div>
+    </div>
   );
 }
 
