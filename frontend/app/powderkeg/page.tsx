@@ -18,6 +18,7 @@ import {
   PowderKegEventItem,
   PowderKegListItem,
   PowderKegReport,
+  PowderKegRunDiffSummaryResponse,
   PowderKegTicket,
 } from "@/lib/api";
 import { fmtKstDateTime } from "@/lib/time";
@@ -256,6 +257,18 @@ function ListTab({ token, guideNonce = 0 }: { token: string; guideNonce?: number
       api.powderkeg.list({ status: statusFilter || undefined, limit: 200 }),
     refetchInterval: 60_000,
   });
+  // P4-1 · 최근 run diff summary (뱃지 · 요약 카드)
+  const diffSummary = useQuery({
+    queryKey: ["powderkeg", "runDiffSummary"],
+    queryFn: () => api.powderkeg.runDiffSummary(),
+    refetchInterval: 60_000,
+  });
+  const changedTickers = new Set(
+    (diffSummary.data?.items || []).map((x) => x.ticker),
+  );
+  const tierMovedTickers = new Set(
+    (diffSummary.data?.items || []).filter((x) => x.tier_moved).map((x) => x.ticker),
+  );
   const rawItems: PowderKegListItem[] = q.data?.items || [];
   const items: PowderKegListItem[] = tierFilter
     ? rawItems.filter(it => it.tier === tierFilter)
@@ -281,6 +294,7 @@ function ListTab({ token, guideNonce = 0 }: { token: string; guideNonce?: number
     <section className="space-y-3 rounded border p-4">
       <UsageGuideCard key={`ug-${guideNonce}`} />
       <FunnelCard runId={q.data?.run_id || null} />
+      <RunDiffSummaryCard data={diffSummary.data} />
       <LowPbrDiscoveryCard token={token} />
       <ReScreenGuide token={token} runId={q.data?.run_id || null} count={q.data?.count || 0} />
       <div className="flex items-center justify-between">
@@ -374,6 +388,21 @@ function ListTab({ token, guideNonce = 0 }: { token: string; guideNonce?: number
                       ) : null}
                       <RobustnessBadge score={it.robustness_score} grade={it.robustness_grade} />
                       <TierBadge tier={it.tier} passed={it.conditions_passed} />
+                      {tierMovedTickers.has(it.ticker) ? (
+                        <span
+                          title="최근 run에서 티어 이동 (P4-1)"
+                          className="rounded bg-fuchsia-100 px-1 py-0.5 text-[9px] font-bold text-fuchsia-900 dark:bg-fuchsia-900 dark:text-fuchsia-100"
+                        >
+                          ⇄ 티어이동
+                        </span>
+                      ) : changedTickers.has(it.ticker) ? (
+                        <span
+                          title="최근 run에서 조건/값 변동 (P4-1)"
+                          className="rounded bg-indigo-100 px-1 py-0.5 text-[9px] text-indigo-900 dark:bg-indigo-900 dark:text-indigo-100"
+                        >
+                          🆕 변동
+                        </span>
+                      ) : null}
                     </div>
                     {it.auto_note ? (
                       <div className="mt-0.5 rounded bg-emerald-50 px-1.5 py-0.5 text-[9px] text-emerald-900 dark:bg-emerald-950 dark:text-emerald-100">
@@ -945,6 +974,162 @@ function UsageGuideCard() {
   );
 }
 
+/** v1.38 · P4-1 · 리스트 상단 · 최근 run diff 요약 카드.
+ *   변화 있는 종목 수 · 티어 이동 종목 수 · run 메타(SHA·트리거) 표시. */
+function RunDiffSummaryCard({ data }: { data: PowderKegRunDiffSummaryResponse | undefined }) {
+  const [open, setOpen] = useState(false);
+  if (!data || !data.run_id) return null;
+  const hasChanges = (data.total_changed_tickers || 0) > 0;
+  if (!hasChanges) return null;
+  return (
+    <div className="rounded border border-indigo-200 bg-indigo-50 p-2 dark:border-indigo-800 dark:bg-indigo-950">
+      <button
+        type="button"
+        onClick={() => setOpen(!open)}
+        className="flex w-full items-center justify-between text-xs"
+        title="P4-1 · 스크리너 run 간 변화 · 지표값·상태 diff 요약"
+      >
+        <span>
+          <span className="mr-2 font-bold">🔄 최근 run 변동 요약</span>
+          <span className="text-indigo-900 dark:text-indigo-100">
+            총 <b>{data.total_changed_tickers}</b> 종목 변화
+            {data.tier_moved_count > 0 ? (
+              <> · <b className="text-fuchsia-800 dark:text-fuchsia-200">티어 이동 {data.tier_moved_count}</b></>
+            ) : null}
+          </span>
+          {data.run_trigger ? (
+            <span className="ml-2 rounded bg-white px-1 text-[9px] text-slate-600 dark:bg-slate-800 dark:text-slate-300">
+              {data.run_trigger}
+            </span>
+          ) : null}
+          {data.run_git_sha ? (
+            <span className="ml-1 rounded bg-white px-1 font-mono text-[9px] text-slate-500 dark:bg-slate-800 dark:text-slate-400">
+              {data.run_git_sha.slice(0, 7)}
+            </span>
+          ) : null}
+        </span>
+        <span className="text-[10px] text-indigo-700 dark:text-indigo-300">{open ? "▲ 접기" : "▼ 펼치기"}</span>
+      </button>
+      {open ? (
+        <div className="mt-2 max-h-48 space-y-0.5 overflow-y-auto text-[11px]">
+          {data.items.slice(0, 40).map((it) => (
+            <div key={it.ticker} className="flex items-center gap-2 rounded px-1 py-0.5 hover:bg-white/60 dark:hover:bg-slate-800/40">
+              <span className="font-mono text-[10px] text-slate-600 dark:text-slate-300">{it.ticker}</span>
+              {it.tier_moved ? (
+                <span className="rounded bg-fuchsia-200 px-1 text-[9px] font-bold text-fuchsia-900 dark:bg-fuchsia-800 dark:text-fuchsia-100">
+                  ⇄ {it.prev_tier || "-"} → {it.curr_tier || "-"}
+                </span>
+              ) : null}
+              <span className="text-slate-600 dark:text-slate-300">변화 {it.diff_count}건</span>
+              <span className="truncate text-[9px] text-slate-500">
+                {it.condition_changes.slice(0, 3).map((c) => `${c.condition_key}(${c.prev_status || "-"}→${c.curr_status || "-"})`).join(" · ")}
+              </span>
+            </div>
+          ))}
+          {data.items.length > 40 ? (
+            <div className="pt-1 text-[10px] text-slate-500">... 이하 {data.items.length - 40}건 생략</div>
+          ) : null}
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+/** v1.38 · P4-1 · 종목 상세 · Provenance + 최근 변동 이력 섹션.
+ *   조건별 원천 컬렉터·수집 시각 + 변경 로그 노출. */
+function ProvenanceAndDiffSection({ ticker }: { ticker: string }) {
+  const pv = useQuery({
+    queryKey: ["powderkeg", "provenance", ticker],
+    queryFn: () => api.powderkeg.tickerProvenance(ticker),
+  });
+  const df = useQuery({
+    queryKey: ["powderkeg", "runDiffLatest", ticker],
+    queryFn: () => api.powderkeg.runDiffLatest(ticker, 30),
+  });
+
+  const provenance = pv.data?.provenance || [];
+  const diffs = df.data?.items || [];
+
+  return (
+    <section className="rounded border p-3">
+      <div className="mb-2 text-sm font-bold">🔄 변동 이력 + Provenance <span className="text-[10px] font-normal text-muted-foreground">(P4-1 · 원천 컬렉터 · run diff)</span></div>
+
+      {/* Provenance · 조건별 최근 값 + 원천 */}
+      <div className="mb-3">
+        <div className="mb-1 text-[11px] font-medium text-slate-700 dark:text-slate-300">📌 조건별 데이터 원천</div>
+        {pv.isLoading ? (
+          <div className="text-[10px] text-muted-foreground">불러오는 중...</div>
+        ) : provenance.length === 0 ? (
+          <div className="text-[10px] text-muted-foreground">provenance 데이터 없음</div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-[10px]">
+              <thead className="bg-slate-100 dark:bg-slate-800">
+                <tr>
+                  <th className="p-1 text-left">조건</th>
+                  <th className="p-1 text-center">값</th>
+                  <th className="p-1 text-left">원천 컬렉터</th>
+                  <th className="p-1 text-left">최종 수집</th>
+                </tr>
+              </thead>
+              <tbody>
+                {provenance.map((p) => {
+                  const v = p.value;
+                  const mark = v === true ? "✅" : v === false ? "❌" : v == null ? "🕳" : String(v);
+                  return (
+                    <tr key={p.condition_key} className="border-b">
+                      <td className="p-1">{p.condition_key}</td>
+                      <td className="p-1 text-center">{mark}</td>
+                      <td className="p-1 font-mono text-[9px] text-slate-600 dark:text-slate-300" title={p.description}>{p.collector}</td>
+                      <td className="p-1 text-[9px] text-muted-foreground">{p.collected_at || "-"}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+
+      {/* Run diff · 최근 변화 이력 */}
+      <div>
+        <div className="mb-1 text-[11px] font-medium text-slate-700 dark:text-slate-300">📜 최근 변동 이력 (최근 30건)</div>
+        {df.isLoading ? (
+          <div className="text-[10px] text-muted-foreground">불러오는 중...</div>
+        ) : diffs.length === 0 ? (
+          <div className="rounded border border-dashed p-2 text-[10px] text-muted-foreground">
+            변동 기록 없음 · P4-1 배포 이후 첫 run부터 기록 시작.
+          </div>
+        ) : (
+          <div className="max-h-56 space-y-1 overflow-y-auto">
+            {diffs.map((d, idx) => {
+              const tierMove = d.condition_key === "tier";
+              return (
+                <div key={idx} className={`flex flex-wrap items-center gap-2 rounded px-2 py-1 text-[10px] ${tierMove ? "bg-fuchsia-50 dark:bg-fuchsia-950" : "bg-indigo-50 dark:bg-indigo-950"}`}>
+                  <span className="rounded bg-white/60 px-1 font-mono text-[9px] text-slate-600 dark:bg-slate-800/60 dark:text-slate-300">{(d.changed_at || "").slice(0, 10)}</span>
+                  <span className="font-mono text-[9px] text-slate-600 dark:text-slate-300">{d.run_id}</span>
+                  <span className={`rounded px-1 font-bold ${tierMove ? "bg-fuchsia-200 text-fuchsia-900 dark:bg-fuchsia-800 dark:text-fuchsia-100" : "bg-indigo-200 text-indigo-900 dark:bg-indigo-800 dark:text-indigo-100"}`}>
+                    {d.condition_key}
+                  </span>
+                  <span className="text-slate-700 dark:text-slate-300">
+                    {String(d.prev_value ?? "∅")} <b className="mx-1">→</b> {String(d.curr_value ?? "∅")}
+                  </span>
+                  {d.prev_status || d.curr_status ? (
+                    <span className="text-[9px] text-slate-500">
+                      ({d.prev_status || "-"} → {d.curr_status || "-"})
+                    </span>
+                  ) : null}
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+    </section>
+  );
+}
+
+
 /** v1.36 · P5-2 · 종목 상세 팝업 (옵션 A · 예측 없음).
  *   재무 3년 · 조건별 실측 · 이벤트 이력 · 외부 링크 (KRX·네이버·다음·DART).
  *   지시서 "hypothesis 유지 · 자동매매 금지" 원칙 정합 · 사용자 판단 근거 제공만. */
@@ -1020,18 +1205,26 @@ function TickerDetailModal({ ticker, onClose }: { ticker: string; onClose: () =>
                   🎯 화약고 스크리너 판정 <span className="text-[10px] font-normal text-muted-foreground">run {d.list_item.run_id}</span>
                 </div>
                 <div className="grid grid-cols-2 gap-1 text-xs md:grid-cols-5">
-                  {d.list_item.conditions ? Object.entries(d.list_item.conditions).map(([k, v]) => {
-                    const label = CONDITION_LABEL_SHORT[k] || k;
-                    const cls = v === true ? "bg-emerald-100 text-emerald-800"
-                      : v === false ? "bg-rose-100 text-rose-800"
-                      : "bg-slate-100 text-slate-600";
-                    const mark = v === true ? "✅" : v === false ? "❌" : "🕳";
-                    return (
-                      <div key={k} className={`rounded px-2 py-1 ${cls}`}>
-                        {mark} {label}
-                      </div>
-                    );
-                  }) : null}
+                  {d.list_item.conditions ? Object.entries(d.list_item.conditions)
+                    .filter(([k]) => k !== "_robustness")
+                    .map(([k, v]) => {
+                      const label = CONDITION_LABEL_SHORT[k] || k;
+                      const isDiscovery = DISCOVERY_CONDITIONS.has(k);
+                      // P4-6 · 발굴 조건은 회색톤 · "🔎 발굴" 태그로 정보량 조건과 분리
+                      const cls = isDiscovery
+                        ? "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300 opacity-70"
+                        : v === true ? "bg-emerald-100 text-emerald-800"
+                        : v === false ? "bg-rose-100 text-rose-800"
+                        : "bg-slate-100 text-slate-600";
+                      const mark = isDiscovery ? "🔎" : v === true ? "✅" : v === false ? "❌" : "🕳";
+                      const suffix = isDiscovery ? " · 발굴" : "";
+                      return (
+                        <div key={k} className={`rounded px-2 py-1 ${cls}`}
+                             title={isDiscovery ? "발굴 조건 · Universe 진입 필터 · 리스트 종목은 항상 통과 (P4-6)" : undefined}>
+                          {mark} {label}{suffix}
+                        </div>
+                      );
+                    }) : null}
                 </div>
                 {d.list_item.reject_reasons ? (
                   <div className="mt-2 rounded bg-rose-50 p-2 text-[10px] text-rose-800 dark:bg-rose-950 dark:text-rose-100">
@@ -1126,6 +1319,9 @@ function TickerDetailModal({ ticker, onClose }: { ticker: string; onClose: () =>
               )}
             </section>
 
+            {/* P4-1 · Provenance + Run diff (v1.38 신설) */}
+            <ProvenanceAndDiffSection ticker={ticker} />
+
             {/* 외부 링크 */}
             <section className="rounded border-2 border-dashed border-sky-300 p-3">
               <div className="mb-2 text-sm font-bold">🔗 외부 참조 (예측 없음 · 사용자 직접 판단)</div>
@@ -1187,6 +1383,11 @@ const CONDITION_LABEL_SHORT: Record<string, string> = {
   "9_adv60": "거래대금",
   "10_no_bad_history": "관리종목",
 };
+
+/** P4-6 · 발굴 조건 (Universe 진입 필터).
+ *   PBR<0.5는 저PBR 발굴 파이프라인에서 이미 통과된 종목만 스크리너에 들어옴.
+ *   → 리스트 내 종목은 사실상 항상 100% pass · 정보량 있는 나머지 9조건과 시각 분리. */
+const DISCOVERY_CONDITIONS = new Set<string>(["1_pbr"]);
 
 /** 저PBR 후보 발굴·대량 스크리닝 카드 · v1.19 · 리뷰어 Priority 2.
  *   "화약고 서식지는 KOSPI 중소형 + KOSDAQ 중형 · 지금은 반대 방향으로 편향"
@@ -1367,7 +1568,41 @@ function FunnelCard({ runId }: { runId: string | null }) {
                 <span className="text-slate-500">■ 결측</span>
               </span>
             </div>
-            {d.per_condition.map((c) => {
+            {/* P4-6 · 발굴 조건 (Universe 진입 필터) · 리스트 종목은 항상 100% */}
+            {d.per_condition.filter((c) => DISCOVERY_CONDITIONS.has(c.id)).length > 0 ? (
+              <div className="rounded border border-slate-200 bg-slate-50 p-1 dark:border-slate-700 dark:bg-slate-800/40">
+                <div className="mb-0.5 text-[9px] font-semibold text-slate-600 dark:text-slate-300">
+                  🔎 발굴 조건 (Universe 진입 필터 · 리스트 종목은 항상 통과)
+                </div>
+                {d.per_condition.filter((c) => DISCOVERY_CONDITIONS.has(c.id)).map((c) => {
+                  const total = c.passed + (c.failed ?? 0) + (c.missing ?? 0);
+                  const pctP = total > 0 ? Math.round((c.passed / total) * 100) : 0;
+                  const wP = total > 0 ? Math.round((c.passed / total) * 100) : 0;
+                  const wF = total > 0 ? Math.round(((c.failed ?? 0) / total) * 100) : 0;
+                  const wM = total > 0 ? Math.round(((c.missing ?? 0) / total) * 100) : 0;
+                  return (
+                    <div key={c.id} className="flex items-center gap-2 opacity-70">
+                      <div className="w-52 truncate text-[10px]" title="발굴 조건 · 리스트 종목은 저PBR 발굴 파이프라인 통과 후 진입">
+                        🔎 {c.label}
+                      </div>
+                      <div className="flex h-3 flex-1 overflow-hidden rounded bg-slate-100 dark:bg-slate-800">
+                        <div className="h-full bg-slate-400 dark:bg-slate-500" style={{ width: `${wP}%` }} title={`통과 ${c.passed}`} />
+                        <div className="h-full bg-rose-400 dark:bg-rose-600" style={{ width: `${wF}%` }} title={`실패 ${c.failed ?? 0}`} />
+                        <div className="h-full bg-slate-400 dark:bg-slate-500" style={{ width: `${wM}%` }} title={`결측 ${c.missing ?? 0}`} />
+                      </div>
+                      <div className="w-32 text-right font-mono text-[9px] text-slate-500">
+                        {c.passed}/{c.failed ?? 0}/{c.missing ?? 0} ({pctP}%)
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : null}
+            {/* 정보량 있는 조건 (실 스크리닝) */}
+            <div className="mt-1 mb-0.5 text-[9px] font-semibold text-slate-600 dark:text-slate-300">
+              📊 정보량 조건 (실 스크리닝)
+            </div>
+            {d.per_condition.filter((c) => !DISCOVERY_CONDITIONS.has(c.id)).map((c) => {
               const total = c.passed + (c.failed ?? 0) + (c.missing ?? 0);
               const pctP = total > 0 ? Math.round((c.passed / total) * 100) : 0;
               // v1.35 · 4차 리뷰 P4-4 · 3색 분리 (통과·실패·결측)

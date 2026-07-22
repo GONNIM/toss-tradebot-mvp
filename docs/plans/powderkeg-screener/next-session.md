@@ -45,14 +45,12 @@ curl -sS "https://optimus8.cafe24.com/api/v1/powderkeg/list?limit=50" | \
 ## 2. 남은 백로그 (Priority 순)
 
 ### 🥇 우선순위 1 · UX·기능 후속 (사용자 관점 즉시 체감)
-- **[P4-1] 서희 provenance UI + Run diff 로그** (task #30)
-  - 스크리너 run 간 diff · 종목별 조건값 변화 원인 노출
-  - 신규 테이블 `PowderKegRunDiff` · UI 뱃지
-  - 소요: 5~6시간 (신규 DB + API + 프론트 UI)
-- **[P4-6] 조건 ① 발굴 조건 별도 표기** (task #35)
-  - PBR은 발굴 필터 (항상 100%) · 정보량 있는 조건과 구분
-  - 퍼널·티어 뱃지 UI 변경만
-  - 소요: 1시간
+- ~~**[P4-1] 서희 provenance UI + Run diff 로그** (task #30)~~ ✅ **로컬 완료 (2026-07-22)** · 배포 대기
+  - Backend: `PowderKegRun` + `PowderKegRunDiff` 모델, screener 훅, 3종 API (`/ticker/{ticker}/provenance`, `/run-diff/latest`, `/run-diff/summary`)
+  - Frontend: 리스트 "🆕 변동/⇄ 티어이동" 뱃지, 상단 요약 카드, 상세 팝업 "🔄 변동 이력 + Provenance" 섹션
+  - Tests: 신규 9건 + 회귀 22건 pass · 계획서 `docs/plans/powderkeg-screener/p4-1-provenance-run-diff.md`
+- ~~**[P4-6] 조건 ① 발굴 조건 별도 표기** (task #35)~~ ✅ **로컬 완료 (2026-07-22)** · 배포 대기
+  - `DISCOVERY_CONDITIONS = {"1_pbr"}` 상수 · 퍼널 카드 발굴/정보량 2그룹 분리 · 상세 팝업 발굴 조건 회색톤 + "🔎 · 발굴" 태그
 
 ### 🥈 우선순위 2 · 실데이터화 (Type B 방어선 강화)
 - **[P4-5] 조건 ⑩ KRX 관리종목 실데이터 (대안 A)** (task #34)

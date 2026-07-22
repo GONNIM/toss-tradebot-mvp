@@ -30,6 +30,8 @@ from backend.services.models import (
     KrxMarketSnapshot,
     MajorShareholder,
     PowderKegList,
+    PowderKegRun,
+    PowderKegRunDiff,
 )
 
 from .cash_verifier import verify_cash_reality
@@ -427,6 +429,100 @@ async def screen_ticker(
     return result
 
 
+def _status_of(v: Any) -> Optional[str]:
+    if v is True:
+        return "pass"
+    if v is False:
+        return "fail"
+    if v is None:
+        return "na"
+    return None
+
+
+def _numeric_equal(a: Any, b: Any) -> bool:
+    if a is None and b is None:
+        return True
+    if a is None or b is None:
+        return False
+    try:
+        return round(float(a), 5) == round(float(b), 5)
+    except (TypeError, ValueError):
+        return a == b
+
+
+def _encode_value(v: Any) -> Optional[str]:
+    if v is None:
+        return None
+    try:
+        return json.dumps(v, ensure_ascii=False)
+    except (TypeError, ValueError):
+        return str(v)
+
+
+def _compute_diffs(prev: Optional[PowderKegList], curr: ScreenResult) -> list[dict[str, Any]]:
+    """이전 run 스냅샷 vs 현재 결과 · 변경된 항목만 반환 (P4-1).
+
+    비교 대상:
+      · 조건 판정 10개 (True/False/None)
+      · 서브스코어 4개 (pbr/net_cash_ratio/owner_pct/piotroski_f_score)
+      · 상태 (tier): passed/rejected/cash_suspect
+    """
+    diffs: list[dict[str, Any]] = []
+    prev_conds: dict[str, Any] = {}
+    if prev and prev.conditions_json:
+        try:
+            prev_conds = json.loads(prev.conditions_json)
+        except (TypeError, ValueError):
+            prev_conds = {}
+    for k, curr_v in curr.conditions.items():
+        prev_v = prev_conds.get(k)
+        if prev_v == curr_v:
+            continue
+        diffs.append({
+            "condition_key": k,
+            "prev_value": prev_v,
+            "curr_value": curr_v,
+            "prev_status": _status_of(prev_v),
+            "curr_status": _status_of(curr_v),
+        })
+    scalar_pairs = [
+        ("pbr", getattr(prev, "pbr", None) if prev else None, curr.pbr),
+        ("net_cash_ratio", getattr(prev, "net_cash_ratio", None) if prev else None, curr.net_cash_ratio),
+        ("owner_pct", getattr(prev, "owner_pct", None) if prev else None, curr.owner_pct),
+        ("piotroski_f_score", getattr(prev, "piotroski_f_score", None) if prev else None, curr.piotroski_f_score),
+    ]
+    for key, pv, cv in scalar_pairs:
+        if _numeric_equal(pv, cv):
+            continue
+        diffs.append({
+            "condition_key": key,
+            "prev_value": pv,
+            "curr_value": cv,
+            "prev_status": None,
+            "curr_status": None,
+        })
+    prev_status = getattr(prev, "status", None) if prev else None
+    if prev_status != curr.status:
+        diffs.append({
+            "condition_key": "tier",
+            "prev_value": prev_status,
+            "curr_value": curr.status,
+            "prev_status": prev_status,
+            "curr_status": curr.status,
+        })
+    return diffs
+
+
+async def _prev_snapshot(session, ticker: str, exclude_run_id: str) -> Optional[PowderKegList]:
+    stmt = (
+        select(PowderKegList)
+        .where(PowderKegList.ticker == ticker, PowderKegList.run_id != exclude_run_id)
+        .order_by(PowderKegList.created_at.desc())
+        .limit(1)
+    )
+    return (await session.execute(stmt)).scalar_one_or_none()
+
+
 def _period_from_snapshot(fs: FinancialSnapshot) -> FinancialPeriod:
     return FinancialPeriod(
         net_income=fs.net_income,
@@ -446,6 +542,7 @@ async def run_screener(
     thresholds: Optional[ScreenerThresholds] = None,
     year: int = 2026,
     run_id: Optional[str] = None,
+    trigger: str = "manual",
 ) -> dict[str, Any]:
     """유니버스 순회 · PowderKegList upsert.
 
@@ -482,6 +579,20 @@ async def run_screener(
         input_set = input_set + extra
 
     stats = {"run_id": run_id, "total": 0, "passed": 0, "rejected": 0, "cash_suspect": 0}
+
+    # P4-1 · Run 시작 기록 (git_sha 는 env 로 주입 · 없으면 None)
+    import os
+    git_sha = os.getenv("GIT_SHA") or os.getenv("VERCEL_GIT_COMMIT_SHA")
+    diff_insert_count = 0
+    async with get_session() as session:
+        session.add(PowderKegRun(
+            run_id=run_id,
+            ticker_count=len(input_set),
+            trigger=trigger,
+            git_sha=git_sha[:40] if git_sha else None,
+        ))
+        await session.commit()
+
     async with get_session() as session:
         for ticker in input_set:
             stats["total"] += 1
@@ -523,5 +634,38 @@ async def run_screener(
             ))
             stats[r.status] = stats.get(r.status, 0) + 1
 
+            # P4-1 · diff 계산 · 변경된 조건만 RunDiff 삽입
+            try:
+                prev_snap = await _prev_snapshot(session, ticker, exclude_run_id=run_id)
+                diffs = _compute_diffs(prev_snap, r)
+                for d in diffs:
+                    session.add(PowderKegRunDiff(
+                        run_id=run_id,
+                        ticker=ticker,
+                        condition_key=d["condition_key"],
+                        prev_value=_encode_value(d["prev_value"]),
+                        curr_value=_encode_value(d["curr_value"]),
+                        prev_status=d["prev_status"],
+                        curr_status=d["curr_status"],
+                    ))
+                    diff_insert_count += 1
+            except Exception as exc:  # noqa: BLE001
+                # diff 실패는 스크리너 저장에 영향 없음
+                logger.warning("[screener.diff] %s · %s", ticker, exc)
+
+    # P4-1 · Run 종료 기록
+    try:
+        async with get_session() as session:
+            from sqlalchemy import update as _update
+            await session.execute(
+                _update(PowderKegRun)
+                .where(PowderKegRun.run_id == run_id)
+                .values(ended_at=datetime.now(tz=timezone.utc))
+            )
+            await session.commit()
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("[screener.run.end] %s · %s", run_id, exc)
+
+    stats["diff_inserts"] = diff_insert_count
     logger.info("[screener.run] %s", stats)
     return stats

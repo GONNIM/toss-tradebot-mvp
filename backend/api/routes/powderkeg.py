@@ -57,6 +57,8 @@ from backend.services.models import (
     PowderKegEvent,
     PowderKegList,
     PowderKegOrderTicket,
+    PowderKegRun,
+    PowderKegRunDiff,
 )
 
 logger = logging.getLogger(__name__)
@@ -501,6 +503,205 @@ async def get_ticker_detail(ticker: str) -> dict[str, Any]:
     }
 
 
+# ═══════════════════════════════════════════════════════════════
+# P4-1 · Provenance + Run diff (2026-07-22 신설)
+# ═══════════════════════════════════════════════════════════════
+
+# 조건별 원천 컬렉터 매핑 (v1.38)
+_CONDITION_PROVENANCE = {
+    "1_pbr": ("krx_market", "KRX 시장 스냅샷 (PBR 미제공 시 book_value 로 계산)"),
+    "2_net_cash_ratio": ("dart_financials", "DART 재무제표 (현금·단기금융상품·총차입금·계약부채)"),
+    "3_owner_pct": ("dart_shareholders", "DART 최대주주 현황"),
+    "4_not_big_biz": ("ftc_big_biz", "공정위 공시대상기업집단 seed"),
+    "5_audit_opinion": ("dart_financials", "DART 감사의견"),
+    "6_cash_reality": ("dart_financials", "DART 이자수익 · BOK 기준금리 교차검증"),
+    "7_operating_profit": ("dart_financials", "DART 3년 영업이익 (2 흑자 필요)"),
+    "8_fscore": ("dart_financials", "Piotroski F-Score 계산 (2년 재무)"),
+    "9_adv60": ("krx_market", "KRX 60일 일평균 거래대금"),
+    "10_no_bad_history": ("dart_financials", "DART 3년 감사의견 근사 (관리종목 대안)"),
+}
+
+
+@router.get("/ticker/{ticker}/provenance")
+async def get_ticker_provenance(ticker: str) -> dict[str, Any]:
+    """P4-1 · 조건별 최근 값 + 출처(원천 컬렉터 · 수집 시각).
+
+    UI 활용: 상세 팝업 "변동 이력" 탭 상단 · 각 조건의 근거 노출.
+    """
+    async with get_session() as session:
+        list_row = (await session.execute(
+            select(PowderKegList)
+            .where(PowderKegList.ticker == ticker)
+            .order_by(PowderKegList.created_at.desc())
+            .limit(1)
+        )).scalar_one_or_none()
+
+        fin_latest = (await session.execute(
+            select(FinancialSnapshot)
+            .where(FinancialSnapshot.ticker == ticker, FinancialSnapshot.report_code == "11011")
+            .order_by(FinancialSnapshot.reference_date.desc(), FinancialSnapshot.release_date.desc())
+            .limit(1)
+        )).scalar_one_or_none()
+
+        holder = (await session.execute(
+            select(MajorShareholder)
+            .where(MajorShareholder.ticker == ticker)
+            .order_by(MajorShareholder.reference_date.desc())
+            .limit(1)
+        )).scalar_one_or_none()
+
+        krx = (await session.execute(
+            select(KrxMarketSnapshot)
+            .where(KrxMarketSnapshot.ticker == ticker)
+            .order_by(KrxMarketSnapshot.snapshot_date.desc())
+            .limit(1)
+        )).scalar_one_or_none()
+
+    if list_row is None:
+        raise HTTPException(status_code=404, detail=f"ticker {ticker} not found")
+
+    conds = {}
+    try:
+        conds = json.loads(list_row.conditions_json) if list_row.conditions_json else {}
+    except Exception:  # noqa: BLE001
+        conds = {}
+
+    # 컬렉터별 최종 수집 시각
+    collector_ts = {
+        "dart_financials": fin_latest.release_date.isoformat() if (fin_latest and fin_latest.release_date) else None,
+        "dart_shareholders": holder.reference_date if holder else None,
+        "krx_market": krx.snapshot_date if krx else None,
+        "ftc_big_biz": None,  # year 단위 seed · 시각 정보 없음
+    }
+
+    provenance = []
+    for key, (collector, desc) in _CONDITION_PROVENANCE.items():
+        provenance.append({
+            "condition_key": key,
+            "value": conds.get(key),
+            "collector": collector,
+            "description": desc,
+            "collected_at": collector_ts.get(collector),
+        })
+
+    return {
+        "disclaimer": DISCLAIMER,
+        "ticker": ticker,
+        "run_id": list_row.run_id,
+        "provenance": provenance,
+        "collector_freshness": collector_ts,
+    }
+
+
+@router.get("/run-diff/latest")
+async def get_run_diff_latest(
+    ticker: str = Query(..., description="종목 코드 (필수)"),
+    limit: int = Query(50, ge=1, le=200),
+) -> dict[str, Any]:
+    """P4-1 · 종목별 최근 diff (변화 이력).
+
+    UI 활용: 상세 팝업 "변동 이력" 탭 목록.
+    """
+    async with get_session() as session:
+        rows = (await session.execute(
+            select(PowderKegRunDiff)
+            .where(PowderKegRunDiff.ticker == ticker)
+            .order_by(PowderKegRunDiff.changed_at.desc())
+            .limit(limit)
+        )).scalars().all()
+
+    def _decode(v: Optional[str]) -> Any:
+        if v is None:
+            return None
+        try:
+            return json.loads(v)
+        except (TypeError, ValueError):
+            return v
+
+    return {
+        "disclaimer": DISCLAIMER,
+        "ticker": ticker,
+        "items": [
+            {
+                "run_id": r.run_id,
+                "condition_key": r.condition_key,
+                "prev_value": _decode(r.prev_value),
+                "curr_value": _decode(r.curr_value),
+                "prev_status": r.prev_status,
+                "curr_status": r.curr_status,
+                "changed_at": r.changed_at.isoformat() if r.changed_at else None,
+                "reason_hint": r.reason_hint,
+            }
+            for r in rows
+        ],
+    }
+
+
+@router.get("/run-diff/summary")
+async def get_run_diff_summary(
+    run_id: Optional[str] = Query(None, description="특정 run · None = 최신"),
+) -> dict[str, Any]:
+    """P4-1 · 최근 run 에서 변화 있는 종목 요약.
+
+    UI 활용: 리스트 상단 요약 카드 + 리스트 뱃지 소스.
+    """
+    async with get_session() as session:
+        if run_id is None:
+            run_id = (await session.execute(
+                select(PowderKegRun.run_id)
+                .order_by(PowderKegRun.started_at.desc()).limit(1)
+            )).scalar_one_or_none()
+        if run_id is None:
+            return {"disclaimer": DISCLAIMER, "run_id": None, "items": []}
+
+        rows = (await session.execute(
+            select(PowderKegRunDiff)
+            .where(PowderKegRunDiff.run_id == run_id)
+            .order_by(PowderKegRunDiff.ticker)
+        )).scalars().all()
+
+        run_meta = (await session.execute(
+            select(PowderKegRun).where(PowderKegRun.run_id == run_id)
+        )).scalar_one_or_none()
+
+    # ticker → diff 그룹핑 · tier 이동 여부 강조
+    by_ticker: dict[str, dict[str, Any]] = {}
+    for r in rows:
+        b = by_ticker.setdefault(r.ticker, {
+            "ticker": r.ticker,
+            "diff_count": 0,
+            "tier_moved": False,
+            "prev_tier": None,
+            "curr_tier": None,
+            "condition_changes": [],
+        })
+        b["diff_count"] += 1
+        if r.condition_key == "tier":
+            b["tier_moved"] = True
+            b["prev_tier"] = r.prev_status
+            b["curr_tier"] = r.curr_status
+        else:
+            b["condition_changes"].append({
+                "condition_key": r.condition_key,
+                "prev_status": r.prev_status,
+                "curr_status": r.curr_status,
+            })
+
+    items = sorted(by_ticker.values(), key=lambda x: (not x["tier_moved"], -x["diff_count"]))
+
+    return {
+        "disclaimer": DISCLAIMER,
+        "run_id": run_id,
+        "run_started_at": run_meta.started_at.isoformat() if (run_meta and run_meta.started_at) else None,
+        "run_ended_at": run_meta.ended_at.isoformat() if (run_meta and run_meta.ended_at) else None,
+        "run_trigger": run_meta.trigger if run_meta else None,
+        "run_git_sha": run_meta.git_sha if run_meta else None,
+        "tier_moved_count": sum(1 for i in items if i["tier_moved"]),
+        "total_changed_tickers": len(items),
+        "items": items,
+    }
+
+
 @router.get("/report/{event_type}")
 async def get_report(event_type: str) -> dict[str, Any]:
     """탭 3 · 백테스트 리포트 (캐시 읽기 · §9-3 · 5년 표본 60s 초과 대응).
@@ -767,6 +968,50 @@ async def migrate_schema() -> dict[str, Any]:
         ("ix_powderkeg_backtest_report_event_type",
          "CREATE INDEX IF NOT EXISTS ix_powderkeg_backtest_report_event_type "
          "ON powderkeg_backtest_report (event_type)"),
+        # P4-1 · Run 자체 기록 (2026-07-22 · v1.38)
+        ("powderkeg_run", """
+            CREATE TABLE IF NOT EXISTS powderkeg_run (
+                run_id VARCHAR(20) NOT NULL PRIMARY KEY,
+                started_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                ended_at DATETIME,
+                ticker_count INTEGER DEFAULT 0,
+                trigger VARCHAR(16) DEFAULT 'manual',
+                git_sha VARCHAR(40)
+            )
+        """),
+        ("ix_powderkeg_run_started",
+         "CREATE INDEX IF NOT EXISTS ix_powderkeg_run_started "
+         "ON powderkeg_run (started_at)"),
+        # P4-1 · 조건 단위 변화 로그
+        ("powderkeg_run_diff", """
+            CREATE TABLE IF NOT EXISTS powderkeg_run_diff (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                run_id VARCHAR(20) NOT NULL,
+                ticker VARCHAR(10) NOT NULL,
+                condition_key VARCHAR(64) NOT NULL,
+                prev_value TEXT,
+                curr_value TEXT,
+                prev_status VARCHAR(16),
+                curr_status VARCHAR(16),
+                reason_hint VARCHAR(255),
+                changed_at DATETIME DEFAULT CURRENT_TIMESTAMP
+            )
+        """),
+        ("ix_powderkeg_run_diff_run",
+         "CREATE INDEX IF NOT EXISTS ix_powderkeg_run_diff_run "
+         "ON powderkeg_run_diff (run_id)"),
+        ("ix_powderkeg_run_diff_ticker",
+         "CREATE INDEX IF NOT EXISTS ix_powderkeg_run_diff_ticker "
+         "ON powderkeg_run_diff (ticker)"),
+        ("ix_powderkeg_run_diff_changed_at",
+         "CREATE INDEX IF NOT EXISTS ix_powderkeg_run_diff_changed_at "
+         "ON powderkeg_run_diff (changed_at)"),
+        ("ix_pk_run_diff_ticker_time",
+         "CREATE INDEX IF NOT EXISTS ix_pk_run_diff_ticker_time "
+         "ON powderkeg_run_diff (ticker, changed_at)"),
+        ("ix_pk_run_diff_cond_time",
+         "CREATE INDEX IF NOT EXISTS ix_pk_run_diff_cond_time "
+         "ON powderkeg_run_diff (condition_key, changed_at)"),
     ]
     async with get_session() as session:
         for name, ddl in direct_creates:

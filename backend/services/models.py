@@ -1085,3 +1085,50 @@ class PowderKegOrderTicket(Base):
     executed_order_uuid: Mapped[Optional[str]] = mapped_column(String(36))
     created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
 
+
+class PowderKegRun(Base):
+    """스크리너 run 자체 기록 · P4-1 provenance/RunDiff.
+
+    - `run_id` = 기존 문자열 형식(YYYYMMDD-HHMMSSK) 재사용 · PK
+    - trigger = auto(scheduler) / manual(API)
+    - git_sha = 배포 SHA (SSR 푸터와 일치 · 데이터 재현성)
+    """
+
+    __tablename__ = "powderkeg_run"
+
+    run_id: Mapped[str] = mapped_column(String(20), primary_key=True)
+    started_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now(), index=True)
+    ended_at: Mapped[Optional[datetime]] = mapped_column(DateTime)
+    ticker_count: Mapped[int] = mapped_column(default=0)
+    trigger: Mapped[str] = mapped_column(String(16), default="manual")
+    git_sha: Mapped[Optional[str]] = mapped_column(String(40))
+
+
+class PowderKegRunDiff(Base):
+    """조건 단위 변화 로그 · P4-1 provenance/RunDiff.
+
+    변경된 조건만 삽입 (동일 값 skip · 값 또는 상태 변화 최소 1건 필수).
+    condition_key 예시:
+      · 조건 판정: "1_pbr", "2_net_cash_ratio", ..., "10_no_bad_history"
+      · 티어 이동: "tier"
+      · 서브스코어: "pbr", "net_cash_ratio", "owner_pct", "piotroski_f_score"
+    """
+
+    __tablename__ = "powderkeg_run_diff"
+
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    run_id: Mapped[str] = mapped_column(String(20), index=True)     # PowderKegRun FK (soft)
+    ticker: Mapped[str] = mapped_column(String(10), index=True)
+    condition_key: Mapped[str] = mapped_column(String(64), index=True)
+    prev_value: Mapped[Optional[str]] = mapped_column(Text)         # JSON 인코딩 (숫자/문자/null)
+    curr_value: Mapped[Optional[str]] = mapped_column(Text)
+    prev_status: Mapped[Optional[str]] = mapped_column(String(16))  # pass/fail/na/skip/null
+    curr_status: Mapped[Optional[str]] = mapped_column(String(16))
+    reason_hint: Mapped[Optional[str]] = mapped_column(String(255))
+    changed_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now(), index=True)
+
+    __table_args__ = (
+        Index("ix_pk_run_diff_ticker_time", "ticker", "changed_at"),
+        Index("ix_pk_run_diff_cond_time", "condition_key", "changed_at"),
+    )
+

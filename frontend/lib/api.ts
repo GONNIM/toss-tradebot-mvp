@@ -819,6 +819,15 @@ export const api = {
         rejected: number;
       }>(`/powderkeg/list/funnel${qs}`);
     },
+    // P4-1 · Provenance + Run diff
+    tickerProvenance: (ticker: string) =>
+      get<PowderKegProvenanceResponse>(`/powderkeg/ticker/${ticker}/provenance`),
+    runDiffLatest: (ticker: string, limit = 50) =>
+      get<PowderKegRunDiffLatestResponse>(`/powderkeg/run-diff/latest?ticker=${encodeURIComponent(ticker)}&limit=${limit}`),
+    runDiffSummary: (run_id?: string) => {
+      const qs = run_id ? `?run_id=${encodeURIComponent(run_id)}` : "";
+      return get<PowderKegRunDiffSummaryResponse>(`/powderkeg/run-diff/summary${qs}`);
+    },
   },
 };
 
@@ -1714,4 +1723,59 @@ export interface PowderKegTicketsResponse {
   disclaimer: string;
   count: number;
   items: PowderKegTicket[];
+}
+
+// P4-1 · Provenance + Run diff
+export interface PowderKegProvenanceItem {
+  condition_key: string;
+  value: unknown | null;
+  collector: string;
+  description: string;
+  collected_at: string | null;
+}
+
+export interface PowderKegProvenanceResponse {
+  disclaimer: string;
+  ticker: string;
+  run_id: string | null;
+  provenance: PowderKegProvenanceItem[];
+  collector_freshness: Record<string, string | null>;
+}
+
+export interface PowderKegRunDiffItem {
+  run_id: string;
+  condition_key: string;
+  prev_value: unknown | null;
+  curr_value: unknown | null;
+  prev_status: string | null;
+  curr_status: string | null;
+  changed_at: string | null;
+  reason_hint: string | null;
+}
+
+export interface PowderKegRunDiffLatestResponse {
+  disclaimer: string;
+  ticker: string;
+  items: PowderKegRunDiffItem[];
+}
+
+export interface PowderKegRunDiffSummaryItem {
+  ticker: string;
+  diff_count: number;
+  tier_moved: boolean;
+  prev_tier: string | null;
+  curr_tier: string | null;
+  condition_changes: { condition_key: string; prev_status: string | null; curr_status: string | null }[];
+}
+
+export interface PowderKegRunDiffSummaryResponse {
+  disclaimer: string;
+  run_id: string | null;
+  run_started_at: string | null;
+  run_ended_at: string | null;
+  run_trigger: string | null;
+  run_git_sha: string | null;
+  tier_moved_count: number;
+  total_changed_tickers: number;
+  items: PowderKegRunDiffSummaryItem[];
 }
