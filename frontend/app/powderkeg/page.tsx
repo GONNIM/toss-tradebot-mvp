@@ -74,6 +74,7 @@ export default function PowderKegPage() {
           </a>
         </div>
       </header>
+      <WorkflowFlowchart />
       <OnboardingBanner key={`ob-${guideNonce}`} />
       <IdentityBanner />
       <Tabs tab={tab} setTab={setTab} />
@@ -88,7 +89,7 @@ export default function PowderKegPage() {
 function OnboardingBanner() {
   const KEY = "powderkeg_onboarding_dismissed";
   const [dismissed, setDismissed] = useState(false);
-  const [open, setOpen] = useState(true);
+  const [open, setOpen] = useState(false);   // v1.37 · 기본 접기
   useEffect(() => {
     if (typeof window !== "undefined") {
       setDismissed(!!localStorage.getItem(KEY));
@@ -129,20 +130,75 @@ function OnboardingBanner() {
   );
 }
 
-function IdentityBanner() {
+/** v1.37 · 사용법 4단계 워크플로우 · 접기 가능 · 항상 최상단 · 설명은 tooltip. */
+function WorkflowFlowchart() {
+  const [open, setOpen] = useState(false);   // 기본 접기 · 헤더는 항상 보임
+  const steps = [
+    { n: "①", label: "자동 감지", desc: "APScheduler · DART 공시 3분 폴링 · Type A/B 이벤트 자동 검출" },
+    { n: "②", label: "알림 수신", desc: "Telegram 알림 자동 전송 · Type A 매수 후보 · Type B DO NOT TOUCH" },
+    { n: "③", label: "재평가", desc: "'🔄 지금 재평가' 버튼 · 사용자 트리거 · 스크리너 자동 재실행 없음" },
+    { n: "④", label: "종목 검토", desc: "종목명 클릭 → 상세 팝업 · 재무·조건·이벤트·외부링크 확인 후 판단" },
+  ];
   return (
-    <section className="rounded border-2 border-red-200 bg-red-50 p-3 text-xs dark:border-red-900 dark:bg-red-950">
-      <div className="font-bold text-red-900 dark:text-red-100">
-        ⚠️ 이 화면은 백테스트 검증 전 hypothesis 상태입니다.
+    <section className="rounded border-2 border-sky-300 bg-sky-50 p-2 dark:border-sky-800 dark:bg-sky-950">
+      <button type="button" onClick={() => setOpen(!open)} className="w-full text-left">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-1 text-xs font-bold text-sky-900 dark:text-sky-100">
+            🗺 사용법 · 자동 감지 → 알림 → 재평가 → 종목 검토
+          </div>
+          <span className="text-[10px] text-sky-700">{open ? "▼ 접기" : "▶ 상세"}</span>
+        </div>
+      </button>
+      <div className="mt-2 flex flex-wrap items-center gap-1 text-[11px]">
+        {steps.map((s, i) => (
+          <div key={s.n} className="flex items-center gap-1">
+            <div
+              title={s.desc}
+              className="rounded border border-sky-400 bg-white px-2 py-1 font-medium text-sky-900 dark:bg-slate-900 dark:text-sky-100"
+            >
+              <b>{s.n}</b> {s.label}
+            </div>
+            {i < steps.length - 1 ? <span className="text-sky-500">→</span> : null}
+          </div>
+        ))}
       </div>
-      <ul className="mt-1 space-y-0.5 text-red-800 dark:text-red-200">
-        <li>
-          · <b>validated</b>=true 이벤트만 반자동 티켓 생성 가능
-          <span className="text-[10px]"> · 게이트 4조건 · 표본 ≥ 50 · t-stat &gt; 2 · 승률 &gt; 50% · 평균 수익 &gt; 0</span>
-        </li>
-        <li>· 오너 개인 이벤트 표기는 공시/기사 원문 링크만 · 판단 문구 표시 X (§7-6-3 명예훼손 방지)</li>
-        <li>· Type B (횡령·감사부적정·거래정지) 발생 시 자동 리스트 제거 + 최우선 알림</li>
-      </ul>
+      {open && (
+        <div className="mt-2 space-y-1 rounded border bg-white p-2 text-[11px] text-slate-700 dark:bg-slate-900 dark:text-slate-300">
+          {steps.map(s => (
+            <div key={s.n}>
+              <b className="text-sky-800 dark:text-sky-200">{s.n} {s.label}</b> · {s.desc}
+            </div>
+          ))}
+          <div className="mt-2 rounded bg-amber-50 p-1.5 text-[10px] text-amber-900 dark:bg-amber-950 dark:text-amber-100">
+            ⚠️ 스크리너 자동 재평가 없음 (설계 원칙) · 새 재무·최대주주 반영은 사용자가 <b>③ 재평가</b> 트리거해야 함.
+          </div>
+        </div>
+      )}
+    </section>
+  );
+}
+
+function IdentityBanner() {
+  const [open, setOpen] = useState(false);   // v1.37 · 기본 접기
+  return (
+    <section className="rounded border-2 border-red-200 bg-red-50 p-2 text-xs dark:border-red-900 dark:bg-red-950">
+      <button
+        type="button"
+        onClick={() => setOpen(!open)}
+        className="w-full text-left font-bold text-red-900 hover:underline dark:text-red-100"
+      >
+        {open ? "▼" : "▶"} ⚠️ 이 화면은 백테스트 검증 전 hypothesis 상태입니다.
+      </button>
+      {open && (
+        <ul className="mt-2 space-y-0.5 text-red-800 dark:text-red-200">
+          <li>
+            · <b>validated</b>=true 이벤트만 반자동 티켓 생성 가능
+            <span className="text-[10px]"> · 게이트 4조건 · 표본 ≥ 50 · t-stat &gt; 2 · 승률 &gt; 50% · 평균 수익 &gt; 0</span>
+          </li>
+          <li>· 오너 개인 이벤트 표기는 공시/기사 원문 링크만 · 판단 문구 표시 X (§7-6-3 명예훼손 방지)</li>
+          <li>· Type B (횡령·감사부적정·거래정지) 발생 시 자동 리스트 제거 + 최우선 알림</li>
+        </ul>
+      )}
     </section>
   );
 }
@@ -275,21 +331,22 @@ function ListTab({ token, guideNonce = 0 }: { token: string; guideNonce?: number
           <table className="w-full text-xs">
             <thead>
               <tr className="border-b bg-slate-50 dark:bg-slate-900">
-                <th className="p-2 text-left">종목</th>
+                {/* v1.37 · 컬럼 폭 고정 · 종목 min-w-64 (256px) · 사유 max-w-80 (320px) truncate */}
+                <th className="p-2 text-left min-w-64">종목</th>
                 <th className="p-2 text-center">상태</th>
                 <th className="p-2 text-right">순현금/시총</th>
                 <th className="p-2 text-right">F-Score</th>
                 <th className="p-2 text-right">지분율</th>
                 <th className="p-2 text-right">PBR</th>
                 <th className="p-2 text-right">자사주</th>
-                <th className="p-2 text-left">사유</th>
+                <th className="p-2 text-left max-w-80">사유</th>
                 <th className="p-2 text-center">액션</th>
               </tr>
             </thead>
             <tbody>
               {items.map((it) => (
                 <tr key={it.id} className={`border-b hover:bg-sky-50/30 ${it.locked ? "bg-amber-50/40 dark:bg-amber-950/20" : ""}`}>
-                  <td className="p-2">
+                  <td className="p-2 min-w-64 align-top">   {/* v1.37 · 종목 컬럼 고정 폭 */}
                     <div className="flex items-center gap-1">
                       <button
                         type="button"
@@ -356,8 +413,11 @@ function ListTab({ token, guideNonce = 0 }: { token: string; guideNonce?: number
                     {it.pbr != null ? it.pbr.toFixed(2) : "-"}
                   </td>
                   <td className="p-2 text-right font-mono">{fmtPct(it.treasury_pct)}</td>
-                  <td className="p-2 text-[10px] text-muted-foreground">
-                    {it.reject_reasons || "-"}
+                  <td className="p-2 max-w-80 text-[10px] text-muted-foreground align-top">
+                    {/* v1.37 · 사유 max-w-80 · truncate · hover 시 tooltip */}
+                    <div className="line-clamp-2 break-words" title={it.reject_reasons || "-"}>
+                      {it.reject_reasons || "-"}
+                    </div>
                   </td>
                   <td className="p-2 text-center">
                     <div className="flex flex-col gap-1">
@@ -691,7 +751,7 @@ function actionToKorean(action: string): string {
 function EventsOnboardingCard() {
   const KEY = "powderkeg_events_onboarding_dismissed";
   const [dismissed, setDismissed] = useState(false);
-  const [open, setOpen] = useState(true);
+  const [open, setOpen] = useState(false);   // v1.37 · 기본 접기
   useEffect(() => {
     if (typeof window !== "undefined") {
       setDismissed(!!localStorage.getItem(KEY));
@@ -793,7 +853,7 @@ function EventTypeBadge({ event_type, kind }: { event_type: string; kind: "A" | 
 function UsageGuideCard() {
   const KEY = "powderkeg_usage_guide_dismissed";
   const [dismissed, setDismissed] = useState(false);
-  const [open, setOpen] = useState(true);
+  const [open, setOpen] = useState(false);   // v1.37 · 기본 접기
   useEffect(() => {
     if (typeof window !== "undefined") {
       setDismissed(!!localStorage.getItem(KEY));
