@@ -68,10 +68,12 @@ curl -sS "https://optimus8.cafe24.com/api/v1/powderkeg/list?limit=50" | \
   - 신규 collector `krx_delisted.py` · 재무 수집기 확장 · 배치 API + Progress 재개
   - Tests: 신규 6건 + 회귀 48 pass · 계획서 `docs/plans/powderkeg-screener/p2-1-delisted-financials-backfill.md`
   - 예상 백필 시간: 반나절 이내 (원 2~3일에서 KIND 실측으로 단축)
-- **[P2-2] PIT 층화 백테스트 재설계** (task #17) · P2-1 백필 완료 후 착수
-  - `backtest.py:run_stratified_backtest` · as-of 재무 조회 · 이벤트 시점 10조건 재평가
-  - 뼈대 완성 (Phase 7-4) · as-of 함수만 추가 필요
-  - 소요: 5~7시간 (P2-1 백필 후)
+- **[P2-2] PIT 층화 백테스트 재설계** ✅ **로컬 완료 (2026-07-23)** · 배포 대기
+  - `pit_evaluate(ticker, as_of_date)` 신설 · release_date <= as_of 재무·최대주주 조회 후 6조건 (3·4·5·6·7·8) 평가
+  - `run_stratified_backtest`에 `powderkeg_pit` stratum 추가 (기존 `powderkeg_passed`는 대조군으로 유지)
+  - Phase 1 실용 접근 · 재무·지분·big_biz 6조건 as-of · 시장(1·9)/관리(10) 관대 처리 → 응답에 `unmeasured_conditions` 명시
+  - 시장 데이터 히스토리 축적 후 Phase 2에서 완전 PIT 재평가 가능
+  - Tests: 신규 8건 + 회귀 46/46 pass · 계획서 `docs/plans/powderkeg-screener/p2-2-pit-stratified-backtest.md`
 - **[v2 인증 아키텍처]** (task #20~#23)
   - localStorage → httpOnly 쿠키
   - JWT + 24h 만료 + refresh + jti blacklist

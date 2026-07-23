@@ -23,8 +23,15 @@ from typing import Any, Optional
 from sqlalchemy import select, update
 
 from backend.services.db import get_session
-from backend.services.models import PowderKegBacktestReport, PowderKegEvent
+from backend.services.models import (
+    FinancialSnapshot,
+    MajorShareholder,
+    PowderKegBacktestReport,
+    PowderKegEvent,
+)
 
+from .cash_verifier import verify_cash_reality
+from .collectors.ftc_big_biz import is_big_biz_group
 from .event_study import (
     WINDOW_DAYS,
     AggregatedResult,
@@ -32,6 +39,7 @@ from .event_study import (
     aggregate_returns,
     compute_event_return,
 )
+from .piotroski import FinancialPeriod, calculate_f_score
 
 logger = logging.getLogger(__name__)
 
@@ -87,6 +95,168 @@ async def run_event_study_from_db(
     return aggregate_returns(event_type, returns, windows)
 
 
+# ═══════════════════════════════════════════════════════════════
+# P2-2 · PIT (Point-In-Time) 층화 백테스트 (v1.41)
+# ═══════════════════════════════════════════════════════════════
+#
+# 목표 · 각 이벤트 release_date 시점에 화약고였던 종목만 표본에 포함
+# (기존 powderkeg_passed 는 오늘 리스트 · look-ahead + 생존 편향).
+#
+# Phase 1 실용 접근 · 재무·지분·big_biz 6조건 as-of · 시장(1·9)/관리(10)는 관대 처리.
+
+_PIT_UNMEASURED = ["1_pbr", "9_adv60", "10_no_bad_history"]
+
+
+async def _as_of_financials(
+    ticker: str,
+    as_of_date: date,
+    report_code: str = "11011",
+    limit: int = 3,
+) -> list[FinancialSnapshot]:
+    """release_date <= as_of_date 인 재무 스냅샷을 최신순으로."""
+    from datetime import datetime, time as _time, timezone as _tz
+    as_of_dt = datetime.combine(as_of_date, _time.max, tzinfo=_tz.utc)
+    async with get_session() as session:
+        stmt = (
+            select(FinancialSnapshot)
+            .where(
+                FinancialSnapshot.ticker == ticker,
+                FinancialSnapshot.report_code == report_code,
+                FinancialSnapshot.release_date <= as_of_dt,
+            )
+            .order_by(FinancialSnapshot.reference_date.desc(), FinancialSnapshot.release_date.desc())
+            .limit(limit)
+        )
+        return list((await session.execute(stmt)).scalars().all())
+
+
+async def _as_of_shareholder(ticker: str, as_of_date: date) -> Optional[MajorShareholder]:
+    """release_date <= as_of_date 인 최대주주 최신."""
+    from datetime import datetime, time as _time, timezone as _tz
+    as_of_dt = datetime.combine(as_of_date, _time.max, tzinfo=_tz.utc)
+    async with get_session() as session:
+        stmt = (
+            select(MajorShareholder)
+            .where(
+                MajorShareholder.ticker == ticker,
+                MajorShareholder.release_date <= as_of_dt,
+            )
+            .order_by(MajorShareholder.reference_date.desc())
+            .limit(1)
+        )
+        return (await session.execute(stmt)).scalar_one_or_none()
+
+
+def _period_from_fs(fs: FinancialSnapshot) -> FinancialPeriod:
+    return FinancialPeriod(
+        net_income=fs.net_income,
+        cash_flow_from_operations=fs.cash_flow_from_operations,
+        total_assets=fs.total_assets,
+        total_debt=fs.total_debt,
+        current_assets=fs.current_assets,
+        current_liabilities=fs.current_liabilities,
+        revenue=fs.revenue,
+        gross_profit=fs.gross_profit,
+        shares_outstanding=fs.shares_outstanding,
+    )
+
+
+async def pit_evaluate(
+    ticker: str,
+    as_of_date: date,
+    thresholds: Optional[dict] = None,
+) -> tuple[bool, dict[str, Any]]:
+    """P2-2 · 이벤트 시점 화약고 여부 재평가 (Phase 1 · 6조건).
+
+    평가 조건 · 3 owner · 4 not_big_biz · 5 audit · 6 cash_reality · 7 op_profit · 8 fscore
+    관대 처리 (통과 가정) · 1 pbr · 9 adv60 · 10 no_bad_history · 2 net_cash (시가총액 부재)
+
+    Returns:
+        (passed_pit, meta)
+        meta.reason 은 실패 시 요약 · meta.cond 는 조건별 판정 값
+    """
+    t = thresholds or {}
+    fscore_min = t.get("piotroski_f_score_min", 6)
+    owner_min = t.get("major_shareholder_pct_min", 0.40)
+    base_rate = t.get("boK_base_rate", 0.035)
+    interest_margin = t.get("interest_income_yield_margin", 0.5)
+
+    meta: dict[str, Any] = {"cond": {}, "unmeasured": list(_PIT_UNMEASURED), "reason": None}
+
+    fin_all = await _as_of_financials(ticker, as_of_date)
+    if not fin_all:
+        meta["reason"] = "no_financial_data"
+        return False, meta
+    holder = await _as_of_shareholder(ticker, as_of_date)
+
+    fin = fin_all[0]
+    # 3 owner
+    if holder is None:
+        meta["cond"]["3_owner"] = None
+    else:
+        owner = (holder.major_pct or 0) + (holder.related_pct or 0)
+        meta["cond"]["3_owner"] = owner >= owner_min
+
+    # 5 audit (2년)
+    audits = [f.audit_opinion for f in fin_all[:2] if f.audit_opinion]
+
+    def _adequate(op: str) -> bool:
+        op = (op or "").strip()
+        if not op:
+            return False
+        if any(bad in op for bad in ("한정", "부적정", "의견거절")):
+            return False
+        return "적정" in op
+
+    if len(audits) < 2:
+        meta["cond"]["5_audit"] = None
+    else:
+        meta["cond"]["5_audit"] = all(_adequate(op) for op in audits[:2])
+
+    # 6 cash_reality
+    cash_current = (fin.cash_and_equivalents or 0) + (fin.short_term_investments or 0)
+    cash_prior = None
+    if len(fin_all) >= 2:
+        p = fin_all[1]
+        cash_prior = (p.cash_and_equivalents or 0) + (p.short_term_investments or 0)
+    cash_check = verify_cash_reality(
+        interest_income=fin.interest_income,
+        cash_current=cash_current if cash_current > 0 else None,
+        cash_prior=cash_prior if cash_prior and cash_prior > 0 else None,
+        base_rate=base_rate, margin=interest_margin,
+    )
+    meta["cond"]["6_cash_reality"] = cash_check.passed
+
+    # 7 op_profit (3년 중 2년 흑자)
+    ops = [f.operating_income for f in fin_all[:3] if f.operating_income is not None]
+    positive = sum(1 for op in ops if op > 0)
+    if len(ops) < 3:
+        meta["cond"]["7_op_profit"] = None
+    else:
+        meta["cond"]["7_op_profit"] = positive >= 2
+
+    # 8 fscore (2년 필요)
+    if len(fin_all) >= 2:
+        fscore = calculate_f_score(
+            current=_period_from_fs(fin_all[0]),
+            prior=_period_from_fs(fin_all[1]),
+        )
+        meta["cond"]["8_fscore"] = fscore.total_score >= fscore_min
+    else:
+        meta["cond"]["8_fscore"] = None
+
+    # 4 not_big_biz (release_date.year 근사)
+    is_big = await is_big_biz_group(ticker, as_of_date.year)
+    meta["cond"]["4_not_big_biz"] = not is_big
+
+    # 통합 판정 · 명시적 True 만 통과 (None/False 는 실패)
+    passed = all(v is True for v in meta["cond"].values())
+    if not passed:
+        failed = [k for k, v in meta["cond"].items() if v is not True]
+        meta["reason"] = f"failed_conds:{','.join(failed)}"
+    return passed, meta
+
+
 async def run_stratified_backtest(
     event_type: str,
     stratum: str = "powderkeg_passed",
@@ -103,8 +273,10 @@ async def run_stratified_backtest(
       · all              · 전체 시장 (기존 · 대조군)
     """
     import json as _json
+    from datetime import datetime, timezone as _tz
     ticker_filter: Optional[set[str]] = None
-    stratum_meta = {"name": stratum}
+    stratum_meta: dict[str, Any] = {"name": stratum}
+    pit_meta: Optional[dict[str, Any]] = None
     if stratum == "powderkeg_passed":
         # 최신 run_id 의 passed 종목만 필터
         from backend.services.models import PowderKegList
@@ -125,7 +297,49 @@ async def run_stratified_backtest(
         stratum_meta["run_id"] = latest_run
         stratum_meta["ticker_count"] = len(ticker_filter)
 
-    agg = await run_event_study_from_db(event_type, since=since, ticker_filter=ticker_filter)
+    if stratum == "powderkeg_pit":
+        # P2-2 · 각 이벤트 release_date 시점에 화약고였던 종목만 표본
+        async with get_session() as session:
+            stmt = select(PowderKegEvent).where(PowderKegEvent.event_type == event_type)
+            if since is not None:
+                stmt = stmt.where(PowderKegEvent.release_date >= datetime.combine(since, datetime.min.time(), tzinfo=_tz.utc))
+            all_events = list((await session.execute(stmt)).scalars().all())
+
+        pit_stats = {
+            "total_events": len(all_events),
+            "excluded_no_release_date": 0,
+            "excluded_no_financial": 0,
+            "excluded_failed_pit": 0,
+            "pit_passed": 0,
+            "unmeasured_conditions": list(_PIT_UNMEASURED),
+        }
+        pit_passed_events: list[PowderKegEvent] = []
+        for e in all_events:
+            if e.release_date is None:
+                pit_stats["excluded_no_release_date"] += 1
+                continue
+            passed, meta = await pit_evaluate(e.ticker, e.release_date.date())
+            if passed:
+                pit_stats["pit_passed"] += 1
+                pit_passed_events.append(e)
+            else:
+                if meta.get("reason") == "no_financial_data":
+                    pit_stats["excluded_no_financial"] += 1
+                else:
+                    pit_stats["excluded_failed_pit"] += 1
+
+        # 표본에서 직접 CAR 계산 (run_event_study_from_db 재호출 없이)
+        returns: list[SingleEventReturn] = []
+        for e in pit_passed_events:
+            d = e.release_date.date()
+            r = await compute_event_return(e.ticker, d, windows=WINDOW_DAYS)
+            returns.append(r)
+        agg = aggregate_returns(event_type, returns, WINDOW_DAYS)
+        stratum_meta["pit"] = pit_stats
+        pit_meta = pit_stats
+    else:
+        agg = await run_event_study_from_db(event_type, since=since, ticker_filter=ticker_filter)
+
     decision = evaluate_validation(agg)
 
     # 캐시 저장 (event_type_stratum 키로 별도 저장)
@@ -157,6 +371,7 @@ async def run_stratified_backtest(
         "stratum": stratum_meta,
         "aggregate": agg_dict,
         "decision": decision_dict,
+        "pit_meta": pit_meta,
     }
 
 
