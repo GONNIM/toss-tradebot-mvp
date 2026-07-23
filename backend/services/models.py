@@ -1104,6 +1104,47 @@ class PowderKegRun(Base):
     git_sha: Mapped[Optional[str]] = mapped_column(String(40))
 
 
+class PowderKegDelistedIssue(Base):
+    """KIND 상장폐지 종목 스냅샷 · P2-1.
+
+    kind.krx.co.kr/investwarn/delcompany.do 크롤링 결과 append-only 저장.
+    P2-1 재무 백필 대상 후보 · P2-2 PIT 백테스트 생존 편향 해소용.
+    """
+
+    __tablename__ = "powderkeg_delisted_issue"
+
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    ticker: Mapped[str] = mapped_column(String(10), index=True)
+    corp_name: Mapped[str] = mapped_column(String(200))
+    market: Mapped[Optional[str]] = mapped_column(String(20))     # KOSPI/KOSDAQ/KONEX
+    delisted_date: Mapped[Optional[str]] = mapped_column(String(20))
+    reason: Mapped[Optional[str]] = mapped_column(Text)
+    note: Mapped[Optional[str]] = mapped_column(String(200))
+    is_transitional: Mapped[bool] = mapped_column(Boolean, default=False)  # 이관성 (이전상장/합병 등)
+    snapshot_date: Mapped[str] = mapped_column(String(10), index=True)
+    refreshed_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
+
+    __table_args__ = (
+        Index("ix_pk_delisted_ticker_snap", "ticker", "snapshot_date"),
+    )
+
+
+class PowderKegDelistedBackfillProgress(Base):
+    """P2-1 상폐사 재무 백필 진행 저장 (재개 지원)."""
+
+    __tablename__ = "powderkeg_delisted_backfill_progress"
+
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    run_id: Mapped[str] = mapped_column(String(20), unique=True, index=True)
+    last_offset: Mapped[int] = mapped_column(default=0)
+    total_candidates: Mapped[int] = mapped_column(default=0)
+    inserted: Mapped[int] = mapped_column(default=0)
+    errors: Mapped[int] = mapped_column(default=0)
+    status: Mapped[str] = mapped_column(String(16), default="running")  # running/paused/done/error
+    last_error: Mapped[Optional[str]] = mapped_column(Text)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now(), onupdate=func.now())
+
+
 class PowderKegKrxIssue(Base):
     """KRX 관리종목 · 매매거래정지 스냅샷 · P4-5.
 

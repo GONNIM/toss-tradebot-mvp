@@ -62,10 +62,16 @@ curl -sS "https://optimus8.cafe24.com/api/v1/powderkeg/list?limit=50" | \
   - Tests: 신규 12건 + 회귀 8건 pass · 계획서 `docs/plans/powderkeg-screener/p4-5-krx-admin-issue.md`
 
 ### 🥉 우선순위 3 · 파이프라인 심화 (v2 성격)
-- **[P2-2] PIT 층화 백테스트 재설계** (task #17)
+- **[P2-1] 상폐 재무 백필** ✅ **로컬 완료 (2026-07-23)** · 배포 대기
+  - 원 계획(DartCorpCodeMap stock_code IS NULL) 실측 파괴 → KIND `delcompany.do` 크롤링 채택
+  - 5년 실측: 전체 393건 · Powderkeg 대상 311건 · 이관성 제외 후 236건
+  - 신규 collector `krx_delisted.py` · 재무 수집기 확장 · 배치 API + Progress 재개
+  - Tests: 신규 6건 + 회귀 48 pass · 계획서 `docs/plans/powderkeg-screener/p2-1-delisted-financials-backfill.md`
+  - 예상 백필 시간: 반나절 이내 (원 2~3일에서 KIND 실측으로 단축)
+- **[P2-2] PIT 층화 백테스트 재설계** (task #17) · P2-1 백필 완료 후 착수
   - `backtest.py:run_stratified_backtest` · as-of 재무 조회 · 이벤트 시점 10조건 재평가
-  - 상폐 재무 백필 완결 필요
-  - 소요: 6~8시간
+  - 뼈대 완성 (Phase 7-4) · as-of 함수만 추가 필요
+  - 소요: 5~7시간 (P2-1 백필 후)
 - **[v2 인증 아키텍처]** (task #20~#23)
   - localStorage → httpOnly 쿠키
   - JWT + 24h 만료 + refresh + jti blacklist

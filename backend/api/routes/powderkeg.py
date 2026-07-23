@@ -1034,6 +1034,46 @@ async def migrate_schema() -> dict[str, Any]:
         ("ix_pk_krx_issue_ticker_kind_snap",
          "CREATE INDEX IF NOT EXISTS ix_pk_krx_issue_ticker_kind_snap "
          "ON powderkeg_krx_issue (ticker, kind, snapshot_date)"),
+        # P2-1 · KIND 상장폐지 종목 스냅샷 + 백필 진행 저장 (2026-07-23 · v1.40)
+        ("powderkeg_delisted_issue", """
+            CREATE TABLE IF NOT EXISTS powderkeg_delisted_issue (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                ticker VARCHAR(10) NOT NULL,
+                corp_name VARCHAR(200) NOT NULL,
+                market VARCHAR(20),
+                delisted_date VARCHAR(20),
+                reason TEXT,
+                note VARCHAR(200),
+                is_transitional BOOLEAN DEFAULT 0,
+                snapshot_date VARCHAR(10) NOT NULL,
+                refreshed_at DATETIME DEFAULT CURRENT_TIMESTAMP
+            )
+        """),
+        ("ix_powderkeg_delisted_issue_ticker",
+         "CREATE INDEX IF NOT EXISTS ix_powderkeg_delisted_issue_ticker "
+         "ON powderkeg_delisted_issue (ticker)"),
+        ("ix_powderkeg_delisted_issue_snap",
+         "CREATE INDEX IF NOT EXISTS ix_powderkeg_delisted_issue_snap "
+         "ON powderkeg_delisted_issue (snapshot_date)"),
+        ("ix_pk_delisted_ticker_snap",
+         "CREATE INDEX IF NOT EXISTS ix_pk_delisted_ticker_snap "
+         "ON powderkeg_delisted_issue (ticker, snapshot_date)"),
+        ("powderkeg_delisted_backfill_progress", """
+            CREATE TABLE IF NOT EXISTS powderkeg_delisted_backfill_progress (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                run_id VARCHAR(20) NOT NULL UNIQUE,
+                last_offset INTEGER DEFAULT 0,
+                total_candidates INTEGER DEFAULT 0,
+                inserted INTEGER DEFAULT 0,
+                errors INTEGER DEFAULT 0,
+                status VARCHAR(16) DEFAULT 'running',
+                last_error TEXT,
+                updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+            )
+        """),
+        ("ix_powderkeg_delisted_backfill_progress_run",
+         "CREATE INDEX IF NOT EXISTS ix_powderkeg_delisted_backfill_progress_run "
+         "ON powderkeg_delisted_backfill_progress (run_id)"),
     ]
     async with get_session() as session:
         for name, ddl in direct_creates:
@@ -1080,6 +1120,145 @@ async def trigger_krx_admin_refresh() -> dict[str, Any]:
     """
     from backend.powderkeg.collectors.krx_admin_issue import refresh_admin_issue_snapshot
     return await refresh_admin_issue_snapshot()
+
+
+@router.post("/collectors/krx-delisted-refresh", dependencies=[Depends(require_sniper_token)])
+async def trigger_krx_delisted_refresh(
+    from_date: Optional[str] = Body(None, embed=True, description="YYYY-MM-DD · 기본 5년 전"),
+    to_date: Optional[str] = Body(None, embed=True, description="YYYY-MM-DD · 기본 오늘"),
+) -> dict[str, Any]:
+    """P2-1 · KIND 상장폐지 종목 리스트 refresh.
+
+    2 요청 (KOSPI + KOSDAQ 각각) · EUC-KR HTML 파싱.
+    이관성 사유(이전상장·피흡수합병·스팩 등) 자동 태그 · 재무 백필 대상 target_candidates 계산.
+    """
+    from backend.powderkeg.collectors.krx_delisted import refresh_delisted_snapshot
+    return await refresh_delisted_snapshot(from_date=from_date, to_date=to_date)
+
+
+@router.post("/collectors/dart-financials-delisted-batch", dependencies=[Depends(require_sniper_token)])
+async def trigger_dart_financials_delisted_batch(
+    years: list[int] = Body([2023, 2024, 2025], embed=True),
+    limit: int = Body(50, embed=True, description="배치당 최대 종목 수"),
+    offset: int = Body(0, embed=True, description="재개용 offset"),
+    sleep_ms: int = Body(300, embed=True, description="호출간 대기 (ms)"),
+    dry_run: bool = Body(False, embed=True, description="true=집계만 · false=실 백필"),
+    run_id: Optional[str] = Body(None, embed=True, description="progress 재개 시 run_id 명시 · None=신규"),
+) -> dict[str, Any]:
+    """P2-1 · 상폐사 재무 백필 (KIND 후보 → DART 재무 저장).
+
+    진행 저장: PowderKegDelistedBackfillProgress.run_id upsert.
+    dry_run=True 시 실 DART 호출 없이 후보 수만 리포트.
+    """
+    from datetime import datetime as _dt, timedelta as _td, timezone as _tz
+    from sqlalchemy import update as _update
+
+    from backend.powderkeg.collectors.dart_financials import collect_delisted_financials
+    from backend.powderkeg.collectors.krx_delisted import list_backfill_candidates
+    from backend.services.models import PowderKegDelistedBackfillProgress
+
+    candidates = await list_backfill_candidates()
+    total = len(candidates)
+
+    if dry_run:
+        return {
+            "dry_run": True,
+            "total_candidates": total,
+            "sample": candidates[:5],
+        }
+
+    if total == 0:
+        return {"error": "candidates 비어있음 · krx-delisted-refresh 먼저 실행"}
+
+    # progress upsert
+    if run_id is None:
+        _kst = _tz(_td(hours=9))
+        run_id = _dt.now(tz=_kst).strftime("%Y%m%d-%H%M%SK")
+
+    async with get_session() as session:
+        prog = (await session.execute(
+            select(PowderKegDelistedBackfillProgress).where(
+                PowderKegDelistedBackfillProgress.run_id == run_id
+            ).limit(1)
+        )).scalar_one_or_none()
+        if prog is None:
+            prog = PowderKegDelistedBackfillProgress(
+                run_id=run_id,
+                last_offset=offset,
+                total_candidates=total,
+                status="running",
+            )
+            session.add(prog)
+            await session.commit()
+
+    try:
+        result = await collect_delisted_financials(
+            candidates, years=years, sleep_ms=sleep_ms,
+            limit=limit, offset=offset,
+        )
+    except Exception as exc:  # noqa: BLE001
+        async with get_session() as session:
+            await session.execute(
+                _update(PowderKegDelistedBackfillProgress)
+                .where(PowderKegDelistedBackfillProgress.run_id == run_id)
+                .values(status="error", last_error=str(exc)[:500])
+            )
+            await session.commit()
+        raise
+
+    # progress 갱신
+    is_done = result["next_offset"] >= total
+    async with get_session() as session:
+        await session.execute(
+            _update(PowderKegDelistedBackfillProgress)
+            .where(PowderKegDelistedBackfillProgress.run_id == run_id)
+            .values(
+                last_offset=result["next_offset"],
+                inserted=PowderKegDelistedBackfillProgress.inserted + result["collected"],
+                errors=PowderKegDelistedBackfillProgress.errors + result["failed"],
+                status="done" if is_done else "paused",
+            )
+        )
+        await session.commit()
+
+    return {
+        "run_id": run_id,
+        "status": "done" if is_done else "paused",
+        **result,
+    }
+
+
+@router.get("/collectors/dart-financials-delisted-progress")
+async def get_delisted_backfill_progress(
+    run_id: Optional[str] = Query(None, description="특정 run · None=최신"),
+) -> dict[str, Any]:
+    """P2-1 · 백필 진행 저장 상태 조회."""
+    from backend.services.models import PowderKegDelistedBackfillProgress
+    async with get_session() as session:
+        if run_id is None:
+            row = (await session.execute(
+                select(PowderKegDelistedBackfillProgress)
+                .order_by(PowderKegDelistedBackfillProgress.updated_at.desc())
+                .limit(1)
+            )).scalar_one_or_none()
+        else:
+            row = (await session.execute(
+                select(PowderKegDelistedBackfillProgress).where(
+                    PowderKegDelistedBackfillProgress.run_id == run_id
+                ).limit(1)
+            )).scalar_one_or_none()
+    if row is None:
+        return {"run_id": run_id, "status": "not_found"}
+    return {
+        "run_id": row.run_id,
+        "last_offset": row.last_offset,
+        "total_candidates": row.total_candidates,
+        "inserted": row.inserted,
+        "errors": row.errors,
+        "status": row.status,
+        "last_error": row.last_error,
+        "updated_at": row.updated_at.isoformat() if row.updated_at else None,
+    }
 
 
 @router.get("/candidates/low-pbr")

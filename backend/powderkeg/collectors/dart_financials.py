@@ -20,6 +20,7 @@ from __future__ import annotations
 
 import json
 import logging
+import time
 from dataclasses import dataclass, field
 from datetime import date, datetime, timezone
 from typing import Any, Optional
@@ -211,6 +212,8 @@ async def collect_financial_snapshot(
     reprt_code: str,
     release_date: Optional[datetime] = None,
     fs_div_preference: tuple[str, ...] = ("CFS", "OFS"),
+    is_delisted: bool = False,
+    delisted_at: Optional[str] = None,
 ) -> Optional[int]:
     """단일 회사 · 단일 회계기간 재무 스냅샷 수집·저장.
 
@@ -329,9 +332,90 @@ async def collect_financial_snapshot(
         row.cash_flow_from_operations = parsed.cash_flow_from_operations
         row.audit_opinion = audit_opinion
         row.raw_json = raw_json
+        # P2-1 · 상폐사 백필 flag (매 호출마다 세팅 · 후속 스크리너·백테스트 필터용)
+        if is_delisted:
+            row.is_delisted = True
+            if delisted_at:
+                # ISO string → datetime (KST 자정 · timezone unaware · SQLite 정합)
+                try:
+                    row.delisted_at = datetime.strptime(delisted_at[:10], "%Y-%m-%d")
+                except (TypeError, ValueError):
+                    pass
         await session.flush()
         row_id = row.id
     return row_id
+
+
+async def collect_delisted_financials(
+    candidates: list[dict[str, Any]],   # [{ticker, corp_name, delisted_date, market, reason}, ...]
+    years: list[int],
+    report_codes: tuple[str, ...] = ("11011",),   # 사업보고서만 (반기/분기 백필 불필요)
+    sleep_ms: int = 300,
+    limit: Optional[int] = None,
+    offset: int = 0,
+) -> dict[str, Any]:
+    """P2-1 · 상폐사 재무 백필 (KIND delisted 후보 → DART corp_code → 재무 저장).
+
+    Args:
+        candidates: krx_delisted.list_backfill_candidates() 결과 형태
+        years: [2023, 2024, 2025] 등
+        report_codes: 기본 사업보고서만 (11011)
+        sleep_ms: 각 호출 사이 대기 · rate control
+        limit / offset: 재개 지원 · candidates[offset:offset+limit]
+
+    Returns:
+        {total_candidates, processed, matched_corp, collected, empty, failed, next_offset}
+    """
+    from .corp_codes import resolve_corp_code
+
+    total = len(candidates)
+    end = min(total, offset + limit) if limit else total
+    slice_ = candidates[offset:end]
+    stats = {
+        "total_candidates": total,
+        "processed": len(slice_),
+        "matched_corp": 0,
+        "collected": 0,
+        "empty": 0,
+        "failed": 0,
+        "next_offset": end,
+        "elapsed_sec": 0.0,
+    }
+    t0 = time.time()
+    for cand in slice_:
+        ticker = cand["ticker"]
+        try:
+            corp_code = await resolve_corp_code(ticker)
+        except Exception as exc:  # noqa: BLE001
+            logger.warning("[dart_fin.delisted] %s corp_code 해결 실패 · %s", ticker, exc)
+            stats["failed"] += 1
+            continue
+        if not corp_code:
+            stats["failed"] += 1
+            continue
+        stats["matched_corp"] += 1
+
+        for year in years:
+            for rcp in report_codes:
+                try:
+                    row_id = await collect_financial_snapshot(
+                        ticker, corp_code, year, rcp,
+                        is_delisted=True,
+                        delisted_at=cand.get("delisted_date"),
+                    )
+                    if row_id is not None:
+                        stats["collected"] += 1
+                    else:
+                        stats["empty"] += 1
+                except Exception as exc:  # noqa: BLE001
+                    logger.warning("[dart_fin.delisted] %s/%s/%s 실패 · %s", ticker, year, rcp, exc)
+                    stats["failed"] += 1
+                if sleep_ms > 0:
+                    time.sleep(sleep_ms / 1000.0)
+
+    stats["elapsed_sec"] = round(time.time() - t0, 2)
+    logger.info("[dart_fin.delisted.batch] %s", stats)
+    return stats
 
 
 async def collect_batch(
