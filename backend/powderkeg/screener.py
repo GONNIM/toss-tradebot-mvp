@@ -36,6 +36,10 @@ from backend.services.models import (
 
 from .cash_verifier import verify_cash_reality
 from .collectors.ftc_big_biz import is_big_biz_group
+from .collectors.krx_admin_issue import (
+    designation_history,
+    is_currently_designated,
+)
 from .collectors.order_industry_seed import (
     is_order_industry, order_industry_info,
     is_financial_industry, financial_industry_info,
@@ -386,21 +390,36 @@ async def screen_ticker(
             result.reject_reasons.append(f"adv60<{t.adv_60d_min_krw:.0f}({market.avg_daily_amount_60d})")
     result.conditions["9_adv60"] = c9
 
-    # ── 조건 10 · 관리종목·거래정지 이력 근사 (v1.35 · 4차 리뷰 대안 B) ─
-    # 실 관리종목 API 미확보 (pykrx·FDR 미제공) · KRX 크롤링은 v2.
-    # 근사: DART 감사의견 최근 3년 · 하나라도 부적정/한정/의견거절이면 c10=False.
-    # 완전한 관리종목 판정 아니지만 v1 True 고정보다 큰 개선 (실 관리종목 상당 겹침).
-    # 데이터 3년 미만은 None (3상태 분리 · Tier 2 needs_data 로 유도).
-    audits_3y = [fs.audit_opinion for fs in fin_all[:3] if fs.audit_opinion]
-    _is_bad_audit = lambda op: any(k in (op or "") for k in ("한정", "부적정", "의견거절"))
-    if len(audits_3y) < 3:
+    # ── 조건 10 · KRX 관리종목/거래정지 실 데이터 (v1.39 · P4-5) ─
+    # KIND(kind.krx.co.kr) 크롤링 스냅샷 · powderkeg_krx_issue 조회.
+    # 스냅샷 미수집 → c10=None (3상태 유지 · Tier 2 needs_data 로 유도)
+    # 현재 리스트에 있음 → c10=False · 사유·kind·지정일 노출
+    # 최근 3년 지정 이력 → c10=False · 최근 지정일 표시
+    # 위 모두 아님 → c10=True
+    kri = await is_currently_designated(ticker)
+    if kri is None:
         c10 = None
-        result.reject_reasons.append(f"bad_history:no_audit_data<3yrs({len(audits_3y)})")
-    elif any(_is_bad_audit(op) for op in audits_3y):
+        result.reject_reasons.append("bad_history:no_krx_snapshot")
+    elif kri.get("kind"):
         c10 = False
-        result.reject_reasons.append(f"bad_history:audit_bad({','.join(audits_3y[:3])})")
+        result.reject_reasons.append(
+            f"bad_history:krx_{kri['kind']}("
+            f"reason={kri.get('reason') or '-'};"
+            f"date={kri.get('designation_date') or '-'};"
+            f"snap={kri['snapshot_date']})"
+        )
     else:
-        c10 = True
+        hist = await designation_history(ticker, lookback_days=3 * 365)
+        if hist:
+            latest = hist[0]
+            c10 = False
+            result.reject_reasons.append(
+                f"bad_history:krx_prior_{latest['kind']}("
+                f"reason={latest.get('reason') or '-'};"
+                f"snap={latest['snapshot_date']})"
+            )
+        else:
+            c10 = True
     result.conditions["10_no_bad_history"] = c10
 
     # ── 통합 판정 ────────────────────────

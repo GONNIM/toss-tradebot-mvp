@@ -21,6 +21,7 @@ from backend.services.models import (
     FinancialSnapshot,
     KrxMarketSnapshot,
     MajorShareholder,
+    PowderKegKrxIssue,
     PowderKegList,
 )
 
@@ -37,7 +38,23 @@ async def _clean_db():
         await session.execute(delete(KrxMarketSnapshot))
         await session.execute(delete(MajorShareholder))
         await session.execute(delete(PowderKegList))
+        await session.execute(delete(PowderKegKrxIssue))
     yield
+
+
+async def _seed_krx_snapshot_clean(tickers: list[str], snapshot_date: str = "2026-07-23"):
+    """P4-5 · KRX 스냅샷 존재하지만 대상 티커는 미지정 상태 시뮬레이션 (c10=True 유도).
+
+    실 스크리너는 스냅샷 미수집 시 c10=None → passed_all=False 로 판정하므로,
+    통과 테스트에는 스냅샷 존재 + 대상 티커 미지정을 함께 시딩해야 함.
+    """
+    async with get_session() as session:
+        # baseline · 다른 티커 하나를 관리종목으로 넣어 스냅샷 존재 확증
+        session.add(PowderKegKrxIssue(
+            ticker="900000", name="TEST_ADMIN_ONLY", kind="admin",
+            reason="시가총액 미달", designation_date="2026-07-21",
+            snapshot_date=snapshot_date,
+        ))
 
 
 async def _seed_ideal_powder_keg(ticker: str = TRADE_TICKER):
@@ -90,6 +107,8 @@ async def _seed_ideal_powder_keg(ticker: str = TRADE_TICKER):
         ))
     # 공정위 seed 로드 (조건 4 · TRADE_TICKER 는 미포함)
     await refresh_from_seed(2026)
+    # P4-5 · KRX 스냅샷 (조건 10 · 대상 티커는 리스트에 없음 · c10=True)
+    await _seed_krx_snapshot_clean([ticker])
 
 
 @pytest.mark.asyncio

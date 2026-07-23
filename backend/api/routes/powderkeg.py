@@ -1012,6 +1012,28 @@ async def migrate_schema() -> dict[str, Any]:
         ("ix_pk_run_diff_cond_time",
          "CREATE INDEX IF NOT EXISTS ix_pk_run_diff_cond_time "
          "ON powderkeg_run_diff (condition_key, changed_at)"),
+        # P4-5 · KRX 관리종목/거래정지 스냅샷 (2026-07-23 · v1.39)
+        ("powderkeg_krx_issue", """
+            CREATE TABLE IF NOT EXISTS powderkeg_krx_issue (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                ticker VARCHAR(10) NOT NULL,
+                name VARCHAR(200),
+                kind VARCHAR(16) NOT NULL,
+                reason VARCHAR(500),
+                designation_date VARCHAR(20),
+                snapshot_date VARCHAR(10) NOT NULL,
+                refreshed_at DATETIME DEFAULT CURRENT_TIMESTAMP
+            )
+        """),
+        ("ix_powderkeg_krx_issue_ticker",
+         "CREATE INDEX IF NOT EXISTS ix_powderkeg_krx_issue_ticker "
+         "ON powderkeg_krx_issue (ticker)"),
+        ("ix_powderkeg_krx_issue_snap",
+         "CREATE INDEX IF NOT EXISTS ix_powderkeg_krx_issue_snap "
+         "ON powderkeg_krx_issue (snapshot_date)"),
+        ("ix_pk_krx_issue_ticker_kind_snap",
+         "CREATE INDEX IF NOT EXISTS ix_pk_krx_issue_ticker_kind_snap "
+         "ON powderkeg_krx_issue (ticker, kind, snapshot_date)"),
     ]
     async with get_session() as session:
         for name, ddl in direct_creates:
@@ -1047,6 +1069,17 @@ async def migrate_schema() -> dict[str, Any]:
 async def trigger_ftc_refresh(year: int = Body(2026, embed=True)) -> dict[str, Any]:
     """공정위 대기업집단 seed → BigBusinessGroup 재적재."""
     return await refresh_from_seed(year)
+
+
+@router.post("/collectors/krx-admin-refresh", dependencies=[Depends(require_sniper_token)])
+async def trigger_krx_admin_refresh() -> dict[str, Any]:
+    """P4-5 · KIND 관리종목·거래정지 스냅샷 refresh.
+
+    3 요청: adminissue.do (관리종목) + tradinghaltissue.do (거래정지) + corpList.do (매핑, 하루 캐시).
+    같은 (ticker, kind, snapshot_date) 조합 중복은 skip (idempotent within a day).
+    """
+    from backend.powderkeg.collectors.krx_admin_issue import refresh_admin_issue_snapshot
+    return await refresh_admin_issue_snapshot()
 
 
 @router.get("/candidates/low-pbr")

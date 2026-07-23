@@ -1104,6 +1104,29 @@ class PowderKegRun(Base):
     git_sha: Mapped[Optional[str]] = mapped_column(String(40))
 
 
+class PowderKegKrxIssue(Base):
+    """KRX 관리종목 · 매매거래정지 스냅샷 · P4-5.
+
+    KIND(kind.krx.co.kr) 크롤링 결과를 매일 append-only 로 저장 · 이력 유지.
+    스크리너 조건 ⑩ (관리종목 이력 없음) 실 데이터 근거.
+    """
+
+    __tablename__ = "powderkeg_krx_issue"
+
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    ticker: Mapped[str] = mapped_column(String(10), index=True)
+    name: Mapped[Optional[str]] = mapped_column(String(200))
+    kind: Mapped[str] = mapped_column(String(16))                   # admin (관리종목) / halt (매매거래정지)
+    reason: Mapped[Optional[str]] = mapped_column(String(500))
+    designation_date: Mapped[Optional[str]] = mapped_column(String(20))   # 원문 or ISO
+    snapshot_date: Mapped[str] = mapped_column(String(10), index=True)    # YYYY-MM-DD
+    refreshed_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
+
+    __table_args__ = (
+        Index("ix_pk_krx_issue_ticker_kind_snap", "ticker", "kind", "snapshot_date"),
+    )
+
+
 class PowderKegRunDiff(Base):
     """조건 단위 변화 로그 · P4-1 provenance/RunDiff.
 

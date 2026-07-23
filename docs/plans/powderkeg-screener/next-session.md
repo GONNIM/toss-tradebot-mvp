@@ -53,10 +53,13 @@ curl -sS "https://optimus8.cafe24.com/api/v1/powderkeg/list?limit=50" | \
   - `DISCOVERY_CONDITIONS = {"1_pbr"}` 상수 · 퍼널 카드 발굴/정보량 2그룹 분리 · 상세 팝업 발굴 조건 회색톤 + "🔎 · 발굴" 태그
 
 ### 🥈 우선순위 2 · 실데이터화 (Type B 방어선 강화)
-- **[P4-5] 조건 ⑩ KRX 관리종목 실데이터 (대안 A)** (task #34)
-  - 현재는 감사 3년 근사 · KRX 웹 크롤링으로 정확화
-  - 신규 collector `krx_delisting_risk.py`
-  - 소요: 3~4시간 (크롤링 안정화 포함)
+- ~~**[P4-5] 조건 ⑩ KRX 관리종목 실데이터 (대안 A)** (task #34)~~ ✅ **로컬 완료 (2026-07-23)** · 배포 대기
+  - data.krx.co.kr JSON API가 2026 로그인 봉쇄 → **KIND 3-엔드포인트 조합** (adminissue.do + tradinghaltissue.do + corpList.do) 채택
+  - 신규 collector `krx_admin_issue.py` · admin 93.7% · halt 98.4% 매칭 실측 (미매칭은 ETF/우선주 · 스크리너 대상 아님)
+  - 신규 모델 `PowderKegKrxIssue` (append-only 스냅샷)
+  - 신규 API `POST /collectors/krx-admin-refresh`
+  - screener 조건 ⑩ 감사 근사 → 실 데이터 (스냅샷 미수집 시 c10=None 3상태 유지)
+  - Tests: 신규 12건 + 회귀 8건 pass · 계획서 `docs/plans/powderkeg-screener/p4-5-krx-admin-issue.md`
 
 ### 🥉 우선순위 3 · 파이프라인 심화 (v2 성격)
 - **[P2-2] PIT 층화 백테스트 재설계** (task #17)
