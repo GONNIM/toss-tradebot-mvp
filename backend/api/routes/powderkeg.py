@@ -25,7 +25,10 @@ from fastapi import APIRouter, Body, Depends, HTTPException, Query
 from sqlalchemy import select
 
 from backend.api.auth import require_sniper_token
-from backend.powderkeg.backtest import run_backtest_for_event_type
+from backend.powderkeg.backtest import (
+    run_backtest_for_event_type,
+    run_stratified_backtest,
+)
 from backend.powderkeg.collectors.corp_codes import (
     refresh_corp_codes,
     resolve_corp_code,
@@ -1535,6 +1538,22 @@ async def trigger_screener(
 async def trigger_backtest(event_type: str) -> dict[str, Any]:
     """이벤트 타입 백테스트 실행 + validated 승격 (게이트 통과 시)."""
     return await run_backtest_for_event_type(event_type)
+
+
+@router.post("/backtest/{event_type}/stratified", dependencies=[Depends(require_sniper_token)])
+async def trigger_stratified_backtest(
+    event_type: str,
+    stratum: str = Body("powderkeg_pit", embed=True,
+                        description="powderkeg_passed (오늘 리스트) · powderkeg_pit (P2-2 · 이벤트 시점 재평가) · all (전체 시장)"),
+) -> dict[str, Any]:
+    """P2-2 · 화약고 층화 백테스트 트리거.
+
+    stratum:
+      · powderkeg_pit    · 각 이벤트 release_date 시점 화약고 재평가 (편향 최소)
+      · powderkeg_passed · 오늘의 화약고 리스트 (기존 · 대조군 · 편향 있음)
+      · all              · 전체 시장 (전 종목)
+    """
+    return await run_stratified_backtest(event_type, stratum=stratum)
 
 
 @router.post("/triggers/process", dependencies=[Depends(require_sniper_token)])
