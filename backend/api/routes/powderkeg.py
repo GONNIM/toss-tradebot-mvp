@@ -1231,6 +1231,132 @@ async def trigger_dart_financials_delisted_batch(
     }
 
 
+@router.post("/collectors/dart-financials-universe-batch", dependencies=[Depends(require_sniper_token)])
+async def trigger_dart_financials_universe_batch(
+    years: list[int] = Body([2020, 2021, 2022], embed=True, description="백필 대상 사업연도"),
+    report_code: str = Body("11011", embed=True, description="사업보고서 (11011) 등"),
+    limit: int = Body(3000, embed=True, description="배치당 최대 종목 수"),
+    offset: int = Body(0, embed=True, description="재개용 offset"),
+    sleep_ms: int = Body(300, embed=True, description="호출간 대기 (ms)"),
+    dry_run: bool = Body(False, embed=True, description="true=집계만 · false=실 백필"),
+    run_id: Optional[str] = Body(None, embed=True, description="progress 재개 시 run_id"),
+) -> dict[str, Any]:
+    """P2-1b · 활성 종목(KrxMarketSnapshot 존재) 대상 사업보고서 백필.
+
+    각 (ticker, year) 조합 · 이미 있으면 dart_financials 내부에서 skip (release_date 비교).
+    PIT 층화 백테스트(P2-2)의 표본 확보를 목적으로 2020~2022 재무 확보.
+    """
+    from datetime import datetime as _dt, timedelta as _td, timezone as _tz
+    from sqlalchemy import update as _update
+    import time as _time
+
+    from backend.powderkeg.collectors.corp_codes import resolve_corp_code
+    from backend.powderkeg.collectors.dart_financials import collect_financial_snapshot
+    from backend.services.models import (
+        KrxMarketSnapshot,
+        PowderKegDelistedBackfillProgress,
+    )
+
+    # 활성 종목 로드 · 최신 스냅샷 기준 unique
+    async with get_session() as session:
+        latest_snap = (await session.execute(
+            select(KrxMarketSnapshot.snapshot_date)
+            .order_by(KrxMarketSnapshot.snapshot_date.desc()).limit(1)
+        )).scalar_one_or_none()
+        tickers = list((await session.execute(
+            select(KrxMarketSnapshot.ticker)
+            .where(KrxMarketSnapshot.snapshot_date == latest_snap)
+            .order_by(KrxMarketSnapshot.ticker)
+        )).scalars().all())
+
+    total = len(tickers)
+    end = min(total, offset + limit)
+    slice_ = tickers[offset:end]
+
+    if dry_run:
+        return {
+            "dry_run": True,
+            "latest_snapshot_date": latest_snap,
+            "total_tickers": total,
+            "slice_size": len(slice_),
+            "years": years,
+            "expected_calls": len(slice_) * len(years),
+            "sample_tickers": slice_[:10],
+        }
+
+    # progress row (진행 저장 · 기존 delisted progress 테이블 재활용 · run_id 이름으로 구분)
+    if run_id is None:
+        _kst = _tz(_td(hours=9))
+        run_id = _dt.now(tz=_kst).strftime("universe-%Y%m%d-%H%M%SK")
+
+    async with get_session() as session:
+        prog = (await session.execute(
+            select(PowderKegDelistedBackfillProgress).where(
+                PowderKegDelistedBackfillProgress.run_id == run_id
+            ).limit(1)
+        )).scalar_one_or_none()
+        if prog is None:
+            prog = PowderKegDelistedBackfillProgress(
+                run_id=run_id,
+                last_offset=offset,
+                total_candidates=total,
+                status="running",
+            )
+            session.add(prog)
+            await session.commit()
+
+    stats = {
+        "run_id": run_id,
+        "total_tickers": total,
+        "processed_tickers": 0,
+        "matched_corp": 0,
+        "collected": 0, "empty": 0, "failed": 0,
+        "next_offset": end,
+    }
+    t0 = _time.time()
+    for ticker in slice_:
+        stats["processed_tickers"] += 1
+        try:
+            corp_code = await resolve_corp_code(ticker)
+        except Exception as exc:  # noqa: BLE001
+            logger.warning("[universe.backfill] %s corp_code 실패 · %s", ticker, exc)
+            stats["failed"] += 1
+            continue
+        if not corp_code:
+            stats["failed"] += 1
+            continue
+        stats["matched_corp"] += 1
+        for year in years:
+            try:
+                row_id = await collect_financial_snapshot(ticker, corp_code, year, report_code)
+                if row_id is not None:
+                    stats["collected"] += 1
+                else:
+                    stats["empty"] += 1
+            except Exception as exc:  # noqa: BLE001
+                logger.warning("[universe.backfill] %s/%s 실패 · %s", ticker, year, exc)
+                stats["failed"] += 1
+            if sleep_ms > 0:
+                _time.sleep(sleep_ms / 1000.0)
+
+    stats["elapsed_sec"] = round(_time.time() - t0, 2)
+    is_done = end >= total
+    async with get_session() as session:
+        await session.execute(
+            _update(PowderKegDelistedBackfillProgress)
+            .where(PowderKegDelistedBackfillProgress.run_id == run_id)
+            .values(
+                last_offset=end,
+                inserted=PowderKegDelistedBackfillProgress.inserted + stats["collected"],
+                errors=PowderKegDelistedBackfillProgress.errors + stats["failed"],
+                status="done" if is_done else "paused",
+            )
+        )
+        await session.commit()
+    stats["status"] = "done" if is_done else "paused"
+    return stats
+
+
 @router.get("/collectors/dart-financials-delisted-progress")
 async def get_delisted_backfill_progress(
     run_id: Optional[str] = Query(None, description="특정 run · None=최신"),
