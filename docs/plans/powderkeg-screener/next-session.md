@@ -1,8 +1,8 @@
 # Phase 7 화약고 스크리너 · 다음 세션 재개 가이드
 
-**작성일**: 2026-07-22 (세션 종료 시점)
+**작성일**: 2026-07-22 · **개정 2026-07-23** (v1.43 세션 종료 시점)
 **대상**: 다음 세션 재개 시 · Claude 및 사용자
-**현 라이브**: v1.37 · `6ac02fb`
+**현 라이브**: **v1.43 · `1e37134`** (7개 배포 · P4-1 + P4-6 + P4-5 + P2-1 + P2-2 + P2-1b 완결)
 
 ---
 
@@ -11,7 +11,7 @@
 ```bash
 # 1. 라이브 SHA 확증
 curl -sS https://optimus8.cafe24.com/powderkeg | grep -oE 'build [a-f0-9]{7}'
-# 기대: build 6ac02fb
+# 기대: build 1e37134 (or 이후 커밋)
 
 # 2. 서버 상태
 ssh root@optimus8.cafe24.com "systemctl is-active tradebot-api tradebot-cron"
@@ -44,48 +44,41 @@ curl -sS "https://optimus8.cafe24.com/api/v1/powderkeg/list?limit=50" | \
 
 ## 2. 남은 백로그 (Priority 순)
 
-### 🥇 우선순위 1 · UX·기능 후속 (사용자 관점 즉시 체감)
-- ~~**[P4-1] 서희 provenance UI + Run diff 로그** (task #30)~~ ✅ **로컬 완료 (2026-07-22)** · 배포 대기
-  - Backend: `PowderKegRun` + `PowderKegRunDiff` 모델, screener 훅, 3종 API (`/ticker/{ticker}/provenance`, `/run-diff/latest`, `/run-diff/summary`)
-  - Frontend: 리스트 "🆕 변동/⇄ 티어이동" 뱃지, 상단 요약 카드, 상세 팝업 "🔄 변동 이력 + Provenance" 섹션
-  - Tests: 신규 9건 + 회귀 22건 pass · 계획서 `docs/plans/powderkeg-screener/p4-1-provenance-run-diff.md`
-- ~~**[P4-6] 조건 ① 발굴 조건 별도 표기** (task #35)~~ ✅ **로컬 완료 (2026-07-22)** · 배포 대기
-  - `DISCOVERY_CONDITIONS = {"1_pbr"}` 상수 · 퍼널 카드 발굴/정보량 2그룹 분리 · 상세 팝업 발굴 조건 회색톤 + "🔎 · 발굴" 태그
+### ✅ 완결 · 배포 완료 (2026-07-22~23 세션)
+- **P4-1** provenance UI + Run diff (v1.38 · `3f7edb2`) · `p4-1-provenance-run-diff.md`
+- **P4-6** 발굴 조건 분리 표기 (v1.38 동시)
+- **P4-5** KRX 관리종목 실데이터 (v1.39 · `49d0922`) · `p4-5-krx-admin-issue.md`
+- **P2-1** 상폐 재무 백필 (v1.40 · `6b22962`) · `p2-1-delisted-financials-backfill.md` · **322 rows / 185 tickers 실측 완결**
+- **P2-2** PIT 층화 백테스트 (v1.41 · `3c62d20`) + `/backtest/stratified` 라우트 (v1.42 · `8314688`) · `p2-2-pit-stratified-backtest.md`
+- **P2-1b** 활성 종목 재무 백필 (v1.43 · `1e37134`) · **+4,232 rows (2020-2022 재무 확충)**
 
-### 🥈 우선순위 2 · 실데이터화 (Type B 방어선 강화)
-- ~~**[P4-5] 조건 ⑩ KRX 관리종목 실데이터 (대안 A)** (task #34)~~ ✅ **로컬 완료 (2026-07-23)** · 배포 대기
-  - data.krx.co.kr JSON API가 2026 로그인 봉쇄 → **KIND 3-엔드포인트 조합** (adminissue.do + tradinghaltissue.do + corpList.do) 채택
-  - 신규 collector `krx_admin_issue.py` · admin 93.7% · halt 98.4% 매칭 실측 (미매칭은 ETF/우선주 · 스크리너 대상 아님)
-  - 신규 모델 `PowderKegKrxIssue` (append-only 스냅샷)
-  - 신규 API `POST /collectors/krx-admin-refresh`
-  - screener 조건 ⑩ 감사 근사 → 실 데이터 (스냅샷 미수집 시 c10=None 3상태 유지)
-  - Tests: 신규 12건 + 회귀 8건 pass · 계획서 `docs/plans/powderkeg-screener/p4-5-krx-admin-issue.md`
+### ⚠️ 주요 발견 (다음 세션 참고 필수)
+- **PIT 재실측 결과 pit_passed=0** (A3·B3 이벤트) — 시스템 무결이나 **화약고 6조건 자체가 매우 tight** · 이벤트 발생 종목 대부분이 화약고 아님 → **화약고 가설 재검토 필요** (Phase 2 성격 · 별건 논의)
+- 백필 후 흐름 변화: A3 excluded_no_financial 72%→19% · excluded_failed_pit 28%→81% · 재무 확보는 정상 · 6조건 판정에서 탈락
+- Tier 1 lock 11 종목 유지 · KRX 실데이터로도 c10=True 확증 (감사 근사 판정 정확도 100%)
 
-### 🥉 우선순위 3 · 파이프라인 심화 (v2 성격)
-- **[P2-1] 상폐 재무 백필** ✅ **로컬 완료 (2026-07-23)** · 배포 대기
-  - 원 계획(DartCorpCodeMap stock_code IS NULL) 실측 파괴 → KIND `delcompany.do` 크롤링 채택
-  - 5년 실측: 전체 393건 · Powderkeg 대상 311건 · 이관성 제외 후 236건
-  - 신규 collector `krx_delisted.py` · 재무 수집기 확장 · 배치 API + Progress 재개
-  - Tests: 신규 6건 + 회귀 48 pass · 계획서 `docs/plans/powderkeg-screener/p2-1-delisted-financials-backfill.md`
-  - 예상 백필 시간: 반나절 이내 (원 2~3일에서 KIND 실측으로 단축)
-- **[P2-2] PIT 층화 백테스트 재설계** ✅ **로컬 완료 (2026-07-23)** · 배포 대기
-  - `pit_evaluate(ticker, as_of_date)` 신설 · release_date <= as_of 재무·최대주주 조회 후 6조건 (3·4·5·6·7·8) 평가
-  - `run_stratified_backtest`에 `powderkeg_pit` stratum 추가 (기존 `powderkeg_passed`는 대조군으로 유지)
-  - Phase 1 실용 접근 · 재무·지분·big_biz 6조건 as-of · 시장(1·9)/관리(10) 관대 처리 → 응답에 `unmeasured_conditions` 명시
-  - 시장 데이터 히스토리 축적 후 Phase 2에서 완전 PIT 재평가 가능
-  - Tests: 신규 8건 + 회귀 46/46 pass · 계획서 `docs/plans/powderkeg-screener/p2-2-pit-stratified-backtest.md`
-- **[v2 인증 아키텍처]** (task #20~#23)
-  - localStorage → httpOnly 쿠키
-  - JWT + 24h 만료 + refresh + jti blacklist
-  - role-based access · sniper_api_access 감사 테이블
-  - 총 소요: 12~16시간 (4 서브태스크)
+### 🥇 남은 우선순위 (다음 세션)
 
-### 후속 세션 신규 검토 항목
-- **자동 재평가 옵션 A** (일 1회 · 현재 리스트 종목만 · identity.md §6 참조)
-  - 사용자 재검토 후 결정
-- **Tier 2 near 20 종목 개별 분석**
-- **P4-2b 조건 ④ 정의 재검토** (상호출자제한 vs 공시대상 세분화)
-- **P2-3b dart_financials CFS/OFS fallback** (서희 계약부채 별도 확인)
+**우선순위 1 · 화약고 가설 재검토 (신설 · P2-2 결과 근거)**
+- 6조건 relax 실측 (F-Score 4+·owner 30%+ grid search) · 3~4h
+- 또는 이벤트 시점 조건 완화 · 화약고 정의 자체를 이벤트 반응 종목 관찰로 역설계
+
+**우선순위 2 · v2 인증 아키텍처** (task #20~#23) · 12~14h Phase 1 MVP
+- localStorage → httpOnly 쿠키
+- JWT + 24h 만료 · pyjwt 이미 설치 (신규 라이브러리 불요)
+- role-based access · sniper_api_access 감사 테이블
+- Grace period 2~4주 · 하위 호환
+
+**우선순위 3 · Phase 2 완전 PIT** · 3~6개월 대기 (자연 축적)
+- KrxMarketSnapshot 매일 append 스케줄러 (현재 2일치만) · 3~4h
+- PowderKegKrxIssue 매일 append (P4-5 스케줄러화) · 이미 크롤링 API 있음
+- 축적 완료 후 pit_evaluate에서 시장·관리 조건도 as-of 평가
+
+**우선순위 4 · 소소한 개선**
+- git_sha env 주입 (PowderKegRun.git_sha=null 해소) · 30분
+- Tier 2 near 39 종목 개별 분석 (계획서 20 → 실측 39) · 2~3h
+- P4-2b 조건 ④ 정의 재검토 (상호출자제한 vs 공시대상 세분화)
+- P2-3b dart_financials CFS/OFS fallback
 
 ---
 
@@ -176,11 +169,11 @@ cd /Users/gonnim/Project-MVP/Source/toss-tradebot-mvp/frontend && \
 
 ## 6. 다음 세션 시작 시 첫 지시 제안
 
-**Option A**: 우선순위 1 진행 · 서희 provenance UI (5~6시간)
-**Option B**: 우선순위 2 · KRX 관리종목 크롤링 (3~4시간)
-**Option C**: Tier 2 near 20 종목 개별 분석 (2~3시간 · 관찰 후보 확대)
-**Option D**: Tier 1 11 종목 상세 검증 · 6개 미검증 종목 실측 (2시간)
-**Option E**: 사용자 판단 · 목록 확인 후 결정
+**Option A**: 화약고 가설 재검토 · 6조건 relax grid search (3~4h · PIT 결과 후속)
+**Option B**: v2 인증 Phase 1 MVP (12~14h · 보안 심화 · pyjwt 준비 완료)
+**Option C**: Phase 2 완전 PIT 준비 · 시장·관리 데이터 매일 append 스케줄러 (3~4h + 3개월 대기)
+**Option D**: Tier 2 near **39** 종목 개별 분석 (2~3h · 관찰 후보 확대)
+**Option E**: 사용자 판단 · Tier 1 관찰 지속 · 다음 요청 대기
 
 ---
 
@@ -200,4 +193,5 @@ cd /Users/gonnim/Project-MVP/Source/toss-tradebot-mvp/frontend && \
 
 | 날짜 | 버전 | 변경 | 커밋 |
 |---|---|---|---|
-| 2026-07-22 | v1.0 | 신규 · 다음 세션 재개 가이드 · 백로그 우선순위 · 자주 쓴 명령·문서 인덱스·Tier 1 노트 | (pending) |
+| 2026-07-22 | v1.0 | 신규 · 다음 세션 재개 가이드 · 백로그 우선순위 · 자주 쓴 명령·문서 인덱스·Tier 1 노트 | f32624d |
+| 2026-07-23 | v2.0 | 7개 배포 완결 반영 (v1.38~v1.43) · P4-1/P4-6/P4-5/P2-1/P2-2/P2-1b 완료 표시 · 화약고 가설 재검토 신규 우선순위 1 · 남은 백로그 재정렬 | (pending) |
