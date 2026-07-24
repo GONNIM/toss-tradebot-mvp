@@ -1671,6 +1671,8 @@ async def trigger_stratified_backtest(
     event_type: str,
     stratum: str = Body("powderkeg_pit", embed=True,
                         description="powderkeg_passed (오늘 리스트) · powderkeg_pit (P2-2 · 이벤트 시점 재평가) · all (전체 시장)"),
+    thresholds: Optional[dict] = Body(None, embed=True,
+                                      description="P2-2b · pit_evaluate 임계값 override · null=기본"),
 ) -> dict[str, Any]:
     """P2-2 · 화약고 층화 백테스트 트리거.
 
@@ -1679,7 +1681,43 @@ async def trigger_stratified_backtest(
       · powderkeg_passed · 오늘의 화약고 리스트 (기존 · 대조군 · 편향 있음)
       · all              · 전체 시장 (전 종목)
     """
-    return await run_stratified_backtest(event_type, stratum=stratum)
+    return await run_stratified_backtest(event_type, stratum=stratum, thresholds=thresholds)
+
+
+@router.post("/backtest/{event_type}/grid", dependencies=[Depends(require_sniper_token)])
+async def trigger_grid_backtest(
+    event_type: str,
+    grid: list[dict] = Body(..., embed=True,
+                            description="thresholds 조합 리스트 · 각각 pit_evaluate 임계값 override"),
+) -> dict[str, Any]:
+    """P2-2b · 화약고 가설 재검토 · Grid Search.
+
+    grid 예:
+      [
+        {"piotroski_f_score_min": 4, "major_shareholder_pct_min": 0.30},
+        {"piotroski_f_score_min": 5, "major_shareholder_pct_min": 0.30},
+        {"piotroski_f_score_min": 6, "major_shareholder_pct_min": 0.30},
+        {"piotroski_f_score_min": 4, "major_shareholder_pct_min": 0.35},
+        ...
+      ]
+
+    각 조합에 대해 powderkeg_pit stratum 실행 · 결과 매트릭스 반환.
+    캐시 없이 즉시 반환 · 완화 vs pit_passed·CAR 트레이드오프 관찰용.
+    """
+    results = []
+    for th in grid:
+        r = await run_stratified_backtest(event_type, stratum="powderkeg_pit", thresholds=th)
+        results.append({
+            "thresholds": th,
+            "pit_meta": r.get("pit_meta"),
+            "aggregate": r.get("aggregate"),
+            "decision": r.get("decision"),
+        })
+    return {
+        "event_type": event_type,
+        "grid_size": len(grid),
+        "results": results,
+    }
 
 
 @router.post("/triggers/process", dependencies=[Depends(require_sniper_token)])

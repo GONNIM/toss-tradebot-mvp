@@ -261,6 +261,7 @@ async def run_stratified_backtest(
     event_type: str,
     stratum: str = "powderkeg_passed",
     since: Optional[date] = None,
+    thresholds: Optional[dict] = None,
 ) -> dict[str, Any]:
     """화약고 층화 백테스트 · 지시서 §7-4 스펙 (§10-5 층화).
 
@@ -318,7 +319,7 @@ async def run_stratified_backtest(
             if e.release_date is None:
                 pit_stats["excluded_no_release_date"] += 1
                 continue
-            passed, meta = await pit_evaluate(e.ticker, e.release_date.date())
+            passed, meta = await pit_evaluate(e.ticker, e.release_date.date(), thresholds=thresholds)
             if passed:
                 pit_stats["pit_passed"] += 1
                 pit_passed_events.append(e)
