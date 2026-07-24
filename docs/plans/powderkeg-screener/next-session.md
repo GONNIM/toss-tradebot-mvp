@@ -59,9 +59,14 @@ curl -sS "https://optimus8.cafe24.com/api/v1/powderkeg/list?limit=50" | \
 
 ### 🥇 남은 우선순위 (다음 세션)
 
-**우선순위 1 · 화약고 가설 재검토 (신설 · P2-2 결과 근거)**
-- 6조건 relax 실측 (F-Score 4+·owner 30%+ grid search) · 3~4h
-- 또는 이벤트 시점 조건 완화 · 화약고 정의 자체를 이벤트 반응 종목 관찰로 역설계
+- ~~**P2-2b 화약고 가설 grid search**~~ ✅ **완료 (2026-07-24 · v1.44 · 8bec550)** · 시나리오 B 확증 (구조적 표본 문제) · 계획서 `p2-2b-hypothesis-grid-search.md` v1.1
+  - A3/B3 × 6조합 매트릭스 · 최대 완화(F4·O0.30)에서도 pit_passed A3=1·B3=2
+  - F-Score가 owner보다 큰 병목 · 완화만으로 이벤트 표본 확보 불가
+  - **결론**: 화약고를 좁게 유지 · 원 목적(예측 아닌 관찰 · Tier 1 lock 지켜보기) 정합
+
+**우선순위 1 · 화약고 정체성 방향 재검토 (별건 · P2-2b 후속)**
+- 이벤트 상위 CAR 종목의 재무 특성 관찰 · 역설계 접근 (별건 데이터 조사)
+- 또는 이벤트 타입 재정의 (지분·경영권 관련 협소화) · identity.md 갱신
 
 **우선순위 2 · v2 인증 아키텍처** (task #20~#23) · 12~14h Phase 1 MVP
 - localStorage → httpOnly 쿠키
