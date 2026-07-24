@@ -490,6 +490,197 @@ async def read_cached_report(event_type: str) -> Optional[dict[str, Any]]:
     }
 
 
+# ═══════════════════════════════════════════════════════════════
+# P2-2c · 역설계 · 이벤트 CAR 상위·하위 재무 특성 대조 (v1.45)
+# ═══════════════════════════════════════════════════════════════
+#
+# 정체성 v2.0 (2026-07-24 · identity.md): 투자 이익 창출 목적.
+# 화약고 조건은 매우 좁은 니치 (P2-2b 실측 · 완화만으로 표본 확보 불가).
+# → 실 데이터가 말하는 조건 재정의 근거 확보.
+
+
+async def _extract_event_features(
+    ticker: str, as_of_date: date,
+) -> dict[str, Any]:
+    """이벤트 시점 as-of 재무·최대주주 특성 추출 (역설계 매트릭스용).
+
+    P2-2 as-of 헬퍼 재사용 · 시장 데이터(net_cash·pbr)는 limitation.
+    """
+    features: dict[str, Any] = {}
+    fin_all = await _as_of_financials(ticker, as_of_date)
+    holder = await _as_of_shareholder(ticker, as_of_date)
+
+    if not fin_all:
+        return {"missing": "no_financial_data"}
+
+    fin = fin_all[0]
+    features["cash_current"] = (fin.cash_and_equivalents or 0) + (fin.short_term_investments or 0)
+    features["total_debt"] = fin.total_debt or 0
+    features["total_equity"] = fin.total_equity
+    features["revenue"] = fin.revenue
+    features["operating_income"] = fin.operating_income
+    features["net_income"] = fin.net_income
+    features["interest_income"] = fin.interest_income
+    features["contract_liabilities"] = getattr(fin, "contract_liabilities", None)
+    features["is_delisted"] = bool(getattr(fin, "is_delisted", False))
+    features["audit_ok_2y"] = None
+
+    audits = [f.audit_opinion for f in fin_all[:2] if f.audit_opinion]
+
+    def _adequate(op: str) -> bool:
+        op = (op or "").strip()
+        if not op:
+            return False
+        if any(bad in op for bad in ("한정", "부적정", "의견거절")):
+            return False
+        return "적정" in op
+
+    if len(audits) >= 2:
+        features["audit_ok_2y"] = all(_adequate(op) for op in audits[:2])
+
+    ops = [f.operating_income for f in fin_all[:3] if f.operating_income is not None]
+    features["op_profit_years_positive"] = sum(1 for op in ops if op > 0)
+    features["op_profit_years_total"] = len(ops)
+
+    if len(fin_all) >= 2:
+        fscore = calculate_f_score(
+            current=_period_from_fs(fin_all[0]),
+            prior=_period_from_fs(fin_all[1]),
+        )
+        features["piotroski_f_score"] = fscore.total_score
+    else:
+        features["piotroski_f_score"] = None
+
+    if holder is None:
+        features["owner_pct"] = None
+    else:
+        features["owner_pct"] = (holder.major_pct or 0) + (holder.related_pct or 0)
+        features["treasury_pct"] = holder.treasury_pct
+
+    features["is_big_biz"] = await is_big_biz_group(ticker, as_of_date.year)
+    return features
+
+
+def _feature_stats(rows: list[dict[str, Any]], key: str) -> dict[str, Any]:
+    """rows의 features[key] 값에서 평균·중앙값·n 추출 (숫자 or True 카운트)."""
+    vals = []
+    for r in rows:
+        f = r.get("features") or {}
+        v = f.get(key)
+        if v is None:
+            continue
+        if isinstance(v, bool):
+            vals.append(1 if v else 0)
+        elif isinstance(v, (int, float)):
+            vals.append(float(v))
+    if not vals:
+        return {"n": 0, "mean": None, "median": None}
+    vals_sorted = sorted(vals)
+    n = len(vals)
+    mid = n // 2
+    median = vals_sorted[mid] if n % 2 else (vals_sorted[mid - 1] + vals_sorted[mid]) / 2
+    return {"n": n, "mean": sum(vals) / n, "median": median}
+
+
+async def list_event_features_by_car(
+    event_type: str,
+    top_pct: float = 0.20,
+    window: str = "12m",
+    since: Optional[date] = None,
+) -> dict[str, Any]:
+    """P2-2c · 이벤트 CAR 상위·하위 종목의 이벤트 시점 as-of 재무 특성 대조.
+
+    Args:
+        event_type: A1/A3/B1/B3 등
+        top_pct: 상위·하위 분위 (기본 0.20 · 각 20%)
+        window: CAR 산출 창 (1d/1m/3m/6m/12m)
+
+    Returns:
+        {
+          event_type, window, top_pct,
+          total_events, events_with_return,
+          top_n, bottom_n,
+          top_events: [{ticker, release_date, car, features}, ...],
+          bottom_events: [...],
+          feature_summary: {feature_key: {top: {n,mean,median}, bottom: {n,mean,median}, diff_mean}}
+        }
+    """
+    from datetime import datetime as _dt, timezone as _tz
+
+    async with get_session() as session:
+        stmt = select(PowderKegEvent).where(PowderKegEvent.event_type == event_type)
+        if since is not None:
+            stmt = stmt.where(PowderKegEvent.release_date >= _dt.combine(since, _dt.min.time(), tzinfo=_tz.utc))
+        events = list((await session.execute(stmt)).scalars().all())
+
+    rows: list[dict[str, Any]] = []
+    for e in events:
+        if e.release_date is None:
+            continue
+        d = e.release_date.date()
+        try:
+            r = await compute_event_return(e.ticker, d, windows=WINDOW_DAYS)
+        except Exception:  # noqa: BLE001
+            continue
+        car_map = getattr(r, "per_window_returns", None) or {}
+        car = car_map.get(window)
+        if car is None:
+            continue
+        rows.append({
+            "ticker": e.ticker,
+            "release_date": e.release_date.isoformat(),
+            "car": car,
+        })
+
+    if not rows:
+        return {
+            "event_type": event_type, "window": window, "top_pct": top_pct,
+            "total_events": len(events), "events_with_return": 0,
+            "top_n": 0, "bottom_n": 0,
+            "top_events": [], "bottom_events": [], "feature_summary": {},
+        }
+
+    rows.sort(key=lambda x: x["car"], reverse=True)
+    n = len(rows)
+    take = max(1, int(round(n * top_pct)))
+    top = rows[:take]
+    bottom = rows[-take:]
+
+    # 특성 추출 (top/bottom 만 · 성능 배려)
+    for r in top + bottom:
+        d = _dt.fromisoformat(r["release_date"]).date() if isinstance(r["release_date"], str) else r["release_date"]
+        r["features"] = await _extract_event_features(r["ticker"], d)
+
+    feature_keys = [
+        "cash_current", "total_debt", "total_equity", "revenue",
+        "operating_income", "net_income", "interest_income",
+        "owner_pct", "treasury_pct",
+        "piotroski_f_score",
+        "op_profit_years_positive", "op_profit_years_total",
+        "audit_ok_2y", "is_big_biz", "is_delisted",
+    ]
+    feature_summary: dict[str, Any] = {}
+    for k in feature_keys:
+        t = _feature_stats(top, k)
+        b = _feature_stats(bottom, k)
+        diff_mean = (t["mean"] - b["mean"]) if (t["mean"] is not None and b["mean"] is not None) else None
+        feature_summary[k] = {"top": t, "bottom": b, "diff_mean": diff_mean}
+
+    return {
+        "event_type": event_type,
+        "window": window,
+        "top_pct": top_pct,
+        "total_events": len(events),
+        "events_with_return": len(rows),
+        "top_n": len(top),
+        "bottom_n": len(bottom),
+        "top_events": top,
+        "bottom_events": bottom,
+        "feature_summary": feature_summary,
+        "unmeasured_conditions": ["1_pbr", "9_adv60"],   # 시장 데이터 as-of 부재
+    }
+
+
 def _serialize_agg(agg: AggregatedResult) -> dict:
     return {
         "event_type": agg.event_type,

@@ -26,6 +26,7 @@ from sqlalchemy import select
 
 from backend.api.auth import require_sniper_token
 from backend.powderkeg.backtest import (
+    list_event_features_by_car,
     run_backtest_for_event_type,
     run_stratified_backtest,
 )
@@ -1682,6 +1683,20 @@ async def trigger_stratified_backtest(
       · all              · 전체 시장 (전 종목)
     """
     return await run_stratified_backtest(event_type, stratum=stratum, thresholds=thresholds)
+
+
+@router.get("/backtest/{event_type}/reverse-engineer")
+async def get_reverse_engineer(
+    event_type: str,
+    top_pct: float = Query(0.20, ge=0.05, le=0.5, description="상위·하위 분위 (기본 20%)"),
+    window: str = Query("12m", description="CAR 산출 창 · 1d/1m/3m/6m/12m"),
+) -> dict[str, Any]:
+    """P2-2c · 역설계 · 이벤트 CAR 상위·하위 종목의 이벤트 시점 as-of 재무 특성 대조.
+
+    정체성 v2.0 (identity.md · 2026-07-24) 반영 · 투자 이익 창출 목적.
+    화약고 조건 재정의 근거 데이터 · 별도 config 갱신은 사용자 판단 후 별건 세션.
+    """
+    return await list_event_features_by_car(event_type, top_pct=top_pct, window=window)
 
 
 @router.post("/backtest/{event_type}/grid", dependencies=[Depends(require_sniper_token)])
