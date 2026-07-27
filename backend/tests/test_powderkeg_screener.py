@@ -58,17 +58,17 @@ async def _seed_krx_snapshot_clean(tickers: list[str], snapshot_date: str = "202
 
 
 async def _seed_ideal_powder_keg(ticker: str = TRADE_TICKER):
-    """10 조건 전부 통과하도록 시딩 (F-Score 6+ 위해 개선 트렌드)."""
+    """11 조건 전부 통과하도록 시딩 (v1.46 · 규모 필터 3000억 반영).
+       F-Score 4+ 위해 개선 트렌드 유지 · 매출 4000억 · 영업익 400억."""
     now = datetime.now(tz=timezone.utc)
-    # 연도별 · 최신 (2026) 이 가장 우수 · Piotroski Δ 개선 조건 만족
+    # ref_date, ni(=op_inc), cfo, total_assets, total_debt, curr_a, curr_l, revenue, gp, shares
     yearly_data = [
-        # ref_date, ni, cfo, total_assets, total_debt, curr_a, curr_l, revenue, gp, shares
-        ("2026-12-31", 4_000_000_000, 5_000_000_000, 22_000_000_000, 800_000_000,
-         14_000_000_000, 2_500_000_000, 35_000_000_000, 18_000_000_000, 1_000_000),
-        ("2025-12-31", 3_000_000_000, 3_500_000_000, 20_000_000_000, 1_000_000_000,
-         12_000_000_000, 3_000_000_000, 30_000_000_000, 14_000_000_000, 1_000_000),
-        ("2024-12-31", 2_500_000_000, 2_800_000_000, 19_000_000_000, 1_200_000_000,
-         11_000_000_000, 3_000_000_000, 28_000_000_000, 12_000_000_000, 1_000_000),
+        ("2026-12-31", 40_000_000_000, 50_000_000_000, 220_000_000_000, 8_000_000_000,
+         140_000_000_000, 25_000_000_000, 400_000_000_000, 180_000_000_000, 10_000_000),
+        ("2025-12-31", 30_000_000_000, 35_000_000_000, 200_000_000_000, 10_000_000_000,
+         120_000_000_000, 30_000_000_000, 350_000_000_000, 140_000_000_000, 10_000_000),
+        ("2024-12-31", 25_000_000_000, 28_000_000_000, 190_000_000_000, 12_000_000_000,
+         110_000_000_000, 30_000_000_000, 320_000_000_000, 120_000_000_000, 10_000_000),
     ]
     async with get_session() as session:
         for ref_date, ni, cfo, ta, td, ca, cl, rev, gp, sh in yearly_data:
@@ -76,8 +76,8 @@ async def _seed_ideal_powder_keg(ticker: str = TRADE_TICKER):
                 ticker=ticker, corp_code="00000001",
                 reference_date=ref_date, report_code="11011",
                 release_date=now,
-                cash_and_equivalents=8_000_000_000,
-                short_term_investments=2_000_000_000,
+                cash_and_equivalents=80_000_000_000,
+                short_term_investments=20_000_000_000,
                 total_debt=td,
                 total_equity=15_000_000_000,
                 retained_earnings=10_000_000_000,
@@ -88,16 +88,16 @@ async def _seed_ideal_powder_keg(ticker: str = TRADE_TICKER):
                 gross_profit=gp,
                 operating_income=ni,   # 흑자 · Piotroski §1
                 net_income=ni,
-                interest_income=400_000_000,
+                interest_income=4_000_000_000,
                 cash_flow_from_operations=cfo,
                 shares_outstanding=sh,
                 audit_opinion="적정",
             ))
-        # KRX 스냅샷 · PBR 0.3 · 시총 200억 · ADV 5억
+        # KRX 스냅샷 · PBR 0.3 · 시총 2000억 · ADV 5억 (v1.46 · 규모 반영)
         session.add(KrxMarketSnapshot(
             ticker=ticker, snapshot_date="2026-07-15",
-            market="KOSDAQ", close_price=2000,
-            market_cap=20_000_000_000,   # 순현금 90억 / 200억 = 45%
+            market="KOSDAQ", close_price=20000,
+            market_cap=200_000_000_000,   # 순현금 920억 / 2000억 = 46%
             pbr=0.3, avg_daily_amount_60d=500_000_000,
         ))
         # 최대주주 45% · 특수관계인 포함

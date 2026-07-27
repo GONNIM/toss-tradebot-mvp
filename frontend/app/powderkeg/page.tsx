@@ -1382,6 +1382,7 @@ const CONDITION_LABEL_SHORT: Record<string, string> = {
   "8_fscore": "F-Score",
   "9_adv60": "거래대금",
   "10_no_bad_history": "관리종목",
+  "11_size_filter": "규모",  // v2 · P2-2c 역설계 · 매출 3000억 or 영업익 100억
 };
 
 /** P4-6 · 발굴 조건 (Universe 진입 필터).

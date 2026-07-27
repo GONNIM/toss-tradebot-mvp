@@ -43,13 +43,18 @@ class ScreenerThresholds:
 
     # 7. 영업이익 · 최근 3년 중 2년 이상 흑자 (bool · 코드로 판정)
 
-    # 8. 피오트로스키 F-Score ≥ 6 (9 항목)
-    piotroski_f_score_min: int = 6
+    # 8. 피오트로스키 F-Score ≥ 4 (v2 · P2-2c 역설계 · 상위 CAR 평균 4.65)
+    piotroski_f_score_min: int = 4
 
     # 9. 일평균 거래대금 60일 ≥ 1억
     adv_60d_min_krw: float = 100_000_000.0
 
     # 10. 관리종목/거래정지/감사의견 비적정 이력 3년 (bool · 코드로 판정)
+
+    # 11. 규모 필터 (v2 신설 · P2-2c 역설계 · 상위 CAR 종목의 규모 신호)
+    #     매출 3,000억 이상 OR 영업이익 100억 이상 (OR · 관대)
+    revenue_min_krw: float = 300_000_000_000.0        # 3,000억
+    operating_income_min_krw: float = 10_000_000_000.0  # 100억
 
 
 def get_thresholds() -> ScreenerThresholds:
@@ -60,8 +65,10 @@ def get_thresholds() -> ScreenerThresholds:
         major_shareholder_pct_min=_f("POWDERKEG_OWNER_PCT_MIN", 0.40),
         boK_base_rate=_f("POWDERKEG_BOK_BASE_RATE", 0.0325),
         interest_income_yield_margin=_f("POWDERKEG_INTEREST_MARGIN", 0.015),
-        piotroski_f_score_min=_i("POWDERKEG_FSCORE_MIN", 6),
+        piotroski_f_score_min=_i("POWDERKEG_FSCORE_MIN", 4),
         adv_60d_min_krw=_f("POWDERKEG_ADV_60D_MIN", 100_000_000.0),
+        revenue_min_krw=_f("POWDERKEG_REVENUE_MIN", 300_000_000_000.0),
+        operating_income_min_krw=_f("POWDERKEG_OP_INCOME_MIN", 10_000_000_000.0),
     )
 
 

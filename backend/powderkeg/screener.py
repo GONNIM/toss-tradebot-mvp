@@ -390,6 +390,18 @@ async def screen_ticker(
             result.reject_reasons.append(f"adv60<{t.adv_60d_min_krw:.0f}({market.avg_daily_amount_60d})")
     result.conditions["9_adv60"] = c9
 
+    # ── 조건 11 · 규모 필터 (v1.46 · P2-2c 역설계 · 상위 CAR 종목 규모 신호) ─
+    # 매출 3,000억 이상 OR 영업이익 100억 이상 (OR · 관대)
+    _op_inc = fin_latest.operating_income or 0
+    _rev = fin_latest.revenue or 0
+    c11 = (_op_inc >= t.operating_income_min_krw) or (_rev >= t.revenue_min_krw)
+    if not c11:
+        result.reject_reasons.append(
+            f"size_filter:op={_op_inc/1e8:.1f}억<{t.operating_income_min_krw/1e8:.0f}억 "
+            f"& rev={_rev/1e8:.1f}억<{t.revenue_min_krw/1e8:.0f}억"
+        )
+    result.conditions["11_size_filter"] = c11
+
     # ── 조건 10 · KRX 관리종목/거래정지 실 데이터 (v1.39 · P4-5) ─
     # KIND(kind.krx.co.kr) 크롤링 스냅샷 · powderkeg_krx_issue 조회.
     # 스냅샷 미수집 → c10=None (3상태 유지 · Tier 2 needs_data 로 유도)

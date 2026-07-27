@@ -87,7 +87,11 @@ def test_config_thresholds_defaults():
     assert isinstance(t, ScreenerThresholds)
     assert t.pbr_max == 0.5
     assert t.net_cash_ratio_min == 0.40
-    assert t.piotroski_f_score_min == 6
+    # v1.46 · P2-2c 역설계 반영 · F-Score 6→4 완화
+    assert t.piotroski_f_score_min == 4
+    # v1.46 · 규모 필터 신설 (매출 3000억 or 영업익 100억)
+    assert t.revenue_min_krw == 300_000_000_000.0
+    assert t.operating_income_min_krw == 10_000_000_000.0
 
 
 def test_config_thresholds_env_override(monkeypatch):

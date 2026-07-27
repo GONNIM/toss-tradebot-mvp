@@ -109,18 +109,19 @@ async def get_list_funnel(
             select(PowderKegList).where(PowderKegList.run_id == run_id)
         )).scalars().all()
 
-    # 조건 label · 한국어
+    # 조건 label · 한국어 · v1.46 · P2-2c 역설계 결과 반영 (F-Score 완화 · 규모 필터 신설)
     CONDITION_LABELS = {
-        "1_pbr": "① PBR < 0.5 (저평가)",
+        "1_pbr": "① PBR < 0.5 (저평가 · 발굴)",
         "2_net_cash_ratio": "② 순현금/시총 > 40% (현금 부자)",
         "3_owner_pct": "③ 최대주주 지분 ≥ 40%",
         "4_not_big_biz": "④ 공정위 대기업집단 아님",
         "5_audit_opinion": "⑤ 감사의견 적정 (2년)",
         "6_cash_reality": "⑥ 이자수익 정합 (분식 X)",
         "7_operating_profit": "⑦ 영업이익 3년 중 2년 흑자",
-        "8_fscore": "⑧ F-Score ≥ 6",
+        "8_fscore": "⑧ F-Score ≥ 4 (v2 완화)",
         "9_adv60": "⑨ 60일 일평균 거래대금 ≥ 1억",
-        "10_no_bad_history": "⑩ 관리종목 이력 없음 (감사 3년 근사)",
+        "10_no_bad_history": "⑩ 관리종목/거래정지 없음",
+        "11_size_filter": "⑪ 규모 (매출 3000억 or 영업익 100억)",
     }
 
     universe_size = len(rows)
