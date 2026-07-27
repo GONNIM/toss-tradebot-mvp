@@ -254,7 +254,8 @@ function ListTab({ token, guideNonce = 0 }: { token: string; guideNonce?: number
   const q = useQuery({
     queryKey: ["powderkeg", "list", statusFilter],
     queryFn: () =>
-      api.powderkeg.list({ status: statusFilter || undefined, limit: 200 }),
+      // v1.49 · P2-3 · 최근 5 run union · 카드 1(발굴)/카드 2(재평가) 결과 동시 유지
+      api.powderkeg.list({ status: statusFilter || undefined, limit: 200, union_last_n_runs: 5 }),
     refetchInterval: 60_000,
   });
   // P4-1 · 최근 run diff summary (뱃지 · 요약 카드)
@@ -306,6 +307,14 @@ function ListTab({ token, guideNonce = 0 }: { token: string; guideNonce?: number
           >
             · {q.data?.count || 0} 종목
           </span>
+          {q.data?.source_run_ids && q.data.source_run_ids.length > 1 ? (
+            <span
+              className="ml-2 rounded bg-indigo-100 px-2 py-0.5 text-[10px] text-indigo-900 dark:bg-indigo-900 dark:text-indigo-100"
+              title={`v1.49 · P2-3 · 최근 ${q.data.source_run_ids.length}개 run 병합\n${q.data.source_run_ids.join('\n')}`}
+            >
+              🔀 최근 {q.data.source_run_ids.length} run 병합
+            </span>
+          ) : null}
         </div>
         <div className="flex gap-1">
           <select
@@ -1412,7 +1421,8 @@ function LowPbrDiscoveryCard({ token }: { token: string }) {
     mutationFn: async () => {
       const tks = candidates.data?.items.map(x => x.ticker) || [];
       if (tks.length === 0) throw new Error("발굴된 저PBR 후보가 없습니다");
-      return await api.powderkeg.runScreener(token, tks);
+      // v1.49 · P2-3 · universe_type=low_pbr · 카드 2(manual)와 구분
+      return await api.powderkeg.runScreener(token, tks, 2026, "low_pbr");
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["powderkeg", "list"] });
@@ -1670,31 +1680,42 @@ function fmtRunIdKst(runId?: string | null): string {
 /** 리스트 강제 재평가 가이드 카드 · 리뷰어 UX 지적 대응. */
 function ReScreenGuide({ token, runId, count }: { token: string; runId: string | null; count: number }) {
   const qc = useQueryClient();
-  // 기본 유니버스 · 사용자가 입력 안 하면 화약고 리스트 + 서희건설 (부트스트랩)
   const [tickers, setTickers] = useState<string>("035890");
   const runScreener = useMutation({
     mutationFn: async () => {
       const arr = tickers.split(/[,\s]+/).map(t => t.trim()).filter(Boolean);
       if (arr.length === 0) throw new Error("종목 티커를 최소 1개 입력하세요");
-      return await api.powderkeg.runScreener(token, arr);
+      // v1.49 · P2-3 · universe_type=manual · 카드 1(low_pbr) 결과와 구분
+      return await api.powderkeg.runScreener(token, arr, 2026, "manual");
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["powderkeg", "list"] });
     },
   });
   const disabled = !token || runScreener.isPending;
+  // v1.49 · P2-3 · 파괴 액션 confirm
+  const handleClick = () => {
+    const ok = window.confirm(
+      "🎯 관찰 종목 재평가\n\n" +
+      "이 액션은 '입력 종목'만 스크리닝합니다.\n" +
+      "카드 1(저PBR 대량 발굴) 결과는 유니버스가 달라서 이 실행에 포함되지 않습니다.\n" +
+      "(v1.49부터 리스트가 최근 5 run 병합 표시 · 발굴 결과는 안전하게 유지됨)\n\n" +
+      "계속하시겠습니까?"
+    );
+    if (ok) runScreener.mutate();
+  };
   return (
-    <section className="rounded border-2 border-sky-200 bg-gradient-to-r from-sky-50 to-blue-50 p-3 text-xs dark:border-sky-800 dark:from-sky-950 dark:to-blue-950">
+    <section className="rounded border-2 border-amber-200 bg-gradient-to-r from-amber-50 to-yellow-50 p-3 text-xs dark:border-amber-800 dark:from-amber-950 dark:to-yellow-950">
       <div className="flex items-center justify-between gap-2">
         <div className="flex-1 space-y-0.5">
-          <div className="font-bold text-sky-900 dark:text-sky-100">
-            🔄 리스트 강제 재평가
+          <div className="font-bold text-amber-900 dark:text-amber-100">
+            🎯 관찰 종목 재평가 <span className="text-[10px] font-normal">(내 지정 티커만 · 카드 1 발굴 결과와 별개)</span>
           </div>
-          <div className="text-sky-800 dark:text-sky-200">
-            마지막 갱신 · <b>{fmtRunIdKst(runId)}</b> · 현재 {count}개 종목
+          <div className="text-amber-800 dark:text-amber-200">
+            마지막 갱신 · <b>{fmtRunIdKst(runId)}</b> · 현재 {count}개 종목 (병합 뷰)
           </div>
-          <div className="text-[10px] text-sky-700 dark:text-sky-300">
-            💡 언제? · 사업보고서 공개 (5·8·11·2월) · 새 KRX 데이터 · 시장 급변 후
+          <div className="text-[10px] text-amber-700 dark:text-amber-300">
+            💡 언제? · 사업보고서 공개 (5·8·11·2월) · 새 KRX 데이터 · lock 종목 재판정 필요 시
           </div>
         </div>
         <div className="flex flex-col gap-1">
@@ -1708,18 +1729,18 @@ function ReScreenGuide({ token, runId, count }: { token: string; runId: string |
           />
           <button
             type="button"
-            onClick={() => runScreener.mutate()}
+            onClick={handleClick}
             disabled={disabled}
-            className="rounded bg-sky-600 px-2 py-1 text-xs font-bold text-white hover:bg-sky-700 disabled:bg-sky-300"
-            title="입력한 종목을 10 조건으로 재평가 · X-API-Token 필요"
+            className="rounded bg-amber-600 px-2 py-1 text-xs font-bold text-white hover:bg-amber-700 disabled:bg-amber-300"
+            title="입력 종목만 재평가 · 카드 1 발굴 결과와 별개 · X-API-Token 필요"
           >
-            {runScreener.isPending ? "⏳ 계산 중..." : "🔄 지금 재평가"}
+            {runScreener.isPending ? "⏳ 계산 중..." : "🎯 관찰 종목만 재평가"}
           </button>
         </div>
       </div>
       {runScreener.isSuccess && runScreener.data ? (
         <div className="mt-2 rounded bg-emerald-100 px-2 py-1 text-[11px] text-emerald-900 dark:bg-emerald-900 dark:text-emerald-100">
-          ✅ 재평가 완료 · 통과 {String(runScreener.data.passed ?? "?")} · 탈락 {String(runScreener.data.rejected ?? "?")} · 현금 의심 {String(runScreener.data.cash_suspect ?? "?")}
+          ✅ 재평가 완료 · 유니버스 {runScreener.data.universe_size ?? "?"}종({runScreener.data.universe_type ?? "-"}) · 통과 {String(runScreener.data.passed ?? "?")} · 탈락 {String(runScreener.data.rejected ?? "?")} · 현금 의심 {String(runScreener.data.cash_suspect ?? "?")}
         </div>
       ) : null}
       {runScreener.isError ? (

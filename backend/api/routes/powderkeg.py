@@ -22,7 +22,7 @@ from datetime import date, datetime, timedelta, timezone
 from typing import Any, Optional
 
 from fastapi import APIRouter, Body, Depends, HTTPException, Query
-from sqlalchemy import select
+from sqlalchemy import func, select
 
 from backend.api.auth import require_sniper_token
 from backend.powderkeg.backtest import (
@@ -178,24 +178,69 @@ async def get_list_funnel(
 
 @router.get("/list")
 async def get_list(
-    run_id: Optional[str] = Query(None, description="특정 run · None = 최신"),
+    run_id: Optional[str] = Query(None, description="특정 run · None = 최신 (union_last_n_runs 무시)"),
     status: Optional[str] = Query(None, description="passed / rejected / cash_suspect"),
     limit: int = Query(200, ge=1, le=1000),
+    union_last_n_runs: int = Query(
+        1, ge=1, le=20,
+        description=(
+            "v1.49 · P2-3 · 최근 N run 병합. 기본 1 (백워드 호환). "
+            "5 이상 권장 · 카드 1(발굴)·카드 2(재평가) 결과가 동시에 살아있음."
+        ),
+    ),
 ) -> dict[str, Any]:
-    """탭 1 · 화약고 리스트."""
+    """탭 1 · 화약고 리스트.
+
+    v1.49 (P2-3) · union_last_n_runs 지원:
+      · run_id 명시 시 · 그 run 만 조회 (기존 동작 그대로)
+      · run_id 없고 union_last_n_runs=1 · 최신 run 만 (백워드 호환)
+      · run_id 없고 union_last_n_runs>1 · 최근 N run union · ticker 중복은 최신 run 채택
+    """
+    source_run_ids: list[str] = []
     async with get_session() as session:
-        if run_id is None:
-            latest = (await session.execute(
-                select(PowderKegList.run_id).order_by(PowderKegList.created_at.desc()).limit(1)
-            )).scalar_one_or_none()
-            run_id = latest
-        if run_id is None:
-            return {"disclaimer": DISCLAIMER, "run_id": None, "items": []}
-        stmt = select(PowderKegList).where(PowderKegList.run_id == run_id)
-        if status:
-            stmt = stmt.where(PowderKegList.status == status)
-        stmt = stmt.order_by(PowderKegList.net_cash_ratio.desc().nulls_last()).limit(limit)
-        rows = (await session.execute(stmt)).scalars().all()
+        if run_id is not None:
+            # 명시된 run 만 · 기존 동작
+            stmt = select(PowderKegList).where(PowderKegList.run_id == run_id)
+            if status:
+                stmt = stmt.where(PowderKegList.status == status)
+            stmt = stmt.order_by(PowderKegList.net_cash_ratio.desc().nulls_last()).limit(limit)
+            rows = list((await session.execute(stmt)).scalars().all())
+            source_run_ids = [run_id]
+        else:
+            # 최근 N run 조회
+            recent_stmt = (
+                select(PowderKegList.run_id)
+                .group_by(PowderKegList.run_id)
+                .order_by(func.max(PowderKegList.created_at).desc())
+                .limit(union_last_n_runs)
+            )
+            recent_runs = list((await session.execute(recent_stmt)).scalars().all())
+            if not recent_runs:
+                return {
+                    "disclaimer": DISCLAIMER, "run_id": None, "items": [],
+                    "source_run_ids": [], "union_last_n_runs": union_last_n_runs,
+                }
+            source_run_ids = recent_runs
+            run_id = recent_runs[0]   # 최신 run · UI 라벨용
+            # union · ticker 중복 시 · 각 run 을 최신순 순회하며 이미 본 ticker skip
+            stmt_union = select(PowderKegList).where(PowderKegList.run_id.in_(recent_runs))
+            if status:
+                stmt_union = stmt_union.where(PowderKegList.status == status)
+            all_rows = list((await session.execute(stmt_union)).scalars().all())
+            # created_at 최신순 정렬 후 · 최신 run row 를 각 ticker 별로 채택
+            all_rows.sort(key=lambda r: (r.created_at or 0), reverse=True)
+            seen: set = set()
+            rows = []
+            for r in all_rows:
+                if r.ticker in seen:
+                    continue
+                seen.add(r.ticker)
+                rows.append(r)
+            # net_cash_ratio desc 재정렬 (nulls last)
+            rows.sort(
+                key=lambda r: (r.net_cash_ratio is None, -(r.net_cash_ratio or 0)),
+            )
+            rows = rows[:limit]
 
     def _extract_robustness(cond_json_str: Optional[str]) -> dict:
         """v1.14 · conditions_json 에서 _robustness meta 추출."""
@@ -334,9 +379,11 @@ async def get_list(
 
     return {
         "disclaimer": DISCLAIMER,
-        "run_id": run_id,
+        "run_id": run_id,                       # 최신 run · UI 라벨용 (union 시 최근 run)
         "count": len(rows),
         "items": items,
+        "source_run_ids": source_run_ids,       # v1.49 · P2-3 · union 병합 소스 run 목록
+        "union_last_n_runs": union_last_n_runs, # v1.49 · P2-3 · 요청된 병합 수 (echo)
     }
 
 
@@ -1656,10 +1703,14 @@ async def trigger_events_backfill(
 async def trigger_screener(
     tickers: list[str] = Body(..., embed=True),
     year: int = Body(2026, embed=True),
+    universe_type: str = Body(
+        "custom", embed=True,
+        description="v1.49 · P2-3 · 호출 카드 구분 · low_pbr · manual · locked_only · custom",
+    ),
 ) -> dict[str, Any]:
     if not tickers:
         raise HTTPException(status_code=400, detail="tickers required")
-    return await run_screener(tickers, year=year)
+    return await run_screener(tickers, year=year, universe_type=universe_type)
 
 
 @router.post("/backtest/{event_type}", dependencies=[Depends(require_sniper_token)])

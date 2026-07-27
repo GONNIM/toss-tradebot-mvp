@@ -574,15 +574,33 @@ async def run_screener(
     year: int = 2026,
     run_id: Optional[str] = None,
     trigger: str = "manual",
+    universe_type: str = "custom",
 ) -> dict[str, Any]:
     """유니버스 순회 · PowderKegList upsert.
 
-    Returns: {"run_id", "total", "passed", "rejected", "cash_suspect"}
+    v1.49 · P2-3 · run_id 원자성 (초 충돌 시 -N suffix 재시도) + universe_type 응답.
+
+    Args:
+        universe_type: "low_pbr" · "manual" · "locked_only" · "custom" (호출 카드 구분용)
+
+    Returns: {"run_id", "total", "passed", "rejected", "cash_suspect", "universe_type", "universe_size"}
     """
     if run_id is None:
         # v1.15 · KST 시간 (Asia/Seoul UTC+9) 명시 · UI 표시 정합
+        # v1.49 · P2-3 · run_id 초 충돌 방어 · 기존 run 있으면 -N suffix 재시도
         _kst = timezone(timedelta(hours=9))
-        run_id = datetime.now(tz=_kst).strftime("%Y%m%d-%H%M%SK")
+        base = datetime.now(tz=_kst).strftime("%Y%m%d-%H%M%SK")
+        async with get_session() as _s:
+            for suffix in ("", "-2", "-3", "-4", "-5"):
+                candidate = base + suffix
+                existing = (await _s.execute(
+                    select(PowderKegRun.run_id).where(PowderKegRun.run_id == candidate).limit(1)
+                )).scalar_one_or_none()
+                if existing is None:
+                    run_id = candidate
+                    break
+            else:   # for-else · 5회 모두 실패 시 microsecond 접미
+                run_id = base + "-" + datetime.now(tz=_kst).strftime("%f")[:4]
 
     # locked=True 인 종목 union · 사용자가 lock 걸어둔 종목은 유니버스에 없어도 항상 재평가
     #   (스케줄러 자동 실행에서도 수동 추가 종목이 orphan 안 되도록 보장)
@@ -698,5 +716,7 @@ async def run_screener(
         logger.warning("[screener.run.end] %s · %s", run_id, exc)
 
     stats["diff_inserts"] = diff_insert_count
+    stats["universe_type"] = universe_type      # v1.49 · P2-3
+    stats["universe_size"] = len(input_set)     # v1.49 · P2-3
     logger.info("[screener.run] %s", stats)
     return stats

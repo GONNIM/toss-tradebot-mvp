@@ -727,11 +727,12 @@ export const api = {
   },
   powderkeg: {
     disclaimer: () => get<{ disclaimer: string }>(`/powderkeg/disclaimer`),
-    list: (opts: { run_id?: string; status?: string; limit?: number } = {}) => {
+    list: (opts: { run_id?: string; status?: string; limit?: number; union_last_n_runs?: number } = {}) => {
       const q = new URLSearchParams();
       if (opts.run_id) q.set("run_id", opts.run_id);
       if (opts.status) q.set("status", opts.status);
       if (opts.limit) q.set("limit", String(opts.limit));
+      if (opts.union_last_n_runs) q.set("union_last_n_runs", String(opts.union_last_n_runs));
       const qs = q.toString();
       return get<PowderKegListResponse>(`/powderkeg/list${qs ? `?${qs}` : ""}`);
     },
@@ -755,9 +756,9 @@ export const api = {
       const qs = q.toString();
       return get<PowderKegTicketsResponse>(`/powderkeg/tickets${qs ? `?${qs}` : ""}`);
     },
-    runScreener: (token: string, tickers: string[], year = 2026) =>
-      postWithToken<{ run_id: string; total: number; passed: number; rejected: number; cash_suspect?: number }>(
-        `/powderkeg/screener/run`, token, { tickers, year },
+    runScreener: (token: string, tickers: string[], year = 2026, universe_type: string = "custom") =>
+      postWithToken<{ run_id: string; total: number; passed: number; rejected: number; cash_suspect?: number; universe_type?: string; universe_size?: number }>(
+        `/powderkeg/screener/run`, token, { tickers, year, universe_type },
       ),
     processTriggers: (token: string) =>
       postWithToken<Record<string, number>>(`/powderkeg/triggers/process`, token),
@@ -1584,6 +1585,8 @@ export interface PowderKegListResponse {
   run_id: string | null;
   count: number;
   items: PowderKegListItem[];
+  source_run_ids?: string[];       // v1.49 · P2-3 · union 병합 소스 run 목록
+  union_last_n_runs?: number;      // v1.49 · P2-3 · 요청된 병합 수
 }
 
 // v1.36 · P5-2 · 종목 상세 (팝업)
