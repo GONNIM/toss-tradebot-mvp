@@ -65,6 +65,28 @@
 
 ---
 
+## 💡 shadcn 토큰 자동 다크 대응 (판정 오탐 방지)
+
+프로젝트는 shadcn/ui 기반 · `globals.css`의 CSS 변수가 라이트/다크 자동 반전. **`dark:` variant grep 통계 0회여도 이슈 아님** (아래 토큰 사용 시 자동 대응).
+
+**자동 대응 shadcn 토큰**:
+- `bg-card` · `bg-background` · `bg-primary` · `bg-secondary` · `bg-muted` · `bg-accent`
+- `text-foreground` · `text-muted-foreground` · `text-primary-foreground` 등
+- `border-border` · `border-input`
+
+**정합 판정 순서** (경직된 grep 대신):
+1. `bg-*-950` 등 다크 하드코딩 실 위치 있는지
+2. `pink/fuchsia/cyan-500` 등 금지 팔레트 있는지
+3. `ring-2` · `shadow-lg` 있는지
+4. shadcn 토큰 총 사용 회수 (10+ 이면 자동 대응 충분)
+5. 위 4개 모두 클린이면 **정합 완결** — `dark:` variant 0회여도 무해
+
+**실측 예 (2026-07-28)**:
+- execution (896줄, dark: 0회, shadcn 61회) → ✅ 정합 완결 (리팩터 불필요)
+- backtest / super-signals / dashboard / moonshot → 모두 동일
+
+---
+
 ## 🚫 프로젝트 안티패턴 (재발 방지)
 
 1. **다크/라이트 혼재**: 한 페이지에 `bg-slate-50` + `bg-slate-900` 혼용 시 어느 하나로 통일
