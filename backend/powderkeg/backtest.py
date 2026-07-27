@@ -166,20 +166,26 @@ async def pit_evaluate(
     as_of_date: date,
     thresholds: Optional[dict] = None,
 ) -> tuple[bool, dict[str, Any]]:
-    """P2-2 · 이벤트 시점 화약고 여부 재평가 (Phase 1 · 6조건).
+    """P2-2 · 이벤트 시점 화약고 여부 재평가.
 
-    평가 조건 · 3 owner · 4 not_big_biz · 5 audit · 6 cash_reality · 7 op_profit · 8 fscore
+    v1.48 · config 기본값 사용 (get_thresholds) · 조건 11 (규모 필터) 추가.
+    평가 조건 · 3 owner · 4 not_big_biz · 5 audit · 6 cash_reality · 7 op_profit · 8 fscore · 11 size
     관대 처리 (통과 가정) · 1 pbr · 9 adv60 · 10 no_bad_history · 2 net_cash (시가총액 부재)
 
     Returns:
         (passed_pit, meta)
         meta.reason 은 실패 시 요약 · meta.cond 는 조건별 판정 값
     """
+    # v1.48 · config 기본값 · thresholds override 있으면 그것 우선
+    from .config import get_thresholds
+    _cfg = get_thresholds()
     t = thresholds or {}
-    fscore_min = t.get("piotroski_f_score_min", 6)
-    owner_min = t.get("major_shareholder_pct_min", 0.40)
-    base_rate = t.get("boK_base_rate", 0.035)
-    interest_margin = t.get("interest_income_yield_margin", 0.5)
+    fscore_min = t.get("piotroski_f_score_min", _cfg.piotroski_f_score_min)
+    owner_min = t.get("major_shareholder_pct_min", _cfg.major_shareholder_pct_min)
+    base_rate = t.get("boK_base_rate", _cfg.boK_base_rate)
+    interest_margin = t.get("interest_income_yield_margin", _cfg.interest_income_yield_margin)
+    revenue_min = t.get("revenue_min_krw", _cfg.revenue_min_krw)
+    op_income_min = t.get("operating_income_min_krw", _cfg.operating_income_min_krw)
 
     meta: dict[str, Any] = {"cond": {}, "unmeasured": list(_PIT_UNMEASURED), "reason": None}
 
@@ -248,6 +254,11 @@ async def pit_evaluate(
     # 4 not_big_biz (release_date.year 근사)
     is_big = await is_big_biz_group(ticker, as_of_date.year)
     meta["cond"]["4_not_big_biz"] = not is_big
+
+    # 11 size filter (v1.48 · v2 조건) · op_income OR revenue
+    _op_inc = fin.operating_income or 0
+    _rev = fin.revenue or 0
+    meta["cond"]["11_size_filter"] = (_op_inc >= op_income_min) or (_rev >= revenue_min)
 
     # 통합 판정 · 명시적 True 만 통과 (None/False 는 실패)
     passed = all(v is True for v in meta["cond"].values())

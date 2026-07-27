@@ -38,24 +38,25 @@ async def _clean_db():
 async def _seed_marginal_ticker(ticker: str = TICKER, owner_pct: float = 0.35):
     """owner 35% · 기존 임계 40 미만 · 완화 30 통과."""
     release = datetime(2024, 3, 15, tzinfo=timezone.utc)
+    # v1.48 · 규모 필터 통과 위해 재무 규모 10배 상향 (rev 3500억 · op 300억)
     async with get_session() as session:
         for ref, ni, cfo, ta, td in [
-            ("2023-12-31", 3_000_000_000, 3_500_000_000, 22_000_000_000, 1_000_000_000),
-            ("2022-12-31", 2_500_000_000, 2_800_000_000, 20_000_000_000, 1_100_000_000),
-            ("2021-12-31", 2_000_000_000, 2_500_000_000, 19_000_000_000, 1_200_000_000),
+            ("2023-12-31", 30_000_000_000, 35_000_000_000, 220_000_000_000, 10_000_000_000),
+            ("2022-12-31", 25_000_000_000, 28_000_000_000, 200_000_000_000, 11_000_000_000),
+            ("2021-12-31", 20_000_000_000, 25_000_000_000, 190_000_000_000, 12_000_000_000),
         ]:
             session.add(FinancialSnapshot(
                 ticker=ticker, corp_code="00000002",
                 reference_date=ref, report_code="11011",
                 release_date=release,
-                cash_and_equivalents=8_000_000_000,
-                short_term_investments=2_000_000_000,
-                total_debt=td, total_equity=15_000_000_000,
-                retained_earnings=10_000_000_000, total_assets=ta,
-                current_assets=14_000_000_000, current_liabilities=2_500_000_000,
-                revenue=35_000_000_000, gross_profit=18_000_000_000,
+                cash_and_equivalents=80_000_000_000,
+                short_term_investments=20_000_000_000,
+                total_debt=td, total_equity=150_000_000_000,
+                retained_earnings=100_000_000_000, total_assets=ta,
+                current_assets=140_000_000_000, current_liabilities=25_000_000_000,
+                revenue=350_000_000_000, gross_profit=180_000_000_000,
                 operating_income=ni, net_income=ni,
-                interest_income=400_000_000,
+                interest_income=4_000_000_000,
                 cash_flow_from_operations=cfo,
                 shares_outstanding=1_000_000,
                 audit_opinion="적정",
