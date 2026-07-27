@@ -610,36 +610,37 @@ function ActivistCard({ s, onEdit }: { s: VipStatus; onEdit: () => void }) {
       </div>
 
       {a.latest_target ? (
-        <div className="mt-4 rounded-lg border-2 border-cyan-500/60 bg-slate-950 p-3 text-sm shadow-lg">
+        // v1.52 · design-rules 정합 · activist-radar와 동일 리팩터 (warm 축 + 라이트 우선)
+        <div className="mt-4 rounded-md border border-amber-300 bg-amber-50 p-3 text-sm dark:border-amber-800 dark:bg-amber-950/40">
           <div className="mb-2 flex items-baseline gap-2 flex-wrap">
-            <span className="text-xs font-bold uppercase tracking-wider text-cyan-300">
+            <span className="text-xs font-bold uppercase tracking-wider text-amber-800 dark:text-amber-300">
               🎯 최신 대상 필링
             </span>
-            <span className="ml-auto text-[10px] font-mono text-slate-400">
+            <span className="ml-auto text-[10px] font-mono text-slate-500 dark:text-slate-400">
               Filing {a.latest_target.filing_date}
             </span>
           </div>
 
-          {/* 폼 배지 · 힌트 */}
+          {/* 폼 배지 · 힌트 · shadow 제거 */}
           <div className="flex items-baseline gap-2 flex-wrap">
-            <span className="rounded bg-amber-500 px-2 py-0.5 font-mono text-xs font-bold text-slate-900 shadow">
+            <span className="rounded bg-amber-500 px-2 py-0.5 font-mono text-xs font-bold text-slate-900">
               {a.latest_target.form}
             </span>
             {a.latest_target.form_hint && (
-              <span className="text-xs font-medium text-amber-200">
+              <span className="text-xs font-medium text-amber-700 dark:text-amber-300">
                 {a.latest_target.form_hint}
               </span>
             )}
           </div>
 
-          {/* 이슈어 (SC 13D XML 파싱 결과) */}
+          {/* 이슈어 · 라이트 우선 */}
           {a.latest_target.details?.issuer_name && (
             <div className="mt-2 flex items-baseline gap-2 flex-wrap">
-              <span className="text-lg font-bold text-white">
+              <span className="text-lg font-bold text-slate-900 dark:text-white">
                 {a.latest_target.details.issuer_name}
               </span>
               {a.latest_target.details.issuer_cik && (
-                <span className="text-[10px] font-mono text-slate-400">
+                <span className="text-[10px] font-mono text-slate-500 dark:text-slate-400">
                   issuer CIK {a.latest_target.details.issuer_cik}
                   {a.latest_target.details.issuer_cusip &&
                     ` · CUSIP ${a.latest_target.details.issuer_cusip}`}
@@ -648,48 +649,48 @@ function ActivistCard({ s, onEdit }: { s: VipStatus; onEdit: () => void }) {
             </div>
           )}
 
-          {/* 지분 grid — 지분율/보유주식/수정차수/이벤트일 */}
+          {/* 지분 grid · 지분율만 amber 강조 (규칙 3) · 나머지 slate */}
           {a.latest_target.details &&
            (a.latest_target.details.percent_of_class != null ||
             a.latest_target.details.aggregate_amount_owned != null) && (
             <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
               {a.latest_target.details.percent_of_class != null && (
-                <div className="rounded-lg border border-cyan-400/50 bg-cyan-500/15 p-2">
-                  <div className="text-[10px] font-semibold uppercase tracking-wide text-cyan-300">
+                <div className="rounded-md border border-amber-300 bg-white p-2 dark:border-amber-800 dark:bg-amber-950/30">
+                  <div className="text-[10px] font-semibold uppercase tracking-wide text-amber-700 dark:text-amber-300">
                     지분율
                   </div>
-                  <div className="mt-0.5 text-3xl font-black leading-none text-cyan-100">
+                  <div className="mt-0.5 text-3xl font-black leading-none text-amber-900 dark:text-amber-100">
                     {a.latest_target.details.percent_of_class.toFixed(1)}
                     <span className="text-xl">%</span>
                   </div>
                 </div>
               )}
               {a.latest_target.details.aggregate_amount_owned != null && (
-                <div className="rounded-lg border border-emerald-400/50 bg-emerald-500/15 p-2">
-                  <div className="text-[10px] font-semibold uppercase tracking-wide text-emerald-300">
+                <div className="rounded-md border border-slate-200 bg-white p-2 dark:border-slate-700 dark:bg-slate-900/40">
+                  <div className="text-[10px] font-semibold uppercase tracking-wide text-slate-600 dark:text-slate-300">
                     보유 주식
                   </div>
-                  <div className="mt-0.5 text-base font-bold font-mono text-emerald-100">
+                  <div className="mt-0.5 text-base font-bold font-mono text-slate-800 dark:text-slate-100">
                     {a.latest_target.details.aggregate_amount_owned.toLocaleString()}
                   </div>
                 </div>
               )}
               {a.latest_target.details.amendment_no != null && (
-                <div className="rounded-lg border border-fuchsia-400/50 bg-fuchsia-500/15 p-2">
-                  <div className="text-[10px] font-semibold uppercase tracking-wide text-fuchsia-300">
+                <div className="rounded-md border border-slate-200 bg-white p-2 dark:border-slate-700 dark:bg-slate-900/40">
+                  <div className="text-[10px] font-semibold uppercase tracking-wide text-slate-600 dark:text-slate-300">
                     수정 차수
                   </div>
-                  <div className="mt-0.5 text-base font-bold text-fuchsia-100">
+                  <div className="mt-0.5 text-base font-bold text-slate-800 dark:text-slate-100">
                     Amendment #{a.latest_target.details.amendment_no}
                   </div>
                 </div>
               )}
               {a.latest_target.details.date_of_event && (
-                <div className="rounded-lg border border-indigo-400/50 bg-indigo-500/15 p-2">
-                  <div className="text-[10px] font-semibold uppercase tracking-wide text-indigo-300">
+                <div className="rounded-md border border-slate-200 bg-white p-2 dark:border-slate-700 dark:bg-slate-900/40">
+                  <div className="text-[10px] font-semibold uppercase tracking-wide text-slate-600 dark:text-slate-300">
                     이벤트 발생일
                   </div>
-                  <div className="mt-0.5 text-base font-bold text-indigo-100">
+                  <div className="mt-0.5 text-base font-bold text-slate-800 dark:text-slate-100">
                     {a.latest_target.details.date_of_event}
                   </div>
                 </div>
@@ -698,22 +699,21 @@ function ActivistCard({ s, onEdit }: { s: VipStatus; onEdit: () => void }) {
           )}
 
           {a.latest_target.details?.securities_class_title && (
-            <div className="mt-3 rounded bg-slate-800 px-2 py-1 text-xs text-slate-200">
-              <span className="font-semibold text-slate-400">증권 클래스:</span>{" "}
+            <div className="mt-3 rounded bg-slate-100 px-2 py-1 text-xs text-slate-700 dark:bg-slate-800 dark:text-slate-200">
+              <span className="font-semibold text-slate-500 dark:text-slate-400">증권 클래스:</span>{" "}
               {a.latest_target.details.securities_class_title}
             </div>
           )}
 
-          {/* primary_desc (XML issuer_name 없을 때 fallback) */}
           {!a.latest_target.details?.issuer_name && a.latest_target.primary_desc && (
-            <div className="mt-2 text-sm font-medium text-white">
+            <div className="mt-2 text-sm font-medium text-slate-900 dark:text-white">
               {a.latest_target.primary_desc}
             </div>
           )}
 
           {a.latest_target.details?.transaction_purpose && (
-            <details className="mt-3 rounded border border-slate-700 bg-slate-900">
-              <summary className="cursor-pointer px-2 py-1 text-xs font-semibold text-amber-300 hover:bg-slate-800">
+            <details className="mt-3 rounded border border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-900">
+              <summary className="cursor-pointer px-2 py-1 text-xs font-semibold text-amber-700 hover:bg-slate-50 dark:text-amber-300 dark:hover:bg-slate-800">
                 📝 Item 4 — 거래 목적/사유 (원문 발췌 · 클릭 펼치기)
               </summary>
               <div className="whitespace-pre-wrap border-t border-slate-700 p-2 font-mono text-[11px] text-slate-100">

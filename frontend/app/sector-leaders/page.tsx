@@ -65,7 +65,7 @@ export default function SectorLeadersPage() {
         </div>
         <button
           onClick={() => setTop10Open(true)}
-          className="rounded-lg border border-cyan-500/60 bg-cyan-500/10 px-4 py-2 text-sm font-semibold text-cyan-300 hover:bg-cyan-500/20 transition"
+          className="rounded-lg border border-sky-300 bg-sky-50 px-4 py-2 text-sm font-semibold text-sky-800 hover:bg-sky-100 dark:border-sky-800 dark:bg-sky-950/40 dark:text-sky-200 dark:hover:bg-sky-900/40 transition"
         >
           🏆 투자 종목 Top 10
         </button>
@@ -132,7 +132,7 @@ function ItemList({
             onClick={() => onSelect(it.item)}
             className={`w-full text-left px-3 py-2.5 text-sm transition ${
               active
-                ? "bg-cyan-500/10 border-l-2 border-cyan-500"
+                ? "bg-sky-50 border-l-2 border-sky-500 dark:bg-sky-950/40 dark:border-sky-400"
                 : "hover:bg-muted/30 border-l-2 border-transparent"
             }`}
           >
@@ -312,7 +312,7 @@ function LeaderCard({
       onClick={onSelect}
       className={`text-left rounded-lg border bg-background p-3 transition ${
         active
-          ? "border-cyan-500/60 ring-1 ring-cyan-500/30 bg-cyan-500/5"
+          ? "border-2 border-sky-400 bg-sky-50 dark:border-sky-700 dark:bg-sky-950/40"
           : "border-border hover:border-muted-foreground/40"
       }`}
     >

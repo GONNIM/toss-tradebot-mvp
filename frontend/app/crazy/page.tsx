@@ -36,7 +36,7 @@ export default function CrazyPage() {
             onClick={() => setTab("today")}
             className={`rounded-lg border px-3 py-1.5 text-sm ${
               tab === "today"
-                ? "border-cyan-500/60 bg-cyan-500/10 text-cyan-400"
+                ? "border-sky-300 bg-sky-50 text-sky-800 dark:border-sky-800 dark:bg-sky-950/40 dark:text-sky-200"
                 : "border-border text-muted-foreground hover:text-foreground"
             }`}
           >
@@ -46,7 +46,7 @@ export default function CrazyPage() {
             onClick={() => setTab("history")}
             className={`rounded-lg border px-3 py-1.5 text-sm ${
               tab === "history"
-                ? "border-cyan-500/60 bg-cyan-500/10 text-cyan-400"
+                ? "border-sky-300 bg-sky-50 text-sky-800 dark:border-sky-800 dark:bg-sky-950/40 dark:text-sky-200"
                 : "border-border text-muted-foreground hover:text-foreground"
             }`}
           >
