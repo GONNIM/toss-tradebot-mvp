@@ -324,7 +324,7 @@ function ListTab({ token, guideNonce = 0 }: { token: string; guideNonce?: number
             title="상태별 필터 · 전체 / 매수 후보 / 탈락 / 현금 의심"
           >
             <option value="">🔍 전체 상태</option>
-            <option value="passed">✅ 매수 후보 (10/10 통과)</option>
+            <option value="passed">✅ 매수 후보 (전체 조건 통과)</option>
             <option value="rejected">❌ 탈락</option>
             <option value="cash_suspect">⚠️ 현금 의심 (분식 가능)</option>
           </select>
@@ -332,13 +332,13 @@ function ListTab({ token, guideNonce = 0 }: { token: string; guideNonce?: number
             value={tierFilter}
             onChange={(e) => setTierFilter(e.target.value)}
             className="rounded border px-2 py-1 text-xs"
-            title="티어별 필터 · v1.20 · 8~9/10 경계선 후보 발굴"
+            title="티어별 필터 · v1.20 · 경계선 후보 발굴 (실 통과 · 데이터 부족 분리)"
           >
             <option value="">🎖 전체 티어</option>
-            <option value="tier_1_passed">🥇 Tier 1 · 10/10</option>
+            <option value="tier_1_passed">🥇 Tier 1 · 전체 통과</option>
             <option value="tier_2_near">🥈 Tier 2 · 실패 1건 (경계)</option>
             <option value="tier_2_needs_data">🥈 Tier 2 · 데이터 부족</option>
-            <option value="tier_3_watch">🥉 Tier 3 · 7/10</option>
+            <option value="tier_3_watch">🥉 Tier 3 · 관찰 (7건+ 통과)</option>
           </select>
         </div>
       </div>
@@ -396,7 +396,7 @@ function ListTab({ token, guideNonce = 0 }: { token: string; guideNonce?: number
                         </span>
                       ) : null}
                       <RobustnessBadge score={it.robustness_score} grade={it.robustness_grade} />
-                      <TierBadge tier={it.tier} passed={it.conditions_passed} />
+                      <TierBadge tier={it.tier} passed={it.conditions_passed} total={it.conditions ? Object.keys(it.conditions).filter(k => k !== "_robustness").length : undefined} />
                       {tierMovedTickers.has(it.ticker) ? (
                         <span
                           title="최근 run에서 티어 이동 (P4-1)"
@@ -925,16 +925,16 @@ function UsageGuideCard() {
             <div className="mb-1 font-bold">🎯 티어별 액션</div>
             <ul className="space-y-1">
               <li>
-                <b className="text-amber-900 dark:text-amber-100">🥇 Tier 1 (10/10 통과)</b> ·
+                <b className="text-amber-900 dark:text-amber-100">🥇 Tier 1 (전체 조건 통과)</b> ·
                 <b>최상위 관찰 대상</b>. 이벤트 발생 시 (담보제공 등) Telegram 알림 도착 · 알림 확인 후 개별 판단.
                 <span className="text-[10px] text-red-700"> ⚠️ 자동매매 X · 사용자 최종 결정</span>
               </li>
               <li>
-                <b className="text-slate-800 dark:text-slate-100">🥈 Tier 2 (8~9/10)</b> ·
+                <b className="text-slate-800 dark:text-slate-100">🥈 Tier 2 (경계선 · 실 실패 1건)</b> ·
                 <b>승격 후보 관찰</b>. 병목 조건 (예: F-Score) 개선 시 Tier 1 승격 가능. 다음 분기 사업보고서 공개 후 재평가 확인.
               </li>
               <li>
-                <b className="text-orange-800 dark:text-orange-100">🥉 Tier 3 (7/10)</b> ·
+                <b className="text-orange-800 dark:text-orange-100">🥉 Tier 3 (관찰 · 대부분 통과)</b> ·
                 <b>지속 관찰</b>. 여러 조건 병목 · 개선 여지 낮음 · 참고용.
               </li>
               <li>
@@ -1355,7 +1355,7 @@ function TickerDetailModal({ ticker, onClose }: { ticker: string; onClose: () =>
 
 /** Tier 뱃지 · v1.20 리뷰어 Priority 4 · v1.29 3차 리뷰 P1 · 3상태 분리
  *   (True/False/None → passed/failed/missing 반영). */
-function TierBadge({ tier, passed }: { tier?: string; passed?: number }) {
+function TierBadge({ tier, passed, total }: { tier?: string; passed?: number; total?: number }) {
   if (!tier) return null;
   const cfg: Record<string, { icon: string; label: string; cls: string }> = {
     tier_1_passed:     { icon: "🥇", label: "Tier 1",              cls: "bg-amber-100 text-amber-900 dark:bg-amber-900 dark:text-amber-100" },
@@ -1366,15 +1366,17 @@ function TierBadge({ tier, passed }: { tier?: string; passed?: number }) {
     rejected:          { icon: "❌", label: "탈락",                cls: "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300" },
   };
   const m = cfg[tier] || cfg.rejected;
+  // v1.50 · P2-2d 이후 조건 11개 · total prop 동적 · 미지정 시 fallback 11 (v2 baseline)
+  const denom = total ?? 11;
   const title = tier === "tier_2_needs_data"
-    ? `실 통과 ${passed ?? "-"}/10 · 데이터 부족 조건 채우면 통과 가능`
-    : passed != null ? `조건 통과: ${passed}/10` : tier;
+    ? `실 통과 ${passed ?? "-"}/${denom} · 데이터 부족 조건 채우면 통과 가능`
+    : passed != null ? `조건 통과: ${passed}/${denom}` : tier;
   return (
     <span
       title={title}
       className={`rounded px-1.5 py-0.5 text-[10px] font-bold ${m.cls}`}
     >
-      {m.icon} {m.label} · {passed}/10
+      {m.icon} {m.label} · {passed}/{denom}
     </span>
   );
 }
@@ -1641,7 +1643,7 @@ function FunnelCard({ runId }: { runId: string | null }) {
               );
             })}
             <div className="mt-2 flex items-center justify-between rounded border-t pt-1 font-bold">
-              <span className="text-emerald-800 dark:text-emerald-100">✅ 10/10 최종 통과</span>
+              <span className="text-emerald-800 dark:text-emerald-100">✅ 전체 조건 통과 (Tier 1)</span>
               <span className="font-mono">{d.final_passed} 개</span>
             </div>
             {d.cash_suspect > 0 || d.rejected > 0 ? (
