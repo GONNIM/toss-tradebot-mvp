@@ -89,9 +89,9 @@ def test_config_thresholds_defaults():
     assert t.net_cash_ratio_min == 0.40
     # v1.46 · P2-2c 역설계 반영 · F-Score 6→4 완화
     assert t.piotroski_f_score_min == 4
-    # v1.46 · 규모 필터 신설 (매출 3000억 or 영업익 100억)
-    assert t.revenue_min_krw == 300_000_000_000.0
-    assert t.operating_income_min_krw == 10_000_000_000.0
+    # v1.47 · 규모 필터 hotfix (경계선 종목 살림 · 매출 2000억 or 영업익 90억)
+    assert t.revenue_min_krw == 200_000_000_000.0
+    assert t.operating_income_min_krw == 9_000_000_000.0
 
 
 def test_config_thresholds_env_override(monkeypatch):

@@ -121,7 +121,7 @@ async def get_list_funnel(
         "8_fscore": "⑧ F-Score ≥ 4 (v2 완화)",
         "9_adv60": "⑨ 60일 일평균 거래대금 ≥ 1억",
         "10_no_bad_history": "⑩ 관리종목/거래정지 없음",
-        "11_size_filter": "⑪ 규모 (매출 3000억 or 영업익 100억)",
+        "11_size_filter": "⑪ 규모 (매출 2000억 or 영업익 90억)",
     }
 
     universe_size = len(rows)

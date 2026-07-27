@@ -52,9 +52,12 @@ class ScreenerThresholds:
     # 10. 관리종목/거래정지/감사의견 비적정 이력 3년 (bool · 코드로 판정)
 
     # 11. 규모 필터 (v2 신설 · P2-2c 역설계 · 상위 CAR 종목의 규모 신호)
-    #     매출 3,000억 이상 OR 영업이익 100억 이상 (OR · 관대)
-    revenue_min_krw: float = 300_000_000_000.0        # 3,000억
-    operating_income_min_krw: float = 10_000_000_000.0  # 100억
+    #     매출 2,000억 이상 OR 영업이익 90억 이상 (OR · 관대)
+    #     v1.47 hotfix (2026-07-27) · 세원물산(rev 2,309억)·넵튠(op 96.1억) 경계선 통과 위해 완화
+    #     원 v1.46 임계 (rev 3,000억 · op 100억)는 P2-2c 역설계 상위 평균값 기준이나
+    #     Tier 1 lock 종목 실측에서 경계선 3종 강등 → 실용 관대 조정
+    revenue_min_krw: float = 200_000_000_000.0         # 2,000억
+    operating_income_min_krw: float = 9_000_000_000.0  # 90억
 
 
 def get_thresholds() -> ScreenerThresholds:
@@ -67,8 +70,8 @@ def get_thresholds() -> ScreenerThresholds:
         interest_income_yield_margin=_f("POWDERKEG_INTEREST_MARGIN", 0.015),
         piotroski_f_score_min=_i("POWDERKEG_FSCORE_MIN", 4),
         adv_60d_min_krw=_f("POWDERKEG_ADV_60D_MIN", 100_000_000.0),
-        revenue_min_krw=_f("POWDERKEG_REVENUE_MIN", 300_000_000_000.0),
-        operating_income_min_krw=_f("POWDERKEG_OP_INCOME_MIN", 10_000_000_000.0),
+        revenue_min_krw=_f("POWDERKEG_REVENUE_MIN", 200_000_000_000.0),
+        operating_income_min_krw=_f("POWDERKEG_OP_INCOME_MIN", 9_000_000_000.0),
     )
 
 
