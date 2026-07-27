@@ -39,53 +39,56 @@ const INTENSITY_META: Record<
     countBg: string;      // 카운트 배지 색상
   }
 > = {
+  // v1.51 · P2-4 · design-rules.md 정합 · warm 축 통일 + 명도 위계 (규칙 3·9·10·25·26·27)
+  //   원 · pink/rose/amber/cyan/indigo 강채도 500 혼재 + ring-2 + shadow → 이질감 유발
+  //   개선 · rose/orange/amber/sky/slate 명도 위계 (라이트 우선 · dark: variant · border만)
   REGIME_CHANGE: {
     icon: "🚨",
     label: "REGIME CHANGE",
     hint: "13G→13D 전환 · passive → active 태세 전환 · 최상 신호 · 즉시 검토",
-    className: "border-pink-500/60 bg-pink-950/30 ring-2 ring-pink-500/50",
-    badgeBg: "bg-pink-500 text-white",
-    countBg: "bg-pink-400 text-slate-900",
+    className: "border-2 border-rose-300 bg-rose-50 dark:border-rose-800 dark:bg-rose-950/40",
+    badgeBg: "bg-rose-600 text-white",
+    countBg: "bg-rose-100 text-rose-800 dark:bg-rose-900 dark:text-rose-100",
   },
   CRITICAL: {
     icon: "🌋",
     label: "CRITICAL",
     hint: "즉시 검토 · 신규 SC 13D 또는 Wolf Pack",
-    className: "border-rose-500/50 bg-rose-950/30",
-    badgeBg: "bg-rose-500 text-white",
-    countBg: "bg-rose-400 text-slate-900",
+    className: "border-2 border-orange-300 bg-orange-50 dark:border-orange-900 dark:bg-orange-950/40",
+    badgeBg: "bg-orange-600 text-white",
+    countBg: "bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-100",
   },
   STRONG: {
     icon: "🔥",
     label: "STRONG",
     hint: "관심 · 지분 변동·수정본",
-    className: "border-amber-500/50 bg-amber-950/30",
+    className: "border-2 border-amber-300 bg-amber-50 dark:border-amber-900 dark:bg-amber-950/40",
     badgeBg: "bg-amber-500 text-slate-900",
-    countBg: "bg-amber-300 text-slate-900",
+    countBg: "bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-100",
   },
   INSIDER: {
     icon: "👤",
     label: "INSIDER",
     hint: "임원 매매 · activism 진입 종목의 동조/이탈 방향",
-    className: "border-cyan-500/50 bg-cyan-950/30",
-    badgeBg: "bg-cyan-500 text-white",
-    countBg: "bg-cyan-300 text-slate-900",
+    className: "border-2 border-sky-300 bg-sky-50 dark:border-sky-900 dark:bg-sky-950/40",
+    badgeBg: "bg-sky-600 text-white",
+    countBg: "bg-sky-100 text-sky-800 dark:bg-sky-900 dark:text-sky-100",
   },
   WATCH: {
     icon: "⚠️",
     label: "WATCH",
     hint: "참고 · passive 성 필링",
-    className: "border-indigo-500/50 bg-indigo-950/30",
-    badgeBg: "bg-indigo-500 text-white",
-    countBg: "bg-indigo-300 text-slate-900",
+    className: "border-2 border-slate-300 bg-slate-50 dark:border-slate-700 dark:bg-slate-900/40",
+    badgeBg: "bg-slate-500 text-white",
+    countBg: "bg-slate-100 text-slate-800 dark:bg-slate-800 dark:text-slate-100",
   },
   NOTE: {
     icon: "📝",
     label: "NOTE",
     hint: "기록만",
-    className: "border-slate-600/50 bg-slate-900/40",
-    badgeBg: "bg-slate-600 text-white",
-    countBg: "bg-slate-500 text-white",
+    className: "border border-slate-200 bg-slate-50/50 dark:border-slate-800 dark:bg-slate-900/20",
+    badgeBg: "bg-slate-400 text-white",
+    countBg: "bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300",
   },
 };
 
@@ -98,21 +101,22 @@ function EventRow({ e }: { e: ActivistEventItem }) {
     : `https://www.google.com/search?q=${encodeURIComponent(searchQuery + " SEC filing")}`;
 
   return (
-    <div className="rounded-lg border border-slate-700/60 bg-slate-900/70 p-3 text-sm text-slate-100 shadow">
+    // v1.51 · P2-4 · 라이트 우선 · shadow 제거 (규칙 26) · border 단독 (규칙 25·27)
+    <div className="rounded-lg border border-slate-200 bg-white p-3 text-sm text-slate-800 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100">
       {/* 헤더 · 폼 배지 + 힌트 + 점수 */}
       <div className="flex items-baseline gap-2 flex-wrap">
         <span
-          className="rounded bg-amber-500 px-2 py-0.5 font-mono text-xs font-bold text-slate-900 shadow"
+          className="rounded bg-amber-500 px-2 py-0.5 font-mono text-xs font-bold text-slate-900"
           title={e.form_hint || undefined}
         >
           {e.form}
         </span>
         {e.form_hint && (
-          <span className="text-xs font-medium text-amber-200">
+          <span className="text-xs font-medium text-amber-700 dark:text-amber-300">
             {e.form_hint}
           </span>
         )}
-        <span className="ml-auto rounded bg-slate-800 px-2 py-0.5 text-xs font-mono font-bold text-white">
+        <span className="ml-auto rounded bg-slate-100 px-2 py-0.5 text-xs font-mono font-bold text-slate-700 dark:bg-slate-800 dark:text-slate-200">
           score {e.score}
         </span>
       </div>
@@ -127,40 +131,40 @@ function EventRow({ e }: { e: ActivistEventItem }) {
                 ? "bg-emerald-500 text-white"
                 : e.filer_tier === 2
                 ? "bg-sky-500 text-white"
-                : "bg-slate-600 text-slate-100")
+                : "bg-slate-400 text-white")
             }
           >
             T{e.filer_tier}
           </span>
         )}
-        <span className="rounded bg-slate-700 px-1.5 py-0.5 text-[10px] font-mono font-bold text-slate-100">
+        <span className="rounded bg-slate-100 px-1.5 py-0.5 text-[10px] font-mono font-bold text-slate-700 dark:bg-slate-800 dark:text-slate-200">
           {e.country}
         </span>
-        <span className="font-bold text-white">{e.filer_name}</span>
+        <span className="font-bold text-slate-900 dark:text-white">{e.filer_name}</span>
         {e.filer_cik && (
-          <span className="text-[10px] font-mono text-slate-400">
+          <span className="text-[10px] font-mono text-slate-500 dark:text-slate-400">
             CIK {e.filer_cik}
           </span>
         )}
       </div>
 
       {/* 메타 */}
-      <div className="mt-1.5 text-xs text-slate-400">
-        <span className="text-slate-300">Filing</span>{" "}
-        <span className="font-mono text-slate-200">{e.filing_date}</span>{" "}
-        · <span className="text-slate-300">Accession</span>{" "}
-        <span className="font-mono text-slate-200">{e.accession}</span>{" "}
-        · 감지 <span className="text-slate-200">{relTime(e.detected_at)}</span>
+      <div className="mt-1.5 text-xs text-slate-500 dark:text-slate-400">
+        <span className="text-slate-600 dark:text-slate-300">Filing</span>{" "}
+        <span className="font-mono text-slate-700 dark:text-slate-200">{e.filing_date}</span>{" "}
+        · <span className="text-slate-600 dark:text-slate-300">Accession</span>{" "}
+        <span className="font-mono text-slate-700 dark:text-slate-200">{e.accession}</span>{" "}
+        · 감지 <span className="text-slate-700 dark:text-slate-200">{relTime(e.detected_at)}</span>
       </div>
 
-      {/* 대상 회사·종목 · 지분 상세 (XML 파싱 결과) · 강한 대비 */}
-      <div className="mt-3 rounded-lg border-2 border-cyan-500/60 bg-slate-950/70 p-3 text-sm shadow-lg">
+      {/* 대상 회사·종목 · warm 축 통일 (amber) · 단일 강조 · 사중 디바이드 해체 */}
+      <div className="mt-3 rounded-md border border-amber-300 bg-amber-50 p-3 text-sm dark:border-amber-800 dark:bg-amber-950/40">
         <div className="mb-2 flex items-center gap-2">
-          <span className="text-xs font-bold uppercase tracking-wider text-cyan-300">
+          <span className="text-xs font-bold uppercase tracking-wider text-amber-800 dark:text-amber-300">
             🎯 대상 종목
           </span>
           {e.details?.issuer_cik && (
-            <span className="ml-auto text-[10px] font-mono text-slate-400">
+            <span className="ml-auto text-[10px] font-mono text-slate-500 dark:text-slate-400">
               issuer CIK {e.details.issuer_cik}
               {e.details.issuer_cusip && ` · CUSIP ${e.details.issuer_cusip}`}
             </span>
@@ -169,20 +173,20 @@ function EventRow({ e }: { e: ActivistEventItem }) {
 
         <div className="flex items-baseline gap-2 flex-wrap">
           {e.target_ticker && (
-            <span className="rounded-md bg-cyan-500 px-2.5 py-1 font-mono text-sm font-bold text-white shadow">
+            <span className="rounded-md bg-amber-600 px-2.5 py-1 font-mono text-sm font-bold text-white">
               {e.target_ticker}
             </span>
           )}
-          <span className="text-lg font-bold text-white">
+          <span className="text-lg font-bold text-slate-900 dark:text-white">
             {e.details?.issuer_name || e.target_desc || (
-              <span className="text-slate-400 italic font-normal">
+              <span className="text-slate-500 italic font-normal">
                 회사명 미확인 — 원문 링크 확인 필요
               </span>
             )}
           </span>
         </div>
 
-        {/* 지분 상세 grid — 컬러 톤 · 큰 폰트 · 강한 대비 */}
+        {/* 지분 상세 grid · 지분율만 amber 강조 (규칙 3) · 나머지는 slate 중성 */}
         {(e.details?.percent_of_class !== undefined ||
           e.details?.aggregate_amount_owned !== undefined ||
           e.details?.amendment_no !== undefined ||
@@ -190,11 +194,11 @@ function EventRow({ e }: { e: ActivistEventItem }) {
           <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
             {e.details?.percent_of_class !== null &&
              e.details?.percent_of_class !== undefined && (
-              <div className="rounded-lg border border-cyan-400/50 bg-cyan-500/15 p-2">
-                <div className="text-[10px] font-semibold uppercase tracking-wide text-cyan-300">
+              <div className="rounded-md border border-amber-300 bg-white p-2 dark:border-amber-800 dark:bg-amber-950/30">
+                <div className="text-[10px] font-semibold uppercase tracking-wide text-amber-700 dark:text-amber-300">
                   지분율
                 </div>
-                <div className="mt-0.5 text-3xl font-black leading-none text-cyan-100">
+                <div className="mt-0.5 text-3xl font-black leading-none text-amber-900 dark:text-amber-100">
                   {e.details.percent_of_class.toFixed(1)}
                   <span className="text-xl">%</span>
                 </div>
@@ -202,32 +206,32 @@ function EventRow({ e }: { e: ActivistEventItem }) {
             )}
             {e.details?.aggregate_amount_owned !== null &&
              e.details?.aggregate_amount_owned !== undefined && (
-              <div className="rounded-lg border border-emerald-400/50 bg-emerald-500/15 p-2">
-                <div className="text-[10px] font-semibold uppercase tracking-wide text-emerald-300">
+              <div className="rounded-md border border-slate-200 bg-white p-2 dark:border-slate-700 dark:bg-slate-900/40">
+                <div className="text-[10px] font-semibold uppercase tracking-wide text-slate-600 dark:text-slate-300">
                   보유 주식
                 </div>
-                <div className="mt-0.5 text-base font-bold font-mono text-emerald-100">
+                <div className="mt-0.5 text-base font-bold font-mono text-slate-800 dark:text-slate-100">
                   {e.details.aggregate_amount_owned.toLocaleString()}
                 </div>
               </div>
             )}
             {e.details?.amendment_no !== null &&
              e.details?.amendment_no !== undefined && (
-              <div className="rounded-lg border border-fuchsia-400/50 bg-fuchsia-500/15 p-2">
-                <div className="text-[10px] font-semibold uppercase tracking-wide text-fuchsia-300">
+              <div className="rounded-md border border-slate-200 bg-white p-2 dark:border-slate-700 dark:bg-slate-900/40">
+                <div className="text-[10px] font-semibold uppercase tracking-wide text-slate-600 dark:text-slate-300">
                   수정 차수
                 </div>
-                <div className="mt-0.5 text-base font-bold text-fuchsia-100">
+                <div className="mt-0.5 text-base font-bold text-slate-800 dark:text-slate-100">
                   Amendment #{e.details.amendment_no}
                 </div>
               </div>
             )}
             {e.details?.date_of_event && (
-              <div className="rounded-lg border border-indigo-400/50 bg-indigo-500/15 p-2">
-                <div className="text-[10px] font-semibold uppercase tracking-wide text-indigo-300">
+              <div className="rounded-md border border-slate-200 bg-white p-2 dark:border-slate-700 dark:bg-slate-900/40">
+                <div className="text-[10px] font-semibold uppercase tracking-wide text-slate-600 dark:text-slate-300">
                   이벤트 발생일
                 </div>
-                <div className="mt-0.5 text-base font-bold text-indigo-100">
+                <div className="mt-0.5 text-base font-bold text-slate-800 dark:text-slate-100">
                   {e.details.date_of_event}
                 </div>
               </div>
@@ -236,40 +240,40 @@ function EventRow({ e }: { e: ActivistEventItem }) {
         )}
 
         {e.details?.securities_class_title && (
-          <div className="mt-3 rounded bg-slate-800/70 px-2 py-1 text-xs text-slate-200">
-            <span className="font-semibold text-slate-400">증권 클래스:</span>{" "}
+          <div className="mt-3 rounded bg-slate-100 px-2 py-1 text-xs text-slate-700 dark:bg-slate-800/70 dark:text-slate-200">
+            <span className="font-semibold text-slate-500 dark:text-slate-400">증권 클래스:</span>{" "}
             {e.details.securities_class_title}
           </div>
         )}
 
         {e.details?.transaction_purpose && (
-          <details className="mt-3 rounded border border-slate-700 bg-slate-900/60">
-            <summary className="cursor-pointer px-2 py-1 text-xs font-semibold text-amber-300 hover:bg-slate-800/50">
+          <details className="mt-3 rounded border border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-900/60">
+            <summary className="cursor-pointer px-2 py-1 text-xs font-semibold text-amber-700 hover:bg-slate-50 dark:text-amber-300 dark:hover:bg-slate-800/50">
               📝 Item 4 — 거래 목적/사유 (원문 발췌 · 클릭 펼치기)
             </summary>
-            <div className="whitespace-pre-wrap border-t border-slate-700 p-2 font-mono text-[11px] text-slate-100">
+            <div className="whitespace-pre-wrap border-t border-slate-200 p-2 font-mono text-[11px] text-slate-800 dark:border-slate-700 dark:text-slate-100">
               {e.details.transaction_purpose}
             </div>
           </details>
         )}
       </div>
 
-      {/* 액션 힌트 */}
+      {/* 액션 힌트 · sky 계열 (프로젝트 팔레트) · shadow 제거 */}
       {e.action_hint && (
-        <div className="mt-3 rounded-lg border border-blue-400/50 bg-blue-500/15 p-2 text-sm">
-          <span className="mr-1 text-xs font-bold uppercase tracking-wide text-blue-300">
+        <div className="mt-3 rounded-md border border-sky-300 bg-sky-50 p-2 text-sm dark:border-sky-800 dark:bg-sky-950/40">
+          <span className="mr-1 text-xs font-bold uppercase tracking-wide text-sky-800 dark:text-sky-300">
             추천 액션
           </span>
-          <span className="text-blue-100 font-medium">{e.action_hint}</span>
+          <span className="text-sky-900 font-medium dark:text-sky-100">{e.action_hint}</span>
         </div>
       )}
 
-      {/* Wolf Pack */}
+      {/* Wolf Pack · rose 축 유지 · border만 · 라이트화 */}
       {e.wolf_pack.length > 0 && (
-        <div className="mt-2 rounded-lg border-2 border-rose-500/60 bg-rose-950/50 p-2 text-xs font-medium text-rose-100">
+        <div className="mt-2 rounded-md border-2 border-rose-300 bg-rose-50 p-2 text-xs font-medium text-rose-900 dark:border-rose-800 dark:bg-rose-950/40 dark:text-rose-100">
           🐺 <span className="font-bold">Wolf Pack (30d)</span>: 다른 activist{" "}
-          <span className="text-rose-300 font-bold">{e.wolf_pack.length}명</span> 동일 종목 진입 —{" "}
-          <span className="text-rose-200">{e.wolf_pack.join(", ")}</span>
+          <span className="text-rose-700 font-bold dark:text-rose-300">{e.wolf_pack.length}명</span> 동일 종목 진입 —{" "}
+          <span className="text-rose-800 dark:text-rose-200">{e.wolf_pack.join(", ")}</span>
         </div>
       )}
 
@@ -280,7 +284,7 @@ function EventRow({ e }: { e: ActivistEventItem }) {
             href={filingUrl}
             target="_blank"
             rel="noopener noreferrer"
-            className="rounded-md border border-slate-600 bg-slate-800 px-3 py-1 font-medium text-slate-100 hover:bg-slate-700 hover:text-white"
+            className="rounded-md border border-slate-200 bg-white px-3 py-1 font-medium text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700"
           >
             📄 원문 필링 ↗
           </a>
@@ -290,7 +294,7 @@ function EventRow({ e }: { e: ActivistEventItem }) {
             href={filerUrl}
             target="_blank"
             rel="noopener noreferrer"
-            className="rounded-md border border-slate-600 bg-slate-800 px-3 py-1 font-medium text-slate-100 hover:bg-slate-700 hover:text-white"
+            className="rounded-md border border-slate-200 bg-white px-3 py-1 font-medium text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700"
           >
             🔍 {e.filer_name.split(" ")[0]} 다른 필링 ↗
           </a>
@@ -316,30 +320,32 @@ const PACK_STYLE: Record<
   WolfPackGroup["intensity_label"],
   { icon: string; label: string; className: string }
 > = {
+  // v1.51 · design-rules 정합 · warm 명도 위계 · ring/shadow 제거
   CRITICAL_PACK: {
     icon: "🐺🐺",
     label: "CRITICAL PACK",
-    className: "border-pink-500/60 bg-pink-500/10 ring-2 ring-pink-500/50",
+    className: "border-2 border-rose-300 bg-rose-50 dark:border-rose-800 dark:bg-rose-950/40",
   },
   STRONG_PACK: {
     icon: "🐺",
     label: "STRONG PACK",
-    className: "border-orange-500/50 bg-orange-500/10",
+    className: "border-2 border-orange-300 bg-orange-50 dark:border-orange-900 dark:bg-orange-950/40",
   },
   PACK: {
     icon: "🐺",
     label: "PACK",
-    className: "border-yellow-500/40 bg-yellow-500/5",
+    className: "border border-amber-300 bg-amber-50 dark:border-amber-900 dark:bg-amber-950/30",
   },
 };
 
 function TierBadge({ tier }: { tier: number }) {
+  // v1.51 · 라이트 우선 · 파스텔 배경 + 짙은 텍스트
   const color =
     tier === 1
-      ? "bg-emerald-500/20 text-emerald-300"
+      ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-200"
       : tier === 2
-      ? "bg-sky-500/20 text-sky-300"
-      : "bg-muted text-muted-foreground";
+      ? "bg-sky-100 text-sky-800 dark:bg-sky-900/40 dark:text-sky-200"
+      : "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300";
   return (
     <span className={`rounded px-1.5 py-0.5 text-[10px] font-mono ${color}`}>
       T{tier}
@@ -359,21 +365,22 @@ function WolfPackEntryRow({
   return (
     <div className="relative flex gap-3">
       <div className="flex flex-col items-center">
-        <div className="h-3 w-3 rounded-full bg-pink-500 ring-2 ring-background" />
-        {!isLast && <div className="w-px flex-1 bg-pink-500/40" />}
+        {/* v1.51 · rose 축 통일 (Wolf Pack 정체성) · ring 제거 · border로 대체 */}
+        <div className="h-3 w-3 rounded-full bg-rose-500 border-2 border-white dark:border-slate-900" />
+        {!isLast && <div className="w-px flex-1 bg-rose-300 dark:bg-rose-800" />}
       </div>
       <div className="mb-3 flex-1 pb-2">
         <div className="flex items-baseline gap-2 flex-wrap">
           <TierBadge tier={e.tier} />
           <span className="font-medium">{e.filer_name}</span>
-          <span className="rounded bg-amber-500/20 px-2 py-0.5 text-xs font-mono text-amber-400">
+          <span className="rounded bg-amber-100 px-2 py-0.5 text-xs font-mono text-amber-800 dark:bg-amber-900/40 dark:text-amber-200">
             {e.form}
           </span>
           {isFirst && (
             <span className="text-xs text-muted-foreground">🩸 최초 진입</span>
           )}
           {isLast && !isFirst && (
-            <span className="text-xs text-pink-400">⚡ 최신 진입</span>
+            <span className="text-xs text-rose-700 dark:text-rose-300">⚡ 최신 진입</span>
           )}
         </div>
         <div className="mt-0.5 text-xs text-muted-foreground">
@@ -394,7 +401,7 @@ function WolfPackCard({ g }: { g: WolfPackGroup }) {
         <div>
           <div className="flex items-baseline gap-2 flex-wrap">
             <span className="text-2xl">{style.icon}</span>
-            <span className="rounded bg-pink-500/30 px-2 py-0.5 text-xs font-mono font-semibold text-pink-100">
+            <span className="rounded bg-rose-100 px-2 py-0.5 text-xs font-mono font-semibold text-rose-800 dark:bg-rose-900/40 dark:text-rose-200">
               {g.country}
             </span>
             <span className="text-xl font-bold font-mono">{g.target_ticker}</span>
@@ -488,20 +495,20 @@ function BucketCard({
   if (!events || events.length === 0) return null;
   return (
     <div className={`overflow-hidden rounded-lg border ${meta.className}`}>
-      {/* 헤더 밴드 — 완전 불투명 슬레이트 배경 · 부모 색상 배어남 방지 */}
-      <div className="flex items-center gap-2 flex-wrap bg-slate-950 px-4 py-2.5 border-b border-slate-700">
+      {/* v1.51 · 헤더 밴드 라이트 우선 · shadow 제거 (규칙 26) · 배경은 카드 톤 상속 */}
+      <div className="flex items-center gap-2 flex-wrap bg-white/60 px-4 py-2.5 border-b border-slate-200 dark:bg-slate-900/60 dark:border-slate-700">
         <span
-          className={`inline-flex items-center gap-1.5 rounded-md px-2.5 py-1 text-sm font-bold shadow ${meta.badgeBg}`}
+          className={`inline-flex items-center gap-1.5 rounded-md px-2.5 py-1 text-sm font-bold ${meta.badgeBg}`}
         >
           <span className="text-base">{meta.icon}</span>
           {meta.label}
         </span>
         <span
-          className={`inline-flex min-w-[24px] items-center justify-center rounded-full px-2 py-0.5 text-xs font-black shadow ${meta.countBg}`}
+          className={`inline-flex min-w-[24px] items-center justify-center rounded-full px-2 py-0.5 text-xs font-black ${meta.countBg}`}
         >
           {events.length}
         </span>
-        <span className="text-sm text-slate-100 font-medium">
+        <span className="text-sm text-slate-700 dark:text-slate-100 font-medium">
           {meta.hint}
         </span>
       </div>
@@ -903,13 +910,13 @@ export default function ActivistRadarPage() {
           <BucketCard intensity="INSIDER" events={s.buckets.INSIDER || []} />
           <BucketCard intensity="WATCH" events={s.buckets.WATCH || []} />
           {(s.insider_watchlist_kr || []).length > 0 && (
-            <div className="rounded-lg border border-cyan-500/40 bg-cyan-500/5 p-3 text-sm">
-              <div className="mb-1 font-medium text-cyan-300">
+            <div className="rounded-lg border border-sky-300 bg-sky-50 p-3 text-sm dark:border-sky-800 dark:bg-sky-950/40">
+              <div className="mb-1 font-medium text-sky-800 dark:text-sky-300">
                 👤 KR Insider Watchlist ({s.insider_watchlist_kr!.length} 종목 · 최근 90일 activism 진입 자동 추적)
               </div>
               <div className="flex flex-wrap gap-1 font-mono text-xs">
                 {s.insider_watchlist_kr!.map((code) => (
-                  <span key={code} className="rounded bg-cyan-500/20 px-2 py-0.5">
+                  <span key={code} className="rounded bg-sky-100 px-2 py-0.5 text-sky-800 dark:bg-sky-900/40 dark:text-sky-200">
                     {code}
                   </span>
                 ))}
@@ -920,14 +927,14 @@ export default function ActivistRadarPage() {
             </div>
           )}
           {(s.insider_watchlist_us || []).length > 0 && (
-            <div className="rounded-lg border border-cyan-500/40 bg-cyan-500/5 p-3 text-sm">
-              <div className="mb-1 font-medium text-cyan-300">
+            <div className="rounded-lg border border-sky-300 bg-sky-50 p-3 text-sm dark:border-sky-800 dark:bg-sky-950/40">
+              <div className="mb-1 font-medium text-sky-800 dark:text-sky-300">
                 👤 US Insider Watchlist ({s.insider_watchlist_us!.length} 회사 · 최근 90일 activism 진입 자동 추적)
               </div>
               <div className="flex flex-col gap-1 text-xs">
                 {s.insider_watchlist_us!.map((w) => (
                   <div key={w.cik} className="flex gap-2 items-baseline">
-                    <span className="rounded bg-cyan-500/20 px-2 py-0.5 font-mono font-semibold">
+                    <span className="rounded bg-sky-100 px-2 py-0.5 font-mono font-semibold text-sky-800 dark:bg-sky-900/40 dark:text-sky-200">
                       {w.ticker}
                     </span>
                     <span className="text-muted-foreground truncate">{w.name}</span>
