@@ -162,6 +162,99 @@ def test_wolf_pack_ignores_insider_events():
     assert scoring.detect_wolf_pack(state, "SNN", "form4:SNN") == ["cevian"]
 
 
+# ─────────────────────────────────────────────────────────────
+# P2-5b · KR 경로 empty-string 가드 (v1.55)
+# ─────────────────────────────────────────────────────────────
+
+
+def test_kr_corp_name_empty_string_guard_prior_forms():
+    """v1.55 · KR corp_name == '' 시 · substring 매칭 폭발 방지.
+
+    원 · radar.py:289 US 경로 P2-5 fix 대칭 누락 · KR filer의 모든 이벤트가 wrong hit.
+    """
+    state = ActivistState()
+    state.events = [
+        _make_evt("1", "kcgi", target_desc="한양증권", target_ticker="001750"),
+        _make_evt("2", "kcgi", target_desc="SK네트웍스", target_ticker="001740"),
+    ]
+    # KR 경로 시뮬레이션 · corp_name 빈 문자열 케이스
+    corp_name = ""  # or None
+    kr_corp_name = (corp_name or "").strip()
+    prior_forms = []
+    if kr_corp_name:
+        up = kr_corp_name.upper()
+        prior_forms = [
+            e.form for e in state.events
+            if e.filer_key == "kcgi"
+            and up in (e.target_desc or "").upper()
+        ]
+    # 가드 · 빈 corp_name → prior_forms 빈 리스트 (폭발 방지)
+    assert prior_forms == []
+
+    # 대조 · corp_name 정상 시 · 매칭 정상 작동
+    corp_name2 = "한양증권"
+    kr_corp2 = (corp_name2 or "").strip()
+    up2 = kr_corp2.upper()
+    prior2 = [
+        e.form for e in state.events
+        if e.filer_key == "kcgi"
+        and up2 in (e.target_desc or "").upper()
+    ]
+    assert len(prior2) == 1  # 한양증권만 매칭
+
+
+# ─────────────────────────────────────────────────────────────
+# P2-5b · Form 4 URI-agnostic (v1.55)
+# ─────────────────────────────────────────────────────────────
+
+
+def test_form4_iter_compat_with_xmlns():
+    """v1.55 · SEC Form 4 XML에 xmlns 추가되어도 파싱 정상."""
+    from backend.discovery.activist.us_form4_poller import _iter_compat, _text, _bool_flag
+    from xml.etree import ElementTree as ET
+    # xmlns 있는 Form 4 시뮬레이션 (미래 SEC 변경 대비)
+    xml = b"""<?xml version="1.0"?>
+    <ownershipDocument xmlns="http://www.sec.gov/edgar/ownership">
+      <reportingOwner>
+        <reportingOwnerRelationship>
+          <isOfficer>true</isOfficer>
+        </reportingOwnerRelationship>
+        <reportingOwnerId>
+          <rptOwnerName>Test Officer</rptOwnerName>
+        </reportingOwnerId>
+      </reportingOwner>
+      <nonDerivativeTable>
+        <nonDerivativeTransaction>
+          <transactionCoding><transactionCode>P</transactionCode></transactionCoding>
+        </nonDerivativeTransaction>
+      </nonDerivativeTable>
+    </ownershipDocument>"""
+    root = ET.fromstring(xml)
+    # v1.55 · {*} 로 xmlns 무시 매칭
+    officers = _iter_compat(root, "isOfficer")
+    assert len(officers) == 1
+    assert _bool_flag(root, "isOfficer") is True
+    txns = _iter_compat(root, "nonDerivativeTransaction")
+    assert len(txns) == 1
+    assert _text(root, "rptOwnerName") == "Test Officer"
+
+
+def test_form4_iter_compat_without_xmlns():
+    """v1.55 · xmlns 없는 Form 4 XML 도 정상 (기존 동작 회귀 없음)."""
+    from backend.discovery.activist.us_form4_poller import _iter_compat, _bool_flag
+    from xml.etree import ElementTree as ET
+    xml = b"""<?xml version="1.0"?>
+    <ownershipDocument>
+      <reportingOwner>
+        <isOfficer>true</isOfficer>
+      </reportingOwner>
+    </ownershipDocument>"""
+    root = ET.fromstring(xml)
+    officers = _iter_compat(root, "isOfficer")
+    assert len(officers) == 1
+    assert _bool_flag(root, "isOfficer") is True
+
+
 def test_score_event_accepts_target_ticker_kwarg():
     """v1.53 · score_event · target_ticker 파라미터 · wolf_pack 정확 계산."""
     from backend.discovery.activist.universe import Activist

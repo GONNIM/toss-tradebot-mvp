@@ -283,11 +283,18 @@ async def run_kr_tick(
 
     for m in matched:
         form_key = f"KR_D001_{m.purpose}"
-        prior_forms = [
-            e.form for e in state.events
-            if e.filer_key == m.activist.key
-            and (m.disclosure.corp_name or "").upper() in (e.target_desc or "").upper()
-        ]
+        # v1.55 · P2-5b · KR 경로 empty-string 가드 (US 경로 v1.53 P2-5 대칭)
+        #   원 · corp_name == "" → "" in x == True → prior_forms 폭발 · REGIME_CHANGE 오탐
+        #   개선 · corp_name 없으면 prior_forms skip
+        kr_corp_name = (m.disclosure.corp_name or "").strip()
+        prior_forms: list[str] = []
+        if kr_corp_name:
+            up = kr_corp_name.upper()
+            prior_forms = [
+                e.form for e in state.events
+                if e.filer_key == m.activist.key
+                and up in (e.target_desc or "").upper()
+            ]
         score, label, wolf_pack = scoring.score_event(
             m.activist,
             form_key,

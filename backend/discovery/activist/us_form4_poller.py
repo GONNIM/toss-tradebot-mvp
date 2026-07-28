@@ -132,34 +132,55 @@ async def _fetch_form4_xml(cik: str, accession: str, ua: str) -> Optional[bytes]
 
 
 def _value_text(elem, path: str) -> str:
-    """element/path/value 텍스트 (없으면 빈 문자열)."""
-    node = elem.find(f".//{path}/value")
+    """element/path/value 텍스트 (없으면 빈 문자열).
+
+    v1.55 · P2-5b · URI-agnostic (`{*}` 로 xmlns 무시)
+    """
+    node = elem.find(f".//{{*}}{path}/{{*}}value")
+    if node is None:
+        # 폴백 · bare-tag (기존 동작 · xmlns 없는 XML)
+        node = elem.find(f".//{path}/value")
     if node is not None and node.text:
         return node.text.strip()
     return ""
 
 
+def _iter_compat(root, local_name: str):
+    """v1.55 · P2-5b · URI-agnostic iterator · SEC 스키마에 xmlns 추가돼도 방어.
+
+    Python ElementTree `iter()` 는 `{*}` wildcard 미지원 (find/findall 만 지원).
+    로컬네임 매칭은 수동으로 · `tag == local` 또는 `tag == '{uri}local'` 형태 확인.
+    """
+    suffix = "}" + local_name
+    out = []
+    for elem in root.iter():
+        tag = elem.tag
+        if tag == local_name or (isinstance(tag, str) and tag.endswith(suffix)):
+            out.append(elem)
+    return out
+
+
 def _bool_flag(root, tag: str) -> bool:
     """rptOwner 등 boolean flag (예: <isOfficer>true</isOfficer>)."""
-    for n in root.iter(tag):
+    for n in _iter_compat(root, tag):
         if n.text and n.text.strip().lower() == "true":
             return True
     return False
 
 
 def _text(root, tag: str) -> str:
-    for n in root.iter(tag):
+    for n in _iter_compat(root, tag):
         if n.text:
             return n.text.strip()
     return ""
 
 
 def _iter_transactions(root) -> list:
-    """non-derivative + derivative 모든 트랜잭션 순회."""
+    """non-derivative + derivative 모든 트랜잭션 순회. v1.55 · URI-agnostic."""
     out = []
-    for txn in root.iter("nonDerivativeTransaction"):
+    for txn in _iter_compat(root, "nonDerivativeTransaction"):
         out.append(("nonDerivative", txn))
-    for txn in root.iter("derivativeTransaction"):
+    for txn in _iter_compat(root, "derivativeTransaction"):
         out.append(("derivative", txn))
     return out
 

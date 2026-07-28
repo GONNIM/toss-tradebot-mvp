@@ -87,6 +87,55 @@
 
 ---
 
+## 🔧 백엔드 데이터 정합성 안티패턴 (v1.53~v1.55 사고 근거)
+
+### 패턴 X · empty-string substring 매칭 버그
+```python
+# ❌ 위험 · target_desc == "" 이면 "" in x == True → 모든 이벤트 매칭 폭발
+if user_var.upper() in (row.target_desc or "").upper():
+    ...
+```
+**가드**:
+```python
+# ✅ 안전
+val = (user_var or "").strip()
+if val and val.upper() in (row.target_desc or "").upper():
+    ...
+```
+**실 사례**: activist-radar Wolf Pack에 SNN 이벤트에 무관 10명 허위 표시 (v1.53 P2-5 · KR 대칭 v1.55 P2-5b).
+
+### 패턴 Y · XML 네임스페이스 하드코딩
+```python
+# ❌ 위험 · 스키마 URI 편차 시 모든 XPath 실패
+_NS = {"s13": "http://www.sec.gov/edgar/schedule13D"}   # 대문자만
+root.find(".//s13:issuerName", _NS)
+```
+**개선**:
+```python
+# ✅ URI-agnostic · Python 3.8+
+root.find(".//{*}issuerName")
+
+# iter() 는 wildcard 미지원 · 로컬네임 수동 매칭
+for elem in root.iter():
+    if elem.tag == local_name or elem.tag.endswith("}" + local_name):
+        ...
+```
+**실 사례**: SC 13G 5건 파싱 실패 · "회사명 미확인" (v1.53) · Form 4 잠재 리스크 (v1.55 P2-5b 예방).
+
+### 패턴 Z · 동일 데이터 이원 계산 (신뢰성 파괴)
+- 두 API가 같은 지표를 다른 축·다른 함수로 계산 → 사용자 관점 어긋남
+- 예: `/summary`는 DB `status="passed"` 카운트 vs `/list`는 `_compute_tier` 재계산 → 스키마 진화 시 불일치
+- **원칙**: 단일 계산 함수 · single source of truth · 다른 위치는 그 함수 재사용
+- 실 사례: Wolf Pack 요약(0) vs 이벤트 필드(10) (v1.53 P2-5) · Powderkeg tier 이원화 (v1.55 P2-5b)
+
+### 코드 리뷰 체크리스트
+1. `<var>.upper() in (...)` 발견 시 · `<var>` empty 가드 확인
+2. `xml.etree` 신규 사용 · `{*}` URI-agnostic 강제
+3. 동일 지표 2군데 계산 · 하나의 함수로 위임 (DRY)
+4. `if x.something or y:` · empty 문자열이 `y`로 위장 못하는지 확인
+
+---
+
 ## 🚫 프로젝트 안티패턴 (재발 방지)
 
 1. **다크/라이트 혼재**: 한 페이지에 `bg-slate-50` + `bg-slate-900` 혼용 시 어느 하나로 통일

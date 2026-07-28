@@ -151,9 +151,20 @@ async def get_list_funnel(
             elif v is None:
                 per_condition[k]["missing"] += 1
 
-    final_passed = sum(1 for r in rows if r.status == "passed")
+    # v1.55 · P2-5b · tier 이원화 통일 · _compute_tier 재사용 (single source of truth)
+    # 원 · r.status(DB) 카운트 vs /list 의 _compute_tier(conditions_json 재계산) 어긋남 위험
+    # 개선 · 두 API 모두 conditions_json 재계산 결과 사용
+    def _passed_by_tier(row) -> bool:
+        try:
+            cj = json.loads(row.conditions_json) if row.conditions_json else {}
+        except Exception:  # noqa: BLE001
+            cj = {}
+        items = [(k, v) for k, v in cj.items() if k != "_robustness"]
+        return len(items) > 0 and all(v is True for _, v in items)
+
+    final_passed = sum(1 for r in rows if _passed_by_tier(r))
     cash_suspect = sum(1 for r in rows if r.status == "cash_suspect")
-    rejected = sum(1 for r in rows if r.status == "rejected")
+    rejected = sum(1 for r in rows if r.status == "rejected" and not _passed_by_tier(r))
 
     return {
         "disclaimer": DISCLAIMER,
