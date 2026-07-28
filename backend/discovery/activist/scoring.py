@@ -115,11 +115,22 @@ def _is_regime_change(prior_forms: List[str], current_form: str) -> bool:
 
 
 def detect_wolf_pack(
-    state: ActivistState, target_desc: str, current_filer_key: str
+    state: ActivistState, target_ticker: str, current_filer_key: str,
 ) -> List[str]:
-    """30일 window 에 동일 target 에 진입한 다른 activist filer_key 리스트 반환."""
+    """v1.53 · P2-5 · Wolf Pack 정확 계산 · target_ticker 축 · ACTIVIST 이벤트만.
+
+    Args:
+        target_ticker: 대상 종목 티커 (없으면 빈 리스트 반환)
+        current_filer_key: 자기 자신 제외
+
+    변경 근거:
+        - 원 · target_desc 문자열 substring 매칭 · empty-string 매칭 버그 (SNN에 무관 10명)
+        - 개선 · wolf_pack.extract_groups (target_ticker) 와 동일 축 · 완전 정합
+    """
+    if not target_ticker:
+        return []
     since = time.time() - _WOLF_WINDOW_SEC
-    others = state.events_by_target(target_desc, since)
+    others = state.events_by_ticker(target_ticker, since, event_type="ACTIVIST")
     seen: List[str] = []
     for e in others:
         if e.filer_key == current_filer_key:
@@ -134,10 +145,12 @@ def score_event(
     form: str,
     target_desc: str,
     state: ActivistState,
+    target_ticker: str = None,
     prior_forms_by_this_filer_on_target: List[str] = None,
 ) -> Tuple[int, str, List[str]]:
     """이벤트 강도 계산 · (score, label, wolf_pack) 반환.
 
+    v1.53 · P2-5 · target_ticker 파라미터 추가 · wolf_pack 정확 계산.
     Phase D: 13G→13D 전환은 별도 REGIME_CHANGE 라벨로 승격 (score 100).
     """
     base = _BASE_FORM_SCORE.get(form, 30)
@@ -145,12 +158,12 @@ def score_event(
 
     # ── Phase D · 13G→13D 태세 전환 감지 (명시적 라벨) ──
     if _is_regime_change(prior, form):
-        wolf_pack = detect_wolf_pack(state, target_desc, activist.key)
+        wolf_pack = detect_wolf_pack(state, target_ticker or "", activist.key)
         return 100, "REGIME_CHANGE", wolf_pack
 
     tier_mult = _TIER_MULTIPLIER.get(activist.tier, 1.0)
 
-    wolf_pack = detect_wolf_pack(state, target_desc, activist.key)
+    wolf_pack = detect_wolf_pack(state, target_ticker or "", activist.key)
     n_others = len(wolf_pack)
     wolf_mult = 1.0
     if n_others >= 2:

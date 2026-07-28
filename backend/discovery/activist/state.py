@@ -141,9 +141,29 @@ class ActivistState:
         return sorted(self.events, key=lambda e: e.detected_at, reverse=True)[:limit]
 
     def events_by_target(self, target_desc: str, since_ts: float) -> List[ActivistEvent]:
+        """v1.53 · P2-5 · empty-string 가드 · deprecated: 신 코드는 events_by_ticker 사용."""
+        if not target_desc or not target_desc.strip():
+            return []
         return [
             e for e in self.events
             if target_desc.upper() in (e.target_desc or "").upper()
+            and e.detected_at >= since_ts
+        ]
+
+    def events_by_ticker(
+        self, target_ticker: str, since_ts: float, event_type: str = "ACTIVIST",
+    ) -> List[ActivistEvent]:
+        """v1.53 · P2-5 · Wolf Pack 정확 계산용 · target_ticker 축 (wolf_pack.extract_groups 정합).
+
+        - target_ticker 빈 문자열 → 빈 리스트 (empty-string 매칭 버그 방지)
+        - event_type 기본 ACTIVIST · INSIDER/NOTE 이벤트는 wolf_pack 대상 제외
+        """
+        if not target_ticker:
+            return []
+        return [
+            e for e in self.events
+            if e.target_ticker == target_ticker
+            and e.event_type == event_type
             and e.detected_at >= since_ts
         ]
 

@@ -270,3 +270,34 @@ def delete_activist_universe(key: str):
     from backend.discovery.activist.radar import delete_universe
 
     return delete_universe(key)
+
+
+@router.post("/activist/recompute-wolf-pack")
+def recompute_activist_wolf_pack():
+    """v1.53 · P2-5 · 저장된 이벤트 wolf_pack 재계산 (target_ticker 축 통일).
+
+    empty-string substring 매칭 버그로 잘못 저장된 wolf_pack 필드 정정.
+    각 이벤트에 대해 target_ticker + ACTIVIST 기준으로 재계산.
+    """
+    from backend.discovery.activist import scoring
+    from backend.discovery.activist.state import ActivistState
+
+    state = ActivistState.load()
+    updated = 0
+    unchanged = 0
+    for evt in state.events:
+        if evt.event_type != "ACTIVIST":
+            continue
+        new_wp = scoring.detect_wolf_pack(state, evt.target_ticker or "", evt.filer_key)
+        if new_wp != evt.wolf_pack:
+            evt.wolf_pack = new_wp
+            updated += 1
+        else:
+            unchanged += 1
+    state.save()
+    return {
+        "total_events": len(state.events),
+        "activist_events_reviewed": updated + unchanged,
+        "updated": updated,
+        "unchanged": unchanged,
+    }

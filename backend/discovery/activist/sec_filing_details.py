@@ -1,6 +1,12 @@
 """SEC SC 13D · SC 13G primary_doc.xml 파싱.
 
-SEC 정형 스키마 (2025~ 개편): http://www.sec.gov/edgar/schedule13D
+SEC 정형 스키마:
+- SC 13D: http://www.sec.gov/edgar/schedule13D  (대문자 D)
+- SC 13G: http://www.sec.gov/edgar/schedule13g  (소문자 g)
+
+v1.53 · P2-5 · URI-agnostic XPath (`.//{{*}}elementName`) 사용 · form별 URI 분기 불필요.
+Python ElementTree 3.8+ 지원 · SC 13D/G 모두 하나의 로직으로 파싱.
+
 파일 위치: `Archives/edgar/data/{filer_cik}/{accession_nodash}/primary_doc.xml`
 
 추출 대상 (매매 판단 핵심):
@@ -27,11 +33,6 @@ logger = logging.getLogger(__name__)
 
 _TIMEOUT_SEC = 10.0
 _BASE = "https://www.sec.gov/Archives/edgar/data"
-
-_NS = {
-    "s13": "http://www.sec.gov/edgar/schedule13D",
-    "cmn": "http://www.sec.gov/edgar/common",
-}
 
 
 @dataclass(frozen=True)
@@ -70,17 +71,18 @@ async def fetch_and_parse(filer_cik: str, accession: str, ua: str) -> Optional[S
         return None
 
 
-def _text(root, path: str, ns=None) -> str:
-    node = root.find(path, ns or _NS)
+def _text(root, path: str) -> str:
+    """v1.53 · URI-agnostic · path 는 `.//{{*}}elementName` 형태 사용."""
+    node = root.find(path)
     if node is not None and node.text:
         return node.text.strip()
     return ""
 
 
-def _findall_text(root, path: str, ns=None) -> list:
+def _findall_text(root, path: str) -> list:
     return [
         (n.text or "").strip()
-        for n in root.findall(path, ns or _NS)
+        for n in root.findall(path)
         if n.text
     ]
 
@@ -88,25 +90,28 @@ def _findall_text(root, path: str, ns=None) -> list:
 def _parse(xml_bytes: bytes) -> SC13Details:
     root = ET.fromstring(xml_bytes)
 
-    issuer_name = _text(root, ".//s13:coverPageHeader/s13:issuerInfo/s13:issuerName")
-    issuer_cik = _text(root, ".//s13:coverPageHeader/s13:issuerInfo/s13:issuerCIK")
-    issuer_cusip = _text(root, ".//s13:coverPageHeader/s13:issuerInfo/s13:issuerCusips/s13:issuerCusipNumber")
-    class_title = _text(root, ".//s13:coverPageHeader/s13:securitiesClassTitle")
+    # v1.53 · P2-5 · URI-agnostic XPath (`{*}` 로 URI 무시)
+    #   원 · s13:issuerName 은 schedule13D URI 만 매칭 · SC 13G(소문자 g) 실패
+    #   개선 · {*}issuerName 은 모든 URI 매칭 · SC 13D/G 통합 파싱
+    issuer_name = _text(root, ".//{*}coverPageHeader/{*}issuerInfo/{*}issuerName")
+    issuer_cik = _text(root, ".//{*}coverPageHeader/{*}issuerInfo/{*}issuerCIK")
+    issuer_cusip = _text(root, ".//{*}coverPageHeader/{*}issuerInfo/{*}issuerCusips/{*}issuerCusipNumber")
+    class_title = _text(root, ".//{*}coverPageHeader/{*}securitiesClassTitle")
 
     # amendmentNo · dateOfEvent
-    amend_txt = _text(root, ".//s13:coverPageHeader/s13:amendmentNo")
+    amend_txt = _text(root, ".//{*}coverPageHeader/{*}amendmentNo")
     amendment_no: Optional[int] = None
     if amend_txt:
         try:
             amendment_no = int(amend_txt)
         except ValueError:
             pass
-    date_of_event = _text(root, ".//s13:coverPageHeader/s13:dateOfEvent")
+    date_of_event = _text(root, ".//{*}coverPageHeader/{*}dateOfEvent")
 
     # reportingPersons · percentOfClass 및 aggregateAmountOwned 최대 값
-    pcs = _findall_text(root, ".//s13:reportingPersons//s13:percentOfClass")
-    aggs = _findall_text(root, ".//s13:reportingPersons//s13:aggregateAmountOwned")
-    reporting_count = len(root.findall(".//s13:reportingPersons/s13:reportingPersonInfo", _NS))
+    pcs = _findall_text(root, ".//{*}reportingPersons//{*}percentOfClass")
+    aggs = _findall_text(root, ".//{*}reportingPersons//{*}aggregateAmountOwned")
+    reporting_count = len(root.findall(".//{*}reportingPersons/{*}reportingPersonInfo"))
 
     def _max_float(vals):
         out = []
@@ -130,7 +135,7 @@ def _parse(xml_bytes: bytes) -> SC13Details:
     aggregate_amount_owned = _max_int(aggs)
 
     # item 4 발췌
-    purpose = _text(root, ".//s13:items1To7/s13:item4/s13:transactionPurpose")
+    purpose = _text(root, ".//{*}items1To7/{*}item4/{*}transactionPurpose")
     if len(purpose) > 400:
         purpose = purpose[:397] + "..."
 

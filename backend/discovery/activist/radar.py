@@ -117,24 +117,30 @@ async def run_us_tick(
             if not subject and sc_details.issuer_name:
                 # ticker 룩업 (subject_resolver 는 이름 기반이라 재사용)
                 subject = await subject_resolver.resolve(sc_details.issuer_name, cfg.sec_ua)
-        # 강도 스코어링 (같은 filer 가 이전에 낸 filing form 이력 참조)
-        prior_forms = [
-            e.form for e in state.events
-            if e.filer_key == nf.activist.key
-            and (nf.filing.primary_desc or "").upper() in (e.target_desc or "").upper()
-        ]
-        score, label, wolf_pack = scoring.score_event(
-            nf.activist,
-            nf.filing.form,
-            nf.filing.primary_desc or "",
-            state,
-            prior_forms_by_this_filer_on_target=prior_forms,
-        )
-
+        # v1.53 · P2-5 · target_ticker/target_desc 확정 후 score_event 호출 순서 이동
         # target_desc 강화: primary_desc 비어있고 XML 에 issuer_name 있으면 그것 사용
         eff_desc = nf.filing.primary_desc or ""
         if not eff_desc and sc_details and sc_details.issuer_name:
             eff_desc = sc_details.issuer_name
+        eff_ticker = subject.ticker if subject else None
+
+        # 강도 스코어링 (같은 filer 가 이전에 낸 filing form 이력 참조)
+        # v1.53 · P2-5 · prior_forms 도 empty-string substring 매칭 버그 방지 (eff_desc 비었으면 skip)
+        prior_forms: list[str] = []
+        if eff_desc:
+            prior_forms = [
+                e.form for e in state.events
+                if e.filer_key == nf.activist.key
+                and eff_desc.upper() in (e.target_desc or "").upper()
+            ]
+        score, label, wolf_pack = scoring.score_event(
+            nf.activist,
+            nf.filing.form,
+            eff_desc,
+            state,
+            target_ticker=eff_ticker,   # v1.53 · P2-5 · target_ticker 축 wolf_pack
+            prior_forms_by_this_filer_on_target=prior_forms,
+        )
 
         evt = ActivistEvent(
             id=_make_event_id("US", nf.activist.cik or "", nf.filing.accession),
@@ -287,6 +293,7 @@ async def run_kr_tick(
             form_key,
             m.disclosure.corp_name or m.disclosure.report_nm,
             state,
+            target_ticker=m.disclosure.stock_code,   # v1.53 · P2-5 · KR도 target_ticker 축
             prior_forms_by_this_filer_on_target=prior_forms,
         )
         # ─── majorstock 정밀 필드 반영 ───
