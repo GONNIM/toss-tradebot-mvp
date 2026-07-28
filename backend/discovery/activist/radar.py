@@ -652,14 +652,18 @@ async def get_status() -> Dict[str, Any]:
     state = ActivistState.load()
     recent = state.recent_events(50)
 
-    # ── Lazy backfill (details 비어있고 SC 13D 계열 US 이벤트만 · 상한 8) ──
+    # ── Lazy backfill (v1.53 · P2-5 · issuer_name 없으면 재파싱 · URI-agnostic fix 이후) ──
+    #   원 조건 `e.details or ...` 은 이전 SC 13G 파싱 실패로 details={} 저장 후 재시도 X 버그.
+    #   개선 · issuer_name 없으면 재파싱 · v1.53 URI-agnostic 으로 성공 예상.
     cfg = vip_config.load()
     _u_by_key_bf = {a.key: a for a in load_universe()}
     backfilled = 0
     for e in recent:
         if backfilled >= 8:
             break
-        if e.details or e.country != "US":
+        if e.country != "US":
+            continue
+        if e.details and e.details.get("issuer_name"):
             continue
         if e.form not in _SC13_FORMS:
             continue
