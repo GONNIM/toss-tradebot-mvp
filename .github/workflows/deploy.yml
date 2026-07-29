@@ -140,7 +140,7 @@ jobs:
           ssh ${{ secrets.OPTIMUS8_USER }}@${{ secrets.OPTIMUS8_HOST }} 'bash -s' << 'EOF'
           set -e
           cd /root/toss-tradebot-mvp
-          echo "[1/5] sync to origin/main"
+          echo "[1/6] sync to origin/main"
           # ── origin/main single source of truth. npm install 이 lockfile 재생성해도 매번 안전.
           # ── .gitignore (.venv/.next/node_modules/data/) 항목은 reset 영향 없음.
           git fetch --quiet origin main
@@ -149,19 +149,27 @@ jobs:
           AFTER=$(git rev-parse --short HEAD)
           echo "  $BEFORE → $AFTER"
 
-          echo "[2/5] backend deps"
+          echo "[2/6] backend deps"
           cd backend
           .venv/bin/pip install -e ".[dev]" -q
 
-          echo "[3/5] frontend build"
+          echo "[3/6] frontend build"
           cd ../frontend
           npm install --legacy-peer-deps --silent
           npm run build
 
-          echo "[4/5] systemd restart"
+          echo "[4/6] git_sha env inject (재현성 · PowderKegRun.git_sha)"
+          # SOPS sync 이후에 append. 다음 배포 때 SOPS mv 로 .env 재생성 시 다시 append 되어 idempotent.
+          ENV_FILE=/root/toss-tradebot-mvp/backend/.env
+          sed -i '/^GIT_SHA=/d' "$ENV_FILE" 2>/dev/null || true
+          echo "GIT_SHA=$AFTER" >> "$ENV_FILE"
+          chmod 600 "$ENV_FILE"
+          echo "  git_sha=$AFTER injected"
+
+          echo "[5/6] systemd restart"
           systemctl restart tradebot-api tradebot-cron
 
-          echo "[5/5] pm2 reload"
+          echo "[6/6] pm2 reload"
           pm2 reload tradebot-web
 
           echo "✅ deploy complete"
