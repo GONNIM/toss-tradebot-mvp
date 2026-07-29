@@ -134,8 +134,7 @@ function SetupGuide({ token }: { token: string }) {
             {`# 32자 랜덤 토큰 생성
 openssl rand -base64 32
 
-# SOPS 암호화 env 편집
-cd /Users/gonnim/Project-MVP/Source/toss-tradebot-mvp
+# SOPS 암호화 env 편집 (프로젝트 루트에서)
 sops edit backend/.env.sops.yaml
 
 # 다음 두 줄 추가/수정 후 저장
@@ -144,6 +143,9 @@ sops edit backend/.env.sops.yaml
 
 # 백엔드 재기동 (사용자에게 승인 요청)`}
           </pre>
+          <p className="mt-1 text-[10px] text-muted-foreground">
+            상세 절차·토큰 회전·트러블슈팅: <code className="rounded bg-slate-200 px-1 dark:bg-slate-800">docs/operations/sniper-setup.md</code>
+          </p>
         </GuideStep>
 
         <GuideStep
