@@ -92,7 +92,7 @@ curl -sS "https://optimus8.cafe24.com/api/v1/powderkeg/list?limit=50" | \
 - 소요: 12~14h
 
 **우선순위 3 · 소소 개선**
-- git_sha env 주입 (PowderKegRun.git_sha=null 해소)
+- ✅ git_sha env 주입 (PowderKegRun.git_sha=null 해소) — v1.55.1 · `da4c3b1` · 2026-07-29 배포 (`deploy.yml` [4/6])
 - Tier 2 near **39** 종목 개별 분석
 - 이벤트 타입 세분화 (B1·B2·A1 역설계)
 - 규모 임계 미세조정 (사용자 실 관찰 후 판단)
@@ -109,7 +109,7 @@ curl -sS "https://optimus8.cafe24.com/api/v1/powderkeg/list?limit=50" | \
 - 축적 완료 후 pit_evaluate에서 시장·관리 조건도 as-of 평가
 
 **우선순위 4 · 소소한 개선**
-- git_sha env 주입 (PowderKegRun.git_sha=null 해소) · 30분
+- ✅ git_sha env 주입 (PowderKegRun.git_sha=null 해소) — v1.55.1 · `da4c3b1` (2026-07-29)
 - Tier 2 near 39 종목 개별 분석 (계획서 20 → 실측 39) · 2~3h
 - P4-2b 조건 ④ 정의 재검토 (상호출자제한 vs 공시대상 세분화)
 - P2-3b dart_financials CFS/OFS fallback
