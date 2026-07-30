@@ -32,6 +32,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from backend.api.routes import (
     dashboard,
+    insights,
     judgments,
     logs,
     meme_watch,
@@ -193,6 +194,8 @@ app.include_router(
     prefix="/api/v1/sector-leaders",
     tags=["sector-leaders"],
 )
+# ── Insights (자산화 공개 · Stage 2 sync 소비)
+app.include_router(insights.router, prefix="/api/v1/insights", tags=["insights"])
 # ── L3 실험장 (UI 는 /lab 이관 · API 는 데이터 유지)
 app.include_router(
     meme_watch.router,

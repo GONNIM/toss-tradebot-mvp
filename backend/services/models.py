@@ -997,6 +997,16 @@ class PowderKegList(Base):
     # 조건별 통과/탈락 상세 (JSON: {"pbr":true, "net_cash":false, ...})
     conditions_json: Mapped[Optional[str]] = mapped_column(Text)
     reject_reasons: Mapped[Optional[str]] = mapped_column(Text)   # 콤마 분리
+    # Phase C 주 5-1 · 자산화 4요소 (2026-07-30)
+    # 참조: docs/plans/toss-tradebot-tobe/stage2-architecture.md §4-1
+    hypothesis_id: Mapped[Optional[str]] = mapped_column(String(50), index=True)
+    # 예: "v2.0-powderkeg-6cond" · 판정 시점 가설 버전 각인 (리뷰 C 리스크 C2)
+    market_context: Mapped[Optional[str]] = mapped_column(String(30))
+    # 예: "bull" | "bear" | "choppy" | "crisis" | "unknown" · KOSPI 20MA·VKOSPI 자동 태깅
+    retrospect_url: Mapped[Optional[str]] = mapped_column(Text)
+    # 승격 후 이벤트·매수·결과 링크 (사용자 수동 or 미래 자동)
+    # 조건별 margin 값 (예: {"1_pbr": {"value": 0.42, "margin": 0.18}, ...}) · 강등/복귀 추이 분석 근거
+    conditions_margins_json: Mapped[Optional[str]] = mapped_column(Text)
     # 사용자 편집 (Phase 7-2 · UI)
     locked: Mapped[bool] = mapped_column(Boolean, default=False)          # 스크리너 재실행 후에도 유지
     added_by: Mapped[str] = mapped_column(String(10), default="auto")     # auto | user
@@ -1263,5 +1273,38 @@ class UserJudgment(Base):
         Index("ix_judgment_user_ts", "user_id", "ts"),
         Index("ix_judgment_ticker_ts", "ticker", "ts"),
         Index("ix_judgment_hyp_ts", "hypothesis_id", "ts"),
+    )
+
+
+# ─────────────────────────────────────────────────────────────────
+# Powderkeg Tier History (Phase C 주 5-2 · 2026-07-30)
+#   설계: docs/plans/toss-tradebot-tobe/stage2-architecture.md §4-3
+#   근거: reviews/perspective-c-knowledge-assetization.md 권고 3
+#         "경인전자 강등(v2 정체성 부적합)처럼 tier 이동 자체가 인용 가능한 이벤트"
+# ─────────────────────────────────────────────────────────────────
+
+
+class PowderKegTierHistory(Base):
+    """종목별 tier 이동 시계열 · Weekly Report·컨설팅 소재.
+
+    run 단위 스냅샷(powderkeg_list)과 별개 · 종목 단위 시계열.
+    승격·강등 이벤트마다 append (동일 tier 반복 저장 안 함).
+    """
+
+    __tablename__ = "powderkeg_tier_history"
+
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    ticker: Mapped[str] = mapped_column(String(10), index=True)
+    run_id: Mapped[str] = mapped_column(String(20), index=True)     # 이 run 에서 감지
+    prev_tier: Mapped[Optional[str]] = mapped_column(String(30))    # None = 첫 등장
+    curr_tier: Mapped[str] = mapped_column(String(30))              # tier_1_passed / tier_2_near / rejected / ...
+    change_type: Mapped[str] = mapped_column(String(20))            # promoted / demoted / stable_first / rejected
+    note: Mapped[Optional[str]] = mapped_column(Text)               # 예: "v2 정체성 부적합"
+    hypothesis_id: Mapped[Optional[str]] = mapped_column(String(50))
+    changed_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now(), index=True)
+
+    __table_args__ = (
+        Index("ix_pk_tier_hist_ticker_time", "ticker", "changed_at"),
+        Index("ix_pk_tier_hist_run", "run_id"),
     )
 
