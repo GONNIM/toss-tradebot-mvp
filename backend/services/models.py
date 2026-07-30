@@ -36,6 +36,8 @@ class CrazyPick(Base):
     __tablename__ = "crazy_picks"
 
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    # Stage 3 다중 사용자 대비 · 현재 "owner" 고정 · toss-tradebot-tobe stage2-architecture §1.1
+    user_id: Mapped[str] = mapped_column(String(50), server_default="owner", default="owner", index=True)
     pick_date: Mapped[str] = mapped_column(String(10), index=True)  # YYYY-MM-DD
     rank: Mapped[int]  # 1~10
     ticker: Mapped[str] = mapped_column(String(10), index=True)
@@ -87,6 +89,7 @@ class MoonshotPick(Base):
     __tablename__ = "moonshot_picks"
 
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    user_id: Mapped[str] = mapped_column(String(50), server_default="owner", default="owner", index=True)
     pick_date: Mapped[str] = mapped_column(String(10), index=True)
     rank: Mapped[int]  # 1~10
     ticker: Mapped[str] = mapped_column(String(10), index=True)
@@ -572,6 +575,7 @@ class SniperSignal(Base):
     __tablename__ = "sniper_signal"
 
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    user_id: Mapped[str] = mapped_column(String(50), server_default="owner", default="owner", index=True)
     ticker: Mapped[str] = mapped_column(String(10), index=True)
     detected_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
     tape_score: Mapped[Optional[float]]
@@ -625,6 +629,7 @@ class SuperSignal(Base):
     __tablename__ = "super_signal"
 
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    user_id: Mapped[str] = mapped_column(String(50), server_default="owner", default="owner", index=True)
     ticker: Mapped[str] = mapped_column(String(20), index=True)
     intensity: Mapped[float]                                 # Σ(hit_score × source_weight)
     sources: Mapped[str] = mapped_column(String(120))        # "meme_stock+vip+activist" (구분자 +)
@@ -707,6 +712,7 @@ class MemeAlertHistory(Base):
     __tablename__ = "meme_alert_history"
 
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    user_id: Mapped[str] = mapped_column(String(50), server_default="owner", default="owner", index=True)
     ticker: Mapped[str] = mapped_column(String(20), index=True)
     alert_type: Mapped[str] = mapped_column(String(30))
     # "ERUPTING" (Intensity ≥ 8.0) / "BLAZING" (Score ≥ 1.0)
@@ -817,6 +823,7 @@ class Watchlist(Base):
     __tablename__ = "watchlist"
 
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    user_id: Mapped[str] = mapped_column(String(50), server_default="owner", default="owner", index=True)
     trade_date: Mapped[str] = mapped_column(String(10), index=True)   # YYYY-MM-DD
     ticker: Mapped[str] = mapped_column(String(10), index=True)
     name: Mapped[Optional[str]] = mapped_column(String(100))
@@ -834,7 +841,8 @@ class Watchlist(Base):
     updated_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now(), onupdate=func.now())
 
     __table_args__ = (
-        Index("ix_watchlist_date_ticker", "trade_date", "ticker", unique=True),
+        # Stage 3 다중 사용자 대비 · trade_date + ticker + user_id unique
+        Index("ix_watchlist_date_ticker_user", "trade_date", "ticker", "user_id", unique=True),
         Index("ix_watchlist_date_rank", "trade_date", "rank"),
     )
 
@@ -974,6 +982,7 @@ class PowderKegList(Base):
     __tablename__ = "powderkeg_list"
 
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    user_id: Mapped[str] = mapped_column(String(50), server_default="owner", default="owner", index=True)
     run_id: Mapped[str] = mapped_column(String(20), index=True)   # YYYYMMDD-HHMMSS
     ticker: Mapped[str] = mapped_column(String(10), index=True)
     name: Mapped[Optional[str]] = mapped_column(String(100))
@@ -995,7 +1004,8 @@ class PowderKegList(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
 
     __table_args__ = (
-        Index("ix_pk_list_run_ticker", "run_id", "ticker", unique=True),
+        # Stage 3 다중 사용자 대비 · run_id + ticker + user_id unique
+        Index("ix_pk_list_run_ticker_user", "run_id", "ticker", "user_id", unique=True),
     )
 
 
