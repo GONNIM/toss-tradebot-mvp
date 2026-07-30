@@ -34,6 +34,30 @@ const nextConfig = {
     ];
   },
 
+  // Phase A 주 2 · 2026-07-30 · 301 redirects · 크론·Telegram 알림·docs 링크 사망 방지
+  // 참조: docs/plans/toss-tradebot-tobe/stage2-architecture.md §2-3
+  //       리뷰 B 리스크 B1 (URL 북마크 파괴)
+  async redirects() {
+    return [
+      // L3 실험장 이관 → /lab/*
+      { source: "/crazy", destination: "/lab/crazy", permanent: true },
+      { source: "/crazy/:path*", destination: "/lab/crazy/:path*", permanent: true },
+      { source: "/moonshot", destination: "/lab/moonshot", permanent: true },
+      { source: "/moonshot/:path*", destination: "/lab/moonshot/:path*", permanent: true },
+      { source: "/meme-watch", destination: "/lab/meme-watch", permanent: true },
+      { source: "/meme-watch/:path*", destination: "/lab/meme-watch/:path*", permanent: true },
+      { source: "/super-signals", destination: "/lab/super-signals", permanent: true },
+      { source: "/super-signals/:path*", destination: "/lab/super-signals/:path*", permanent: true },
+      { source: "/backtest", destination: "/lab/backtest", permanent: true },
+      { source: "/backtest/:path*", destination: "/lab/backtest/:path*", permanent: true },
+      { source: "/execution", destination: "/lab/execution", permanent: true },
+      { source: "/execution/:path*", destination: "/lab/execution/:path*", permanent: true },
+      // 관리자 이관 → /admin/*
+      { source: "/settings", destination: "/admin/settings", permanent: true },
+      { source: "/settings/:path*", destination: "/admin/settings/:path*", permanent: true },
+    ];
+  },
+
   // 3차 리뷰: 기본 Next.js 정적 캐시(s-maxage=31536000)는 배포 후에도
   // nginx/CDN 이 구버전 SSR 을 계속 서빙하는 원인. 60s 캐시 + 5분 SWR 로 하향.
   async headers() {

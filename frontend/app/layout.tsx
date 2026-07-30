@@ -5,29 +5,31 @@ import { Providers } from "./providers";
 
 export const metadata: Metadata = {
   title: "Toss Tradebot",
-  description: "Toss API 기반 자동매매 + Discovery 모듈 (Crazy Picks + Moonshot Picks)",
+  description: "개인 전문 정보 창구 · 2026-1억-Sprint 서브루틴 · Stage 1 개인 판단 도구",
 };
 
-const NAV = [
-  { href: "/", label: "홈" },
-  { href: "/sector-leaders", label: "🇰🇷 섹터별 주도주 Top 3" },
-  { href: "/meme-watch", label: "🔥 밈주 워치" },
-  { href: "/vip", label: "🕵️ VIP 감시" },
-  { href: "/activist-radar", label: "🐺 Activist Radar" },
-  { href: "/watchlist", label: "🌙 Watchlist (마감후 예측)" },
-  { href: "/powderkeg", label: "🧨 화약고 스크리너" },
-  { href: "/sniper", label: "🚀 급등주 스나이퍼" },
-  // 아래 3개 메뉴는 정체성 재정의(급등주 사전 예측)에 따라 네비에서 제거.
-  // 코드/라우트는 백업 목적으로 유지 · 직접 URL 접근은 여전히 가능.
-  // { href: "/super-signals", label: "🌟 Super Signal" },
-  // { href: "/backtest", label: "🧪 Backtest" },
-  // { href: "/execution", label: "⚙️ 실행" },
-  // { href: "/crazy", label: "Crazy Picks" },        // 한국 주식 전환으로 숨김 (라우트 유지)
-  // { href: "/moonshot", label: "Moonshot" },        // 한국 주식 전환으로 숨김 (라우트 유지)
-  { href: "/dashboard", label: "대시보드" },
-  { href: "/positions", label: "포지션" },
-  { href: "/settings", label: "설정" },
-  { href: "/logs", label: "로그" },
+// Phase A 주 2 · 2026-07-30 · 3계층 재편
+// 참조: docs/plans/toss-tradebot-tobe/stage1-optimization.md §3
+//   L1 매일 (개장 여정 시간축) — 5개
+//   L2 심층 (주말 리서치) — 4개
+//   L3 실험장 (nav 히든 · /lab 인덱스만 노출)
+//
+// Stage 2 이행 시 관리자·외부 뷰 분리 대비 · docs/plans/toss-tradebot-tobe/stage2-architecture.md §2
+
+const NAV_L1 = [
+  { href: "/journal", label: "📓 Journal" },
+  { href: "/watchlist", label: "🌙 Watchlist" },
+  { href: "/sniper", label: "🚀 Sniper" },
+  { href: "/positions", label: "💼 Positions" },
+  { href: "/dashboard", label: "📊 Dashboard" },
+  { href: "/logs", label: "📜 Logs" },
+];
+
+const NAV_L2 = [
+  { href: "/powderkeg", label: "🧨 Powderkeg" },
+  { href: "/activist-radar", label: "🐺 Activist" },
+  { href: "/vip", label: "🕵️ VIP" },
+  { href: "/sector-leaders", label: "🇰🇷 Sector" },
 ];
 
 export default function RootLayout({
@@ -40,16 +42,37 @@ export default function RootLayout({
       <body className="min-h-screen bg-background font-sans antialiased">
         <Providers>
           <header className="sticky top-0 z-50 border-b border-border bg-card/95 backdrop-blur">
-            <div className="container mx-auto flex items-center justify-between px-4 py-3">
-              <Link href="/" className="text-lg font-bold">
-                🌙 Toss Tradebot
-              </Link>
-              <nav className="flex gap-4 text-sm">
-                {NAV.map((item) => (
+            <div className="container mx-auto flex flex-col gap-2 px-4 py-3">
+              <div className="flex items-center justify-between">
+                <Link href="/" className="text-lg font-bold">
+                  🌙 Toss Tradebot
+                </Link>
+                <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                  <Link href="/lab" className="hover:text-foreground" title="L3 실험장">
+                    🧪 Lab
+                  </Link>
+                  <Link href="/admin/settings" className="hover:text-foreground" title="관리자 설정">
+                    ⚙️
+                  </Link>
+                </div>
+              </div>
+              <nav className="flex flex-wrap gap-4 text-sm">
+                {NAV_L1.map((item) => (
                   <Link
                     key={item.href}
                     href={item.href}
                     className="text-muted-foreground hover:text-foreground"
+                  >
+                    {item.label}
+                  </Link>
+                ))}
+              </nav>
+              <nav className="flex flex-wrap gap-4 border-t border-border/50 pt-2 text-xs">
+                {NAV_L2.map((item) => (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    className="text-muted-foreground/70 hover:text-foreground"
                   >
                     {item.label}
                   </Link>

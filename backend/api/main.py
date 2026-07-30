@@ -3,14 +3,24 @@
 기동:
     uvicorn backend.api.main:app --host 0.0.0.0 --port 8000
 
-라우트:
-    /api/v1/crazy       — Crazy Picks Top 10
-    /api/v1/moonshot    — Moonshot Picks Top 3
-    /api/v1/positions   — 보유 종목 (Phase K 후)
-    /api/v1/dashboard   — 자동매매 요약 (Phase K 후)
-    /api/v1/settings    — 파라미터
-    /api/v1/logs        — 감사 로그
-    /health             — 헬스체크
+활성 라우트 (Phase A 주 2 · 2026-07-30):
+    /api/v1/powderkeg          — 화약고 스크리너 (L2)
+    /api/v1/sector-leaders     — 섹터별 주도주 (L2)
+    /api/v1/meme-watch         — Meme Watch (L3 실험장 · UI /lab)
+    /api/v1/meme-watch/vip     — VIP 감시 (L2 · meme_watch 내 서브라우트)
+    /api/v1/meme-watch/activist — Activist Radar (L2 · meme_watch 내 서브라우트)
+    /api/v1/watchlist          — Watchlist (L1)
+    /api/v1/sniper             — 급등주 스나이퍼 (L1)
+    /api/v1/positions          — 보유 종목 (Phase K 후 · L1)
+    /api/v1/dashboard          — 자동매매 요약 (Phase K 후 · L1)
+    /api/v1/logs               — 감사 로그 (L1)
+    /api/v1/settings           — 관리자 설정
+    /health                    — 헬스체크
+
+이월 dead 라우트 (파일 유지 · include 제외):
+    crazy · moonshot · super_signals · backtest · execution
+    UI 는 /lab 인덱스로 재편 (프론트 layout.tsx 참조).
+    admin/read prefix 이원화는 Stage 2 Judgment Journal 신설 시 함께.
 """
 from __future__ import annotations
 
@@ -21,19 +31,14 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from backend.api.routes import (
-    backtest,
-    crazy,
     dashboard,
-    execution,
     logs,
     meme_watch,
-    moonshot,
     positions,
     powderkeg,
     sector_leaders,
     settings,
     sniper,
-    super_signals,
     watchlist,
 )
 from backend.services import config
@@ -172,53 +177,31 @@ app.add_middleware(
 )
 
 
-# 라우트 등록
-app.include_router(crazy.router, prefix="/api/v1/crazy", tags=["crazy"])
-app.include_router(moonshot.router, prefix="/api/v1/moonshot", tags=["moonshot"])
+# 라우트 등록 (Phase A 주 2 · 2026-07-30 · dead 5개 include 제외)
+# ── L1 매일 여정
 app.include_router(positions.router, prefix="/api/v1/positions", tags=["positions"])
 app.include_router(dashboard.router, prefix="/api/v1/dashboard", tags=["dashboard"])
-app.include_router(settings.router, prefix="/api/v1/settings", tags=["settings"])
 app.include_router(logs.router, prefix="/api/v1/logs", tags=["logs"])
+app.include_router(sniper.router, prefix="/api/v1/sniper", tags=["sniper"])
+app.include_router(watchlist.router, prefix="/api/v1/watchlist", tags=["watchlist"])
+# ── L2 심층 (주말 리서치)
+app.include_router(powderkeg.router, prefix="/api/v1/powderkeg", tags=["powderkeg"])
 app.include_router(
     sector_leaders.router,
     prefix="/api/v1/sector-leaders",
     tags=["sector-leaders"],
 )
+# ── L3 실험장 (UI 는 /lab 이관 · API 는 데이터 유지)
 app.include_router(
     meme_watch.router,
     prefix="/api/v1/meme-watch",
     tags=["meme-watch"],
 )
-app.include_router(
-    execution.router,
-    prefix="/api/v1/execution",
-    tags=["execution"],
-)
-app.include_router(
-    super_signals.router,
-    prefix="/api/v1/super-signals",
-    tags=["super-signals"],
-)
-app.include_router(
-    backtest.router,
-    prefix="/api/v1/backtest",
-    tags=["backtest"],
-)
-app.include_router(
-    sniper.router,
-    prefix="/api/v1/sniper",
-    tags=["sniper"],
-)
-app.include_router(
-    watchlist.router,
-    prefix="/api/v1/watchlist",
-    tags=["watchlist"],
-)
-app.include_router(
-    powderkeg.router,
-    prefix="/api/v1/powderkeg",
-    tags=["powderkeg"],
-)
+# ── 관리
+app.include_router(settings.router, prefix="/api/v1/settings", tags=["settings"])
+# ── 이월 dead (include 제외 · Phase A 주 2)
+#    crazy · moonshot · super_signals · backtest · execution
+#    파일은 backend/api/routes/ 에 유지 (참조·재활성 대비) · main 등록만 제거
 
 
 @app.get("/health")
