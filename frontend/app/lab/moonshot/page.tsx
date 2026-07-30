@@ -32,9 +32,17 @@ export default function MoonshotPage() {
   return (
     <div className="space-y-6">
       <header>
-        <h1 className="text-3xl font-bold">🚀 Moonshot Picks</h1>
+        <h1 className="flex items-center gap-2 text-3xl font-bold">
+          🚀 Moonshot Picks
+          <span className="rounded bg-gray-500/20 px-2 py-0.5 text-[10px] font-semibold text-gray-400">
+            LAGGING
+          </span>
+        </h1>
         <p className="mt-1 text-sm text-muted-foreground">
-          매일 16:50 KST (미국 장 시작 10분 전). 100만원 카지노 자금 · 수동 매수.
+          매일 16:50 KST (미국 장 시작 10분 전) · 정보 전용 (수동 매수)
+        </p>
+        <p className="mt-1 text-[11px] text-amber-400/80">
+          ⚠️ 모든 pick 의 outcome (T+1·T+3·T+5) 을 카드에 표시합니다. cherry-pick 금지 (리뷰 A 권고 2).
         </p>
       </header>
 
@@ -165,6 +173,36 @@ function PickCard({ pick }: { pick: MoonshotPick }) {
           </div>
         </div>
       </div>
+
+      {/* Phase B 주 4-1 · outcome (cherry-pick 방지 · 무조건 표시) */}
+      <div className="rounded-lg border border-amber-500/30 bg-amber-500/5 p-3 text-sm">
+        <div className="font-semibold">📊 Outcome (실현 수익률 · 계산 대기 시 —)</div>
+        <div className="mt-2 grid grid-cols-4 gap-2 text-center text-xs">
+          <PerfBox label="T+1" value={pick.perf_1d} />
+          <PerfBox label="T+3" value={pick.perf_3d} />
+          <PerfBox label="T+5" value={pick.perf_5d} />
+          <div>
+            <div className="text-muted-foreground">최고가 이후</div>
+            <div className="font-mono font-bold">
+              {pick.max_price_after != null ? formatUSD(pick.max_price_after, 4) : "—"}
+            </div>
+          </div>
+        </div>
+      </div>
     </article>
+  );
+}
+
+function PerfBox({ label, value }: { label: string; value: number | null }) {
+  const pct = value !== null && value !== undefined ? value * 100 : null;
+  const color =
+    pct === null ? "text-muted-foreground/60" : pct > 0 ? "text-green-400" : pct < 0 ? "text-red-400" : "text-muted-foreground";
+  return (
+    <div>
+      <div className="text-muted-foreground">{label}</div>
+      <div className={`font-mono font-bold ${color}`}>
+        {pct === null ? "—" : `${pct >= 0 ? "+" : ""}${pct.toFixed(2)}%`}
+      </div>
+    </div>
   );
 }

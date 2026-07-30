@@ -24,6 +24,9 @@ class CrazyPickResponse(BaseModel):
     catalysts: Optional[str] = None     # JSON string
     risks: Optional[str] = None
     news_summary: Optional[str] = None
+    # Phase B 주 4-1 · outcome UI 노출 (리뷰 A 권고 2 · cherry-pick 방지)
+    perf_1w: Optional[float] = None      # T+7 실 수익률
+    perf_1m: Optional[float] = None      # T+30 실 수익률
     created_at: datetime
 
 
@@ -43,6 +46,11 @@ class MoonshotPickResponse(BaseModel):
     market_cap_category: Optional[str] = None
     manipulation_risk: Optional[int] = None
     composite_score: Optional[float] = None
+    # Phase B 주 4-1 · outcome UI 노출 (리뷰 A 권고 2)
+    perf_1d: Optional[float] = None
+    perf_3d: Optional[float] = None
+    perf_5d: Optional[float] = None
+    max_price_after: Optional[float] = None
     # 9 인자 점수
     score_volatility: Optional[float] = None
     score_catalyst: Optional[float] = None

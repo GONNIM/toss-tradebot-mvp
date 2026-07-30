@@ -87,6 +87,9 @@ export interface CrazyPick {
   catalysts: string | null;            // JSON string
   risks: string | null;
   news_summary: string | null;
+  // Phase B 주 4-1 · outcome UI 노출 (cherry-pick 방지)
+  perf_1w: number | null;
+  perf_1m: number | null;
   created_at: string;
 }
 
@@ -103,6 +106,11 @@ export interface MoonshotPick {
   market_cap_category: string | null;
   manipulation_risk: number | null;
   composite_score: number | null;
+  // Phase B 주 4-1 · outcome UI 노출
+  perf_1d: number | null;
+  perf_3d: number | null;
+  perf_5d: number | null;
+  max_price_after: number | null;
   // 9 인자 점수
   score_volatility: number | null;
   score_catalyst: number | null;

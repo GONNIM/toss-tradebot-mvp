@@ -49,7 +49,12 @@ export default function PowderKegPage() {
     <div className="space-y-4">
       <header className="flex items-start justify-between gap-2">
         <div className="space-y-1">
-          <h1 className="text-2xl font-bold">🧨 화약고 스크리너</h1>
+          <h1 className="flex items-center gap-2 text-2xl font-bold">
+            🧨 화약고 스크리너
+            <span className="rounded bg-blue-500/20 px-2 py-0.5 text-[10px] font-semibold text-blue-400" title="LEADING · 미래 잠재 (사전 예측)">
+              LEADING
+            </span>
+          </h1>
           <p className="text-sm text-muted-foreground">
             딥밸류 (그레이엄 net-net + 피오트로스키) × 지배구조 카탈리스트 (그린블라트 특수상황) ·
             hypothesis 모드 · 자동매매 미연결

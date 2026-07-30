@@ -39,7 +39,12 @@ export default function MemeWatchPage() {
     <div className="space-y-4">
       <header className="flex items-start justify-between flex-wrap gap-3">
         <div>
-          <h1 className="text-3xl font-bold">🔥 화끈한 밈주 찾기</h1>
+          <h1 className="flex items-center gap-2 text-3xl font-bold">
+            🔥 화끈한 밈주 찾기
+            <span className="rounded bg-gray-500/20 px-2 py-0.5 text-[10px] font-semibold text-gray-400" title="LAGGING · 사후 반응 시그널 (예측 아님)">
+              LAGGING
+            </span>
+          </h1>
           <p className="mt-1 text-sm text-muted-foreground">
             5요소 confluence — 공매도 · 소셜 · 거래량 · Momentum · Catalyst.
             매 5분 갱신.

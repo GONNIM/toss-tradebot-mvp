@@ -1206,3 +1206,62 @@ class PowderKegRunDiff(Base):
         Index("ix_pk_run_diff_cond_time", "condition_key", "changed_at"),
     )
 
+
+# ─────────────────────────────────────────────────────────────────
+# Judgment Journal (Phase B 주 3 · 2026-08-12 예정 · 조기 착수 2026-07-30)
+#   설계: docs/plans/toss-tradebot-tobe/stage1-optimization.md §1
+#   근거: reviews/perspective-a-quant-psychology.md 권고 1
+#         "판정→결과 폐루프 · 모든 페이지 판정 병치 (self-page 편애 방지)"
+# ─────────────────────────────────────────────────────────────────
+
+
+class UserJudgment(Base):
+    """사용자 판정 저널 · rejection criteria 강제 · outcome 자동 계산.
+
+    Stage 1 진짜 KPI (자기 판단 오류율 측정·감소) 의 원자 단위.
+    Powderkeg lock · Watchlist 편입 · Sniper enable 시 팝업으로 강제 기록.
+    Stage 2 지식 자산화 시 상품(Weekly Report · 컨설팅) 의 원천.
+    """
+
+    __tablename__ = "user_judgments"
+
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    ts: Mapped[datetime] = mapped_column(DateTime, server_default=func.now(), index=True)
+    user_id: Mapped[str] = mapped_column(String(50), server_default="owner", default="owner", index=True)
+    ticker: Mapped[str] = mapped_column(String(20), index=True)
+    page_source: Mapped[str] = mapped_column(String(30), index=True)
+    # 예: "powderkeg" | "watchlist" | "sniper" | "activist" | "vip" | "manual"
+
+    # 가설 버전 각인 (v1.x 판정 무효화 방지 · 리뷰 C 리스크 C2)
+    hypothesis_id: Mapped[str] = mapped_column(String(50), index=True)
+    # 예: "v2.0-powderkeg-6cond" | "sniper-v1.55-tape-score" | "manual-thesis"
+
+    # 판정 본문 (마크다운 · 자유 서술)
+    thesis_md: Mapped[str] = mapped_column(Text)
+
+    # 반증 기준 (필수 · rejection criteria)
+    invalidation_price: Mapped[Optional[float]]  # 이 가격 이탈 시 판정 무효
+    target_price: Mapped[Optional[float]]        # 목표가 (선택)
+    horizon_days: Mapped[int] = mapped_column(Integer, default=7)  # T+N 검증 기간
+
+    # 사용자 상태 (Kahneman hot/cold state · 리뷰 A 권고 5)
+    mood: Mapped[str] = mapped_column(String(20), default="neutral")
+    # cool | neutral | revenge | fomo
+
+    # 시장 컨텍스트 (자동 태깅 · KOSPI 20MA·VKOSPI 기반)
+    market_regime: Mapped[str] = mapped_column(String(30), default="unknown")
+    # bull | bear | choppy | crisis | unknown
+
+    # 자동 outcome (T+N 실현 수익률 · 크론 자동 계산)
+    result_at_horizon: Mapped[Optional[float]] = mapped_column(default=None)
+    result_computed_at: Mapped[Optional[datetime]] = mapped_column(DateTime, default=None)
+
+    # 재현성 (판정 시점 배포 SHA)
+    git_sha: Mapped[Optional[str]] = mapped_column(String(40))
+
+    __table_args__ = (
+        Index("ix_judgment_user_ts", "user_id", "ts"),
+        Index("ix_judgment_ticker_ts", "ticker", "ts"),
+        Index("ix_judgment_hyp_ts", "hypothesis_id", "ts"),
+    )
+

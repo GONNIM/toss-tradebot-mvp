@@ -26,9 +26,17 @@ export default function CrazyPage() {
     <div className="space-y-6">
       <header className="flex items-end justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold">🎯 Crazy Picks</h1>
+          <h1 className="flex items-center gap-2 text-3xl font-bold">
+            🎯 Crazy Picks
+            <span className="rounded bg-gray-500/20 px-2 py-0.5 text-[10px] font-semibold text-gray-400">
+              LAGGING
+            </span>
+          </h1>
           <p className="mt-1 text-sm text-muted-foreground">
             매일 06:30 KST · 시총 ≥ $1B 안전 universe · 정보 전용 (수동 매수) · 행 클릭 시 상세 보기
+          </p>
+          <p className="mt-1 text-[11px] text-amber-400/80">
+            ⚠️ 모든 pick 의 outcome (T+7·T+30) 을 무조건 표시합니다. cherry-pick 금지 (리뷰 A 권고 2).
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -122,6 +130,8 @@ function PicksTable({ picks, showDate = false }: { picks: CrazyPick[]; showDate?
             <th className="px-4 py-3 text-right">현재가</th>
             <th className="px-4 py-3 text-right">시총</th>
             <th className="px-4 py-3 text-right">점수</th>
+            <th className="px-4 py-3 text-right" title="T+7 실 수익률 (cron 자동 · null=계산 대기)">T+7</th>
+            <th className="px-4 py-3 text-right" title="T+30 실 수익률 (cron 자동 · null=계산 대기)">T+30</th>
             <th className="px-4 py-3">Thesis</th>
           </tr>
         </thead>
@@ -154,13 +164,19 @@ function PicksTable({ picks, showDate = false }: { picks: CrazyPick[]; showDate?
                   <td className="px-4 py-3 text-right font-bold">
                     {(p.composite_score ?? 0).toFixed(1)}
                   </td>
+                  <td className="px-4 py-3 text-right font-mono">
+                    <PerfCell value={p.perf_1w} />
+                  </td>
+                  <td className="px-4 py-3 text-right font-mono">
+                    <PerfCell value={p.perf_1m} />
+                  </td>
                   <td className="px-4 py-3 max-w-[300px] truncate text-muted-foreground">
                     {p.thesis || "(미생성)"}
                   </td>
                 </tr>
                 {isOpen && (
                   <tr key={`${p.id}-detail`} className="border-b border-border bg-muted/10">
-                    <td colSpan={showDate ? 9 : 8} className="px-6 py-4">
+                    <td colSpan={showDate ? 11 : 10} className="px-6 py-4">
                       <PickDetail pick={p} />
                     </td>
                   </tr>
@@ -234,4 +250,14 @@ function Empty({ msg }: { msg: string }) {
   return (
     <div className="rounded-lg border border-border bg-card p-6 text-muted-foreground">{msg}</div>
   );
+}
+
+// Phase B 주 4-1 · outcome 셀 (cherry-pick 방지 · 모든 값 무조건 표시)
+function PerfCell({ value }: { value: number | null }) {
+  if (value === null || value === undefined) {
+    return <span className="text-muted-foreground/60" title="계산 대기 (cron 자동)">—</span>;
+  }
+  const pct = value * 100;
+  const color = pct > 0 ? "text-green-400" : pct < 0 ? "text-red-400" : "text-muted-foreground";
+  return <span className={color}>{pct >= 0 ? "+" : ""}{pct.toFixed(2)}%</span>;
 }

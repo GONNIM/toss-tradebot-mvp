@@ -57,7 +57,12 @@ export default function SectorLeadersPage() {
     <div className="space-y-4">
       <header className="flex items-end justify-between gap-3 flex-wrap">
         <div className="space-y-1">
-          <h1 className="text-3xl font-bold">🇰🇷 섹터별 주도주 Top 3</h1>
+          <h1 className="flex items-center gap-2 text-3xl font-bold">
+            🇰🇷 섹터별 주도주 Top 3
+            <span className="rounded bg-gray-500/20 px-2 py-0.5 text-[10px] font-semibold text-gray-400" title="LAGGING · 매크로 지표 · 참고">
+              LAGGING
+            </span>
+          </h1>
           <p className="text-sm text-muted-foreground">
             산업통상부 월간 수출입동향 ↔ KRX 주도주 ·{" "}
             매월 1일 발표 자료 자동 갱신 · 24개월 Pearson 상관 + lead/lag 시그널

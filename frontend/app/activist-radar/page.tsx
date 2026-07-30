@@ -859,7 +859,12 @@ export default function ActivistRadarPage() {
   return (
     <div className="space-y-4">
       <header>
-        <h1 className="text-3xl font-bold">🐺 Activist Radar</h1>
+        <h1 className="flex items-center gap-2 text-3xl font-bold">
+          🐺 Activist Radar
+          <span className="rounded bg-green-500/20 px-2 py-0.5 text-[10px] font-semibold text-green-400" title="COINCIDENT · 실시간 이벤트">
+            COINCIDENT
+          </span>
+        </h1>
         <p className="mt-1 text-sm text-muted-foreground">
           헤지펀드 경영권 매수 초기 신호 감시 · SEC 13D/G 필링 실시간 폴링 (5분) ·
           Wolf Pack 감지 (30일 window)

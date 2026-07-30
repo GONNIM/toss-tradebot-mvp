@@ -1103,7 +1103,12 @@ export default function VipPage() {
     <div className="space-y-4">
       <header className="flex items-start justify-between gap-3 flex-wrap">
         <div>
-          <h1 className="text-3xl font-bold">🕵️ VIP 개별 감시</h1>
+          <h1 className="flex items-center gap-2 text-3xl font-bold">
+            🕵️ VIP 개별 감시
+            <span className="rounded bg-green-500/20 px-2 py-0.5 text-[10px] font-semibold text-green-400" title="COINCIDENT · 실시간 관측">
+              COINCIDENT
+            </span>
+          </h1>
           <p className="mt-1 text-sm text-muted-foreground">
             실 매수 종목 심층 감시 · 매수가 기반 알림 + Activist SEC 필링 추적
           </p>

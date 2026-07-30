@@ -32,6 +32,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from backend.api.routes import (
     dashboard,
+    judgments,
     logs,
     meme_watch,
     positions,
@@ -179,6 +180,7 @@ app.add_middleware(
 
 # 라우트 등록 (Phase A 주 2 · 2026-07-30 · dead 5개 include 제외)
 # ── L1 매일 여정
+app.include_router(judgments.router, prefix="/api/v1/judgments", tags=["judgments"])
 app.include_router(positions.router, prefix="/api/v1/positions", tags=["positions"])
 app.include_router(dashboard.router, prefix="/api/v1/dashboard", tags=["dashboard"])
 app.include_router(logs.router, prefix="/api/v1/logs", tags=["logs"])
