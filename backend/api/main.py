@@ -39,9 +39,11 @@ from backend.api.routes import (
     positions,
     powderkeg,
     sector_leaders,
+    session,
     settings,
     sniper,
     watchlist,
+    webhooks,
 )
 from backend.services import config
 from backend.services.db import init_db
@@ -51,6 +53,10 @@ logger = logging.getLogger(__name__)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    # 관측성 초기화 (Phase D 주 8 · 2026-07-31 · DSN 미설정 시 no-op)
+    from backend.services.observability import init_sentry
+    init_sentry()
+
     # 시작 시
     logger.info("[FastAPI] starting — init DB")
     await init_db()
@@ -204,6 +210,10 @@ app.include_router(
 )
 # ── 관리
 app.include_router(settings.router, prefix="/api/v1/settings", tags=["settings"])
+# ── 관리자 세션 (Phase D 주 7 · 2026-07-31 · httpOnly 쿠키 이관)
+app.include_router(session.router, prefix="/api/v1/admin/session", tags=["session"])
+# ── Webhooks (Phase D 주 8 · 2026-07-31 · 결제 훅 스텁)
+app.include_router(webhooks.router, prefix="/api/v1/webhooks", tags=["webhooks"])
 # ── 이월 dead (include 제외 · Phase A 주 2)
 #    crazy · moonshot · super_signals · backtest · execution
 #    파일은 backend/api/routes/ 에 유지 (참조·재활성 대비) · main 등록만 제거

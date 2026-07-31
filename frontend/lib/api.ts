@@ -840,10 +840,23 @@ export const api = {
   },
 };
 
+// ─────────────────────────────────────────────
+// Admin API helpers — Phase D 주 7 (2026-07-31)
+// 쿠키 세션(sniper_session) 우선 · token 인자는 하위 호환용(빈 문자열 허용).
+// credentials: "include" 로 httpOnly 쿠키 자동 전송.
+// ─────────────────────────────────────────────
+
+function adminHeaders(token?: string): HeadersInit {
+  const h: Record<string, string> = { "Content-Type": "application/json" };
+  if (token && token.length > 0) h["X-API-Token"] = token;
+  return h;
+}
+
 async function putWithToken<T>(path: string, token: string, body: unknown): Promise<T> {
   const res = await fetch(`${BASE}${path}`, {
     method: "PUT",
-    headers: { "Content-Type": "application/json", "X-API-Token": token },
+    headers: adminHeaders(token),
+    credentials: "include",
     body: JSON.stringify(body),
     cache: "no-store",
   });
@@ -854,7 +867,8 @@ async function putWithToken<T>(path: string, token: string, body: unknown): Prom
 async function patchWithToken<T>(path: string, token: string, body: unknown): Promise<T> {
   const res = await fetch(`${BASE}${path}`, {
     method: "PATCH",
-    headers: { "Content-Type": "application/json", "X-API-Token": token },
+    headers: adminHeaders(token),
+    credentials: "include",
     body: JSON.stringify(body),
     cache: "no-store",
   });
@@ -865,7 +879,8 @@ async function patchWithToken<T>(path: string, token: string, body: unknown): Pr
 async function delWithToken<T>(path: string, token: string): Promise<T> {
   const res = await fetch(`${BASE}${path}`, {
     method: "DELETE",
-    headers: { "Content-Type": "application/json", "X-API-Token": token },
+    headers: adminHeaders(token),
+    credentials: "include",
     cache: "no-store",
   });
   if (!res.ok) throw new Error(`API DELETE ${path} failed: ${res.status} · ${await res.text()}`);
@@ -875,7 +890,8 @@ async function delWithToken<T>(path: string, token: string): Promise<T> {
 async function postWithToken<T>(path: string, token: string, body?: unknown): Promise<T> {
   const res = await fetch(`${BASE}${path}`, {
     method: "POST",
-    headers: { "Content-Type": "application/json", "X-API-Token": token },
+    headers: adminHeaders(token),
+    credentials: "include",
     body: body ? JSON.stringify(body) : undefined,
     cache: "no-store",
   });

@@ -14,6 +14,7 @@
 //   />
 
 import { useEffect, useRef, useState } from "react";
+import { capture } from "@/lib/observability";
 
 type Judgment = {
   id: number;
@@ -105,6 +106,14 @@ export function JudgmentDialog({
         throw new Error(`POST /judgments ${res.status} · ${body.slice(0, 200)}`);
       }
       const j: Judgment = await res.json();
+      // Phase D 주 8 · PostHog capture (KEY 없으면 no-op).
+      void capture("judgment_created", {
+        page_source: pageSource,
+        hypothesis_id: hypothesisId,
+        mood,
+        horizon_days: horizon,
+        has_target: !!target,
+      });
       onSuccess?.(j);
       handleClose();
     } catch (e: unknown) {

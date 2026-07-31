@@ -1308,3 +1308,40 @@ class PowderKegTierHistory(Base):
         Index("ix_pk_tier_hist_run", "run_id"),
     )
 
+
+# ─────────────────────────────────────────────────────────────────
+# Sniper API Access Audit (Phase D 주 7 · 2026-07-31)
+#   설계: docs/plans/toss-tradebot-tobe/roadmap-12week.md Phase D
+#         "sniper_api_access 감사 테이블 실체화 · auth.py DB write 승격"
+#   근거: 인증 이관 시 실 감사 이벤트를 DB에 축적 · Stage 3 SLA 근거
+# ─────────────────────────────────────────────────────────────────
+
+
+class SniperApiAccess(Base):
+    """관리자 인증·감사 이벤트 append-only 로그.
+
+    auth.py의 require_sniper_token/require_sniper_live_token 통과·실패,
+    세션 로그인/로그아웃 이벤트를 그대로 기록. Sentry 관측성과 병존.
+    표준 로그로만 남기던 것을 DB write로 승격 (Phase D).
+    """
+
+    __tablename__ = "sniper_api_access"
+
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    ts: Mapped[datetime] = mapped_column(DateTime, server_default=func.now(), index=True)
+    event: Mapped[str] = mapped_column(String(30), index=True)
+    # login_ok | login_fail | logout | auth_ok | auth_fail | live_block | server_misconfig
+    role: Mapped[str] = mapped_column(String(20), default="anon")
+    # admin | subscriber | anon
+    path: Mapped[str] = mapped_column(String(200))
+    method: Mapped[Optional[str]] = mapped_column(String(10))
+    ip: Mapped[Optional[str]] = mapped_column(String(45))          # IPv6 max 45
+    user_agent: Mapped[Optional[str]] = mapped_column(String(255))
+    token_source: Mapped[Optional[str]] = mapped_column(String(10))  # cookie | header | none
+    detail: Mapped[Optional[str]] = mapped_column(Text)             # 실패 사유·메타 JSON
+
+    __table_args__ = (
+        Index("ix_sniper_access_event_ts", "event", "ts"),
+        Index("ix_sniper_access_ip_ts", "ip", "ts"),
+    )
+

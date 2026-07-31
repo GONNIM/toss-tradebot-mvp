@@ -11,7 +11,6 @@ ORM 추상화로 DATABASE_URL 만 변경하면 DB 전환 가능.
 """
 from __future__ import annotations
 
-import os
 from contextlib import asynccontextmanager
 from typing import AsyncIterator
 
@@ -22,25 +21,11 @@ from sqlalchemy.ext.asyncio import (
     create_async_engine,
 )
 
-try:
-    from dotenv import load_dotenv
-    load_dotenv()
-except ImportError:
-    pass  # dotenv 미설치 시 환경변수 직접 사용
+from backend.services.config import database_url
 
-# DATABASE_URL: SQLite 기본, Postgres 마이그 가능
-DATABASE_URL = os.environ.get(
-    "DATABASE_URL",
-    "sqlite+aiosqlite:///./data/tradebot.db",
-)
-
-# sqlite scheme 보정 (sync → async)
-if DATABASE_URL.startswith("sqlite:///") and "+aiosqlite" not in DATABASE_URL:
-    DATABASE_URL = DATABASE_URL.replace("sqlite:///", "sqlite+aiosqlite:///", 1)
-
-# Postgres scheme 보정
-if DATABASE_URL.startswith("postgresql://") and "+asyncpg" not in DATABASE_URL:
-    DATABASE_URL = DATABASE_URL.replace("postgresql://", "postgresql+asyncpg://", 1)
+# DATABASE_URL 결정·scheme 보정은 backend.services.config.database_url() 로 위임
+# (Phase D 주 8 · 2026-07-31 · Postgres 전환 시 진입점 단일화).
+DATABASE_URL = database_url()
 
 # Engine + Session factory (모듈 레벨, 프로세스 lifetime)
 engine: AsyncEngine = create_async_engine(

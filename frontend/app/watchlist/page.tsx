@@ -14,17 +14,12 @@ import {
   WatchlistSignal,
 } from "@/lib/api";
 import { fmtKstDateTime, fmtKstTime, fmtKstDate } from "@/lib/time";
-
-const TOKEN_KEY = "sniper_api_token"; // sniper 와 공유
+import { AdminSessionBar } from "@/components/admin/AdminSessionBar";
 
 export default function WatchlistPage() {
-  const [token, setToken] = useState<string>("");
+  // Phase D 주 7 (2026-07-31) · localStorage 토큰 → httpOnly 쿠키 세션.
+  const [isAdmin, setIsAdmin] = useState<boolean>(false);
   const [tradeDate, setTradeDate] = useState<string>("");   // 빈 값이면 서버 default (next_trade_date)
-  useEffect(() => {
-    if (typeof window !== "undefined") {
-      setToken(localStorage.getItem(TOKEN_KEY) || "");
-    }
-  }, []);
 
   return (
     <div className="space-y-6">
@@ -37,10 +32,13 @@ export default function WatchlistPage() {
 
       <PrincipleBanner />
       <ExecuteStatusPanel />
-      <TokenHint token={token} />
+      <AdminSessionBar
+        scope="watchlist"
+        onSessionChange={(info) => setIsAdmin(info.role === "admin")}
+      />
       <DateSelector tradeDate={tradeDate} setTradeDate={setTradeDate} />
-      <WatchlistTable tradeDate={tradeDate} token={token} />
-      <ManualAdd tradeDate={tradeDate} token={token} />
+      <WatchlistTable tradeDate={tradeDate} isAdmin={isAdmin} />
+      <ManualAdd tradeDate={tradeDate} isAdmin={isAdmin} />
       <DoDReportPanel />
       <SignalsInspector tradeDate={tradeDate} />
     </div>
@@ -237,26 +235,8 @@ function PrincipleBanner() {
 }
 
 // ═══════════════════════════════════════════════════════════════
-// Token 안내 (sniper 페이지에서 저장된 값 재사용)
+// (Phase D 주 7) TokenHint 제거 · 공용 AdminSessionBar 사용
 // ═══════════════════════════════════════════════════════════════
-function TokenHint({ token }: { token: string }) {
-  if (token) {
-    return (
-      <div className="rounded border border-emerald-300 bg-emerald-50 px-3 py-2 text-xs text-emerald-800 dark:border-emerald-900 dark:bg-emerald-950 dark:text-emerald-200">
-        🔐 X-API-Token 감지됨 · 편집·finalize 요청 자동 첨부
-      </div>
-    );
-  }
-  return (
-    <div className="rounded border border-orange-300 bg-orange-50 px-3 py-2 text-xs text-orange-900 dark:border-orange-900 dark:bg-orange-950 dark:text-orange-100">
-      ⚠️ X-API-Token 미저장 · 편집·finalize 불가. 먼저{" "}
-      <a href="/sniper" className="underline">
-        /sniper
-      </a>{" "}
-      에서 토큰 저장 필요.
-    </div>
-  );
-}
 
 // ═══════════════════════════════════════════════════════════════
 // 날짜 선택
@@ -322,7 +302,7 @@ function DateSelector({
 // ═══════════════════════════════════════════════════════════════
 // Watchlist 표 (Top 30)
 // ═══════════════════════════════════════════════════════════════
-function WatchlistTable({ tradeDate, token }: { tradeDate: string; token: string }) {
+function WatchlistTable({ tradeDate, isAdmin }: { tradeDate: string; isAdmin: boolean }) {
   const qc = useQueryClient();
   const q = useQuery<{ trade_date: string; size: number; items: WatchlistItem[] }>({
     queryKey: ["watchlist", "list", tradeDate || "default"],
@@ -332,18 +312,18 @@ function WatchlistTable({ tradeDate, token }: { tradeDate: string; token: string
 
   const finalize = useMutation({
     mutationFn: () =>
-      api.watchlist.finalize(token, { trade_date: tradeDate || undefined, top_n: 30 }),
+      api.watchlist.finalize("", { trade_date: tradeDate || undefined, top_n: 30 }),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["watchlist"] }),
   });
 
   const toggleLock = useMutation({
     mutationFn: ({ id, locked }: { id: number; locked: boolean }) =>
-      api.watchlist.toggleLock(token, id, locked),
+      api.watchlist.toggleLock("", id, locked),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["watchlist"] }),
   });
 
   const remove = useMutation({
-    mutationFn: (id: number) => api.watchlist.remove(token, id),
+    mutationFn: (id: number) => api.watchlist.remove("", id),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["watchlist"] }),
   });
 
@@ -362,7 +342,7 @@ function WatchlistTable({ tradeDate, token }: { tradeDate: string; token: string
         <div className="flex items-center gap-2">
           <button
             type="button"
-            disabled={!token || finalize.isPending}
+            disabled={!isAdmin || finalize.isPending}
             onClick={() => finalize.mutate()}
             className="rounded bg-sky-600 px-3 py-1 text-xs text-white disabled:opacity-50"
             title="지금 즉시 finalize 실행 (08:30 KST 잡과 동일)"
@@ -444,7 +424,7 @@ function WatchlistTable({ tradeDate, token }: { tradeDate: string; token: string
                     <div className="flex justify-center gap-1">
                       <button
                         type="button"
-                        disabled={!token || toggleLock.isPending}
+                        disabled={!isAdmin || toggleLock.isPending}
                         onClick={() => toggleLock.mutate({ id: it.id, locked: !it.locked })}
                         className="rounded border px-1.5 py-0.5 text-[10px] hover:bg-amber-50 disabled:opacity-30"
                         title={it.locked ? "unlock (다음 finalize 시 재평가)" : "lock (다음 finalize 시 유지)"}
@@ -453,7 +433,7 @@ function WatchlistTable({ tradeDate, token }: { tradeDate: string; token: string
                       </button>
                       <button
                         type="button"
-                        disabled={!token || remove.isPending}
+                        disabled={!isAdmin || remove.isPending}
                         onClick={() => {
                           if (confirm(`삭제 · ${it.ticker} · id=${it.id}?`)) remove.mutate(it.id);
                         }}
@@ -512,14 +492,14 @@ function shortSource(s: string) {
 // ═══════════════════════════════════════════════════════════════
 // 수동 add
 // ═══════════════════════════════════════════════════════════════
-function ManualAdd({ tradeDate, token }: { tradeDate: string; token: string }) {
+function ManualAdd({ tradeDate, isAdmin }: { tradeDate: string; isAdmin: boolean }) {
   const qc = useQueryClient();
   const [ticker, setTicker] = useState("");
   const [name, setName] = useState("");
 
   const add = useMutation({
     mutationFn: () =>
-      api.watchlist.addManual(token, {
+      api.watchlist.addManual("", {
         ticker,
         trade_date: tradeDate || undefined,
         name: name || undefined,
@@ -554,7 +534,7 @@ function ManualAdd({ tradeDate, token }: { tradeDate: string; token: string }) {
         />
         <button
           type="button"
-          disabled={!token || !ticker || add.isPending}
+          disabled={!isAdmin || !ticker || add.isPending}
           onClick={() => add.mutate()}
           className="rounded bg-emerald-600 px-3 py-1 text-xs text-white disabled:opacity-50"
         >

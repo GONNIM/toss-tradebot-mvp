@@ -44,3 +44,7 @@ tenacity>=9.0.0
 # Toss API (Phase K)
 pyjwt>=2.10.0
 requests>=2.32.0
+
+# Observability (Phase D 주 8 · 2026-07-31)
+# DSN 미설정 시 no-op · 코드는 항상 import 가능해야 하므로 필수 의존성으로 둔다.
+sentry-sdk[fastapi]>=2.19.0

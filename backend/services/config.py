@@ -96,3 +96,56 @@ def cors_origins() -> list[str]:
     """
     raw = get("CORS_ORIGINS", _DEFAULT_CORS_ORIGINS) or _DEFAULT_CORS_ORIGINS
     return [o.strip() for o in raw.split(",") if o.strip()]
+
+
+# ─────────────────────────────────────────────────────────────────
+# DATABASE_URL 추상화 (Phase D 주 8 · 2026-07-31)
+#   Stage 3 Postgres 전환 대비 · 진입점 단일화.
+#   db.py 는 본 함수만 호출 · scheme 보정도 여기서.
+# ─────────────────────────────────────────────────────────────────
+
+_DEFAULT_DATABASE_URL = "sqlite+aiosqlite:///./data/tradebot.db"
+
+
+def database_url() -> str:
+    """DATABASE_URL 반환 · async 드라이버 스킴 자동 보정.
+
+    - sqlite:/// → sqlite+aiosqlite:/// (async 강제)
+    - postgresql:// → postgresql+asyncpg:// (async 강제)
+    - 그 외는 그대로 반환.
+
+    Postgres 전환 시 SOPS/env 의 DATABASE_URL 만 갱신하면 됨.
+    """
+    url = get("DATABASE_URL", _DEFAULT_DATABASE_URL) or _DEFAULT_DATABASE_URL
+    if url.startswith("sqlite:///") and "+aiosqlite" not in url:
+        url = url.replace("sqlite:///", "sqlite+aiosqlite:///", 1)
+    if url.startswith("postgresql://") and "+asyncpg" not in url:
+        url = url.replace("postgresql://", "postgresql+asyncpg://", 1)
+    return url
+
+
+# ─────────────────────────────────────────────────────────────────
+# 관측성 (Phase D 주 8 · 2026-07-31)
+#   DSN 미설정 시 no-op · 코드는 항상 이 함수만 호출.
+# ─────────────────────────────────────────────────────────────────
+
+
+def sentry_dsn() -> str | None:
+    """Sentry DSN · 미설정 시 None (no-op)."""
+    v = (get("SENTRY_DSN") or "").strip()
+    return v or None
+
+
+def sentry_environment() -> str:
+    """Sentry environment 라벨 · APP_ENV 우선, 없으면 'local'."""
+    return (get("APP_ENV") or "local").strip() or "local"
+
+
+def sentry_traces_sample_rate() -> float:
+    """트레이스 샘플링 비율 · 기본 0 (성능 이슈 방지 · 필요 시 env 로 조정)."""
+    raw = (get("SENTRY_TRACES_SAMPLE_RATE") or "0").strip()
+    try:
+        v = float(raw)
+    except ValueError:
+        return 0.0
+    return max(0.0, min(1.0, v))

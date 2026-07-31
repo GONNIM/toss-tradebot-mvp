@@ -23,20 +23,12 @@ import {
   fmtPriceForTicker,
   fmtShares,
 } from "@/lib/time";
-
-const TOKEN_KEY = "sniper_api_token";
+import { AdminSessionBar } from "@/components/admin/AdminSessionBar";
 
 export default function SniperPage() {
-  const [token, setToken] = useState<string>("");
-  useEffect(() => {
-    if (typeof window !== "undefined") {
-      setToken(localStorage.getItem(TOKEN_KEY) || "");
-    }
-  }, []);
-  const saveToken = (v: string) => {
-    setToken(v);
-    if (typeof window !== "undefined") localStorage.setItem(TOKEN_KEY, v);
-  };
+  // Phase D 주 7 (2026-07-31) · localStorage 토큰 → httpOnly 쿠키 세션.
+  // AdminSessionBar 가 whoami 로 실제 role 을 확증 · 여기서는 캐시본만 유지.
+  const [isAdmin, setIsAdmin] = useState<boolean>(false);
 
   return (
     <div className="space-y-6">
@@ -46,13 +38,16 @@ export default function SniperPage() {
           정체성: 급등주 사전 예측 (안정 수익 X) · 시드 100만원 · 100% 손실 감내 루틴 완결
         </p>
       </header>
-      <SetupGuide token={token} />
-      <TokenBar token={token} onSave={saveToken} />
+      <SetupGuide isAdmin={isAdmin} />
+      <AdminSessionBar
+        scope="sniper"
+        onSessionChange={(info) => setIsAdmin(info.role === "admin")}
+      />
       <StatusPanel />
       <CandidatesPanel />
       <SignalsPanel />
-      <UniversePanel token={token} />
-      <ParamsEditor token={token} />
+      <UniversePanel isAdmin={isAdmin} />
+      <ParamsEditor isAdmin={isAdmin} />
     </div>
   );
 }
@@ -62,7 +57,7 @@ export default function SniperPage() {
 // ═══════════════════════════════════════════════════════════════
 const GUIDE_DISMISS_KEY = "sniper_guide_dismissed";
 
-function SetupGuide({ token }: { token: string }) {
+function SetupGuide({ isAdmin }: { isAdmin: boolean }) {
   const [dismissed, setDismissed] = useState(false);
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -76,9 +71,9 @@ function SetupGuide({ token }: { token: string }) {
   });
   const s = q.data;
 
-  const step1Done = !!s?.live_enabled;                    // env 완료?
-  const step2Done = token.length > 0;                      // 토큰 저장?
-  const step3Done = !!s?.sniper_enabled;                   // enabled On?
+  const step1Done = !!s?.live_enabled;   // env 완료?
+  const step2Done = isAdmin;             // 관리자 세션 활성?
+  const step3Done = !!s?.sniper_enabled; // enabled On?
 
   if (dismissed) {
     return (
@@ -151,12 +146,12 @@ sops edit backend/.env.sops.yaml
         <GuideStep
           num={2}
           done={step2Done}
-          title="브라우저에 토큰 저장 (localStorage)"
-          summary={step2Done ? "✅ 완료 — 토큰 저장됨" : "⛔ 대기 — 아래 🔐 카드에 입력"}
+          title="관리자 로그인 (httpOnly 쿠키)"
+          summary={step2Done ? "✅ 완료 — 관리자 세션 활성" : "⛔ 대기 — 아래 🔐 카드에서 로그인"}
         >
-          <p>Step 1에서 생성한 토큰을 아래 🔐 X-API-Token 입력창에 붙여넣고 "저장" 클릭.</p>
+          <p>Step 1에서 생성한 토큰을 아래 🔐 관리자 세션 입력창에 붙여넣고 "로그인" 클릭.</p>
           <p className="mt-1 text-xs text-muted-foreground">
-            브라우저 로컬 저장 · 페이지 새로고침 후에도 유지 · 편집·실행 요청에 자동 첨부.
+            서버가 httpOnly 쿠키(sniper_session)로 응답 · JS 접근 불가 (XSS 방어). 세션 12시간 유지 후 재로그인 필요.
           </p>
         </GuideStep>
 
@@ -232,85 +227,7 @@ function GuideStep({
 }
 
 // ═══════════════════════════════════════════════════════════════
-function TokenBar({ token, onSave }: { token: string; onSave: (v: string) => void }) {
-  const [draft, setDraft] = useState(token);
-  const [showHelp, setShowHelp] = useState(false);
-  useEffect(() => setDraft(token), [token]);
-  const hasToken = token.length > 0;
-  return (
-    <section className="rounded border border-border bg-card p-4">
-      <div className="mb-2 flex items-center justify-between">
-        <h2 className="text-sm font-semibold">
-          🔐 X-API-Token
-          {hasToken ? (
-            <span className="ml-2 rounded bg-emerald-100 px-2 py-0.5 text-[10px] font-semibold text-emerald-700">
-              저장됨
-            </span>
-          ) : (
-            <span className="ml-2 rounded bg-red-100 px-2 py-0.5 text-[10px] font-semibold text-red-700">
-              미저장 · 편집·실주문 불가
-            </span>
-          )}
-        </h2>
-        <button
-          type="button"
-          onClick={() => setShowHelp(!showHelp)}
-          className="text-xs text-sky-600 hover:underline"
-        >
-          {showHelp ? "설명 닫기" : "❓ 이게 뭐예요?"}
-        </button>
-      </div>
-      {showHelp && (
-        <div className="mb-3 rounded bg-slate-50 p-2 text-xs text-slate-700 dark:bg-slate-900 dark:text-slate-300">
-          <p className="mb-1">
-            <strong>왜 필요한가?</strong> 이 백엔드는 로그인 시스템이 없습니다. 파라미터 편집·자동매매 On/Off·실주문 등
-            자금이 움직일 수 있는 요청을 아무나 못 하도록 <strong>토큰 인증</strong>을 뒀습니다.
-          </p>
-          <p className="mb-1">
-            <strong>어디서 발급받나?</strong> 최초 1회 터미널에서{" "}
-            <code className="rounded bg-slate-200 px-1 dark:bg-slate-800">openssl rand -base64 32</code> 실행해 랜덤 32자
-            생성 → SOPS 편집 (<code className="rounded bg-slate-200 px-1 dark:bg-slate-800">sops edit backend/.env.sops.yaml</code>) 에{" "}
-            <code className="rounded bg-slate-200 px-1 dark:bg-slate-800">SNIPER_API_TOKEN</code> 저장.
-          </p>
-          <p>
-            <strong>저장하면?</strong> 브라우저 localStorage에 저장 · 이 페이지 새로고침해도 유지 · 편집·실주문 요청 시 자동
-            <code className="rounded bg-slate-200 px-1 dark:bg-slate-800">X-API-Token</code> 헤더 부착.
-          </p>
-        </div>
-      )}
-      <div className="flex gap-2">
-        <input
-          type="password"
-          value={draft}
-          onChange={(e) => setDraft(e.target.value)}
-          placeholder="예: kJ8Nz2mQ7xY5pL9vR3sT6wA4bC1dE0fG="
-          className="flex-1 rounded border border-border bg-background px-2 py-1 text-sm font-mono"
-        />
-        <button
-          type="button"
-          onClick={() => onSave(draft.trim())}
-          disabled={draft.trim() === token}
-          className="rounded bg-primary px-3 py-1.5 text-xs font-semibold text-primary-foreground disabled:opacity-50"
-        >
-          저장
-        </button>
-        {hasToken && (
-          <button
-            type="button"
-            onClick={() => {
-              onSave("");
-              setDraft("");
-            }}
-            className="rounded border border-border px-3 py-1.5 text-xs hover:bg-muted"
-          >
-            지우기
-          </button>
-        )}
-      </div>
-    </section>
-  );
-}
-
+// (Phase D 주 7) 기존 TokenBar 삭제 · 공용 AdminSessionBar 로 대체
 // ═══════════════════════════════════════════════════════════════
 function StatusPanel() {
   const q = useQuery<SniperStatus>({
@@ -574,7 +491,7 @@ function SignalsPanel() {
 }
 
 // ═══════════════════════════════════════════════════════════════
-function UniversePanel({ token }: { token: string }) {
+function UniversePanel({ isAdmin }: { isAdmin: boolean }) {
   const qc = useQueryClient();
   const q = useQuery({
     queryKey: ["sniper", "universe"],
@@ -582,7 +499,7 @@ function UniversePanel({ token }: { token: string }) {
     refetchInterval: 60_000,
   });
   const refresh = useMutation({
-    mutationFn: () => api.sniper.refreshUniverse(token),
+    mutationFn: () => api.sniper.refreshUniverse(""),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["sniper", "universe"] }),
   });
   const size = q.data?.size ?? 0;
@@ -592,16 +509,17 @@ function UniversePanel({ token }: { token: string }) {
         <div>
           <h2 className="text-sm font-semibold">🗂 유니버스 (Top 30 · nightly 22:00 KST 재싱크)</h2>
           <p className="mt-0.5 text-[10px] text-muted-foreground">
-            스나이퍼가 감시할 KOSDAQ 종목 목록 · 매일 22:00 KST 자동 재싱크 · 즉시 재싱크는 토큰 필요
+            스나이퍼가 감시할 KOSDAQ 종목 목록 · 매일 22:00 KST 자동 재싱크 · 즉시 재싱크는 관리자 세션 필요
           </p>
         </div>
         <button
           type="button"
-          onClick={() => token && refresh.mutate()}
-          disabled={!token || refresh.isPending}
+          onClick={() => isAdmin && refresh.mutate()}
+          disabled={!isAdmin || refresh.isPending}
           className="rounded bg-sky-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-sky-700 disabled:opacity-50"
+          title={!isAdmin ? "관리자 로그인 필요" : ""}
         >
-          {refresh.isPending ? "재싱크 중…" : "🔄 지금 재싱크 (토큰 필요)"}
+          {refresh.isPending ? "재싱크 중…" : "🔄 지금 재싱크 (관리자)"}
         </button>
       </div>
       {refresh.error && (
@@ -609,8 +527,7 @@ function UniversePanel({ token }: { token: string }) {
           <p className="font-semibold">재싱크 실패</p>
           <p className="mt-1 font-mono text-[10px]">{(refresh.error as Error).message}</p>
           <p className="mt-1">
-            403이면 토큰 정확한지 확인 · 401이면 헤더 미부착 · 500이면 서버 SNIPER_API_TOKEN
-            미설정. Auto mode 응답이 실패해도 브라우저 콘솔에 상세 로그 확인 가능.
+            401 이면 세션 만료·미로그인 · 403 이면 SNIPER_LIVE_ENABLED 확인 · 500 이면 서버 SNIPER_API_TOKEN 미설정.
           </p>
         </div>
       )}
@@ -673,7 +590,7 @@ function UniversePanel({ token }: { token: string }) {
 }
 
 // ═══════════════════════════════════════════════════════════════
-function ParamsEditor({ token }: { token: string }) {
+function ParamsEditor({ isAdmin }: { isAdmin: boolean }) {
   const qc = useQueryClient();
   const q = useQuery<SniperParams>({
     queryKey: ["sniper", "params"],
@@ -682,7 +599,7 @@ function ParamsEditor({ token }: { token: string }) {
   const [draft, setDraft] = useState<Partial<SniperParams>>({});
   const save = useMutation({
     mutationFn: (updates: Partial<SniperParams>) =>
-      api.sniper.updateParams(token, updates),
+      api.sniper.updateParams("", updates),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["sniper"] });
       setDraft({});
@@ -702,10 +619,10 @@ function ParamsEditor({ token }: { token: string }) {
         <div>
           <h2 className="text-sm font-semibold">⚙️ 하드 파라미터 편집</h2>
           <p className="mt-0.5 text-[10px] text-muted-foreground">
-            33개 파라미터 UI 편집 · 토큰 필요 · 저장 시 백엔드 hot reload · 다음 폴부터 즉시 반영
-            {!token && (
+            33개 파라미터 UI 편집 · 관리자 세션 필요 · 저장 시 백엔드 hot reload · 다음 폴부터 즉시 반영
+            {!isAdmin && (
               <span className="ml-1 rounded bg-red-100 px-1.5 py-0.5 font-semibold text-red-700">
-                🔐 토큰 미저장 · 저장 불가
+                🔐 anon · 저장 불가
               </span>
             )}
           </p>
@@ -714,10 +631,10 @@ function ParamsEditor({ token }: { token: string }) {
           {dirty && <span className="text-xs text-amber-600">변경사항 있음</span>}
           <button
             type="button"
-            onClick={() => token && save.mutate(draft)}
-            disabled={!token || !dirty || save.isPending}
+            onClick={() => isAdmin && save.mutate(draft)}
+            disabled={!isAdmin || !dirty || save.isPending}
             className="rounded bg-primary px-3 py-1.5 text-xs font-semibold text-primary-foreground disabled:opacity-50"
-            title={!token ? "먼저 🔐 X-API-Token 저장 필요" : ""}
+            title={!isAdmin ? "먼저 🔐 관리자 로그인 필요" : ""}
           >
             {save.isPending ? "저장 중…" : "💾 저장"}
           </button>

@@ -22,18 +22,14 @@ import {
   PowderKegTicket,
 } from "@/lib/api";
 import { fmtKstDateTime } from "@/lib/time";
+import { AdminSessionBar } from "@/components/admin/AdminSessionBar";
 
-const TOKEN_KEY = "sniper_api_token";
 type Tab = "list" | "events" | "report";
 
 export default function PowderKegPage() {
   const [tab, setTab] = useState<Tab>("list");
-  const [token, setToken] = useState<string>("");
-  useEffect(() => {
-    if (typeof window !== "undefined") {
-      setToken(localStorage.getItem(TOKEN_KEY) || "");
-    }
-  }, []);
+  // Phase D 주 7 (2026-07-31) · localStorage 토큰 → httpOnly 쿠키 세션.
+  const [isAdmin, setIsAdmin] = useState<boolean>(false);
 
   const [guideNonce, setGuideNonce] = useState(0);
   const resetGuides = () => {
@@ -83,10 +79,14 @@ export default function PowderKegPage() {
       <WorkflowFlowchart />
       <OnboardingBanner key={`ob-${guideNonce}`} />
       <IdentityBanner />
+      <AdminSessionBar
+        scope="powderkeg"
+        onSessionChange={(info) => setIsAdmin(info.role === "admin")}
+      />
       <Tabs tab={tab} setTab={setTab} />
-      {tab === "list" && <ListTab token={token} guideNonce={guideNonce} />}
+      {tab === "list" && <ListTab isAdmin={isAdmin} guideNonce={guideNonce} />}
       {tab === "events" && <EventsTab />}
-      {tab === "report" && <ReportTab token={token} />}
+      {tab === "report" && <ReportTab isAdmin={isAdmin} />}
       <Disclaimer />
     </div>
   );
@@ -251,7 +251,7 @@ function Disclaimer() {
 // ═══════════════════════════════════════════════════════════════
 // 탭 1 · 화약고 리스트
 // ═══════════════════════════════════════════════════════════════
-function ListTab({ token, guideNonce = 0 }: { token: string; guideNonce?: number }) {
+function ListTab({ isAdmin, guideNonce = 0 }: { isAdmin: boolean; guideNonce?: number }) {
   const [statusFilter, setStatusFilter] = useState<string>("");
   const [tierFilter, setTierFilter] = useState<string>("");
   const [detailTicker, setDetailTicker] = useState<string | null>(null);   // v1.36 · P5-2 · 팝업
@@ -282,17 +282,17 @@ function ListTab({ token, guideNonce = 0 }: { token: string; guideNonce?: number
 
   const toggleLock = useMutation({
     mutationFn: ({ id, locked }: { id: number; locked: boolean }) =>
-      api.powderkeg.toggleListLock(token, id, locked),
+      api.powderkeg.toggleListLock("", id, locked),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["powderkeg", "list"] }),
   });
   const remove = useMutation({
     mutationFn: ({ ticker, reason }: { ticker: string; reason: string }) =>
-      api.powderkeg.removeListItem(token, ticker, reason, q.data?.run_id || undefined),
+      api.powderkeg.removeListItem("", ticker, reason, q.data?.run_id || undefined),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["powderkeg", "list"] }),
   });
   const saveNote = useMutation({
     mutationFn: ({ id, note }: { id: number; note: string }) =>
-      api.powderkeg.setListNote(token, id, note),
+      api.powderkeg.setListNote("", id, note),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["powderkeg", "list"] }),
   });
 
@@ -301,8 +301,8 @@ function ListTab({ token, guideNonce = 0 }: { token: string; guideNonce?: number
       <UsageGuideCard key={`ug-${guideNonce}`} />
       <FunnelCard runId={q.data?.run_id || null} />
       <RunDiffSummaryCard data={diffSummary.data} />
-      <LowPbrDiscoveryCard token={token} />
-      <ReScreenGuide token={token} runId={q.data?.run_id || null} count={q.data?.count || 0} />
+      <LowPbrDiscoveryCard isAdmin={isAdmin} />
+      <ReScreenGuide isAdmin={isAdmin} runId={q.data?.run_id || null} count={q.data?.count || 0} />
       <div className="flex items-center justify-between">
         <div className="text-sm">
           <span className="font-bold">마지막 갱신 · {fmtRunIdKst(q.data?.run_id)}</span>
@@ -347,7 +347,7 @@ function ListTab({ token, guideNonce = 0 }: { token: string; guideNonce?: number
           </select>
         </div>
       </div>
-      <ManualAddForm token={token} runId={q.data?.run_id || undefined} />
+      <ManualAddForm isAdmin={isAdmin} runId={q.data?.run_id || undefined} />
       {q.isLoading ? (
         <div className="text-xs text-muted-foreground">불러오는 중...</div>
       ) : items.length === 0 ? (
@@ -441,7 +441,7 @@ function ListTab({ token, guideNonce = 0 }: { token: string; guideNonce?: number
                     <NoteInput
                       item={it}
                       onSave={(note) => saveNote.mutate({ id: it.id, note })}
-                      disabled={!token || saveNote.isPending}
+                      disabled={!isAdmin || saveNote.isPending}
                     />
                   </td>
                   <td className="p-2 text-center">
@@ -466,7 +466,7 @@ function ListTab({ token, guideNonce = 0 }: { token: string; guideNonce?: number
                     <div className="flex flex-col gap-1">
                       <button
                         type="button"
-                        disabled={!token || toggleLock.isPending}
+                        disabled={!isAdmin || toggleLock.isPending}
                         onClick={() =>
                           toggleLock.mutate({ id: it.id, locked: !it.locked })
                         }
@@ -481,7 +481,7 @@ function ListTab({ token, guideNonce = 0 }: { token: string; guideNonce?: number
                       </button>
                       <button
                         type="button"
-                        disabled={!token || remove.isPending}
+                        disabled={!isAdmin || remove.isPending}
                         onClick={() => {
                           const reason = prompt(
                             `삭제 · ${it.ticker} ${it.name || ""}\n사유 (감사 로그):`,
@@ -545,13 +545,13 @@ function NoteInput({
   );
 }
 
-function ManualAddForm({ token, runId }: { token: string; runId?: string }) {
+function ManualAddForm({ isAdmin, runId }: { isAdmin: boolean; runId?: string }) {
   const qc = useQueryClient();
   const [ticker, setTicker] = useState("");
   const [note, setNote] = useState("");
   const add = useMutation({
     mutationFn: () =>
-      api.powderkeg.addManualToList(token, {
+      api.powderkeg.addManualToList("", {
         ticker,
         note: note || undefined,
         run_id: runId,
@@ -584,7 +584,7 @@ function ManualAddForm({ token, runId }: { token: string; runId?: string }) {
         />
         <button
           type="button"
-          disabled={!token || !ticker || add.isPending}
+          disabled={!isAdmin || !ticker || add.isPending}
           onClick={() => add.mutate()}
           className="rounded bg-emerald-600 px-3 py-1 text-xs text-white disabled:opacity-40"
         >
@@ -1410,7 +1410,7 @@ const DISCOVERY_CONDITIONS = new Set<string>(["1_pbr"]);
  *   "화약고 서식지는 KOSPI 중소형 + KOSDAQ 중형 · 지금은 반대 방향으로 편향"
  *   → KRX 스냅샷의 저PBR (< 0.5) 종목 대량 발굴 · 스크리너 원클릭 실행.
  */
-function LowPbrDiscoveryCard({ token }: { token: string }) {
+function LowPbrDiscoveryCard({ isAdmin }: { isAdmin: boolean }) {
   const [open, setOpen] = useState(false);
   const [maxPbr, setMaxPbr] = useState<number>(0.5);
   const [market, setMarket] = useState<string>("ALL");
@@ -1429,7 +1429,7 @@ function LowPbrDiscoveryCard({ token }: { token: string }) {
       const tks = candidates.data?.items.map(x => x.ticker) || [];
       if (tks.length === 0) throw new Error("발굴된 저PBR 후보가 없습니다");
       // v1.49 · P2-3 · universe_type=low_pbr · 카드 2(manual)와 구분
-      return await api.powderkeg.runScreener(token, tks, 2026, "low_pbr");
+      return await api.powderkeg.runScreener("", tks, 2026, "low_pbr");
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["powderkeg", "list"] });
@@ -1505,7 +1505,7 @@ function LowPbrDiscoveryCard({ token }: { token: string }) {
                 <button
                   type="button"
                   onClick={() => runBulk.mutate()}
-                  disabled={!token || runBulk.isPending || candidates.data.count === 0}
+                  disabled={!isAdmin || runBulk.isPending || candidates.data.count === 0}
                   className="rounded bg-emerald-600 px-2 py-1 text-[11px] font-bold text-white hover:bg-emerald-700 disabled:bg-emerald-300"
                   title={`${candidates.data.count}개 종목을 화약고 10 조건으로 대량 스크리닝`}
                 >
@@ -1685,7 +1685,7 @@ function fmtRunIdKst(runId?: string | null): string {
 }
 
 /** 리스트 강제 재평가 가이드 카드 · 리뷰어 UX 지적 대응. */
-function ReScreenGuide({ token, runId, count }: { token: string; runId: string | null; count: number }) {
+function ReScreenGuide({ isAdmin, runId, count }: { isAdmin: boolean; runId: string | null; count: number }) {
   const qc = useQueryClient();
   const [tickers, setTickers] = useState<string>("035890");
   const runScreener = useMutation({
@@ -1693,13 +1693,13 @@ function ReScreenGuide({ token, runId, count }: { token: string; runId: string |
       const arr = tickers.split(/[,\s]+/).map(t => t.trim()).filter(Boolean);
       if (arr.length === 0) throw new Error("종목 티커를 최소 1개 입력하세요");
       // v1.49 · P2-3 · universe_type=manual · 카드 1(low_pbr) 결과와 구분
-      return await api.powderkeg.runScreener(token, arr, 2026, "manual");
+      return await api.powderkeg.runScreener("", arr, 2026, "manual");
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["powderkeg", "list"] });
     },
   });
-  const disabled = !token || runScreener.isPending;
+  const disabled = !isAdmin || runScreener.isPending;
   // v1.49 · P2-3 · 파괴 액션 confirm
   const handleClick = () => {
     const ok = window.confirm(
@@ -1809,7 +1809,7 @@ const EVENT_TYPE_INFO: Record<string, { icon: string; short: string; long: strin
   B3: { icon: "🚨", short: "거래정지", long: "거래정지·상장적격성 실질심사 대상", expected: "즉시 회피 (검증)" },
 };
 
-function ReportTab({ token }: { token: string }) {
+function ReportTab({ isAdmin }: { isAdmin: boolean }) {
   const [type, setType] = useState<string>("A3");
   const [expandStats, setExpandStats] = useState(false);
   const qc = useQueryClient();
@@ -1819,7 +1819,7 @@ function ReportTab({ token }: { token: string }) {
   });
   const r = q.data;
   const runBacktest = useMutation({
-    mutationFn: () => api.powderkeg.runBacktest(token, type),
+    mutationFn: () => api.powderkeg.runBacktest("", type),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["powderkeg", "report", type] }),
   });
   const noCache = r?.decision?.reasons?.includes("no_cache_run_backtest");
@@ -1844,7 +1844,7 @@ function ReportTab({ token }: { token: string }) {
         <button
           type="button"
           onClick={() => runBacktest.mutate()}
-          disabled={!token || runBacktest.isPending}
+          disabled={!isAdmin || runBacktest.isPending}
           className="ml-auto rounded border px-2 py-0.5 text-xs hover:bg-sky-50 disabled:opacity-30"
           title="백테스트 재실행 · 5년 표본 · 수 분 소요"
         >
