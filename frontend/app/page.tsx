@@ -6,6 +6,7 @@
 // 실시간 배지 (Watchlist / Sniper / Tier1 / Kill Switch) · Phase B 신설 시 API 연결
 
 import Link from "next/link";
+import { JournalKpiBadge } from "@/components/home/JournalKpiBadge";
 
 const L1 = [
   { href: "/journal", emoji: "📓", title: "Judgment Journal", desc: "판정→결과 폐루프 · rejection criteria 강제 · Phase B 신설 예정" },
@@ -44,10 +45,13 @@ export default function Home() {
         </p>
       </section>
 
-      {/* Stage 1 실시간 배지 4개 (Phase B API 연결 예정 · 지금은 안내) */}
+      {/* Phase E · 판정 축적 실시간 배지 (사용 정착 유도) */}
+      <JournalKpiBadge />
+
+      {/* Stage 1 실시간 배지 4개 (Phase F API 연결 예정 · 지금은 안내) */}
       <section className="rounded-lg border border-dashed border-border/70 bg-muted/10 p-4">
         <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-          오늘의 컨트롤 타워 (실시간 배지 · Phase B API 연결 예정)
+          오늘의 컨트롤 타워 (실시간 배지 · Phase F API 연결 예정)
         </div>
         <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-4">
           {["Watchlist 확정", "Sniper enabled", "Tier 1 lock", "Kill Switch"].map((label) => (
