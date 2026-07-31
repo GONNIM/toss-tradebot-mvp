@@ -24,6 +24,7 @@ import {
   fmtShares,
 } from "@/lib/time";
 import { AdminSessionBar } from "@/components/admin/AdminSessionBar";
+import { JudgmentDialog } from "@/components/journal/JudgmentDialog";
 
 export default function SniperPage() {
   // Phase D 주 7 (2026-07-31) · localStorage 토큰 → httpOnly 쿠키 세션.
@@ -597,11 +598,18 @@ function ParamsEditor({ isAdmin }: { isAdmin: boolean }) {
     queryFn: api.sniper.params,
   });
   const [draft, setDraft] = useState<Partial<SniperParams>>({});
+  // Phase E · 판정 팝업 자동 트리거 · sniper_enabled 를 false→true 로 저장 시.
+  const [judgmentOpen, setJudgmentOpen] = useState(false);
   const save = useMutation({
     mutationFn: (updates: Partial<SniperParams>) =>
       api.sniper.updateParams("", updates),
-    onSuccess: () => {
+    onSuccess: (_data, variables) => {
       qc.invalidateQueries({ queryKey: ["sniper"] });
+      // enable 승격 감지: 이전 SniperParams.enabled 가 false 였고 이번 변경에 true 포함.
+      const prev = q.data?.enabled ?? false;
+      if (!prev && variables?.enabled === true) {
+        setJudgmentOpen(true);
+      }
       setDraft({});
     },
   });
@@ -827,6 +835,13 @@ function ParamsEditor({ isAdmin }: { isAdmin: boolean }) {
       <p className="mt-3 text-[10px] text-muted-foreground">
         저장 시 백엔드 hot reload · 다음 폴링부터 즉시 반영. 유니버스 필터 변경 시 재싱크 필요.
       </p>
+      <JudgmentDialog
+        open={judgmentOpen}
+        onOpenChange={setJudgmentOpen}
+        ticker="SNIPER-ENABLE"
+        pageSource="sniper"
+        hypothesisId="sniper-enable-toggle"
+      />
     </section>
   );
 }

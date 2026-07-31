@@ -15,6 +15,7 @@ import {
 } from "@/lib/api";
 import { fmtKstDateTime, fmtKstTime, fmtKstDate } from "@/lib/time";
 import { AdminSessionBar } from "@/components/admin/AdminSessionBar";
+import { JudgmentDialog } from "@/components/journal/JudgmentDialog";
 
 export default function WatchlistPage() {
   // Phase D 주 7 (2026-07-31) · localStorage 토큰 → httpOnly 쿠키 세션.
@@ -496,6 +497,9 @@ function ManualAdd({ tradeDate, isAdmin }: { tradeDate: string; isAdmin: boolean
   const qc = useQueryClient();
   const [ticker, setTicker] = useState("");
   const [name, setName] = useState("");
+  // Phase E · 판정 팝업 자동 트리거 · 수동 편입 성공 시 강제 판정 기록.
+  const [judgmentOpen, setJudgmentOpen] = useState(false);
+  const [judgmentTicker, setJudgmentTicker] = useState("");
 
   const add = useMutation({
     mutationFn: () =>
@@ -505,6 +509,9 @@ function ManualAdd({ tradeDate, isAdmin }: { tradeDate: string; isAdmin: boolean
         name: name || undefined,
       }),
     onSuccess: () => {
+      // 판정 팝업 트리거 (Phase B 주 3 계획 · Phase E 착수 · roadmap-12week.md)
+      setJudgmentTicker(ticker);
+      setJudgmentOpen(true);
       setTicker("");
       setName("");
       qc.invalidateQueries({ queryKey: ["watchlist"] });
@@ -551,6 +558,13 @@ function ManualAdd({ tradeDate, isAdmin }: { tradeDate: string; isAdmin: boolean
           </span>
         )}
       </div>
+      <JudgmentDialog
+        open={judgmentOpen}
+        onOpenChange={setJudgmentOpen}
+        ticker={judgmentTicker}
+        pageSource="watchlist"
+        hypothesisId="watchlist-manual-add"
+      />
     </section>
   );
 }

@@ -104,6 +104,9 @@ export default function JournalPage() {
         </p>
       </header>
 
+      {/* Phase E · Stage 2 진입 KPI 진행률 (roadmap-12week.md §0) */}
+      <Stage2KpiProgress baseline={baseline} judgments={judgments} />
+
       {/* Baseline · Stage 2 진입 KPI 근거 */}
       <section className="rounded-lg border border-border bg-card p-4">
         <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
@@ -214,6 +217,144 @@ function Kpi({ label, value }: { label: string; value: string }) {
     <div className="rounded border border-border bg-muted/20 px-3 py-2">
       <div className="text-xs text-muted-foreground">{label}</div>
       <div className="mt-1 text-lg font-bold">{value}</div>
+    </div>
+  );
+}
+
+// ─── Stage 2 진입 KPI 진행률 (Phase E · 2026-07-31) ─────────────
+// 기준: roadmap-12week.md §0 Stage 2 진입 KPI 6항
+//   1. 판정 30건+ · rejection criteria 100%
+//   2. 판정 baseline 확정 (T+7 outcome 자동)
+//   3. Obsidian sync 3경로 자동화 (Runs/Weekly/Tickers) — 별도 확증 필요
+//   4. 관리자 인증 100% · 무인증 실 종목 노출 0
+//   5. 3계층 재편 완결 · L3 /lab 이관
+//   6. T2 Cal.com 컨설팅 슬롯 유료 예약 1건
+// 자동 판정 가능 항목만 표시 · 3/5/6 은 수동 체크 항목으로 표기.
+
+function Stage2KpiProgress({
+  baseline,
+  judgments,
+}: {
+  baseline: Baseline | null;
+  judgments: Judgment[];
+}) {
+  if (!baseline) return null;
+
+  const total = baseline.total_count;
+  const target = 30;
+  const pct = Math.min(100, Math.round((total / target) * 100));
+
+  // rejection criteria 100% = 판정 목록 최근 100건 중 invalidation_price != null 비율
+  const withInvalidation = judgments.filter((j) => j.invalidation_price !== null).length;
+  const invalidationPct =
+    judgments.length > 0 ? Math.round((withInvalidation / judgments.length) * 100) : 0;
+
+  // page_source 편중 확인 (self-page 편애 방지)
+  const dist = baseline.page_source_distribution;
+  const distTotal = Object.values(dist).reduce((a, b) => a + b, 0) || 1;
+  const maxSource =
+    Object.entries(dist).sort((a, b) => b[1] - a[1])[0] ?? (["-", 0] as [string, number]);
+  const maxSourcePct = Math.round((maxSource[1] / distTotal) * 100);
+
+  return (
+    <section className="rounded-lg border border-primary/40 bg-primary/5 p-4">
+      <div className="flex items-center justify-between">
+        <div>
+          <div className="text-sm font-semibold">🎯 Stage 2 진입 KPI (Phase E)</div>
+          <div className="mt-0.5 text-xs text-muted-foreground">
+            판정 30건 · rejection criteria 100% · baseline 확정 · self-page 편중 감지
+          </div>
+        </div>
+        <span
+          className={`rounded px-2 py-0.5 text-xs font-semibold ${
+            total >= target
+              ? "bg-emerald-500/20 text-emerald-500"
+              : "bg-amber-500/20 text-amber-500"
+          }`}
+        >
+          {total >= target ? "PASS" : "진행 중"}
+        </span>
+      </div>
+
+      <div className="mt-3">
+        <div className="flex items-baseline justify-between text-xs">
+          <span className="text-muted-foreground">판정 축적</span>
+          <span className="font-mono">
+            {total} / {target} 건 ({pct}%)
+          </span>
+        </div>
+        <div className="mt-1 h-2 overflow-hidden rounded bg-muted">
+          <div
+            className={`h-full transition-all ${
+              total >= target ? "bg-emerald-500" : "bg-primary"
+            }`}
+            style={{ width: `${pct}%` }}
+          />
+        </div>
+      </div>
+
+      <div className="mt-3 grid grid-cols-2 gap-3 text-xs sm:grid-cols-4">
+        <KpiCheck
+          label="rejection criteria"
+          detail={`${withInvalidation}/${judgments.length} 판정 (invalidation_price 설정)`}
+          ok={invalidationPct === 100 && judgments.length > 0}
+          value={`${invalidationPct}%`}
+        />
+        <KpiCheck
+          label="outcome 자동 계산"
+          detail={`${baseline.computed_count}/${baseline.total_count} 판정 (T+N 이후)`}
+          ok={baseline.computed_count > 0}
+          value={
+            baseline.total_count > 0
+              ? `${Math.round((baseline.computed_count / baseline.total_count) * 100)}%`
+              : "—"
+          }
+        />
+        <KpiCheck
+          label="page_source 균형"
+          detail={`최대 편중: ${maxSource[0]} ${maxSourcePct}%`}
+          ok={maxSourcePct <= 60 && Object.keys(dist).length >= 2}
+          value={`${maxSourcePct}%`}
+          warnHigh
+        />
+        <KpiCheck
+          label="관리자 인증"
+          detail="Phase D 배포 완료 (httpOnly 쿠키)"
+          ok={true}
+          value="배선 완료"
+        />
+      </div>
+
+      <div className="mt-3 text-[10px] text-muted-foreground">
+        수동 확인 필요: Obsidian sync 3경로 · 3계층 재편 완결 · T2 Cal.com 컨설팅 예약.
+        <br />
+        기준: <code>docs/plans/toss-tradebot-tobe/roadmap-12week.md</code> §0
+      </div>
+    </section>
+  );
+}
+
+function KpiCheck({
+  label,
+  detail,
+  ok,
+  value,
+  warnHigh = false,
+}: {
+  label: string;
+  detail: string;
+  ok: boolean;
+  value: string;
+  warnHigh?: boolean;
+}) {
+  return (
+    <div className="rounded border border-border bg-background/50 px-2 py-1.5">
+      <div className="flex items-center justify-between">
+        <span className="text-[10px] text-muted-foreground">{label}</span>
+        <span className="text-xs">{ok ? "✅" : warnHigh ? "⚠️" : "⏳"}</span>
+      </div>
+      <div className="mt-0.5 text-sm font-semibold">{value}</div>
+      <div className="mt-0.5 line-clamp-2 text-[10px] text-muted-foreground">{detail}</div>
     </div>
   );
 }

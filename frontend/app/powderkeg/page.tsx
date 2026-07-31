@@ -23,6 +23,7 @@ import {
 } from "@/lib/api";
 import { fmtKstDateTime } from "@/lib/time";
 import { AdminSessionBar } from "@/components/admin/AdminSessionBar";
+import { JudgmentDialog } from "@/components/journal/JudgmentDialog";
 
 type Tab = "list" | "events" | "report";
 
@@ -280,10 +281,23 @@ function ListTab({ isAdmin, guideNonce = 0 }: { isAdmin: boolean; guideNonce?: n
     ? rawItems.filter(it => it.tier === tierFilter)
     : rawItems;
 
+  // Phase E · 판정 팝업 자동 트리거 · lock 성공 시 강제 판정 기록.
+  const [judgmentOpen, setJudgmentOpen] = useState(false);
+  const [judgmentTicker, setJudgmentTicker] = useState("");
   const toggleLock = useMutation({
     mutationFn: ({ id, locked }: { id: number; locked: boolean }) =>
       api.powderkeg.toggleListLock("", id, locked),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["powderkeg", "list"] }),
+    onSuccess: (_data, variables) => {
+      qc.invalidateQueries({ queryKey: ["powderkeg", "list"] });
+      // lock=true 로 성공 시에만 판정 팝업 (unlock 은 판정 아님).
+      if (variables.locked) {
+        const it = rawItems.find((x) => x.id === variables.id);
+        if (it) {
+          setJudgmentTicker(it.ticker);
+          setJudgmentOpen(true);
+        }
+      }
+    },
   });
   const remove = useMutation({
     mutationFn: ({ ticker, reason }: { ticker: string; reason: string }) =>
@@ -507,6 +521,13 @@ function ListTab({ isAdmin, guideNonce = 0 }: { isAdmin: boolean; guideNonce?: n
       {detailTicker ? (
         <TickerDetailModal ticker={detailTicker} onClose={() => setDetailTicker(null)} />
       ) : null}
+      <JudgmentDialog
+        open={judgmentOpen}
+        onOpenChange={setJudgmentOpen}
+        ticker={judgmentTicker}
+        pageSource="powderkeg"
+        hypothesisId="powderkeg-v2-lock"
+      />
     </section>
   );
 }
