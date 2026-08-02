@@ -135,6 +135,11 @@ async def lifespan(app: FastAPI):
         register_powderkeg_jobs(scheduler)
         logger.info("[FastAPI] Powder Keg 이벤트 자동 감시 잡 등록 완료 (Phase 7-3)")
 
+    # Serenity Influencer 크론 (Phase L8 · 2026-08-02)
+    # crawler 06:00 · scorer 08:00 · backtest 월 00:00 (extractor 는 z.ai 비용 · env 명시)
+    from backend.discovery.serenity.scheduler import register_serenity_jobs
+    register_serenity_jobs(scheduler)
+
     # Rulebook · Blue-Chip 5단계 스크리너 (Phase E+ · 2026-08-02)
     # 매일 22:30 KST · Powderkeg 22:00 이후 · 존마 강의 원칙 1
     if _os.environ.get("RULEBOOK_BLUECHIP_ENABLED", "true").lower() in {"1", "true", "yes", "on"}:
