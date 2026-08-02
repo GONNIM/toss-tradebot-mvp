@@ -39,7 +39,8 @@ async def _job_extractor() -> None:
         logger.warning("[serenity] cron extractor skip · ZAI_API_KEY 미설정")
         return
     from backend.discovery.serenity.extractor import process_pending_tweets
-    result = await process_pending_tweets(batch_size=200, concurrency=4)
+    # z.ai glm-4.5-flash rate limit 2. flagship 승격 시 상향 (glm-5.2 concurrency 10).
+    result = await process_pending_tweets(batch_size=200, concurrency=2)
     logger.info("[serenity] cron extractor · %s", result)
 
 
