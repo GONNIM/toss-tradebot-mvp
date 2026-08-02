@@ -2,6 +2,8 @@
 // 프록시: next.config.mjs rewrites · /api/v1/serenity/* → backend
 
 import type {
+  BacktestSummary,
+  MethodologyResponse,
   SerenitySummary,
   SignalFeedItem,
   TickerCardItem,
@@ -51,4 +53,9 @@ export const serenityApi = {
     json<TickerDetailResponse>(
       `${BASE}/tickers/${encodeURIComponent(ticker.toUpperCase())}?recent_limit=${recentLimit}`,
     ),
+
+  methodology: () => json<MethodologyResponse>(`${BASE}/methodology`),
+
+  backtestSummary: (days = 180) =>
+    json<BacktestSummary>(`${BASE}/backtest/summary?days=${days}`),
 };

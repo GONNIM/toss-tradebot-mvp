@@ -55,3 +55,27 @@ export type TickerDetailResponse = {
     return_180d: number | null;
   };
 };
+
+export type MethodologyResponse = {
+  source: string;
+  text: string;
+  bytes: number;
+};
+
+export type BacktestBucket = {
+  key: string;
+  count: number;
+  avg_return_5d: number | null;
+  avg_return_10d: number | null;
+  avg_return_30d: number | null;
+  avg_return_60d: number | null;
+  avg_return_180d: number | null;
+};
+
+export type BacktestSummary = {
+  total_backtests: number;
+  overall: BacktestBucket;
+  by_sentiment: BacktestBucket[];
+  by_financing_tier: BacktestBucket[];
+  top_tickers_60d: BacktestBucket[];
+};

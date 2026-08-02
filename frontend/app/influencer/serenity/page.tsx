@@ -3,6 +3,7 @@
 // Serenity 랜딩 · Signal Feed + Ticker Grid · Phase L6 · 2026-08-02
 // 참조: docs/plans/serenity-integration/01-ui-spec.md §5
 
+import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { serenityApi } from "@/lib/serenity/api";
 import type {
@@ -71,6 +72,20 @@ export default function SerenityLanding() {
         <p className="mt-1 text-xs text-muted-foreground">
           docs/plans/serenity-integration · 15원칙·per-ticker 논지·dated calls
         </p>
+        <nav className="mt-3 flex flex-wrap gap-3 text-xs">
+          <Link
+            href="/influencer/serenity/methodology"
+            className="rounded border border-border bg-card px-2 py-1 hover:border-primary/60"
+          >
+            📚 Methodology (15원칙)
+          </Link>
+          <Link
+            href="/influencer/serenity/backtest"
+            className="rounded border border-border bg-card px-2 py-1 hover:border-primary/60"
+          >
+            📊 Backtest Report
+          </Link>
+        </nav>
       </header>
 
       {summary && (
