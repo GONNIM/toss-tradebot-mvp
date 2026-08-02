@@ -28,7 +28,8 @@ pykrx>=1.0.55  # Sector Leaders — KRX 일봉 (B-2c)
 finance-datareader>=0.9.94  # Sector Leaders — KRX 시총·종목 리스트 (B-2c)
 pyyaml>=6.0    # Sector Leaders — 품목↔KRX 매핑 YAML (B-2c)
 
-# External APIs
+# External APIs (LLM provider 병행 · LLM_PROVIDER env 로 전환)
+openai>=2.0.0                # GPT / z.ai OpenAI-호환 (Serenity extractor L3)
 anthropic>=0.40.0
 praw>=7.8.0
 feedparser>=6.0.0
