@@ -40,6 +40,7 @@ from backend.api.routes import (
     powderkeg,
     rulebook,
     sector_leaders,
+    serenity,
     session,
     settings,
     sniper,
@@ -230,6 +231,8 @@ app.include_router(
 app.include_router(insights.router, prefix="/api/v1/insights", tags=["insights"])
 # ── Rulebook (Phase E · 2026-08-02 · 존마 강의 3원칙 이식 · L2 첫 항목)
 app.include_router(rulebook.router, prefix="/api/v1/rulebook", tags=["rulebook"])
+# ── Serenity Influencer (Phase L6 · 2026-08-02 · public read)
+app.include_router(serenity.router, prefix="/api/v1/serenity", tags=["serenity"])
 # ── L3 실험장 (UI 는 /lab 이관 · API 는 데이터 유지)
 app.include_router(
     meme_watch.router,

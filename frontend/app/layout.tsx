@@ -2,36 +2,21 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import "./globals.css";
 import { Providers } from "./providers";
+import { AppNav } from "@/components/layout/AppNav";
 
 export const metadata: Metadata = {
   title: "Toss Tradebot",
   description: "개인 전문 정보 창구 · 2026-1억-Sprint 서브루틴 · Stage 1 개인 판단 도구",
 };
 
-// Phase A 주 2 · 2026-07-30 · 3계층 재편
+// Phase A 주 2 · 2026-07-30 · 3계층 재편 (Phase L6 · 2026-08-02 Influencer 삽입)
 // 참조: docs/plans/toss-tradebot-tobe/stage1-optimization.md §3
-//   L1 매일 (개장 여정 시간축) — 5개
-//   L2 심층 (주말 리서치) — 4개
+//       docs/plans/serenity-integration/01-ui-spec.md §1
+//   L1 매일 (개장 여정 시간축) — 7개 (Journal ~ Logs · Influencer 포함)
+//   L2 심층 (주말 리서치) — 5개 기본 / Influencer 활성 시 [Serenity] 단독
 //   L3 실험장 (nav 히든 · /lab 인덱스만 노출)
 //
-// Stage 2 이행 시 관리자·외부 뷰 분리 대비 · docs/plans/toss-tradebot-tobe/stage2-architecture.md §2
-
-const NAV_L1 = [
-  { href: "/journal", label: "📓 Journal" },
-  { href: "/watchlist", label: "🌙 Watchlist" },
-  { href: "/sniper", label: "🚀 Sniper" },
-  { href: "/positions", label: "💼 Positions" },
-  { href: "/dashboard", label: "📊 Dashboard" },
-  { href: "/logs", label: "📜 Logs" },
-];
-
-const NAV_L2 = [
-  { href: "/rulebook", label: "📏 Rulebook" },
-  { href: "/powderkeg", label: "🧨 Powderkeg" },
-  { href: "/activist-radar", label: "🐺 Activist" },
-  { href: "/vip", label: "🕵️ VIP" },
-  { href: "/sector-leaders", label: "🇰🇷 Sector" },
-];
+// Nav 조건부 렌더링 위해 client 컴포넌트 AppNav 로 분리 (layout.tsx server 유지).
 
 export default function RootLayout({
   children,
@@ -57,28 +42,7 @@ export default function RootLayout({
                   </Link>
                 </div>
               </div>
-              <nav className="flex flex-wrap gap-4 text-sm">
-                {NAV_L1.map((item) => (
-                  <Link
-                    key={item.href}
-                    href={item.href}
-                    className="text-muted-foreground hover:text-foreground"
-                  >
-                    {item.label}
-                  </Link>
-                ))}
-              </nav>
-              <nav className="flex flex-wrap gap-4 border-t border-border/50 pt-2 text-xs">
-                {NAV_L2.map((item) => (
-                  <Link
-                    key={item.href}
-                    href={item.href}
-                    className="text-muted-foreground/70 hover:text-foreground"
-                  >
-                    {item.label}
-                  </Link>
-                ))}
-              </nav>
+              <AppNav />
             </div>
           </header>
           <main className="container mx-auto px-4 py-6">{children}</main>
