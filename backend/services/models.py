@@ -1430,3 +1430,134 @@ class BlueChipCandidate(Base):
         Index("ix_bluechip_ticker_time", "ticker", "created_at"),
     )
 
+
+# ─────────────────────────────────────────────────────────────────
+# Serenity Integration (Phase L1 · 2026-08-02)
+#   설계: docs/plans/serenity-integration/02-backend-arch.md
+#   원천: vendor/serenity-tracker (yan-labs/serenity-aleabitoreddit · submodule)
+#
+#   SQLite 호환 재작성 (문서의 Supabase DDL 이관):
+#     UUID       → String(36)  · str(uuid.uuid4())
+#     TIMESTAMPTZ → DateTime (UTC 저장)
+#     JSONB      → Text (json.dumps/loads)
+#     TEXT[]     → Text (CSV or JSON serialized)
+#     ENUM       → String(20) + application-level check
+#     NUMERIC    → Float
+#     DATE       → String(10) YYYY-MM-DD
+#
+#   Supabase 이관 시 database_url() (services/config.py) 만 갱신하면 됨.
+# ─────────────────────────────────────────────────────────────────
+
+
+class SerenityTweet(Base):
+    """@aleabitoreddit 트윗 아카이브 append-only."""
+
+    __tablename__ = "serenity_tweets"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True)  # uuid4 hex
+    tweet_id: Mapped[int] = mapped_column(Integer, unique=True, index=True)
+    url: Mapped[str] = mapped_column(String(255))
+    posted_at: Mapped[datetime] = mapped_column(DateTime, index=True)
+    text: Mapped[str] = mapped_column(Text)
+    reply_to_id: Mapped[Optional[int]] = mapped_column(Integer, index=True)
+    quoted_id: Mapped[Optional[int]] = mapped_column(Integer)
+    metrics: Mapped[Optional[str]] = mapped_column(Text)     # JSON · likes·views·retweets
+    raw_json: Mapped[Optional[str]] = mapped_column(Text)    # 원본 트윗 JSON
+    ingested_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now(), index=True)
+
+
+# Serenity ENUM 값 (application-level validation)
+SERENITY_SENTIMENTS = ("bullish", "bearish", "neutral", "calibration")
+SERENITY_THESIS_TYPES = ("new_bottleneck", "reaffirmation", "watchlist", "victory_lap")
+SERENITY_EVIDENCE_TYPES = (
+    "earnings", "contract", "insider_buy", "sellside_upgrade",
+    "macro", "policy", "ownership_disclosure", "watchlist", "other",
+)
+SERENITY_FINANCING_TIERS = ("S", "A", "B", "C", "D", "F")
+
+
+class SerenitySignal(Base):
+    """트윗별 z.ai 추출 signal · (tweet_id, ticker) unique."""
+
+    __tablename__ = "serenity_signals"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True)  # uuid4 hex
+    tweet_id: Mapped[int] = mapped_column(Integer, index=True)      # FK → serenity_tweets.tweet_id
+    ticker: Mapped[str] = mapped_column(String(20), index=True)
+    sentiment: Mapped[str] = mapped_column(String(20))              # SERENITY_SENTIMENTS
+    thesis_type: Mapped[Optional[str]] = mapped_column(String(30))  # SERENITY_THESIS_TYPES
+    evidence_type: Mapped[Optional[str]] = mapped_column(String(30))  # SERENITY_EVIDENCE_TYPES
+    confidence: Mapped[float] = mapped_column(Float)                # 0.00 ~ 1.00
+    extracted_reasoning: Mapped[Optional[str]] = mapped_column(Text)
+    extracted_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now(), index=True)
+
+    __table_args__ = (
+        Index("ix_serenity_signal_tweet_ticker", "tweet_id", "ticker", unique=True),
+        Index("ix_serenity_signal_ticker_time", "ticker", "extracted_at"),
+        Index("ix_serenity_signal_sentiment_time", "sentiment", "extracted_at"),
+    )
+
+
+class DiscoverySerenityScore(Base):
+    """티커별 15원칙 스코어 · 매일 갱신 · 단일 행 per ticker."""
+
+    __tablename__ = "discovery_serenity_scores"
+
+    ticker: Mapped[str] = mapped_column(String(20), primary_key=True)
+    # 원칙 1 · Bottleneck (0~10)
+    bottleneck_score: Mapped[Optional[int]]
+    bom_pct: Mapped[Optional[float]]                       # 다운스트림 BOM 내 비율 %
+    # 원칙 3 · Contract ARR
+    contracted_arr_multiple: Mapped[Optional[float]]
+    # 원칙 4 · Mag7 (0~7)
+    mag7_customer_count: Mapped[Optional[int]]
+    # 원칙 5 · GAAP Margin
+    gaap_gross_margin: Mapped[Optional[float]]             # %
+    # 원칙 6 · Qualification
+    is_pre_ramp: Mapped[Optional[bool]] = mapped_column(Boolean, default=None)
+    # 원칙 7 · Dilution
+    active_atm_pct_of_mc: Mapped[Optional[float]]          # > 40 % → auto_avoid 후보
+    # 원칙 8 · Financing Tier · SERENITY_FINANCING_TIERS
+    financing_tier: Mapped[Optional[str]] = mapped_column(String(2))
+    # 원칙 9 · Short Squeeze
+    short_interest_pct: Mapped[Optional[float]]
+    is_profitable: Mapped[Optional[bool]] = mapped_column(Boolean, default=None)
+    # 원칙 11 · Institutional Lag
+    institutional_holdings_delta_30d: Mapped[Optional[float]]  # Δ %
+    # 원칙 13 · Serenity Conviction Tier · SERENITY_FINANCING_TIERS
+    serenity_tier: Mapped[Optional[str]] = mapped_column(String(2))
+    # 원칙 14 · Anti-patterns (CSV · e.g. "non_gaap_abuse,sbc_high")
+    anti_pattern_flags: Mapped[Optional[str]] = mapped_column(Text)
+    # 종합
+    total_score: Mapped[int] = mapped_column(default=0)
+    auto_avoid: Mapped[bool] = mapped_column(Boolean, default=False, index=True)
+    domain_tags: Mapped[Optional[str]] = mapped_column(Text)  # CSV · e.g. "optical_cpo,inp_substrates"
+    last_signal_at: Mapped[Optional[datetime]] = mapped_column(DateTime)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
+
+    __table_args__ = (
+        Index("ix_serenity_score_total_desc", "total_score"),
+    )
+
+
+class SerenityBacktest(Base):
+    """signal → 실 주가 (yfinance) 대조 · 주간 재계산 · unique(signal_id)."""
+
+    __tablename__ = "serenity_backtest"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    signal_id: Mapped[str] = mapped_column(String(36), unique=True, index=True)
+    ticker: Mapped[str] = mapped_column(String(20), index=True)
+    signal_date: Mapped[str] = mapped_column(String(10))    # YYYY-MM-DD
+    price_at_signal: Mapped[Optional[float]]
+    return_5d: Mapped[Optional[float]]                       # %
+    return_10d: Mapped[Optional[float]]
+    return_30d: Mapped[Optional[float]]
+    return_60d: Mapped[Optional[float]]
+    return_180d: Mapped[Optional[float]]
+    computed_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
+
+    __table_args__ = (
+        Index("ix_serenity_backtest_ticker_date", "ticker", "signal_date"),
+    )
+

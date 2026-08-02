@@ -25,6 +25,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          submodules: recursive
 
       - name: Backend syntax check
         run: |
@@ -45,6 +47,8 @@ jobs:
     if: github.ref == 'refs/heads/main'
     steps:
       - uses: actions/checkout@v4
+        with:
+          submodules: recursive
 
       - name: Setup SSH (key-based)
         uses: webfactory/ssh-agent@v0.9.0
@@ -146,6 +150,12 @@ jobs:
           git fetch --quiet origin main
           BEFORE=$(git rev-parse --short HEAD)
           git reset --hard origin/main
+          # Serenity Integration L1 (2026-08-02) · submodule 채택 · vendor/serenity-tracker
+          # HTTPS 로 clone (서버 SSH key 는 배포용만) · 실패해도 배포는 계속 (submodule 무관 코드 대비)
+          git submodule sync --quiet
+          git submodule update --init --recursive --depth 1 2>&1 | tail -3 || {
+            echo "⚠️  submodule 갱신 실패 · Serenity Integration 기능 제한 가능성"
+          }
           AFTER=$(git rev-parse --short HEAD)
           echo "  $BEFORE → $AFTER"
 

@@ -1,0 +1,3 @@
+[submodule "vendor/serenity-tracker"]
+	path = vendor/serenity-tracker
+	url = https://github.com/yan-labs/serenity-aleabitoreddit
