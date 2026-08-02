@@ -113,6 +113,10 @@ def extract_signals(
     if tweet_context:
         user_block += f"\n\n# 컨텍스트\n{json.dumps(tweet_context, ensure_ascii=False)}"
 
+    # z.ai 확장 · glm-5.x 계열은 reasoning 기본 ON · signal 추출엔 불필요·비용 낭비.
+    # glm-4.x 는 미지원 필드 무시 (실측 확인 · Sunday z.ai spec).
+    extra_body: dict[str, Any] = {"thinking": {"type": "disabled"}}
+
     response = client.chat.completions.create(
         model=model,
         temperature=0.3,
@@ -122,6 +126,7 @@ def extract_signals(
             {"role": "system", "content": load_system_prompt()},
             {"role": "user", "content": user_block},
         ],
+        extra_body=extra_body,
     )
     raw = response.choices[0].message.content or "{}"
     try:
