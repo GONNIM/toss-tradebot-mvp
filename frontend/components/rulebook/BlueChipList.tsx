@@ -59,12 +59,15 @@ function fmtCapKrw(v: number | null): string {
   return `${cho.toFixed(2)}조`;
 }
 
-export function BlueChipList() {
+export function BlueChipList({ isAdmin = false }: { isAdmin?: boolean }) {
   const [data, setData] = useState<ListResp | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [onlyPass, setOnlyPass] = useState(false);
   const [minPass, setMinPass] = useState(3);
+  const [running, setRunning] = useState(false);
+  const [runResult, setRunResult] = useState<string | null>(null);
+  const [runError, setRunError] = useState<string | null>(null);
 
   const load = () => {
     setLoading(true);
@@ -81,6 +84,31 @@ export function BlueChipList() {
   };
 
   useEffect(load, [onlyPass, minPass]);
+
+  async function runScreener() {
+    setRunning(true);
+    setRunError(null);
+    setRunResult(null);
+    try {
+      const r = await fetch("/api/v1/rulebook/blue-chip/run", {
+        method: "POST",
+        credentials: "include",
+      });
+      if (!r.ok) {
+        const body = await r.text().catch(() => "");
+        throw new Error(`${r.status} · ${body.slice(0, 120)}`);
+      }
+      const j = await r.json();
+      setRunResult(
+        `run=${j.run_id} · 유니버스 ${j.universe_size} · 전 통과 ${j.passed} · 부분 ${j.partial} · ${j.elapsed_sec.toFixed(1)}s`,
+      );
+      load();
+    } catch (e) {
+      setRunError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setRunning(false);
+    }
+  }
 
   return (
     <section className="rounded-lg border border-primary/40 bg-primary/5 p-4">
@@ -114,8 +142,32 @@ export function BlueChipList() {
             />
             <span>전 5단계</span>
           </label>
+          <button
+            type="button"
+            onClick={runScreener}
+            disabled={!isAdmin || running}
+            title={
+              !isAdmin
+                ? "관리자 로그인 필요 (상단 🔐 카드)"
+                : "5단계 스크리너 즉시 재실행 · 예상 3~10분"
+            }
+            className="rounded bg-primary px-3 py-1 text-xs font-semibold text-primary-foreground disabled:opacity-40"
+          >
+            {running ? "실행 중… (3~10분)" : "🔄 지금 재실행"}
+          </button>
         </div>
       </div>
+
+      {runResult && (
+        <div className="mt-2 rounded border border-emerald-500/40 bg-emerald-500/10 px-3 py-2 text-xs text-emerald-500">
+          ✅ {runResult}
+        </div>
+      )}
+      {runError && (
+        <div className="mt-2 rounded border border-red-500/40 bg-red-500/10 px-3 py-2 text-xs text-red-500">
+          ⛔ {runError}
+        </div>
+      )}
 
       {data && (
         <div className="mt-2 flex flex-wrap items-center gap-3 text-xs text-muted-foreground">

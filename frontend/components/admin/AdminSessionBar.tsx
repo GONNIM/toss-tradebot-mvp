@@ -19,13 +19,14 @@ interface Props {
   /** 세션 상태 변경(login/logout) 완료 시 부모에 알림. isAdmin 로컬 캐싱 갱신용. */
   onSessionChange?: (info: SessionInfo) => void;
   /** 페이지 컨텍스트 · 도움말 문구에만 사용 (인증 로직 무관). */
-  scope?: "sniper" | "watchlist" | "powderkeg";
+  scope?: "sniper" | "watchlist" | "powderkeg" | "rulebook";
 }
 
 const SCOPE_HINT: Record<NonNullable<Props["scope"]>, string> = {
   sniper: "파라미터 편집·자동매매 On/Off·실주문 요청 시 필요.",
   watchlist: "확정·수동 편입·잠금·삭제 등 편집 작업 시 필요.",
   powderkeg: "런 실행·리스트 편집 등 관리 작업 시 필요.",
+  rulebook: "5단계 스크리너 즉시 재실행 시 필요 (매일 22:30 KST 자동).",
 };
 
 export function AdminSessionBar({ onSessionChange, scope = "sniper" }: Props) {
