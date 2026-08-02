@@ -108,3 +108,38 @@ Phase E 사용 정착기 진입 후, 외부 강의(존마 주식 기초 강의 #
    - Tier 2 (우량주 벤치마크) → 반나절 · 사용 정착 후
 
 3. 원칙 문서화 · Obsidian sync는 **본 세션에서 완료** (SSOT + Wiki 미러 + 결정 로그)
+
+---
+
+## Rulebook 정체성 재정의 (사용자 지시 · 2026-08-02)
+
+**핵심 기능**: 원칙 1의 **5단계 필터로 실제 종목을 찾는 것**. R:R 계산기·물타기 감지는 부수 도구.
+
+### 5단계 확정 규칙
+
+| # | 단계 | 규칙 | 사용자 결정 |
+|---|---|---|---|
+| 1 | 시가총액 | 5조↑(entry) + 10조↑(premium) 2tier | Q1=C |
+| 2 | 업종 미래 | **자동 통과** · 모든 섹터 허용 (정보성 라벨만) | Q2=모든 섹터 |
+| 3 | 매출·순이익 상승 | 최근 3년 연속 증가 (매출 AND 순이익) | Q4=A |
+| 4 | 연봉 턴어라운드 | 최근 3년 연평균 증가 (단순) | Q3=A |
+| 5 | 월봉 5MA 위 3개월+ | 월봉 종가가 5개월 이동평균 위 · 3개월 유지 | 강의 정의 |
+
+### 구현 아키텍처
+
+- **Backend**: `backend/rulebook/screener.py` (Powderkeg 패턴 미러)
+- **Model**: `BlueChipCandidate` + `BlueChipRun` (run_id 시계열)
+- **API**: `GET /api/v1/rulebook/blue-chip/{list,detail/{ticker}}` + `POST /run` (관리자)
+- **UI**: `/rulebook` 페이지 최상단 새 섹션 "🎯 오늘의 5단계 통과 종목"
+- **크론**: APScheduler nightly 22:30 KST (Powderkeg 22:00 이후 30분)
+- **데이터 소스**: KrxMarketSnapshot (시총·PBR) + DART FinancialSnapshot (매출·순이익) + pykrx 일봉→월/연봉 aggregate
+
+### 신규 작성 규모
+
+- 월봉/연봉 aggregate + 5MA (~50줄)
+- 5단계 판정 함수 (~120줄)
+- API 라우트 (~80줄)
+- UI 컴포넌트 (~200줄)
+- Alembic 1건 (2 테이블)
+- APScheduler 등록 (~20줄)
+- **총 ~500줄** · 90% 기존 Powderkeg/DART/pykrx 인프라 재사용

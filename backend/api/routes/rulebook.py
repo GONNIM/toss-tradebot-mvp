@@ -7,21 +7,27 @@ Toss Tradebot 판정 데이터에 이식한 뷰용 엔드포인트.
     GET /api/v1/rulebook/rr-stats              — R:R 분포·평균·목표(≥2) 달성률
     GET /api/v1/rulebook/invalidation-hits     — 물타기 감지 판정 목록
     GET /api/v1/rulebook/rr-calc               — Stateless R:R 계산기 (query param)
+    GET /api/v1/rulebook/blue-chip/list        — 5단계 필터 통과 종목 (최신 run)
+    GET /api/v1/rulebook/blue-chip/detail/{ticker} — 종목별 5단계 근거 (최신 run)
+    POST /api/v1/rulebook/blue-chip/run        — 스크리너 수동 재실행 (관리자)
 
 참조: docs/plans/toss-tradebot-tobe/rulebook-integration.md
 """
 from __future__ import annotations
 
+import json
 from datetime import datetime, timedelta
 from typing import Optional
 
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, ConfigDict
-from sqlalchemy import desc, select
+from sqlalchemy import desc, func, select
 
+from backend.api.auth import require_sniper_token
 from backend.api.routes.judgments import _compute_rr
+from backend.rulebook.screener import run_blue_chip_screener
 from backend.services.db import get_session
-from backend.services.models import UserJudgment
+from backend.services.models import BlueChipCandidate, BlueChipRun, UserJudgment
 
 router = APIRouter()
 
@@ -174,3 +180,139 @@ async def rr_calc(
         risk_pct=risk_pct, reward_pct=reward_pct,
         verdict=verdict,
     )
+
+
+# ─── Blue-Chip 5단계 필터 (Phase E+ · 2026-08-02) ───────────────
+
+
+class BlueChipItem(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    ticker: str
+    name: Optional[str]
+    market: Optional[str]
+    sector: Optional[str]
+    market_cap_krw: Optional[float]
+    tier: str  # premium (10조+) | entry (5조+) | none
+    close_price: Optional[float]
+    revenue_3y_growing: bool
+    net_income_3y_growing: bool
+    annual_turnaround: bool
+    monthly_ma5_above: bool
+    monthly_ma5_months_above: int
+    pass_count: int
+    overall_pass: bool
+    reject_reasons: Optional[str]
+
+
+class BlueChipListResponse(BaseModel):
+    run_id: Optional[str]
+    run_started_at: Optional[datetime]
+    universe_size: int
+    passed_count: int
+    partial_count: int
+    items: list[BlueChipItem]
+
+
+class BlueChipDetailResponse(BaseModel):
+    ticker: str
+    latest_snapshots: list[BlueChipItem]   # 최근 N run · 시계열
+    conditions_json: Optional[dict]        # 최신 run 상세 pass/fail
+    financial_years: Optional[list[str]]
+    annual_yoy_pcts: Optional[list[float]]
+
+
+class BlueChipRunResponse(BaseModel):
+    run_id: str
+    universe_size: int
+    passed: int
+    partial: int
+    elapsed_sec: float
+
+
+@router.get("/blue-chip/list", response_model=BlueChipListResponse)
+async def get_blue_chip_list(
+    min_pass: int = Query(3, ge=1, le=5, description="최소 통과 단계 수 (기본 3+)"),
+    only_overall_pass: bool = Query(False, description="5단계 모두 통과만"),
+    limit: int = Query(200, ge=1, le=1000),
+):
+    """5단계 필터 통과 종목 · 최신 run 기준."""
+    async with get_session() as session:
+        latest_run: Optional[BlueChipRun] = (
+            await session.execute(
+                select(BlueChipRun).order_by(desc(BlueChipRun.started_at)).limit(1)
+            )
+        ).scalar_one_or_none()
+        if latest_run is None:
+            return BlueChipListResponse(
+                run_id=None, run_started_at=None,
+                universe_size=0, passed_count=0, partial_count=0, items=[],
+            )
+        stmt = (
+            select(BlueChipCandidate)
+            .where(BlueChipCandidate.run_id == latest_run.run_id)
+            .where(BlueChipCandidate.pass_count >= min_pass)
+        )
+        if only_overall_pass:
+            stmt = stmt.where(BlueChipCandidate.overall_pass.is_(True))
+        stmt = stmt.order_by(
+            desc(BlueChipCandidate.overall_pass),
+            desc(BlueChipCandidate.pass_count),
+            desc(BlueChipCandidate.market_cap_krw),
+        ).limit(limit)
+        rows = (await session.execute(stmt)).scalars().all()
+
+    return BlueChipListResponse(
+        run_id=latest_run.run_id,
+        run_started_at=latest_run.started_at,
+        universe_size=latest_run.universe_size,
+        passed_count=latest_run.passed_count,
+        partial_count=latest_run.partial_count,
+        items=[BlueChipItem.model_validate(r) for r in rows],
+    )
+
+
+@router.get("/blue-chip/detail/{ticker}", response_model=BlueChipDetailResponse)
+async def get_blue_chip_detail(ticker: str, limit: int = Query(10, ge=1, le=100)):
+    """특정 종목의 최근 N run 5단계 근거 시계열."""
+    async with get_session() as session:
+        rows = (
+            await session.execute(
+                select(BlueChipCandidate)
+                .where(BlueChipCandidate.ticker == ticker)
+                .order_by(desc(BlueChipCandidate.created_at))
+                .limit(limit)
+            )
+        ).scalars().all()
+    if not rows:
+        raise HTTPException(status_code=404, detail=f"blue-chip snapshot not found for {ticker}")
+
+    latest = rows[0]
+    try:
+        conds = json.loads(latest.conditions_json) if latest.conditions_json else None
+    except json.JSONDecodeError:
+        conds = None
+    years = latest.financial_years.split(",") if latest.financial_years else None
+    yoy = (
+        [float(x) for x in latest.annual_yoy_pcts.split(",")]
+        if latest.annual_yoy_pcts else None
+    )
+
+    return BlueChipDetailResponse(
+        ticker=ticker,
+        latest_snapshots=[BlueChipItem.model_validate(r) for r in rows],
+        conditions_json=conds,
+        financial_years=years,
+        annual_yoy_pcts=yoy,
+    )
+
+
+@router.post(
+    "/blue-chip/run",
+    response_model=BlueChipRunResponse,
+    dependencies=[Depends(require_sniper_token)],
+)
+async def trigger_blue_chip_run(limit: Optional[int] = Query(None, ge=1, le=1000)):
+    """스크리너 수동 재실행 (관리자) · limit 은 유니버스 상위 N개."""
+    result = await run_blue_chip_screener(trigger="manual", limit=limit)
+    return BlueChipRunResponse(**result)

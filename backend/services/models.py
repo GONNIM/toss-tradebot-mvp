@@ -1355,3 +1355,78 @@ class SniperApiAccess(Base):
         Index("ix_sniper_access_ip_ts", "ip", "ts"),
     )
 
+
+# ─────────────────────────────────────────────────────────────────
+# Rulebook · Blue-Chip Screener (Phase E+ · 2026-08-02)
+#   존마 강의 원칙 1 · 5단계 우량주 필터 결과 저장.
+#   Powderkeg 패턴 미러 · run_id 시계열 · 매일 22:30 KST nightly.
+#   설계: docs/plans/toss-tradebot-tobe/rulebook-integration.md
+# ─────────────────────────────────────────────────────────────────
+
+
+class BlueChipRun(Base):
+    """5단계 스크리너 run 메타 · 재현성 (git_sha·trigger·기간)."""
+
+    __tablename__ = "blue_chip_runs"
+
+    run_id: Mapped[str] = mapped_column(String(20), primary_key=True)  # YYYYMMDD-HHMMSSK
+    started_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now(), index=True)
+    ended_at: Mapped[Optional[datetime]] = mapped_column(DateTime)
+    trigger: Mapped[str] = mapped_column(String(20), default="cron")  # cron | manual | api
+    universe_size: Mapped[int] = mapped_column(default=0)
+    passed_count: Mapped[int] = mapped_column(default=0)   # 5단계 모두 통과
+    partial_count: Mapped[int] = mapped_column(default=0)  # 3+ 통과 (재검토)
+    git_sha: Mapped[Optional[str]] = mapped_column(String(40))
+
+
+class BlueChipCandidate(Base):
+    """5단계 필터 결과 스냅샷 · run_id + ticker unique.
+
+    5단계 (사용자 확정 · Q1=C, Q2=모든 섹터, Q3=A, Q4=A):
+        1. 시총 ≥ 5조 (10조↑=premium tier)
+        2. 업종 (자동 통과 · 정보성 라벨)
+        3. 매출·순이익 3년 연속 증가
+        4. 연봉 3년 연평균 증가 (턴어라운드)
+        5. 월봉 종가 5MA 위 3개월+ 유지
+    """
+
+    __tablename__ = "blue_chip_candidates"
+
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    run_id: Mapped[str] = mapped_column(String(20), index=True)
+    ticker: Mapped[str] = mapped_column(String(10), index=True)
+    name: Mapped[Optional[str]] = mapped_column(String(200))
+    sector: Mapped[Optional[str]] = mapped_column(String(60))       # KRX 업종 (참조용 · 필터 안 함)
+    market: Mapped[Optional[str]] = mapped_column(String(10))       # KOSPI | KOSDAQ
+
+    # 단계 1 · 시총
+    market_cap_krw: Mapped[Optional[float]]                          # 원 단위
+    tier: Mapped[str] = mapped_column(String(10), default="none")   # premium (10조+) | entry (5조+) | none
+    close_price: Mapped[Optional[float]]
+
+    # 단계 3 · 매출·순이익 3년 연속 증가
+    revenue_3y_growing: Mapped[bool] = mapped_column(Boolean, default=False)
+    net_income_3y_growing: Mapped[bool] = mapped_column(Boolean, default=False)
+    financial_years: Mapped[Optional[str]] = mapped_column(String(30))  # "2023,2024,2025"
+
+    # 단계 4 · 연봉 3년 연평균 증가 (턴어라운드)
+    annual_turnaround: Mapped[bool] = mapped_column(Boolean, default=False)
+    annual_yoy_pcts: Mapped[Optional[str]] = mapped_column(String(80))  # "0.15,0.22,0.18"
+
+    # 단계 5 · 월봉 5MA 위 3개월+
+    monthly_ma5_above: Mapped[bool] = mapped_column(Boolean, default=False)
+    monthly_ma5_months_above: Mapped[int] = mapped_column(default=0)     # 연속 개월수
+
+    # 종합
+    conditions_json: Mapped[Optional[str]] = mapped_column(Text)         # {"1":bool,"2":bool,...}
+    pass_count: Mapped[int] = mapped_column(default=0)                   # 5단계 중 통과 수
+    overall_pass: Mapped[bool] = mapped_column(Boolean, default=False)   # 5단계 모두 통과
+    reject_reasons: Mapped[Optional[str]] = mapped_column(Text)          # 실패 단계 요약
+
+    created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now(), index=True)
+
+    __table_args__ = (
+        Index("ix_bluechip_run_pass", "run_id", "overall_pass"),
+        Index("ix_bluechip_ticker_time", "ticker", "created_at"),
+    )
+

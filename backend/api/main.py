@@ -134,6 +134,31 @@ async def lifespan(app: FastAPI):
         register_powderkeg_jobs(scheduler)
         logger.info("[FastAPI] Powder Keg 이벤트 자동 감시 잡 등록 완료 (Phase 7-3)")
 
+    # Rulebook · Blue-Chip 5단계 스크리너 (Phase E+ · 2026-08-02)
+    # 매일 22:30 KST · Powderkeg 22:00 이후 · 존마 강의 원칙 1
+    if _os.environ.get("RULEBOOK_BLUECHIP_ENABLED", "true").lower() in {"1", "true", "yes", "on"}:
+        from backend.rulebook.screener import run_blue_chip_screener
+
+        async def _blue_chip_cron():
+            try:
+                result = await run_blue_chip_screener(trigger="cron")
+                logger.info(
+                    "[BlueChip] nightly done · run=%s · passed=%d/%d · %.1fs",
+                    result["run_id"], result["passed"], result["universe_size"], result["elapsed_sec"],
+                )
+            except Exception as exc:  # noqa: BLE001
+                logger.error("[BlueChip] nightly 실패 · %s", exc)
+
+        scheduler.add_job(
+            _blue_chip_cron,
+            "cron",
+            hour=22, minute=30,
+            id="blue_chip_screener_nightly",
+            max_instances=1,
+            coalesce=True,
+        )
+        logger.info("[FastAPI] Blue-Chip 5단계 스크리너 · 매일 22:30 KST nightly")
+
     # WATCH 프로파일 배치 · 30분 요약 발송 (Phase 3 §6-2)
     if _os.environ.get("TELEGRAM_PROFILE", "SCOUT").upper() == "WATCH":
         from backend.services.notifier import Level, TelegramNotifier
