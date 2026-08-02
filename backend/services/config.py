@@ -104,12 +104,15 @@ def cors_origins() -> list[str]:
 #   db.py 는 본 함수만 호출 · scheme 보정도 여기서.
 # ─────────────────────────────────────────────────────────────────
 
-_DEFAULT_DATABASE_URL = "sqlite+aiosqlite:///./data/tradebot.db"
+_DEFAULT_SQLITE_ABS_PATH = _BACKEND_DIR / "data" / "tradebot.db"
+_DEFAULT_DATABASE_URL = f"sqlite+aiosqlite:///{_DEFAULT_SQLITE_ABS_PATH}"
 
 
 def database_url() -> str:
-    """DATABASE_URL 반환 · async 드라이버 스킴 자동 보정.
+    """DATABASE_URL 반환 · async 드라이버 스킴 자동 보정 · sqlite 상대경로 절대화.
 
+    - 기본값은 backend/data/tradebot.db 절대 경로 (CWD 무관)
+    - sqlite:///./... 상대경로는 backend/ 기준으로 승격 (CWD 무관 안정)
     - sqlite:/// → sqlite+aiosqlite:/// (async 강제)
     - postgresql:// → postgresql+asyncpg:// (async 강제)
     - 그 외는 그대로 반환.
@@ -117,6 +120,17 @@ def database_url() -> str:
     Postgres 전환 시 SOPS/env 의 DATABASE_URL 만 갱신하면 됨.
     """
     url = get("DATABASE_URL", _DEFAULT_DATABASE_URL) or _DEFAULT_DATABASE_URL
+    # sqlite 상대경로 절대화 (예: sqlite:///./data/tradebot.db → sqlite:///{backend}/data/tradebot.db)
+    _SQLITE_REL_PREFIXES = (
+        ("sqlite:///./", "sqlite:///"),
+        ("sqlite+aiosqlite:///./", "sqlite+aiosqlite:///"),
+    )
+    for src, dst in _SQLITE_REL_PREFIXES:
+        if url.startswith(src):
+            rel = url[len(src):]
+            abs_path = (_BACKEND_DIR / rel).resolve()
+            url = f"{dst}{abs_path}"
+            break
     if url.startswith("sqlite:///") and "+aiosqlite" not in url:
         url = url.replace("sqlite:///", "sqlite+aiosqlite:///", 1)
     if url.startswith("postgresql://") and "+asyncpg" not in url:

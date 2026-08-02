@@ -44,11 +44,12 @@ def test_database_url_config_default(monkeypatch):
 
 
 def test_database_url_scheme_boost_sqlite(monkeypatch):
-    """sqlite:/// 는 자동으로 +aiosqlite 붙임."""
-    from backend.services.config import database_url
+    """sqlite:/// 는 자동으로 +aiosqlite · 상대경로는 backend/ 기준 절대화."""
+    from backend.services.config import _BACKEND_DIR, database_url
 
     monkeypatch.setenv("DATABASE_URL", "sqlite:///./x.db")
-    assert database_url() == "sqlite+aiosqlite:///./x.db"
+    expected_abs = (_BACKEND_DIR / "x.db").resolve()
+    assert database_url() == f"sqlite+aiosqlite:///{expected_abs}"
 
 
 def test_database_url_scheme_boost_postgres(monkeypatch):
