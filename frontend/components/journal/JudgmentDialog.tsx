@@ -50,6 +50,7 @@ export function JudgmentDialog({
 }: Props) {
   const dialogRef = useRef<HTMLDialogElement>(null);
   const [thesis, setThesis] = useState("");
+  const [entry, setEntry] = useState("");
   const [invalidation, setInvalidation] = useState("");
   const [target, setTarget] = useState("");
   const [horizon, setHorizon] = useState(7);
@@ -66,6 +67,7 @@ export function JudgmentDialog({
 
   const reset = () => {
     setThesis("");
+    setEntry("");
     setInvalidation("");
     setTarget("");
     setHorizon(7);
@@ -95,6 +97,7 @@ export function JudgmentDialog({
         target_price: target ? parseFloat(target) : null,
         horizon_days: horizon,
         mood,
+        entry_price: entry ? parseFloat(entry) : null,
       };
       const res = await fetch("/api/v1/judgments", {
         method: "POST",
@@ -154,10 +157,23 @@ export function JudgmentDialog({
           />
         </label>
 
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-3 gap-3">
           <label className="block">
             <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-              Invalidation 가격 (필수)
+              Entry (선택 · R:R)
+            </span>
+            <input
+              type="number"
+              step="0.01"
+              value={entry}
+              onChange={(e) => setEntry(e.target.value)}
+              placeholder="진입가"
+              className="mt-1 w-full rounded border border-border bg-background px-3 py-2 text-sm"
+            />
+          </label>
+          <label className="block">
+            <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+              Invalidation (필수)
             </span>
             <input
               type="number"
@@ -165,13 +181,13 @@ export function JudgmentDialog({
               value={invalidation}
               onChange={(e) => setInvalidation(e.target.value)}
               required
-              placeholder="반증 가격"
+              placeholder="반증가"
               className="mt-1 w-full rounded border border-border bg-background px-3 py-2 text-sm"
             />
           </label>
           <label className="block">
             <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-              Target 가격 (선택)
+              Target (선택 · R:R)
             </span>
             <input
               type="number"
@@ -183,6 +199,7 @@ export function JudgmentDialog({
             />
           </label>
         </div>
+        <RRHint entry={entry} invalidation={invalidation} target={target} />
 
         <label className="block">
           <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
@@ -251,5 +268,54 @@ export function JudgmentDialog({
         </div>
       </form>
     </dialog>
+  );
+}
+
+/** R:R 실시간 힌트 · 존마 원칙 2 유도 · Phase E · 2026-08-02. */
+function RRHint({
+  entry,
+  invalidation,
+  target,
+}: {
+  entry: string;
+  invalidation: string;
+  target: string;
+}) {
+  const e = parseFloat(entry);
+  const i = parseFloat(invalidation);
+  const t = parseFloat(target);
+  if (!(e > 0 && i > 0 && t > 0)) {
+    return (
+      <p className="text-[10px] text-muted-foreground">
+        💡 Entry·Invalidation·Target 모두 입력하면 R:R 실시간 표시 (존마 강의 권장 ≥ 2).
+      </p>
+    );
+  }
+  let rr: number | null = null;
+  let direction = "invalid";
+  if (t > e && e > i) {
+    rr = (t - e) / (e - i);
+    direction = "long";
+  } else if (t < e && e < i) {
+    rr = (e - t) / (i - e);
+    direction = "short";
+  }
+  if (rr === null || !isFinite(rr)) {
+    return (
+      <p className="rounded bg-red-500/10 px-2 py-1 text-[10px] text-red-500">
+        ⚠️ Entry·Invalidation·Target 관계가 Long/Short 어느 쪽도 아닙니다.
+      </p>
+    );
+  }
+  const color =
+    rr >= 2 ? "text-emerald-500" : rr >= 1 ? "text-amber-500" : "text-red-500";
+  const bg =
+    rr >= 2 ? "bg-emerald-500/10" : rr >= 1 ? "bg-amber-500/10" : "bg-red-500/10";
+  const verdict =
+    rr >= 2 ? "권장" : rr >= 1 ? "재검토 (강의 권장 2 미달)" : "위험 (손 > 보)";
+  return (
+    <p className={`rounded ${bg} px-2 py-1 text-xs ${color}`}>
+      R:R <strong>{rr.toFixed(2)}</strong> · {direction} · {verdict}
+    </p>
   );
 }

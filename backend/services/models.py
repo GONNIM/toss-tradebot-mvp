@@ -1253,6 +1253,10 @@ class UserJudgment(Base):
     invalidation_price: Mapped[Optional[float]]  # 이 가격 이탈 시 판정 무효
     target_price: Mapped[Optional[float]]        # 목표가 (선택)
     horizon_days: Mapped[int] = mapped_column(Integer, default=7)  # T+N 검증 기간
+    # 진입가 (Rulebook R:R 계산용 · 2026-08-02 · 존마 원칙 2)
+    #   R:R = (target - entry) / (entry - invalidation) · target·invalidation 있어야 함
+    #   미입력 시 R:R baseline 에서 제외
+    entry_price: Mapped[Optional[float]] = mapped_column(default=None)
 
     # 사용자 상태 (Kahneman hot/cold state · 리뷰 A 권고 5)
     mood: Mapped[str] = mapped_column(String(20), default="neutral")
@@ -1265,6 +1269,12 @@ class UserJudgment(Base):
     # 자동 outcome (T+N 실현 수익률 · 크론 자동 계산)
     result_at_horizon: Mapped[Optional[float]] = mapped_column(default=None)
     result_computed_at: Mapped[Optional[datetime]] = mapped_column(DateTime, default=None)
+
+    # 물타기 감지 (Rulebook Phase 1-B · 2026-08-02 · 존마 원칙 3)
+    # 판정 후 T+horizon_days 기간 내 저가가 invalidation_price 이하 이탈했으면 기록.
+    # invalidation_hit_ts != NULL AND result_at_horizon < 0 이면 "물타기" 로 카운트.
+    invalidation_hit_ts: Mapped[Optional[datetime]] = mapped_column(DateTime, default=None)
+    invalidation_hit_low: Mapped[Optional[float]] = mapped_column(default=None)
 
     # 재현성 (판정 시점 배포 SHA)
     git_sha: Mapped[Optional[str]] = mapped_column(String(40))

@@ -42,6 +42,7 @@ class JudgmentCreate(BaseModel):
     horizon_days: int = Field(default=7, ge=1, le=365)
     mood: Literal["cool", "neutral", "revenge", "fomo"] = "neutral"
     market_regime: Optional[str] = None  # None 이면 자동 태깅
+    entry_price: Optional[float] = Field(default=None, description="Rulebook R:R 계산용 (선택).")
 
 
 class JudgmentOut(BaseModel):
@@ -57,8 +58,11 @@ class JudgmentOut(BaseModel):
     horizon_days: int
     mood: str
     market_regime: str
+    entry_price: Optional[float] = None
     result_at_horizon: Optional[float]
     result_computed_at: Optional[datetime]
+    invalidation_hit_ts: Optional[datetime] = None
+    invalidation_hit_low: Optional[float] = None
     git_sha: Optional[str]
 
     class Config:
@@ -78,6 +82,11 @@ class Baseline(BaseModel):
     avg_return: Optional[float]  # 평균 수익률
     mood_distribution: dict[str, int]  # mood 별 판정 건수
     page_source_distribution: dict[str, int]
+    # Rulebook 확장 (Phase E · 2026-08-02 · 존마 원칙 2·3)
+    avg_rr_ratio: Optional[float] = None       # entry·target·invalidation 있는 판정만 · 평균 R:R
+    rr_computable_count: int = 0               # R:R 계산 가능한 판정 수
+    invalidation_hit_count: int = 0            # invalidation 이탈 감지 판정 수
+    invalidation_hit_rate: Optional[float] = None  # 물타기율 = 이탈/전체 (전체 0 이면 None)
 
 
 # ─── Endpoints ───────────────────────────────────────────────────
@@ -100,6 +109,7 @@ async def create_judgment(payload: JudgmentCreate):
             horizon_days=payload.horizon_days,
             mood=payload.mood,
             market_regime=regime,
+            entry_price=payload.entry_price,
             git_sha=git_sha[:40] if git_sha else None,
         )
         session.add(row)
@@ -156,6 +166,18 @@ async def get_baseline(days: int = Query(90, ge=7, le=365)):
         mood_dist[r.mood] = mood_dist.get(r.mood, 0) + 1
         page_dist[r.page_source] = page_dist.get(r.page_source, 0) + 1
 
+    # Rulebook 확장 · R:R 평균 (entry·target·invalidation 모두 있는 판정)
+    rr_values = [
+        rr for r in rows
+        if (rr := _compute_rr(r.entry_price, r.target_price, r.invalidation_price)) is not None
+    ]
+    rr_computable_count = len(rr_values)
+    avg_rr_ratio = (sum(rr_values) / rr_computable_count) if rr_computable_count else None
+
+    # Rulebook 확장 · 물타기율 (invalidation 이탈 감지 판정)
+    invalidation_hit_count = sum(1 for r in rows if r.invalidation_hit_ts is not None)
+    invalidation_hit_rate = (invalidation_hit_count / total) if total else None
+
     return Baseline(
         total_count=total,
         computed_count=computed_count,
@@ -163,7 +185,35 @@ async def get_baseline(days: int = Query(90, ge=7, le=365)):
         avg_return=avg_return,
         mood_distribution=mood_dist,
         page_source_distribution=page_dist,
+        avg_rr_ratio=avg_rr_ratio,
+        rr_computable_count=rr_computable_count,
+        invalidation_hit_count=invalidation_hit_count,
+        invalidation_hit_rate=invalidation_hit_rate,
     )
+
+
+def _compute_rr(
+    entry: Optional[float],
+    target: Optional[float],
+    invalidation: Optional[float],
+) -> Optional[float]:
+    """Long/Short 자동 판별 R:R 계산 · 세 값 모두 있고 유효할 때만.
+
+    Long: target > entry > invalidation
+        R:R = (target - entry) / (entry - invalidation)
+    Short: target < entry < invalidation
+        R:R = (entry - target) / (invalidation - entry)
+    그 외: None (계산 불가 · Rulebook 재검토 대상)
+    """
+    if entry is None or target is None or invalidation is None:
+        return None
+    if target > entry > invalidation:
+        risk = entry - invalidation
+        return (target - entry) / risk if risk > 0 else None
+    if target < entry < invalidation:
+        risk = invalidation - entry
+        return (entry - target) / risk if risk > 0 else None
+    return None
 
 
 @router.patch("/{judgment_id}/outcome", response_model=JudgmentOut)

@@ -18,6 +18,7 @@ const L1 = [
 ];
 
 const L2 = [
+  { href: "/rulebook", emoji: "📏", title: "Rulebook", desc: "판정 원칙집 · 손익비·물타기 감지 · 강의·서적·논문 통합", badge: "PRINCIPLE" },
   { href: "/powderkeg", emoji: "🧨", title: "Powderkeg", desc: "딥밸류 스크리너 v2 · Tier 1 lock 10 종목", badge: "LEADING" },
   { href: "/activist-radar", emoji: "🐺", title: "Activist Radar", desc: "SEC 13D/G · Wolf Pack · DART", badge: "COINCIDENT" },
   { href: "/vip", emoji: "🕵️", title: "VIP", desc: "개별 종목 딥다이브", badge: "COINCIDENT" },
@@ -29,6 +30,8 @@ const badgeColor = (b: string) =>
     ? "bg-blue-500/20 text-blue-400"
     : b === "COINCIDENT"
     ? "bg-green-500/20 text-green-400"
+    : b === "PRINCIPLE"
+    ? "bg-purple-500/20 text-purple-400"
     : "bg-gray-500/20 text-gray-400";
 
 export default function Home() {

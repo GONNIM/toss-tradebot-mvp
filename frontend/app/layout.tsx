@@ -26,6 +26,7 @@ const NAV_L1 = [
 ];
 
 const NAV_L2 = [
+  { href: "/rulebook", label: "📏 Rulebook" },
   { href: "/powderkeg", label: "🧨 Powderkeg" },
   { href: "/activist-radar", label: "🐺 Activist" },
   { href: "/vip", label: "🕵️ VIP" },
