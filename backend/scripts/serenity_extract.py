@@ -17,12 +17,17 @@ import logging
 import sys
 
 from backend.discovery.serenity.extractor import process_pending_tweets
+from backend.services import config as _config  # ZAI_API_KEY .env 로드용 (side-effect import)
+
+_ = _config  # unused-warning 회피 · load_env_once() 는 모듈 로드 시 자동 실행
 
 
 def _parse_args() -> argparse.Namespace:
     p = argparse.ArgumentParser(description="Serenity 트윗 z.ai 추출")
     p.add_argument("--batch", type=int, default=50, help="1회 처리 트윗 수 (기본 50)")
-    p.add_argument("--concurrency", type=int, default=4, help="동시 API 호출 (기본 4)")
+    # z.ai concurrency 제한 · glm-4.5-flash=2 · glm-4.5/5.2=10 · glm-4-plus=20
+    # 기본 2 = flash 안전 · flagship 모델 사용 시 CLI 로 --concurrency 상향
+    p.add_argument("--concurrency", type=int, default=2, help="동시 API 호출 (기본 2 · z.ai flash rate limit)")
     p.add_argument("--verbose", action="store_true")
     return p.parse_args()
 

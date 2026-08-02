@@ -138,9 +138,26 @@ async def test_tickers_sorted_by_score_desc(client: AsyncClient):
 
 
 @pytest.mark.asyncio
-async def test_tickers_exclude_avoid(client: AsyncClient):
+async def test_tickers_exclude_avoid_drops_seed_avoid(client: AsyncClient):
+    """include_avoid=false 시 seed avoid 제외 · 하지만 signals 언급 있으면 unscored 로 재편입."""
     await _seed()
     j = (await client.get("/api/v1/serenity/tickers?include_avoid=false")).json()
+    by_ticker = {t["ticker"]: t for t in j}
+    assert "NBIS" in by_ticker
+    # IREN 은 seed 는 avoid 로 제외 · 하지만 signals 언급 있어 unscored 로 재편입
+    assert "IREN" in by_ticker
+    assert by_ticker["IREN"]["total_score"] == 0
+    assert by_ticker["IREN"]["financing_tier"] is None
+    assert by_ticker["IREN"]["mention_count_90d"] >= 1
+
+
+@pytest.mark.asyncio
+async def test_tickers_exclude_unscored(client: AsyncClient):
+    """include_unscored=false 시 signals 언급만 있는 티커 제외."""
+    await _seed()
+    j = (await client.get(
+        "/api/v1/serenity/tickers?include_avoid=false&include_unscored=false"
+    )).json()
     assert [t["ticker"] for t in j] == ["NBIS"]
 
 

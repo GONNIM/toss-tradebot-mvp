@@ -165,13 +165,13 @@ export default function SerenityLanding() {
         )}
       </section>
 
-      {/* Ticker Grid */}
+      {/* Ticker Grid · Serenity 가 언급한 모든 종목 (seed + signals union) */}
       <section>
         <div className="mb-3 flex flex-wrap items-baseline justify-between gap-2">
           <div>
-            <h2 className="text-lg font-semibold">🎯 Ticker Grid</h2>
+            <h2 className="text-lg font-semibold">🎯 Serenity 언급 종목</h2>
             <p className="text-xs text-muted-foreground">
-              15원칙 총 스코어 정렬 · financing tier 분류 (S/A/B/C/D/F)
+              seed 있는 티커는 15원칙 tier 분류 (S/A/B/C/D/F) · 나머지는 언급 횟수 순 (미분류)
             </p>
           </div>
           <label className="flex items-center gap-1 text-xs">
@@ -189,7 +189,7 @@ export default function SerenityLanding() {
         )}
         {tickers && tickers.length === 0 && (
           <div className="rounded border border-dashed border-border p-6 text-center text-xs text-muted-foreground">
-            seed 티커 없음 · <code>python -m backend.scripts.serenity_seed_tiers</code> 실행 필요
+            언급 종목 없음 · <code>python -m backend.scripts.serenity_extract</code> 실행 후 signals 채워지면 자동 표시
           </div>
         )}
         {tickers && tickers.length > 0 && (
@@ -209,7 +209,7 @@ export default function SerenityLanding() {
             {byTier["?"] && byTier["?"].length > 0 && (
               <div>
                 <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                  Unclassified · {byTier["?"].length}개
+                  미분류 (seed 없음 · Serenity 언급만) · {byTier["?"].length}개
                 </h3>
                 <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
                   {byTier["?"].map((t) => (

@@ -24,7 +24,7 @@ from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel, ConfigDict
 from sqlalchemy import desc, func, select
 
-from backend.discovery.serenity.aggregators import aggregate_signals
+from backend.discovery.serenity.aggregators import active_tickers, aggregate_signals
 from backend.services.db import get_session
 from backend.services.models import (
     DiscoverySerenityScore,
@@ -168,27 +168,66 @@ async def list_signals(
 
 @router.get("/tickers", response_model=list[TickerCardItem])
 async def list_tickers(
-    min_score: Optional[int] = Query(None, description="최소 total_score"),
+    days: int = Query(90, ge=1, le=365, description="signal aggregate 윈도우"),
+    min_score: Optional[int] = Query(None, description="최소 total_score (seed 있는 티커만 필터)"),
     include_avoid: bool = Query(True, description="auto_avoid 포함 여부"),
-    limit: int = Query(200, ge=1, le=500),
+    include_unscored: bool = Query(True, description="seed 없는 언급 티커도 포함"),
+    limit: int = Query(500, ge=1, le=2000),
 ):
-    """Ticker Grid · discovery_serenity_scores 정렬 + 90일 aggregate 병합."""
+    """Ticker Grid · seed 티커 + Serenity 가 언급한 모든 티커 union.
+
+    정렬:
+      1. seed 있고 total_score>0 → total_score desc
+      2. seed 없는 언급 티커 → mention_count desc
+      3. 이후 알파벳
+    """
+    # 1) seed 티커 로드
     async with get_session() as session:
-        stmt = select(DiscoverySerenityScore)
+        seed_stmt = select(DiscoverySerenityScore)
         if not include_avoid:
-            stmt = stmt.where(DiscoverySerenityScore.auto_avoid.is_(False))
+            seed_stmt = seed_stmt.where(DiscoverySerenityScore.auto_avoid.is_(False))
         if min_score is not None:
-            stmt = stmt.where(DiscoverySerenityScore.total_score >= min_score)
-        stmt = stmt.order_by(
-            desc(DiscoverySerenityScore.total_score),
-            DiscoverySerenityScore.ticker,
-        ).limit(limit)
-        scores = list((await session.execute(stmt)).scalars().all())
+            seed_stmt = seed_stmt.where(DiscoverySerenityScore.total_score >= min_score)
+        seed_scores = list((await session.execute(seed_stmt)).scalars().all())
+    seed_by_ticker: dict[str, DiscoverySerenityScore] = {s.ticker: s for s in seed_scores}
+
+    # 2) signals 에서 언급된 모든 티커 (최근 N일 · 확장 가능하도록 별도 인자)
+    signal_tickers: set[str] = set()
+    if include_unscored:
+        signal_tickers = set(await active_tickers(days=days))
+
+    # union · seed 있으면 seed 우선 카드 · 없으면 unscored 카드
+    all_tickers = sorted(set(seed_by_ticker.keys()) | signal_tickers)
 
     items: list[TickerCardItem] = []
-    for s in scores:
-        items.append(await _score_to_card(s))
-    return items
+    for tk in all_tickers:
+        seed = seed_by_ticker.get(tk)
+        if seed is not None:
+            items.append(await _score_to_card(seed))
+        else:
+            # unscored · seed 없이 aggregate 만으로 카드 구성
+            agg = await aggregate_signals(tk, days=days)
+            items.append(TickerCardItem(
+                ticker=tk,
+                financing_tier=None,
+                serenity_tier=None,
+                total_score=0,
+                auto_avoid=False,
+                domain_tags=[],
+                anti_pattern_flags=[],
+                mention_count_90d=agg["mention_count"],
+                bullish_pct_90d=agg["bullish_pct"],
+                last_signal_at=agg["last_signal_at"],
+                latest_reasoning=None,
+            ))
+
+    # 3) 정렬 · seed(score>0) → mention_count → alpha
+    def _key(x: TickerCardItem) -> tuple[int, int, int, str]:
+        seeded_high = 1 if (x.total_score > 0) else 0
+        return (-seeded_high, -x.total_score, -x.mention_count_90d, x.ticker)
+
+    items.sort(key=_key)
+    return items[:limit]
 
 
 @router.get("/tickers/{ticker}", response_model=TickerDetailResponse)
