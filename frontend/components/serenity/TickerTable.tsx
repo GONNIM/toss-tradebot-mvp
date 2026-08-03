@@ -12,6 +12,7 @@ type SortKey =
   | "mentions_90d"
   | "mentions_today"
   | "last_signal_at"
+  | "first_mention_at"
   | "bullish_pct_90d"
   | "vs_prior_close_pct"
   | "gain_since_first_mention_pct"
@@ -59,6 +60,8 @@ export function TickerTable({ items }: { items: TickerCardItem[] }) {
           return t.ticker;
         case "last_signal_at":
           return t.last_signal_at ? new Date(t.last_signal_at).getTime() : 0;
+        case "first_mention_at":
+          return t.first_mention_at ? new Date(t.first_mention_at).getTime() : 0;
         case "vs_prior_close_pct":
           return t.vs_prior_close_pct ?? -Infinity * dir;
         case "gain_since_first_mention_pct":
@@ -122,6 +125,7 @@ export function TickerTable({ items }: { items: TickerCardItem[] }) {
             <tr>
               <SortHead k="ticker" label="Ticker" />
               <th className="px-2 py-1.5 text-left text-xs font-semibold text-muted-foreground">Industry</th>
+              <SortHead k="first_mention_at" label="First mention" />
               <SortHead k="last_signal_at" label="Latest mention" />
               <SortHead k="mentions_today" label="Today" align="right" />
               <th className="px-2 py-1.5 text-right text-xs font-semibold text-muted-foreground">7d</th>
@@ -156,6 +160,9 @@ export function TickerTable({ items }: { items: TickerCardItem[] }) {
                     )}
                   </td>
                   <td className="px-2 py-1.5 text-xs text-muted-foreground">{industry}</td>
+                  <td className="px-2 py-1.5 text-[11px] font-mono text-muted-foreground">
+                    {fmtKstDateTimeSec(t.first_mention_at)}
+                  </td>
                   <td className="px-2 py-1.5 text-[11px] font-mono text-muted-foreground">
                     {fmtKstDateTimeSec(t.last_signal_at)}
                   </td>
