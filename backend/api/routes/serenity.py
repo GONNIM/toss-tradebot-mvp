@@ -111,6 +111,9 @@ class TickerCardItem(BaseModel):
     vs_prior_close_pct: Optional[float] = None
     # Phase L10 · gain since first mention
     gain_since_first_mention_pct: Optional[float] = None
+    # Phase L13 · yfinance sector/industry
+    sector: Optional[str] = None
+    industry: Optional[str] = None
 
 
 class TickerDetailResponse(BaseModel):
@@ -141,7 +144,7 @@ def _parse_csv(raw: Optional[str]) -> list[str]:
 
 
 async def _load_price_map(tickers: list[str]) -> dict[str, dict]:
-    """티커 → {vs_prior_close_pct, gain_since_first_mention_pct} 매핑 (SerenityTickerPrice 배치 결과)."""
+    """티커 → {vs_prior_close_pct, gain_since_first_mention_pct, sector, industry} 매핑."""
     if not tickers:
         return {}
     async with get_session() as session:
@@ -150,11 +153,18 @@ async def _load_price_map(tickers: list[str]) -> dict[str, dict]:
                 SerenityTickerPrice.ticker,
                 SerenityTickerPrice.vs_prior_close_pct,
                 SerenityTickerPrice.gain_since_first_mention_pct,
+                SerenityTickerPrice.sector,
+                SerenityTickerPrice.industry,
             )
             .where(SerenityTickerPrice.ticker.in_(tickers))
         )).all()
     return {
-        r[0]: {"vs_prior_close_pct": r[1], "gain_since_first_mention_pct": r[2]}
+        r[0]: {
+            "vs_prior_close_pct": r[1],
+            "gain_since_first_mention_pct": r[2],
+            "sector": r[3],
+            "industry": r[4],
+        }
         for r in rows
     }
 
@@ -165,6 +175,8 @@ async def _score_to_card(
     latest_reasoning: Optional[str] = None,
     vs_prior_close_pct: Optional[float] = None,
     gain_since_first_mention_pct: Optional[float] = None,
+    sector: Optional[str] = None,
+    industry: Optional[str] = None,
 ) -> TickerCardItem:
     agg = await aggregate_ticker_full(score.ticker)
     return TickerCardItem(
@@ -189,6 +201,8 @@ async def _score_to_card(
         latest_reasoning=latest_reasoning,
         vs_prior_close_pct=vs_prior_close_pct,
         gain_since_first_mention_pct=gain_since_first_mention_pct,
+        sector=sector,
+        industry=industry,
     )
 
 
@@ -278,11 +292,15 @@ async def list_tickers(
         price = price_map.get(tk) or {}
         vs_prior = price.get("vs_prior_close_pct")
         gain = price.get("gain_since_first_mention_pct")
+        sec = price.get("sector")
+        ind = price.get("industry")
         if seed is not None:
             card = await _score_to_card(
                 seed,
                 vs_prior_close_pct=vs_prior,
                 gain_since_first_mention_pct=gain,
+                sector=sec,
+                industry=ind,
             )
             # 90일 언급 없는 seed 티커 제외 (사용자 지시 · UI 노이즈)
             if card.mention_count_90d == 0:
@@ -317,6 +335,8 @@ async def list_tickers(
                 latest_reasoning=None,
                 vs_prior_close_pct=vs_prior,
                 gain_since_first_mention_pct=gain,
+                sector=sec,
+                industry=ind,
             ))
 
     # 3) 정렬 (이미지 UX · By Mentions Today · 그 다음 rolling window)
@@ -404,6 +424,8 @@ async def get_ticker_detail(ticker: str, recent_limit: int = Query(10, ge=1, le=
     price = price_map.get(ticker) or {}
     vs_prior = price.get("vs_prior_close_pct")
     gain = price.get("gain_since_first_mention_pct")
+    sec = price.get("sector")
+    ind = price.get("industry")
 
     if score is not None:
         card = await _score_to_card(
@@ -411,6 +433,8 @@ async def get_ticker_detail(ticker: str, recent_limit: int = Query(10, ge=1, le=
             latest_reasoning=latest_reasoning,
             vs_prior_close_pct=vs_prior,
             gain_since_first_mention_pct=gain,
+            sector=sec,
+            industry=ind,
         )
     else:
         # unscored · seed 없이 aggregate + price 만으로 카드 구성
@@ -437,6 +461,8 @@ async def get_ticker_detail(ticker: str, recent_limit: int = Query(10, ge=1, le=
             latest_reasoning=latest_reasoning,
             vs_prior_close_pct=vs_prior,
             gain_since_first_mention_pct=gain,
+            sector=sec,
+            industry=ind,
         )
 
     return TickerDetailResponse(

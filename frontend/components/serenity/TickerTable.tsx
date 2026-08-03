@@ -236,7 +236,11 @@ export function TickerTable({ items }: { items: TickerCardItem[] }) {
           <tbody>
             {sorted.map((t) => {
               const stance = STANCE_META[t.overall_stance] ?? STANCE_META.neutral;
-              const industry = t.domain_tags.length > 0 ? t.domain_tags.join(", ") : "—";
+              // Industry · yfinance industry 우선 · fallback yfinance sector · fallback domain_tags · "—"
+              const industry =
+                t.industry ||
+                t.sector ||
+                (t.domain_tags.length > 0 ? t.domain_tags.join(", ") : "—");
               return (
                 <tr
                   key={t.ticker}

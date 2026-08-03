@@ -52,6 +52,8 @@ def _fetch_price_bundle(
         "snapshot_date": None,
         "first_mention_price": None,
         "first_mention_used_date": None,
+        "sector": None,
+        "industry": None,
         "error": None,
     }
 
@@ -112,6 +114,19 @@ def _fetch_price_bundle(
         except (KeyError, IndexError, ValueError, AttributeError) as exc:
             logger.warning("[serenity_price] first_mention parse 실패 · %s · %s", yahoo_symbol, exc)
 
+    # yfinance info · sector · industry (Phase L13 · Industry 컬럼 정확화)
+    # info 는 별도 HTTP 요청 · 실패해도 price 결과는 유지
+    try:
+        info = getattr(stock, "info", None) or {}
+        sec = info.get("sector")
+        ind = info.get("industry")
+        if isinstance(sec, str) and sec.strip():
+            result["sector"] = sec.strip()[:80]
+        if isinstance(ind, str) and ind.strip():
+            result["industry"] = ind.strip()[:120]
+    except Exception as exc:  # noqa: BLE001
+        logger.debug("[serenity_price] info 실패 · %s · %s", yahoo_symbol, exc)
+
     return result
 
 
@@ -132,6 +147,8 @@ async def _upsert_price(
     snapshot_date,
     first_mention_price,
     first_mention_used_date,
+    sector: Optional[str],
+    industry: Optional[str],
     error: Optional[str],
 ) -> None:
     pct = None
@@ -152,6 +169,11 @@ async def _upsert_price(
             existing.first_mention_date = first_mention_used_date or existing.first_mention_date
             existing.first_mention_price = first_mention_price or existing.first_mention_price
             existing.gain_since_first_mention_pct = gain_pct if gain_pct is not None else existing.gain_since_first_mention_pct
+            # sector · industry · 새 값 있으면 갱신 · 없으면 기존 유지 (yfinance info 간헐 실패)
+            if sector:
+                existing.sector = sector
+            if industry:
+                existing.industry = industry
             existing.yahoo_symbol = yahoo_symbol
             existing.error = error
             existing.fetched_at = datetime.utcnow()
@@ -166,6 +188,8 @@ async def _upsert_price(
             first_mention_date=first_mention_used_date,
             first_mention_price=first_mention_price,
             gain_since_first_mention_pct=gain_pct,
+            sector=sector,
+            industry=industry,
             yahoo_symbol=yahoo_symbol,
             error=error,
         )
@@ -202,7 +226,7 @@ async def refresh_prices(
         async with sem:
             # Private / 브랜드명 · yfinance 호출 스킵 (rate limit 소모 방지)
             if is_private_or_brand(tk):
-                await _upsert_price(tk, tk, None, None, None, None, None, "private/브랜드")
+                await _upsert_price(tk, tk, None, None, None, None, None, None, None, "private/브랜드")
                 stats["skipped"] = stats.get("skipped", 0) + 1
                 return
 
@@ -227,6 +251,8 @@ async def refresh_prices(
                 bundle["snapshot_date"],
                 bundle["first_mention_price"],
                 bundle["first_mention_used_date"],
+                bundle["sector"],
+                bundle["industry"],
                 bundle["error"],
             )
 

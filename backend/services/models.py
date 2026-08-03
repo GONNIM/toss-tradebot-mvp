@@ -1582,5 +1582,8 @@ class SerenityTickerPrice(Base):
     gain_since_first_mention_pct: Mapped[Optional[float]]  # (close - first_mention_price)/first_mention_price*100
     yahoo_symbol: Mapped[Optional[str]] = mapped_column(String(20))
     error: Mapped[Optional[str]] = mapped_column(String(200))  # yfinance 실패 사유
+    # Phase L13 · yfinance sector/industry (테이블 Industry 컬럼 UX 정확화)
+    sector: Mapped[Optional[str]] = mapped_column(String(80))
+    industry: Mapped[Optional[str]] = mapped_column(String(120))
     fetched_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
 
