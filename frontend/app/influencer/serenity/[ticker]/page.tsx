@@ -4,18 +4,19 @@
 // 참조: docs/plans/serenity-integration/01-ui-spec.md §6
 
 import Link from "next/link";
-import { use, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { serenityApi } from "@/lib/serenity/api";
 import type { TickerDetailResponse } from "@/lib/serenity/types";
 import { BacktestChart } from "@/components/serenity/BacktestChart";
 import { ChecklistCard } from "@/components/serenity/ChecklistCard";
 import { SignalFeedCard } from "@/components/serenity/SignalFeedCard";
 
-type PageProps = { params: Promise<{ ticker: string }> };
+// Next 14 client component · params 는 plain object (Promise 아님)
+// use(params) 사용 시 React error #438 · L12 hotfix 2026-08-03
+type PageProps = { params: { ticker: string } };
 
 export default function TickerDetailPage({ params }: PageProps) {
-  const { ticker } = use(params);
-  const upper = ticker.toUpperCase();
+  const upper = params.ticker.toUpperCase();
   const [data, setData] = useState<TickerDetailResponse | null>(null);
   const [err, setErr] = useState<string | null>(null);
 
