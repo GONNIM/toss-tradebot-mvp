@@ -95,6 +95,8 @@ class TickerCardItem(BaseModel):
 
     # Stance breakdown (오늘)
     stance_today: StanceBreakdown
+    # Stance breakdown (90일 전체 · 테이블 UX · Bull/Bear/Neu 컬럼)
+    stance_90d: StanceBreakdown
 
     # Overall stance · UI 상단 배지 (▲/▼/• )
     overall_stance: str            # bullish | bearish | mixed | neutral
@@ -169,6 +171,7 @@ async def _score_to_card(
         mention_count_90d=agg["mentions_90d"],
         bullish_pct_90d=agg["overall_bullish_pct"],
         stance_today=StanceBreakdown(**agg["stance_today"]),
+        stance_90d=StanceBreakdown(**agg["stance_90d"]),
         overall_stance=agg["overall_stance"],
         thesis_types=agg["thesis_types"],
         first_mention_at=agg["first_mention_at"],
@@ -289,6 +292,7 @@ async def list_tickers(
                 mention_count_90d=agg["mentions_90d"],
                 bullish_pct_90d=agg["overall_bullish_pct"],
                 stance_today=StanceBreakdown(**agg["stance_today"]),
+                stance_90d=StanceBreakdown(**agg["stance_90d"]),
                 overall_stance=agg["overall_stance"],
                 thesis_types=agg["thesis_types"],
                 first_mention_at=agg["first_mention_at"],
@@ -400,6 +404,7 @@ async def get_ticker_detail(ticker: str, recent_limit: int = Query(10, ge=1, le=
             mention_count_90d=agg["mentions_90d"],
             bullish_pct_90d=agg["overall_bullish_pct"],
             stance_today=StanceBreakdown(**agg["stance_today"]),
+            stance_90d=StanceBreakdown(**agg["stance_90d"]),
             overall_stance=agg["overall_stance"],
             thesis_types=agg["thesis_types"],
             first_mention_at=agg["first_mention_at"],

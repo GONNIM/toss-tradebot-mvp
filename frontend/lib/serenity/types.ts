@@ -47,6 +47,7 @@ export type TickerCardItem = {
 
   // Stance
   stance_today: StanceBreakdown;
+  stance_90d: StanceBreakdown;
   overall_stance: OverallStance;
   thesis_types: string[];
 

@@ -130,6 +130,14 @@ async def aggregate_ticker_full(ticker: str) -> dict:
     last_at = max((r[1] for r in rows), default=None)  # posted_at 기준
     thesis_types = sorted({r[2] for r in rows if r[2]})
 
+    # 90d 전체 sentiment breakdown (테이블 UX · Bull/Bear/Neu 컬럼)
+    stance_90d = {
+        "bull": _count(rows, "bullish"),
+        "bear": _count(rows, "bearish"),
+        "neu": _count(rows, "neutral"),
+        "cal": _count(rows, "calibration"),
+    }
+
     return {
         "ticker": ticker,
         "mentions_today": len(today_rows),
@@ -137,6 +145,7 @@ async def aggregate_ticker_full(ticker: str) -> dict:
         "mentions_28d": len(d28_rows),
         "mentions_90d": total_90d,
         "stance_today": stance_today,
+        "stance_90d": stance_90d,
         "first_mention_at": first_at,
         "last_signal_at": last_at,
         "overall_stance": overall,

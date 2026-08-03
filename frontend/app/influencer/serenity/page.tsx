@@ -18,6 +18,7 @@ import type {
 } from "@/lib/serenity/types";
 import { SignalFeedCard } from "@/components/serenity/SignalFeedCard";
 import { TickerCard } from "@/components/serenity/TickerCard";
+import { TickerTable } from "@/components/serenity/TickerTable";
 
 const SENTIMENT_OPTS: { value: string; label: string }[] = [
   { value: "", label: "전체" },
@@ -207,11 +208,16 @@ export default function SerenityLanding() {
         </section>
       )}
 
-      {/* ─── All Tickers · Tier 별 ────────────────────────────────── */}
+      {/* ─── 90일 언급 종목 리스트 · 테이블 (사용자 요구 · 정보 밀도) ─── */}
+      {tickers && tickers.length > 0 && (
+        <TickerTable items={nonAvoid} />
+      )}
+
+      {/* ─── All Tickers · Tier 별 (카드 그리드 · 시각 강조) ─────── */}
       <section>
         <div className="mb-3 flex flex-wrap items-baseline justify-between gap-2">
           <div>
-            <h2 className="text-lg font-semibold">📊 전체 언급 종목 · Tier 별</h2>
+            <h2 className="text-lg font-semibold">📊 전체 언급 종목 · Tier 별 (카드)</h2>
             <p className="text-xs text-muted-foreground">
               seed 티커는 15원칙 tier (S~F) · 미분류는 언급 순 · today/7d/28d rolling
             </p>
