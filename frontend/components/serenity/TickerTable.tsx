@@ -131,13 +131,16 @@ export function TickerTable({ items }: { items: TickerCardItem[] }) {
 
   function SortHead({ k, label, align = "left" }: { k: SortKey; label: string; align?: "left" | "right" }) {
     const active = sortKey === k;
-    const arrow = active ? (sortDir === "desc" ? "▼" : "▲") : "";
+    // 정렬 가능 상시 표시 · active=▼/▲ · inactive=⇅ (희미) · 사용자 클릭 유도
+    const icon = active ? (sortDir === "desc" ? "▼" : "▲") : "⇅";
+    const iconCls = active ? "text-primary" : "text-muted-foreground/50";
     return (
       <th
         onClick={() => toggleSort(k)}
         className={`cursor-pointer select-none px-2 py-2.5 text-xs font-semibold text-muted-foreground hover:text-foreground text-${align}`}
+        title={`정렬 · 현재 ${active ? (sortDir === "desc" ? "내림차순" : "오름차순") : "비활성"} · 클릭 시 ${active ? "방향 반전" : "이 컬럼 기준 정렬"}`}
       >
-        {label} {arrow && <span className="text-[9px]">{arrow}</span>}
+        {label} <span className={`text-[9px] ${iconCls}`}>{icon}</span>
       </th>
     );
   }
