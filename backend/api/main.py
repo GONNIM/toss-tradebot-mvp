@@ -50,6 +50,15 @@ from backend.api.routes import (
 from backend.services import config
 from backend.services.db import init_db
 
+# Root logger 설정 · Python default = WARNING · info 메시지 유실 방지 (2026-08-03)
+# uvicorn 이 자체 logger 를 갖지만 앱 코드의 logger.info() 는 별도 · 여기서 명시 설정.
+# force=True · uvicorn --log-config 등 기존 handler 있어도 덮어씀.
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s %(levelname)s [%(name)s] %(message)s",
+    force=True,
+)
+
 logger = logging.getLogger(__name__)
 
 
