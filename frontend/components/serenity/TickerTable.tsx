@@ -68,9 +68,9 @@ function _mentionsForKey(t: TickerCardItem, k: SortKey): number {
 }
 
 export function TickerTable({ items }: { items: TickerCardItem[] }) {
-  // 기본 정렬: Mentions today · desc (사용자 지시 · 오늘 언급이 가장 시급 · L11)
-  const [mentionsPeriod, setMentionsPeriod] = useState<MentionsPeriod>("today");
-  const [sortKey, setSortKey] = useState<SortKey>("mentions_today");
+  // 기본 정렬: Mentions 총 카운트 (90d) · desc (사용자 지시 L12 · 총 카운트 = 셀 맨 앞 큰 숫자)
+  const [mentionsPeriod, setMentionsPeriod] = useState<MentionsPeriod>("90d");
+  const [sortKey, setSortKey] = useState<SortKey>("mentions_90d");
   const [sortDir, setSortDir] = useState<SortDir>("desc");
   const [query, setQuery] = useState("");
 
@@ -162,12 +162,12 @@ export function TickerTable({ items }: { items: TickerCardItem[] }) {
               value={mentionsPeriod}
               onChange={(e) => onMentionsPeriodChange(e.target.value as MentionsPeriod)}
               className="bg-transparent text-xs font-semibold outline-none"
-              title="Mentions 정렬 기간"
+              title="Mentions 정렬 기간 · 셀 맨 앞 큰 숫자도 이 기간으로 표시"
             >
-              <option value="today">today</option>
-              <option value="7d">7d</option>
+              <option value="90d">90d (총)</option>
               <option value="28d">28d</option>
-              <option value="90d">90d</option>
+              <option value="7d">7d</option>
+              <option value="today">today</option>
             </select>
             <button
               type="button"
@@ -203,13 +203,13 @@ export function TickerTable({ items }: { items: TickerCardItem[] }) {
               <th
                 onClick={() => toggleSort(MENTIONS_PERIOD_KEY[mentionsPeriod])}
                 className="cursor-pointer select-none px-2 py-2.5 text-xs font-semibold text-muted-foreground hover:text-foreground text-right"
-                title="상단 Mentions 컨트롤로 기간/방향 선택 · 헤더 클릭 시 현재 기간 정렬 방향 반전"
+                title="맨 앞 큰 숫자 = 상단 컨트롤에서 선택한 기간의 총 카운트 · 괄호 = 나머지 기간"
               >
                 Mentions {mentionsActive && <span className="text-[9px]">{sortDir === "desc" ? "▼" : "▲"}</span>}
-                <div className="text-[9px] font-normal opacity-70">today (7d/28d/90d)</div>
+                <div className="text-[9px] font-normal opacity-70">{mentionsPeriod} (나머지 기간)</div>
               </th>
-              <th className="px-2 py-2.5 text-right text-xs font-semibold text-emerald-500">Bullish</th>
-              <th className="px-2 py-2.5 text-right text-xs font-semibold text-red-500">Bearish</th>
+              <th className="px-2 py-2.5 text-right text-xs font-semibold text-emerald-500">Bull</th>
+              <th className="px-2 py-2.5 text-right text-xs font-semibold text-red-500">Bear</th>
               <th className="px-2 py-2.5 text-right text-xs font-semibold text-slate-400">Neutral</th>
               <SortHead k="bullish_pct_90d" label="Bull%" align="right" />
               <SortHead k="vs_prior_close_pct" label="vs Prior" align="right" />
@@ -247,16 +247,23 @@ export function TickerTable({ items }: { items: TickerCardItem[] }) {
                     className="px-2 py-3 text-right font-mono"
                     title={`today ${t.mentions_today} · 7d ${t.mentions_7d} · 28d ${t.mentions_28d} · 90d ${t.mention_count_90d}`}
                   >
-                    <span className={t.mentions_today > 0 ? "font-bold text-primary" : ""}>{t.mentions_today}</span>
+                    <span className="font-bold text-primary text-sm">
+                      {_mentionsForKey(t, MENTIONS_PERIOD_KEY[mentionsPeriod])}
+                    </span>
                     <span className="text-[9px] text-muted-foreground ml-1">
-                      ({t.mentions_7d}/{t.mentions_28d}/{t.mention_count_90d})
+                      ({[
+                        mentionsPeriod !== "today" ? `t:${t.mentions_today}` : null,
+                        mentionsPeriod !== "7d" ? `7d:${t.mentions_7d}` : null,
+                        mentionsPeriod !== "28d" ? `28d:${t.mentions_28d}` : null,
+                        mentionsPeriod !== "90d" ? `90d:${t.mention_count_90d}` : null,
+                      ].filter(Boolean).join(" · ")})
                     </span>
                   </td>
-                  <td className="px-2 py-3 text-right font-mono text-emerald-500">{t.stance_90d.bull}</td>
-                  <td className="px-2 py-3 text-right font-mono text-red-500">{t.stance_90d.bear}</td>
-                  <td className="px-2 py-3 text-right font-mono text-slate-400">{t.stance_90d.neu}</td>
-                  <td className="px-2 py-3 text-right font-mono">{t.bullish_pct_90d.toFixed(0)}%</td>
-                  <td className={`px-2 py-3 text-right font-mono ${_priorCls(t.vs_prior_close_pct)}`}>
+                  <td className="px-2 py-3 text-right font-mono font-bold text-emerald-500">{t.stance_90d.bull}</td>
+                  <td className="px-2 py-3 text-right font-mono font-bold text-red-500">{t.stance_90d.bear}</td>
+                  <td className="px-2 py-3 text-right font-mono font-bold text-slate-400">{t.stance_90d.neu}</td>
+                  <td className="px-2 py-3 text-right font-mono font-bold">{t.bullish_pct_90d.toFixed(0)}%</td>
+                  <td className={`px-2 py-3 text-right font-mono font-bold ${_priorCls(t.vs_prior_close_pct)}`}>
                     {_fmtPct(t.vs_prior_close_pct, 2)}
                   </td>
                   <td
