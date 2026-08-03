@@ -25,7 +25,7 @@ from sqlalchemy.exc import IntegrityError
 from backend.discovery.serenity.aggregators import active_tickers
 from backend.services.db import get_session
 from backend.services.models import DiscoverySerenityScore, SerenityTickerPrice
-from backend.services.ticker_map import to_yfinance_symbol
+from backend.services.ticker_map import is_private_or_brand, to_yfinance_symbol
 
 logger = logging.getLogger(__name__)
 
@@ -121,10 +121,16 @@ async def refresh_prices(
         return {"targets": 0, "ok": 0, "failed": 0}
 
     sem = asyncio.Semaphore(CONCURRENCY)
-    stats = {"targets": len(tickers), "ok": 0, "failed": 0}
+    stats = {"targets": len(tickers), "ok": 0, "failed": 0, "skipped": 0}
 
     async def _one(tk: str) -> None:
         async with sem:
+            # Private / 브랜드명 · yfinance 호출 스킵 (rate limit 소모 방지)
+            if is_private_or_brand(tk):
+                await _upsert_price(tk, tk, None, None, None, "private/브랜드")
+                stats["skipped"] = stats.get("skipped", 0) + 1
+                return
+
             symbol = to_yfinance_symbol(tk)
             close, prior, snap_or_err = await asyncio.to_thread(
                 _fetch_close_pair, symbol, ticker_client=ticker_client
