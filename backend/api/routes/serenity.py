@@ -308,13 +308,23 @@ async def list_tickers(
 
 @router.get("/tickers/{ticker}", response_model=TickerDetailResponse)
 async def get_ticker_detail(ticker: str, recent_limit: int = Query(10, ge=1, le=100)):
-    """티커 상세 · L7 페이지 데이터 소스."""
+    """티커 상세 · L7 페이지 데이터 소스.
+
+    seed 있으면 score 카드 + 상세 · seed 없어도 signals 언급 있으면 unscored 카드로 표시.
+    "최적 종목 찾기" UX · 신규 매핑 티커 접근 지원.
+    """
     ticker = ticker.upper()
     async with get_session() as session:
         score = (await session.execute(
             select(DiscoverySerenityScore).where(DiscoverySerenityScore.ticker == ticker)
         )).scalar_one_or_none()
-        if score is None:
+
+        # signal 존재 여부 (seed 없어도 언급만 있으면 표시)
+        has_signal = (await session.execute(
+            select(SerenitySignal.id).where(SerenitySignal.ticker == ticker).limit(1)
+        )).scalar_one_or_none() is not None
+
+        if score is None and not has_signal:
             raise HTTPException(status_code=404, detail=f"ticker not found: {ticker}")
 
         # 최근 signals + 트윗 컨텍스트
@@ -358,7 +368,37 @@ async def get_ticker_detail(ticker: str, recent_limit: int = Query(10, ge=1, le=
         for sig, tw in sig_rows
     ]
     latest_reasoning = recent_signals[0].extracted_reasoning if recent_signals else None
-    card = await _score_to_card(score, latest_reasoning=latest_reasoning)
+
+    # 가격 스냅샷 병합
+    price_map = await _load_price_map([ticker])
+    vs_prior = price_map.get(ticker)
+
+    if score is not None:
+        card = await _score_to_card(score, latest_reasoning=latest_reasoning, vs_prior_close_pct=vs_prior)
+    else:
+        # unscored · seed 없이 aggregate + price 만으로 카드 구성
+        agg = await aggregate_ticker_full(ticker)
+        card = TickerCardItem(
+            ticker=ticker,
+            financing_tier=None,
+            serenity_tier=None,
+            total_score=0,
+            auto_avoid=False,
+            domain_tags=[],
+            anti_pattern_flags=[],
+            mentions_today=agg["mentions_today"],
+            mentions_7d=agg["mentions_7d"],
+            mentions_28d=agg["mentions_28d"],
+            mention_count_90d=agg["mentions_90d"],
+            bullish_pct_90d=agg["overall_bullish_pct"],
+            stance_today=StanceBreakdown(**agg["stance_today"]),
+            overall_stance=agg["overall_stance"],
+            thesis_types=agg["thesis_types"],
+            first_mention_at=agg["first_mention_at"],
+            last_signal_at=agg["last_signal_at"],
+            latest_reasoning=latest_reasoning,
+            vs_prior_close_pct=vs_prior,
+        )
 
     return TickerDetailResponse(
         ticker=ticker,
