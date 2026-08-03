@@ -263,7 +263,11 @@ async def list_tickers(
         seed = seed_by_ticker.get(tk)
         vs_prior = price_map.get(tk)
         if seed is not None:
-            items.append(await _score_to_card(seed, vs_prior_close_pct=vs_prior))
+            card = await _score_to_card(seed, vs_prior_close_pct=vs_prior)
+            # 90일 언급 없는 seed 티커 제외 (사용자 지시 · UI 노이즈)
+            if card.mention_count_90d == 0:
+                continue
+            items.append(card)
         else:
             # unscored · seed 없이 aggregate_ticker_full 로 카드 구성 (동일 UX)
             agg = await aggregate_ticker_full(tk)

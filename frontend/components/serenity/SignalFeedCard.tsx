@@ -3,6 +3,7 @@
 // 개별 signal 카드 · Phase L6 · 2026-08-02
 
 import Link from "next/link";
+import { fmtKstDateTimeSec } from "@/lib/time";
 import type { SignalFeedItem } from "@/lib/serenity/types";
 
 const SENTIMENT_STYLE: Record<string, { chip: string; label: string }> = {
@@ -14,7 +15,8 @@ const SENTIMENT_STYLE: Record<string, { chip: string; label: string }> = {
 
 export function SignalFeedCard({ item }: { item: SignalFeedItem }) {
   const s = SENTIMENT_STYLE[item.sentiment] ?? SENTIMENT_STYLE.neutral;
-  const date = new Date(item.extracted_at).toLocaleDateString("ko-KR");
+  // 트윗 발행 시각 우선 · 없으면 z.ai 추출 시각 fallback (YYYY-MM-DD HH:MM:SS KST)
+  const date = fmtKstDateTimeSec(item.tweet_posted_at ?? item.extracted_at);
   return (
     <article className="rounded-lg border border-border bg-card p-3 text-xs">
       <div className="flex flex-wrap items-center gap-2">

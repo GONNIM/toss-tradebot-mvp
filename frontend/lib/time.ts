@@ -120,6 +120,14 @@ export function fmtPct(v: number | null | undefined, digits = 2): string {
   return `${sign}${(v * 100).toFixed(digits)}%`;
 }
 
+/** "2026-08-03 14:32:05" (KST · 초까지 · signal 카드용) */
+export function fmtKstDateTimeSec(iso: string | null | undefined): string {
+  const d = parseServerIso(iso);
+  if (!d) return "—";
+  // sv-SE 로케일 = ISO YYYY-MM-DD HH:mm:ss 형식 그대로 반환
+  return d.toLocaleString("sv-SE", { timeZone: KST, hour12: false });
+}
+
 /** "2026-07-11 14:32:05 KST" (풀 포맷 · 툴팁·상세용) */
 export function fmtKstFull(iso: string | null | undefined): string {
   const d = parseServerIso(iso);
