@@ -127,13 +127,17 @@ export function TickerTable({ items }: { items: TickerCardItem[] }) {
               <th className="px-2 py-1.5 text-left text-xs font-semibold text-muted-foreground">Industry</th>
               <SortHead k="first_mention_at" label="First mention" />
               <SortHead k="last_signal_at" label="Latest mention" />
-              <SortHead k="mentions_today" label="Today" align="right" />
-              <th className="px-2 py-1.5 text-right text-xs font-semibold text-muted-foreground">7d</th>
-              <th className="px-2 py-1.5 text-right text-xs font-semibold text-muted-foreground">28d</th>
-              <SortHead k="mentions_90d" label="90d" align="right" />
-              <th className="px-2 py-1.5 text-right text-xs font-semibold text-emerald-500">Bull</th>
-              <th className="px-2 py-1.5 text-right text-xs font-semibold text-red-500">Bear</th>
-              <th className="px-2 py-1.5 text-right text-xs font-semibold text-slate-400">Neu</th>
+              <th
+                onClick={() => toggleSort("mentions_today")}
+                className="cursor-pointer select-none px-2 py-1.5 text-xs font-semibold text-muted-foreground hover:text-foreground text-right"
+                title="today 큰 숫자 · 괄호 안 7d/28d/90d"
+              >
+                Mentions {sortKey === "mentions_today" && <span className="text-[9px]">{sortDir === "desc" ? "▼" : "▲"}</span>}
+                <div className="text-[9px] font-normal opacity-70">today (7d/28d/90d)</div>
+              </th>
+              <th className="px-2 py-1.5 text-right text-xs font-semibold text-emerald-500">Bullish</th>
+              <th className="px-2 py-1.5 text-right text-xs font-semibold text-red-500">Bearish</th>
+              <th className="px-2 py-1.5 text-right text-xs font-semibold text-slate-400">Neutral</th>
               <SortHead k="bullish_pct_90d" label="Bull%" align="right" />
               <SortHead k="vs_prior_close_pct" label="vs Prior" align="right" />
               <SortHead k="gain_since_first_mention_pct" label="Gain" align="right" />
@@ -166,12 +170,15 @@ export function TickerTable({ items }: { items: TickerCardItem[] }) {
                   <td className="px-2 py-1.5 text-[11px] font-mono text-muted-foreground">
                     {fmtKstDateTimeSec(t.last_signal_at)}
                   </td>
-                  <td className={`px-2 py-1.5 text-right font-mono ${t.mentions_today > 0 ? "font-bold" : ""}`}>
-                    {t.mentions_today}
+                  <td
+                    className="px-2 py-1.5 text-right font-mono"
+                    title={`today ${t.mentions_today} · 7d ${t.mentions_7d} · 28d ${t.mentions_28d} · 90d ${t.mention_count_90d}`}
+                  >
+                    <span className={t.mentions_today > 0 ? "font-bold text-primary" : ""}>{t.mentions_today}</span>
+                    <span className="text-[9px] text-muted-foreground ml-1">
+                      ({t.mentions_7d}/{t.mentions_28d}/{t.mention_count_90d})
+                    </span>
                   </td>
-                  <td className="px-2 py-1.5 text-right font-mono">{t.mentions_7d}</td>
-                  <td className="px-2 py-1.5 text-right font-mono">{t.mentions_28d}</td>
-                  <td className="px-2 py-1.5 text-right font-mono font-bold">{t.mention_count_90d}</td>
                   <td className="px-2 py-1.5 text-right font-mono text-emerald-500">{t.stance_90d.bull}</td>
                   <td className="px-2 py-1.5 text-right font-mono text-red-500">{t.stance_90d.bear}</td>
                   <td className="px-2 py-1.5 text-right font-mono text-slate-400">{t.stance_90d.neu}</td>
