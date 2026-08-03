@@ -50,7 +50,10 @@ export function BacktestChart({ data, title, height = 220 }: Props) {
       {title && <h3 className="mb-2 text-sm font-semibold">{title}</h3>}
       {allEmpty ? (
         <div className="rounded border border-dashed border-border p-6 text-center text-xs text-muted-foreground">
-          백테스트 데이터 없음 · signals 발생 후 refresh_backtests 실행 필요
+          이 티커에 대한 백테스트 결과가 아직 없습니다.
+          <br />
+          각 신호(트윗) 시점 이후 5·10·30·60·180일 후 주가 변화율을 계산하며,
+          매주 월요일 00:00 KST 자동 갱신됩니다.
         </div>
       ) : (
         <ResponsiveContainer width="100%" height={height}>

@@ -105,7 +105,7 @@ export default function TickerDetailPage({ params }: PageProps) {
       <ChecklistCard ticker={s} />
 
       <BacktestChart
-        title="📊 Backtest 평균 수익률 (최근 90일 signals)"
+        title="📊 신호 발생 후 실제 주가 변화율 · 최근 90일 평균"
         data={data.backtest_avg}
       />
 
