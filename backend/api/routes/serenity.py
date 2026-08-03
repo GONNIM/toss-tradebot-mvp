@@ -34,6 +34,7 @@ from backend.services.models import (
     DiscoverySerenityScore,
     SerenityBacktest,
     SerenitySignal,
+    SerenityTickerPrice,
     SerenityTweet,
 )
 
@@ -135,10 +136,23 @@ def _parse_csv(raw: Optional[str]) -> list[str]:
     return [x.strip() for x in raw.split(",") if x.strip()]
 
 
+async def _load_price_map(tickers: list[str]) -> dict[str, float]:
+    """티커 → vs_prior_close_pct 매핑 (SerenityTickerPrice 배치 결과)."""
+    if not tickers:
+        return {}
+    async with get_session() as session:
+        rows = (await session.execute(
+            select(SerenityTickerPrice.ticker, SerenityTickerPrice.vs_prior_close_pct)
+            .where(SerenityTickerPrice.ticker.in_(tickers))
+        )).all()
+    return {r[0]: r[1] for r in rows if r[1] is not None}
+
+
 async def _score_to_card(
     score: DiscoverySerenityScore,
     *,
     latest_reasoning: Optional[str] = None,
+    vs_prior_close_pct: Optional[float] = None,
 ) -> TickerCardItem:
     agg = await aggregate_ticker_full(score.ticker)
     return TickerCardItem(
@@ -160,6 +174,7 @@ async def _score_to_card(
         first_mention_at=agg["first_mention_at"],
         last_signal_at=agg["last_signal_at"],
         latest_reasoning=latest_reasoning,
+        vs_prior_close_pct=vs_prior_close_pct,
     )
 
 
@@ -240,11 +255,15 @@ async def list_tickers(
     # union · seed 있으면 seed 우선 카드 · 없으면 unscored 카드
     all_tickers = sorted(set(seed_by_ticker.keys()) | signal_tickers)
 
+    # 가격 스냅샷 map (yfinance 배치 · 존재 티커만 값 있음)
+    price_map = await _load_price_map(all_tickers)
+
     items: list[TickerCardItem] = []
     for tk in all_tickers:
         seed = seed_by_ticker.get(tk)
+        vs_prior = price_map.get(tk)
         if seed is not None:
-            items.append(await _score_to_card(seed))
+            items.append(await _score_to_card(seed, vs_prior_close_pct=vs_prior))
         else:
             # unscored · seed 없이 aggregate_ticker_full 로 카드 구성 (동일 UX)
             agg = await aggregate_ticker_full(tk)
@@ -267,6 +286,7 @@ async def list_tickers(
                 first_mention_at=agg["first_mention_at"],
                 last_signal_at=agg["last_signal_at"],
                 latest_reasoning=None,
+                vs_prior_close_pct=vs_prior,
             ))
 
     # 3) 정렬 (이미지 UX · By Mentions Today · 그 다음 rolling window)

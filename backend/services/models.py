@@ -1561,3 +1561,22 @@ class SerenityBacktest(Base):
         Index("ix_serenity_backtest_ticker_date", "ticker", "signal_date"),
     )
 
+
+class SerenityTickerPrice(Base):
+    """티커별 최신 종가 스냅샷 · yfinance 배치 (매일 09:30 KST) · Phase L9 · 2026-08-03.
+
+    UX 목적: Ticker Card 상단 "vs prior close · +X.X%" 표시.
+    구조: ticker PK · upsert (매일 최신 값으로 덮어씀 · 시계열 필요 시 별도 히스토리 테이블).
+    """
+
+    __tablename__ = "serenity_ticker_prices"
+
+    ticker: Mapped[str] = mapped_column(String(20), primary_key=True)
+    snapshot_date: Mapped[str] = mapped_column(String(10), index=True)  # YYYY-MM-DD (yf 최근 거래일)
+    close: Mapped[Optional[float]]
+    prior_close: Mapped[Optional[float]]
+    vs_prior_close_pct: Mapped[Optional[float]]
+    yahoo_symbol: Mapped[Optional[str]] = mapped_column(String(20))
+    error: Mapped[Optional[str]] = mapped_column(String(200))  # yfinance 실패 사유
+    fetched_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
+

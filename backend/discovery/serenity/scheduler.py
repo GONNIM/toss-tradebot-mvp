@@ -56,6 +56,12 @@ async def _job_backtest() -> None:
     logger.info("[serenity] cron backtest · %s", result)
 
 
+async def _job_price_snapshot() -> None:
+    from backend.discovery.serenity.price_snapshot import refresh_prices
+    result = await refresh_prices()
+    logger.info("[serenity] cron price snapshot · %s", result)
+
+
 def register_serenity_jobs(scheduler: AsyncIOScheduler) -> None:
     """Serenity 4 크론 등록 · env 스위치 존중.
 
@@ -118,4 +124,16 @@ def register_serenity_jobs(scheduler: AsyncIOScheduler) -> None:
         misfire_grace_time=3600,
     )
 
-    logger.info("[serenity] cron 등록 완료 · 4 jobs (extractor 는 env 스위치 필요)")
+    # 티커 종가 스냅샷 (매일 09:30 KST · US 종가 이후 · vs prior close UX)
+    scheduler.add_job(
+        _job_price_snapshot,
+        trigger=CronTrigger(hour=9, minute=30, timezone="Asia/Seoul"),
+        id="serenity_price_snapshot_daily",
+        name="매일 09:30 KST · Serenity 언급 티커 종가 스냅샷 (yfinance)",
+        replace_existing=True,
+        max_instances=1,
+        coalesce=True,
+        misfire_grace_time=1800,
+    )
+
+    logger.info("[serenity] cron 등록 완료 · 5 jobs (extractor 는 env 스위치 필요)")
