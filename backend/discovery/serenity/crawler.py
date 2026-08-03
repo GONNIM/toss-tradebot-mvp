@@ -127,15 +127,51 @@ async def _existing_tweet_ids(candidate_ids: Iterable[int]) -> set[int]:
         return set(result.scalars().all())
 
 
+def _auto_pull_submodule(tracker_dir: Path) -> Optional[str]:
+    """upstream yan-labs main 브랜치 fast-forward pull.
+
+    성공 시 신규 pointer sha 반환 · 실패·비활성 시 None.
+    SERENITY_AUTO_PULL=false 로 스킵 가능 (테스트·로컬 개발용).
+    """
+    if os.environ.get("SERENITY_AUTO_PULL", "true").strip().lower() in {"0", "false", "no", "off"}:
+        return None
+    if not (tracker_dir / ".git").exists() and not (tracker_dir / ".git").is_file():
+        # submodule 이 아닌 로컬 clone 인 경우 · pull 안전
+        pass
+    import subprocess
+    try:
+        result = subprocess.run(
+            ["git", "-C", str(tracker_dir), "pull", "--ff-only", "origin", "main"],
+            capture_output=True, text=True, timeout=60,
+        )
+        if result.returncode == 0:
+            sha = subprocess.run(
+                ["git", "-C", str(tracker_dir), "rev-parse", "--short", "HEAD"],
+                capture_output=True, text=True, timeout=10,
+            ).stdout.strip()
+            logger.info("[serenity] submodule auto-pull ok · pointer=%s", sha)
+            return sha
+        logger.warning("[serenity] submodule pull 실패 · %s", result.stderr[:200])
+        return None
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("[serenity] submodule pull 예외 · %s", exc)
+        return None
+
+
 async def sync_tweets(
     tracker_dir: Optional[Path] = None,
     batch_size: int = 500,
+    auto_pull: bool = True,
 ) -> dict:
-    """신규 트윗만 upsert.
+    """신규 트윗만 upsert · upstream 자동 pull (기본 활성 · env override).
 
-    반환: {"inserted": N, "skipped": M, "invalid": K, "total_archive": T}
+    반환: {"inserted": N, "skipped": M, "invalid": K, "total_archive": T, "submodule_sha": str}
     """
-    archive = load_archive_tweets(tracker_dir)
+    resolved_dir = _resolve_tracker_dir(tracker_dir)
+    submodule_sha = None
+    if auto_pull:
+        submodule_sha = _auto_pull_submodule(resolved_dir)
+    archive = load_archive_tweets(resolved_dir)
     total = len(archive)
     logger.info("[serenity] archive 로드 · total=%d", total)
 
@@ -197,4 +233,5 @@ async def sync_tweets(
         "skipped": len(existing) + dedup_skip,
         "invalid": invalid,
         "total_archive": total,
+        "submodule_sha": submodule_sha,
     }
