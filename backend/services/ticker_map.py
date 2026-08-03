@@ -20,17 +20,24 @@ _YFINANCE_SYMBOL: dict[str, str] = {
     "SIVE": "SIVE.ST",
     # Korea · KRX (트윗 원문이 KQ 로 오는 경우 KS 로 매핑)
     "138080.KQ": "138080.KS",
-    # US ADR · 있는 그대로
-    "SKHYV": "SKHYV",
-    "SKHY": "000660.KS",
+    # Korea 대기업 · Serenity 자주 언급
+    "SAMSUNG": "005930.KS",
     "SKHYNIX": "000660.KS",
-    # Compound semi / photonics · US·유럽·아시아 대기업
+    "SK HYNIX": "000660.KS",
+    "SKHY": "000660.KS",
+    "SKHYV": "HXSCL",            # SK Hynix OTC ADR 실 심볼
+    "SKHYY": "HXSCL",
+    "SMHSF": "010140.KS",        # Samsung Heavy Industries
+    "SKC": "011790.KS",          # SKC 소재
+    # 상해 STAR (688xxx) · 자동 규칙(6자리→.KS)이 잘못 잡음 · 명시 override
+    "688017": "688017.SS",
+    # Compound semi / photonics / memory · US·유럽·아시아 대기업
     "AIXA": "AIXA.DE",           # AIXTRON · Germany
-    "AJINY": "AJINY",            # Ajinomoto ADR
+    "AJINY": "AJINY",            # Ajinomoto ADR (OTC · yfinance 커버 확인)
     "ALCHIP": "3661.TW",         # Alchip TW
     "ALAB": "ALAB",              # Astera Labs US
     "AUO": "2409.TW",            # AU Optronics TW
-    "ASE": "3711.TW",            # ASE Group TW (adr 별도)
+    "ASE": "3711.TW",            # ASE Group TW
     "ASEH": "ASX",               # ASE Holdings ADR
     "ASMC": "ASML",              # ASML NL · alias
     "ASML": "ASML",
@@ -40,9 +47,22 @@ _YFINANCE_SYMBOL: dict[str, str] = {
     "FURUKAWA": "5801.T",        # Furukawa Electric JP
     "HARMONICDRIVE": "6324.T",   # Harmonic Drive JP
     "IQE": "IQE.L",              # IQE LSE
-    "SOI": "SOI",                # Soitec Euronext (US ADR)
+    "LPKF": "LPKF.DE",           # LPKF Laser · Xetra
+    "MACRONIX": "2337.TW",       # Macronix
+    "MTK": "2454.TW",            # MediaTek
+    "NIDGY": "NJDCY",            # Nidec ADR 실 심볼
+    "RESONAC": "4004.T",         # Resonac JP
+    "RIBER": "ALRIB.PA",         # Riber SA · Paris
+    "SHUNSIN": "6451.TW",        # Shunsin Technology TW
+    "SILEX": "SLX.AX",           # Silex Systems · Sydney
+    "SOI": "SOI",                # Soitec ADR
     "SOITEC": "SOIT.PA",         # Soitec Paris
     "TSEM": "TSEM",              # Tower Semi (Israel)
+    "TOSOH": "4042.T",           # Tosoh Corp JP
+    "TOWA": "6315.T",            # Towa Corp JP
+    "ULVAC": "6728.T",           # Ulvac JP
+    "WIN": "3105.TW",            # WIN Semiconductors TW
+    "WINBOND": "2344.TW",        # Winbond Electronics TW
     "XFAB": "XFAB.PA",           # X-Fab
     "COHR": "COHR",
     "POET": "POET",
@@ -87,24 +107,38 @@ _YFINANCE_SYMBOL: dict[str, str] = {
 # ─── Private / 브랜드명 / 미상장 · yfinance 호출 스킵 ────────────
 _PRIVATE_OR_BRAND: frozenset[str] = frozenset({
     # Robotics · humanoid (거의 대부분 사설)
-    "AGILITY", "APPTRONIK", "FIGURE", "BOSTONDYNAMICS",
+    "AGILITY", "APPTRONIK", "FIGURE", "BOSTONDYNAMICS", "UNITREE", "LEADERDRIVE",
+    "XBOT",
     # Optical/CPO · China private
     "INNOLIGHT", "AYAR",
+    # AI · foundation model 사설
+    "OPENAI",
     # Memory · IPO 예정
     "KIOXIA", "CXMT",
     # 부품·소재 사설
     "ADVAN", "ALRIB", "AURO", "AUROS", "CMXT", "CNEX", "CRBS",
     "ENNR", "ENPL", "ENPLAS", "FOCI", "FON", "GNC", "HARPO",
     "HAYL", "HB", "HPELF",
-    # 일반 카테고리·약어 (실 티커 아님)
-    "CPO", "FIT",
+    "MSSCORP", "MSSCORPS", "NEXTRONICS",
+    "OE SOLUTIONS", "SAMYANG NC CHEM", "YC CHEM",
+    "RASA", "RIBER".upper() if False else "RIBER_SKIP_PLACEHOLDER",   # RIBER 는 매핑됨 · placeholder 제거
+    # 일반 카테고리·약어·지수 (실 티커 아님)
+    "CPO", "FIT", "KOSPI", "MEMORY", "PHOTONICS", "SPACE",
+    # Unknown / 오타 / duplicate (매핑 불가)
+    "UNKNOWN", "P4O", "PLY", "PROJ", "SHA0", "SHUN", "SSDI",
+    "TYNT", "VNP", "WIM", "WINS", "WSEM", "WSTM", "XINT",
+    "LPK", "LPKK", "MACOM", "TPEX:3625",
+    # 상장폐지
+    "SIVB",   # Silicon Valley Bank 파산 2023
     # 명확 미상장·회사명 축약 (Serenity 원문 그대로)
     "KCC", "KLA",   # KCC 는 국내 상장 (002380.KS) · KLA 는 KLAC · 필요 시 명시 매핑 승격
-    # class share (특수 · A/B share)
+    # class share (특수 · A/B share · yfinance 미지원)
     "HPS.A", "HSP.A",
     # 800V · 규격 이름 · 티커 아님
     "800V",
 })
+# placeholder 자체는 skip 리스트에서 노출되지 않아야 · rebuild
+_PRIVATE_OR_BRAND = frozenset(x for x in _PRIVATE_OR_BRAND if x != "RIBER_SKIP_PLACEHOLDER")
 
 
 def _auto_suffix(ticker: str) -> str | None:
