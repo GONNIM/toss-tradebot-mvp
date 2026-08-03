@@ -85,18 +85,18 @@ export function TickerTable({ items }: { items: TickerCardItem[] }) {
       : items;
 
     const dir = sortDir === "desc" ? -1 : 1;
-    const val = (t: TickerCardItem): number | string => {
+    const val = (t: TickerCardItem): number | string | null => {
       switch (sortKey) {
         case "ticker":
           return t.ticker;
         case "last_signal_at":
-          return t.last_signal_at ? new Date(t.last_signal_at).getTime() : 0;
+          return t.last_signal_at ? new Date(t.last_signal_at).getTime() : null;
         case "first_mention_at":
-          return t.first_mention_at ? new Date(t.first_mention_at).getTime() : 0;
+          return t.first_mention_at ? new Date(t.first_mention_at).getTime() : null;
         case "vs_prior_close_pct":
-          return t.vs_prior_close_pct ?? -Infinity * dir;
+          return t.vs_prior_close_pct ?? null;
         case "gain_since_first_mention_pct":
-          return t.gain_since_first_mention_pct ?? -Infinity * dir;
+          return t.gain_since_first_mention_pct ?? null;
         case "mentions_today":
         case "mentions_7d":
         case "mentions_28d":
@@ -106,9 +106,17 @@ export function TickerTable({ items }: { items: TickerCardItem[] }) {
           return (t as unknown as Record<string, number>)[sortKey] ?? 0;
       }
     };
+    // null · undefined · NaN · Infinity 는 방향과 무관하게 항상 뒤로 (데이터 없음 UX)
+    const isMissing = (v: number | string | null) =>
+      v === null || v === undefined || (typeof v === "number" && !Number.isFinite(v));
     return [...filtered].sort((a, b) => {
       const va = val(a);
       const vb = val(b);
+      const am = isMissing(va);
+      const bm = isMissing(vb);
+      if (am && bm) return 0;
+      if (am) return 1;
+      if (bm) return -1;
       if (typeof va === "string" && typeof vb === "string") {
         return va.localeCompare(vb) * dir;
       }
@@ -208,7 +216,12 @@ export function TickerTable({ items }: { items: TickerCardItem[] }) {
                 className="cursor-pointer select-none px-2 py-2.5 text-xs font-semibold text-muted-foreground hover:text-foreground text-right"
                 title="맨 앞 큰 숫자 = 상단 컨트롤에서 선택한 기간의 총 카운트 · 괄호 = 나머지 기간"
               >
-                Mentions {mentionsActive && <span className="text-[9px]">{sortDir === "desc" ? "▼" : "▲"}</span>}
+                Mentions{" "}
+                <span
+                  className={`text-[9px] ${mentionsActive ? "text-primary" : "text-muted-foreground/50"}`}
+                >
+                  {mentionsActive ? (sortDir === "desc" ? "▼" : "▲") : "⇅"}
+                </span>
                 <div className="text-[9px] font-normal opacity-70">{mentionsPeriod} (나머지 기간)</div>
               </th>
               <th className="px-2 py-2.5 text-right text-xs font-semibold text-emerald-500">Bull</th>
