@@ -154,6 +154,22 @@ async def aggregate_ticker_full(ticker: str) -> dict:
     }
 
 
+async def first_mention_map(tickers: list[str]) -> dict[str, datetime]:
+    """티커별 최초 언급 시각 (SerenityTweet.posted_at 최소) · 배치용."""
+    from backend.services.models import SerenityTweet
+
+    if not tickers:
+        return {}
+    async with get_session() as session:
+        rows = (await session.execute(
+            select(SerenitySignal.ticker, func.min(SerenityTweet.posted_at))
+            .join(SerenityTweet, SerenityTweet.tweet_id == SerenitySignal.tweet_id)
+            .where(SerenitySignal.ticker.in_(tickers))
+            .group_by(SerenitySignal.ticker)
+        )).all()
+    return {t: at for t, at in rows if at is not None}
+
+
 async def active_tickers(*, days: int = 90) -> list[str]:
     """최근 N일 signal 이 하나라도 있는 티커 목록."""
     cutoff = datetime.utcnow() - timedelta(days=days)

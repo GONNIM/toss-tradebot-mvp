@@ -14,6 +14,7 @@ type SortKey =
   | "last_signal_at"
   | "bullish_pct_90d"
   | "vs_prior_close_pct"
+  | "gain_since_first_mention_pct"
   | "ticker";
 
 type SortDir = "desc" | "asc";
@@ -60,6 +61,8 @@ export function TickerTable({ items }: { items: TickerCardItem[] }) {
           return t.last_signal_at ? new Date(t.last_signal_at).getTime() : 0;
         case "vs_prior_close_pct":
           return t.vs_prior_close_pct ?? -Infinity * dir;
+        case "gain_since_first_mention_pct":
+          return t.gain_since_first_mention_pct ?? -Infinity * dir;
         default:
           return (t as unknown as Record<string, number>)[sortKey] ?? 0;
       }
@@ -129,6 +132,7 @@ export function TickerTable({ items }: { items: TickerCardItem[] }) {
               <th className="px-2 py-1.5 text-right text-xs font-semibold text-slate-400">Neu</th>
               <SortHead k="bullish_pct_90d" label="Bull%" align="right" />
               <SortHead k="vs_prior_close_pct" label="vs Prior" align="right" />
+              <SortHead k="gain_since_first_mention_pct" label="Gain" align="right" />
               <th className="px-2 py-1.5 text-center text-xs font-semibold text-muted-foreground">Stance</th>
             </tr>
           </thead>
@@ -167,6 +171,12 @@ export function TickerTable({ items }: { items: TickerCardItem[] }) {
                   <td className="px-2 py-1.5 text-right font-mono">{t.bullish_pct_90d.toFixed(0)}%</td>
                   <td className={`px-2 py-1.5 text-right font-mono ${_priorCls(t.vs_prior_close_pct)}`}>
                     {_fmtPct(t.vs_prior_close_pct, 2)}
+                  </td>
+                  <td
+                    className={`px-2 py-1.5 text-right font-mono font-bold ${_priorCls(t.gain_since_first_mention_pct)}`}
+                    title="Gain since first mention"
+                  >
+                    {_fmtPct(t.gain_since_first_mention_pct, 1)}
                   </td>
                   <td className={`px-2 py-1.5 text-center font-bold ${stance.cls}`} title={t.overall_stance}>
                     {stance.icon}

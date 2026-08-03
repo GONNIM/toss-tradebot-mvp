@@ -107,8 +107,10 @@ class TickerCardItem(BaseModel):
     last_signal_at: Optional[datetime]
     latest_reasoning: Optional[str] = None
 
-    # Phase 2 · vs prior close (yfinance 배치 · 아직 채워지지 않음)
+    # Phase 2 · vs prior close (yfinance 배치)
     vs_prior_close_pct: Optional[float] = None
+    # Phase L10 · gain since first mention
+    gain_since_first_mention_pct: Optional[float] = None
 
 
 class TickerDetailResponse(BaseModel):
@@ -138,16 +140,23 @@ def _parse_csv(raw: Optional[str]) -> list[str]:
     return [x.strip() for x in raw.split(",") if x.strip()]
 
 
-async def _load_price_map(tickers: list[str]) -> dict[str, float]:
-    """티커 → vs_prior_close_pct 매핑 (SerenityTickerPrice 배치 결과)."""
+async def _load_price_map(tickers: list[str]) -> dict[str, dict]:
+    """티커 → {vs_prior_close_pct, gain_since_first_mention_pct} 매핑 (SerenityTickerPrice 배치 결과)."""
     if not tickers:
         return {}
     async with get_session() as session:
         rows = (await session.execute(
-            select(SerenityTickerPrice.ticker, SerenityTickerPrice.vs_prior_close_pct)
+            select(
+                SerenityTickerPrice.ticker,
+                SerenityTickerPrice.vs_prior_close_pct,
+                SerenityTickerPrice.gain_since_first_mention_pct,
+            )
             .where(SerenityTickerPrice.ticker.in_(tickers))
         )).all()
-    return {r[0]: r[1] for r in rows if r[1] is not None}
+    return {
+        r[0]: {"vs_prior_close_pct": r[1], "gain_since_first_mention_pct": r[2]}
+        for r in rows
+    }
 
 
 async def _score_to_card(
@@ -155,6 +164,7 @@ async def _score_to_card(
     *,
     latest_reasoning: Optional[str] = None,
     vs_prior_close_pct: Optional[float] = None,
+    gain_since_first_mention_pct: Optional[float] = None,
 ) -> TickerCardItem:
     agg = await aggregate_ticker_full(score.ticker)
     return TickerCardItem(
@@ -178,6 +188,7 @@ async def _score_to_card(
         last_signal_at=agg["last_signal_at"],
         latest_reasoning=latest_reasoning,
         vs_prior_close_pct=vs_prior_close_pct,
+        gain_since_first_mention_pct=gain_since_first_mention_pct,
     )
 
 
@@ -264,9 +275,15 @@ async def list_tickers(
     items: list[TickerCardItem] = []
     for tk in all_tickers:
         seed = seed_by_ticker.get(tk)
-        vs_prior = price_map.get(tk)
+        price = price_map.get(tk) or {}
+        vs_prior = price.get("vs_prior_close_pct")
+        gain = price.get("gain_since_first_mention_pct")
         if seed is not None:
-            card = await _score_to_card(seed, vs_prior_close_pct=vs_prior)
+            card = await _score_to_card(
+                seed,
+                vs_prior_close_pct=vs_prior,
+                gain_since_first_mention_pct=gain,
+            )
             # 90일 언급 없는 seed 티커 제외 (사용자 지시 · UI 노이즈)
             if card.mention_count_90d == 0:
                 continue
@@ -299,6 +316,7 @@ async def list_tickers(
                 last_signal_at=agg["last_signal_at"],
                 latest_reasoning=None,
                 vs_prior_close_pct=vs_prior,
+                gain_since_first_mention_pct=gain,
             ))
 
     # 3) 정렬 (이미지 UX · By Mentions Today · 그 다음 rolling window)
@@ -383,10 +401,17 @@ async def get_ticker_detail(ticker: str, recent_limit: int = Query(10, ge=1, le=
 
     # 가격 스냅샷 병합
     price_map = await _load_price_map([ticker])
-    vs_prior = price_map.get(ticker)
+    price = price_map.get(ticker) or {}
+    vs_prior = price.get("vs_prior_close_pct")
+    gain = price.get("gain_since_first_mention_pct")
 
     if score is not None:
-        card = await _score_to_card(score, latest_reasoning=latest_reasoning, vs_prior_close_pct=vs_prior)
+        card = await _score_to_card(
+            score,
+            latest_reasoning=latest_reasoning,
+            vs_prior_close_pct=vs_prior,
+            gain_since_first_mention_pct=gain,
+        )
     else:
         # unscored · seed 없이 aggregate + price 만으로 카드 구성
         agg = await aggregate_ticker_full(ticker)
@@ -411,6 +436,7 @@ async def get_ticker_detail(ticker: str, recent_limit: int = Query(10, ge=1, le=
             last_signal_at=agg["last_signal_at"],
             latest_reasoning=latest_reasoning,
             vs_prior_close_pct=vs_prior,
+            gain_since_first_mention_pct=gain,
         )
 
     return TickerDetailResponse(

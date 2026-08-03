@@ -58,6 +58,8 @@ export type TickerCardItem = {
 
   // Phase 2 · yfinance vs prior close
   vs_prior_close_pct: number | null;
+  // Phase L10 · gain since first mention
+  gain_since_first_mention_pct: number | null;
 };
 
 export type SerenitySummary = {

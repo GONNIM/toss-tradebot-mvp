@@ -1576,6 +1576,10 @@ class SerenityTickerPrice(Base):
     close: Mapped[Optional[float]]
     prior_close: Mapped[Optional[float]]
     vs_prior_close_pct: Mapped[Optional[float]]
+    # Phase L10 · Gain since first mention (yfinance 배치 시 first_mention_at 시점 종가 함께 upsert)
+    first_mention_date: Mapped[Optional[str]] = mapped_column(String(10))  # 사용한 first_mention YYYY-MM-DD (재조회 트리거)
+    first_mention_price: Mapped[Optional[float]]  # 최초 언급일 종가
+    gain_since_first_mention_pct: Mapped[Optional[float]]  # (close - first_mention_price)/first_mention_price*100
     yahoo_symbol: Mapped[Optional[str]] = mapped_column(String(20))
     error: Mapped[Optional[str]] = mapped_column(String(200))  # yfinance 실패 사유
     fetched_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())

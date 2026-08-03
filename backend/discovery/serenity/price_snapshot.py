@@ -22,7 +22,7 @@ from typing import Optional
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 
-from backend.discovery.serenity.aggregators import active_tickers
+from backend.discovery.serenity.aggregators import active_tickers, first_mention_map
 from backend.services.db import get_session
 from backend.services.models import DiscoverySerenityScore, SerenityTickerPrice
 from backend.services.ticker_map import is_private_or_brand, to_yfinance_symbol
@@ -31,34 +31,88 @@ logger = logging.getLogger(__name__)
 
 CONCURRENCY = 4
 _HISTORY_DAYS = 7
+_MAX_LOOKBACK_DAYS = 400  # first_mention_at 최대 커버 범위 (yfinance range 상한 방어)
 
 
-def _fetch_close_pair(yahoo_symbol: str, *, ticker_client=None) -> tuple[Optional[float], Optional[float], Optional[str]]:
-    """(close · prior_close · snapshot_date) 반환 · 실패 시 (None,None,None)."""
+def _fetch_price_bundle(
+    yahoo_symbol: str,
+    *,
+    first_mention_date: Optional[str] = None,
+    ticker_client=None,
+) -> dict:
+    """close · prior_close · first_mention_price 한 번의 yfinance 호출로 취득.
+
+    반환:
+      {close, prior, snapshot_date, first_mention_price, first_mention_used_date, error}
+      실패 시 close/prior=None · error 채움.
+    """
+    result: dict = {
+        "close": None,
+        "prior": None,
+        "snapshot_date": None,
+        "first_mention_price": None,
+        "first_mention_used_date": None,
+        "error": None,
+    }
+
+    # start 결정 · first_mention_date 있으면 그 이전 1 거래일 · 최대 400 일
+    today = datetime.utcnow().date()
+    if first_mention_date:
+        try:
+            fm_dt = datetime.strptime(first_mention_date, "%Y-%m-%d").date()
+            start_dt = fm_dt - timedelta(days=3)
+        except ValueError:
+            fm_dt = None
+            start_dt = today - timedelta(days=_HISTORY_DAYS)
+    else:
+        fm_dt = None
+        start_dt = today - timedelta(days=_HISTORY_DAYS)
+
+    # 상한 방어 · 400 일 초과 시 잘라냄
+    earliest = today - timedelta(days=_MAX_LOOKBACK_DAYS)
+    if start_dt < earliest:
+        start_dt = earliest
+
     try:
         if ticker_client is None:
             import yfinance as yf
             stock = yf.Ticker(yahoo_symbol)
         else:
             stock = ticker_client(yahoo_symbol)
-        today = datetime.utcnow().date()
         hist = stock.history(
-            start=(today - timedelta(days=_HISTORY_DAYS)).isoformat(),
+            start=start_dt.isoformat(),
             end=(today + timedelta(days=1)).isoformat(),
         )
     except Exception as exc:  # noqa: BLE001
         logger.warning("[serenity_price] yfinance 실패 · %s · %s", yahoo_symbol, exc)
-        return (None, None, str(exc)[:180])
+        result["error"] = str(exc)[:180]
+        return result
 
     if hist is None or getattr(hist, "empty", True) or len(hist) < 2:
-        return (None, None, "history 부족")
+        result["error"] = "history 부족"
+        return result
+
     try:
-        close = float(hist.iloc[-1]["Close"])
-        prior = float(hist.iloc[-2]["Close"])
-        snapshot_date = hist.index[-1].date().isoformat()
+        result["close"] = float(hist.iloc[-1]["Close"])
+        result["prior"] = float(hist.iloc[-2]["Close"])
+        result["snapshot_date"] = hist.index[-1].date().isoformat()
     except (KeyError, IndexError, ValueError) as exc:
-        return (None, None, f"parse: {exc}")
-    return (close, prior, snapshot_date)
+        result["error"] = f"parse: {exc}"
+        return result
+
+    # first_mention_price · fm_dt 이상 첫 거래일 종가
+    if fm_dt is not None:
+        try:
+            idx_dates = [ts.date() for ts in hist.index]
+            for i, d in enumerate(idx_dates):
+                if d >= fm_dt:
+                    result["first_mention_price"] = float(hist.iloc[i]["Close"])
+                    result["first_mention_used_date"] = d.isoformat()
+                    break
+        except (KeyError, IndexError, ValueError, AttributeError) as exc:
+            logger.warning("[serenity_price] first_mention parse 실패 · %s · %s", yahoo_symbol, exc)
+
+    return result
 
 
 async def _load_all_tickers(days: int = 180) -> list[str]:
@@ -70,10 +124,22 @@ async def _load_all_tickers(days: int = 180) -> list[str]:
     return sorted(seed_set | signal_set)
 
 
-async def _upsert_price(ticker: str, yahoo_symbol: str, close, prior, snapshot_date, error: Optional[str]) -> None:
+async def _upsert_price(
+    ticker: str,
+    yahoo_symbol: str,
+    close,
+    prior,
+    snapshot_date,
+    first_mention_price,
+    first_mention_used_date,
+    error: Optional[str],
+) -> None:
     pct = None
     if close is not None and prior is not None and prior > 0:
         pct = round((close - prior) / prior * 100, 2)
+    gain_pct = None
+    if close is not None and first_mention_price is not None and first_mention_price > 0:
+        gain_pct = round((close - first_mention_price) / first_mention_price * 100, 2)
     async with get_session() as session:
         existing = (await session.execute(
             select(SerenityTickerPrice).where(SerenityTickerPrice.ticker == ticker)
@@ -83,6 +149,9 @@ async def _upsert_price(ticker: str, yahoo_symbol: str, close, prior, snapshot_d
             existing.close = close
             existing.prior_close = prior
             existing.vs_prior_close_pct = pct
+            existing.first_mention_date = first_mention_used_date or existing.first_mention_date
+            existing.first_mention_price = first_mention_price or existing.first_mention_price
+            existing.gain_since_first_mention_pct = gain_pct if gain_pct is not None else existing.gain_since_first_mention_pct
             existing.yahoo_symbol = yahoo_symbol
             existing.error = error
             existing.fetched_at = datetime.utcnow()
@@ -94,6 +163,9 @@ async def _upsert_price(ticker: str, yahoo_symbol: str, close, prior, snapshot_d
             close=close,
             prior_close=prior,
             vs_prior_close_pct=pct,
+            first_mention_date=first_mention_used_date,
+            first_mention_price=first_mention_price,
+            gain_since_first_mention_pct=gain_pct,
             yahoo_symbol=yahoo_symbol,
             error=error,
         )
@@ -120,6 +192,9 @@ async def refresh_prices(
     if not tickers:
         return {"targets": 0, "ok": 0, "failed": 0}
 
+    # first_mention_at 배치 조회 (Gain 계산용 · Phase L10)
+    fm_map = await first_mention_map(tickers)
+
     sem = asyncio.Semaphore(CONCURRENCY)
     stats = {"targets": len(tickers), "ok": 0, "failed": 0, "skipped": 0}
 
@@ -127,24 +202,33 @@ async def refresh_prices(
         async with sem:
             # Private / 브랜드명 · yfinance 호출 스킵 (rate limit 소모 방지)
             if is_private_or_brand(tk):
-                await _upsert_price(tk, tk, None, None, None, "private/브랜드")
+                await _upsert_price(tk, tk, None, None, None, None, None, "private/브랜드")
                 stats["skipped"] = stats.get("skipped", 0) + 1
                 return
 
             symbol = to_yfinance_symbol(tk)
-            close, prior, snap_or_err = await asyncio.to_thread(
-                _fetch_close_pair, symbol, ticker_client=ticker_client
+            fm_dt = fm_map.get(tk)
+            fm_date_str = fm_dt.strftime("%Y-%m-%d") if fm_dt else None
+            bundle = await asyncio.to_thread(
+                _fetch_price_bundle,
+                symbol,
+                first_mention_date=fm_date_str,
+                ticker_client=ticker_client,
             )
-            # _fetch_close_pair 는 성공 시 3번째가 snapshot_date · 실패 시 error 문자열
-            if close is None:
-                error = snap_or_err
-                snapshot_date = None
+            if bundle["close"] is None:
                 stats["failed"] += 1
             else:
-                error = None
-                snapshot_date = snap_or_err
                 stats["ok"] += 1
-            await _upsert_price(tk, symbol, close, prior, snapshot_date, error)
+            await _upsert_price(
+                tk,
+                symbol,
+                bundle["close"],
+                bundle["prior"],
+                bundle["snapshot_date"],
+                bundle["first_mention_price"],
+                bundle["first_mention_used_date"],
+                bundle["error"],
+            )
 
     await asyncio.gather(*[_one(t) for t in tickers])
     return stats
