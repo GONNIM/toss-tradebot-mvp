@@ -271,6 +271,10 @@ async def list_tickers(
         else:
             # unscored · seed 없이 aggregate_ticker_full 로 카드 구성 (동일 UX)
             agg = await aggregate_ticker_full(tk)
+            # active_tickers 는 extracted_at 기준 · aggregate 는 posted_at 기준 · window 불일치.
+            # 트윗 posted_at 기준 90d 언급 0 이면 제외 (사용자 원칙 · Serenity 실 발화 없음).
+            if agg["mentions_90d"] == 0:
+                continue
             items.append(TickerCardItem(
                 ticker=tk,
                 financing_tier=None,

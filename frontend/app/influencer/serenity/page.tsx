@@ -10,6 +10,7 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { serenityApi } from "@/lib/serenity/api";
+import { fmtKstDateTimeSec } from "@/lib/time";
 import type {
   SerenitySummary,
   SignalFeedItem,
@@ -149,12 +150,8 @@ export default function SerenityLanding() {
             hint={`${summary.tickers_auto_avoid} auto_avoid`}
           />
           <SummaryStat
-            label="최근 signal"
-            value={
-              summary.last_signal_at
-                ? new Date(summary.last_signal_at).toLocaleDateString("ko-KR")
-                : "—"
-            }
+            label="최근 signal (KST)"
+            value={fmtKstDateTimeSec(summary.last_signal_at)}
           />
         </section>
       )}
