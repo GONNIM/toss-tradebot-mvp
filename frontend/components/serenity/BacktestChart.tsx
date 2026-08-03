@@ -52,8 +52,11 @@ export function BacktestChart({ data, title, height = 220 }: Props) {
         <div className="rounded border border-dashed border-border p-6 text-center text-xs text-muted-foreground">
           이 티커에 대한 백테스트 결과가 아직 없습니다.
           <br />
-          각 신호(트윗) 시점 이후 5·10·30·60·180일 후 주가 변화율을 계산하며,
-          매주 월요일 00:00 KST 자동 갱신됩니다.
+          각 신호의 <strong>추출일 종가</strong> 대비 5·10·30·60·180 거래일 후
+          종가 변화율을 계산합니다.
+          <br />
+          매주 월요일 00:00 KST 배치가 미처리 신호를 200건씩 순차 처리하며,
+          이 티커 차례가 오면 채워집니다.
         </div>
       ) : (
         <ResponsiveContainer width="100%" height={height}>
