@@ -57,7 +57,10 @@ async def aggregate_signals(ticker: str, *, days: int = 90) -> dict:
 
 
 async def aggregate_ticker_full(ticker: str) -> dict:
-    """이미지 카드 UX 전용 · rolling window + first_mention + stance today.
+    """이미지 카드 UX 전용 · rolling window (트윗 posted_at 기준) + first_mention + stance today.
+
+    시각 기준: SerenityTweet.posted_at (트윗 실 발행일) · extracted_at (배치 처리 시각) 아님.
+    Rate limit·재처리로 배치 시각이 뒤로 밀려도 시계열 UX 안정.
 
     반환:
       mentions_today · mentions_7d · mentions_28d · mentions_90d
@@ -67,6 +70,8 @@ async def aggregate_ticker_full(ticker: str) -> dict:
       overall_bullish_pct: 90일 bullish %
       thesis_types (90일)
     """
+    from backend.services.models import SerenityTweet
+
     now = datetime.utcnow()
     d1 = now - timedelta(days=1)
     d7 = now - timedelta(days=7)
@@ -74,25 +79,30 @@ async def aggregate_ticker_full(ticker: str) -> dict:
     d90 = now - timedelta(days=90)
 
     async with get_session() as session:
-        # 90d 창 안 데이터 · 파이썬에서 window filter (호출 1회 · 티커 대량 시 유리)
-        rows = list((await session.execute(
-            select(SerenitySignal).where(
+        # signal + tweet.posted_at join · posted_at 기준 window
+        stmt = (
+            select(SerenitySignal.sentiment, SerenityTweet.posted_at, SerenitySignal.thesis_type)
+            .join(SerenityTweet, SerenityTweet.tweet_id == SerenitySignal.tweet_id)
+            .where(
                 SerenitySignal.ticker == ticker,
-                SerenitySignal.extracted_at >= d90,
+                SerenityTweet.posted_at >= d90,
             )
-        )).scalars().all())
-        # first_mention 은 전체 히스토리 · 별도 min 쿼리
+        )
+        rows = list((await session.execute(stmt)).all())
+        # first_mention 은 전체 히스토리 · tweet posted_at 최소
         first_at = (await session.execute(
-            select(func.min(SerenitySignal.extracted_at))
+            select(func.min(SerenityTweet.posted_at))
+            .join(SerenitySignal, SerenitySignal.tweet_id == SerenityTweet.tweet_id)
             .where(SerenitySignal.ticker == ticker)
         )).scalar_one_or_none()
 
+    # rows · (sentiment, posted_at, thesis_type) 튜플
     def _count(subset, sentiment):
-        return sum(1 for r in subset if r.sentiment == sentiment)
+        return sum(1 for r in subset if r[0] == sentiment)
 
-    today_rows = [r for r in rows if r.extracted_at >= d1]
-    d7_rows = [r for r in rows if r.extracted_at >= d7]
-    d28_rows = [r for r in rows if r.extracted_at >= d28]
+    today_rows = [r for r in rows if r[1] >= d1]
+    d7_rows = [r for r in rows if r[1] >= d7]
+    d28_rows = [r for r in rows if r[1] >= d28]
 
     stance_today = {
         "bull": _count(today_rows, "bullish"),
@@ -117,8 +127,8 @@ async def aggregate_ticker_full(ticker: str) -> dict:
     else:
         overall = "neutral"
 
-    last_at = max((r.extracted_at for r in rows), default=None)
-    thesis_types = sorted({r.thesis_type for r in rows if r.thesis_type})
+    last_at = max((r[1] for r in rows), default=None)  # posted_at 기준
+    thesis_types = sorted({r[2] for r in rows if r[2]})
 
     return {
         "ticker": ticker,
