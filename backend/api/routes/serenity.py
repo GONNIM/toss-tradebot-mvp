@@ -24,7 +24,11 @@ from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel, ConfigDict
 from sqlalchemy import desc, func, select
 
-from backend.discovery.serenity.aggregators import active_tickers, aggregate_signals
+from backend.discovery.serenity.aggregators import (
+    active_tickers,
+    aggregate_signals,
+    aggregate_ticker_full,
+)
 from backend.services.db import get_session
 from backend.services.models import (
     DiscoverySerenityScore,
@@ -58,8 +62,20 @@ class SignalFeedItem(BaseModel):
     tweet_posted_at: Optional[datetime] = None
 
 
+class StanceBreakdown(BaseModel):
+    bull: int = 0
+    bear: int = 0
+    neu: int = 0
+    cal: int = 0
+
+
 class TickerCardItem(BaseModel):
-    """Ticker Grid 항목 · score + aggregate 합쳐 카드용 요약."""
+    """Ticker Grid 항목 · 이미지 UX 형식 (mentions rolling window + stance today).
+
+    - seed 있으면 tier/score/anti_pattern/domain 필드 채움 · 없으면 None/[].
+    - overall_stance: bullish | bearish | mixed | neutral (90일 다수결).
+    - vs_prior_close: yfinance 배치 저장 컬럼 (Phase 2 · 현재는 None).
+    """
 
     ticker: str
     financing_tier: Optional[str]
@@ -68,10 +84,28 @@ class TickerCardItem(BaseModel):
     auto_avoid: bool
     domain_tags: list[str]
     anti_pattern_flags: list[str]
+
+    # Rolling window mentions (이미지 · today · 7d · 28d)
+    mentions_today: int
+    mentions_7d: int
+    mentions_28d: int
     mention_count_90d: int
     bullish_pct_90d: float
+
+    # Stance breakdown (오늘)
+    stance_today: StanceBreakdown
+
+    # Overall stance · UI 상단 배지 (▲/▼/• )
+    overall_stance: str            # bullish | bearish | mixed | neutral
+    thesis_types: list[str] = []   # 90일 관측된 thesis_type 집합
+
+    # Meta
+    first_mention_at: Optional[datetime]
     last_signal_at: Optional[datetime]
     latest_reasoning: Optional[str] = None
+
+    # Phase 2 · vs prior close (yfinance 배치 · 아직 채워지지 않음)
+    vs_prior_close_pct: Optional[float] = None
 
 
 class TickerDetailResponse(BaseModel):
@@ -106,7 +140,7 @@ async def _score_to_card(
     *,
     latest_reasoning: Optional[str] = None,
 ) -> TickerCardItem:
-    agg = await aggregate_signals(score.ticker, days=90)
+    agg = await aggregate_ticker_full(score.ticker)
     return TickerCardItem(
         ticker=score.ticker,
         financing_tier=score.financing_tier,
@@ -115,8 +149,15 @@ async def _score_to_card(
         auto_avoid=score.auto_avoid,
         domain_tags=_parse_csv(score.domain_tags),
         anti_pattern_flags=_parse_csv(score.anti_pattern_flags),
-        mention_count_90d=agg["mention_count"],
-        bullish_pct_90d=agg["bullish_pct"],
+        mentions_today=agg["mentions_today"],
+        mentions_7d=agg["mentions_7d"],
+        mentions_28d=agg["mentions_28d"],
+        mention_count_90d=agg["mentions_90d"],
+        bullish_pct_90d=agg["overall_bullish_pct"],
+        stance_today=StanceBreakdown(**agg["stance_today"]),
+        overall_stance=agg["overall_stance"],
+        thesis_types=agg["thesis_types"],
+        first_mention_at=agg["first_mention_at"],
         last_signal_at=agg["last_signal_at"],
         latest_reasoning=latest_reasoning,
     )
@@ -205,8 +246,8 @@ async def list_tickers(
         if seed is not None:
             items.append(await _score_to_card(seed))
         else:
-            # unscored · seed 없이 aggregate 만으로 카드 구성
-            agg = await aggregate_signals(tk, days=days)
+            # unscored · seed 없이 aggregate_ticker_full 로 카드 구성 (동일 UX)
+            agg = await aggregate_ticker_full(tk)
             items.append(TickerCardItem(
                 ticker=tk,
                 financing_tier=None,
@@ -215,16 +256,31 @@ async def list_tickers(
                 auto_avoid=False,
                 domain_tags=[],
                 anti_pattern_flags=[],
-                mention_count_90d=agg["mention_count"],
-                bullish_pct_90d=agg["bullish_pct"],
+                mentions_today=agg["mentions_today"],
+                mentions_7d=agg["mentions_7d"],
+                mentions_28d=agg["mentions_28d"],
+                mention_count_90d=agg["mentions_90d"],
+                bullish_pct_90d=agg["overall_bullish_pct"],
+                stance_today=StanceBreakdown(**agg["stance_today"]),
+                overall_stance=agg["overall_stance"],
+                thesis_types=agg["thesis_types"],
+                first_mention_at=agg["first_mention_at"],
                 last_signal_at=agg["last_signal_at"],
                 latest_reasoning=None,
             ))
 
-    # 3) 정렬 · seed(score>0) → mention_count → alpha
-    def _key(x: TickerCardItem) -> tuple[int, int, int, str]:
+    # 3) 정렬 (이미지 UX · By Mentions Today · 그 다음 rolling window)
+    #    seed 있고 total_score>0 은 여전히 상단 유지 · 그 안에서 mentions_today desc
+    def _key(x: TickerCardItem) -> tuple[int, int, int, int, int, str]:
         seeded_high = 1 if (x.total_score > 0) else 0
-        return (-seeded_high, -x.total_score, -x.mention_count_90d, x.ticker)
+        return (
+            -seeded_high,
+            -x.total_score,
+            -x.mentions_today,
+            -x.mentions_7d,
+            -x.mention_count_90d,
+            x.ticker,
+        )
 
     items.sort(key=_key)
     return items[:limit]

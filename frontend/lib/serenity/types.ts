@@ -20,6 +20,15 @@ export type SignalFeedItem = {
   tweet_posted_at: string | null;
 };
 
+export type StanceBreakdown = {
+  bull: number;
+  bear: number;
+  neu: number;
+  cal: number;
+};
+
+export type OverallStance = "bullish" | "bearish" | "mixed" | "neutral";
+
 export type TickerCardItem = {
   ticker: string;
   financing_tier: Tier | null;
@@ -28,10 +37,26 @@ export type TickerCardItem = {
   auto_avoid: boolean;
   domain_tags: string[];
   anti_pattern_flags: string[];
+
+  // Rolling window mentions
+  mentions_today: number;
+  mentions_7d: number;
+  mentions_28d: number;
   mention_count_90d: number;
   bullish_pct_90d: number;
+
+  // Stance
+  stance_today: StanceBreakdown;
+  overall_stance: OverallStance;
+  thesis_types: string[];
+
+  // Meta
+  first_mention_at: string | null;
   last_signal_at: string | null;
   latest_reasoning: string | null;
+
+  // Phase 2 · yfinance vs prior close
+  vs_prior_close_pct: number | null;
 };
 
 export type SerenitySummary = {

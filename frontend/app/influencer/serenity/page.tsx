@@ -169,9 +169,10 @@ export default function SerenityLanding() {
       <section>
         <div className="mb-3 flex flex-wrap items-baseline justify-between gap-2">
           <div>
-            <h2 className="text-lg font-semibold">🎯 Serenity 언급 종목</h2>
+            <h2 className="text-lg font-semibold">🎯 최적 투자 종목 후보 (Serenity 논지)</h2>
             <p className="text-xs text-muted-foreground">
-              seed 있는 티커는 15원칙 tier 분류 (S/A/B/C/D/F) · 나머지는 언급 횟수 순 (미분류)
+              오늘 언급 순 (rolling 7d/28d/90d) · stance today · overall bullish/bearish 판정 ·
+              seed 티커는 15원칙 tier (S~F) 우선 노출
             </p>
           </div>
           <label className="flex items-center gap-1 text-xs">
