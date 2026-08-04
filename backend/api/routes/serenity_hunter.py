@@ -16,6 +16,7 @@ from pydantic import BaseModel
 from sqlalchemy import func, select
 
 from backend.discovery.serenity.hunter import (
+    hunter_rows,
     is_deprecation_triggered,
     is_gate_open,
     mid_gate_excess_warning,
@@ -116,6 +117,40 @@ class VerificationResponse(BaseModel):
     hero: VerificationHero
     buckets: list[BucketGroup]
     confidence_predictive_check: ConfidencePredictiveCheck
+
+
+class HunterRow(BaseModel):
+    ticker: str
+    industry: Optional[str] = None
+    sector: Optional[str] = None
+    first_mention_at: Optional[str] = None
+    latest_signal_at: Optional[str] = None
+    mentions_today: int = 0
+    mentions_7d: int = 0
+    mentions_28d: int = 0
+    mentions_90d: int = 0
+    avg_confidence_recent: Optional[float] = None
+    latest_thesis: Optional[str] = None
+    bull_pct_90d: float = 0.0
+    market_cap: Optional[float] = None
+    market_cap_tier: str = "unknown"
+    avg_dollar_volume_20d: Optional[float] = None
+    order_pct_of_adv_1M: Optional[float] = None
+    passes_liquidity: bool = False
+    vs_prior_close_pct: Optional[float] = None
+    gain_since_first_mention_pct: Optional[float] = None
+    stance: str = "neutral"
+    is_new: bool = False
+    is_avoid_new: bool = False
+
+
+class HunterResponse(BaseModel):
+    gate_open: bool
+    deprecation_triggered: bool
+    mid_gate_warning: bool
+    gate_close_reasons: list[str] = []
+    deprecation_recommended: bool = False
+    rows: list[HunterRow] = []
 
 
 # ─── Health ─────────────────────────────────────────────────────────────────
@@ -231,4 +266,46 @@ async def verification() -> VerificationResponse:
         hero=hero,
         buckets=buckets,
         confidence_predictive_check=check,
+    )
+
+
+# ─── Hunter (Step C) ────────────────────────────────────────────────────────
+
+@router.get("/hunter", response_model=HunterResponse)
+async def hunter() -> HunterResponse:
+    """발굴 리스트 · 게이트+폐기 판정 반영 (v6 §2.6).
+
+    Fable 5 3차 (2a): deprecation_triggered=true 시 자동 rows=[] (배너 아님).
+
+    로컬 dev 편의: env `SERENITY_HUNTER_SKIP_HEALTH_GATE=true` 시 health warn 무시.
+    로컬 크론 미실행이라 stale 판정 발동 · UI 검증 불가한 문제 해소.
+    서버 default 미설정 · 자연 정상 작동.
+    """
+    import os
+    skip_health = os.environ.get("SERENITY_HUNTER_SKIP_HEALTH_GATE", "").lower() in {"1", "true", "yes"}
+    # health 상태 반영 (warn=true → 게이트 강제 close · v6 §2.7)
+    reasons, _meta = await _health_reasons()
+    health_warn = (len(reasons) > 0) and (not skip_health)
+
+    # hunter_rows 내부 게이트 판정 · 여기 health_warn 은 별도 재판정 필요
+    if health_warn:
+        # 이 케이스도 gate close · rows=[]
+        result = {
+            "gate_open": False,
+            "deprecation_triggered": False,
+            "mid_gate_warning": False,
+            "gate_close_reasons": ["health_warn"],
+            "deprecation_recommended": False,
+            "rows": [],
+        }
+    else:
+        result = await hunter_rows()
+
+    return HunterResponse(
+        gate_open=result["gate_open"],
+        deprecation_triggered=result["deprecation_triggered"],
+        mid_gate_warning=result["mid_gate_warning"],
+        gate_close_reasons=result.get("gate_close_reasons", []),
+        deprecation_recommended=result.get("deprecation_recommended", False),
+        rows=[HunterRow(**r) for r in result.get("rows", [])],
     )

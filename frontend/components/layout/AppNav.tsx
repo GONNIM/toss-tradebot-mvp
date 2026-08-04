@@ -28,6 +28,7 @@ const NAV_L2_DEFAULT = [
 
 const NAV_L2_INFLUENCER = [
   { href: "/influencer/serenity", label: "🧠 Serenity" },
+  { href: "/influencer/serenity-hunter", label: "🎯 Serenity Hunter" },
 ];
 
 function isActive(pathname: string, href: string): boolean {
