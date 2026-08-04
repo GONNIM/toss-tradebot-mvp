@@ -268,13 +268,11 @@ async def hunter_rows() -> dict:
 
         price = price_map.get(tk) or {}
         recent = by_ticker.get(tk, [])[:5]
-        avg_conf = None
         latest_thesis = None
         if recent:
-            confs = [r[0] for r in recent if r[0] is not None]
-            if confs:
-                avg_conf = round(sum(confs) / len(confs), 2)
             latest_thesis = recent[0][1]
+        # v6 L14+ hotfix: avg_confidence_recent 컬럼 삭제
+        # (predictive_status=fail 확정 · Fable 5 3차 D2 · top-bottom diff 10.99pp < 15pp)
 
         first_at = fm_map.get(tk)
         is_new = first_at is not None and first_at >= d7
@@ -309,7 +307,6 @@ async def hunter_rows() -> dict:
             "mentions_7d": agg["mentions_7d"],
             "mentions_28d": agg["mentions_28d"],
             "mentions_90d": agg["mentions_90d"],
-            "avg_confidence_recent": avg_conf,
             "latest_thesis": latest_thesis,
             "bull_pct_90d": agg["overall_bullish_pct"],
             "market_cap": mc,

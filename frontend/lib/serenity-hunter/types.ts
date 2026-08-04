@@ -93,7 +93,7 @@ export type HunterRow = {
   mentions_7d: number;
   mentions_28d: number;
   mentions_90d: number;
-  avg_confidence_recent: number | null;
+  // avg_confidence_recent 삭제 (v6 L14+ · predictive_status=fail 확정 · 2026-08-04)
   latest_thesis: string | null;
   bull_pct_90d: number;
   market_cap: number | null;

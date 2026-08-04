@@ -129,7 +129,7 @@ class HunterRow(BaseModel):
     mentions_7d: int = 0
     mentions_28d: int = 0
     mentions_90d: int = 0
-    avg_confidence_recent: Optional[float] = None
+    # avg_confidence_recent 삭제 (v6 L14+ · predictive_status=fail 확정)
     latest_thesis: Optional[str] = None
     bull_pct_90d: float = 0.0
     market_cap: Optional[float] = None

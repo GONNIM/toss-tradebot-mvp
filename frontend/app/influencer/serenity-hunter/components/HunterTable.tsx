@@ -17,8 +17,7 @@ type SortKey =
   | "market_cap"
   | "avg_dollar_volume_20d"
   | "vs_prior_close_pct"
-  | "gain_since_first_mention_pct"
-  | "avg_confidence_recent";
+  | "gain_since_first_mention_pct";
 
 type SortDir = "desc" | "asc";
 
@@ -83,8 +82,6 @@ export function HunterTable({ rows }: { rows: HunterRow[] }) {
           return r.vs_prior_close_pct;
         case "gain_since_first_mention_pct":
           return r.gain_since_first_mention_pct;
-        case "avg_confidence_recent":
-          return r.avg_confidence_recent;
       }
     };
     const isMissing = (v: number | string | null) =>
@@ -152,7 +149,6 @@ export function HunterTable({ rows }: { rows: HunterRow[] }) {
               <SortHead k="latest_signal_at" label="Latest" />
               <SortHead k="mentions_today" label="Today" align="right" />
               <SortHead k="mentions_90d" label="90d" align="right" />
-              <SortHead k="avg_confidence_recent" label="Conf." align="right" />
               <th className="px-2 py-2.5 text-left text-xs font-semibold text-muted-foreground">Thesis</th>
               <SortHead k="bull_pct_90d" label="Bull%" align="right" />
               <SortHead k="market_cap" label="Market cap" align="right" />
@@ -200,9 +196,6 @@ export function HunterTable({ rows }: { rows: HunterRow[] }) {
                     {r.mentions_today}
                   </td>
                   <td className="px-2 py-3 text-right font-mono font-bold">{r.mentions_90d}</td>
-                  <td className="px-2 py-3 text-right font-mono">
-                    {r.avg_confidence_recent === null ? "—" : r.avg_confidence_recent.toFixed(2)}
-                  </td>
                   <td className="px-2 py-3 text-[11px] text-muted-foreground">
                     {r.latest_thesis ?? "—"}
                   </td>
