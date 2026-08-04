@@ -28,10 +28,53 @@ def _is_enabled(env_name: str, default: bool) -> bool:
     return raw in {"1", "true", "yes", "on"}
 
 
+# ─── 크론 결과 Telegram 알림 (v6 L14+ · 사용자 감시 요청 · 2026-08-04) ────
+
+_JOB_ICONS: dict[str, str] = {
+    "crawler": "📥",
+    "extractor": "🧠",
+    "scorer": "📊",
+    "backtest": "📈",
+    "price_snapshot": "💰",
+    "benchmark": "🌐",
+}
+
+
+async def _notify_job_result(job: str, result: dict | None = None, error: str | None = None) -> None:
+    """크론 완료 결과 Telegram 발송 · profile 필터 존중.
+
+    result 예: {"pending": 500, "computed": 412, "failed": 88, "delisting": 0}
+    error 시 · WARNING 레벨 발송.
+    """
+    try:
+        from backend.services.notifier import TelegramNotifier
+        notifier = TelegramNotifier()
+        icon = _JOB_ICONS.get(job, "🔧")
+        if error:
+            title = f"{icon} Serenity {job} 실패"
+            body = f"<code>{error}</code>"
+            await notifier.send_warning(title, body)
+        else:
+            title = f"{icon} Serenity {job}"
+            if result:
+                lines = [f"<b>{k}:</b> {v}" for k, v in result.items()]
+                body = "\n".join(lines)
+            else:
+                body = "완료"
+            await notifier.send_info(title, body)
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("[serenity] notifier 실패 · %s · %s", job, exc)
+
+
 async def _job_crawler() -> None:
     from backend.discovery.serenity.crawler import sync_tweets
-    result = await sync_tweets()
-    logger.info("[serenity] cron crawler · %s", result)
+    try:
+        result = await sync_tweets()
+        logger.info("[serenity] cron crawler · %s", result)
+        await _notify_job_result("crawler", result)
+    except Exception as exc:  # noqa: BLE001
+        logger.exception("[serenity] cron crawler 실패")
+        await _notify_job_result("crawler", error=str(exc)[:200])
 
 
 async def _job_extractor() -> None:
@@ -39,34 +82,59 @@ async def _job_extractor() -> None:
         logger.warning("[serenity] cron extractor skip · ZAI_API_KEY 미설정")
         return
     from backend.discovery.serenity.extractor import process_pending_tweets
-    # z.ai glm-4.5-flash rate limit 2. flagship 승격 시 상향 (glm-5.2 concurrency 10).
-    result = await process_pending_tweets(batch_size=200, concurrency=2)
-    logger.info("[serenity] cron extractor · %s", result)
+    try:
+        # z.ai glm-4.5-flash rate limit 2. flagship 승격 시 상향 (glm-5.2 concurrency 10).
+        result = await process_pending_tweets(batch_size=200, concurrency=2)
+        logger.info("[serenity] cron extractor · %s", result)
+        await _notify_job_result("extractor", result)
+    except Exception as exc:  # noqa: BLE001
+        logger.exception("[serenity] cron extractor 실패")
+        await _notify_job_result("extractor", error=str(exc)[:200])
 
 
 async def _job_scorer() -> None:
     from backend.discovery.serenity.scorer import refresh_all_scores
-    result = await refresh_all_scores()
-    logger.info("[serenity] cron scorer · %s", result)
+    try:
+        result = await refresh_all_scores()
+        logger.info("[serenity] cron scorer · %s", result)
+        await _notify_job_result("scorer", result)
+    except Exception as exc:  # noqa: BLE001
+        logger.exception("[serenity] cron scorer 실패")
+        await _notify_job_result("scorer", error=str(exc)[:200])
 
 
 async def _job_backtest() -> None:
     from backend.discovery.serenity.backtest import refresh_backtests
-    # v6 D1: 배치 500 · Fable 5 3차 지적 반영 (주간 200 → 매일 500)
-    result = await refresh_backtests(batch_size=500, concurrency=4)
-    logger.info("[serenity] cron backtest · %s", result)
+    try:
+        # v6 D1: 배치 500 · Fable 5 3차 지적 반영 (주간 200 → 매일 500)
+        result = await refresh_backtests(batch_size=500, concurrency=4)
+        logger.info("[serenity] cron backtest · %s", result)
+        await _notify_job_result("backtest", result)
+    except Exception as exc:  # noqa: BLE001
+        logger.exception("[serenity] cron backtest 실패")
+        await _notify_job_result("backtest", error=str(exc)[:200])
 
 
 async def _job_price_snapshot() -> None:
     from backend.discovery.serenity.price_snapshot import refresh_prices
-    result = await refresh_prices()
-    logger.info("[serenity] cron price snapshot · %s", result)
+    try:
+        result = await refresh_prices()
+        logger.info("[serenity] cron price snapshot · %s", result)
+        await _notify_job_result("price_snapshot", result)
+    except Exception as exc:  # noqa: BLE001
+        logger.exception("[serenity] cron price snapshot 실패")
+        await _notify_job_result("price_snapshot", error=str(exc)[:200])
 
 
 async def _job_benchmark() -> None:
     from backend.discovery.serenity.benchmark import refresh_benchmark_prices
-    result = await refresh_benchmark_prices()
-    logger.info("[serenity] cron benchmark · %s", result)
+    try:
+        result = await refresh_benchmark_prices()
+        logger.info("[serenity] cron benchmark · %s", result)
+        await _notify_job_result("benchmark", result)
+    except Exception as exc:  # noqa: BLE001
+        logger.exception("[serenity] cron benchmark 실패")
+        await _notify_job_result("benchmark", error=str(exc)[:200])
 
 
 def register_serenity_jobs(scheduler: AsyncIOScheduler) -> None:
