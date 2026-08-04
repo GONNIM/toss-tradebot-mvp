@@ -24,7 +24,7 @@ import uuid
 from datetime import datetime, timedelta
 from typing import Any, Optional
 
-from sqlalchemy import not_, select
+from sqlalchemy import case, func, not_, select
 from sqlalchemy.exc import IntegrityError
 
 from backend.discovery.serenity.benchmark import benchmark_forward_return
@@ -172,17 +172,42 @@ async def _attach_benchmark_returns(payload: dict) -> None:
 
 
 async def load_pending_signals(limit: int = 100) -> list[dict]:
-    """SerenityBacktest 미존재 signal 최근순 조회."""
+    """SerenityBacktest 미존재 signal 조회 · first mention 우선 정렬 (v6 hotfix 2026-08-04).
+
+    각 티커의 첫 signal (posted_at 최소 아닌 extracted_at 최소 · SerenityBacktest 대상은 extracted_at 기준
+    이지만 verification.first_mention_events() 도 동일 extracted_at 기준 사용 · 일치 보장).
+
+    이전 로직 (extracted_at desc) 은 최근 signals 만 처리 · verification 이 요구하는 first mention
+    signals 미커버 → valid_events=0 사고.
+    """
     async with get_session() as session:
+        # 티커별 first signal (extracted_at 최소) subquery
+        first_subq = (
+            select(
+                SerenitySignal.ticker,
+                func.min(SerenitySignal.extracted_at).label("first_at"),
+            )
+            .group_by(SerenitySignal.ticker)
+            .subquery()
+        )
         exists_sub = (
             select(SerenityBacktest.signal_id)
             .where(SerenityBacktest.signal_id == SerenitySignal.id)
             .exists()
         )
+        # is_first_mention · 우선순위 정렬용 (true=1 desc → true 먼저)
+        is_first = case(
+            (SerenitySignal.extracted_at == first_subq.c.first_at, 1),
+            else_=0,
+        ).label("is_first")
         stmt = (
             select(SerenitySignal)
+            .join(first_subq, SerenitySignal.ticker == first_subq.c.ticker)
             .where(not_(exists_sub))
-            .order_by(SerenitySignal.extracted_at.desc())
+            .order_by(
+                is_first.desc(),                               # first mention 먼저
+                SerenitySignal.extracted_at.desc(),            # 그 다음 최근
+            )
             .limit(limit)
         )
         rows = (await session.execute(stmt)).scalars().all()
