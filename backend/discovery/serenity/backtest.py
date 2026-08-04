@@ -30,7 +30,7 @@ from sqlalchemy.exc import IntegrityError
 from backend.discovery.serenity.benchmark import benchmark_forward_return
 from backend.discovery.serenity.constants import SLIPPAGE_PCT
 from backend.services.db import get_session
-from backend.services.models import SerenityBacktest, SerenitySignal
+from backend.services.models import SerenityBacktest, SerenitySignal, SerenityTweet
 from backend.services.ticker_map import to_yfinance_symbol
 
 logger = logging.getLogger(__name__)
@@ -76,8 +76,12 @@ def _detect_delisting(hist, signal_date) -> bool:
 def backtest_signal(signal: dict[str, Any], *, ticker_client=None) -> Optional[dict]:
     """개별 signal 백테스트 · yfinance sync 호출.
 
-    signal dict 필요 필드: id · ticker · extracted_at (datetime)
+    signal dict 필요 필드: id · ticker · posted_at (트윗 실 발행 시각 · 우선) or extracted_at (fallback)
     ticker_client · 테스트 mock 주입 지점.
+
+    v6 hotfix (2026-08-04): signal_date = SerenityTweet.posted_at 우선.
+    extracted_at (z.ai 배치 시각) 은 최근으로 밀리는 문제 · 백테스트 미래 데이터 요청 · 전량 NULL 사고.
+    aggregators.first_mention_map · verification.first_mention_events 도 posted_at 기준으로 통일.
 
     반환: SerenityBacktest 생성용 dict.
       · 성공 · return_*/entry/gap/benchmark 채움
@@ -88,7 +92,10 @@ def backtest_signal(signal: dict[str, Any], *, ticker_client=None) -> Optional[d
     """
     ticker_raw = signal["ticker"]
     yahoo_symbol = to_yfinance_symbol(ticker_raw)
-    signal_at = signal["extracted_at"]
+    # posted_at 우선 · fallback extracted_at (posted_at 결측 시)
+    signal_at = signal.get("posted_at") or signal.get("extracted_at")
+    if signal_at is None:
+        return None
     signal_date = (
         signal_at.date() if isinstance(signal_at, datetime) else datetime.fromisoformat(str(signal_at)).date()
     )
@@ -172,21 +179,21 @@ async def _attach_benchmark_returns(payload: dict) -> None:
 
 
 async def load_pending_signals(limit: int = 100) -> list[dict]:
-    """SerenityBacktest 미존재 signal 조회 · first mention 우선 정렬 (v6 hotfix 2026-08-04).
+    """SerenityBacktest 미존재 signal 조회 · first mention 우선 정렬 (v6 hotfix2 2026-08-04).
 
-    각 티커의 첫 signal (posted_at 최소 아닌 extracted_at 최소 · SerenityBacktest 대상은 extracted_at 기준
-    이지만 verification.first_mention_events() 도 동일 extracted_at 기준 사용 · 일치 보장).
+    v6 hotfix2: first mention 기준을 **SerenityTweet.posted_at** (트윗 발행일) 로 통일.
+    이전 (extracted_at 기준) 은 z.ai 배치 최근 시각으로 몰림 · signal_date 미래 → return NULL 사고.
 
-    이전 로직 (extracted_at desc) 은 최근 signals 만 처리 · verification 이 요구하는 first mention
-    signals 미커버 → valid_events=0 사고.
+    각 티커의 첫 signal = SerenityTweet.posted_at 최소 · aggregators.first_mention_map 과 통일.
     """
     async with get_session() as session:
-        # 티커별 first signal (extracted_at 최소) subquery
+        # 티커별 first signal (posted_at 최소) subquery
         first_subq = (
             select(
                 SerenitySignal.ticker,
-                func.min(SerenitySignal.extracted_at).label("first_at"),
+                func.min(SerenityTweet.posted_at).label("first_at"),
             )
+            .join(SerenityTweet, SerenityTweet.tweet_id == SerenitySignal.tweet_id)
             .group_by(SerenitySignal.ticker)
             .subquery()
         )
@@ -195,24 +202,30 @@ async def load_pending_signals(limit: int = 100) -> list[dict]:
             .where(SerenityBacktest.signal_id == SerenitySignal.id)
             .exists()
         )
-        # is_first_mention · 우선순위 정렬용 (true=1 desc → true 먼저)
+        # is_first_mention · posted_at 기준 · 우선순위 정렬 (true=1 desc → first 먼저)
         is_first = case(
-            (SerenitySignal.extracted_at == first_subq.c.first_at, 1),
+            (SerenityTweet.posted_at == first_subq.c.first_at, 1),
             else_=0,
         ).label("is_first")
         stmt = (
-            select(SerenitySignal)
-            .join(first_subq, SerenitySignal.ticker == first_subq.c.ticker)
+            select(SerenitySignal, SerenityTweet.posted_at)
+            .join(SerenityTweet, SerenityTweet.tweet_id == SerenitySignal.tweet_id, isouter=True)
+            .join(first_subq, SerenitySignal.ticker == first_subq.c.ticker, isouter=True)
             .where(not_(exists_sub))
             .order_by(
                 is_first.desc(),                               # first mention 먼저
-                SerenitySignal.extracted_at.desc(),            # 그 다음 최근
+                SerenityTweet.posted_at.desc(),                # 그 다음 최근 트윗
             )
             .limit(limit)
         )
-        rows = (await session.execute(stmt)).scalars().all()
+        rows = list((await session.execute(stmt)).all())
     return [
-        {"id": r.id, "ticker": r.ticker, "extracted_at": r.extracted_at}
+        {
+            "id": r[0].id,
+            "ticker": r[0].ticker,
+            "extracted_at": r[0].extracted_at,
+            "posted_at": r[1],                                 # SerenityTweet.posted_at (없으면 None)
+        }
         for r in rows
     ]
 

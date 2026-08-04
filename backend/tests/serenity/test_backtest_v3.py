@@ -40,7 +40,7 @@ def test_entry_next_open_and_raw_returns():
     client = lambda sym: _FakeTicker(hist)
 
     result = bt_mod.backtest_signal(
-        {"id": "sig-1", "ticker": "TEST", "extracted_at": signal_date},
+        {"id": "sig-1", "ticker": "TEST", "posted_at": signal_date, "extracted_at": signal_date},
         ticker_client=client,
     )
     assert result is not None
@@ -65,7 +65,7 @@ def test_detect_delisting_when_hist_ends_within_30d():
     client = lambda sym: _FakeTicker(hist)
 
     result = bt_mod.backtest_signal(
-        {"id": "sig-del", "ticker": "DEAD", "extracted_at": signal_date},
+        {"id": "sig-del", "ticker": "DEAD", "posted_at": signal_date, "extracted_at": signal_date},
         ticker_client=client,
     )
     assert result is not None
@@ -78,7 +78,7 @@ def test_returns_none_when_empty_history():
     client = lambda sym: _FakeTicker(hist)
 
     result = bt_mod.backtest_signal(
-        {"id": "sig-empty", "ticker": "GONE", "extracted_at": signal_date},
+        {"id": "sig-empty", "ticker": "GONE", "posted_at": signal_date, "extracted_at": signal_date},
         ticker_client=client,
     )
     assert result is None

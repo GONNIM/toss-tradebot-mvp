@@ -32,6 +32,7 @@ from backend.services.models import (
     SerenityBenchmarkPrice,
     SerenitySignal,
     SerenityTickerPrice,
+    SerenityTweet,
 )
 
 logger = logging.getLogger(__name__)
@@ -41,35 +42,40 @@ BUCKET_MIN_N = 30         # Fable 5 3차 · n<30 회색 · "판정 불가"
 
 
 async def first_mention_events() -> list[dict]:
-    """각 티커의 first signal (extracted_at 최소) 이벤트 + backtest join.
+    """각 티커의 first signal (SerenityTweet.posted_at 최소) 이벤트 + backtest join.
+
+    v6 hotfix2 (2026-08-04): first mention 기준 = SerenityTweet.posted_at (트윗 발행일).
+    aggregators.first_mention_map · backtest.load_pending_signals 와 통일.
+    이전 (extracted_at) 은 z.ai 배치 최근으로 밀림 · 잘못된 first 판정.
 
     반환 각 dict:
-        {ticker, signal_id, extracted_at, sentiment, confidence,
-         backtest: {return_1d, return_3d, ..., benchmark_iwm_return_3d, delisting_flag}}
-        (backtest 없으면 backtest=None)
+        {ticker, signal_id, posted_at, extracted_at, sentiment, confidence,
+         backtest: SerenityBacktest or None}
     """
     async with get_session() as session:
-        # 티커별 first signal id (min extracted_at 매핑)
+        # 티커별 first posted_at (트윗 발행) subquery
         subq = (
             select(
                 SerenitySignal.ticker,
-                func.min(SerenitySignal.extracted_at).label("min_at"),
+                func.min(SerenityTweet.posted_at).label("first_posted_at"),
             )
+            .join(SerenityTweet, SerenityTweet.tweet_id == SerenitySignal.tweet_id)
             .group_by(SerenitySignal.ticker)
             .subquery()
         )
         stmt = (
-            select(SerenitySignal)
+            select(SerenitySignal, SerenityTweet.posted_at)
+            .join(SerenityTweet, SerenityTweet.tweet_id == SerenitySignal.tweet_id)
             .join(
                 subq,
                 (SerenitySignal.ticker == subq.c.ticker)
-                & (SerenitySignal.extracted_at == subq.c.min_at),
+                & (SerenityTweet.posted_at == subq.c.first_posted_at),
             )
         )
-        first_signals = list((await session.execute(stmt)).scalars().all())
+        rows = list((await session.execute(stmt)).all())
 
         # backtest 조회 (signal_id 매핑)
-        signal_ids = [s.id for s in first_signals]
+        signal_ids = [r[0].id for r in rows]
         if not signal_ids:
             return []
         bt_rows = list((await session.execute(
@@ -78,11 +84,12 @@ async def first_mention_events() -> list[dict]:
         bt_by_signal = {b.signal_id: b for b in bt_rows}
 
     events: list[dict] = []
-    for sig in first_signals:
+    for sig, posted_at in rows:
         bt = bt_by_signal.get(sig.id)
         events.append({
             "ticker": sig.ticker,
             "signal_id": sig.id,
+            "posted_at": posted_at,
             "extracted_at": sig.extracted_at,
             "sentiment": sig.sentiment,
             "confidence": sig.confidence,
