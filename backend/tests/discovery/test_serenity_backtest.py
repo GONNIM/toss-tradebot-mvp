@@ -80,10 +80,14 @@ def test_ticker_map_passthrough_uppercase():
 
 
 def test_backtest_signal_computes_returns():
-    """200일 시계열 · 5·10·30·60·180 return 정확 계산."""
+    """v6 D1: entry = 다음 거래일 시가 · return_* = 다음 시가 기준 raw.
+
+    200일 시리즈 · Open == Close (매일 +0.5).
+    index 1 시가 = 100.5 · index 1+5 = 105.5 종가 → return_5d = 4.98%.
+    """
     prices = [100.0 + i * 0.5 for i in range(200)]  # 매일 +0.5
     idx = pd.date_range("2026-01-01", periods=200, freq="D")
-    df = pd.DataFrame({"Close": prices}, index=idx)
+    df = pd.DataFrame({"Open": prices, "Close": prices}, index=idx)
 
     signal = {
         "id": str(uuid.uuid4()),
@@ -95,18 +99,20 @@ def test_backtest_signal_computes_returns():
     assert out["ticker"] == "NBIS"
     assert out["signal_date"] == "2026-01-01"
     assert out["price_at_signal"] == 100.0
-    # +5일 후 close=102.5 → return = 2.5%
-    assert out["return_5d"] == 2.5
-    assert out["return_10d"] == 5.0
-    assert out["return_30d"] == 15.0
-    assert out["return_60d"] == 30.0
-    assert out["return_180d"] == 90.0
+    # entry = index 1 open = 100.5
+    assert out["entry_next_open_price"] == 100.5
+    # return_5d: index 1 (100.5) → index 6 (103.0) → (103-100.5)/100.5*100 ≈ 2.49
+    assert out["return_5d"] == pytest.approx(2.49, abs=0.01)
+    # return_10d: index 1 → index 11 (105.5) → 4.98
+    assert out["return_10d"] == pytest.approx(4.98, abs=0.01)
+    # return_180d: index 1 → index 181 (190.5) → (190.5-100.5)/100.5*100 ≈ 89.55
+    assert out["return_180d"] == pytest.approx(89.55, abs=0.01)
 
 
 def test_backtest_signal_short_history_returns_none_missing_windows():
-    """20일치만 · 30/60/180 은 None."""
+    """20일치만 · 30/60/180 은 None · delisting_flag=True (30일 이내 종료)."""
     idx = pd.date_range("2026-01-01", periods=20, freq="D")
-    df = pd.DataFrame({"Close": [100.0] * 20}, index=idx)
+    df = pd.DataFrame({"Open": [100.0] * 20, "Close": [100.0] * 20}, index=idx)
 
     signal = {"id": "x", "ticker": "AXTI", "extracted_at": datetime(2026, 1, 1)}
     out = backtest_signal(signal, ticker_client=_fake_client(df))
@@ -115,6 +121,8 @@ def test_backtest_signal_short_history_returns_none_missing_windows():
     assert out["return_30d"] is None
     assert out["return_60d"] is None
     assert out["return_180d"] is None
+    # v6: signal_date+30d 이전에 history 종료 → 상폐 의심
+    assert out["delisting_flag"] is True
 
 
 def test_backtest_signal_empty_history_returns_none():
@@ -174,17 +182,20 @@ async def test_load_pending_excludes_backtested():
 
 @pytest.mark.asyncio
 async def test_refresh_backtests_inserts_and_counts():
+    # v6 · days_ago=200 · signal_date 이후 mock history 가 30d 이상 커버 (delisting=False 보장)
     async with get_session() as session:
         session.add_all([
-            _make_signal("s1", "NBIS"),
-            _make_signal("s2", "AXTI"),
+            _make_signal("s1", "NBIS", days_ago=200),
+            _make_signal("s2", "AXTI", days_ago=200),
         ])
         await session.commit()
 
     idx = pd.date_range("2026-01-01", periods=200, freq="D")
-    df = pd.DataFrame({"Close": [100.0 + i for i in range(200)]}, index=idx)
+    prices = [100.0 + i for i in range(200)]
+    df = pd.DataFrame({"Open": prices, "Close": prices}, index=idx)
     result = await refresh_backtests(batch_size=10, concurrency=2, ticker_client=_fake_client(df))
-    assert result == {"pending": 2, "computed": 2, "failed": 0}
+    # v6 · delisting 필드 추가
+    assert result == {"pending": 2, "computed": 2, "failed": 0, "delisting": 0}
 
     async with get_session() as session:
         n = (await session.execute(select(func.count(SerenityBacktest.id)))).scalar_one()
@@ -207,4 +218,5 @@ async def test_refresh_backtests_failed_counted_when_history_empty():
 @pytest.mark.asyncio
 async def test_refresh_backtests_no_pending():
     result = await refresh_backtests(batch_size=10, concurrency=1)
-    assert result == {"pending": 0, "computed": 0, "failed": 0}
+    # v6 · delisting 필드 추가
+    assert result == {"pending": 0, "computed": 0, "failed": 0, "delisting": 0}

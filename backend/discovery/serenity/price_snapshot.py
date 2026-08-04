@@ -54,6 +54,10 @@ def _fetch_price_bundle(
         "first_mention_used_date": None,
         "sector": None,
         "industry": None,
+        # Phase L14 · 시총 + 유동성 (RISK-PRINCIPLES §3)
+        "market_cap": None,
+        "market_cap_source": None,
+        "avg_dollar_volume_20d": None,
         "error": None,
     }
 
@@ -114,7 +118,7 @@ def _fetch_price_bundle(
         except (KeyError, IndexError, ValueError, AttributeError) as exc:
             logger.warning("[serenity_price] first_mention parse 실패 · %s · %s", yahoo_symbol, exc)
 
-    # yfinance info · sector · industry (Phase L13 · Industry 컬럼 정확화)
+    # yfinance info · sector · industry · market_cap (Phase L13 · L14)
     # info 는 별도 HTTP 요청 · 실패해도 price 결과는 유지
     try:
         info = getattr(stock, "info", None) or {}
@@ -124,8 +128,27 @@ def _fetch_price_bundle(
             result["sector"] = sec.strip()[:80]
         if isinstance(ind, str) and ind.strip():
             result["industry"] = ind.strip()[:120]
+        # Phase L14 · market_cap · info 우선 · fallback sharesOutstanding × close
+        mc = info.get("marketCap")
+        if isinstance(mc, (int, float)) and mc > 0:
+            result["market_cap"] = float(mc)
+            result["market_cap_source"] = "yf"
+        else:
+            shares = info.get("sharesOutstanding")
+            if isinstance(shares, (int, float)) and shares > 0 and result["close"]:
+                result["market_cap"] = float(shares) * result["close"]
+                result["market_cap_source"] = "computed"
     except Exception as exc:  # noqa: BLE001
         logger.debug("[serenity_price] info 실패 · %s · %s", yahoo_symbol, exc)
+
+    # Phase L14 · avg_dollar_volume_20d · 이미 fetch 한 hist 재사용
+    try:
+        from backend.discovery.serenity.liquidity import compute_avg_dollar_volume
+        adv = compute_avg_dollar_volume(hist, window=20)
+        if adv is not None:
+            result["avg_dollar_volume_20d"] = adv
+    except Exception as exc:  # noqa: BLE001
+        logger.debug("[serenity_price] adv 계산 실패 · %s · %s", yahoo_symbol, exc)
 
     return result
 
@@ -149,6 +172,9 @@ async def _upsert_price(
     first_mention_used_date,
     sector: Optional[str],
     industry: Optional[str],
+    market_cap: Optional[float],
+    market_cap_source: Optional[str],
+    avg_dollar_volume_20d: Optional[float],
     error: Optional[str],
 ) -> None:
     pct = None
@@ -169,11 +195,16 @@ async def _upsert_price(
             existing.first_mention_date = first_mention_used_date or existing.first_mention_date
             existing.first_mention_price = first_mention_price or existing.first_mention_price
             existing.gain_since_first_mention_pct = gain_pct if gain_pct is not None else existing.gain_since_first_mention_pct
-            # sector · industry · 새 값 있으면 갱신 · 없으면 기존 유지 (yfinance info 간헐 실패)
+            # sector · industry · market_cap · adv · 새 값 있으면 갱신 · 없으면 기존 유지
             if sector:
                 existing.sector = sector
             if industry:
                 existing.industry = industry
+            if market_cap is not None:
+                existing.market_cap = market_cap
+                existing.market_cap_source = market_cap_source
+            if avg_dollar_volume_20d is not None:
+                existing.avg_dollar_volume_20d = avg_dollar_volume_20d
             existing.yahoo_symbol = yahoo_symbol
             existing.error = error
             existing.fetched_at = datetime.utcnow()
@@ -190,6 +221,9 @@ async def _upsert_price(
             gain_since_first_mention_pct=gain_pct,
             sector=sector,
             industry=industry,
+            market_cap=market_cap,
+            market_cap_source=market_cap_source,
+            avg_dollar_volume_20d=avg_dollar_volume_20d,
             yahoo_symbol=yahoo_symbol,
             error=error,
         )
@@ -226,7 +260,11 @@ async def refresh_prices(
         async with sem:
             # Private / 브랜드명 · yfinance 호출 스킵 (rate limit 소모 방지)
             if is_private_or_brand(tk):
-                await _upsert_price(tk, tk, None, None, None, None, None, None, None, "private/브랜드")
+                await _upsert_price(
+                    tk, tk, None, None, None, None, None,
+                    None, None, None, None, None,
+                    "private/브랜드",
+                )
                 stats["skipped"] = stats.get("skipped", 0) + 1
                 return
 
@@ -253,6 +291,9 @@ async def refresh_prices(
                 bundle["first_mention_used_date"],
                 bundle["sector"],
                 bundle["industry"],
+                bundle["market_cap"],
+                bundle["market_cap_source"],
+                bundle["avg_dollar_volume_20d"],
                 bundle["error"],
             )
 

@@ -1,15 +1,20 @@
-"""Serenity signal → 실 주가 대조 백테스트 · Phase L5 · 2026-08-02.
+"""Serenity signal → 실 주가 대조 백테스트 · Phase L14 v6 (2026-08-04).
 
-원본: docs/plans/serenity-integration/02-backend-arch.md §6
+Fable 5 6차 GO 반영:
+    - RETURN_WINDOWS = (1, 3, 5, 10, 30, 60, 180) · +1d/+3d 급등 검증 추가
+    - entry 기준가 = 다음 거래일 시가 (look-ahead 방지 · v6 §2.7)
+    - return_* 컬럼은 raw 저장 (다음 시가 기준 무조정 · v6 D1 이중 차감 제거)
+      · entry_with_slippage_price 는 참고 컬럼 · 계산 진입점 아님
+    - gap_next_open_pct = (다음 시가 - signal 종가) / signal 종가 × 100
+    - delisting_flag heuristic · signal_date+30d 이후 history 종료 감지
+    - benchmark_iwm/spy_return_* 병렬 계산 · 초과수익 (표시/판정 계층에서 조정)
 
 파이프라인:
-    SerenitySignal (backtest 없음) → yfinance.history(signal_date, +200d)
-    → 5·10·30·60·180 일 후 종가 return 계산 → SerenityBacktest upsert
+    미처리 signals → yfinance history(signal_date, +200d) →
+    entry (다음 거래일 시가) → return_*d (raw) → benchmark forward return 조회 →
+    delisting 판정 → SerenityBacktest upsert
 
-주의:
-    - yfinance rate limit 심각 · 배치·재시도·비동기 처리 유의
-    - non-US 심볼(SEK·KRX·TW)은 ticker_map.py 매핑
-    - weekend·holiday 로 signal_date 종가 없으면 다음 거래일 사용
+주기: 매일 KST 01:00 (v6 §2.2 · scheduler.py).
 """
 from __future__ import annotations
 
@@ -22,29 +27,53 @@ from typing import Any, Optional
 from sqlalchemy import not_, select
 from sqlalchemy.exc import IntegrityError
 
+from backend.discovery.serenity.benchmark import benchmark_forward_return
+from backend.discovery.serenity.constants import SLIPPAGE_PCT
 from backend.services.db import get_session
 from backend.services.models import SerenityBacktest, SerenitySignal
 from backend.services.ticker_map import to_yfinance_symbol
 
 logger = logging.getLogger(__name__)
 
-RETURN_WINDOWS = (5, 10, 30, 60, 180)
+RETURN_WINDOWS = (1, 3, 5, 10, 30, 60, 180)
+BENCHMARK_WINDOWS = (1, 3, 5, 10, 30)
 _HISTORY_WINDOW_DAYS = 200
+_DELISTING_LOOKBACK_DAYS = 30  # signal_date+30d 이후 history 종료 시 상폐 의심
 
 
-def _round_pct(a: float, b: float) -> float:
-    if a <= 0:
+def _round_pct(base: float, target: float) -> float:
+    if base <= 0:
         return 0.0
-    return round((b - a) / a * 100, 2)
+    return round((target - base) / base * 100, 2)
+
+
+def _detect_delisting(hist, signal_date) -> bool:
+    """상폐 heuristic · signal_date+30d 이후 마지막 close 존재 여부.
+
+    True = signal_date+30d 이후 history 없음 = 상폐/티커 소멸 의심.
+    """
+    if hist is None or getattr(hist, "empty", True):
+        return True
+    try:
+        last_date = hist.index[-1].date()
+        cutoff = signal_date + timedelta(days=_DELISTING_LOOKBACK_DAYS)
+        return last_date < cutoff
+    except (AttributeError, IndexError):
+        return False
 
 
 def backtest_signal(signal: dict[str, Any], *, ticker_client=None) -> Optional[dict]:
     """개별 signal 백테스트 · yfinance sync 호출.
 
     signal dict 필요 필드: id · ticker · extracted_at (datetime)
-    ticker_client · 테스트 mock 주입 지점 (콜러블 · returns yf.Ticker 유사 객체)
+    ticker_client · 테스트 mock 주입 지점.
 
-    반환: SerenityBacktest 생성용 dict · yfinance 응답 없으면 None.
+    반환: SerenityBacktest 생성용 dict.
+      · 성공 · return_*/entry/gap/benchmark 채움
+      · empty history · None 반환 (실패 카운트)
+      · 상폐 감지 · delisting_flag=True + 채울 수 있는 필드만 채움
+
+    v6 D1 원칙: return_* = raw · 다음 시가 기준 무조정. slippage/cost 조정은 판정/표시 계층.
     """
     ticker_raw = signal["ticker"]
     yahoo_symbol = to_yfinance_symbol(ticker_raw)
@@ -56,7 +85,7 @@ def backtest_signal(signal: dict[str, Any], *, ticker_client=None) -> Optional[d
 
     try:
         if ticker_client is None:
-            import yfinance as yf  # 지연 import · 테스트에서 mock 대체 가능
+            import yfinance as yf
             stock = yf.Ticker(yahoo_symbol)
         else:
             stock = ticker_client(yahoo_symbol)
@@ -66,8 +95,7 @@ def backtest_signal(signal: dict[str, Any], *, ticker_client=None) -> Optional[d
                        ticker_raw, yahoo_symbol, exc)
         return None
 
-    if hist is None or getattr(hist, "empty", True):
-        logger.debug("[serenity] history empty · %s @%s", yahoo_symbol, signal_date)
+    if hist is None or getattr(hist, "empty", True) or len(hist) < 1:
         return None
 
     try:
@@ -77,22 +105,59 @@ def backtest_signal(signal: dict[str, Any], *, ticker_client=None) -> Optional[d
     if signal_price <= 0:
         return None
 
-    returns: dict[str, Optional[float]] = {f"return_{d}d": None for d in RETURN_WINDOWS}
-    for days in RETURN_WINDOWS:
-        if len(hist) > days:
-            try:
-                future_price = float(hist.iloc[days]["Close"])
-                returns[f"return_{days}d"] = _round_pct(signal_price, future_price)
-            except (KeyError, IndexError, ValueError):
-                continue
+    delisting = _detect_delisting(hist, signal_date)
 
-    return {
+    payload: dict[str, Any] = {
         "signal_id": signal["id"],
         "ticker": ticker_raw,
         "signal_date": signal_date.isoformat(),
         "price_at_signal": round(signal_price, 4),
-        **returns,
+        "entry_next_open_price": None,
+        "entry_with_slippage_price": None,
+        "gap_next_open_pct": None,
+        "delisting_flag": delisting,
     }
+    for w in RETURN_WINDOWS:
+        payload[f"return_{w}d"] = None
+
+    # entry = 다음 거래일 시가 (index 1) · look-ahead 방지
+    if len(hist) >= 2:
+        try:
+            next_open = float(hist.iloc[1]["Open"])
+            if next_open > 0:
+                payload["entry_next_open_price"] = round(next_open, 4)
+                # 참고 컬럼 · 계산 진입점 아님 (v6 D1)
+                payload["entry_with_slippage_price"] = round(next_open * (1 + SLIPPAGE_PCT / 100), 4)
+                payload["gap_next_open_pct"] = _round_pct(signal_price, next_open)
+
+                # Forward return · 다음 시가 기준 raw (무조정)
+                for days in RETURN_WINDOWS:
+                    # index 1 = 다음 거래일 · +days 후 = index 1+days
+                    idx = 1 + days
+                    if len(hist) > idx:
+                        try:
+                            future_close = float(hist.iloc[idx]["Close"])
+                            payload[f"return_{days}d"] = _round_pct(next_open, future_close)
+                        except (KeyError, IndexError, ValueError):
+                            continue
+        except (KeyError, IndexError, ValueError):
+            pass
+
+    return payload
+
+
+async def _attach_benchmark_returns(payload: dict) -> None:
+    """payload 에 benchmark_iwm/spy_return_* 병렬 조회 · in-place mutate."""
+    signal_date = payload["signal_date"]
+    for symbol_key, symbol in (("iwm", "IWM"), ("spy", "SPY")):
+        for days in BENCHMARK_WINDOWS:
+            key = f"benchmark_{symbol_key}_return_{days}d"
+            try:
+                payload[key] = await benchmark_forward_return(symbol, signal_date, days)
+            except Exception as exc:  # noqa: BLE001
+                logger.debug("[serenity] benchmark fetch 실패 · %s %s %dd · %s",
+                             symbol, signal_date, days, exc)
+                payload[key] = None
 
 
 async def load_pending_signals(limit: int = 100) -> list[dict]:
@@ -124,12 +189,14 @@ async def _persist_backtest(payload: dict) -> bool:
             signal_id=payload["signal_id"],
             ticker=payload["ticker"],
             signal_date=payload["signal_date"],
-            price_at_signal=payload["price_at_signal"],
-            return_5d=payload.get("return_5d"),
-            return_10d=payload.get("return_10d"),
-            return_30d=payload.get("return_30d"),
-            return_60d=payload.get("return_60d"),
-            return_180d=payload.get("return_180d"),
+            price_at_signal=payload.get("price_at_signal"),
+            entry_next_open_price=payload.get("entry_next_open_price"),
+            entry_with_slippage_price=payload.get("entry_with_slippage_price"),
+            gap_next_open_pct=payload.get("gap_next_open_pct"),
+            delisting_flag=payload.get("delisting_flag", False),
+            **{f"return_{w}d": payload.get(f"return_{w}d") for w in RETURN_WINDOWS},
+            **{f"benchmark_iwm_return_{w}d": payload.get(f"benchmark_iwm_return_{w}d") for w in BENCHMARK_WINDOWS},
+            **{f"benchmark_spy_return_{w}d": payload.get(f"benchmark_spy_return_{w}d") for w in BENCHMARK_WINDOWS},
         )
         session.add(row)
         try:
@@ -145,41 +212,62 @@ async def _persist_backtest(payload: dict) -> bool:
         )).scalar_one()
         target.ticker = payload["ticker"]
         target.signal_date = payload["signal_date"]
-        target.price_at_signal = payload["price_at_signal"]
+        target.price_at_signal = payload.get("price_at_signal")
+        target.entry_next_open_price = payload.get("entry_next_open_price")
+        target.entry_with_slippage_price = payload.get("entry_with_slippage_price")
+        target.gap_next_open_pct = payload.get("gap_next_open_pct")
+        target.delisting_flag = payload.get("delisting_flag", False)
         for w in RETURN_WINDOWS:
             setattr(target, f"return_{w}d", payload.get(f"return_{w}d"))
+        for w in BENCHMARK_WINDOWS:
+            setattr(target, f"benchmark_iwm_return_{w}d", payload.get(f"benchmark_iwm_return_{w}d"))
+            setattr(target, f"benchmark_spy_return_{w}d", payload.get(f"benchmark_spy_return_{w}d"))
         target.computed_at = datetime.utcnow()
         await s2.commit()
     return True
 
 
 async def refresh_backtests(
-    batch_size: int = 100,
+    batch_size: int = 500,
     *,
     concurrency: int = 4,
     ticker_client=None,
+    retries: int = 2,
 ) -> dict:
-    """미처리 signals 배치 백테스트.
+    """미처리 signals 배치 백테스트 · v6 D1 raw 원칙.
 
-    반환: {"pending": N, "computed": M, "failed": K}
+    반환: {"pending": N, "computed": M, "failed": K, "delisting": D}
     """
     pending = await load_pending_signals(limit=batch_size)
     if not pending:
-        return {"pending": 0, "computed": 0, "failed": 0}
+        return {"pending": 0, "computed": 0, "failed": 0, "delisting": 0}
 
     sem = asyncio.Semaphore(concurrency)
-    stats = {"pending": len(pending), "computed": 0, "failed": 0}
+    stats = {"pending": len(pending), "computed": 0, "failed": 0, "delisting": 0}
 
     async def _one(sig: dict) -> None:
         async with sem:
-            payload = await asyncio.to_thread(
-                backtest_signal, sig, ticker_client=ticker_client,
-            )
+            payload = None
+            for attempt in range(retries + 1):
+                payload = await asyncio.to_thread(
+                    backtest_signal, sig, ticker_client=ticker_client,
+                )
+                if payload is not None:
+                    break
+                if attempt < retries:
+                    await asyncio.sleep(1 + attempt)  # 1s, 2s backoff
+
             if payload is None:
                 stats["failed"] += 1
                 return
+
+            await _attach_benchmark_returns(payload)
+
+            if payload.get("delisting_flag"):
+                stats["delisting"] += 1
             if await _persist_backtest(payload):
                 stats["computed"] += 1
 
     await asyncio.gather(*[_one(s) for s in pending])
+    logger.info("[serenity] backtest refresh · %s", stats)
     return stats

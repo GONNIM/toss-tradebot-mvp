@@ -41,6 +41,7 @@ from backend.api.routes import (
     rulebook,
     sector_leaders,
     serenity,
+    serenity_hunter,
     session,
     settings,
     sniper,
@@ -247,6 +248,8 @@ app.include_router(insights.router, prefix="/api/v1/insights", tags=["insights"]
 app.include_router(rulebook.router, prefix="/api/v1/rulebook", tags=["rulebook"])
 # ── Serenity Influencer (Phase L6 · 2026-08-02 · public read)
 app.include_router(serenity.router, prefix="/api/v1/serenity", tags=["serenity"])
+# ── Serenity Hunter (Phase L14 v6 · 2026-08-04 · Step A: /verification + /health · Step C: /hunter)
+app.include_router(serenity_hunter.router, prefix="/api/v1/serenity", tags=["serenity-hunter"])
 # ── L3 실험장 (UI 는 /lab 이관 · API 는 데이터 유지)
 app.include_router(
     meme_watch.router,

@@ -52,7 +52,8 @@ async def _job_scorer() -> None:
 
 async def _job_backtest() -> None:
     from backend.discovery.serenity.backtest import refresh_backtests
-    result = await refresh_backtests(batch_size=200, concurrency=4)
+    # v6 D1: 배치 500 · Fable 5 3차 지적 반영 (주간 200 → 매일 500)
+    result = await refresh_backtests(batch_size=500, concurrency=4)
     logger.info("[serenity] cron backtest · %s", result)
 
 
@@ -60,6 +61,12 @@ async def _job_price_snapshot() -> None:
     from backend.discovery.serenity.price_snapshot import refresh_prices
     result = await refresh_prices()
     logger.info("[serenity] cron price snapshot · %s", result)
+
+
+async def _job_benchmark() -> None:
+    from backend.discovery.serenity.benchmark import refresh_benchmark_prices
+    result = await refresh_benchmark_prices()
+    logger.info("[serenity] cron benchmark · %s", result)
 
 
 def register_serenity_jobs(scheduler: AsyncIOScheduler) -> None:
@@ -111,17 +118,29 @@ def register_serenity_jobs(scheduler: AsyncIOScheduler) -> None:
         misfire_grace_time=1800,
     )
 
+    # Phase L14 · 매일 01:00 KST · 배치 500 · Fable 5 3차 지적
+    # (주 1회 × 200건 vs signals 4194건 = 21주 소요 → 매일 500건)
     scheduler.add_job(
         _job_backtest,
-        trigger=CronTrigger(
-            day_of_week="mon", hour=0, minute=0, timezone="Asia/Seoul"
-        ),
-        id="serenity_backtest_weekly",
-        name="매주 월 00:00 KST · Serenity yfinance 백테스트",
+        trigger=CronTrigger(hour=1, minute=0, timezone="Asia/Seoul"),
+        id="serenity_backtest_daily",
+        name="매일 01:00 KST · Serenity yfinance 백테스트 (v6 · 배치 500)",
         replace_existing=True,
         max_instances=1,
         coalesce=True,
         misfire_grace_time=3600,
+    )
+
+    # Phase L14 · 매일 00:30 KST · IWM + SPY 400일 종가 캐시 (초과수익 산출용)
+    scheduler.add_job(
+        _job_benchmark,
+        trigger=CronTrigger(hour=0, minute=30, timezone="Asia/Seoul"),
+        id="serenity_benchmark_daily",
+        name="매일 00:30 KST · Serenity IWM/SPY 벤치마크 종가 캐시",
+        replace_existing=True,
+        max_instances=1,
+        coalesce=True,
+        misfire_grace_time=1800,
     )
 
     # 티커 종가 스냅샷 (매일 09:30 KST · US 종가 이후 · vs prior close UX)

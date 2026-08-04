@@ -41,8 +41,43 @@ jobs:
             echo "frontend/package.json OK"
           fi
 
+  # Serenity Hunter Step gate (v6 D3 · Fable 5 5차 · 순환 의존 데드락 해소)
+  # ─────────────────────────────────────────────────────────────────────
+  # Step B UI 커밋 (frontend/app/influencer/serenity-hunter/**) 감지 시
+  # Step A 산출 /verification 이 gate_events_have ≥ 50 + benchmark_rows_iwm ≥ 50
+  # 을 만족하는지 CI 러너에서 직접 검증. 미달 시 배포 중단.
+  # gate_open 은 사용 금지 (health.warn / deprecation 이 배포 무관 사유로 차단)
+  serenity_hunter_step_gate:
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2  # HEAD~1 diff 조회용
+      - name: Detect Serenity Hunter UI change
+        id: detect
+        run: |
+          if git diff --name-only HEAD~1 HEAD | grep -q '^frontend/app/influencer/serenity-hunter/'; then
+            echo "ui_changed=true" >> $GITHUB_OUTPUT
+            echo "→ Serenity Hunter UI 커밋 감지 · gate check 실행"
+          else
+            echo "ui_changed=false" >> $GITHUB_OUTPUT
+            echo "→ Serenity Hunter UI 무변경 · gate check skip"
+          fi
+      - name: Gate check (curl /verification · gate_events_have ≥ 50 + benchmark_rows_iwm ≥ 50)
+        if: steps.detect.outputs.ui_changed == 'true'
+        run: |
+          set -e
+          RESP=$(curl -sSf https://${{ secrets.OPTIMUS8_HOST }}/api/v1/serenity/verification)
+          echo "$RESP" | jq '.hero | {gate_events_have, benchmark_rows_iwm, valid_events}'
+          echo "$RESP" | jq -e '.hero.gate_events_have >= 50 and .hero.benchmark_rows_iwm >= 50' > /dev/null || {
+            echo "✗ Serenity Hunter Step gate 실패 · Step A 데이터 미충족 (v6 §2.2)"
+            exit 1
+          }
+          echo "✓ Serenity Hunter Step gate 통과"
+
   deploy:
-    needs: validate
+    needs: [validate, serenity_hunter_step_gate]
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/main'
     steps:

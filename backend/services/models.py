@@ -1541,7 +1541,17 @@ class DiscoverySerenityScore(Base):
 
 
 class SerenityBacktest(Base):
-    """signal → 실 주가 (yfinance) 대조 · 주간 재계산 · unique(signal_id)."""
+    """signal → 실 주가 (yfinance) 대조 · 매일 재계산 · unique(signal_id).
+
+    Phase L14 v6 (2026-08-04 · Fable 5 6차 GO):
+      - return_1d/3d 추가 · 급등주 검증 임계 (+1d/+3d ≥10%)
+      - entry_next_open_price · entry_with_slippage_price · gap_next_open_pct
+        · entry 기준가 = 다음 거래일 시가 (look-ahead 방지)
+        · entry_with_slippage_price 는 참고 컬럼 (v6 D1 · 계산 진입점 아님)
+      - return_* 컬럼은 raw 저장 (다음 시가 기준 무조정 · v6 D1 이중 차감 제거 원칙)
+      - delisting_flag · signal_date+30d 이후 history 종료 heuristic
+      - benchmark_iwm_return_*/spy_return_* · 초과수익 산출용
+    """
 
     __tablename__ = "serenity_backtest"
 
@@ -1549,16 +1559,58 @@ class SerenityBacktest(Base):
     signal_id: Mapped[str] = mapped_column(String(36), unique=True, index=True)
     ticker: Mapped[str] = mapped_column(String(20), index=True)
     signal_date: Mapped[str] = mapped_column(String(10))    # YYYY-MM-DD
-    price_at_signal: Mapped[Optional[float]]
-    return_5d: Mapped[Optional[float]]                       # %
+    price_at_signal: Mapped[Optional[float]]                # signal_date 종가 (참고)
+    # Phase L14 · 진입 실무 (Fable 5 · look-ahead 방지)
+    entry_next_open_price: Mapped[Optional[float]]          # 다음 거래일 시가 (실제 매수 가능 지점)
+    entry_with_slippage_price: Mapped[Optional[float]]      # 시가 + 1% (참고 · v6 D1 원칙 · 계산 진입 아님)
+    gap_next_open_pct: Mapped[Optional[float]]              # (다음 시가 - signal 종가) / signal 종가 × 100
+    # Forward return (%) · v6 D1: raw · 다음 거래일 시가 기준 (무조정)
+    return_1d: Mapped[Optional[float]]
+    return_3d: Mapped[Optional[float]]
+    return_5d: Mapped[Optional[float]]
     return_10d: Mapped[Optional[float]]
     return_30d: Mapped[Optional[float]]
     return_60d: Mapped[Optional[float]]
     return_180d: Mapped[Optional[float]]
+    # Phase L14 · 상장폐지·티커 소멸 감지 (v6 §2.7 valid 카운트 포함)
+    delisting_flag: Mapped[bool] = mapped_column(default=False)
+    # Phase L14 · 벤치마크 forward return (IWM · SPY · 초과수익 산출용)
+    benchmark_iwm_return_1d: Mapped[Optional[float]]
+    benchmark_iwm_return_3d: Mapped[Optional[float]]
+    benchmark_iwm_return_5d: Mapped[Optional[float]]
+    benchmark_iwm_return_10d: Mapped[Optional[float]]
+    benchmark_iwm_return_30d: Mapped[Optional[float]]
+    benchmark_spy_return_1d: Mapped[Optional[float]]
+    benchmark_spy_return_3d: Mapped[Optional[float]]
+    benchmark_spy_return_5d: Mapped[Optional[float]]
+    benchmark_spy_return_10d: Mapped[Optional[float]]
+    benchmark_spy_return_30d: Mapped[Optional[float]]
     computed_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
 
     __table_args__ = (
         Index("ix_serenity_backtest_ticker_date", "ticker", "signal_date"),
+    )
+
+
+class SerenityBenchmarkPrice(Base):
+    """벤치마크 지수 (IWM · SPY) 일 종가 캐시 · Phase L14 · 2026-08-04.
+
+    목적: 각 first_mention 이벤트마다 동일 signal_date 기준 벤치마크 forward return 계산
+    → 초과수익 (signal_return − benchmark_return) 판정.
+
+    구조: (symbol, snapshot_date) 복합 PK · 매일 IWM + SPY 400d 갱신 (KST 00:30).
+    """
+
+    __tablename__ = "serenity_benchmark_prices"
+
+    symbol: Mapped[str] = mapped_column(String(10), primary_key=True)   # IWM · SPY
+    snapshot_date: Mapped[str] = mapped_column(String(10), primary_key=True)  # YYYY-MM-DD
+    open: Mapped[Optional[float]]
+    close: Mapped[Optional[float]]
+    fetched_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
+
+    __table_args__ = (
+        Index("ix_serenity_benchmark_symbol_date", "symbol", "snapshot_date"),
     )
 
 
@@ -1585,5 +1637,9 @@ class SerenityTickerPrice(Base):
     # Phase L13 · yfinance sector/industry (테이블 Industry 컬럼 UX 정확화)
     sector: Mapped[Optional[str]] = mapped_column(String(80))
     industry: Mapped[Optional[str]] = mapped_column(String(120))
+    # Phase L14 · 시총 + 유동성 (Hunter 리스크 관리 · RISK-PRINCIPLES §3)
+    market_cap: Mapped[Optional[float]]                              # USD · yf.info.marketCap
+    market_cap_source: Mapped[Optional[str]] = mapped_column(String(20))  # "yf" / "computed"
+    avg_dollar_volume_20d: Mapped[Optional[float]]                   # USD · Close × Volume 20일 평균
     fetched_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
 
