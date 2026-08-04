@@ -51,12 +51,23 @@ def _detect_delisting(hist, signal_date) -> bool:
     """상폐 heuristic · signal_date+30d 이후 마지막 close 존재 여부.
 
     True = signal_date+30d 이후 history 없음 = 상폐/티커 소멸 의심.
+
+    v6 hotfix (2026-08-04): cutoff (signal_date+30d) 가 아직 도래하지 않은 최근 signal 은
+    판정 불가 → False. 또한 hist 마지막 date 가 today 근접 (3일 이내) 이면 상장 유지 판정.
+    이전 로직은 최근 signal 을 무조건 상폐로 오판했음 (delisting=456/456 사고).
     """
     if hist is None or getattr(hist, "empty", True):
         return True
     try:
         last_date = hist.index[-1].date()
+        today = datetime.utcnow().date()
         cutoff = signal_date + timedelta(days=_DELISTING_LOOKBACK_DAYS)
+        # cutoff 미도래 · 판정 불가
+        if cutoff > today:
+            return False
+        # hist last 가 today 근접 (yfinance 최신 거래일 반영 지연 감안 3일)
+        if (today - last_date).days <= 3:
+            return False
         return last_date < cutoff
     except (AttributeError, IndexError):
         return False
