@@ -73,25 +73,59 @@ def _tier_rank(tier: Optional[str]) -> int:
 
 
 def _compute_execution_plan(last_close: float) -> dict:
-    """가격 → 매수·수량·손절·TP 자동 계산 (constants.py 상수 사용)."""
+    """가격 → 이중 모드 실행 계획 (Fable 5 2차 리뷰 · 2026-08-13).
+
+    모드:
+      - shares: 1주 원화 ≤ POSITION_KRW → 정수 주식 · 지정가 완전 통제
+      - amount: 1주 원화 > POSITION_KRW → 금액 주문 (₩200,000) · 소수점 수량 ·
+                지정가 통제 제한 · 손절 자동화 수동 확인 필요
+
+    SL/TP 가격은 두 모드 동일.
+    """
     entry_limit = round(last_close * (1 + SLIPPAGE_LIMIT_PCT / 100), 4)
-    # qty (원화 예산 ÷ 원화 환산 매수 상한가 · floor)
     entry_krw = entry_limit * USDKRW_RATE
-    qty = int(math.floor(POSITION_KRW / entry_krw)) if entry_krw > 0 else 0
     sl_price = round(entry_limit * (1 - SL_PCT / 100), 4)
     tp_trigger_price = round(entry_limit * (1 + TP_TRIGGER_PCT / 100), 4)
-    # 최소 R:R = (TP − entry) / (entry − SL) = TP_TRIGGER_PCT / SL_PCT
     min_rr = round(TP_TRIGGER_PCT / SL_PCT, 2) if SL_PCT > 0 else 0.0
-    return {
+
+    common = {
         "entry_limit": entry_limit,
         "entry_krw": round(entry_krw, 0),
-        "qty": qty,
         "sl_price": sl_price,
         "sl_days": SL_DAYS,
         "tp_trigger_price": tp_trigger_price,
         "trail_pct": TRAIL_PCT,
         "min_rr": min_rr,
         "min_rr_warning": min_rr < MIN_RR_WARNING,
+    }
+
+    if entry_krw > 0 and entry_krw <= POSITION_KRW:
+        # 정수 모드 · 기존 로직 + 잔여 예산 표시
+        qty = int(math.floor(POSITION_KRW / entry_krw))
+        total_krw = round(entry_krw * qty, 0)
+        remaining_krw = round(POSITION_KRW - total_krw, 0)
+        return {
+            **common,
+            "order_mode": "shares",
+            "qty": qty,
+            "total_krw": total_krw,
+            "remaining_krw": remaining_krw,
+            "est_qty_fractional": None,
+            "order_krw": None,
+            "manual_sl_required": False,
+        }
+
+    # 금액 모드 · 소수점 수량 · 경고 배지 활성
+    est_qty_fractional = round(POSITION_KRW / entry_krw, 3) if entry_krw > 0 else 0.0
+    return {
+        **common,
+        "order_mode": "amount",
+        "qty": 0,  # UI 는 order_mode 로 분기 · 정수 미사용
+        "total_krw": None,
+        "remaining_krw": None,
+        "est_qty_fractional": est_qty_fractional,
+        "order_krw": POSITION_KRW,
+        "manual_sl_required": True,
     }
 
 
@@ -214,20 +248,9 @@ async def build_action_cards() -> dict:
             })
             continue
 
-        # 카드 발급 대상 · 실행 계획 계산
+        # 카드 발급 대상 · 실행 계획 계산 (2026-08-13 Fable 5 2차 · 이중 모드)
+        # 정수 주식 가정이 틀린 경우 (고가주) 금액 모드로 자동 전환 · 배제 X
         plan = _compute_execution_plan(last_close)
-
-        # qty=0 판정 · 예산 대비 매수 불가 (2026-08-13 MU 사고 · A안 · Fable 5 리뷰)
-        if plan["qty"] < 1:
-            entry_usd = plan["entry_limit"]
-            excluded.append({
-                "ticker": tk,
-                "reason": (
-                    f"예산 미달 (1주 ${entry_usd:.2f} × FX {int(USDKRW_RATE)} = "
-                    f"₩{int(entry_usd * USDKRW_RATE):,} > 예산 ₩{int(POSITION_KRW):,})"
-                ),
-            })
-            continue
 
         # 가격 검증 게이트 (Fable 5 리뷰 · 배제 X · 배지만)
         vs_prior_pct = price.get("vs_prior_pct")

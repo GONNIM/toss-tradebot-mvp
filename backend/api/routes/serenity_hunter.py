@@ -173,7 +173,14 @@ class ActionCard(BaseModel):
     first_mention_at: Optional[str] = None
     entry_limit: float
     entry_krw: float
-    qty: int
+    # 이중 모드 (2026-08-13 Fable 5 2차) · shares (정수) | amount (금액)
+    order_mode: str = "shares"
+    qty: int = 0                              # shares 모드
+    total_krw: Optional[float] = None         # shares · qty × entry_krw
+    remaining_krw: Optional[float] = None     # shares · 잔여 예산
+    est_qty_fractional: Optional[float] = None  # amount · 소수점 3자리
+    order_krw: Optional[float] = None         # amount · POSITION_KRW
+    manual_sl_required: bool = False          # amount · 저널 태그
     sl_price: float
     sl_days: int
     tp_trigger_price: float

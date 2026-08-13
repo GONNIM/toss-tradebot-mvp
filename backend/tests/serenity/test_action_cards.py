@@ -51,16 +51,33 @@ def test_compute_execution_plan_basic():
     assert p["entry_limit"] == pytest.approx(100.0 * (1 + SLIPPAGE_LIMIT_PCT / 100))
     assert p["sl_price"] == pytest.approx(p["entry_limit"] * (1 - SL_PCT / 100), rel=1e-3)
     assert p["tp_trigger_price"] == pytest.approx(p["entry_limit"] * (1 + TP_TRIGGER_PCT / 100), rel=1e-3)
-    # min_rr = TP / SL = 15 / 10 = 1.5
     assert p["min_rr"] == 1.5
-    assert p["min_rr_warning"] is True  # < MIN_RR_WARNING (2.0)
+    assert p["min_rr_warning"] is True
 
 
-def test_compute_execution_plan_qty_floor():
-    """POSITION_KRW / (entry_limit × USDKRW_RATE) floor."""
-    p = ac._compute_execution_plan(100.0)
-    expected_qty = int((POSITION_KRW) // (p["entry_limit"] * USDKRW_RATE))
-    assert p["qty"] == expected_qty
+def test_shares_mode_when_affordable():
+    """last_close × FX ≤ POSITION_KRW → shares 모드 · qty·remaining."""
+    p = ac._compute_execution_plan(100.0)  # entry_krw = 101 × 1330 = 134,330
+    assert p["order_mode"] == "shares"
+    assert p["qty"] == int(POSITION_KRW // (p["entry_limit"] * USDKRW_RATE))
+    assert p["total_krw"] == pytest.approx(p["entry_krw"] * p["qty"])
+    assert p["remaining_krw"] == pytest.approx(POSITION_KRW - p["total_krw"])
+    assert p["est_qty_fractional"] is None
+    assert p["order_krw"] is None
+    assert p["manual_sl_required"] is False
+
+
+def test_amount_mode_when_expensive():
+    """last_close × FX > POSITION_KRW → amount 모드 · 소수점 수량 · manual_sl_required."""
+    p = ac._compute_execution_plan(911.29)  # MU 시나리오 · entry_krw ≈ 1,224,132
+    assert p["order_mode"] == "amount"
+    assert p["qty"] == 0
+    assert p["total_krw"] is None
+    assert p["remaining_krw"] is None
+    assert p["est_qty_fractional"] > 0.0
+    assert p["est_qty_fractional"] < 1.0  # 20만원 / 900달러급 = 소수점
+    assert p["order_krw"] == POSITION_KRW
+    assert p["manual_sl_required"] is True
 
 
 # ─── 필터 유닛 (aggregate mock) ─────────────────────────────────
@@ -235,14 +252,20 @@ async def test_fx_rate_and_filters_in_response():
 
 
 @pytest.mark.asyncio
-async def test_qty_zero_excluded_with_reason():
-    """예산 미달 (qty=0) → excluded 로 이동 · 사유 명시 (Fable 5 · 탈락 명단 투명성)."""
-    # MU 시나리오 · $911 · 20만원 예산 · qty = floor(200000 / (911×1.01×1330)) = 0
+async def test_high_price_ticker_kept_as_amount_mode():
+    """(2026-08-13 Fable 5 2차) MU $911 같은 고가주 · 배제 X · amount 모드 카드 발급."""
     await _seed_ticker_with_signals("MU", m90=45, m7=3, bull_pct=78.0, price=911.29, tier=None)
     result = await ac.build_action_cards()
-    assert all(c["ticker"] != "MU" for c in result["cards"]), "qty=0 카드 노출 X"
-    reason = next(e["reason"] for e in result["excluded"] if e["ticker"] == "MU")
-    assert "예산 미달" in reason and "₩200,000" in reason
+    mu_card = next((c for c in result["cards"] if c["ticker"] == "MU"), None)
+    assert mu_card is not None, "고가주가 배제되지 않고 카드에 남아야 함"
+    assert mu_card["order_mode"] == "amount"
+    assert mu_card["manual_sl_required"] is True
+    assert mu_card["est_qty_fractional"] > 0
+    # excluded 에 예산 미달 사유가 남아있지 않아야 함
+    assert not any(
+        e["ticker"] == "MU" and "예산 미달" in e["reason"]
+        for e in result["excluded"]
+    ), "구 A안 사유 문자열 잔재 X"
 
 
 @pytest.mark.asyncio

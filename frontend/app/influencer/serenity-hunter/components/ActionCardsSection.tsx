@@ -120,6 +120,11 @@ export function ActionCardsSection({ data }: { data: ActionCardsResponse }) {
           ticker={activeCard.ticker}
           pageSource="serenity-hunter"
           hypothesisId={`serenity-hunter-action-v1-${activeCard.tier ?? "unscored"}`}
+          initialThesis={
+            activeCard.manual_sl_required
+              ? "manual_sl_required=true · 소수점 주문 · 자동 손절 브로커 확인 필요\n\n"
+              : ""
+          }
           initialEntry={activeCard.entry_limit.toFixed(4)}
           initialInvalidation={activeCard.sl_price.toFixed(4)}
           initialTarget={activeCard.tp_trigger_price.toFixed(4)}
@@ -175,6 +180,28 @@ function ActionCardItem({
             ⚠ 시총 검산 실패
           </span>
         )}
+        {card.order_mode === "amount" && (
+          <>
+            <span
+              className="rounded bg-purple-500/20 px-1.5 py-0.5 text-[10px] font-semibold text-purple-400"
+              title="1주가 예산을 초과 · 금액 주문 (₩200,000 상당) · 소수점 수량 · 지정가 통제 브로커별 제한"
+            >
+              💰 금액 모드
+            </span>
+            <span
+              className="rounded bg-yellow-500/20 px-1.5 py-0.5 text-[10px] font-semibold text-yellow-400"
+              title="소수점 주문은 지정가 슬리피지 방어가 약함 · 브로커 매매 방식 실 확인"
+            >
+              ⚠ 지정가 통제 제한
+            </span>
+            <span
+              className="rounded bg-red-500/20 px-1.5 py-0.5 text-[10px] font-semibold text-red-400"
+              title="브로커별 소수점 주문의 자동 손절 지원 상이 · 저널에 manual_sl_required=true 태그 프리필 · 실 손절 반드시 수동 확인"
+            >
+              🛑 손절 수동 확인
+            </span>
+          </>
+        )}
       </header>
 
       {card.industry && (
@@ -194,11 +221,27 @@ function ActionCardItem({
             매수 <span className="text-muted-foreground">·</span> 다음 시가 · 지정가 상한{" "}
             <span className="font-bold">{_fmtUsd(card.entry_limit, 4)}</span>
           </div>
-          <div>
-            수량 <span className="text-muted-foreground">·</span>{" "}
-            <span className="font-bold">{card.qty}주</span>{" "}
-            <span className="text-muted-foreground">(≈{_fmtKrw(card.entry_krw * card.qty)})</span>
-          </div>
+          {card.order_mode === "shares" ? (
+            <div>
+              수량 <span className="text-muted-foreground">·</span>{" "}
+              <span className="font-bold">{card.qty}주</span>{" "}
+              <span className="text-muted-foreground">
+                (≈{_fmtKrw(card.total_krw ?? card.entry_krw * card.qty)}
+                {card.remaining_krw !== null && card.remaining_krw !== undefined
+                  ? ` · 잔여 ${_fmtKrw(card.remaining_krw)}`
+                  : ""}
+                )
+              </span>
+            </div>
+          ) : (
+            <div>
+              주문금액 <span className="text-muted-foreground">·</span>{" "}
+              <span className="font-bold">{_fmtKrw(card.order_krw ?? 0)}</span>{" "}
+              <span className="text-muted-foreground">
+                (예상 수량 ≈ {(card.est_qty_fractional ?? 0).toFixed(3)}주)
+              </span>
+            </div>
+          )}
           <div className="text-red-500">
             손절 <span className="text-muted-foreground">·</span> −{risk.sl_pct}% ={" "}
             <span className="font-bold">{_fmtUsd(card.sl_price, 4)}</span> or {card.sl_days}거래일

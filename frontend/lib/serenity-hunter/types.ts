@@ -137,7 +137,13 @@ export type ActionCard = {
   first_mention_at: string | null;
   entry_limit: number;
   entry_krw: number;
+  order_mode: "shares" | "amount";
   qty: number;
+  total_krw: number | null;
+  remaining_krw: number | null;
+  est_qty_fractional: number | null;
+  order_krw: number | null;
+  manual_sl_required: boolean;
   sl_price: number;
   sl_days: number;
   tp_trigger_price: number;
