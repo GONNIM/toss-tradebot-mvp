@@ -6,7 +6,7 @@
  * 색상: 이익 red · 손실 blue (한국 관례).
  * 원장 = 토스 API · 대시보드 = 사본 (broker-api-source-of-truth).
  */
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { useQueryClient, useQuery } from "@tanstack/react-query";
 import { AdminSessionBar } from "@/components/admin/AdminSessionBar";
 import { api, type TossAccountSnapshot, type TossHolding } from "@/lib/api";
@@ -195,37 +195,72 @@ function TossAccountView({
   );
 }
 
-// ─── 층 1 · 총 자산 헤더 (배지 부착 금지) ─────────────────────────────
+// ─── 접힘 가능 카드 공통 헤더 ────────────────────────────────────────
+
+function CardHeader({
+  label,
+  amount,
+  open,
+  onToggle,
+  extra,
+}: {
+  label: ReactNode;
+  amount: string;
+  open: boolean;
+  onToggle: () => void;
+  extra?: ReactNode;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onToggle}
+      className="flex w-full items-center justify-between text-left"
+    >
+      <span className="flex-1">
+        <div className="text-xs text-muted-foreground">{label}</div>
+        <div className="mt-1 flex flex-wrap items-baseline gap-2">
+          <span className="text-xl font-bold">{amount}</span>
+          {extra}
+        </div>
+      </span>
+      <span className="ml-2 text-xs text-muted-foreground">{open ? "▲" : "▼"}</span>
+    </button>
+  );
+}
+
+// ─── 층 1 · 총 자산 헤더 (배지 부착 금지 · 접힘 default) ──────────────
 
 function TotalAssetHeader({ data }: { data: TossAccountSnapshot }) {
+  const [open, setOpen] = useState(false);
   return (
     <section className="rounded-xl border border-border bg-card p-6">
-      <div className="text-xs text-muted-foreground">총 자산</div>
-      <div className="mt-1 text-3xl font-bold">{_krw(data.total_asset_krw)}</div>
-      <div className="mt-2 text-[10px] text-muted-foreground">
-        = 주문 가능 + 내 투자 · 총자산에는 수익률을 붙이지 않습니다 (수익률은 아래 '내 투자' 참조)
-      </div>
+      <CardHeader
+        label="총 자산"
+        amount={_krw(data.total_asset_krw)}
+        open={open}
+        onToggle={() => setOpen(!open)}
+      />
+      {open && (
+        <div className="mt-3 border-t border-border/40 pt-3 text-[10px] text-muted-foreground">
+          = 주문 가능 + 내 투자 · 총자산에는 수익률을 붙이지 않습니다 (수익률은 아래 '내 투자' 참조)
+        </div>
+      )}
     </section>
   );
 }
 
-// ─── 층 2A · 주문 가능 (손익 없음 · 통화 접힘) ────────────────────────
+// ─── 층 2A · 주문 가능 (손익 없음 · 접힘 default) ─────────────────────
 
 function OrderAvailableCard({ data }: { data: TossAccountSnapshot }) {
   const [open, setOpen] = useState(false);
   return (
     <section className="rounded-xl border border-border bg-card p-4">
-      <button
-        type="button"
-        onClick={() => setOpen(!open)}
-        className="flex w-full items-center justify-between text-left"
-      >
-        <span>
-          <div className="text-xs text-muted-foreground">💰 주문 가능</div>
-          <div className="mt-1 text-xl font-bold">{_krw(data.order_available_krw)}</div>
-        </span>
-        <span className="text-xs text-muted-foreground">{open ? "▲ 접기" : "▼ 통화별"}</span>
-      </button>
+      <CardHeader
+        label="💰 주문 가능"
+        amount={_krw(data.order_available_krw)}
+        open={open}
+        onToggle={() => setOpen(!open)}
+      />
       {open && (
         <div className="mt-3 grid gap-2 border-t border-border/40 pt-3 text-xs sm:grid-cols-2">
           <div>
@@ -249,44 +284,48 @@ function OrderAvailableCard({ data }: { data: TossAccountSnapshot }) {
   );
 }
 
-// ─── 층 2B · 내 투자 (손익 배지 · 수익률 분모 툴팁) ───────────────────
+// ─── 층 2B · 내 투자 (손익 배지 · 접힘 default) ───────────────────────
 
 function InvestmentCard({ data }: { data: TossAccountSnapshot }) {
+  const [open, setOpen] = useState(false);
   const pnl = data.investment_pnl_krw;
   const pct = data.investment_pnl_pct;
   const cost = data.investment_cost_krw;
+  // 헤더 우측에 항상 손익 배지 노출 (접힘 시에도 보이도록 · 요구 위계)
+  const badge =
+    pnl !== null ? (
+      <>
+        <span className={"text-sm font-semibold " + pnlClass(pnl)}>
+          {pnl > 0 ? "+" : ""}{_krw(pnl)}
+        </span>
+        <span
+          className={"text-xs " + pnlClass(pct)}
+          title={cost !== null ? `투자 원금 ${_krw(cost)} 기준 (총자산 아님)` : undefined}
+        >
+          ({_pct(pct)})
+        </span>
+        {data.investment_pnl_source === "computed" && (
+          <span
+            className="rounded bg-muted px-1.5 py-0.5 text-[10px] text-muted-foreground"
+            title="API 원본 없음 · KR+US 자체 합산 · 오차 가능"
+          >
+            computed
+          </span>
+        )}
+      </>
+    ) : null;
   return (
     <section className="rounded-xl border border-border bg-card p-4">
-      <div className="text-xs text-muted-foreground">📈 내 투자</div>
-      <div className="mt-1 text-xl font-bold">{_krw(data.investment_market_value_krw)}</div>
-      {pnl !== null && (
-        <div className="mt-2 flex flex-wrap items-baseline gap-2 text-sm">
-          <span className={"font-semibold " + pnlClass(pnl)}>
-            {pnl > 0 ? "+" : ""}{_krw(pnl)}
-          </span>
-          <span
-            className={"text-xs " + pnlClass(pct)}
-            title={
-              cost !== null
-                ? `투자 원금 ${_krw(cost)} 기준 (총자산 기준 아님)`
-                : undefined
-            }
-          >
-            ({_pct(pct)})
-          </span>
-          {data.investment_pnl_source === "computed" && (
-            <span
-              className="rounded bg-muted px-1.5 py-0.5 text-[10px] text-muted-foreground"
-              title="API 원본 없음 · KR+US 자체 합산 · 오차 가능"
-            >
-              computed
-            </span>
-          )}
-        </div>
-      )}
-      {cost !== null && (
-        <div className="mt-1 text-[10px] text-muted-foreground">
-          투자 원금 {_krw(cost)} · 수익률은 원금 대비
+      <CardHeader
+        label="📈 내 투자"
+        amount={_krw(data.investment_market_value_krw)}
+        open={open}
+        onToggle={() => setOpen(!open)}
+        extra={badge}
+      />
+      {open && cost !== null && (
+        <div className="mt-3 border-t border-border/40 pt-3 text-[10px] text-muted-foreground">
+          투자 원금 {_krw(cost)} · 수익률은 원금 대비 (총자산 아님)
         </div>
       )}
     </section>
@@ -377,7 +416,18 @@ function UsSection({
 function HoldingsTable({ holdings }: { holdings: TossHolding[] }) {
   return (
     <div className="overflow-x-auto">
-      <table className="w-full text-xs">
+      <table className="w-full table-fixed text-xs">
+        {/* KR/US 섹션 컬럼 너비 통일 (요구: 2026-08-13) */}
+        <colgroup>
+          <col className="w-[18%]" />   {/* 종목 */}
+          <col className="w-[9%]" />    {/* 수량 */}
+          <col className="w-[13%]" />   {/* 평균단가 */}
+          <col className="w-[13%]" />   {/* 현재가 */}
+          <col className="w-[16%]" />   {/* 평가금액 (KRW 환산 2줄 감안) */}
+          <col className="w-[13%]" />   {/* 손익 */}
+          <col className="w-[9%]" />    {/* % */}
+          <col className="w-[9%]" />    {/* 📓 */}
+        </colgroup>
         <thead className="border-b border-border text-left text-[10px] uppercase tracking-wide text-muted-foreground">
           <tr>
             <th className="pb-2">종목</th>
@@ -395,10 +445,14 @@ function HoldingsTable({ holdings }: { holdings: TossHolding[] }) {
             const fmt = h.currency === "KRW" ? _krw : (v: number | null) => _usd(v, 2);
             return (
               <tr key={h.symbol} className="border-b border-border/40 last:border-0">
-                <td className="py-2">
-                  <div className="font-bold">{h.name || h.symbol}</div>
+                <td className="py-2 pr-2">
+                  <div className="truncate font-bold" title={h.name || h.symbol}>
+                    {h.name || h.symbol}
+                  </div>
                   {h.name && (
-                    <div className="text-[10px] font-mono text-muted-foreground">{h.symbol}</div>
+                    <div className="truncate text-[10px] font-mono text-muted-foreground">
+                      {h.symbol}
+                    </div>
                   )}
                 </td>
                 <td className="py-2 text-right font-mono">{_qty(h.qty)}</td>
