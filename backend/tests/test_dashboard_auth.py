@@ -260,6 +260,34 @@ async def test_accounting_identity_asset_ok(client: AsyncClient, monkeypatch):
 
 
 @pytest.mark.asyncio
+async def test_item_pnl_pct_always_self_computed(client: AsyncClient, monkeypatch):
+    """(2026-08-13 사고) item.profitLoss.rate 는 소수 반환 (3.855) · 정의 애매.
+    우리는 자체 계산 (mv-cost)/cost*100 만 사용 · 항상 정확한 백분율."""
+    class _FakeToss:
+        def holdings(self, symbol=None):
+            return {"items": [{
+                "symbol": "005930",
+                "quantity": "100",
+                "averagePurchasePrice": "13543",
+                "lastPrice": "65750",
+                "currency": "KRW",
+                # API rate = 소수 (3.855 = 385.5%) · 우리는 무시
+                "profitLoss": {"amount": 5220700, "rate": 3.855, "ratio": 3.855},
+            }]}
+        def buying_power(self, currency="KRW"):
+            return {}
+
+    monkeypatch.setattr("backend.execution.brokers.toss_client.get_toss_client", lambda: _FakeToss())
+    r = await client.get("/api/v1/dashboard/toss-account", headers={"X-API-Token": TOKEN})
+    body = r.json()
+    h = body["kr_holdings"][0]
+    # 자체 계산: (65750-13543)/13543 * 100 = 385.49%
+    assert h["unrealized_pnl_pct"] == 385.49, (
+        f"item.rate=3.855 원본 무시 · 자체 계산 385.49% 이어야 함. 실제 {h['unrealized_pnl_pct']}"
+    )
+
+
+@pytest.mark.asyncio
 async def test_accounting_identity_investment_ok(client: AsyncClient, monkeypatch):
     """항등식 ⓑ: 국내 + 해외 == 내투자 (±1원 · API 원본 vs KR/US 합산)."""
     class _FakeToss:

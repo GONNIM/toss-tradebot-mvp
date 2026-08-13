@@ -216,8 +216,10 @@ async def get_toss_account():
         pnl_native = _to_float(item_pl_obj.get("amount"))
         if pnl_native is None and mv_native is not None:
             pnl_native = round(mv_native - cost_native, 4)
-        pnl_pct = _to_float(item_pl_obj.get("rate")) or _to_float(item_pl_obj.get("ratio"))
-        if pnl_pct is None and cost_native > 0 and pnl_native is not None:
+        # % 는 자체 계산 (2026-08-13 사고: item.profitLoss.rate 소수 반환 vs 상위 백분율 · 정의 애매)
+        # (mv - cost) / cost × 100 · 항상 백분율 · 반올림 오차만 존재
+        pnl_pct = None
+        if cost_native > 0 and pnl_native is not None:
             pnl_pct = round(pnl_native / cost_native * 100, 2)
 
         # KRW 환산 (US 종목 총계·표시용 · 상위 marketValue.krw 있으면 그거 · 없으면 하드코드 환율)
