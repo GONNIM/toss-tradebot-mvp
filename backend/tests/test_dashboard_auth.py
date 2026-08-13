@@ -145,10 +145,10 @@ async def test_toss_account_kr_us_separation(client: AsyncClient, monkeypatch):
     # 잔고 필드
     assert body["cash_krw"] == 1219785
     assert body["cash_usd"] == 3.97
-    # 총 자산 = 투자 + 주문가능 (사용자 앱 뷰)
-    assert body["total_investment_krw"] == 8241516  # 원본 사용
-    assert body["total_pnl_krw"] == 4644539  # 원본 사용
-    assert body["total_pnl_pct"] == 129.12
+    # 층 2B · 내 투자 (원본 값 · 3층 구조)
+    assert body["investment_market_value_krw"] == 8241516
+    assert body["investment_pnl_krw"] == 4644539
+    assert body["investment_pnl_pct"] == 129.12
 
 
 @pytest.mark.asyncio
@@ -182,7 +182,6 @@ async def test_toss_account_uses_api_values_not_recomputed(client: AsyncClient, 
     """API totalPurchaseAmount/marketValue/profitLoss 원본 그대로 사용 (broker-api-source-of-truth)."""
     class _FakeToss:
         def holdings(self, symbol=None):
-            # API 가 반환한 총계 vs 자체 계산 값이 다르면 (환율·수수료) API 우선
             return {
                 "totalPurchaseAmount": {"krw": 1000000},
                 "marketValue": {"krw": 1200000, "amount": 1200000},
@@ -197,6 +196,89 @@ async def test_toss_account_uses_api_values_not_recomputed(client: AsyncClient, 
     r = await client.get("/api/v1/dashboard/toss-account", headers={"X-API-Token": TOKEN})
     body = r.json()
     # API 원본 값 그대로 노출
-    assert body["total_investment_krw"] == 1200000
-    assert body["total_pnl_krw"] == 200000
-    assert body["total_pnl_pct"] == 20.0
+    assert body["investment_market_value_krw"] == 1200000
+    assert body["investment_cost_krw"] == 1000000
+    assert body["investment_pnl_krw"] == 200000
+    assert body["investment_pnl_pct"] == 20.0
+    assert body["investment_pnl_source"] == "api"
+
+
+# ─── 3층 구조 · 회계 항등식 (Fable 5 · 2026-08-13) ────────────────────
+
+
+@pytest.mark.asyncio
+async def test_three_tier_structure_matches_clippings(client: AsyncClient, monkeypatch):
+    """Clippings 실 값 그대로 검증 · 3층 구조 (총자산 → 주문가능 + 내투자)."""
+    class _FakeToss:
+        def holdings(self, symbol=None):
+            return {
+                "totalPurchaseAmount": {"krw": 3596977},   # 투자 원금
+                "marketValue": {"krw": 8241516, "amount": 8241516},  # 내 투자 평가
+                "profitLoss": {"krw": 4644539, "rate": 129.12, "amount": 4644539},
+                "items": [
+                    {"symbol": "005930", "name": "삼성전자", "quantity": "100",
+                     "averagePurchasePrice": "13543", "lastPrice": "65750", "currency": "KRW"},
+                ],
+            }
+        def buying_power(self, currency="KRW"):
+            # 주문 가능: 원화 1,219,785 + 달러 3.97 (KRW 환산 ~5,281)
+            return {"cashBuyingPower": 1219785 if currency == "KRW" else 3.97}
+
+    monkeypatch.setattr("backend.execution.brokers.toss_client.get_toss_client", lambda: _FakeToss())
+    r = await client.get("/api/v1/dashboard/toss-account", headers={"X-API-Token": TOKEN})
+    body = r.json()
+    # 층 1 · 총 자산 (배지 없음)
+    assert body["total_asset_krw"] == 8241516 + (1219785 + round(3.97 * 1330))
+    # 층 2A · 주문 가능
+    assert body["cash_krw"] == 1219785
+    assert body["cash_usd"] == 3.97
+    # 층 2B · 내 투자 (손익 여기)
+    assert body["investment_market_value_krw"] == 8241516
+    assert body["investment_cost_krw"] == 3596977
+    assert body["investment_pnl_krw"] == 4644539
+    assert body["investment_pnl_pct"] == 129.12
+    # 수익률 분모 검산: 4644539 / 3596977 ≈ 129.12
+    computed_rate = round(4644539 / 3596977 * 100, 2)
+    assert computed_rate == 129.12
+
+
+@pytest.mark.asyncio
+async def test_accounting_identity_asset_ok(client: AsyncClient, monkeypatch):
+    """항등식 ⓐ: 주문가능 + 내투자 == 총자산 (±1원)."""
+    class _FakeToss:
+        def holdings(self, symbol=None):
+            return {"marketValue": {"krw": 1000000}, "items": []}
+        def buying_power(self, currency="KRW"):
+            return {"cashBuyingPower": 500000 if currency == "KRW" else 0}
+
+    monkeypatch.setattr("backend.execution.brokers.toss_client.get_toss_client", lambda: _FakeToss())
+    r = await client.get("/api/v1/dashboard/toss-account", headers={"X-API-Token": TOKEN})
+    body = r.json()
+    assert body["total_asset_krw"] == 1500000
+    assert body["identity_asset_ok"] is True
+    assert body["identity_asset_diff"] == 0
+
+
+@pytest.mark.asyncio
+async def test_accounting_identity_investment_ok(client: AsyncClient, monkeypatch):
+    """항등식 ⓑ: 국내 + 해외 == 내투자 (±1원 · API 원본 vs KR/US 합산)."""
+    class _FakeToss:
+        def holdings(self, symbol=None):
+            return {
+                "marketValue": {"krw": 200000},  # API 총계
+                "items": [
+                    {"symbol": "005930", "quantity": "1", "averagePurchasePrice": "100000",
+                     "lastPrice": "150000", "currency": "KRW"},  # KR mv=150000
+                    # US 종목 · 하드코드 환율 1330 · qty=1 · $37.59 * 1330 ≈ 49994 · 총합 199994
+                    # 항등식 위반 (diff=6 · > 1) 시나리오
+                ],
+            }
+        def buying_power(self, currency="KRW"):
+            return {}
+
+    monkeypatch.setattr("backend.execution.brokers.toss_client.get_toss_client", lambda: _FakeToss())
+    r = await client.get("/api/v1/dashboard/toss-account", headers={"X-API-Token": TOKEN})
+    body = r.json()
+    # KR 150000 · US 0 · sum=150000 · API 200000 → diff=-50000 · 위반
+    assert body["identity_investment_ok"] is False
+    assert body["identity_investment_diff"] == -50000

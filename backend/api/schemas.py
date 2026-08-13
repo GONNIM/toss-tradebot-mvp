@@ -124,40 +124,56 @@ class TossHolding(BaseModel):
 
 
 class TossAccountSnapshot(BaseModel):
-    """토스 계좌 실시간 스냅샷 · '내 계좌' 미러링 (Fable 5 · 2026-08-13)."""
+    """토스 '내 계좌' 3층 미러링 · 회계 항등식 (Fable 5 · 2026-08-13).
+
+    3층 구조 (토스 앱 위계):
+      총 자산
+      ├── 주문 가능 (현금 · 손익 없음)
+      └── 내 투자 (손익 여기 붙음)
+          ├── 국내주식
+          └── 해외주식
+    """
     ok: bool
     error_reason: Optional[str] = None
     last_success_at: Optional[datetime] = None
     fetched_at: datetime
     market_open: bool
-    price_source: str                     # "realtime" | "prior_close"
+    price_source: str
 
-    # 총 자산 헤더 (통합 KRW · 사용자 앱 뷰 정합)
-    total_asset_krw: Optional[float] = None       # 잔고 + 평가금액 (KRW)
-    total_investment_krw: Optional[float] = None  # 총 평가 (KRW · 잔고 제외)
-    total_pnl_krw: Optional[float] = None         # 총 손익 (KRW)
-    total_pnl_pct: Optional[float] = None         # 총 손익률
+    # 층 1 · 총 자산 (헤더 · 손익 없음 · 배지 부착 금지)
+    total_asset_krw: Optional[float] = None
 
-    # 주문 가능 (원화 + 달러)
-    order_available_krw: Optional[float] = None   # 통합 (원화 + 달러 KRW 환산)
-    cash_krw: Optional[float] = None              # 원화 매수여력
-    cash_usd: Optional[float] = None              # 달러 매수여력
+    # 층 2A · 주문 가능 (현금 · 손익 없음)
+    order_available_krw: Optional[float] = None
+    cash_krw: Optional[float] = None
+    cash_usd: Optional[float] = None
 
-    # 국내주식 소계
-    kr_market_value: Optional[float] = None       # KR 평가 (KRW)
-    kr_pnl: Optional[float] = None                # KR 손익 (KRW)
-    kr_pnl_pct: Optional[float] = None            # KR 손익률
+    # 층 2B · 내 투자 (손익 배지 · 수익률 분모 = 투자 원금)
+    investment_market_value_krw: Optional[float] = None  # 현재 평가 (₩8,241,516)
+    investment_cost_krw: Optional[float] = None          # 투자 원금 (₩3,596,977 · 분모 명시)
+    investment_pnl_krw: Optional[float] = None           # 손익 (₩4,644,539)
+    investment_pnl_pct: Optional[float] = None           # 손익률 (129.12% · 원금 기준)
+    investment_pnl_source: str = "computed"              # "api" (원본) | "computed" (자체 합산)
+
+    # 층 3A · 국내주식 (내 투자 하위)
+    kr_market_value: Optional[float] = None
+    kr_cost: Optional[float] = None
+    kr_pnl: Optional[float] = None
+    kr_pnl_pct: Optional[float] = None
     kr_holdings: list[TossHolding] = []
 
-    # 해외주식 소계
-    us_market_value_krw: Optional[float] = None   # US 평가 (KRW 환산)
-    us_pnl_krw: Optional[float] = None            # US 손익 (KRW 환산)
-    us_pnl_pct: Optional[float] = None            # US 손익률
+    # 층 3B · 해외주식 (내 투자 하위)
+    us_market_value_krw: Optional[float] = None
+    us_cost_krw: Optional[float] = None
+    us_pnl_krw: Optional[float] = None
+    us_pnl_pct: Optional[float] = None
     us_holdings: list[TossHolding] = []
 
-    # 정합성 검산 (원본 신뢰 + 검산 병기 · sanity-invariants 원칙)
-    totals_mismatch_pct: Optional[float] = None   # (자체 합계 − API 총자산) / API × 100
-    totals_mismatch_warning: bool = False         # abs > 1% 시 True → UI ⚠ 배지
+    # 회계 항등식 게이트 (±1원 · 근사 X · 원본 로그)
+    identity_asset_ok: bool = True                       # 주문가능 + 내투자 == 총자산
+    identity_asset_diff: Optional[float] = None          # 위반 시 차액 (KRW)
+    identity_investment_ok: bool = True                  # 국내 + 해외 == 내투자
+    identity_investment_diff: Optional[float] = None
 
 
 class LogEntry(BaseModel):

@@ -137,22 +137,43 @@ function TossAccountView({
 
       {data.ok && (
         <>
-          {/* 정합성 검산 배지 (원본 신뢰 + 검산 병기 · sanity-invariants) */}
-          {data.totals_mismatch_warning && (
+          {/* 회계 항등식 위반 배지 (Fable 5 ±1원 · 근사 X) */}
+          {(!data.identity_asset_ok || !data.identity_investment_ok) && (
             <div className="rounded border border-amber-500/40 bg-amber-500/10 p-3 text-xs">
-              <span className="font-semibold text-amber-500">
-                ⚠ 합계 불일치 {_pct(data.totals_mismatch_pct)}
-              </span>{" "}
-              <span className="text-muted-foreground">
-                · 자체 검산 (KR+US 소계) vs API 총자산 1% 초과 편차 · API 값 표시 우선
-              </span>
+              <div className="font-semibold text-amber-500">⚠ 회계 항등식 위반</div>
+              {!data.identity_asset_ok && (
+                <div className="mt-1 font-mono text-muted-foreground">
+                  주문가능 + 내투자 ≠ 총자산 · 차액 {_krw(data.identity_asset_diff)}
+                </div>
+              )}
+              {!data.identity_investment_ok && (
+                <div className="mt-1 font-mono text-muted-foreground">
+                  국내 + 해외 ≠ 내투자 · 차액 {_krw(data.identity_investment_diff)}
+                </div>
+              )}
+              <div className="mt-1 text-[10px] text-muted-foreground">
+                → 원본 응답 로그 확인 필요 (API 필드 miss or 환율 계산 miss)
+              </div>
             </div>
           )}
 
+          {/* 층 1 · 총 자산 (배지 부착 금지 · Fable 5) */}
           <TotalAssetHeader data={data} />
-          <OrderAvailableCard data={data} />
-          <KrSection holdings={data.kr_holdings} subtotal={data.kr_market_value} pnl={data.kr_pnl} pnlPct={data.kr_pnl_pct} />
-          <UsSection holdings={data.us_holdings} subtotalKrw={data.us_market_value_krw} pnlKrw={data.us_pnl_krw} pnlPct={data.us_pnl_pct} priceSource={data.price_source} />
+
+          {/* 층 2 · 주문 가능 + 내 투자 나란히 */}
+          <div className="grid gap-4 lg:grid-cols-2">
+            <OrderAvailableCard data={data} />
+            <InvestmentCard data={data} />
+          </div>
+
+          {/* 층 3 · 국내 + 해외 (내 투자 하위 · 시각 종속 · 좌측 들여쓰기) */}
+          <div className="ml-4 space-y-4 border-l-2 border-border/40 pl-4">
+            <div className="text-[10px] uppercase tracking-wide text-muted-foreground">
+              내 투자 · 종목 상세
+            </div>
+            <KrSection holdings={data.kr_holdings} subtotal={data.kr_market_value} pnl={data.kr_pnl} pnlPct={data.kr_pnl_pct} />
+            <UsSection holdings={data.us_holdings} subtotalKrw={data.us_market_value_krw} pnlKrw={data.us_pnl_krw} pnlPct={data.us_pnl_pct} priceSource={data.price_source} />
+          </div>
 
           <footer className="mt-2 text-[10px] text-muted-foreground">
             <span
@@ -174,29 +195,21 @@ function TossAccountView({
   );
 }
 
-// ─── 총 자산 헤더 · 토스 '내 계좌' 위계 ───────────────────────────────
+// ─── 층 1 · 총 자산 헤더 (배지 부착 금지) ─────────────────────────────
 
 function TotalAssetHeader({ data }: { data: TossAccountSnapshot }) {
   return (
     <section className="rounded-xl border border-border bg-card p-6">
       <div className="text-xs text-muted-foreground">총 자산</div>
       <div className="mt-1 text-3xl font-bold">{_krw(data.total_asset_krw)}</div>
-      {data.total_pnl_krw !== null && (
-        <div className="mt-2 flex items-baseline gap-2 text-sm">
-          <span className="text-muted-foreground">총 투자 손익</span>
-          <span className={"font-semibold " + pnlClass(data.total_pnl_krw)}>
-            {data.total_pnl_krw > 0 ? "+" : ""}{_krw(data.total_pnl_krw)}
-          </span>
-          <span className={"text-xs " + pnlClass(data.total_pnl_pct)}>
-            ({_pct(data.total_pnl_pct)})
-          </span>
-        </div>
-      )}
+      <div className="mt-2 text-[10px] text-muted-foreground">
+        = 주문 가능 + 내 투자 · 총자산에는 수익률을 붙이지 않습니다 (수익률은 아래 '내 투자' 참조)
+      </div>
     </section>
   );
 }
 
-// ─── 주문 가능 (통합 + 접힘 통화별) ───────────────────────────────────
+// ─── 층 2A · 주문 가능 (손익 없음 · 통화 접힘) ────────────────────────
 
 function OrderAvailableCard({ data }: { data: TossAccountSnapshot }) {
   const [open, setOpen] = useState(false);
@@ -208,25 +221,27 @@ function OrderAvailableCard({ data }: { data: TossAccountSnapshot }) {
         className="flex w-full items-center justify-between text-left"
       >
         <span>
-          <span className="text-xs text-muted-foreground">총 주문 가능 금액</span>
-          <span className="ml-3 text-lg font-bold">{_krw(data.order_available_krw)}</span>
+          <div className="text-xs text-muted-foreground">💰 주문 가능</div>
+          <div className="mt-1 text-xl font-bold">{_krw(data.order_available_krw)}</div>
         </span>
         <span className="text-xs text-muted-foreground">{open ? "▲ 접기" : "▼ 통화별"}</span>
       </button>
       {open && (
         <div className="mt-3 grid gap-2 border-t border-border/40 pt-3 text-xs sm:grid-cols-2">
           <div>
-            <span className="text-muted-foreground">원화 </span>
-            <span className="font-mono font-bold">{_krw(data.cash_krw)}</span>
+            <div className="text-muted-foreground">원화</div>
+            <div className="font-mono font-bold">{_krw(data.cash_krw)}</div>
           </div>
           <div>
-            <span className="text-muted-foreground">달러 </span>
-            <span className="font-mono font-bold">{_usd(data.cash_usd)}</span>
-            {data.cash_usd !== null && (
-              <span className="ml-1 text-[10px] text-muted-foreground">
-                (≈{_krw((data.cash_usd ?? 0) * 1330)})
-              </span>
-            )}
+            <div className="text-muted-foreground">달러</div>
+            <div className="font-mono font-bold">
+              {_usd(data.cash_usd)}
+              {data.cash_usd !== null && (
+                <span className="ml-1 text-[10px] text-muted-foreground">
+                  (≈{_krw((data.cash_usd ?? 0) * 1330)})
+                </span>
+              )}
+            </div>
           </div>
         </div>
       )}
@@ -234,7 +249,51 @@ function OrderAvailableCard({ data }: { data: TossAccountSnapshot }) {
   );
 }
 
-// ─── 국내주식 섹션 ────────────────────────────────────────────────────
+// ─── 층 2B · 내 투자 (손익 배지 · 수익률 분모 툴팁) ───────────────────
+
+function InvestmentCard({ data }: { data: TossAccountSnapshot }) {
+  const pnl = data.investment_pnl_krw;
+  const pct = data.investment_pnl_pct;
+  const cost = data.investment_cost_krw;
+  return (
+    <section className="rounded-xl border border-border bg-card p-4">
+      <div className="text-xs text-muted-foreground">📈 내 투자</div>
+      <div className="mt-1 text-xl font-bold">{_krw(data.investment_market_value_krw)}</div>
+      {pnl !== null && (
+        <div className="mt-2 flex flex-wrap items-baseline gap-2 text-sm">
+          <span className={"font-semibold " + pnlClass(pnl)}>
+            {pnl > 0 ? "+" : ""}{_krw(pnl)}
+          </span>
+          <span
+            className={"text-xs " + pnlClass(pct)}
+            title={
+              cost !== null
+                ? `투자 원금 ${_krw(cost)} 기준 (총자산 기준 아님)`
+                : undefined
+            }
+          >
+            ({_pct(pct)})
+          </span>
+          {data.investment_pnl_source === "computed" && (
+            <span
+              className="rounded bg-muted px-1.5 py-0.5 text-[10px] text-muted-foreground"
+              title="API 원본 없음 · KR+US 자체 합산 · 오차 가능"
+            >
+              computed
+            </span>
+          )}
+        </div>
+      )}
+      {cost !== null && (
+        <div className="mt-1 text-[10px] text-muted-foreground">
+          투자 원금 {_krw(cost)} · 수익률은 원금 대비
+        </div>
+      )}
+    </section>
+  );
+}
+
+// ─── 층 3A · 국내주식 (내 투자 하위) ──────────────────────────────────
 
 function KrSection({
   holdings,
@@ -248,9 +307,9 @@ function KrSection({
   pnlPct: number | null;
 }) {
   return (
-    <section className="rounded-xl border border-border bg-card p-4">
+    <section className="rounded-lg border border-border bg-card/60 p-4">
       <header className="mb-3 flex flex-wrap items-baseline justify-between gap-2 border-b border-border/40 pb-2">
-        <h2 className="text-base font-semibold">🇰🇷 국내주식</h2>
+        <h2 className="text-sm font-semibold">🇰🇷 국내주식</h2>
         <div className="text-sm">
           <span className="font-bold">{_krw(subtotal)}</span>
           {pnl !== null && (
@@ -269,7 +328,7 @@ function KrSection({
   );
 }
 
-// ─── 해외주식 섹션 ────────────────────────────────────────────────────
+// ─── 층 3B · 해외주식 (내 투자 하위) ──────────────────────────────────
 
 function UsSection({
   holdings,
@@ -285,13 +344,13 @@ function UsSection({
   priceSource: "realtime" | "prior_close";
 }) {
   return (
-    <section className="rounded-xl border border-border bg-card p-4">
+    <section className="rounded-lg border border-border bg-card/60 p-4">
       <header className="mb-3 flex flex-wrap items-baseline justify-between gap-2 border-b border-border/40 pb-2">
-        <h2 className="text-base font-semibold">
+        <h2 className="text-sm font-semibold">
           🇺🇸 해외주식
           {priceSource === "prior_close" && (
             <span className="ml-2 rounded bg-muted px-1.5 py-0.5 text-[10px] text-muted-foreground">
-              전일 종가 기준
+              전일 종가
             </span>
           )}
         </h2>

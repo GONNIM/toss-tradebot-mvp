@@ -199,27 +199,40 @@ export interface TossAccountSnapshot {
   market_open: boolean;
   price_source: "realtime" | "prior_close";
 
+  // 층 1 · 총 자산 (배지 없음)
   total_asset_krw: number | null;
-  total_investment_krw: number | null;
-  total_pnl_krw: number | null;
-  total_pnl_pct: number | null;
 
+  // 층 2A · 주문 가능 (손익 없음)
   order_available_krw: number | null;
   cash_krw: number | null;
   cash_usd: number | null;
 
+  // 층 2B · 내 투자 (손익 배지 · 분모 = 투자 원금)
+  investment_market_value_krw: number | null;
+  investment_cost_krw: number | null;
+  investment_pnl_krw: number | null;
+  investment_pnl_pct: number | null;
+  investment_pnl_source: "api" | "computed";
+
+  // 층 3A · 국내주식
   kr_market_value: number | null;
+  kr_cost: number | null;
   kr_pnl: number | null;
   kr_pnl_pct: number | null;
   kr_holdings: TossHolding[];
 
+  // 층 3B · 해외주식
   us_market_value_krw: number | null;
+  us_cost_krw: number | null;
   us_pnl_krw: number | null;
   us_pnl_pct: number | null;
   us_holdings: TossHolding[];
 
-  totals_mismatch_pct: number | null;
-  totals_mismatch_warning: boolean;
+  // 회계 항등식 게이트 (±1원)
+  identity_asset_ok: boolean;
+  identity_asset_diff: number | null;
+  identity_investment_ok: boolean;
+  identity_investment_diff: number | null;
 }
 
 export interface LogEntry {

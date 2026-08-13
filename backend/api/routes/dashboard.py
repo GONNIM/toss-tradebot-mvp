@@ -5,11 +5,14 @@
 """
 from __future__ import annotations
 
+import logging
 from datetime import datetime, timezone
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import desc, select
+
+logger = logging.getLogger(__name__)
 
 from backend.api.auth import require_sniper_token
 from backend.api.schemas import DashboardSummary, TossAccountSnapshot, TossHolding
@@ -163,19 +166,21 @@ async def get_toss_account():
             price_source=price_source,
         )
 
-    # 상위 집계 (원본 우선)
+    # 상위 집계 (원본 우선 · Fable 5 broker-api-source-of-truth)
     total_purchase = holdings_dict.get("totalPurchaseAmount") or {}
     market_value_agg = holdings_dict.get("marketValue") or {}
     profit_loss_agg = holdings_dict.get("profitLoss") or {}
 
-    total_investment_krw = _to_float(market_value_agg.get("krw") or market_value_agg.get("amount"))
-    total_pnl_krw = _to_float(profit_loss_agg.get("krw") or profit_loss_agg.get("amount"))
-    total_pnl_pct = _to_float(profit_loss_agg.get("rate") or profit_loss_agg.get("ratio"))
+    # 층 2B 필드 (내 투자)
+    investment_market_value_krw = _to_float(market_value_agg.get("krw") or market_value_agg.get("amount"))
+    investment_cost_krw = _to_float(total_purchase.get("krw"))
+    investment_pnl_krw = _to_float(profit_loss_agg.get("krw") or profit_loss_agg.get("amount"))
+    investment_pnl_pct = _to_float(profit_loss_agg.get("rate") or profit_loss_agg.get("ratio"))
+    investment_pnl_source = "api" if (investment_market_value_krw is not None and investment_pnl_krw is not None) else "computed"
 
-    # 원가 KRW (검산·손익률 fallback 용)
-    total_cost_krw = _to_float(total_purchase.get("krw"))
-    if total_pnl_pct is None and total_cost_krw and total_pnl_krw is not None:
-        total_pnl_pct = round(total_pnl_krw / total_cost_krw * 100, 2)
+    # 수익률 fallback (원금 기준 · Fable 5: 분모 명시 필요)
+    if investment_pnl_pct is None and investment_cost_krw and investment_pnl_krw is not None:
+        investment_pnl_pct = round(investment_pnl_krw / investment_cost_krw * 100, 2)
 
     items = holdings_dict.get("items") or []
     kr_holdings: list[TossHolding] = []
@@ -250,32 +255,61 @@ async def get_toss_account():
             # US cost KRW 환산 (검산용)
             us_cost_krw_sum += round(cost_native * 1330, 0)
 
-    # 섹션 소계 (원본 없으면 자체 합)
+    # 층 3 · 섹션 소계 (자체 합산 · KR/US 별도)
     kr_market_value = round(kr_mv_sum, 0) if kr_holdings else None
+    kr_cost = round(kr_cost_sum, 0) if kr_holdings else None
     kr_pnl = round(kr_mv_sum - kr_cost_sum, 0) if kr_holdings else None
     kr_pnl_pct = round((kr_mv_sum - kr_cost_sum) / kr_cost_sum * 100, 2) if kr_cost_sum > 0 else None
 
     us_market_value_krw = round(us_mv_krw_sum, 0) if us_holdings else None
+    us_cost_krw = round(us_cost_krw_sum, 0) if us_holdings else None
     us_pnl_krw = round(us_mv_krw_sum - us_cost_krw_sum, 0) if us_holdings else None
     us_pnl_pct = round((us_mv_krw_sum - us_cost_krw_sum) / us_cost_krw_sum * 100, 2) if us_cost_krw_sum > 0 else None
 
-    # 총 자산 (원본 우선)
-    if total_investment_krw is None:
-        total_investment_krw = kr_mv_sum + us_mv_krw_sum
+    # 층 2B fallback (API 없으면 자체 합산)
+    if investment_market_value_krw is None:
+        computed_mv = kr_mv_sum + us_mv_krw_sum
+        investment_market_value_krw = computed_mv if computed_mv > 0 else None
+        if investment_pnl_source == "api":
+            investment_pnl_source = "computed"
 
-    # 잔고 KRW 통합
+    # 층 2A · 주문 가능
     cash_usd_krw = round((cash_usd or 0) * 1330, 0) if cash_usd else 0
     order_available_krw = round((cash_krw or 0) + cash_usd_krw, 0) if (cash_krw or cash_usd) else None
-    total_asset_krw = round(total_investment_krw + (order_available_krw or 0), 0) if total_investment_krw else None
 
-    # 정합성 검산 (Fable 5: 원본 신뢰 + 검산 병기)
-    totals_mismatch_pct = None
-    totals_mismatch_warning = False
-    if total_investment_krw and (kr_mv_sum or us_mv_krw_sum):
-        expected = kr_mv_sum + us_mv_krw_sum
-        diff = expected - total_investment_krw
-        totals_mismatch_pct = round(diff / total_investment_krw * 100, 2)
-        totals_mismatch_warning = abs(totals_mismatch_pct) > 1.0
+    # 층 1 · 총 자산 = 주문 가능 + 내 투자
+    total_asset_krw = None
+    if investment_market_value_krw is not None or order_available_krw is not None:
+        total_asset_krw = round((investment_market_value_krw or 0) + (order_available_krw or 0), 0)
+
+    # ─── 회계 항등식 게이트 (Fable 5 · ±1원 · 근사 X) ─────────
+    identity_asset_ok = True
+    identity_asset_diff = None
+    if total_asset_krw is not None and investment_market_value_krw is not None and order_available_krw is not None:
+        expected_asset = (order_available_krw or 0) + (investment_market_value_krw or 0)
+        diff = round(expected_asset - total_asset_krw, 0)
+        identity_asset_diff = diff
+        identity_asset_ok = abs(diff) <= 1
+        if not identity_asset_ok:
+            logger.warning(
+                "[dashboard.toss] 항등식 위반 · 주문가능+내투자 != 총자산 · diff=%s KRW · "
+                "order_available=%s · investment=%s · total=%s",
+                diff, order_available_krw, investment_market_value_krw, total_asset_krw,
+            )
+
+    identity_investment_ok = True
+    identity_investment_diff = None
+    if investment_market_value_krw is not None and (kr_market_value is not None or us_market_value_krw is not None):
+        expected_inv = (kr_market_value or 0) + (us_market_value_krw or 0)
+        diff = round(expected_inv - investment_market_value_krw, 0)
+        identity_investment_diff = diff
+        identity_investment_ok = abs(diff) <= 1
+        if not identity_investment_ok:
+            logger.warning(
+                "[dashboard.toss] 항등식 위반 · 국내+해외 != 내투자 · diff=%s KRW · "
+                "kr=%s · us_krw=%s · investment=%s",
+                diff, kr_market_value, us_market_value_krw, investment_market_value_krw,
+            )
 
     _last_success["toss_account"] = fetched_at
     return TossAccountSnapshot(
@@ -285,20 +319,26 @@ async def get_toss_account():
         market_open=market_open,
         price_source=price_source,
         total_asset_krw=total_asset_krw,
-        total_investment_krw=round(total_investment_krw, 0) if total_investment_krw else None,
-        total_pnl_krw=round(total_pnl_krw, 0) if total_pnl_krw is not None else None,
-        total_pnl_pct=total_pnl_pct,
         order_available_krw=order_available_krw,
         cash_krw=cash_krw,
         cash_usd=cash_usd,
+        investment_market_value_krw=round(investment_market_value_krw, 0) if investment_market_value_krw else None,
+        investment_cost_krw=round(investment_cost_krw, 0) if investment_cost_krw else None,
+        investment_pnl_krw=round(investment_pnl_krw, 0) if investment_pnl_krw is not None else None,
+        investment_pnl_pct=investment_pnl_pct,
+        investment_pnl_source=investment_pnl_source,
         kr_market_value=kr_market_value,
+        kr_cost=kr_cost,
         kr_pnl=kr_pnl,
         kr_pnl_pct=kr_pnl_pct,
         kr_holdings=kr_holdings,
         us_market_value_krw=us_market_value_krw,
+        us_cost_krw=us_cost_krw,
         us_pnl_krw=us_pnl_krw,
         us_pnl_pct=us_pnl_pct,
         us_holdings=us_holdings,
-        totals_mismatch_pct=totals_mismatch_pct,
-        totals_mismatch_warning=totals_mismatch_warning,
+        identity_asset_ok=identity_asset_ok,
+        identity_asset_diff=identity_asset_diff,
+        identity_investment_ok=identity_investment_ok,
+        identity_investment_diff=identity_investment_diff,
     )
