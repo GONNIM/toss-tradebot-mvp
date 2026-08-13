@@ -159,6 +159,22 @@ function ActionCardItem({
             ⚠ 섹터겹침
           </span>
         )}
+        {card.price_verification_failed && (
+          <span
+            className="rounded bg-red-500/20 px-1.5 py-0.5 text-[10px] font-semibold text-red-500"
+            title={`prior close 대비 ${card.vs_prior_pct?.toFixed(1)}% 이동 · ±30% 초과 · 실적 발표·이벤트 가능 · 수동 확인 필요`}
+          >
+            🚨 가격 검증 실패 · 수동 확인
+          </span>
+        )}
+        {card.market_cap_sanity_warning && (
+          <span
+            className="rounded bg-orange-500/20 px-1.5 py-0.5 text-[10px] font-semibold text-orange-500"
+            title="marketCap ≠ shares × close (>10% 편차) · yfinance 데이터 정합성 의심 · 계산 신뢰도 낮음"
+          >
+            ⚠ 시총 검산 실패
+          </span>
+        )}
       </header>
 
       {card.industry && (

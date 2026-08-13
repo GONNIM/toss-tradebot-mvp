@@ -57,6 +57,14 @@ logger = logging.getLogger(__name__)
 
 MAX_VISIBLE_CARDS = 5
 
+# ─── 가격 검증 게이트 (2026-08-13 MU 사고 대응) ───────────────────
+# Fable 5 리뷰: 절대 범위 하드코딩 X · 내부 일관성 불변식 사용
+PRICE_ABNORMAL_MOVE_THRESHOLD_PCT = 30.0
+"""prior close 대비 |vs_prior_pct| > 30% → 카드에 "가격 검증 실패" 배지 (배제 X)."""
+
+MARKET_CAP_SANITY_TOLERANCE = 0.10
+"""|marketCap − shares × close| / marketCap > 10% → sanity warning."""
+
 
 def _tier_rank(tier: Optional[str]) -> int:
     """S=0 · A=1 · B=2 · C=3 · D=4 · F=5 · None=99. 낮을수록 상위."""
@@ -135,11 +143,19 @@ async def build_action_cards() -> dict:
                 SerenityTickerPrice.close,
                 SerenityTickerPrice.industry,
                 SerenityTickerPrice.sector,
+                SerenityTickerPrice.prior_close,
+                SerenityTickerPrice.vs_prior_close_pct,
+                SerenityTickerPrice.market_cap,
+                SerenityTickerPrice.shares_outstanding,
             )
             .where(SerenityTickerPrice.ticker.in_(all_tickers))
         )).all())
     price_map: dict[str, dict] = {
-        r[0]: {"close": r[1], "industry": r[2], "sector": r[3]}
+        r[0]: {
+            "close": r[1], "industry": r[2], "sector": r[3],
+            "prior_close": r[4], "vs_prior_pct": r[5],
+            "market_cap": r[6], "shares": r[7],
+        }
         for r in price_rows
     }
     fm_map = await first_mention_map(all_tickers)
@@ -200,6 +216,40 @@ async def build_action_cards() -> dict:
 
         # 카드 발급 대상 · 실행 계획 계산
         plan = _compute_execution_plan(last_close)
+
+        # qty=0 판정 · 예산 대비 매수 불가 (2026-08-13 MU 사고 · A안 · Fable 5 리뷰)
+        if plan["qty"] < 1:
+            entry_usd = plan["entry_limit"]
+            excluded.append({
+                "ticker": tk,
+                "reason": (
+                    f"예산 미달 (1주 ${entry_usd:.2f} × FX {int(USDKRW_RATE)} = "
+                    f"₩{int(entry_usd * USDKRW_RATE):,} > 예산 ₩{int(POSITION_KRW):,})"
+                ),
+            })
+            continue
+
+        # 가격 검증 게이트 (Fable 5 리뷰 · 배제 X · 배지만)
+        vs_prior_pct = price.get("vs_prior_pct")
+        price_verification_failed = (
+            vs_prior_pct is not None
+            and abs(vs_prior_pct) > PRICE_ABNORMAL_MOVE_THRESHOLD_PCT
+        )
+
+        # Market cap 검산 (내부 일관성 불변식)
+        market_cap = price.get("market_cap")
+        shares = price.get("shares")
+        market_cap_sanity_warning = False
+        if market_cap and shares and last_close and market_cap > 0:
+            computed = shares * last_close
+            deviation = abs(market_cap - computed) / market_cap
+            if deviation > MARKET_CAP_SANITY_TOLERANCE:
+                market_cap_sanity_warning = True
+                logger.warning(
+                    "[action_cards] market_cap sanity 실패 · %s · yf=%.0f computed=%.0f deviation=%.1f%%",
+                    tk, market_cap, computed, deviation * 100,
+                )
+
         first_at = fm_map.get(tk)
         passed.append({
             "ticker": tk,
@@ -212,6 +262,9 @@ async def build_action_cards() -> dict:
             "industry": industry,
             "sector": price.get("sector"),
             "last_close": last_close,
+            "vs_prior_pct": vs_prior_pct,
+            "price_verification_failed": price_verification_failed,
+            "market_cap_sanity_warning": market_cap_sanity_warning,
             "first_mention_at": first_at.isoformat() if first_at else None,
             **plan,
         })

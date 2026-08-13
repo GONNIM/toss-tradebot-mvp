@@ -57,6 +57,7 @@ def _fetch_price_bundle(
         # Phase L14 · 시총 + 유동성 (RISK-PRINCIPLES §3)
         "market_cap": None,
         "market_cap_source": None,
+        "shares_outstanding": None,
         "avg_dollar_volume_20d": None,
         "error": None,
     }
@@ -130,13 +131,15 @@ def _fetch_price_bundle(
             result["industry"] = ind.strip()[:120]
         # Phase L14 · market_cap · info 우선 · fallback sharesOutstanding × close
         mc = info.get("marketCap")
+        shares_raw = info.get("sharesOutstanding")
+        if isinstance(shares_raw, (int, float)) and shares_raw > 0:
+            result["shares_outstanding"] = float(shares_raw)  # sanity 검산용 (2026-08-13)
         if isinstance(mc, (int, float)) and mc > 0:
             result["market_cap"] = float(mc)
             result["market_cap_source"] = "yf"
         else:
-            shares = info.get("sharesOutstanding")
-            if isinstance(shares, (int, float)) and shares > 0 and result["close"]:
-                result["market_cap"] = float(shares) * result["close"]
+            if result["shares_outstanding"] and result["close"]:
+                result["market_cap"] = result["shares_outstanding"] * result["close"]
                 result["market_cap_source"] = "computed"
     except Exception as exc:  # noqa: BLE001
         logger.debug("[serenity_price] info 실패 · %s · %s", yahoo_symbol, exc)
@@ -174,6 +177,7 @@ async def _upsert_price(
     industry: Optional[str],
     market_cap: Optional[float],
     market_cap_source: Optional[str],
+    shares_outstanding: Optional[float],
     avg_dollar_volume_20d: Optional[float],
     error: Optional[str],
 ) -> None:
@@ -203,6 +207,8 @@ async def _upsert_price(
             if market_cap is not None:
                 existing.market_cap = market_cap
                 existing.market_cap_source = market_cap_source
+            if shares_outstanding is not None:
+                existing.shares_outstanding = shares_outstanding
             if avg_dollar_volume_20d is not None:
                 existing.avg_dollar_volume_20d = avg_dollar_volume_20d
             existing.yahoo_symbol = yahoo_symbol
@@ -223,6 +229,7 @@ async def _upsert_price(
             industry=industry,
             market_cap=market_cap,
             market_cap_source=market_cap_source,
+            shares_outstanding=shares_outstanding,
             avg_dollar_volume_20d=avg_dollar_volume_20d,
             yahoo_symbol=yahoo_symbol,
             error=error,
@@ -262,7 +269,7 @@ async def refresh_prices(
             if is_private_or_brand(tk):
                 await _upsert_price(
                     tk, tk, None, None, None, None, None,
-                    None, None, None, None, None,
+                    None, None, None, None, None, None,
                     "private/브랜드",
                 )
                 stats["skipped"] = stats.get("skipped", 0) + 1
@@ -293,6 +300,7 @@ async def refresh_prices(
                 bundle["industry"],
                 bundle["market_cap"],
                 bundle["market_cap_source"],
+                bundle["shares_outstanding"],
                 bundle["avg_dollar_volume_20d"],
                 bundle["error"],
             )

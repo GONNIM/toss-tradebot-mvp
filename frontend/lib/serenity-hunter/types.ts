@@ -131,6 +131,9 @@ export type ActionCard = {
   sector: string | null;
   sector_overlap: boolean;
   last_close: number;
+  vs_prior_pct: number | null;
+  price_verification_failed: boolean;
+  market_cap_sanity_warning: boolean;
   first_mention_at: string | null;
   entry_limit: number;
   entry_krw: number;

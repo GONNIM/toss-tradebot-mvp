@@ -68,10 +68,13 @@ def test_compute_execution_plan_qty_floor():
 
 async def _seed_ticker_with_signals(ticker: str, m90: int, m7: int, bull_pct: float,
                                      price: float | None = 100.0,
+                                     prior_close: float | None = None,
                                      industry: str | None = "Semiconductors",
                                      tier: str | None = "A",
                                      auto_avoid: bool = False,
-                                     anti_flags: str = ""):
+                                     anti_flags: str = "",
+                                     market_cap: float | None = None,
+                                     shares_outstanding: float | None = None):
     """helper · signals/tweet/price/seed 각각 fixture 로 등록."""
     now = datetime.utcnow()
     async with get_session() as session:
@@ -106,12 +109,19 @@ async def _seed_ticker_with_signals(ticker: str, m90: int, m7: int, bull_pct: fl
 
         # price
         if price is not None:
+            vs_prior = None
+            if prior_close and prior_close > 0:
+                vs_prior = round((price - prior_close) / prior_close * 100, 2)
             session.add(SerenityTickerPrice(
                 ticker=ticker,
                 snapshot_date=now.date().isoformat(),
                 close=price,
+                prior_close=prior_close,
+                vs_prior_close_pct=vs_prior,
                 industry=industry,
                 sector="Technology",
+                market_cap=market_cap,
+                shares_outstanding=shares_outstanding,
             ))
 
         # seed score
@@ -219,3 +229,84 @@ async def test_fx_rate_and_filters_in_response():
     assert result["filters"]["mentions_90d_min"] == MENTIONS_90D_MIN
     assert result["filters"]["mentions_7d_min"] == MENTIONS_7D_MIN
     assert "Shell Companies" in result["filters"]["shell_industries"]
+
+
+# ─── 가격 검증 게이트 (2026-08-13 MU 사고 대응) ─────────────────────
+
+
+@pytest.mark.asyncio
+async def test_qty_zero_excluded_with_reason():
+    """예산 미달 (qty=0) → excluded 로 이동 · 사유 명시 (Fable 5 · 탈락 명단 투명성)."""
+    # MU 시나리오 · $911 · 20만원 예산 · qty = floor(200000 / (911×1.01×1330)) = 0
+    await _seed_ticker_with_signals("MU", m90=45, m7=3, bull_pct=78.0, price=911.29, tier=None)
+    result = await ac.build_action_cards()
+    assert all(c["ticker"] != "MU" for c in result["cards"]), "qty=0 카드 노출 X"
+    reason = next(e["reason"] for e in result["excluded"] if e["ticker"] == "MU")
+    assert "예산 미달" in reason and "₩200,000" in reason
+
+
+@pytest.mark.asyncio
+async def test_price_verification_failed_badge_on_abnormal_move():
+    """prior_close 대비 |pct| > 30% → 카드에 배지 (배제 X · Fable 5 리뷰)."""
+    # +40% 이동 (예 실적 발표 급등)
+    await _seed_ticker_with_signals(
+        "NBIS", m90=15, m7=5, bull_pct=85.0,
+        price=140.0, prior_close=100.0,
+    )
+    result = await ac.build_action_cards()
+    card = next(c for c in result["cards"] if c["ticker"] == "NBIS")
+    assert card["price_verification_failed"] is True, "±30% 초과 → 배지 표시"
+    assert card["vs_prior_pct"] == 40.0
+
+
+@pytest.mark.asyncio
+async def test_price_verification_ok_on_normal_move():
+    """정상 변동 (±30% 이내) → 배지 없음."""
+    await _seed_ticker_with_signals(
+        "COHR", m90=37, m7=7, bull_pct=72.0,
+        price=105.0, prior_close=100.0, tier=None,
+    )
+    result = await ac.build_action_cards()
+    card = next(c for c in result["cards"] if c["ticker"] == "COHR")
+    assert card["price_verification_failed"] is False
+    assert card["vs_prior_pct"] == 5.0
+
+
+@pytest.mark.asyncio
+async def test_market_cap_sanity_warning_on_inconsistency():
+    """|market_cap − shares × close| / market_cap > 10% → sanity warning."""
+    # 편차 20% · yf market_cap 이 shares × close 보다 20% 큼
+    # shares × close = 100M × $100 = $10B · yf market_cap 은 $12B 로 저장
+    await _seed_ticker_with_signals(
+        "AXTI", m90=65, m7=9, bull_pct=83.0,
+        price=100.0, market_cap=12_000_000_000, shares_outstanding=100_000_000,
+    )
+    result = await ac.build_action_cards()
+    card = next(c for c in result["cards"] if c["ticker"] == "AXTI")
+    assert card["market_cap_sanity_warning"] is True
+
+
+@pytest.mark.asyncio
+async def test_market_cap_sanity_ok_when_consistent():
+    """market_cap 과 shares × close 편차 ≤ 10% → warning 없음."""
+    # 편차 5% · 통과
+    await _seed_ticker_with_signals(
+        "AXTI", m90=65, m7=9, bull_pct=83.0,
+        price=100.0, market_cap=10_500_000_000, shares_outstanding=100_000_000,
+    )
+    result = await ac.build_action_cards()
+    card = next(c for c in result["cards"] if c["ticker"] == "AXTI")
+    assert card["market_cap_sanity_warning"] is False
+
+
+@pytest.mark.asyncio
+async def test_market_cap_sanity_skipped_when_shares_missing():
+    """shares_outstanding 미저장 (기존 스냅샷) → sanity skip · warning False."""
+    # market_cap 만 있음 · shares_outstanding 없음
+    await _seed_ticker_with_signals(
+        "AXTI", m90=65, m7=9, bull_pct=83.0,
+        price=100.0, market_cap=10_000_000_000, shares_outstanding=None,
+    )
+    result = await ac.build_action_cards()
+    card = next(c for c in result["cards"] if c["ticker"] == "AXTI")
+    assert card["market_cap_sanity_warning"] is False

@@ -1646,6 +1646,7 @@ class SerenityTickerPrice(Base):
     # Phase L14 · 시총 + 유동성 (Hunter 리스크 관리 · RISK-PRINCIPLES §3)
     market_cap: Mapped[Optional[float]]                              # USD · yf.info.marketCap
     market_cap_source: Mapped[Optional[str]] = mapped_column(String(20))  # "yf" / "computed"
+    shares_outstanding: Mapped[Optional[float]]                       # yf.info.sharesOutstanding · sanity 검산용 (2026-08-13 MU 사고 대응)
     avg_dollar_volume_20d: Mapped[Optional[float]]                   # USD · Close × Volume 20일 평균
     fetched_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
 

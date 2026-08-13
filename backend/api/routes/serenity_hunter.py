@@ -167,6 +167,9 @@ class ActionCard(BaseModel):
     sector: Optional[str] = None
     sector_overlap: bool = False
     last_close: float
+    vs_prior_pct: Optional[float] = None
+    price_verification_failed: bool = False
+    market_cap_sanity_warning: bool = False
     first_mention_at: Optional[str] = None
     entry_limit: float
     entry_krw: float
