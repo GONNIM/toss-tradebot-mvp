@@ -57,6 +57,54 @@ DEPRECATION_OVERRIDE_TICKET: Optional[str] = None
 None 상태 · deprecation_triggered=true 인 한 자동으로 hunter_rows() 빈 배열 유지.
 재개 절차 (RISK-PRINCIPLES §10):
   1. §11 이력 append (재개 사유·수치·담당자)
-  2. 이 상수 값을 티켓 번호 문자열 로 변경
+  2. 이 상수 값을 티커 번호 문자열 로 변경
   3. git commit
 """
+
+# ─── 오늘의 실행 카드 필터 (L14+ · 2026-08-05) ─────────────────────
+# 사용자 지시서 §1.1 · 전부 AND · Serenity Hunter 페이지 상단 섹션
+# 하향 변경 시 test_constants_hardening.py 도 함께 갱신 → git diff 노출 강제
+
+BULL_PCT_MIN: float = 70.0
+"""90d bullish % 최소 · 강세 소스만 카드 발급."""
+
+MENTIONS_90D_MIN: int = 10
+"""표본 최소 · 90일 언급 건수."""
+
+MENTIONS_7D_MIN: int = 2
+"""살아있는 관심 · 7일 언급 건수."""
+
+SHELL_INDUSTRIES: tuple[str, ...] = ("Shell Companies",)
+"""무조건 제외 industry · CCXI 케이스 · yfinance industry 필드 매치."""
+
+# ─── 실행 계획 계산 (RISK-PRINCIPLES §1·4·5·7·8 · 2026-08-05) ──────
+
+SLIPPAGE_LIMIT_PCT: float = 1.0
+"""매수 지정가 상한 = 다음 시가 × (1 + SLIPPAGE_LIMIT_PCT/100).
+
+Fable 5 3차 권고 · 마이크로캡 시가 체결 방어. RISK-PRINCIPLES §7 진입 원칙.
+"""
+
+SL_PCT: float = 10.0
+"""손절 임계 · entry −A% (RISK-PRINCIPLES §4 · Fable 5 3차 -8% → -10% 상향)."""
+
+SL_DAYS: int = 5
+"""시간 손절 · B거래일 무진전 (RISK-PRINCIPLES §4)."""
+
+TP_TRIGGER_PCT: float = 15.0
+"""익절 trigger · entry +C% 도달 후 트레일링 발동 (RISK-PRINCIPLES §5)."""
+
+TRAIL_PCT: float = 7.0
+"""트레일링 stop · +TP 후 최고가 대비 -D% (RISK-PRINCIPLES §5 · Fable 5 3차 -5% → -7% 상향)."""
+
+POSITION_KRW: float = 200_000.0
+"""종목당 매수 상한 (KRW · RISK-PRINCIPLES §1 · 시드 20% = 20만원)."""
+
+USDKRW_RATE: float = 1330.0
+"""환율 (USD/KRW · 하드코딩 · 신규 데이터 소스 스코프 밖).
+
+실측 환율 사용 시 이 상수 갱신 + docs/plans/serenity-hunter/RISK-PRINCIPLES.md §8 수정.
+"""
+
+MIN_RR_WARNING: float = 2.0
+"""Rulebook 최소 R:R 기준 · 미달 시 카드에 노란 배지 (사용자 확인 후 진행 UX)."""

@@ -2,6 +2,7 @@
 // 프록시: next.config.mjs rewrites · /api/v1/serenity/* → backend
 
 import type {
+  ActionCardsResponse,
   HealthResponse,
   HunterResponse,
   VerificationResponse,
@@ -17,4 +18,5 @@ export const hunterApi = {
   health: () => _get<HealthResponse>("/api/v1/serenity/health"),
   verification: () => _get<VerificationResponse>("/api/v1/serenity/verification"),
   hunter: () => _get<HunterResponse>("/api/v1/serenity/hunter"),
+  actionCards: () => _get<ActionCardsResponse>("/api/v1/serenity/action-cards"),
 };

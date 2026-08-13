@@ -31,6 +31,13 @@ type Props = {
   pageSource: string;
   hypothesisId: string;
   onSuccess?: (j: Judgment) => void;
+  // L14+ · Serenity Hunter action-cards 프리필 (2026-08-05)
+  // 지시서 §1.4 · 카드 클릭 시 폼이 매수/손절/TP 프리필 상태로 열림
+  initialThesis?: string;
+  initialEntry?: string;
+  initialInvalidation?: string;
+  initialTarget?: string;
+  initialHorizon?: number;
 };
 
 const MOOD_OPTIONS: { value: Mood; label: string; hint: string }[] = [
@@ -47,13 +54,18 @@ export function JudgmentDialog({
   pageSource,
   hypothesisId,
   onSuccess,
+  initialThesis = "",
+  initialEntry = "",
+  initialInvalidation = "",
+  initialTarget = "",
+  initialHorizon = 7,
 }: Props) {
   const dialogRef = useRef<HTMLDialogElement>(null);
-  const [thesis, setThesis] = useState("");
-  const [entry, setEntry] = useState("");
-  const [invalidation, setInvalidation] = useState("");
-  const [target, setTarget] = useState("");
-  const [horizon, setHorizon] = useState(7);
+  const [thesis, setThesis] = useState(initialThesis);
+  const [entry, setEntry] = useState(initialEntry);
+  const [invalidation, setInvalidation] = useState(initialInvalidation);
+  const [target, setTarget] = useState(initialTarget);
+  const [horizon, setHorizon] = useState(initialHorizon);
   const [mood, setMood] = useState<Mood>("neutral");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -65,12 +77,24 @@ export function JudgmentDialog({
     else if (!open && el.open) el.close();
   }, [open]);
 
+  // L14+ · open 시 initial* 로 재프리필 (다른 카드로 재열림 시 반영)
+  useEffect(() => {
+    if (open) {
+      setThesis(initialThesis);
+      setEntry(initialEntry);
+      setInvalidation(initialInvalidation);
+      setTarget(initialTarget);
+      setHorizon(initialHorizon);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, ticker]);
+
   const reset = () => {
-    setThesis("");
-    setEntry("");
-    setInvalidation("");
-    setTarget("");
-    setHorizon(7);
+    setThesis(initialThesis);
+    setEntry(initialEntry);
+    setInvalidation(initialInvalidation);
+    setTarget(initialTarget);
+    setHorizon(initialHorizon);
     setMood("neutral");
     setError(null);
   };

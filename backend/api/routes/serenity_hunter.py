@@ -153,6 +153,76 @@ class HunterResponse(BaseModel):
     rows: list[HunterRow] = []
 
 
+# ─── Action Cards (L14+ · 2026-08-05 · 사용자 지시서) ─────────────────
+
+class ActionCard(BaseModel):
+    ticker: str
+    tier: Optional[str] = None
+    tier_rank: int = 99
+    financing_tier: Optional[str] = None
+    bull_pct: float
+    mentions_7d: int
+    mentions_90d: int
+    industry: Optional[str] = None
+    sector: Optional[str] = None
+    sector_overlap: bool = False
+    last_close: float
+    first_mention_at: Optional[str] = None
+    entry_limit: float
+    entry_krw: float
+    qty: int
+    sl_price: float
+    sl_days: int
+    tp_trigger_price: float
+    trail_pct: float
+    min_rr: float
+    min_rr_warning: bool
+
+
+class WatchOnlyItem(BaseModel):
+    ticker: str
+    industry: Optional[str] = None
+    bull_pct: float
+    mentions_7d: int
+    mentions_90d: int
+    reason: str
+
+
+class ExcludedItem(BaseModel):
+    ticker: str
+    reason: str
+
+
+class ActionCardFilters(BaseModel):
+    bull_pct_min: float
+    mentions_90d_min: int
+    mentions_7d_min: int
+    shell_industries: list[str]
+
+
+class ActionRiskParams(BaseModel):
+    slippage_limit_pct: float
+    sl_pct: float
+    sl_days: int
+    tp_trigger_pct: float
+    trail_pct: float
+    position_krw: float
+    min_rr_warning: float
+
+
+class ActionCardsResponse(BaseModel):
+    as_of: str
+    fx_rate: float
+    fx_source: str
+    cards: list[ActionCard] = []
+    cards_hidden: list[ActionCard] = []
+    rest_count: int = 0
+    watch_only: list[WatchOnlyItem] = []
+    excluded: list[ExcludedItem] = []
+    filters: ActionCardFilters
+    risk: ActionRiskParams
+
+
 # ─── Health ─────────────────────────────────────────────────────────────────
 
 async def _health_reasons() -> tuple[list[HealthReason], dict]:
@@ -308,4 +378,30 @@ async def hunter() -> HunterResponse:
         gate_close_reasons=result.get("gate_close_reasons", []),
         deprecation_recommended=result.get("deprecation_recommended", False),
         rows=[HunterRow(**r) for r in result.get("rows", [])],
+    )
+
+
+# ─── Action Cards endpoint (L14+ · 2026-08-05) ───────────────────────
+
+@router.get("/action-cards", response_model=ActionCardsResponse)
+async def action_cards() -> ActionCardsResponse:
+    """오늘의 실행 카드 · Serenity Hunter 페이지 최상단 (지시서 §1).
+
+    필터: bull_pct≥70 · m90≥10 · m7≥2 · auto_avoid/anti_pattern 제외 ·
+    industry != Shell Companies · 가격 존재 (없으면 watch_only 분리).
+    계산: 매수 상한가·수량·손절·TP (constants.py 상수).
+    """
+    from backend.discovery.serenity.action_cards import build_action_cards
+    data = await build_action_cards()
+    return ActionCardsResponse(
+        as_of=data["as_of"],
+        fx_rate=data["fx_rate"],
+        fx_source=data["fx_source"],
+        cards=[ActionCard(**c) for c in data["cards"]],
+        cards_hidden=[ActionCard(**c) for c in data.get("cards_hidden", [])],
+        rest_count=data["rest_count"],
+        watch_only=[WatchOnlyItem(**w) for w in data["watch_only"]],
+        excluded=[ExcludedItem(**e) for e in data["excluded"]],
+        filters=ActionCardFilters(**data["filters"]),
+        risk=ActionRiskParams(**data["risk"]),
     )
