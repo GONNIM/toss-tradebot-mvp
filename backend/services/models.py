@@ -1464,6 +1464,12 @@ class SerenityTweet(Base):
     metrics: Mapped[Optional[str]] = mapped_column(Text)     # JSON · likes·views·retweets
     raw_json: Mapped[Optional[str]] = mapped_column(Text)    # 원본 트윗 JSON
     ingested_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now(), index=True)
+    processed_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True, index=True)
+    """Extractor 처리 완료 시각. NULL = 미처리 (다음 배치 대상).
+
+    signals 유무 무관 · z.ai 응답 성공 시 마킹 (2026-08-13 무한 루프 사고 대응).
+    실패 시 NULL 유지 → 다음 배치에서 재시도.
+    """
 
 
 # Serenity ENUM 값 (application-level validation)

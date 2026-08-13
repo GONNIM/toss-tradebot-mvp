@@ -92,6 +92,45 @@ async def _job_extractor() -> None:
         await _notify_job_result("extractor", error=str(exc)[:200])
 
 
+# ─── 축 5 · z.ai 일일 호출 임계값 감시 (2026-08-13 사고 후속) ───────
+# 정상 일일 신호 삽입 ~50 · 300 초과 시 이상 (수동 트리거 폭발·크론 이중 실행 등)
+
+ZAI_DAILY_SIGNAL_THRESHOLD = int(os.environ.get("SERENITY_DAILY_SIGNAL_THRESHOLD", "300"))
+
+
+async def _job_zai_cost_audit() -> None:
+    """24h 롤링 signals_inserted 카운트 → 임계값 초과 시 Telegram 경고."""
+    from datetime import datetime, timedelta
+
+    from sqlalchemy import func, select
+
+    from backend.services.db import get_session
+    from backend.services.models import SerenitySignal
+
+    try:
+        cutoff = datetime.utcnow() - timedelta(hours=24)
+        async with get_session() as session:
+            stmt = (
+                select(func.count()).select_from(SerenitySignal)
+                .where(SerenitySignal.extracted_at >= cutoff)
+            )
+            count_24h = int((await session.execute(stmt)).scalar_one())
+
+        logger.info("[serenity] zai_cost_audit · 24h signals=%d · threshold=%d",
+                    count_24h, ZAI_DAILY_SIGNAL_THRESHOLD)
+
+        if count_24h > ZAI_DAILY_SIGNAL_THRESHOLD:
+            await _notify_job_result(
+                "zai_cost_audit",
+                error=(f"24h signals_inserted={count_24h} > "
+                       f"threshold={ZAI_DAILY_SIGNAL_THRESHOLD} · "
+                       "수동 트리거 or 크론 이중 실행 의심"),
+            )
+    except Exception as exc:  # noqa: BLE001
+        logger.exception("[serenity] cron zai_cost_audit 실패")
+        await _notify_job_result("zai_cost_audit", error=str(exc)[:200])
+
+
 async def _job_scorer() -> None:
     from backend.discovery.serenity.scorer import refresh_all_scores
     try:
@@ -223,4 +262,17 @@ def register_serenity_jobs(scheduler: AsyncIOScheduler) -> None:
         misfire_grace_time=1800,
     )
 
-    logger.info("[serenity] cron 등록 완료 · 5 jobs (extractor 는 env 스위치 필요)")
+    # 축 5 · z.ai 일일 호출 임계값 감시 (2026-08-13 사고 후속)
+    # 매일 08:15 KST · 24h 롤링 signals 카운트 · threshold 초과 시 Telegram alert
+    scheduler.add_job(
+        _job_zai_cost_audit,
+        trigger=CronTrigger(hour=8, minute=15, timezone="Asia/Seoul"),
+        id="serenity_zai_cost_audit_daily",
+        name="매일 08:15 KST · Serenity z.ai 24h 신호 카운트 감시",
+        replace_existing=True,
+        max_instances=1,
+        coalesce=True,
+        misfire_grace_time=1800,
+    )
+
+    logger.info("[serenity] cron 등록 완료 · 6 jobs (extractor 는 env 스위치 필요)")
