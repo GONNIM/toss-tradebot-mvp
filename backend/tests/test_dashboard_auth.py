@@ -85,3 +85,85 @@ async def test_toss_account_valid_token_passes_auth(client: AsyncClient, monkeyp
     assert "fetched_at" in body
     assert "market_open" in body
     assert "price_source" in body
+
+
+# ─── 실 응답 파싱 회귀 (2026-08-13 · items[] · dict 구조) ─────────────
+
+
+@pytest.mark.asyncio
+async def test_toss_account_parses_items_dict_response(client: AsyncClient, monkeypatch):
+    """holdings() 가 dict{items:[...]} · buying_power cashBuyingPower · lastPrice 응답 파싱.
+
+    실 사고 재현: 이전 구현이 응답을 list 로 순회 → holdings=[] 렌더 사고.
+    docs/analysis/toss-api-survey.md §1.5 실 구조 반영 검증.
+    """
+    class _FakeToss:
+        def holdings(self, symbol=None):
+            return {
+                "totalPurchaseAmount": {"krw": 0, "usd": 100.0},
+                "items": [
+                    {
+                        "symbol": "NBIS",
+                        "quantity": "0.574",
+                        "averagePurchasePrice": "193.23",
+                        "lastPrice": "259.20",
+                        "currency": "USD",
+                    },
+                    {
+                        "symbol": "MU",
+                        "quantity": "0.163",
+                        "averagePurchasePrice": "911.29",
+                        "lastPrice": "911.29",
+                        "currency": "USD",
+                    },
+                ],
+            }
+
+        def buying_power(self, currency="KRW"):
+            return {"cashBuyingPower": 12345.67 if currency == "KRW" else 89.10}
+
+    monkeypatch.setattr(
+        "backend.execution.brokers.toss_client.get_toss_client",
+        lambda: _FakeToss(),
+    )
+
+    r = await client.get(
+        "/api/v1/dashboard/toss-account",
+        headers={"X-API-Token": TOKEN},
+    )
+    assert r.status_code == 200
+    body = r.json()
+    assert body["ok"] is True, f"파싱 성공 시 ok=true · body={body}"
+    assert len(body["holdings"]) == 2, "items 2개 파싱"
+    nbis = next(h for h in body["holdings"] if h["symbol"] == "NBIS")
+    assert nbis["qty"] == 0.574
+    assert nbis["avg_price"] == 193.23
+    assert nbis["current_price"] == 259.20
+    assert body["balance_krw"] == 12345.67
+    assert body["balance_usd"] == 89.10
+
+
+@pytest.mark.asyncio
+async def test_toss_account_skips_zero_quantity(client: AsyncClient, monkeypatch):
+    """quantity=0 items 는 skip (매도 완료 잔재)."""
+    class _FakeToss:
+        def holdings(self, symbol=None):
+            return {"items": [
+                {"symbol": "SOLD", "quantity": "0", "averagePurchasePrice": "100", "lastPrice": "110"},
+                {"symbol": "HELD", "quantity": "1", "averagePurchasePrice": "100", "lastPrice": "110"},
+            ]}
+        def buying_power(self, currency="KRW"):
+            return {}
+
+    monkeypatch.setattr(
+        "backend.execution.brokers.toss_client.get_toss_client",
+        lambda: _FakeToss(),
+    )
+    r = await client.get(
+        "/api/v1/dashboard/toss-account",
+        headers={"X-API-Token": TOKEN},
+    )
+    body = r.json()
+    symbols = [h["symbol"] for h in body["holdings"]]
+    assert "HELD" in symbols
+    assert "SOLD" not in symbols, "qty=0 skip"

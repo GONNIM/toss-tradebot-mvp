@@ -114,21 +114,24 @@ async def get_toss_account():
     market_open = _is_us_market_open(fetched_at)
     price_source = "realtime" if market_open else "prior_close"
 
+    # 실 응답 구조 (docs/analysis/toss-api-survey.md §1.5 · toss_adapter.py:210-259 검증):
+    #   holdings() → dict · items[] 배열 (symbol/quantity/averagePurchasePrice/lastPrice/currency)
+    #   buying_power() → dict (cashBuyingPower)
+    #   lastPrice 는 이미 items 에 포함 · prices() 호출 불필요.
     try:
         from backend.execution.brokers.toss_client import get_toss_client
         client = get_toss_client()
-        holdings_raw = client.holdings() or []
-        # 잔고 · KRW 우선 · USD 도 있으면 함께
+        holdings_dict = client.holdings() or {}
         balance_krw = None
         balance_usd = None
         try:
             bp_krw = client.buying_power(currency="KRW") or {}
-            balance_krw = float(bp_krw.get("buyingPower") or bp_krw.get("cash") or 0) or None
+            balance_krw = float(bp_krw.get("cashBuyingPower", 0)) or None
         except Exception:  # noqa: BLE001
             pass
         try:
             bp_usd = client.buying_power(currency="USD") or {}
-            balance_usd = float(bp_usd.get("buyingPower") or bp_usd.get("cash") or 0) or None
+            balance_usd = float(bp_usd.get("cashBuyingPower", 0)) or None
         except Exception:  # noqa: BLE001
             pass
     except Exception as exc:  # noqa: BLE001
@@ -141,40 +144,28 @@ async def get_toss_account():
             price_source=price_source,
         )
 
-    # 심볼 → prices 조회 (배치)
-    symbols = [h.get("symbol") for h in holdings_raw if isinstance(h, dict) and h.get("symbol")]
-    price_map: dict[str, float] = {}
-    if symbols:
-        try:
-            prices_raw = client.prices(symbols) or []
-            for p in prices_raw:
-                if isinstance(p, dict):
-                    sym = p.get("symbol")
-                    close = p.get("price") or p.get("close") or p.get("last")
-                    if sym and close:
-                        try:
-                            price_map[sym] = float(close)
-                        except (ValueError, TypeError):
-                            pass
-        except Exception:  # noqa: BLE001
-            # 시세 실패는 치명적 X · price_map 빈 채로 진행 (holdings 만 표시)
-            pass
-
+    items = holdings_dict.get("items") or []
     holdings: list[TossHolding] = []
     total_cost = 0.0
     total_mv = 0.0
-    for h in holdings_raw:
-        if not isinstance(h, dict):
+    for item in items:
+        if not isinstance(item, dict):
             continue
-        sym = str(h.get("symbol") or "").strip()
+        sym = str(item.get("symbol") or "").strip()
         if not sym:
             continue
         try:
-            qty = float(h.get("qty") or h.get("quantity") or 0)
-            avg = float(h.get("avgPrice") or h.get("avg_price") or 0)
+            qty = float(item.get("quantity") or 0)
+            avg = float(item.get("averagePurchasePrice") or 0)
         except (ValueError, TypeError):
             continue
-        cur = price_map.get(sym)
+        if qty <= 0:
+            continue
+        try:
+            cur_raw = item.get("lastPrice")
+            cur = float(cur_raw) if cur_raw not in (None, "", 0) else None
+        except (ValueError, TypeError):
+            cur = None
         cost = round(qty * avg, 4)
         mv = round(qty * cur, 4) if cur else None
         pnl = round(mv - cost, 4) if mv is not None else None
