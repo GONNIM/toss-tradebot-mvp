@@ -103,6 +103,38 @@ class DashboardSummary(BaseModel):
     engine_status: str  # running/stopped/paused
 
 
+# ─── Toss 실계좌 (2026-08-13 · Fable 5: 인증 필수 · 실 계좌 노출 금지) ────
+
+class TossHolding(BaseModel):
+    """단일 보유종목."""
+    symbol: str
+    qty: float                            # 소수점 지원 (B안)
+    avg_price: float                      # 평균 매수가 USD
+    current_price: Optional[float]        # 현재가 (실시간 or 전일 종가)
+    market_value_usd: Optional[float]     # qty × current_price
+    cost_basis_usd: float                 # qty × avg_price
+    unrealized_pnl_usd: Optional[float]   # market_value − cost_basis
+    unrealized_pnl_pct: Optional[float]   # pnl / cost_basis × 100
+    journal_recorded: bool                # 저널 판정 존재 여부 · Fable 5 30건 캠페인 트리거
+
+
+class TossAccountSnapshot(BaseModel):
+    """토스 계좌 실시간 스냅샷 · 인증 필수."""
+    ok: bool                              # False = API 실패 (배지·안내)
+    error_reason: Optional[str] = None    # 실패 사유 (토큰 만료·rate limit·다운)
+    last_success_at: Optional[datetime] = None  # 마지막 성공 시각 (실패 시 UI 안내)
+    fetched_at: datetime                  # 이번 응답 시각
+    market_open: bool                     # US 장중 여부 (전일 종가/실시간 구분)
+    price_source: str                     # "realtime" | "prior_close"
+    balance_krw: Optional[float] = None   # KRW 잔고
+    balance_usd: Optional[float] = None   # USD 잔고 (있으면)
+    total_value_usd: Optional[float] = None  # 잔고 + 평가금액
+    total_cost_usd: Optional[float] = None
+    total_pnl_usd: Optional[float] = None
+    total_pnl_pct: Optional[float] = None
+    holdings: list[TossHolding] = []
+
+
 class LogEntry(BaseModel):
     """감사 로그 단일 entry."""
     model_config = ConfigDict(from_attributes=True)

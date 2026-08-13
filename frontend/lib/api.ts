@@ -16,6 +16,23 @@ async function get<T>(path: string): Promise<T> {
   return res.json();
 }
 
+// 인증 필요 GET · httpOnly 쿠키 자동 전송 (2026-08-13 Fable 5 · dashboard toss-account)
+async function getWithSession<T>(path: string): Promise<T> {
+  const res = await fetch(`${BASE}${path}`, {
+    headers: { "Content-Type": "application/json" },
+    credentials: "include",
+    cache: "no-store",
+  });
+  if (!res.ok) {
+    // 401 은 그대로 노출 · 프론트가 로그인 유도 UI 표시
+    const body = await res.text().catch(() => "");
+    const err = new Error(`API ${path} failed: ${res.status}${body ? " · " + body.slice(0, 200) : ""}`);
+    (err as Error & { status?: number }).status = res.status;
+    throw err;
+  }
+  return res.json();
+}
+
 async function patch<T>(path: string, body: unknown): Promise<T> {
   const res = await fetch(`${BASE}${path}`, {
     method: "PATCH",
@@ -156,6 +173,35 @@ export interface DashboardSummary {
   open_positions: number;
   last_trade_at: string | null;
   engine_status: string;
+}
+
+// Toss 실계좌 (2026-08-13 · Fable 5 · 인증 필수)
+export interface TossHolding {
+  symbol: string;
+  qty: number;
+  avg_price: number;
+  current_price: number | null;
+  market_value_usd: number | null;
+  cost_basis_usd: number;
+  unrealized_pnl_usd: number | null;
+  unrealized_pnl_pct: number | null;
+  journal_recorded: boolean;
+}
+
+export interface TossAccountSnapshot {
+  ok: boolean;
+  error_reason: string | null;
+  last_success_at: string | null;
+  fetched_at: string;
+  market_open: boolean;
+  price_source: "realtime" | "prior_close";
+  balance_krw: number | null;
+  balance_usd: number | null;
+  total_value_usd: number | null;
+  total_cost_usd: number | null;
+  total_pnl_usd: number | null;
+  total_pnl_pct: number | null;
+  holdings: TossHolding[];
 }
 
 export interface LogEntry {
@@ -484,7 +530,8 @@ export const api = {
     list: () => get<Position[]>(`/positions`),
   },
   dashboard: {
-    summary: () => get<DashboardSummary>(`/dashboard`),
+    summary: () => getWithSession<DashboardSummary>(`/dashboard`),
+    tossAccount: () => getWithSession<TossAccountSnapshot>(`/dashboard/toss-account`),
   },
   settings: {
     list: () => get<Setting[]>(`/settings`),
