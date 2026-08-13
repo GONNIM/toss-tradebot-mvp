@@ -3,6 +3,7 @@
 // 🎯 오늘의 실행 카드 · 지시서 §1 · 페이지 최상단 섹션
 // 필터 통과 종목만 · 매수/손절/TP 자동 계산 · 저널 프리필 버튼
 
+import Link from "next/link";
 import { useState } from "react";
 import { JudgmentDialog } from "@/components/journal/JudgmentDialog";
 import type { ActionCard, ActionCardsResponse } from "@/lib/serenity-hunter/types";
@@ -23,6 +24,9 @@ export function ActionCardsSection({ data }: { data: ActionCardsResponse }) {
   const activeCard = dialogTicker
     ? [...data.cards, ...data.cards_hidden].find((c) => c.ticker === dialogTicker)
     : null;
+
+  // 검증 실패 카드는 저널 오픈 금지 (렌더 단에서 버튼 자체 숨김 · 2중 방어)
+  const activeCardIsValid = activeCard && !activeCard.price_verification_failed;
 
   return (
     <section>
@@ -111,7 +115,7 @@ export function ActionCardsSection({ data }: { data: ActionCardsResponse }) {
         </details>
       )}
 
-      {activeCard && (
+      {activeCardIsValid && (
         <JudgmentDialog
           open={!!dialogTicker}
           onOpenChange={(o) => {
@@ -212,62 +216,103 @@ function ActionCardItem({
         전일 종가 <span className="font-mono font-bold text-foreground">{_fmtUsd(card.last_close)}</span>
       </div>
 
-      <div className="mt-3 border-t border-border/40 pt-2">
-        <div className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
-          실행 계획 (RISK-PRINCIPLES 자동 계산)
-        </div>
-        <div className="mt-1 space-y-1 font-mono text-[11px]">
-          <div>
-            매수 <span className="text-muted-foreground">·</span> 다음 시가 · 지정가 상한{" "}
-            <span className="font-bold">{_fmtUsd(card.entry_limit, 4)}</span>
+      {/*
+        Fable 5 3차 원칙 (2026-08-13):
+        "검증 실패한 입력 위에서는 어떤 계산도 발급하지 않는다."
+        price_verification_failed=true → 실행 계획·저널 버튼 발급 X · 대체 안내만.
+      */}
+      {card.price_verification_failed ? (
+        <div className="mt-3 border-t border-red-500/40 pt-2">
+          <div className="text-[10px] font-semibold uppercase tracking-wide text-red-500">
+            실행 계획 보류 · 가격 확인 후 진행
           </div>
-          {card.order_mode === "shares" ? (
+          <div className="mt-1 space-y-1 font-mono text-[11px] text-muted-foreground">
             <div>
-              수량 <span className="text-muted-foreground">·</span>{" "}
-              <span className="font-bold">{card.qty}주</span>{" "}
-              <span className="text-muted-foreground">
-                (≈{_fmtKrw(card.total_krw ?? card.entry_krw * card.qty)}
-                {card.remaining_krw !== null && card.remaining_krw !== undefined
-                  ? ` · 잔여 ${_fmtKrw(card.remaining_krw)}`
-                  : ""}
-                )
+              최근 스냅샷 <span className="font-bold text-foreground">{_fmtUsd(card.last_close)}</span>{" "}
+              vs 직전{" "}
+              <span className="font-bold text-foreground">
+                {_fmtUsd((card.last_close ?? 0) / (1 + (card.vs_prior_pct ?? 0) / 100))}
+              </span>{" "}
+              (
+              <span className={((card.vs_prior_pct ?? 0) > 0 ? "text-emerald-500" : "text-red-500")}>
+                {(card.vs_prior_pct ?? 0) > 0 ? "+" : ""}
+                {(card.vs_prior_pct ?? 0).toFixed(1)}%
               </span>
+              )
             </div>
-          ) : (
-            <div>
-              주문금액 <span className="text-muted-foreground">·</span>{" "}
-              <span className="font-bold">{_fmtKrw(card.order_krw ?? 0)}</span>{" "}
-              <span className="text-muted-foreground">
-                (예상 수량 ≈ {(card.est_qty_fractional ?? 0).toFixed(3)}주)
-              </span>
+            <div className="text-[10px]">
+              ±30% 초과 · 실적 발표·이벤트·데이터 오염 가능. 다음 정상 스냅샷 시 자동 복원.
             </div>
-          )}
-          <div className="text-red-500">
-            손절 <span className="text-muted-foreground">·</span> −{risk.sl_pct}% ={" "}
-            <span className="font-bold">{_fmtUsd(card.sl_price, 4)}</span> or {card.sl_days}거래일
           </div>
-          <div className="text-emerald-500">
-            TP <span className="text-muted-foreground">·</span> +{risk.tp_trigger_pct}% ={" "}
-            <span className="font-bold">{_fmtUsd(card.tp_trigger_price, 4)}</span>{" "}
-            <span className="text-muted-foreground">후 트레일링 -{card.trail_pct}%</span>
-          </div>
-          <div className={card.min_rr_warning ? "text-amber-500" : "text-muted-foreground"}>
-            최소 R:R <span className="text-muted-foreground">·</span>{" "}
-            <span className="font-bold">{card.min_rr}</span>
-            {card.min_rr_warning && ` ⚠ Rulebook ${risk.min_rr_warning} 미달 · 확인 후 진행`}
+          <div className="mt-3 flex justify-end">
+            <Link
+              href={`/influencer/serenity/${card.ticker}`}
+              className="rounded border border-border px-3 py-1.5 text-xs font-semibold text-muted-foreground hover:text-foreground hover:border-foreground"
+            >
+              📈 가격 수동 확인 후 진행
+            </Link>
           </div>
         </div>
-      </div>
+      ) : (
+        <>
+          <div className="mt-3 border-t border-border/40 pt-2">
+            <div className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+              실행 계획 (RISK-PRINCIPLES 자동 계산)
+            </div>
+            <div className="mt-1 space-y-1 font-mono text-[11px]">
+              <div>
+                매수 <span className="text-muted-foreground">·</span> 다음 시가 · 지정가 상한{" "}
+                <span className="font-bold">{_fmtUsd(card.entry_limit, 4)}</span>
+              </div>
+              {card.order_mode === "shares" ? (
+                <div>
+                  수량 <span className="text-muted-foreground">·</span>{" "}
+                  <span className="font-bold">{card.qty}주</span>{" "}
+                  <span className="text-muted-foreground">
+                    (≈{_fmtKrw(card.total_krw ?? card.entry_krw * card.qty)}
+                    {card.remaining_krw !== null && card.remaining_krw !== undefined
+                      ? ` · 잔여 ${_fmtKrw(card.remaining_krw)}`
+                      : ""}
+                    )
+                  </span>
+                </div>
+              ) : (
+                <div>
+                  주문금액 <span className="text-muted-foreground">·</span>{" "}
+                  <span className="font-bold">{_fmtKrw(card.order_krw ?? 0)}</span>{" "}
+                  <span className="text-muted-foreground">
+                    (예상 수량 ≈ {(card.est_qty_fractional ?? 0).toFixed(3)}주)
+                  </span>
+                </div>
+              )}
+              <div className="text-red-500">
+                손절 <span className="text-muted-foreground">·</span> −{risk.sl_pct}% ={" "}
+                <span className="font-bold">{_fmtUsd(card.sl_price, 4)}</span> or {card.sl_days}거래일
+              </div>
+              <div className="text-emerald-500">
+                TP <span className="text-muted-foreground">·</span> +{risk.tp_trigger_pct}% ={" "}
+                <span className="font-bold">{_fmtUsd(card.tp_trigger_price, 4)}</span>{" "}
+                <span className="text-muted-foreground">후 트레일링 -{card.trail_pct}%</span>
+              </div>
+              <div className={card.min_rr_warning ? "text-amber-500" : "text-muted-foreground"}>
+                최소 R:R <span className="text-muted-foreground">·</span>{" "}
+                <span className="font-bold">{card.min_rr}</span>
+                {card.min_rr_warning && ` ⚠ Rulebook ${risk.min_rr_warning} 미달 · 확인 후 진행`}
+              </div>
+            </div>
+          </div>
 
-      <div className="mt-3 flex justify-end">
-        <button
-          type="button"
-          onClick={onOpenJournal}
-          className="rounded bg-primary px-3 py-1.5 text-xs font-semibold text-primary-foreground hover:bg-primary/80"
-        >
-          📓 저널에 기록
-        </button>
-      </div>
+          <div className="mt-3 flex justify-end">
+            <button
+              type="button"
+              onClick={onOpenJournal}
+              className="rounded bg-primary px-3 py-1.5 text-xs font-semibold text-primary-foreground hover:bg-primary/80"
+            >
+              📓 저널에 기록
+            </button>
+          </div>
+        </>
+      )}
     </article>
   );
 }

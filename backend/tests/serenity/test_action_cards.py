@@ -333,3 +333,33 @@ async def test_market_cap_sanity_skipped_when_shares_missing():
     result = await ac.build_action_cards()
     card = next(c for c in result["cards"] if c["ticker"] == "AXTI")
     assert card["market_cap_sanity_warning"] is False
+
+
+# ─── 가격 검증 실패 시 계산 발급 X (Fable 5 3차 · 2026-08-13) ────────
+#
+# 원칙: "검증 실패한 입력 위에서는 어떤 계산도 발급하지 않는다."
+# 배지는 경고, 계산 보류가 집행.
+# UI 는 별개 · 여기서는 backend 응답 정합성만 검증.
+
+
+@pytest.mark.asyncio
+async def test_price_verification_failed_card_still_has_execution_plan_fields():
+    """검증 실패 카드도 backend 응답에 실행 계획 필드는 존재 (UI 렌더 판단 위임).
+
+    UI 는 price_verification_failed=true 시 실행 블록 대체 렌더 · 저널 버튼 비활성.
+    Backend 는 필드 자체는 제공 (사용자 수동 확인 후 UI 가 게이트 해제 시 활용).
+    """
+    await _seed_ticker_with_signals(
+        "NBIS", m90=15, m7=5, bull_pct=85.0,
+        price=140.0, prior_close=100.0,  # +40% · 게이트 발동
+    )
+    result = await ac.build_action_cards()
+    card = next(c for c in result["cards"] if c["ticker"] == "NBIS")
+    # 배지 플래그 확인
+    assert card["price_verification_failed"] is True
+    # 실행 계획 필드는 여전히 응답에 포함 (UI 가 조건부 렌더)
+    assert "entry_limit" in card
+    assert "sl_price" in card
+    assert "tp_trigger_price" in card
+    # vs_prior_pct 정합 (UI 대체 렌더에 사용)
+    assert card["vs_prior_pct"] == 40.0
