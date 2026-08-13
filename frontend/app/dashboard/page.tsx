@@ -332,6 +332,34 @@ function InvestmentCard({ data }: { data: TossAccountSnapshot }) {
   );
 }
 
+// ─── 섹션 소계 · 컬럼 정렬 (2026-08-13 · KR/US 일치감 통일) ────────────
+// tabular-nums (숫자 등폭) + inline-block + min-w + text-right 로
+// 자릿수·부호 차이가 있어도 두 섹션이 동일 컬럼 정렬 유지.
+
+function SectionSubtotal({
+  subtotal,
+  pnl,
+  pnlPct,
+}: {
+  subtotal: number | null;
+  pnl: number | null;
+  pnlPct: number | null;
+}) {
+  return (
+    <div className="flex items-baseline gap-3 text-sm tabular-nums">
+      <span className="inline-block min-w-[7rem] text-right font-bold">
+        {_krw(subtotal)}
+      </span>
+      <span className={"inline-block min-w-[7rem] text-right " + pnlClass(pnl)}>
+        {pnl !== null ? (pnl > 0 ? "+" : "") + _krw(pnl) : "—"}
+      </span>
+      <span className={"inline-block min-w-[5rem] text-right text-xs " + pnlClass(pnlPct)}>
+        {pnlPct !== null ? `(${_pct(pnlPct)})` : ""}
+      </span>
+    </div>
+  );
+}
+
 // ─── 층 3A · 국내주식 (내 투자 하위) ──────────────────────────────────
 
 function KrSection({
@@ -349,14 +377,7 @@ function KrSection({
     <section className="rounded-lg border border-border bg-card/60 p-4">
       <header className="mb-3 flex flex-wrap items-baseline justify-between gap-2 border-b border-border/40 pb-2">
         <h2 className="text-sm font-semibold">🇰🇷 국내주식</h2>
-        <div className="text-sm">
-          <span className="font-bold">{_krw(subtotal)}</span>
-          {pnl !== null && (
-            <span className={"ml-2 " + pnlClass(pnl)}>
-              {pnl > 0 ? "+" : ""}{_krw(pnl)} ({_pct(pnlPct)})
-            </span>
-          )}
-        </div>
+        <SectionSubtotal subtotal={subtotal} pnl={pnl} pnlPct={pnlPct} />
       </header>
       {holdings.length === 0 ? (
         <div className="text-xs text-muted-foreground">보유 없음</div>
@@ -394,12 +415,7 @@ function UsSection({
           )}
         </h2>
         <div className="text-sm">
-          <span className="font-bold">{_krw(subtotalKrw)}</span>
-          {pnlKrw !== null && (
-            <span className={"ml-2 " + pnlClass(pnlKrw)}>
-              {pnlKrw > 0 ? "+" : ""}{_krw(pnlKrw)} ({_pct(pnlPct)})
-            </span>
-          )}
+          <SectionSubtotal subtotal={subtotalKrw} pnl={pnlKrw} pnlPct={pnlPct} />
         </div>
       </header>
       {holdings.length === 0 ? (
