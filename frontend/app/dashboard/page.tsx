@@ -5,10 +5,11 @@
  * 2026-08-13 · Fable 5 지시 · 토스 실계좌 섹션 + 저널 대조 컬럼 추가.
  * 인증 필수 (실 계좌 노출 방지 · 401 시 로그인 유도).
  */
-import Link from "next/link";
-import { useQuery } from "@tanstack/react-query";
+import { useQueryClient, useQuery } from "@tanstack/react-query";
+import { AdminSessionBar } from "@/components/admin/AdminSessionBar";
 import { api, type TossAccountSnapshot, type TossHolding } from "@/lib/api";
 import { formatUSD } from "@/lib/utils";
+import type { SessionInfo } from "@/lib/auth";
 
 function isAuthError(err: unknown): boolean {
   const s = (err as { status?: number } | null)?.status;
@@ -16,6 +17,8 @@ function isAuthError(err: unknown): boolean {
 }
 
 export default function DashboardPage() {
+  const queryClient = useQueryClient();
+
   const summaryQ = useQuery({
     queryKey: ["dashboard-summary"],
     queryFn: () => api.dashboard.summary(),
@@ -31,6 +34,14 @@ export default function DashboardPage() {
 
   const authRequired = isAuthError(summaryQ.error) || isAuthError(tossQ.error);
 
+  // 로그인 성공 시 데이터 즉시 refetch
+  const handleSessionChange = (info: SessionInfo) => {
+    if (info.role === "admin") {
+      queryClient.invalidateQueries({ queryKey: ["dashboard-summary"] });
+      queryClient.invalidateQueries({ queryKey: ["dashboard-toss-account"] });
+    }
+  };
+
   return (
     <div className="space-y-6">
       <header>
@@ -40,7 +51,21 @@ export default function DashboardPage() {
         </p>
       </header>
 
-      {authRequired && <AuthGate />}
+      {/*
+        인라인 로그인 UI · AdminSessionBar (Phase D · httpOnly 쿠키).
+        Fable 5 지시 · 프론트 숨김이 인증 아님 · 실 인증 게이트는 backend 401.
+        여기는 UX (로그인 성공 시 401 해소 → 자동 refetch).
+      */}
+      <AdminSessionBar onSessionChange={handleSessionChange} scope="sniper" />
+
+      {authRequired && (
+        <div className="rounded border border-red-500/40 bg-red-500/10 px-4 py-3 text-sm">
+          <span className="font-semibold text-red-400">🔒 인증 필요</span>{" "}
+          <span className="text-muted-foreground">
+            · 위 관리자 세션에 SNIPER_API_TOKEN 입력 후 자동 갱신됩니다.
+          </span>
+        </div>
+      )}
 
       {!authRequired && (
         <>
@@ -53,27 +78,6 @@ export default function DashboardPage() {
           {summaryQ.data && <AutoBotSummary data={summaryQ.data} />}
         </>
       )}
-    </div>
-  );
-}
-
-// ─── 로그인 필요 배너 ────────────────────────────────────────────────
-
-function AuthGate() {
-  return (
-    <div className="rounded-xl border border-red-500/40 bg-red-500/10 p-6">
-      <h2 className="text-lg font-semibold text-red-400">🔒 관리자 인증 필요</h2>
-      <p className="mt-2 text-sm text-muted-foreground">
-        이 대시보드는 실 계좌 잔고와 보유종목을 표시하므로 인증 없이 접근할 수 없습니다.
-      </p>
-      <div className="mt-4">
-        <Link
-          href="/admin/settings"
-          className="inline-block rounded bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground hover:bg-primary/80"
-        >
-          로그인 페이지로 이동
-        </Link>
-      </div>
     </div>
   );
 }
