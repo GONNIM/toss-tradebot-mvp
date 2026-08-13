@@ -93,7 +93,7 @@ export default function JournalPage() {
   }, [days]);
 
   return (
-    <div className="mx-auto max-w-5xl space-y-8">
+    <div className="space-y-8">
       <header>
         <h1 className="text-2xl font-bold">📓 Judgment Journal</h1>
         <p className="mt-1 text-sm text-muted-foreground">
