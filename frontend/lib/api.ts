@@ -175,16 +175,19 @@ export interface DashboardSummary {
   engine_status: string;
 }
 
-// Toss 실계좌 (2026-08-13 · Fable 5 · 인증 필수)
+// Toss 실계좌 · '내 계좌' 미러링 (2026-08-13 · Fable 5)
 export interface TossHolding {
   symbol: string;
+  name: string | null;
+  currency: "KRW" | "USD";
   qty: number;
   avg_price: number;
   current_price: number | null;
-  market_value_usd: number | null;
-  cost_basis_usd: number;
-  unrealized_pnl_usd: number | null;
+  market_value: number | null;
+  cost_basis: number;
+  unrealized_pnl: number | null;
   unrealized_pnl_pct: number | null;
+  market_value_krw: number | null;
   journal_recorded: boolean;
 }
 
@@ -195,13 +198,28 @@ export interface TossAccountSnapshot {
   fetched_at: string;
   market_open: boolean;
   price_source: "realtime" | "prior_close";
-  balance_krw: number | null;
-  balance_usd: number | null;
-  total_value_usd: number | null;
-  total_cost_usd: number | null;
-  total_pnl_usd: number | null;
+
+  total_asset_krw: number | null;
+  total_investment_krw: number | null;
+  total_pnl_krw: number | null;
   total_pnl_pct: number | null;
-  holdings: TossHolding[];
+
+  order_available_krw: number | null;
+  cash_krw: number | null;
+  cash_usd: number | null;
+
+  kr_market_value: number | null;
+  kr_pnl: number | null;
+  kr_pnl_pct: number | null;
+  kr_holdings: TossHolding[];
+
+  us_market_value_krw: number | null;
+  us_pnl_krw: number | null;
+  us_pnl_pct: number | null;
+  us_holdings: TossHolding[];
+
+  totals_mismatch_pct: number | null;
+  totals_mismatch_warning: boolean;
 }
 
 export interface LogEntry {

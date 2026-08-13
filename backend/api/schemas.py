@@ -103,36 +103,61 @@ class DashboardSummary(BaseModel):
     engine_status: str  # running/stopped/paused
 
 
-# ─── Toss 실계좌 (2026-08-13 · Fable 5: 인증 필수 · 실 계좌 노출 금지) ────
+# ─── Toss 실계좌 (2026-08-13 · Fable 5 · 인증 필수 · '내 계좌' 미러링) ────
+# 원칙: 브로커 API 원본 사용 · 자체 재계산은 검산 병기만 (broker-api-source-of-truth)
+# 색상 한국 관례: 이익 red · 손실 blue (프론트 렌더)
 
 class TossHolding(BaseModel):
-    """단일 보유종목."""
+    """단일 보유종목 · 통화 원본 값 유지 (KR = KRW · US = USD)."""
     symbol: str
-    qty: float                            # 소수점 지원 (B안)
-    avg_price: float                      # 평균 매수가 USD
-    current_price: Optional[float]        # 현재가 (실시간 or 전일 종가)
-    market_value_usd: Optional[float]     # qty × current_price
-    cost_basis_usd: float                 # qty × avg_price
-    unrealized_pnl_usd: Optional[float]   # market_value − cost_basis
-    unrealized_pnl_pct: Optional[float]   # pnl / cost_basis × 100
-    journal_recorded: bool                # 저널 판정 존재 여부 · Fable 5 30건 캠페인 트리거
+    name: Optional[str] = None            # 한글명 (API 응답에 있으면)
+    currency: str                         # "KRW" | "USD"
+    qty: float                            # 수량 (소수점 · B안 지원)
+    avg_price: float                      # 평균 매수가 · currency 단위
+    current_price: Optional[float]        # 현재가 (lastPrice) · currency 단위
+    market_value: Optional[float]         # 평가금액 · currency 단위 (API 우선 · 없으면 qty × current)
+    cost_basis: float                     # 원가 · currency 단위 (API 우선 · 없으면 qty × avg)
+    unrealized_pnl: Optional[float]       # 손익 · currency 단위
+    unrealized_pnl_pct: Optional[float]   # 손익률
+    market_value_krw: Optional[float]     # KRW 환산 평가 (US 종목 표시용)
+    journal_recorded: bool                # Fable 5 30건 캠페인 트리거
 
 
 class TossAccountSnapshot(BaseModel):
-    """토스 계좌 실시간 스냅샷 · 인증 필수."""
-    ok: bool                              # False = API 실패 (배지·안내)
-    error_reason: Optional[str] = None    # 실패 사유 (토큰 만료·rate limit·다운)
-    last_success_at: Optional[datetime] = None  # 마지막 성공 시각 (실패 시 UI 안내)
-    fetched_at: datetime                  # 이번 응답 시각
-    market_open: bool                     # US 장중 여부 (전일 종가/실시간 구분)
+    """토스 계좌 실시간 스냅샷 · '내 계좌' 미러링 (Fable 5 · 2026-08-13)."""
+    ok: bool
+    error_reason: Optional[str] = None
+    last_success_at: Optional[datetime] = None
+    fetched_at: datetime
+    market_open: bool
     price_source: str                     # "realtime" | "prior_close"
-    balance_krw: Optional[float] = None   # KRW 잔고
-    balance_usd: Optional[float] = None   # USD 잔고 (있으면)
-    total_value_usd: Optional[float] = None  # 잔고 + 평가금액
-    total_cost_usd: Optional[float] = None
-    total_pnl_usd: Optional[float] = None
-    total_pnl_pct: Optional[float] = None
-    holdings: list[TossHolding] = []
+
+    # 총 자산 헤더 (통합 KRW · 사용자 앱 뷰 정합)
+    total_asset_krw: Optional[float] = None       # 잔고 + 평가금액 (KRW)
+    total_investment_krw: Optional[float] = None  # 총 평가 (KRW · 잔고 제외)
+    total_pnl_krw: Optional[float] = None         # 총 손익 (KRW)
+    total_pnl_pct: Optional[float] = None         # 총 손익률
+
+    # 주문 가능 (원화 + 달러)
+    order_available_krw: Optional[float] = None   # 통합 (원화 + 달러 KRW 환산)
+    cash_krw: Optional[float] = None              # 원화 매수여력
+    cash_usd: Optional[float] = None              # 달러 매수여력
+
+    # 국내주식 소계
+    kr_market_value: Optional[float] = None       # KR 평가 (KRW)
+    kr_pnl: Optional[float] = None                # KR 손익 (KRW)
+    kr_pnl_pct: Optional[float] = None            # KR 손익률
+    kr_holdings: list[TossHolding] = []
+
+    # 해외주식 소계
+    us_market_value_krw: Optional[float] = None   # US 평가 (KRW 환산)
+    us_pnl_krw: Optional[float] = None            # US 손익 (KRW 환산)
+    us_pnl_pct: Optional[float] = None            # US 손익률
+    us_holdings: list[TossHolding] = []
+
+    # 정합성 검산 (원본 신뢰 + 검산 병기 · sanity-invariants 원칙)
+    totals_mismatch_pct: Optional[float] = None   # (자체 합계 − API 총자산) / API × 100
+    totals_mismatch_warning: bool = False         # abs > 1% 시 True → UI ⚠ 배지
 
 
 class LogEntry(BaseModel):

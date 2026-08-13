@@ -98,40 +98,59 @@ async def _journal_ticker_set() -> set[str]:
     return {t.strip().upper() for t in rows if t}
 
 
+def _to_float(v, default=None):
+    if v is None or v == "":
+        return default
+    try:
+        return float(v)
+    except (ValueError, TypeError):
+        return default
+
+
+def _sum_marketvalue_krw(items: list[dict]) -> float:
+    """items 각 종목의 marketValue.krw 합산 (KR 이면 원본 · US 이면 환산 필드 확인)."""
+    total = 0.0
+    for it in items:
+        mv = it.get("marketValue") or {}
+        if isinstance(mv, dict):
+            v = _to_float(mv.get("krw") or mv.get("amount"))
+            if v:
+                total += v
+    return total
+
+
 @router.get(
     "/toss-account",
     response_model=TossAccountSnapshot,
     dependencies=[Depends(require_sniper_token)],
 )
 async def get_toss_account():
-    """토스증권 실시간 계좌 스냅샷 · 잔고 + 보유종목 + 저널 대조.
+    """토스증권 '내 계좌' 미러링 (Fable 5 · 2026-08-13).
 
-    인증 필수 (Fable 5: 실 계좌 노출 절대 금지).
-    실패 시 200 + ok=False + error_reason · 프론트가 정직하게 표시.
+    인증 필수 · 원본 우선 · 자체 계산은 검산 병기 (broker-api-source-of-truth).
     """
     fetched_at = datetime.now(timezone.utc)
     journal_set = await _journal_ticker_set()
     market_open = _is_us_market_open(fetched_at)
     price_source = "realtime" if market_open else "prior_close"
 
-    # 실 응답 구조 (docs/analysis/toss-api-survey.md §1.5 · toss_adapter.py:210-259 검증):
-    #   holdings() → dict · items[] 배열 (symbol/quantity/averagePurchasePrice/lastPrice/currency)
-    #   buying_power() → dict (cashBuyingPower)
-    #   lastPrice 는 이미 items 에 포함 · prices() 호출 불필요.
+    # 원본 우선 (Fable 5 broker-api-source-of-truth · 2026-08-13):
+    #   holdings() 응답 = dict · items[] + 상위 집계 (totalPurchaseAmount·marketValue·profitLoss)
+    #   각 item: symbol·quantity·averagePurchasePrice·lastPrice·currency·(name?)·(marketValue?)·(profitLoss?)
     try:
         from backend.execution.brokers.toss_client import get_toss_client
         client = get_toss_client()
         holdings_dict = client.holdings() or {}
-        balance_krw = None
-        balance_usd = None
+        cash_krw = None
+        cash_usd = None
         try:
             bp_krw = client.buying_power(currency="KRW") or {}
-            balance_krw = float(bp_krw.get("cashBuyingPower", 0)) or None
+            cash_krw = _to_float(bp_krw.get("cashBuyingPower"))
         except Exception:  # noqa: BLE001
             pass
         try:
             bp_usd = client.buying_power(currency="USD") or {}
-            balance_usd = float(bp_usd.get("cashBuyingPower", 0)) or None
+            cash_usd = _to_float(bp_usd.get("cashBuyingPower"))
         except Exception:  # noqa: BLE001
             pass
     except Exception as exc:  # noqa: BLE001
@@ -144,50 +163,119 @@ async def get_toss_account():
             price_source=price_source,
         )
 
+    # 상위 집계 (원본 우선)
+    total_purchase = holdings_dict.get("totalPurchaseAmount") or {}
+    market_value_agg = holdings_dict.get("marketValue") or {}
+    profit_loss_agg = holdings_dict.get("profitLoss") or {}
+
+    total_investment_krw = _to_float(market_value_agg.get("krw") or market_value_agg.get("amount"))
+    total_pnl_krw = _to_float(profit_loss_agg.get("krw") or profit_loss_agg.get("amount"))
+    total_pnl_pct = _to_float(profit_loss_agg.get("rate") or profit_loss_agg.get("ratio"))
+
+    # 원가 KRW (검산·손익률 fallback 용)
+    total_cost_krw = _to_float(total_purchase.get("krw"))
+    if total_pnl_pct is None and total_cost_krw and total_pnl_krw is not None:
+        total_pnl_pct = round(total_pnl_krw / total_cost_krw * 100, 2)
+
     items = holdings_dict.get("items") or []
-    holdings: list[TossHolding] = []
-    total_cost = 0.0
-    total_mv = 0.0
+    kr_holdings: list[TossHolding] = []
+    us_holdings: list[TossHolding] = []
+    kr_mv_sum = 0.0
+    kr_cost_sum = 0.0
+    us_mv_krw_sum = 0.0
+    us_cost_krw_sum = 0.0
+
     for item in items:
         if not isinstance(item, dict):
             continue
         sym = str(item.get("symbol") or "").strip()
         if not sym:
             continue
-        try:
-            qty = float(item.get("quantity") or 0)
-            avg = float(item.get("averagePurchasePrice") or 0)
-        except (ValueError, TypeError):
-            continue
+        qty = _to_float(item.get("quantity"), 0) or 0
         if qty <= 0:
             continue
-        try:
-            cur_raw = item.get("lastPrice")
-            cur = float(cur_raw) if cur_raw not in (None, "", 0) else None
-        except (ValueError, TypeError):
-            cur = None
-        cost = round(qty * avg, 4)
-        mv = round(qty * cur, 4) if cur else None
-        pnl = round(mv - cost, 4) if mv is not None else None
-        pnl_pct = round((mv - cost) / cost * 100, 2) if (mv is not None and cost > 0) else None
-        total_cost += cost
-        if mv is not None:
-            total_mv += mv
-        holdings.append(TossHolding(
+        avg = _to_float(item.get("averagePurchasePrice"), 0) or 0
+        cur = _to_float(item.get("lastPrice"))
+        currency = (item.get("currency") or "").upper() or ("KRW" if sym.isdigit() else "USD")
+        name = item.get("name") or item.get("koreanName") or item.get("displayName")
+
+        # item 안에 marketValue/profitLoss 있으면 원본 우선 (없으면 계산)
+        item_mv_obj = item.get("marketValue") or {}
+        item_pl_obj = item.get("profitLoss") or {}
+
+        # native 통화 값
+        mv_native = _to_float(item_mv_obj.get("amount"))
+        if mv_native is None and cur is not None:
+            mv_native = round(qty * cur, 4)
+        cost_native = _to_float(item_mv_obj.get("costBasis")) or round(qty * avg, 4)
+        pnl_native = _to_float(item_pl_obj.get("amount"))
+        if pnl_native is None and mv_native is not None:
+            pnl_native = round(mv_native - cost_native, 4)
+        pnl_pct = _to_float(item_pl_obj.get("rate")) or _to_float(item_pl_obj.get("ratio"))
+        if pnl_pct is None and cost_native > 0 and pnl_native is not None:
+            pnl_pct = round(pnl_native / cost_native * 100, 2)
+
+        # KRW 환산 (US 종목 총계·표시용 · 상위 marketValue.krw 있으면 그거 · 없으면 하드코드 환율)
+        mv_krw = _to_float(item_mv_obj.get("krw"))
+        if mv_krw is None:
+            if currency == "KRW":
+                mv_krw = mv_native
+            elif mv_native is not None:
+                # constants USDKRW 대신 상위 집계 값에서 역산 or 하드코드 fallback
+                mv_krw = round(mv_native * 1330, 0)
+
+        holding = TossHolding(
             symbol=sym,
+            name=name,
+            currency=currency,
             qty=qty,
             avg_price=avg,
             current_price=cur,
-            market_value_usd=mv,
-            cost_basis_usd=cost,
-            unrealized_pnl_usd=pnl,
+            market_value=mv_native,
+            cost_basis=cost_native,
+            unrealized_pnl=pnl_native,
             unrealized_pnl_pct=pnl_pct,
+            market_value_krw=mv_krw,
             journal_recorded=sym.upper() in journal_set,
-        ))
+        )
+        if currency == "KRW":
+            kr_holdings.append(holding)
+            if mv_native is not None:
+                kr_mv_sum += mv_native
+            kr_cost_sum += cost_native
+        else:
+            us_holdings.append(holding)
+            if mv_krw is not None:
+                us_mv_krw_sum += mv_krw
+            # US cost KRW 환산 (검산용)
+            us_cost_krw_sum += round(cost_native * 1330, 0)
 
-    total_pnl = round(total_mv - total_cost, 4) if total_mv else None
-    total_pnl_pct = round((total_mv - total_cost) / total_cost * 100, 2) if total_cost > 0 else None
-    total_value = round(total_mv + (balance_usd or 0), 4) if total_mv or balance_usd else None
+    # 섹션 소계 (원본 없으면 자체 합)
+    kr_market_value = round(kr_mv_sum, 0) if kr_holdings else None
+    kr_pnl = round(kr_mv_sum - kr_cost_sum, 0) if kr_holdings else None
+    kr_pnl_pct = round((kr_mv_sum - kr_cost_sum) / kr_cost_sum * 100, 2) if kr_cost_sum > 0 else None
+
+    us_market_value_krw = round(us_mv_krw_sum, 0) if us_holdings else None
+    us_pnl_krw = round(us_mv_krw_sum - us_cost_krw_sum, 0) if us_holdings else None
+    us_pnl_pct = round((us_mv_krw_sum - us_cost_krw_sum) / us_cost_krw_sum * 100, 2) if us_cost_krw_sum > 0 else None
+
+    # 총 자산 (원본 우선)
+    if total_investment_krw is None:
+        total_investment_krw = kr_mv_sum + us_mv_krw_sum
+
+    # 잔고 KRW 통합
+    cash_usd_krw = round((cash_usd or 0) * 1330, 0) if cash_usd else 0
+    order_available_krw = round((cash_krw or 0) + cash_usd_krw, 0) if (cash_krw or cash_usd) else None
+    total_asset_krw = round(total_investment_krw + (order_available_krw or 0), 0) if total_investment_krw else None
+
+    # 정합성 검산 (Fable 5: 원본 신뢰 + 검산 병기)
+    totals_mismatch_pct = None
+    totals_mismatch_warning = False
+    if total_investment_krw and (kr_mv_sum or us_mv_krw_sum):
+        expected = kr_mv_sum + us_mv_krw_sum
+        diff = expected - total_investment_krw
+        totals_mismatch_pct = round(diff / total_investment_krw * 100, 2)
+        totals_mismatch_warning = abs(totals_mismatch_pct) > 1.0
 
     _last_success["toss_account"] = fetched_at
     return TossAccountSnapshot(
@@ -196,11 +284,21 @@ async def get_toss_account():
         fetched_at=fetched_at,
         market_open=market_open,
         price_source=price_source,
-        balance_krw=balance_krw,
-        balance_usd=balance_usd,
-        total_value_usd=total_value,
-        total_cost_usd=round(total_cost, 4) if total_cost else None,
-        total_pnl_usd=total_pnl,
+        total_asset_krw=total_asset_krw,
+        total_investment_krw=round(total_investment_krw, 0) if total_investment_krw else None,
+        total_pnl_krw=round(total_pnl_krw, 0) if total_pnl_krw is not None else None,
         total_pnl_pct=total_pnl_pct,
-        holdings=holdings,
+        order_available_krw=order_available_krw,
+        cash_krw=cash_krw,
+        cash_usd=cash_usd,
+        kr_market_value=kr_market_value,
+        kr_pnl=kr_pnl,
+        kr_pnl_pct=kr_pnl_pct,
+        kr_holdings=kr_holdings,
+        us_market_value_krw=us_market_value_krw,
+        us_pnl_krw=us_pnl_krw,
+        us_pnl_pct=us_pnl_pct,
+        us_holdings=us_holdings,
+        totals_mismatch_pct=totals_mismatch_pct,
+        totals_mismatch_warning=totals_mismatch_warning,
     )

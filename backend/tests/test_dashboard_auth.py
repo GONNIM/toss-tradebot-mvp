@@ -91,17 +91,26 @@ async def test_toss_account_valid_token_passes_auth(client: AsyncClient, monkeyp
 
 
 @pytest.mark.asyncio
-async def test_toss_account_parses_items_dict_response(client: AsyncClient, monkeypatch):
-    """holdings() 가 dict{items:[...]} · buying_power cashBuyingPower · lastPrice 응답 파싱.
-
-    실 사고 재현: 이전 구현이 응답을 list 로 순회 → holdings=[] 렌더 사고.
-    docs/analysis/toss-api-survey.md §1.5 실 구조 반영 검증.
-    """
+async def test_toss_account_kr_us_separation(client: AsyncClient, monkeypatch):
+    """KR·US 종목 통화별 분리 · '내 계좌' 미러링 (Fable 5 · 2026-08-13)."""
     class _FakeToss:
         def holdings(self, symbol=None):
             return {
-                "totalPurchaseAmount": {"krw": 0, "usd": 100.0},
+                # 상위 집계 · 원본 우선 사용
+                "totalPurchaseAmount": {"krw": 1354265, "usd": 2242.71},
+                "marketValue": {"krw": 8241516, "amount": 8241516},
+                "profitLoss": {"krw": 4644539, "rate": 129.12, "amount": 4644539},
                 "items": [
+                    # KR 종목 · KRW
+                    {
+                        "symbol": "005930",
+                        "name": "삼성전자",
+                        "quantity": "100",
+                        "averagePurchasePrice": "13543",
+                        "lastPrice": "65750",
+                        "currency": "KRW",
+                    },
+                    # US 종목 · USD
                     {
                         "symbol": "NBIS",
                         "quantity": "0.574",
@@ -109,38 +118,37 @@ async def test_toss_account_parses_items_dict_response(client: AsyncClient, monk
                         "lastPrice": "259.20",
                         "currency": "USD",
                     },
-                    {
-                        "symbol": "MU",
-                        "quantity": "0.163",
-                        "averagePurchasePrice": "911.29",
-                        "lastPrice": "911.29",
-                        "currency": "USD",
-                    },
                 ],
             }
-
         def buying_power(self, currency="KRW"):
-            return {"cashBuyingPower": 12345.67 if currency == "KRW" else 89.10}
+            return {"cashBuyingPower": 1219785 if currency == "KRW" else 3.97}
 
     monkeypatch.setattr(
         "backend.execution.brokers.toss_client.get_toss_client",
         lambda: _FakeToss(),
     )
-
     r = await client.get(
         "/api/v1/dashboard/toss-account",
         headers={"X-API-Token": TOKEN},
     )
     assert r.status_code == 200
     body = r.json()
-    assert body["ok"] is True, f"파싱 성공 시 ok=true · body={body}"
-    assert len(body["holdings"]) == 2, "items 2개 파싱"
-    nbis = next(h for h in body["holdings"] if h["symbol"] == "NBIS")
-    assert nbis["qty"] == 0.574
-    assert nbis["avg_price"] == 193.23
-    assert nbis["current_price"] == 259.20
-    assert body["balance_krw"] == 12345.67
-    assert body["balance_usd"] == 89.10
+    assert body["ok"] is True
+    # KR/US 분리 확인
+    assert len(body["kr_holdings"]) == 1
+    assert body["kr_holdings"][0]["symbol"] == "005930"
+    assert body["kr_holdings"][0]["name"] == "삼성전자"
+    assert body["kr_holdings"][0]["currency"] == "KRW"
+    assert len(body["us_holdings"]) == 1
+    assert body["us_holdings"][0]["symbol"] == "NBIS"
+    assert body["us_holdings"][0]["currency"] == "USD"
+    # 잔고 필드
+    assert body["cash_krw"] == 1219785
+    assert body["cash_usd"] == 3.97
+    # 총 자산 = 투자 + 주문가능 (사용자 앱 뷰)
+    assert body["total_investment_krw"] == 8241516  # 원본 사용
+    assert body["total_pnl_krw"] == 4644539  # 원본 사용
+    assert body["total_pnl_pct"] == 129.12
 
 
 @pytest.mark.asyncio
@@ -149,8 +157,8 @@ async def test_toss_account_skips_zero_quantity(client: AsyncClient, monkeypatch
     class _FakeToss:
         def holdings(self, symbol=None):
             return {"items": [
-                {"symbol": "SOLD", "quantity": "0", "averagePurchasePrice": "100", "lastPrice": "110"},
-                {"symbol": "HELD", "quantity": "1", "averagePurchasePrice": "100", "lastPrice": "110"},
+                {"symbol": "SOLD", "quantity": "0", "averagePurchasePrice": "100", "lastPrice": "110", "currency": "USD"},
+                {"symbol": "HELD", "quantity": "1", "averagePurchasePrice": "100", "lastPrice": "110", "currency": "USD"},
             ]}
         def buying_power(self, currency="KRW"):
             return {}
@@ -164,6 +172,31 @@ async def test_toss_account_skips_zero_quantity(client: AsyncClient, monkeypatch
         headers={"X-API-Token": TOKEN},
     )
     body = r.json()
-    symbols = [h["symbol"] for h in body["holdings"]]
-    assert "HELD" in symbols
-    assert "SOLD" not in symbols, "qty=0 skip"
+    all_syms = [h["symbol"] for h in body["us_holdings"]] + [h["symbol"] for h in body["kr_holdings"]]
+    assert "HELD" in all_syms
+    assert "SOLD" not in all_syms, "qty=0 skip"
+
+
+@pytest.mark.asyncio
+async def test_toss_account_uses_api_values_not_recomputed(client: AsyncClient, monkeypatch):
+    """API totalPurchaseAmount/marketValue/profitLoss 원본 그대로 사용 (broker-api-source-of-truth)."""
+    class _FakeToss:
+        def holdings(self, symbol=None):
+            # API 가 반환한 총계 vs 자체 계산 값이 다르면 (환율·수수료) API 우선
+            return {
+                "totalPurchaseAmount": {"krw": 1000000},
+                "marketValue": {"krw": 1200000, "amount": 1200000},
+                "profitLoss": {"krw": 200000, "rate": 20.0, "amount": 200000},
+                "items": [{"symbol": "005930", "quantity": "10", "averagePurchasePrice": "100000",
+                           "lastPrice": "120000", "currency": "KRW"}],
+            }
+        def buying_power(self, currency="KRW"):
+            return {}
+
+    monkeypatch.setattr("backend.execution.brokers.toss_client.get_toss_client", lambda: _FakeToss())
+    r = await client.get("/api/v1/dashboard/toss-account", headers={"X-API-Token": TOKEN})
+    body = r.json()
+    # API 원본 값 그대로 노출
+    assert body["total_investment_krw"] == 1200000
+    assert body["total_pnl_krw"] == 200000
+    assert body["total_pnl_pct"] == 20.0

@@ -1,14 +1,15 @@
 "use client";
 
 /**
- * 자동매매 대시보드 — Phase K (Toss API) 활성 후 실 데이터.
- * 2026-08-13 · Fable 5 지시 · 토스 실계좌 섹션 + 저널 대조 컬럼 추가.
- * 인증 필수 (실 계좌 노출 방지 · 401 시 로그인 유도).
+ * 대시보드 · 토스 '내 계좌' 미러링 (2026-08-13 · Fable 5).
+ * 정보 배치·위계는 복제 · 디자인 자산은 자체 (상표·저작권 방어).
+ * 색상: 이익 red · 손실 blue (한국 관례).
+ * 원장 = 토스 API · 대시보드 = 사본 (broker-api-source-of-truth).
  */
+import { useState } from "react";
 import { useQueryClient, useQuery } from "@tanstack/react-query";
 import { AdminSessionBar } from "@/components/admin/AdminSessionBar";
 import { api, type TossAccountSnapshot, type TossHolding } from "@/lib/api";
-import { formatUSD } from "@/lib/utils";
 import type { SessionInfo } from "@/lib/auth";
 
 function isAuthError(err: unknown): boolean {
@@ -16,28 +17,48 @@ function isAuthError(err: unknown): boolean {
   return s === 401 || s === 403;
 }
 
+// 한국 관례: 이익 red · 손실 blue
+function pnlClass(v: number | null): string {
+  if (v === null || v === undefined) return "text-muted-foreground";
+  if (v > 0) return "text-red-500";
+  if (v < 0) return "text-blue-500";
+  return "text-muted-foreground";
+}
+
+function _krw(v: number | null | undefined): string {
+  if (v === null || v === undefined) return "—";
+  return `${Math.round(v).toLocaleString("ko-KR")}원`;
+}
+
+function _pct(v: number | null | undefined): string {
+  if (v === null || v === undefined) return "—";
+  const sign = v > 0 ? "+" : "";
+  return `${sign}${v.toFixed(2)}%`;
+}
+
+function _usd(v: number | null | undefined, digits = 2): string {
+  if (v === null || v === undefined) return "—";
+  return `$${v.toFixed(digits)}`;
+}
+
+function _qty(v: number): string {
+  return v % 1 === 0 ? String(v) : v.toFixed(3);
+}
+
 export default function DashboardPage() {
   const queryClient = useQueryClient();
-
-  const summaryQ = useQuery({
-    queryKey: ["dashboard-summary"],
-    queryFn: () => api.dashboard.summary(),
-    retry: false,
-  });
 
   const tossQ = useQuery({
     queryKey: ["dashboard-toss-account"],
     queryFn: () => api.dashboard.tossAccount(),
-    refetchInterval: 60_000, // 60s · Fable 5 유지
+    refetchInterval: 60_000,
     retry: false,
   });
 
-  const authRequired = isAuthError(summaryQ.error) || isAuthError(tossQ.error);
+  const authRequired = isAuthError(tossQ.error);
 
-  // 로그인 성공 시 데이터 즉시 refetch
   const handleSessionChange = (info: SessionInfo) => {
     if (info.role === "admin") {
-      queryClient.invalidateQueries({ queryKey: ["dashboard-summary"] });
       queryClient.invalidateQueries({ queryKey: ["dashboard-toss-account"] });
     }
   };
@@ -45,22 +66,17 @@ export default function DashboardPage() {
   return (
     <div className="space-y-6">
       <header>
-        <h1 className="text-3xl font-bold">📊 자동매매 대시보드</h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          토스증권 실 계좌 · 실시간 잔고·보유종목·저널 대조
+        <h1 className="text-3xl font-bold">📊 내 계좌</h1>
+        <p className="mt-1 text-xs text-muted-foreground">
+          토스증권 · 실시간 · 원본 = 토스 앱 · 대시보드는 사본
         </p>
       </header>
 
-      {/*
-        인라인 로그인 UI · AdminSessionBar (Phase D · httpOnly 쿠키).
-        Fable 5 지시 · 프론트 숨김이 인증 아님 · 실 인증 게이트는 backend 401.
-        여기는 UX (로그인 성공 시 401 해소 → 자동 refetch).
-      */}
       <AdminSessionBar onSessionChange={handleSessionChange} scope="sniper" />
 
       {authRequired && (
         <div className="rounded border border-red-500/40 bg-red-500/10 px-4 py-3 text-sm">
-          <span className="font-semibold text-red-400">🔒 인증 필요</span>{" "}
+          <span className="font-semibold text-red-500">🔒 인증 필요</span>{" "}
           <span className="text-muted-foreground">
             · 위 관리자 세션에 SNIPER_API_TOKEN 입력 후 자동 갱신됩니다.
           </span>
@@ -68,23 +84,19 @@ export default function DashboardPage() {
       )}
 
       {!authRequired && (
-        <>
-          <TossAccountSection
-            data={tossQ.data}
-            isLoading={tossQ.isLoading}
-            error={tossQ.error}
-          />
-
-          {summaryQ.data && <AutoBotSummary data={summaryQ.data} />}
-        </>
+        <TossAccountView
+          data={tossQ.data}
+          isLoading={tossQ.isLoading}
+          error={tossQ.error}
+        />
       )}
     </div>
   );
 }
 
-// ─── 토스증권 실 계좌 섹션 ────────────────────────────────────────────
+// ─── 토스 '내 계좌' 미러링 ────────────────────────────────────────────
 
-function TossAccountSection({
+function TossAccountView({
   data,
   isLoading,
   error,
@@ -94,285 +106,281 @@ function TossAccountSection({
   error: unknown;
 }) {
   if (isLoading && !data) {
-    return (
-      <section className="rounded-xl border border-border bg-card p-6">
-        <h2 className="text-lg font-semibold">💼 토스증권 계좌 · 로딩...</h2>
-      </section>
-    );
+    return <div className="text-muted-foreground text-sm">로딩...</div>;
   }
-
   if (!data) {
     return (
-      <section className="rounded-xl border border-red-500/40 bg-red-500/10 p-6">
-        <h2 className="text-lg font-semibold text-red-400">💼 토스증권 · API 호출 실패</h2>
-        <p className="mt-2 text-xs text-muted-foreground">
+      <div className="rounded border border-red-500/40 bg-red-500/10 p-4 text-sm">
+        <div className="font-semibold text-red-500">API 호출 실패</div>
+        <div className="mt-1 text-xs text-muted-foreground">
           {String((error as Error | null)?.message ?? "unknown")}
-        </p>
-      </section>
+        </div>
+      </div>
     );
   }
 
   return (
-    <section className="rounded-xl border border-border bg-card p-6">
-      <header className="mb-4 flex flex-wrap items-baseline justify-between gap-2">
-        <h2 className="text-lg font-semibold">💼 토스증권 계좌</h2>
-        <div className="flex items-center gap-3 text-[11px] text-muted-foreground">
-          <span
-            className={
-              data.market_open
-                ? "rounded bg-emerald-500/20 px-2 py-0.5 font-semibold text-emerald-400"
-                : "rounded bg-muted px-2 py-0.5 font-semibold"
-            }
-          >
-            {data.market_open ? "🟢 US 장중 · 실시간" : "⚪ 장 마감 · 가격 기준: 전일 종가"}
-          </span>
-          <span>60s 자동 갱신 · {new Date(data.fetched_at).toLocaleTimeString("ko-KR")}</span>
-        </div>
-      </header>
-
-      {/* Fable 5 정직 UX: 실패 시 정직 표시 · 빈 테이블 X */}
+    <div className="space-y-4">
+      {/* Fable 5 정직 UX · 실패 시 배너만 · 데이터 잔상 방지 */}
       {!data.ok && (
-        <div className="mb-4 rounded border border-red-500/40 bg-red-500/10 p-3 text-xs">
-          <div className="font-semibold text-red-400">
+        <div className="rounded border border-red-500/40 bg-red-500/10 p-3 text-xs">
+          <div className="font-semibold text-red-500">
             🚨 토스 연결 실패 · {data.error_reason ?? "unknown"}
           </div>
           <div className="mt-1 text-muted-foreground">
             {data.last_success_at
               ? `마지막 성공 ${new Date(data.last_success_at).toLocaleString("ko-KR")}`
-              : "마지막 성공 기록 없음 (프로세스 재시작 후 첫 요청 가능성)"}
+              : "마지막 성공 기록 없음"}
           </div>
         </div>
       )}
 
       {data.ok && (
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-          <StatCard
-            label="총 자산 (USD)"
-            value={data.total_value_usd !== null ? formatUSD(data.total_value_usd) : "—"}
-          />
-          <StatCard
-            label="총 매수 비용"
-            value={data.total_cost_usd !== null ? formatUSD(data.total_cost_usd) : "—"}
-          />
-          <StatCard
-            label="평가 손익"
-            value={data.total_pnl_usd !== null ? formatUSD(data.total_pnl_usd) : "—"}
-            accent={
-              data.total_pnl_usd !== null
-                ? data.total_pnl_usd >= 0
-                  ? "positive"
-                  : "negative"
-                : undefined
-            }
-          />
-          <StatCard
-            label="손익률"
-            value={data.total_pnl_pct !== null ? `${data.total_pnl_pct.toFixed(2)}%` : "—"}
-            accent={
-              data.total_pnl_pct !== null
-                ? data.total_pnl_pct >= 0
-                  ? "positive"
-                  : "negative"
-                : undefined
-            }
-          />
-        </div>
-      )}
-
-      {data.ok && (data.balance_krw !== null || data.balance_usd !== null) && (
-        <div className="mt-3 flex flex-wrap gap-4 rounded border border-border/40 bg-background/40 px-3 py-2 text-xs">
-          {data.balance_krw !== null && (
-            <span>
-              KRW 잔고 <span className="font-mono font-bold">₩{Math.round(data.balance_krw).toLocaleString("ko-KR")}</span>
-            </span>
+        <>
+          {/* 정합성 검산 배지 (원본 신뢰 + 검산 병기 · sanity-invariants) */}
+          {data.totals_mismatch_warning && (
+            <div className="rounded border border-amber-500/40 bg-amber-500/10 p-3 text-xs">
+              <span className="font-semibold text-amber-500">
+                ⚠ 합계 불일치 {_pct(data.totals_mismatch_pct)}
+              </span>{" "}
+              <span className="text-muted-foreground">
+                · 자체 검산 (KR+US 소계) vs API 총자산 1% 초과 편차 · API 값 표시 우선
+              </span>
+            </div>
           )}
-          {data.balance_usd !== null && (
-            <span>
-              USD 잔고 <span className="font-mono font-bold">{formatUSD(data.balance_usd)}</span>
-            </span>
-          )}
-        </div>
-      )}
 
-      {/*
-        보유종목 테이블 · 저널 대조 컬럼 포함 (Fable 5 30건 캠페인)
-        Fable 5 3차 지적 (2026-08-13): react-query 는 200 + ok=false 를 성공으로 캐시.
-        실패 시 이전 성공 데이터 잔상 방지 · data.ok 시에만 렌더 · fetched_at 을 테이블 상단에도 명시.
-      */}
-      {data.ok && (
-        <HoldingsTable
-          holdings={data.holdings}
-          priceSource={data.price_source}
-          fetchedAt={data.fetched_at}
-        />
+          <TotalAssetHeader data={data} />
+          <OrderAvailableCard data={data} />
+          <KrSection holdings={data.kr_holdings} subtotal={data.kr_market_value} pnl={data.kr_pnl} pnlPct={data.kr_pnl_pct} />
+          <UsSection holdings={data.us_holdings} subtotalKrw={data.us_market_value_krw} pnlKrw={data.us_pnl_krw} pnlPct={data.us_pnl_pct} priceSource={data.price_source} />
+
+          <footer className="mt-2 text-[10px] text-muted-foreground">
+            <span
+              className={
+                data.market_open
+                  ? "rounded bg-emerald-500/20 px-2 py-0.5 font-semibold text-emerald-500"
+                  : "rounded bg-muted px-2 py-0.5 font-semibold"
+              }
+            >
+              {data.market_open ? "🟢 US 장중 · 실시간" : "⚪ US 장 마감 · 전일 종가"}
+            </span>
+            <span className="ml-3">
+              60s 자동 갱신 · {new Date(data.fetched_at).toLocaleTimeString("ko-KR")}
+            </span>
+          </footer>
+        </>
+      )}
+    </div>
+  );
+}
+
+// ─── 총 자산 헤더 · 토스 '내 계좌' 위계 ───────────────────────────────
+
+function TotalAssetHeader({ data }: { data: TossAccountSnapshot }) {
+  return (
+    <section className="rounded-xl border border-border bg-card p-6">
+      <div className="text-xs text-muted-foreground">총 자산</div>
+      <div className="mt-1 text-3xl font-bold">{_krw(data.total_asset_krw)}</div>
+      {data.total_pnl_krw !== null && (
+        <div className="mt-2 flex items-baseline gap-2 text-sm">
+          <span className="text-muted-foreground">총 투자 손익</span>
+          <span className={"font-semibold " + pnlClass(data.total_pnl_krw)}>
+            {data.total_pnl_krw > 0 ? "+" : ""}{_krw(data.total_pnl_krw)}
+          </span>
+          <span className={"text-xs " + pnlClass(data.total_pnl_pct)}>
+            ({_pct(data.total_pnl_pct)})
+          </span>
+        </div>
       )}
     </section>
   );
 }
 
-function HoldingsTable({
+// ─── 주문 가능 (통합 + 접힘 통화별) ───────────────────────────────────
+
+function OrderAvailableCard({ data }: { data: TossAccountSnapshot }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <section className="rounded-xl border border-border bg-card p-4">
+      <button
+        type="button"
+        onClick={() => setOpen(!open)}
+        className="flex w-full items-center justify-between text-left"
+      >
+        <span>
+          <span className="text-xs text-muted-foreground">총 주문 가능 금액</span>
+          <span className="ml-3 text-lg font-bold">{_krw(data.order_available_krw)}</span>
+        </span>
+        <span className="text-xs text-muted-foreground">{open ? "▲ 접기" : "▼ 통화별"}</span>
+      </button>
+      {open && (
+        <div className="mt-3 grid gap-2 border-t border-border/40 pt-3 text-xs sm:grid-cols-2">
+          <div>
+            <span className="text-muted-foreground">원화 </span>
+            <span className="font-mono font-bold">{_krw(data.cash_krw)}</span>
+          </div>
+          <div>
+            <span className="text-muted-foreground">달러 </span>
+            <span className="font-mono font-bold">{_usd(data.cash_usd)}</span>
+            {data.cash_usd !== null && (
+              <span className="ml-1 text-[10px] text-muted-foreground">
+                (≈{_krw((data.cash_usd ?? 0) * 1330)})
+              </span>
+            )}
+          </div>
+        </div>
+      )}
+    </section>
+  );
+}
+
+// ─── 국내주식 섹션 ────────────────────────────────────────────────────
+
+function KrSection({
   holdings,
-  priceSource,
-  fetchedAt,
+  subtotal,
+  pnl,
+  pnlPct,
 }: {
   holdings: TossHolding[];
-  priceSource: "realtime" | "prior_close";
-  fetchedAt: string;
+  subtotal: number | null;
+  pnl: number | null;
+  pnlPct: number | null;
 }) {
-  if (holdings.length === 0) {
-    return (
-      <div className="mt-4 rounded border border-dashed border-border p-4 text-center text-xs text-muted-foreground">
-        보유종목 없음.
-      </div>
-    );
-  }
-
   return (
-    <div className="mt-4 overflow-x-auto">
-      <div className="mb-1 text-[10px] text-muted-foreground">
-        📸 가격 스냅샷 · {new Date(fetchedAt).toLocaleString("ko-KR")} ·{" "}
-        {priceSource === "prior_close" ? "전일 종가 기준" : "실시간"}
-      </div>
+    <section className="rounded-xl border border-border bg-card p-4">
+      <header className="mb-3 flex flex-wrap items-baseline justify-between gap-2 border-b border-border/40 pb-2">
+        <h2 className="text-base font-semibold">🇰🇷 국내주식</h2>
+        <div className="text-sm">
+          <span className="font-bold">{_krw(subtotal)}</span>
+          {pnl !== null && (
+            <span className={"ml-2 " + pnlClass(pnl)}>
+              {pnl > 0 ? "+" : ""}{_krw(pnl)} ({_pct(pnlPct)})
+            </span>
+          )}
+        </div>
+      </header>
+      {holdings.length === 0 ? (
+        <div className="text-xs text-muted-foreground">보유 없음</div>
+      ) : (
+        <HoldingsTable holdings={holdings} />
+      )}
+    </section>
+  );
+}
+
+// ─── 해외주식 섹션 ────────────────────────────────────────────────────
+
+function UsSection({
+  holdings,
+  subtotalKrw,
+  pnlKrw,
+  pnlPct,
+  priceSource,
+}: {
+  holdings: TossHolding[];
+  subtotalKrw: number | null;
+  pnlKrw: number | null;
+  pnlPct: number | null;
+  priceSource: "realtime" | "prior_close";
+}) {
+  return (
+    <section className="rounded-xl border border-border bg-card p-4">
+      <header className="mb-3 flex flex-wrap items-baseline justify-between gap-2 border-b border-border/40 pb-2">
+        <h2 className="text-base font-semibold">
+          🇺🇸 해외주식
+          {priceSource === "prior_close" && (
+            <span className="ml-2 rounded bg-muted px-1.5 py-0.5 text-[10px] text-muted-foreground">
+              전일 종가 기준
+            </span>
+          )}
+        </h2>
+        <div className="text-sm">
+          <span className="font-bold">{_krw(subtotalKrw)}</span>
+          {pnlKrw !== null && (
+            <span className={"ml-2 " + pnlClass(pnlKrw)}>
+              {pnlKrw > 0 ? "+" : ""}{_krw(pnlKrw)} ({_pct(pnlPct)})
+            </span>
+          )}
+        </div>
+      </header>
+      {holdings.length === 0 ? (
+        <div className="text-xs text-muted-foreground">보유 없음</div>
+      ) : (
+        <HoldingsTable holdings={holdings} />
+      )}
+    </section>
+  );
+}
+
+// ─── 공통 보유종목 테이블 (통화 자동 감지) ────────────────────────────
+
+function HoldingsTable({ holdings }: { holdings: TossHolding[] }) {
+  return (
+    <div className="overflow-x-auto">
       <table className="w-full text-xs">
         <thead className="border-b border-border text-left text-[10px] uppercase tracking-wide text-muted-foreground">
           <tr>
-            <th className="pb-2">Ticker</th>
-            <th className="pb-2 text-right">Qty</th>
-            <th className="pb-2 text-right">Avg</th>
-            <th className="pb-2 text-right">Current{priceSource === "prior_close" && " (전일)"}</th>
-            <th className="pb-2 text-right">Value</th>
-            <th className="pb-2 text-right">P/L</th>
+            <th className="pb-2">종목</th>
+            <th className="pb-2 text-right">수량</th>
+            <th className="pb-2 text-right">평균단가</th>
+            <th className="pb-2 text-right">현재가</th>
+            <th className="pb-2 text-right">평가금액</th>
+            <th className="pb-2 text-right">손익</th>
             <th className="pb-2 text-right">%</th>
             <th className="pb-2 text-center">📓</th>
           </tr>
         </thead>
         <tbody>
-          {holdings.map((h) => (
-            <tr key={h.symbol} className="border-b border-border/40 last:border-0">
-              <td className="py-2 font-mono font-bold">{h.symbol}</td>
-              <td className="py-2 text-right font-mono">
-                {h.qty < 1 ? h.qty.toFixed(3) : h.qty.toString()}
-              </td>
-              <td className="py-2 text-right font-mono text-muted-foreground">
-                {formatUSD(h.avg_price)}
-              </td>
-              <td className="py-2 text-right font-mono">
-                {h.current_price !== null ? formatUSD(h.current_price) : "—"}
-              </td>
-              <td className="py-2 text-right font-mono">
-                {h.market_value_usd !== null ? formatUSD(h.market_value_usd) : "—"}
-              </td>
-              <td
-                className={
-                  "py-2 text-right font-mono " +
-                  (h.unrealized_pnl_usd === null
-                    ? "text-muted-foreground"
-                    : h.unrealized_pnl_usd >= 0
-                      ? "text-emerald-400"
-                      : "text-red-400")
-                }
-              >
-                {h.unrealized_pnl_usd !== null ? formatUSD(h.unrealized_pnl_usd) : "—"}
-              </td>
-              <td
-                className={
-                  "py-2 text-right font-mono " +
-                  (h.unrealized_pnl_pct === null
-                    ? "text-muted-foreground"
-                    : h.unrealized_pnl_pct >= 0
-                      ? "text-emerald-400"
-                      : "text-red-400")
-                }
-              >
-                {h.unrealized_pnl_pct !== null ? `${h.unrealized_pnl_pct.toFixed(1)}%` : "—"}
-              </td>
-              <td className="py-2 text-center">
-                {h.journal_recorded ? (
-                  <span
-                    className="rounded bg-emerald-500/20 px-1.5 py-0.5 text-[10px] font-semibold text-emerald-400"
-                    title="저널에 판정 기록 있음"
-                  >
-                    ✓
-                  </span>
-                ) : (
-                  <span
-                    className="rounded bg-amber-500/20 px-1.5 py-0.5 text-[10px] font-semibold text-amber-400"
-                    title="저널 판정 미기록 · 실 보유 종목의 근거 없음"
-                  >
-                    ⚠ 미기록
-                  </span>
-                )}
-              </td>
-            </tr>
-          ))}
+          {holdings.map((h) => {
+            const fmt = h.currency === "KRW" ? _krw : (v: number | null) => _usd(v, 2);
+            return (
+              <tr key={h.symbol} className="border-b border-border/40 last:border-0">
+                <td className="py-2">
+                  <div className="font-bold">{h.name || h.symbol}</div>
+                  {h.name && (
+                    <div className="text-[10px] font-mono text-muted-foreground">{h.symbol}</div>
+                  )}
+                </td>
+                <td className="py-2 text-right font-mono">{_qty(h.qty)}</td>
+                <td className="py-2 text-right font-mono text-muted-foreground">{fmt(h.avg_price)}</td>
+                <td className="py-2 text-right font-mono">{fmt(h.current_price)}</td>
+                <td className="py-2 text-right font-mono">
+                  <div>{fmt(h.market_value)}</div>
+                  {h.currency === "USD" && h.market_value_krw !== null && (
+                    <div className="text-[10px] text-muted-foreground">≈{_krw(h.market_value_krw)}</div>
+                  )}
+                </td>
+                <td className={"py-2 text-right font-mono " + pnlClass(h.unrealized_pnl)}>
+                  {h.unrealized_pnl !== null
+                    ? `${h.unrealized_pnl > 0 ? "+" : ""}${fmt(h.unrealized_pnl)}`
+                    : "—"}
+                </td>
+                <td className={"py-2 text-right font-mono " + pnlClass(h.unrealized_pnl_pct)}>
+                  {_pct(h.unrealized_pnl_pct)}
+                </td>
+                <td className="py-2 text-center">
+                  {h.journal_recorded ? (
+                    <span
+                      className="rounded bg-emerald-500/20 px-1.5 py-0.5 text-[10px] font-semibold text-emerald-500"
+                      title="저널 판정 기록 있음"
+                    >
+                      ✓
+                    </span>
+                  ) : (
+                    <span
+                      className="rounded bg-amber-500/20 px-1.5 py-0.5 text-[10px] font-semibold text-amber-500"
+                      title="저널 판정 미기록 · 30건 캠페인 대상"
+                    >
+                      ⚠ 미기록
+                    </span>
+                  )}
+                </td>
+              </tr>
+            );
+          })}
         </tbody>
       </table>
-      <p className="mt-2 text-[10px] text-muted-foreground">
-        📓 미기록 = 저널 판정 없이 보유 중. Rulebook: 매수 전에 판정 기록.
-      </p>
-    </div>
-  );
-}
-
-// ─── 자동매매 봇 요약 (기존 · 유지) ─────────────────────────────────
-
-function AutoBotSummary({ data }: { data: import("@/lib/api").DashboardSummary }) {
-  return (
-    <section className="rounded-xl border border-border bg-card p-6">
-      <h2 className="text-lg font-semibold">🤖 자동매매 봇 (Phase K)</h2>
-      <p className="mt-1 text-xs text-muted-foreground">
-        1,500만원 시드 · Mode A 단타 · Phase K 활성 후 실 데이터
-      </p>
-      <dl className="mt-4 space-y-2 text-sm">
-        <Row label="엔진 상태" value={data.engine_status} />
-        <Row label="보유 종목 수" value={`${data.open_positions} 개`} />
-        <Row
-          label="마지막 거래"
-          value={data.last_trade_at ? new Date(data.last_trade_at).toLocaleString("ko-KR") : "—"}
-        />
-      </dl>
-      {data.engine_status === "not_initialized" && (
-        <div className="mt-4 rounded-lg border border-yellow-500/30 bg-yellow-500/10 p-3 text-xs">
-          <p className="font-semibold text-yellow-400">⚠️ Phase K 미활성</p>
-          <p className="mt-1 text-muted-foreground">
-            Toss API 자동매매 코어가 시작되면 실 데이터로 채워집니다.
-          </p>
-        </div>
-      )}
-    </section>
-  );
-}
-
-// ─── 공통 부품 ───────────────────────────────────────────────────────
-
-function StatCard({
-  label,
-  value,
-  accent,
-}: {
-  label: string;
-  value: string;
-  accent?: "positive" | "negative";
-}) {
-  const color =
-    accent === "positive"
-      ? "text-emerald-400"
-      : accent === "negative"
-        ? "text-red-400"
-        : "";
-  return (
-    <div className="rounded-xl border border-border bg-background/30 p-4">
-      <div className="text-xs text-muted-foreground">{label}</div>
-      <div className={`mt-2 text-xl font-bold ${color}`}>{value}</div>
-    </div>
-  );
-}
-
-function Row({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="flex justify-between border-b border-border pb-2 last:border-0">
-      <dt className="text-muted-foreground">{label}</dt>
-      <dd className="font-mono">{value}</dd>
     </div>
   );
 }
