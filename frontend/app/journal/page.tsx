@@ -729,7 +729,15 @@ function EditForm({
 
   const moveTargetToWish = () => {
     if (!target.trim()) return;
-    const wishLine = `\n\n장기 신념: ${j.ticker} $${target} (target 필드에서 이관 · ${new Date().toLocaleDateString("ko-KR")})`;
+    // 통화 표기: 국내주식(숫자 티커) = ₩·원 · 해외주식(알파벳) = $
+    const isKrTicker = /^\d+/.test(j.ticker);
+    const num = Number(target);
+    const formatted = Number.isFinite(num)
+      ? isKrTicker
+        ? `${num.toLocaleString("ko-KR")}원`
+        : `$${num.toLocaleString("en-US")}`
+      : target;
+    const wishLine = `\n\n장기 신념: ${j.ticker} ${formatted} (target 필드에서 이관 · ${new Date().toLocaleDateString("ko-KR")})`;
     setThesis(thesis + wishLine);
     setTarget("");
     if (!note) setNote("target 소원으로 이관");
