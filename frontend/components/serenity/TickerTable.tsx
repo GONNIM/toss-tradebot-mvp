@@ -68,6 +68,8 @@ function _mentionsForKey(t: TickerCardItem, k: SortKey): number {
 }
 
 export function TickerTable({ items }: { items: TickerCardItem[] }) {
+  // 접기/펼치기 · default 접힘 (2026-08-14 · Fable 5 · 정보 밀도 조절)
+  const [open, setOpen] = useState(false);
   // 기본 정렬: Mentions 총 카운트 (90d) · desc (사용자 지시 L12 · 총 카운트 = 셀 맨 앞 큰 숫자)
   const [mentionsPeriod, setMentionsPeriod] = useState<MentionsPeriod>("90d");
   const [sortKey, setSortKey] = useState<SortKey>("mentions_90d");
@@ -157,14 +159,23 @@ export function TickerTable({ items }: { items: TickerCardItem[] }) {
 
   return (
     <section className="rounded-lg border border-border bg-card">
-      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border px-3 py-2">
+      <button
+        type="button"
+        onClick={() => setOpen(!open)}
+        className="flex w-full items-center justify-between gap-2 px-3 py-2 text-left"
+      >
         <div>
           <h2 className="text-sm font-semibold">📋 90일 언급 종목 리스트 (테이블)</h2>
           <p className="text-[10px] text-muted-foreground">
-            {items.length} 종목 · 상단 컨트롤로 Mentions 기간/방향 선택 · 각 컬럼 헤더 클릭으로도 정렬
+            {items.length} 종목 · {open ? "상단 컨트롤로 Mentions 기간/방향 선택 · 각 컬럼 헤더 클릭으로도 정렬" : "펼쳐서 정렬·검색"}
           </p>
         </div>
+        <span className="text-xs text-muted-foreground">{open ? "▲ 접기" : "▼ 펼치기"}</span>
+      </button>
 
+      {open && (
+      <>
+      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-t border-border px-3 py-2">
         <div className="flex flex-wrap items-center gap-2">
           {/* Mentions 정렬 컨트롤 (사용자 요구 · L11) */}
           <div className="flex items-center gap-1 rounded border border-border bg-background px-2 py-1">
@@ -301,6 +312,8 @@ export function TickerTable({ items }: { items: TickerCardItem[] }) {
           </tbody>
         </table>
       </div>
+      </>
+      )}
     </section>
   );
 }
