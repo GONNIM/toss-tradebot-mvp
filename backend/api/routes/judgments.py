@@ -283,10 +283,23 @@ async def patch_judgment(judgment_id: int, payload: JudgmentPatch):
 
 @router.get("/baseline", response_model=Baseline)
 async def get_baseline(days: int = Query(90, ge=7, le=365)):
-    """판정 정확도 baseline · Stage 2 진입 KPI 근거."""
+    """판정 정확도 baseline · Stage 2 진입 KPI 근거.
+
+    3분류 (Fable 5 · 2026-08-14):
+    - active (진행 중): superseded_by_id IS NULL AND result_at_horizon IS NULL
+    - closed (청산 완료): result_at_horizon IS NOT NULL → 성적 집계 대상
+    - superseded (정리): superseded_by_id IS NOT NULL → 모든 집계 제외
+
+    superseded 는 정리 작업이지 판정이 아니므로 모든 KPI 에서 제외.
+    supersede 생성 시 어떤 KPI 도 개선되지 않아야 함 (부풀림 방지).
+    """
     cutoff = datetime.utcnow() - timedelta(days=days)
     async with get_session() as session:
-        stmt = select(UserJudgment).where(UserJudgment.ts >= cutoff)
+        stmt = (
+            select(UserJudgment)
+            .where(UserJudgment.ts >= cutoff)
+            .where(UserJudgment.superseded_by_id.is_(None))  # 모든 집계에서 superseded 제외
+        )
         rows = (await session.execute(stmt)).scalars().all()
 
     total = len(rows)
