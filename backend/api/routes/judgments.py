@@ -64,10 +64,15 @@ class JudgmentOut(BaseModel):
     invalidation_hit_ts: Optional[datetime] = None
     invalidation_hit_low: Optional[float] = None
     git_sha: Optional[str]
+    # Supersede · 티커당 1건 원칙 (2026-08-14)
+    superseded_by_id: Optional[int] = None
+    superseded_at: Optional[datetime] = None
+    supersede_reason: Optional[str] = None
+    updated_history: Optional[str] = None
 
     # SQLite func.now() 저장 시 naive UTC 반환 → 명시 UTC 마킹 (Z suffix)
     # 브라우저 new Date() 가 로컬 (KST) 로 자동 변환 · 2026-08-14 KST 표기 사고 대응
-    @field_validator("ts", "result_computed_at", "invalidation_hit_ts", mode="before")
+    @field_validator("ts", "result_computed_at", "invalidation_hit_ts", "superseded_at", mode="before")
     @classmethod
     def _mark_utc(cls, v):
         if isinstance(v, datetime) and v.tzinfo is None:
@@ -132,6 +137,7 @@ async def list_judgments(
     ticker: Optional[str] = None,
     page_source: Optional[str] = None,
     mood: Optional[str] = None,
+    active_only: bool = Query(False, description="True 시 superseded 판정 제외"),
     days: int = Query(30, ge=1, le=365),
     limit: int = Query(100, ge=1, le=500),
 ):
@@ -145,9 +151,119 @@ async def list_judgments(
             stmt = stmt.where(UserJudgment.page_source == page_source)
         if mood:
             stmt = stmt.where(UserJudgment.mood == mood)
+        if active_only:
+            stmt = stmt.where(UserJudgment.superseded_by_id.is_(None))
         stmt = stmt.order_by(desc(UserJudgment.ts)).limit(limit)
         result = await session.execute(stmt)
         return result.scalars().all()
+
+
+# ─── Supersede · 티커당 1건 원칙 (2026-08-14 · Fable 5) ───────────────
+
+
+class SupersedeRequest(BaseModel):
+    by_id: int = Field(..., description="이 판정을 대체하는 신규 판정 id")
+    reason: str = Field(..., min_length=1, max_length=200)
+
+
+@router.post("/{judgment_id}/supersede", response_model=JudgmentOut)
+async def supersede_judgment(judgment_id: int, payload: SupersedeRequest):
+    """판정 대체 마킹 · append-only · 삭제 금지.
+
+    Fable 5 (2026-08-14): 티커당 판정 1건 원칙.
+    positions 3건이 manual 3건으로 대체되는 케이스 등.
+    """
+    async with get_session() as session:
+        row = (await session.execute(
+            select(UserJudgment).where(UserJudgment.id == judgment_id)
+        )).scalar_one_or_none()
+        if row is None:
+            raise HTTPException(status_code=404, detail=f"판정 id={judgment_id} 없음")
+        if row.superseded_by_id is not None:
+            raise HTTPException(
+                status_code=409,
+                detail=f"이미 supersede 됨 · by_id={row.superseded_by_id}",
+            )
+        # by_id 존재 확인
+        new_row = (await session.execute(
+            select(UserJudgment).where(UserJudgment.id == payload.by_id)
+        )).scalar_one_or_none()
+        if new_row is None:
+            raise HTTPException(status_code=404, detail=f"by_id={payload.by_id} 판정 없음")
+        if new_row.ticker != row.ticker:
+            raise HTTPException(
+                status_code=400,
+                detail=f"티커 불일치 · {row.ticker} → {new_row.ticker} · supersede 는 동일 티커만",
+            )
+
+        row.superseded_by_id = payload.by_id
+        row.superseded_at = datetime.utcnow()
+        row.supersede_reason = payload.reason
+        await session.commit()
+        await session.refresh(row)
+        return row
+
+
+class JudgmentPatch(BaseModel):
+    """판정 갱신 · 이력 append (updated_history)."""
+    invalidation_price: Optional[float] = None
+    target_price: Optional[float] = None
+    thesis_md: Optional[str] = None
+    horizon_days: Optional[int] = Field(default=None, ge=1, le=365)
+    mood: Optional[Literal["cool", "neutral", "revenge", "fomo"]] = None
+    change_note: str = Field(..., min_length=1, max_length=200, description="변경 사유")
+
+
+@router.patch("/{judgment_id}", response_model=JudgmentOut)
+async def patch_judgment(judgment_id: int, payload: JudgmentPatch):
+    """판정 필드 갱신 · updated_history 에 이전 값·변경 사유 append.
+
+    Fable 5: 첫 기록 오기 수정 허용 · 이력 남김 · 이후 하향 조정 금지 판정은 사용자 책임.
+    """
+    import json as _json
+
+    async with get_session() as session:
+        row = (await session.execute(
+            select(UserJudgment).where(UserJudgment.id == judgment_id)
+        )).scalar_one_or_none()
+        if row is None:
+            raise HTTPException(status_code=404, detail=f"판정 id={judgment_id} 없음")
+        if row.superseded_by_id is not None:
+            raise HTTPException(
+                status_code=409,
+                detail=f"superseded 판정은 갱신 불가 · by_id={row.superseded_by_id}",
+            )
+
+        history: list[dict] = []
+        if row.updated_history:
+            try:
+                history = _json.loads(row.updated_history)
+            except (ValueError, TypeError):
+                history = []
+        entry: dict = {
+            "at": datetime.now(timezone.utc).isoformat(),
+            "note": payload.change_note,
+            "before": {},
+            "after": {},
+        }
+        for field in ("invalidation_price", "target_price", "thesis_md",
+                      "horizon_days", "mood"):
+            new_val = getattr(payload, field)
+            if new_val is not None:
+                old_val = getattr(row, field)
+                if old_val != new_val:
+                    entry["before"][field] = old_val
+                    entry["after"][field] = new_val
+                    setattr(row, field, new_val)
+
+        if not entry["after"]:
+            raise HTTPException(status_code=400, detail="변경 사항 없음")
+
+        history.append(entry)
+        row.updated_history = _json.dumps(history, ensure_ascii=False)
+        await session.commit()
+        await session.refresh(row)
+        return row
 
 
 @router.get("/baseline", response_model=Baseline)

@@ -25,6 +25,10 @@ type Judgment = {
   result_at_horizon: number | null;
   result_computed_at: string | null;
   git_sha: string | null;
+  superseded_by_id: number | null;
+  superseded_at: string | null;
+  supersede_reason: string | null;
+  updated_history: string | null;
 };
 
 type Baseline = {
@@ -363,10 +367,16 @@ function KpiCheck({
 }
 
 function JudgmentCard({ j }: { j: Judgment }) {
+  const superseded = j.superseded_by_id !== null;
+  const cardClass = superseded
+    ? "rounded-lg border border-border bg-card/40 p-4 opacity-60"
+    : "rounded-lg border border-border bg-card p-4";
   return (
-    <div className="rounded-lg border border-border bg-card p-4">
+    <div className={cardClass}>
       <div className="flex flex-wrap items-center gap-2">
-        <span className="font-mono text-sm font-bold">{j.ticker}</span>
+        <span className={"font-mono text-sm font-bold " + (superseded ? "line-through" : "")}>
+          {j.ticker}
+        </span>
         <span className={`rounded px-2 py-0.5 text-[10px] ${pageBadge(j.page_source)}`}>
           {j.page_source}
         </span>
@@ -377,8 +387,24 @@ function JudgmentCard({ j }: { j: Judgment }) {
           {j.market_regime}
         </span>
         <span className="rounded bg-indigo-500/20 px-2 py-0.5 text-[10px] text-indigo-400">
-          {j.hypothesis_id}
+          id={j.id} · {j.hypothesis_id}
         </span>
+        {superseded && (
+          <span
+            className="rounded bg-gray-500/30 px-2 py-0.5 text-[10px] font-semibold text-gray-400"
+            title={j.supersede_reason ?? undefined}
+          >
+            ↷ superseded by id={j.superseded_by_id}
+          </span>
+        )}
+        {j.updated_history && (
+          <span
+            className="rounded bg-amber-500/20 px-2 py-0.5 text-[10px] text-amber-400"
+            title="갱신 이력 있음"
+          >
+            ✎ updated
+          </span>
+        )}
         <span className="ml-auto text-[10px] text-muted-foreground">
           {new Date(j.ts).toLocaleString("ko-KR")}
         </span>
@@ -407,6 +433,11 @@ function JudgmentCard({ j }: { j: Judgment }) {
         )}
         {j.git_sha && <span className="font-mono">build {j.git_sha.slice(0, 7)}</span>}
       </div>
+      {j.supersede_reason && (
+        <div className="mt-2 text-[10px] italic text-muted-foreground">
+          Supersede 사유: {j.supersede_reason}
+        </div>
+      )}
     </div>
   );
 }

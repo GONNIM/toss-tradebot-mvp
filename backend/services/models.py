@@ -1279,6 +1279,15 @@ class UserJudgment(Base):
     # 재현성 (판정 시점 배포 SHA)
     git_sha: Mapped[Optional[str]] = mapped_column(String(40))
 
+    # ─── Supersede · 티커당 판정 1건 원칙 (2026-08-14 · Fable 5) ─────
+    # append-only · 삭제 금지 · 새 판정이 대체 시 이전 판정에 by_id 기록
+    superseded_by_id: Mapped[Optional[int]] = mapped_column(Integer, index=True, default=None)
+    superseded_at: Mapped[Optional[datetime]] = mapped_column(DateTime, default=None)
+    supersede_reason: Mapped[Optional[str]] = mapped_column(String(200), default=None)
+
+    # PATCH 이력 (invalidation/target/thesis 갱신 추적 · JSON 문자열)
+    updated_history: Mapped[Optional[str]] = mapped_column(Text, default=None)
+
     __table_args__ = (
         Index("ix_judgment_user_ts", "user_id", "ts"),
         Index("ix_judgment_ticker_ts", "ticker", "ts"),
