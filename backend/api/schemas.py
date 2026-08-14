@@ -199,6 +199,17 @@ class SerenitySignalPreview(BaseModel):
     reasoning: Optional[str] = None       # 200자 excerpt
 
 
+class PositionTranche(BaseModel):
+    """트랑셰 · 티커별 활성 판정 (task #38a · 2026-08-14).
+
+    한 티커에 여러 전술 (core + swing 등) 동시 존재 가능 · 각각 트랑셰 = 판정 단위.
+    """
+    judgment_id: int
+    strategy: str                         # core | swing | event
+    qty: Optional[float]                  # 트랑셰 수량 (미지정 가능)
+    mood: str
+
+
 class PositionCard(BaseModel):
     """종목별 작전 카드 · dashboard holdings + 저널 + activist 조합."""
     symbol: str
@@ -217,6 +228,10 @@ class PositionCard(BaseModel):
     # Serenity signal 인라인 (task #23 · 2026-08-14)
     serenity_recent_signals: list[SerenitySignalPreview] = []  # 최근 3건 (있으면)
     serenity_bearish_alert: bool = False                 # 최근 bearish 감지 시 alert
+    # 트랑셰 분해 (task #38a · 2026-08-14)
+    tranches: list[PositionTranche] = []                 # 티커별 활성 판정 목록
+    qty_sum_declared: Optional[float] = None             # Σ tranche.qty (지정된 것만)
+    qty_mismatch: bool = False                           # abs(qty_sum − 실보유) > 0.01 시 True
 
 
 class PositionsPlanResponse(BaseModel):

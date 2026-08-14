@@ -17,6 +17,7 @@ from backend.api.schemas import (
     PositionExitPlan,
     PositionResponse,
     PositionsPlanResponse,
+    PositionTranche,
     SerenitySignalPreview,
 )
 from backend.services.db import get_session
@@ -68,6 +69,20 @@ async def _latest_judgment(session, ticker: str) -> Optional[UserJudgment]:
         .limit(1)
     )
     return (await session.execute(stmt)).scalar_one_or_none()
+
+
+async def _active_tranches(session, ticker: str) -> list[UserJudgment]:
+    """티커별 활성 판정 (superseded 제외) · 트랑셰 분해 (task #38a · 2026-08-14).
+
+    한 티커에 core + swing 등 여러 전술 동시 존재 · 각 판정 = 트랑셰 단위.
+    """
+    stmt = (
+        select(UserJudgment)
+        .where(UserJudgment.ticker == ticker.upper())
+        .where(UserJudgment.superseded_by_id.is_(None))
+        .order_by(desc(UserJudgment.ts))
+    )
+    return list((await session.execute(stmt)).scalars().all())
 
 
 async def _serenity_recent_signals(session, ticker: str, limit: int = 3) -> list[SerenitySignalPreview]:
@@ -212,6 +227,25 @@ async def get_positions_plan():
             serenity_previews = await _serenity_recent_signals(session, sym, limit=3)
             bearish_alert = any(p.sentiment == "bearish" for p in serenity_previews)
 
+            # 트랑셰 분해 (task #38a · 2026-08-14)
+            tranche_rows = await _active_tranches(session, sym)
+            tranches = [
+                PositionTranche(
+                    judgment_id=t.id,
+                    strategy=t.strategy or "?",
+                    qty=t.qty,
+                    mood=t.mood,
+                )
+                for t in tranche_rows
+            ]
+            qty_declared_list = [t.qty for t in tranche_rows if t.qty is not None]
+            qty_sum = sum(qty_declared_list) if qty_declared_list else None
+            qty_mm = (
+                qty_sum is not None
+                and qty > 0
+                and abs(qty_sum - qty) > 0.01
+            )
+
             positions.append(PositionCard(
                 symbol=sym,
                 name=name,
@@ -228,6 +262,9 @@ async def get_positions_plan():
                 recent_filings=[],  # 필링 상세는 후속 (activist 라우트에 별도 endpoint 존재 시 조인)
                 serenity_recent_signals=serenity_previews,
                 serenity_bearish_alert=bearish_alert,
+                tranches=tranches,
+                qty_sum_declared=qty_sum,
+                qty_mismatch=qty_mm,
             ))
 
     return PositionsPlanResponse(

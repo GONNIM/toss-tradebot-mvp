@@ -198,6 +198,9 @@ function PositionCardView({ card }: { card: PositionCard }) {
         {fmt(card.unrealized_pnl)} ({_pct(card.unrealized_pnl_pct)})
       </div>
 
+      {/* 트랑셰 분해 (task #38a · 2026-08-14) */}
+      <TrancheBlock card={card} />
+
       {/* 청산 계획 3칸 (Fable 5 핵심) */}
       <ExitPlanBlock plan={plan} symbol={card.symbol} />
 
@@ -207,6 +210,38 @@ function PositionCardView({ card }: { card: PositionCard }) {
         bearishAlert={card.serenity_bearish_alert}
       />
     </article>
+  );
+}
+
+// ─── 트랑셰 분해 (Fable 5 · 2026-08-14) ────────────────────────────────
+// "005930 100주 = 🏛70 core + 🌊30 swing" 표시.
+// 트랑셰 (활성 판정) qty 합계 vs 실 토스 보유 수량 정합 검증.
+
+function TrancheBlock({ card }: { card: PositionCard }) {
+  if (!card.tranches || card.tranches.length === 0) return null;
+  const iconOf: Record<string, string> = { core: "🏛", swing: "🌊", event: "⚡" };
+  const parts = card.tranches.map((t) => {
+    const icon = iconOf[t.strategy] ?? "?";
+    const qtyText = t.qty !== null ? `${t.qty}` : "?";
+    return `${icon}${qtyText} ${t.strategy}`;
+  });
+  return (
+    <div className="mt-3 rounded border border-border/40 bg-background/40 p-2 text-[11px]">
+      <div className="flex flex-wrap items-baseline justify-between gap-2">
+        <span className="text-muted-foreground">🎚 트랑셰 분해</span>
+        <span className="font-mono text-[10px] text-muted-foreground">
+          실보유 {card.qty} · 판정 합계 {card.qty_sum_declared ?? "?"}
+        </span>
+      </div>
+      <div className="mt-1 font-mono">
+        {card.symbol} {card.qty}{card.currency === "KRW" ? "주" : ""} = {parts.join(" + ")}
+      </div>
+      {card.qty_mismatch && (
+        <div className="mt-1 text-[10px] text-amber-500">
+          ⚠ 트랑셰 합계 ≠ 실 보유 수량 · 편집으로 정합 맞추기
+        </div>
+      )}
+    </div>
   );
 }
 

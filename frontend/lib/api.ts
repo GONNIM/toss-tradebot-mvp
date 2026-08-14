@@ -255,6 +255,13 @@ export interface SerenitySignalPreview {
   reasoning: string | null;
 }
 
+export interface PositionTranche {
+  judgment_id: number;
+  strategy: "core" | "swing" | "event" | string;
+  qty: number | null;
+  mood: string;
+}
+
 export interface PositionCard {
   symbol: string;
   name: string | null;
@@ -271,6 +278,9 @@ export interface PositionCard {
   recent_filings: unknown[];
   serenity_recent_signals: SerenitySignalPreview[];
   serenity_bearish_alert: boolean;
+  tranches: PositionTranche[];
+  qty_sum_declared: number | null;
+  qty_mismatch: boolean;
 }
 
 export interface PositionsPlanResponse {
