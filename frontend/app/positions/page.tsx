@@ -40,6 +40,16 @@ function _pct(v: number | null | undefined): string {
   return `${sign}${v.toFixed(2)}%`;
 }
 
+// KRW compact 표기 · US 종목 평가금액 KRW 환산 인라인 병기용
+// 1,224,135원 → 122만원 · 8,241,516원 → 824만원 (한 줄 정렬 유지)
+function _krwCompact(v: number | null | undefined): string {
+  if (v === null || v === undefined) return "—";
+  const abs = Math.abs(v);
+  if (abs >= 1_000_000) return `${(v / 10_000).toFixed(0)}만원`;
+  if (abs >= 10_000) return `${(v / 10_000).toFixed(1)}만원`;
+  return `${Math.round(v).toLocaleString("ko-KR")}원`;
+}
+
 function _qty(v: number): string {
   return v % 1 === 0 ? String(v) : v.toFixed(3);
 }
@@ -187,7 +197,9 @@ function PositionCardView({ card }: { card: PositionCard }) {
           <div className="font-mono">
             {fmt(card.market_value)}
             {card.currency === "USD" && card.market_value_krw !== null && (
-              <div className="text-[10px] text-muted-foreground">≈{_krw(card.market_value_krw)}</div>
+              <span className="ml-1 text-[10px] text-muted-foreground">
+                ≈{_krwCompact(card.market_value_krw)}
+              </span>
             )}
           </div>
         </div>
