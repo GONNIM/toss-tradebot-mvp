@@ -761,7 +761,7 @@ function EditForm({
           <input
             type="number"
             min={1}
-            max={365}
+            max={3650}
             value={horizon}
             onChange={(e) => setHorizon(parseInt(e.target.value) || 30)}
             className="mt-1 w-full rounded border border-border bg-background px-2 py-1 font-mono text-sm"
@@ -1105,7 +1105,7 @@ function NewJudgmentForm({ onCreated }: { onCreated: () => void }) {
         hypothesis_id: hypothesisId.trim() || "manual-v1",
         thesis_md: thesis,
         invalidation_price: invNum,
-        horizon_days: Math.max(1, Math.min(365, horizon)),
+        horizon_days: Math.max(1, Math.min(3650, horizon)),
         mood,
       };
       if (target.trim()) {

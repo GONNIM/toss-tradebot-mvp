@@ -39,7 +39,7 @@ class JudgmentCreate(BaseModel):
     thesis_md: str = Field(..., min_length=1)
     invalidation_price: float = Field(..., description="필수 · 반증 기준. 없으면 판정 아님.")
     target_price: Optional[float] = None
-    horizon_days: int = Field(default=7, ge=1, le=365)
+    horizon_days: int = Field(default=7, ge=1, le=3650)  # 최대 10년 (장기 분할 계획 지원)
     mood: Literal["cool", "neutral", "revenge", "fomo"] = "neutral"
     market_regime: Optional[str] = None  # None 이면 자동 태깅
     entry_price: Optional[float] = Field(default=None, description="Rulebook R:R 계산용 (선택).")
@@ -209,7 +209,7 @@ class JudgmentPatch(BaseModel):
     invalidation_price: Optional[float] = None
     target_price: Optional[float] = None
     thesis_md: Optional[str] = None
-    horizon_days: Optional[int] = Field(default=None, ge=1, le=365)
+    horizon_days: Optional[int] = Field(default=None, ge=1, le=3650)
     mood: Optional[Literal["cool", "neutral", "revenge", "fomo"]] = None
     change_note: str = Field(..., min_length=1, max_length=200, description="변경 사유")
 
