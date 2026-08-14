@@ -40,6 +40,14 @@ const strategyBadge = (s: string | null) => {
   return null;
 };
 
+type Strategy = "core" | "swing" | "event";
+
+const STRATEGY_PRESETS: Record<Strategy, { horizon: number; hint: string }> = {
+  core: { horizon: 730, hint: "🏛 장기 · invalidation = 최후 방어선 · target 은 소원 이관 권장" },
+  swing: { horizon: 30, hint: "🌊 단기 · 타이트 손절 · thesis 에 재매수 조건 명시" },
+  event: { horizon: 180, hint: "⚡ 사건 조건 (필수) · thesis 에 트리거 사건·시한 명시" },
+};
+
 type Baseline = {
   total_count: number;
   computed_count: number;
@@ -435,7 +443,7 @@ function JudgmentCard({
   onChanged: () => void;
 }) {
   const superseded = j.superseded_by_id !== null;
-  const [mode, setMode] = useState<"view" | "edit" | "close">("view");
+  const [mode, setMode] = useState<"view" | "edit" | "close" | "transition">("view");
   const [showHistory, setShowHistory] = useState(false);
 
   const cardClass = superseded
@@ -564,8 +572,17 @@ function JudgmentCard({
                 type="button"
                 onClick={() => setMode("edit")}
                 className="rounded border border-border px-3 py-1 text-xs hover:bg-muted"
+                title="invalidation · target · qty · horizon · thesis · mood 편집 (strategy 제외)"
               >
                 ✎ 수정
+              </button>
+              <button
+                type="button"
+                onClick={() => setMode("transition")}
+                className="rounded border border-purple-500/40 px-3 py-1 text-xs text-purple-400 hover:bg-purple-500/10"
+                title="전술 (core/swing/event) 전환 · 이전 판정 supersede + 신규 판정"
+              >
+                🔀 전술 전환
               </button>
               <button
                 type="button"
@@ -608,6 +625,18 @@ function JudgmentCard({
           currentPrice={currentPrice}
           onCancel={() => setMode("view")}
           onClosed={() => {
+            setMode("view");
+            onChanged();
+          }}
+        />
+      )}
+
+      {/* 전술 전환 폼 (2026-08-14 · UX 명확화) */}
+      {mode === "transition" && (
+        <TransitionForm
+          j={j}
+          onCancel={() => setMode("view")}
+          onTransitioned={() => {
             setMode("view");
             onChanged();
           }}
@@ -750,11 +779,19 @@ function EditForm({
         {j.strategy && (() => {
           const b = strategyBadge(j.strategy);
           return b ? (
-            <span className={`rounded px-2 py-0.5 text-[10px] font-semibold ${b.cls}`}>
-              {b.icon} {b.label} · 수정 불가
+            <span
+              className={`rounded px-2 py-0.5 text-[10px] font-semibold ${b.cls}`}
+              title="전술 변경은 [🔀 전술 전환] 버튼으로 · 이 폼에서는 수정 불가"
+            >
+              {b.icon} {b.label} · 여기선 수정 불가 (전환 → 뒤로 · 🔀)
             </span>
           ) : null;
         })()}
+      </div>
+      <div className="text-[10px] text-muted-foreground">
+        편집 가능: invalidation · target · qty · horizon · thesis · mood
+        <br />
+        편집 불가: strategy (전환은 [🔀 전술 전환]) · ticker (신규 판정) · id/ts (자동)
       </div>
 
       {/* 값 5 · invalidation·target·horizon·qty·thesis */}
@@ -1108,15 +1145,213 @@ function CloseForm({
   );
 }
 
+// ─── 전술 전환 폼 (2026-08-14 · UX 명확화) ─────────────────────────────
+// 원칙: strategy 는 수정 불가 · 전환 = 이전 판정 supersede + 신규 판정.
+// UX: 원클릭으로 이전 값 자동 프리필 · 새 strategy·mood·사유만 입력.
+
+function TransitionForm({
+  j,
+  onCancel,
+  onTransitioned,
+}: {
+  j: Judgment;
+  onCancel: () => void;
+  onTransitioned: () => void;
+}) {
+  const [newStrategy, setNewStrategy] = useState<Strategy | null>(null);
+  const [mood, setMood] = useState<"cool" | "neutral" | "revenge" | "fomo" | null>(null);
+  const [note, setNote] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const canSave =
+    newStrategy !== null &&
+    newStrategy !== j.strategy &&
+    mood !== null &&
+    note.trim().length > 0 &&
+    !submitting;
+
+  const submit = async () => {
+    setError(null);
+    if (!newStrategy || !mood) return;
+    setSubmitting(true);
+    try {
+      // 신규 판정 저장 (이전 값 승계 · strategy 만 새로)
+      const presetHorizon = STRATEGY_PRESETS[newStrategy].horizon;
+      const createR = await fetch("/api/v1/judgments", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          ticker: j.ticker,
+          page_source: "transition",
+          hypothesis_id: `transition-v1-${j.strategy}-to-${newStrategy}`,
+          thesis_md: `[전술 전환 ${j.strategy}→${newStrategy}]\n사유: ${note}\n\n승계 thesis:\n${j.thesis_md}`,
+          invalidation_price: j.invalidation_price ?? 0,
+          target_price: j.target_price ?? undefined,
+          horizon_days: presetHorizon,
+          mood,
+          strategy: newStrategy,
+          qty: j.qty ?? undefined,
+        }),
+      });
+      if (!createR.ok) throw new Error(`create ${createR.status} ${(await createR.text()).slice(0, 200)}`);
+      const newRow = await createR.json();
+      // 이전 판정 supersede
+      const sr = await fetch(`/api/v1/judgments/${j.id}/supersede`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          by_id: newRow.id,
+          reason: `전술 전환 ${j.strategy}→${newStrategy} · ${note}`,
+        }),
+      });
+      if (!sr.ok) throw new Error(`supersede ${sr.status}`);
+      onTransitioned();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const currentBadge = strategyBadge(j.strategy);
+
+  return (
+    <div className="mt-3 space-y-3 rounded border border-purple-500/40 bg-purple-500/5 p-3 text-sm">
+      <div className="flex flex-wrap items-center gap-2">
+        <span className="text-xs font-semibold text-purple-400">🔀 전술 전환</span>
+        <span className="text-[10px] text-muted-foreground">
+          원칙: strategy 는 수정 불가 · 전환 = 이전 판정 supersede + 신규 판정
+        </span>
+      </div>
+
+      {/* 현재 → 새 전술 */}
+      <div className="rounded border border-border/40 bg-background/40 p-2 text-xs">
+        <span className="text-muted-foreground">현재</span>{" "}
+        {currentBadge && (
+          <span className={`ml-1 rounded px-1.5 py-0.5 text-[10px] font-semibold ${currentBadge.cls}`}>
+            {currentBadge.icon} {currentBadge.label}
+          </span>
+        )}
+        <span className="mx-2 text-muted-foreground">→</span>
+        <span className="text-muted-foreground">새 전술</span>
+        {newStrategy && (() => {
+          const b = strategyBadge(newStrategy);
+          return b ? (
+            <span className={`ml-1 rounded px-1.5 py-0.5 text-[10px] font-semibold ${b.cls}`}>
+              {b.icon} {b.label}
+            </span>
+          ) : null;
+        })()}
+      </div>
+
+      {/* 새 strategy 선택 */}
+      <div>
+        <div className="text-[10px] text-muted-foreground">
+          새 전술 <span className="text-red-500">*</span>
+          <span className="ml-2 text-muted-foreground/70">현재와 다른 것</span>
+        </div>
+        <div className="mt-1 flex flex-wrap gap-2">
+          {(["core", "swing", "event"] as const).map((s) => (
+            <button
+              key={s}
+              type="button"
+              onClick={() => setNewStrategy(s)}
+              disabled={s === j.strategy}
+              className={
+                "rounded border px-3 py-1 text-xs disabled:opacity-40 disabled:cursor-not-allowed " +
+                (newStrategy === s
+                  ? "border-primary bg-primary/20 text-primary"
+                  : "border-border text-muted-foreground hover:bg-muted")
+              }
+            >
+              {s === "core" && "🏛 Core (장기)"}
+              {s === "swing" && "🌊 Swing (단기)"}
+              {s === "event" && "⚡ Event (사건)"}
+              {s === j.strategy && " (현재)"}
+            </button>
+          ))}
+        </div>
+        {newStrategy && (
+          <div className="mt-1 text-[10px] text-muted-foreground">
+            {STRATEGY_PRESETS[newStrategy].hint} · horizon 자동 {STRATEGY_PRESETS[newStrategy].horizon}일
+          </div>
+        )}
+      </div>
+
+      {/* 승계 값 프리뷰 (읽기 전용) */}
+      <div className="rounded bg-background/40 p-2 text-[10px] font-mono">
+        <div className="mb-1 text-muted-foreground">신규 판정에 자동 승계 (수정 필요 시 저장 후 [✎ 수정])</div>
+        <div>invalidation={j.invalidation_price ?? "—"} · target={j.target_price ?? "—"} · qty={j.qty ?? "—"} · ticker={j.ticker}</div>
+      </div>
+
+      {/* 전환 사유 · mood */}
+      <label className="block">
+        <div className="text-[10px] text-muted-foreground">
+          전환 사유 <span className="text-red-500">*</span>
+        </div>
+        <input
+          type="text"
+          value={note}
+          onChange={(e) => setNote(e.target.value)}
+          placeholder="한 줄 · 왜 전술을 바꾸는지"
+          className="mt-1 w-full rounded border border-border bg-background px-2 py-1 text-sm"
+        />
+      </label>
+
+      <div>
+        <div className="text-[10px] text-muted-foreground">
+          지금 기분 <span className="text-red-500">*</span>
+          <span className="ml-2 text-muted-foreground/70">(재선택 필수)</span>
+        </div>
+        <div className="mt-1 flex flex-wrap gap-2">
+          {(["cool", "neutral", "revenge", "fomo"] as const).map((m) => (
+            <button
+              key={m}
+              type="button"
+              onClick={() => setMood(m)}
+              className={
+                "rounded border px-3 py-1 text-xs " +
+                (mood === m
+                  ? "border-primary bg-primary/20 text-primary"
+                  : "border-border text-muted-foreground hover:bg-muted")
+              }
+            >
+              {m === "cool" && "🧘 Cool"}
+              {m === "neutral" && "😐 Neutral"}
+              {m === "revenge" && "😡 Revenge"}
+              {m === "fomo" && "🔥 FOMO"}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {error && <div className="text-xs text-red-500">⚠ {error}</div>}
+
+      <div className="flex gap-2 border-t border-border/40 pt-2">
+        <button
+          type="button"
+          onClick={onCancel}
+          disabled={submitting}
+          className="rounded border border-border px-3 py-1.5 text-xs hover:bg-muted disabled:opacity-50"
+        >
+          취소
+        </button>
+        <button
+          type="button"
+          onClick={submit}
+          disabled={!canSave}
+          className="ml-auto rounded bg-purple-500 px-4 py-1.5 text-xs font-semibold text-white disabled:opacity-50 hover:bg-purple-500/80"
+        >
+          {submitting ? "저장 중..." : "전환 저장 · supersede + 신규 판정"}
+        </button>
+      </div>
+    </div>
+  );
+}
+
 // ─── 신규 판정 입력 폼 (2026-08-14 · Fable 5 · 30건 캠페인 + 전술 격벽) ─
-
-type Strategy = "core" | "swing" | "event";
-
-const STRATEGY_PRESETS: Record<Strategy, { horizon: number; hint: string }> = {
-  core: { horizon: 730, hint: "🏛 장기 · invalidation = 최후 방어선 · target 은 소원 이관 권장" },
-  swing: { horizon: 30, hint: "🌊 단기 · 타이트 손절 · thesis 에 재매수 조건 명시" },
-  event: { horizon: 180, hint: "⚡ 사건 조건 (필수) · thesis 에 트리거 사건·시한 명시" },
-};
+// Strategy · STRATEGY_PRESETS 는 파일 상단 (strategyBadge 근처) 정의
 
 function NewJudgmentForm({
   onCreated,
