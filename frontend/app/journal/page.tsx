@@ -812,16 +812,29 @@ function EditForm({
           )}
         </label>
         <label className="block">
-          <div className="text-[10px] text-muted-foreground">
-            Target
+          <div className="flex flex-wrap items-baseline gap-2 text-[10px] text-muted-foreground">
+            <span>Target</span>
             {target.trim() && (
-              <button
-                type="button"
-                onClick={moveTargetToWish}
-                className="ml-2 text-[9px] text-sky-500 hover:underline"
-              >
-                소원으로 이관
-              </button>
+              <>
+                <button
+                  type="button"
+                  onClick={moveTargetToWish}
+                  className="text-[9px] text-sky-500 hover:underline"
+                >
+                  소원으로 이관
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setTarget("");
+                    if (!note) setNote("target 비움 (직접)");
+                  }}
+                  className="text-[9px] text-red-500 hover:underline"
+                  title="target 필드 null · 승률 계산에 invalidation 기준만 채점"
+                >
+                  × 비우기
+                </button>
+              </>
             )}
           </div>
           <input

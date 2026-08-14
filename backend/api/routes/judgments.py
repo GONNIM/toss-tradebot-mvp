@@ -257,15 +257,19 @@ async def patch_judgment(judgment_id: int, payload: JudgmentPatch):
             "before": {},
             "after": {},
         }
+        # exclude_unset · 명시 전송된 필드만 (null 포함 · 미전송 제외)
+        # (2026-08-14 · target 비우기 사고 fix · Pydantic 부분 업데이트 "없음 vs 지움" 구분)
+        patched = payload.model_dump(exclude_unset=True)
         for field in ("invalidation_price", "target_price", "thesis_md",
                       "horizon_days", "mood", "qty"):
-            new_val = getattr(payload, field)
-            if new_val is not None:
-                old_val = getattr(row, field)
-                if old_val != new_val:
-                    entry["before"][field] = old_val
-                    entry["after"][field] = new_val
-                    setattr(row, field, new_val)
+            if field not in patched:
+                continue  # 미전송 · 유지
+            new_val = patched[field]
+            old_val = getattr(row, field)
+            if old_val != new_val:
+                entry["before"][field] = old_val
+                entry["after"][field] = new_val
+                setattr(row, field, new_val)  # null 명시 시 실제 null 저장
 
         if not entry["after"]:
             raise HTTPException(status_code=400, detail="변경 사항 없음")
