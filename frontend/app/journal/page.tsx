@@ -29,6 +29,15 @@ type Judgment = {
   superseded_at: string | null;
   supersede_reason: string | null;
   updated_history: string | null;
+  strategy: "core" | "swing" | "event" | null;
+  qty: number | null;
+};
+
+const strategyBadge = (s: string | null) => {
+  if (s === "core") return { icon: "🏛", label: "core", cls: "bg-emerald-500/20 text-emerald-400" };
+  if (s === "swing") return { icon: "🌊", label: "swing", cls: "bg-sky-500/20 text-sky-400" };
+  if (s === "event") return { icon: "⚡", label: "event", cls: "bg-purple-500/20 text-purple-400" };
+  return null;
 };
 
 type Baseline = {
@@ -130,7 +139,11 @@ export default function JournalPage() {
       </header>
 
       {/* 신규 판정 입력 폼 (2026-08-14 · Fable 5 · 30건 캠페인) */}
-      <NewJudgmentForm onCreated={() => load(days)} />
+      <NewJudgmentForm
+        onCreated={() => load(days)}
+        judgments={judgments}
+        priceMap={priceMap}
+      />
 
       {/* Phase E · Stage 2 진입 KPI 진행률 (roadmap-12week.md §0) */}
       <Stage2KpiProgress baseline={baseline} judgments={judgments} />
@@ -458,6 +471,19 @@ function JudgmentCard({
         <span className="rounded bg-indigo-500/20 px-2 py-0.5 text-[10px] text-indigo-400">
           id={j.id}
         </span>
+        {(() => {
+          const b = strategyBadge(j.strategy);
+          return b ? (
+            <span className={`rounded px-2 py-0.5 text-[10px] font-semibold ${b.cls}`}>
+              {b.icon} {b.label}
+            </span>
+          ) : null;
+        })()}
+        {j.qty !== null && (
+          <span className="rounded bg-slate-500/20 px-2 py-0.5 text-[10px] font-mono text-slate-400">
+            qty {j.qty}
+          </span>
+        )}
         {superseded && (
           <span
             className="rounded bg-gray-500/30 px-2 py-0.5 text-[10px] font-semibold text-gray-400"
@@ -631,6 +657,7 @@ function EditForm({
   const [invalidation, setInvalidation] = useState(String(j.invalidation_price ?? ""));
   const [target, setTarget] = useState(j.target_price !== null ? String(j.target_price) : "");
   const [horizon, setHorizon] = useState(j.horizon_days);
+  const [qty, setQty] = useState(j.qty !== null ? String(j.qty) : "");
   const [thesis, setThesis] = useState(j.thesis_md);
   const [note, setNote] = useState("");
   const [mood, setMood] = useState<"cool" | "neutral" | "revenge" | "fomo" | null>(null);
@@ -699,6 +726,8 @@ function EditForm({
     if (tgtNew !== j.target_price) body.target_price = tgtNew;
     if (horizon !== j.horizon_days) body.horizon_days = horizon;
     if (thesis !== j.thesis_md) body.thesis_md = thesis;
+    const qtyNew = qty.trim() ? parseFloat(qty) : null;
+    if (qtyNew !== j.qty) body.qty = qtyNew;
     try {
       const r = await fetch(`/api/v1/judgments/${j.id}`, {
         method: "PATCH",
@@ -716,10 +745,20 @@ function EditForm({
 
   return (
     <div className="mt-3 space-y-3 rounded border border-primary/30 bg-primary/5 p-3 text-sm">
-      <div className="text-xs font-semibold text-primary">✎ 판정 수정</div>
+      <div className="flex flex-wrap items-center gap-2">
+        <span className="text-xs font-semibold text-primary">✎ 판정 수정</span>
+        {j.strategy && (() => {
+          const b = strategyBadge(j.strategy);
+          return b ? (
+            <span className={`rounded px-2 py-0.5 text-[10px] font-semibold ${b.cls}`}>
+              {b.icon} {b.label} · 수정 불가
+            </span>
+          ) : null;
+        })()}
+      </div>
 
-      {/* 값 4 · invalidation·target·horizon·thesis */}
-      <div className="grid gap-2 sm:grid-cols-3">
+      {/* 값 5 · invalidation·target·horizon·qty·thesis */}
+      <div className="grid gap-2 sm:grid-cols-4">
         <label className="block">
           <div className="text-[10px] text-muted-foreground">Invalidation</div>
           <input
@@ -753,6 +792,16 @@ function EditForm({
             step="any"
             value={target}
             onChange={(e) => setTarget(e.target.value)}
+            className="mt-1 w-full rounded border border-border bg-background px-2 py-1 font-mono text-sm"
+          />
+        </label>
+        <label className="block">
+          <div className="text-[10px] text-muted-foreground">Qty (트랑셰)</div>
+          <input
+            type="number"
+            step="any"
+            value={qty}
+            onChange={(e) => setQty(e.target.value)}
             className="mt-1 w-full rounded border border-border bg-background px-2 py-1 font-mono text-sm"
           />
         </label>
@@ -931,6 +980,9 @@ function CloseForm({
           invalidation_price: priceNum,  // 청산 판정 · invalidation = 청산가 (기록용)
           horizon_days: 1,
           mood,
+          // 청산 판정은 이전 판정의 strategy 승계 (없으면 swing)
+          strategy: j.strategy ?? "swing",
+          qty: j.qty ?? undefined,
         }),
       });
       if (!createR.ok) throw new Error(`create ${createR.status}`);
@@ -1056,11 +1108,29 @@ function CloseForm({
   );
 }
 
-// ─── 신규 판정 입력 폼 (2026-08-14 · Fable 5 · 30건 캠페인) ────────────
+// ─── 신규 판정 입력 폼 (2026-08-14 · Fable 5 · 30건 캠페인 + 전술 격벽) ─
 
-function NewJudgmentForm({ onCreated }: { onCreated: () => void }) {
+type Strategy = "core" | "swing" | "event";
+
+const STRATEGY_PRESETS: Record<Strategy, { horizon: number; hint: string }> = {
+  core: { horizon: 730, hint: "🏛 장기 · invalidation = 최후 방어선 · target 은 소원 이관 권장" },
+  swing: { horizon: 30, hint: "🌊 단기 · 타이트 손절 · thesis 에 재매수 조건 명시" },
+  event: { horizon: 180, hint: "⚡ 사건 조건 (필수) · thesis 에 트리거 사건·시한 명시" },
+};
+
+function NewJudgmentForm({
+  onCreated,
+  judgments,
+  priceMap,
+}: {
+  onCreated: () => void;
+  judgments: Judgment[];
+  priceMap: Record<string, number>;
+}) {
   const [open, setOpen] = useState(false);
   const [ticker, setTicker] = useState("");
+  const [strategy, setStrategy] = useState<Strategy | null>(null);
+  const [qty, setQty] = useState("");
   const [thesis, setThesis] = useState("");
   const [invalidation, setInvalidation] = useState("");
   const [target, setTarget] = useState("");
@@ -1072,9 +1142,32 @@ function NewJudgmentForm({ onCreated }: { onCreated: () => void }) {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  const [laundryAck, setLaundryAck] = useState(false);
+
+  // 세탁 감지 (Fable 5 마찰): 손실 중 swing 열린 티커 + 신규 core 시도
+  const tickerUpper = ticker.trim().toUpperCase();
+  const activeSwing = judgments.find(
+    (j) =>
+      j.superseded_by_id === null &&
+      j.strategy === "swing" &&
+      j.ticker.toUpperCase() === tickerUpper,
+  );
+  const swingLoss =
+    activeSwing !== undefined &&
+    priceMap[tickerUpper] !== undefined &&
+    activeSwing.invalidation_price !== null &&
+    priceMap[tickerUpper] < activeSwing.invalidation_price;
+  const showLaundryWarn = strategy === "core" && activeSwing !== undefined && swingLoss;
+
+  const applyPreset = (s: Strategy) => {
+    setStrategy(s);
+    setHorizon(STRATEGY_PRESETS[s].horizon);
+  };
 
   const reset = () => {
     setTicker("");
+    setStrategy(null);
+    setQty("");
     setThesis("");
     setInvalidation("");
     setTarget("");
@@ -1083,6 +1176,7 @@ function NewJudgmentForm({ onCreated }: { onCreated: () => void }) {
     setMood("neutral");
     setPageSource("manual");
     setHypothesisId("manual-v1");
+    setLaundryAck(false);
   };
 
   const submit = async () => {
@@ -1090,6 +1184,14 @@ function NewJudgmentForm({ onCreated }: { onCreated: () => void }) {
     setSuccess(null);
     if (!ticker.trim() || !thesis.trim() || !invalidation.trim()) {
       setError("ticker · thesis · invalidation_price 는 필수");
+      return;
+    }
+    if (!strategy) {
+      setError("전술 (core / swing / event) 선택 필수");
+      return;
+    }
+    if (showLaundryWarn && !laundryAck) {
+      setError("세탁 경고 확인 필요 (아래 확인 버튼)");
       return;
     }
     const invNum = parseFloat(invalidation);
@@ -1100,14 +1202,19 @@ function NewJudgmentForm({ onCreated }: { onCreated: () => void }) {
     setSubmitting(true);
     try {
       const body: Record<string, unknown> = {
-        ticker: ticker.trim().toUpperCase(),
+        ticker: tickerUpper,
         page_source: pageSource.trim() || "manual",
         hypothesis_id: hypothesisId.trim() || "manual-v1",
         thesis_md: thesis,
         invalidation_price: invNum,
         horizon_days: Math.max(1, Math.min(3650, horizon)),
         mood,
+        strategy,
       };
+      if (qty.trim()) {
+        const q = parseFloat(qty);
+        if (Number.isFinite(q)) body.qty = q;
+      }
       if (target.trim()) {
         const t = parseFloat(target);
         if (Number.isFinite(t)) body.target_price = t;
@@ -1123,7 +1230,7 @@ function NewJudgmentForm({ onCreated }: { onCreated: () => void }) {
       });
       if (!r.ok) throw new Error(`${r.status} ${(await r.text()).slice(0, 200)}`);
       const saved = await r.json();
-      setSuccess(`✅ 저장 · id=${saved.id} · ${saved.ticker}`);
+      setSuccess(`✅ 저장 · id=${saved.id} · ${saved.ticker} · ${saved.strategy}`);
       reset();
       onCreated();
     } catch (e) {
@@ -1185,6 +1292,66 @@ function NewJudgmentForm({ onCreated }: { onCreated: () => void }) {
             </label>
           </div>
 
+          {/* 전술 격벽 (Fable 5 · 필수 · 생성 후 수정 불가) */}
+          <div>
+            <div className="text-xs text-muted-foreground">
+              전술 <span className="text-red-500">*</span>{" "}
+              <span className="text-[10px] text-muted-foreground/70">
+                (생성 후 수정 불가 · 전환은 supersede 만)
+              </span>
+            </div>
+            <div className="mt-1 flex flex-wrap gap-2">
+              {(["core", "swing", "event"] as const).map((s) => (
+                <button
+                  key={s}
+                  type="button"
+                  onClick={() => applyPreset(s)}
+                  className={
+                    "rounded border px-3 py-1 text-xs " +
+                    (strategy === s
+                      ? "border-primary bg-primary/20 text-primary"
+                      : "border-border text-muted-foreground hover:bg-muted")
+                  }
+                >
+                  {s === "core" && "🏛 Core (장기)"}
+                  {s === "swing" && "🌊 Swing (단기)"}
+                  {s === "event" && "⚡ Event (사건)"}
+                </button>
+              ))}
+            </div>
+            {strategy && (
+              <div className="mt-1 text-[10px] text-muted-foreground">
+                {STRATEGY_PRESETS[strategy].hint}
+              </div>
+            )}
+          </div>
+
+          {/* 세탁 감지 · 마찰 (차단 X) */}
+          {showLaundryWarn && (
+            <div className="rounded border border-red-500/40 bg-red-500/10 p-3">
+              <div className="text-xs font-semibold text-red-500">
+                🚨 세탁 감지 · {tickerUpper} 손실 중 swing 판정 열려 있음
+              </div>
+              <div className="mt-1 text-[11px] text-muted-foreground">
+                손실 포지션의 장기 전환은 청산 기록을 먼저 남긴 뒤에 (Fable 5).
+                현 swing id={activeSwing?.id} · invalidation={activeSwing?.invalidation_price} ·
+                현재가 {priceMap[tickerUpper]}
+              </div>
+              <button
+                type="button"
+                onClick={() => setLaundryAck(true)}
+                className={
+                  "mt-2 rounded border px-3 py-1 text-xs " +
+                  (laundryAck
+                    ? "border-emerald-500 bg-emerald-500/20 text-emerald-400"
+                    : "border-red-500 bg-red-500/20 text-red-400 hover:bg-red-500/30")
+                }
+              >
+                {laundryAck ? "✓ 확인함 · 저장 가능" : "그래도 진행 · 확인"}
+              </button>
+            </div>
+          )}
+
           {/* Thesis */}
           <label className="block">
             <div className="text-xs text-muted-foreground">
@@ -1202,8 +1369,8 @@ function NewJudgmentForm({ onCreated }: { onCreated: () => void }) {
             />
           </label>
 
-          {/* 가격 · 기한 */}
-          <div className="grid gap-3 sm:grid-cols-4">
+          {/* 가격 · 수량 · 기한 */}
+          <div className="grid gap-3 sm:grid-cols-5">
             <label className="block">
               <div className="text-xs text-muted-foreground">
                 Invalidation <span className="text-red-500">*</span>
@@ -1218,7 +1385,7 @@ function NewJudgmentForm({ onCreated }: { onCreated: () => void }) {
               />
             </label>
             <label className="block">
-              <div className="text-xs text-muted-foreground">Target (선택)</div>
+              <div className="text-xs text-muted-foreground">Target</div>
               <input
                 type="number"
                 step="any"
@@ -1229,7 +1396,7 @@ function NewJudgmentForm({ onCreated }: { onCreated: () => void }) {
               />
             </label>
             <label className="block">
-              <div className="text-xs text-muted-foreground">Entry (선택 · R:R)</div>
+              <div className="text-xs text-muted-foreground">Entry (R:R)</div>
               <input
                 type="number"
                 step="any"
@@ -1240,11 +1407,22 @@ function NewJudgmentForm({ onCreated }: { onCreated: () => void }) {
               />
             </label>
             <label className="block">
+              <div className="text-xs text-muted-foreground">Qty (트랑셰)</div>
+              <input
+                type="number"
+                step="any"
+                value={qty}
+                onChange={(e) => setQty(e.target.value)}
+                placeholder="수량"
+                className="mt-1 w-full rounded border border-border bg-background px-2 py-1 font-mono text-sm"
+              />
+            </label>
+            <label className="block">
               <div className="text-xs text-muted-foreground">Horizon (일)</div>
               <input
                 type="number"
                 min={1}
-                max={365}
+                max={3650}
                 value={horizon}
                 onChange={(e) => setHorizon(parseInt(e.target.value) || 30)}
                 className="mt-1 w-full rounded border border-border bg-background px-2 py-1 font-mono text-sm"

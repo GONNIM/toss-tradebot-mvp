@@ -43,6 +43,11 @@ class JudgmentCreate(BaseModel):
     mood: Literal["cool", "neutral", "revenge", "fomo"] = "neutral"
     market_regime: Optional[str] = None  # None 이면 자동 태깅
     entry_price: Optional[float] = Field(default=None, description="Rulebook R:R 계산용 (선택).")
+    # 전술 격벽 (Fable 5 · 2026-08-14) · 생성 후 수정 불가 · supersede 만 가능
+    strategy: Literal["core", "swing", "event"] = Field(
+        ..., description="core (장기 · 최후 방어선) · swing (단기 · 타이트 손절) · event (사건 조건)"
+    )
+    qty: Optional[float] = Field(default=None, description="트랑셰 수량 (선택 · 소수점 지원).")
 
 
 class JudgmentOut(BaseModel):
@@ -69,6 +74,9 @@ class JudgmentOut(BaseModel):
     superseded_at: Optional[datetime] = None
     supersede_reason: Optional[str] = None
     updated_history: Optional[str] = None
+    # 전술 격벽 (2026-08-14) · 수정 불가 · supersede 만
+    strategy: Optional[str] = None
+    qty: Optional[float] = None
 
     # SQLite func.now() 저장 시 naive UTC 반환 → 명시 UTC 마킹 (Z suffix)
     # 브라우저 new Date() 가 로컬 (KST) 로 자동 변환 · 2026-08-14 KST 표기 사고 대응
@@ -125,6 +133,8 @@ async def create_judgment(payload: JudgmentCreate):
             market_regime=regime,
             entry_price=payload.entry_price,
             git_sha=git_sha[:40] if git_sha else None,
+            strategy=payload.strategy,
+            qty=payload.qty,
         )
         session.add(row)
         await session.commit()
@@ -205,12 +215,13 @@ async def supersede_judgment(judgment_id: int, payload: SupersedeRequest):
 
 
 class JudgmentPatch(BaseModel):
-    """판정 갱신 · 이력 append (updated_history)."""
+    """판정 갱신 · 이력 append (updated_history) · strategy 는 수정 불가."""
     invalidation_price: Optional[float] = None
     target_price: Optional[float] = None
     thesis_md: Optional[str] = None
     horizon_days: Optional[int] = Field(default=None, ge=1, le=3650)
     mood: Optional[Literal["cool", "neutral", "revenge", "fomo"]] = None
+    qty: Optional[float] = None
     change_note: str = Field(..., min_length=1, max_length=200, description="변경 사유")
 
 
@@ -247,7 +258,7 @@ async def patch_judgment(judgment_id: int, payload: JudgmentPatch):
             "after": {},
         }
         for field in ("invalidation_price", "target_price", "thesis_md",
-                      "horizon_days", "mood"):
+                      "horizon_days", "mood", "qty"):
             new_val = getattr(payload, field)
             if new_val is not None:
                 old_val = getattr(row, field)

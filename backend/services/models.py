@@ -1288,6 +1288,12 @@ class UserJudgment(Base):
     # PATCH 이력 (invalidation/target/thesis 갱신 추적 · JSON 문자열)
     updated_history: Mapped[Optional[str]] = mapped_column(Text, default=None)
 
+    # ─── 전술 격벽 (2026-08-14 · Fable 5) ─────────────────────────────
+    # strategy: core (장기 · 최후 방어선) | swing (단기 · 타이트 손절) | event (사건 조건)
+    # 생성 후 수정 불가 · supersede 만 가능 (전술 전환 = 새 판정)
+    strategy: Mapped[Optional[str]] = mapped_column(String(20), default=None, index=True)
+    qty: Mapped[Optional[float]] = mapped_column(default=None)  # 트랑셰 수량
+
     __table_args__ = (
         Index("ix_judgment_user_ts", "user_id", "ts"),
         Index("ix_judgment_ticker_ts", "ticker", "ts"),
