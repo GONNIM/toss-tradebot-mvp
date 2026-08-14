@@ -1485,6 +1485,10 @@ class SerenityTweet(Base):
     signals 유무 무관 · z.ai 응답 성공 시 마킹 (2026-08-13 무한 루프 사고 대응).
     실패 시 NULL 유지 → 다음 배치에서 재시도.
     """
+    # 독약 트윗 방어 (2026-08-14 · task #10)
+    # 파싱 영구 실패 트윗이 매일 크론마다 z.ai 재호출 → 비용 낭비 방지.
+    # N회 (예: 3회) 연속 실패 시 processed_at 마킹 + 처리 대상 제외.
+    extract_failure_count: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
 
 
 # Serenity ENUM 값 (application-level validation)

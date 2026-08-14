@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import json
 import logging
+import os
 import time
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
@@ -130,6 +131,12 @@ class TossClient:
             ),
             encoding="utf-8",
         )
+        # 권한 600 유지 (2026-08-14 · 자동 갱신 시 리셋 방지 · task #24)
+        # 서버 초기 배포 시 chmod 600 수동 · 갱신 시 write_text 가 644 로 덮음 발견
+        try:
+            os.chmod(self._token_cache_path, 0o600)
+        except OSError as exc:  # noqa: BLE001 · 권한 실패는 write 흐름 막지 않음
+            logger.warning("[toss_client] 토큰 파일 chmod 600 실패 · %s", exc)
         return token
 
     def access_token(self) -> str:

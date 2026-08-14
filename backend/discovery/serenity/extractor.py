@@ -174,15 +174,48 @@ async def count_pending_tweets() -> int:
         return int((await session.execute(stmt)).scalar_one())
 
 
-async def _mark_processed(tweet_id: int) -> None:
-    """z.ai 응답 성공 시 processed_at 마킹 (signals 유무 무관)."""
+async def _mark_processed(tweet_id: int, *, reset_failures: bool = True) -> None:
+    """z.ai 응답 성공 시 processed_at 마킹 (signals 유무 무관).
+
+    reset_failures=True (default) · 성공 시 failure_count 0 리셋 (일시 실패 회복).
+    """
+    values: dict = {"processed_at": datetime.utcnow()}
+    if reset_failures:
+        values["extract_failure_count"] = 0
     async with get_session() as session:
         await session.execute(
             update(SerenityTweet)
             .where(SerenityTweet.tweet_id == tweet_id)
-            .values(processed_at=datetime.utcnow())
+            .values(**values)
         )
         await session.commit()
+
+
+# 독약 트윗 방어 (2026-08-14 · task #10)
+POISON_PILL_THRESHOLD = 3
+
+
+async def _record_failure(tweet_id: int) -> int:
+    """실패 카운트 +1 · N회 (POISON_PILL_THRESHOLD) 도달 시 독약 격리 (processed_at 자동 마킹).
+
+    반환: 갱신 후 failure_count.
+    """
+    async with get_session() as session:
+        row = (await session.execute(
+            select(SerenityTweet).where(SerenityTweet.tweet_id == tweet_id)
+        )).scalar_one_or_none()
+        if row is None:
+            return 0
+        row.extract_failure_count = (row.extract_failure_count or 0) + 1
+        if row.extract_failure_count >= POISON_PILL_THRESHOLD:
+            # 독약 격리 · processed_at 마킹 · 다음 배치에서 제외
+            row.processed_at = datetime.utcnow()
+            logger.warning(
+                "[serenity] 독약 트윗 격리 · tweet_id=%s · failures=%d (>= %d threshold)",
+                tweet_id, row.extract_failure_count, POISON_PILL_THRESHOLD,
+            )
+        await session.commit()
+        return row.extract_failure_count
 
 
 async def _persist_signals(tweet_id: int, signals: list[dict]) -> int:
@@ -269,6 +302,8 @@ async def process_pending_tweets(
             except Exception as exc:  # noqa: BLE001
                 logger.warning("[serenity] extract 실패 · tweet_id=%s · %s", tw.tweet_id, exc)
                 stats["failed"] += 1
+                # 독약 트윗 방어 (task #10 · 2026-08-14) · N회 실패 시 자동 격리
+                await _record_failure(tw.tweet_id)
                 return
             inserted = await _persist_signals(tw.tweet_id, signals)
             await _mark_processed(tw.tweet_id)
