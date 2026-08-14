@@ -19,7 +19,8 @@ from backend.services.models import UserJudgment
 
 
 @pytest_asyncio.fixture(autouse=True)
-async def _clean():
+async def _clean(monkeypatch):
+    monkeypatch.setenv("SNIPER_API_TOKEN", "testtoken32chars_00000000000000")
     await init_db()
     async with get_session() as session:
         await session.execute(delete(UserJudgment))
@@ -36,7 +37,7 @@ async def client():
 
 async def _create(client: AsyncClient, ticker: str, page_source: str = "manual",
                   mood: str = "cool", strategy: str = "core") -> int:
-    r = await client.post("/api/v1/judgments", json={
+    r = await client.post("/api/v1/judgments", headers={"X-API-Token": "testtoken32chars_00000000000000"}, json={
         "ticker": ticker,
         "page_source": page_source,
         "hypothesis_id": "test-v1",
@@ -59,7 +60,7 @@ async def test_baseline_excludes_superseded(client: AsyncClient):
     id2 = await _create(client, "TICK2")
     id3 = await _create(client, "TICK3")
 
-    r = await client.get("/api/v1/judgments/baseline?days=90")
+    r = await client.get("/api/v1/judgments/baseline?days=90", headers={"X-API-Token": "testtoken32chars_00000000000000"})
     before = r.json()
     assert before["total_count"] == 3
     assert before["mood_distribution"]["cool"] == 3
@@ -67,14 +68,15 @@ async def test_baseline_excludes_superseded(client: AsyncClient):
 
     # 신규 판정 저장 + id1 supersede
     id_new = await _create(client, "TICK1", page_source="positions")
-    r = await client.post(f"/api/v1/judgments/{id1}/supersede", json={
-        "by_id": id_new,
-        "reason": "test supersede",
-    })
+    r = await client.post(
+        f"/api/v1/judgments/{id1}/supersede",
+        headers={"X-API-Token": "testtoken32chars_00000000000000"},
+        json={"by_id": id_new, "reason": "test supersede"},
+    )
     assert r.status_code == 200
 
     # supersede 후 baseline · 활성 판정만 (id_new + id2 + id3 = 3건 · id1 제외)
-    r = await client.get("/api/v1/judgments/baseline?days=90")
+    r = await client.get("/api/v1/judgments/baseline?days=90", headers={"X-API-Token": "testtoken32chars_00000000000000"})
     after = r.json()
     # supersede 로 진행률 개선 없음 · 활성 3건 그대로
     assert after["total_count"] == 3, (
@@ -98,18 +100,20 @@ async def test_baseline_win_rate_excludes_superseded(client: AsyncClient):
         row.result_at_horizon = 0.10
         await session.commit()
 
-    r = await client.get("/api/v1/judgments/baseline?days=90")
+    r = await client.get("/api/v1/judgments/baseline?days=90", headers={"X-API-Token": "testtoken32chars_00000000000000"})
     before = r.json()
     assert before["computed_count"] == 1
     assert before["win_rate"] == 1.0  # 1/1
 
     # id1 supersede · 승률 판정 제외 되어야 함
     id_new = await _create(client, "TICK1")
-    await client.post(f"/api/v1/judgments/{id1}/supersede", json={
-        "by_id": id_new, "reason": "test",
-    })
+    await client.post(
+        f"/api/v1/judgments/{id1}/supersede",
+        headers={"X-API-Token": "testtoken32chars_00000000000000"},
+        json={"by_id": id_new, "reason": "test"},
+    )
 
-    r = await client.get("/api/v1/judgments/baseline?days=90")
+    r = await client.get("/api/v1/judgments/baseline?days=90", headers={"X-API-Token": "testtoken32chars_00000000000000"})
     after = r.json()
     assert after["computed_count"] == 0, "superseded 판정의 outcome 은 승률 집계에서 제외"
     assert after["win_rate"] is None

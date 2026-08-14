@@ -8,6 +8,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { AdminSessionBar } from "@/components/admin/AdminSessionBar";
+import type { SessionInfo } from "@/lib/auth";
 
 type Judgment = {
   id: number;
@@ -110,11 +112,11 @@ export default function JournalPage() {
     setError(null);
     try {
       const [j, b, pm] = await Promise.all([
-        fetch(`/api/v1/judgments?days=${d}&limit=100`).then((r) => {
+        fetch(`/api/v1/judgments?days=${d}&limit=100`, { credentials: "include" }).then((r) => {
           if (!r.ok) throw new Error(`judgments ${r.status}`);
           return r.json();
         }),
-        fetch(`/api/v1/judgments/baseline?days=90`).then((r) => {
+        fetch(`/api/v1/judgments/baseline?days=90`, { credentials: "include" }).then((r) => {
           if (!r.ok) throw new Error(`baseline ${r.status}`);
           return r.json();
         }),
@@ -145,6 +147,14 @@ export default function JournalPage() {
           docs/plans/toss-tradebot-tobe/stage1-optimization.md §1
         </p>
       </header>
+
+      {/* 관리자 인증 (2026-08-14 · POST/PATCH/supersede/baseline 전부 require_sniper_token) */}
+      <AdminSessionBar
+        onSessionChange={(info: SessionInfo) => {
+          if (info.role === "admin") load(days);
+        }}
+        scope="sniper"
+      />
 
       {/* 신규 판정 입력 폼 (2026-08-14 · Fable 5 · 30건 캠페인) */}
       <NewJudgmentForm
@@ -768,6 +778,7 @@ function EditForm({
     try {
       const r = await fetch(`/api/v1/judgments/${j.id}`, {
         method: "PATCH",
+        credentials: "include",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),
       });
@@ -1029,6 +1040,7 @@ function CloseForm({
       const thesis = `[청산 · ${reasonLabel}]\n청산가: ${priceNum}\n사유: ${note || reasonLabel}\n기분: ${mood}`;
       const createR = await fetch("/api/v1/judgments", {
         method: "POST",
+        credentials: "include",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           ticker: j.ticker,
@@ -1048,6 +1060,7 @@ function CloseForm({
       // 2) 이전 판정 supersede
       const sr = await fetch(`/api/v1/judgments/${j.id}/supersede`, {
         method: "POST",
+        credentials: "include",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           by_id: newRow.id,
@@ -1201,6 +1214,7 @@ function TransitionForm({
       const presetHorizon = STRATEGY_PRESETS[newStrategy].horizon;
       const createR = await fetch("/api/v1/judgments", {
         method: "POST",
+        credentials: "include",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           ticker: j.ticker,
@@ -1220,6 +1234,7 @@ function TransitionForm({
       // 이전 판정 supersede
       const sr = await fetch(`/api/v1/judgments/${j.id}/supersede`, {
         method: "POST",
+        credentials: "include",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           by_id: newRow.id,
@@ -1481,6 +1496,7 @@ function NewJudgmentForm({
       }
       const r = await fetch("/api/v1/judgments", {
         method: "POST",
+        credentials: "include",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),
       });

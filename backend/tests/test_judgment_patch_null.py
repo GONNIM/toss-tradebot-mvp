@@ -21,7 +21,8 @@ from backend.services.models import UserJudgment
 
 
 @pytest_asyncio.fixture(autouse=True)
-async def _clean():
+async def _clean(monkeypatch):
+    monkeypatch.setenv("SNIPER_API_TOKEN", "testtoken32chars_00000000000000")
     await init_db()
     async with get_session() as session:
         await session.execute(delete(UserJudgment))
@@ -37,7 +38,7 @@ async def client():
 
 
 async def _create(client: AsyncClient, target_price: float | None = 25.0) -> int:
-    r = await client.post("/api/v1/judgments", json={
+    r = await client.post("/api/v1/judgments", headers={"X-API-Token": "testtoken32chars_00000000000000"}, json={
         "ticker": "WEN",
         "page_source": "test",
         "hypothesis_id": "test-v1",
@@ -57,7 +58,7 @@ async def test_patch_target_null_clears_field(client: AsyncClient):
     """target_price: null 명시 전송 → 실제 null 저장 (소원 이관 · [× 비우기] 지원)."""
     jid = await _create(client, target_price=25.0)
 
-    r = await client.patch(f"/api/v1/judgments/{jid}", json={
+    r = await client.patch(f"/api/v1/judgments/{jid}", headers={"X-API-Token": "testtoken32chars_00000000000000"}, json={
         "target_price": None,
         "change_note": "소원으로 이관",
     })
@@ -72,7 +73,7 @@ async def test_patch_target_omitted_keeps_field(client: AsyncClient):
     jid = await _create(client, target_price=25.0)
 
     # target_price 미전송 · horizon_days 만 변경
-    r = await client.patch(f"/api/v1/judgments/{jid}", json={
+    r = await client.patch(f"/api/v1/judgments/{jid}", headers={"X-API-Token": "testtoken32chars_00000000000000"}, json={
         "horizon_days": 60,
         "change_note": "horizon 만 변경",
     })
@@ -85,7 +86,7 @@ async def test_patch_target_omitted_keeps_field(client: AsyncClient):
 @pytest.mark.asyncio
 async def test_patch_qty_null_clears_field(client: AsyncClient):
     """qty null 도 동일 원칙 · 트랑셰 미지정으로 되돌리기."""
-    r = await client.post("/api/v1/judgments", json={
+    r = await client.post("/api/v1/judgments", headers={"X-API-Token": "testtoken32chars_00000000000000"}, json={
         "ticker": "TTD",
         "page_source": "test",
         "hypothesis_id": "test-v1",
@@ -98,7 +99,7 @@ async def test_patch_qty_null_clears_field(client: AsyncClient):
     })
     jid = r.json()["id"]
 
-    r = await client.patch(f"/api/v1/judgments/{jid}", json={
+    r = await client.patch(f"/api/v1/judgments/{jid}", headers={"X-API-Token": "testtoken32chars_00000000000000"}, json={
         "qty": None,
         "change_note": "트랑셰 미지정으로",
     })

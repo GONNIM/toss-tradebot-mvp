@@ -16,10 +16,11 @@ import os
 from datetime import datetime, timedelta, timezone
 from typing import Literal, Optional
 
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, Field, field_validator
 from sqlalchemy import desc, func, select
 
+from backend.api.auth import require_sniper_token
 from backend.services.db import get_session
 from backend.services.market_regime import infer_market_regime
 from backend.services.models import UserJudgment
@@ -114,7 +115,7 @@ class Baseline(BaseModel):
 # ─── Endpoints ───────────────────────────────────────────────────
 
 
-@router.post("", response_model=JudgmentOut, status_code=201)
+@router.post("", response_model=JudgmentOut, status_code=201, dependencies=[Depends(require_sniper_token)])
 async def create_judgment(payload: JudgmentCreate):
     """판정 생성 · invalidation_price 필수 · git_sha·market_regime 자동."""
     regime = payload.market_regime or await infer_market_regime()
@@ -142,7 +143,7 @@ async def create_judgment(payload: JudgmentCreate):
         return row
 
 
-@router.get("", response_model=list[JudgmentOut])
+@router.get("", response_model=list[JudgmentOut], dependencies=[Depends(require_sniper_token)])
 async def list_judgments(
     ticker: Optional[str] = None,
     page_source: Optional[str] = None,
@@ -176,7 +177,7 @@ class SupersedeRequest(BaseModel):
     reason: str = Field(..., min_length=1, max_length=200)
 
 
-@router.post("/{judgment_id}/supersede", response_model=JudgmentOut)
+@router.post("/{judgment_id}/supersede", response_model=JudgmentOut, dependencies=[Depends(require_sniper_token)])
 async def supersede_judgment(judgment_id: int, payload: SupersedeRequest):
     """판정 대체 마킹 · append-only · 삭제 금지.
 
@@ -225,7 +226,7 @@ class JudgmentPatch(BaseModel):
     change_note: str = Field(..., min_length=1, max_length=200, description="변경 사유")
 
 
-@router.patch("/{judgment_id}", response_model=JudgmentOut)
+@router.patch("/{judgment_id}", response_model=JudgmentOut, dependencies=[Depends(require_sniper_token)])
 async def patch_judgment(judgment_id: int, payload: JudgmentPatch):
     """판정 필드 갱신 · updated_history 에 이전 값·변경 사유 append.
 
@@ -281,7 +282,7 @@ async def patch_judgment(judgment_id: int, payload: JudgmentPatch):
         return row
 
 
-@router.get("/baseline", response_model=Baseline)
+@router.get("/baseline", response_model=Baseline, dependencies=[Depends(require_sniper_token)])
 async def get_baseline(days: int = Query(90, ge=7, le=365)):
     """판정 정확도 baseline · Stage 2 진입 KPI 근거.
 
@@ -369,7 +370,7 @@ def _compute_rr(
     return None
 
 
-@router.patch("/{judgment_id}/outcome", response_model=JudgmentOut)
+@router.patch("/{judgment_id}/outcome", response_model=JudgmentOut, dependencies=[Depends(require_sniper_token)])
 async def update_outcome(judgment_id: int, payload: OutcomeUpdate):
     """outcome 수동 갱신 · 크론 자동 계산 실패 시 대체 경로."""
     async with get_session() as session:
