@@ -197,8 +197,8 @@ function PositionCardView({ card }: { card: PositionCard }) {
           <div className="font-mono">
             {fmt(card.market_value)}
             {card.currency === "USD" && card.market_value_krw !== null && (
-              <span className="ml-1 text-[10px] text-muted-foreground">
-                ≈{_krwCompact(card.market_value_krw)}
+              <span className="ml-1 whitespace-nowrap text-[10px] text-muted-foreground">
+                ≈{_krw(card.market_value_krw)}
               </span>
             )}
           </div>
@@ -214,7 +214,7 @@ function PositionCardView({ card }: { card: PositionCard }) {
       <TrancheBlock card={card} />
 
       {/* 청산 계획 3칸 (Fable 5 핵심) */}
-      <ExitPlanBlock plan={plan} symbol={card.symbol} />
+      <ExitPlanBlock plan={plan} symbol={card.symbol} currency={card.currency} />
 
       {/* Serenity 최근 signal 인라인 (task #23 · 2026-08-14) */}
       <SerenityBlock
@@ -309,7 +309,15 @@ function SerenityBlock({
 
 // ─── 청산 계획 3칸 ────────────────────────────────────────────────────
 
-function ExitPlanBlock({ plan, symbol }: { plan: PositionExitPlan; symbol: string }) {
+function ExitPlanBlock({
+  plan,
+  symbol,
+  currency,
+}: {
+  plan: PositionExitPlan;
+  symbol: string;
+  currency: "KRW" | "USD";
+}) {
   if (!plan.has_plan) {
     return (
       <div className="rounded border border-red-500/40 bg-red-500/5 p-3">
@@ -327,18 +335,29 @@ function ExitPlanBlock({ plan, symbol }: { plan: PositionExitPlan; symbol: strin
     );
   }
 
+  // 통화별 fmt (2026-08-14 · 국내 60000.0000 → 60,000 요구)
+  const fmtPrice = (v: number | null): string => {
+    if (v === null) return "—";
+    if (currency === "KRW") return _krw(v);
+    return _usd(v, v < 100 ? 2 : 2);
+  };
+
+  const priceParts: string[] = [];
+  if (plan.invalidation_price !== null) priceParts.push(`손절 ${fmtPrice(plan.invalidation_price)}`);
+  if (plan.target_price !== null) priceParts.push(`목표 ${fmtPrice(plan.target_price)}`);
+
   return (
     <div className="space-y-2 rounded bg-background/40 p-2 text-[11px]">
       <div>
         <div className="text-[10px] uppercase tracking-wide text-muted-foreground">가격 조건</div>
         <div className="font-mono">
-          {plan.price_condition ?? <span className="text-muted-foreground">—</span>}
+          {priceParts.length > 0 ? priceParts.join(" · ") : <span className="text-muted-foreground">—</span>}
         </div>
       </div>
       <div>
         <div className="text-[10px] uppercase tracking-wide text-muted-foreground">사건 조건 / thesis</div>
-        <div className="text-muted-foreground">
-          {plan.thesis_excerpt ?? "—"}
+        <div className="whitespace-pre-wrap text-muted-foreground">
+          {plan.thesis_full ?? "—"}
         </div>
       </div>
       <div className="flex justify-between">

@@ -238,10 +238,12 @@ export interface TossAccountSnapshot {
 // ─── 보유 작전실 (2026-08-14 · Fable 5) ───────────────────────────────
 export interface PositionExitPlan {
   has_plan: boolean;
-  price_condition: string | null;
+  invalidation_price: number | null;
+  target_price: number | null;
+  price_condition: string | null;   // 하위 호환 · UI 는 raw + fmt 사용
   event_condition: string | null;
   deadline: string | null;
-  thesis_excerpt: string | null;
+  thesis_full: string | null;       // 원문 전체 (whitespace-pre-wrap)
   judgment_id: number | null;
   horizon_days: number | null;
   trigger_hit: boolean;

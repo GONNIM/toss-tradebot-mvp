@@ -121,15 +121,17 @@ def _build_exit_plan(judgment: Optional[UserJudgment], current_price: Optional[f
     horizon = judgment.horizon_days
     deadline = judgment.ts + timedelta(days=horizon) if horizon else None
 
+    # 가격 조건 raw 값 · frontend 에서 currency 기반 fmt (2026-08-14 사용자 요구)
+    # backend 는 텍스트 요약도 병기 (하위 호환) · 소수점은 유지되나 UI 는 raw 사용
     price_parts = []
     if inv is not None:
-        price_parts.append(f"손절 {inv:.4f}")
+        price_parts.append(f"손절 {inv}")
     if tgt is not None:
-        price_parts.append(f"목표 {tgt:.4f}")
+        price_parts.append(f"목표 {tgt}")
     price_cond = " · ".join(price_parts) if price_parts else None
 
-    thesis = (judgment.thesis_md or "").strip()
-    excerpt = thesis[:200] + ("…" if len(thesis) > 200 else "") if thesis else None
+    # thesis 원문 전체 (개행 유지 · excerpt 제거 · 2026-08-14 사용자 요구)
+    thesis_full = (judgment.thesis_md or "").strip() or None
 
     # 트리거 도달 판정 (broker-api-source-of-truth · 가격 원본으로 비교)
     trigger_hit = False
@@ -144,10 +146,12 @@ def _build_exit_plan(judgment: Optional[UserJudgment], current_price: Optional[f
 
     return PositionExitPlan(
         has_plan=True,
+        invalidation_price=inv,
+        target_price=tgt,
         price_condition=price_cond,
-        event_condition=None,  # thesis 안 사건 조건 구조화는 후속 (지금은 excerpt 로만)
+        event_condition=None,
         deadline=deadline,
-        thesis_excerpt=excerpt,
+        thesis_full=thesis_full,
         judgment_id=judgment.id,
         horizon_days=horizon,
         trigger_hit=trigger_hit,

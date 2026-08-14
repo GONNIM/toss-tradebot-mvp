@@ -181,10 +181,13 @@ class TossAccountSnapshot(BaseModel):
 class PositionExitPlan(BaseModel):
     """청산 계획 3칸 · 저널 (UserJudgment) 에서 읽음."""
     has_plan: bool                                       # False = ⚠ 청산 계획 없음 (적색)
-    price_condition: Optional[str] = None                # "손절 $X · 목표 $Y" or "트레일링 -N%"
-    event_condition: Optional[str] = None                # 사건 조건 (thesis_md 발췌)
+    # 가격 조건 · raw 값 (frontend 에서 currency 기반 fmt · 2026-08-14)
+    invalidation_price: Optional[float] = None
+    target_price: Optional[float] = None
+    price_condition: Optional[str] = None                # 텍스트 요약 (하위 호환)
+    event_condition: Optional[str] = None                # 사건 조건 (thesis_md 발췌 · 사용 안 함)
     deadline: Optional[datetime] = None                  # ts + horizon_days (기한)
-    thesis_excerpt: Optional[str] = None                 # thesis_md 200자
+    thesis_full: Optional[str] = None                    # thesis_md 원문 (개행 유지 · 2026-08-14 사용자 요구)
     judgment_id: Optional[int] = None                    # UserJudgment.id (편집 링크)
     horizon_days: Optional[int] = None
     trigger_hit: bool = False                            # 손절/목표 도달 → 카드 적색
