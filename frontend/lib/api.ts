@@ -235,6 +235,43 @@ export interface TossAccountSnapshot {
   identity_investment_diff: number | null;
 }
 
+// ─── 보유 작전실 (2026-08-14 · Fable 5) ───────────────────────────────
+export interface PositionExitPlan {
+  has_plan: boolean;
+  price_condition: string | null;
+  event_condition: string | null;
+  deadline: string | null;
+  thesis_excerpt: string | null;
+  judgment_id: number | null;
+  horizon_days: number | null;
+  trigger_hit: boolean;
+  trigger_reason: string | null;
+}
+
+export interface PositionCard {
+  symbol: string;
+  name: string | null;
+  currency: "KRW" | "USD";
+  qty: number;
+  avg_price: number;
+  current_price: number | null;
+  market_value: number | null;
+  market_value_krw: number | null;
+  unrealized_pnl: number | null;
+  unrealized_pnl_pct: number | null;
+  exit_plan: PositionExitPlan;
+  activist_symbol: boolean;
+  recent_filings: unknown[];
+}
+
+export interface PositionsPlanResponse {
+  ok: boolean;
+  error_reason: string | null;
+  fetched_at: string;
+  positions: PositionCard[];
+  total_missing_plans: number;
+}
+
 export interface LogEntry {
   id: number;
   timestamp: string;
@@ -559,6 +596,7 @@ export const api = {
   },
   positions: {
     list: () => get<Position[]>(`/positions`),
+    plan: () => getWithSession<PositionsPlanResponse>(`/positions/plan`),
   },
   dashboard: {
     summary: () => getWithSession<DashboardSummary>(`/dashboard`),

@@ -176,6 +176,47 @@ class TossAccountSnapshot(BaseModel):
     identity_investment_diff: Optional[float] = None
 
 
+# ─── 보유 작전실 (Fable 5 · 2026-08-14 · 청산 계획 강제) ───────────────
+
+class PositionExitPlan(BaseModel):
+    """청산 계획 3칸 · 저널 (UserJudgment) 에서 읽음."""
+    has_plan: bool                                       # False = ⚠ 청산 계획 없음 (적색)
+    price_condition: Optional[str] = None                # "손절 $X · 목표 $Y" or "트레일링 -N%"
+    event_condition: Optional[str] = None                # 사건 조건 (thesis_md 발췌)
+    deadline: Optional[datetime] = None                  # ts + horizon_days (기한)
+    thesis_excerpt: Optional[str] = None                 # thesis_md 200자
+    judgment_id: Optional[int] = None                    # UserJudgment.id (편집 링크)
+    horizon_days: Optional[int] = None
+    trigger_hit: bool = False                            # 손절/목표 도달 → 카드 적색
+    trigger_reason: Optional[str] = None                 # "invalidation_hit" | "target_reached"
+
+
+class PositionCard(BaseModel):
+    """종목별 작전 카드 · dashboard holdings + 저널 + activist 조합."""
+    symbol: str
+    name: Optional[str] = None
+    currency: str
+    qty: float
+    avg_price: float
+    current_price: Optional[float]
+    market_value: Optional[float]
+    market_value_krw: Optional[float]
+    unrealized_pnl: Optional[float]
+    unrealized_pnl_pct: Optional[float]
+    exit_plan: PositionExitPlan
+    activist_symbol: bool = False                        # activist universe 소속 여부
+    recent_filings: list[dict] = []                      # 최근 SEC 필링 (activist 심볼만)
+
+
+class PositionsPlanResponse(BaseModel):
+    """/positions/plan · 인증 필수."""
+    ok: bool
+    error_reason: Optional[str] = None
+    fetched_at: datetime
+    positions: list[PositionCard] = []
+    total_missing_plans: int = 0                         # 청산 계획 미기록 종목 수 (캠페인 트리거)
+
+
 class LogEntry(BaseModel):
     """감사 로그 단일 entry."""
     model_config = ConfigDict(from_attributes=True)
