@@ -1,7 +1,12 @@
 "use client";
 
-// Serenity Ticker Card · 이미지 UX 스타일 (mentions today 중심 · rolling window · stance).
-// Phase L6 · 2026-08-02 · Phase L9 (UX 고도화) · 2026-08-03
+// Serenity Ticker Card · Fable 5 재설계 (2026-08-14):
+// 정보 위계 4행 (모바일 375px 유지):
+//   1행 · 티커 + Financing/Serenity tier + Bull%(90d) 정체성
+//   2행 · 🕐 마지막 언급 (신선도 · 최신 1건 stance) — 카드의 새 주인공
+//   3행 · 📈 7d/28d/90d + 추세 배지 (🔥/→/❄) — 언급이 늘고 있나 계산 없이 읽기
+//   4행 · vs prior close (또는 관찰 전용 배지) + 도메인 태그
+// today mentions/stance 는 표시 강등 (백엔드 보존 · 실시간 크롤 시 부활)
 
 import Link from "next/link";
 import type { TickerCardItem } from "@/lib/serenity/types";
@@ -16,16 +21,12 @@ const TIER_STYLE: Record<string, string> = {
 };
 
 const STANCE_META: Record<string, { label: string; icon: string; cls: string }> = {
-  bullish: { label: "Bullish", icon: "▲", cls: "text-emerald-500" },
-  bearish: { label: "Bearish", icon: "▼", cls: "text-red-500" },
-  mixed: { label: "Mixed", icon: "◆", cls: "text-amber-500" },
-  neutral: { label: "Neutral", icon: "●", cls: "text-slate-400" },
+  bullish: { label: "bullish", icon: "▲", cls: "text-emerald-500" },
+  bearish: { label: "bearish", icon: "▼", cls: "text-red-500" },
+  neutral: { label: "neutral", icon: "●", cls: "text-slate-400" },
+  calibration: { label: "cal", icon: "◆", cls: "text-amber-500" },
+  mixed: { label: "mixed", icon: "◆", cls: "text-amber-500" },
 };
-
-function _fmtDate(iso: string | null): string {
-  if (!iso) return "—";
-  return iso.slice(0, 10);
-}
 
 function _fmtSignedPct(v: number | null): { txt: string; cls: string } {
   if (v === null || v === undefined) return { txt: "—", cls: "text-muted-foreground" };
@@ -34,11 +35,43 @@ function _fmtSignedPct(v: number | null): { txt: string; cls: string } {
   return { txt: `${sign}${v.toFixed(1)}%`, cls };
 }
 
+// 상대 시간 (한국어) · Fable 5: 타임존 무관 · 크롤 지연에 강건
+function relTime(iso: string | null): { txt: string; days: number | null; silent: boolean } {
+  if (!iso) return { txt: "언급 없음", days: null, silent: true };
+  const dt = new Date(iso);
+  const diffMs = Date.now() - dt.getTime();
+  const diffMin = diffMs / 60000;
+  const diffH = diffMs / 3_600_000;
+  const diffD = diffMs / 86_400_000;
+  let txt: string;
+  if (diffMin < 1) txt = "방금";
+  else if (diffH < 1) txt = `${Math.round(diffMin)}분 전`;
+  else if (diffH < 24) txt = `${Math.round(diffH)}시간 전`;
+  else if (diffD < 30) txt = `${Math.round(diffD)}일 전`;
+  else if (diffD < 365) txt = `${Math.round(diffD / 30)}개월 전`;
+  else txt = `${(diffD / 365).toFixed(1)}년 전`;
+  return { txt, days: diffD, silent: diffD >= 7 };
+}
+
+// 추세 배지 · (7d/7) ÷ (28d/28) 비율
+function trendBadge(m7: number, m28: number): { icon: string; ratio: number; cls: string } | null {
+  if (m28 === 0) return null; // 계산 불가
+  const rate7 = m7 / 7;
+  const rate28 = m28 / 28;
+  const ratio = rate7 / rate28;
+  if (ratio >= 1.5) return { icon: "🔥", ratio, cls: "text-red-500" };
+  if (ratio <= 0.5) return { icon: "❄", ratio, cls: "text-sky-400" };
+  return { icon: "→", ratio, cls: "text-muted-foreground" };
+}
+
 export function TickerCard({ item }: { item: TickerCardItem }) {
-  const stance = STANCE_META[item.overall_stance] ?? STANCE_META.neutral;
   const financing = item.financing_tier;
   const serenity = item.serenity_tier;
   const prior = _fmtSignedPct(item.vs_prior_close_pct);
+  const rt = relTime(item.last_signal_at);
+  const latestStance = STANCE_META[item.latest_stance ?? "neutral"] ?? STANCE_META.neutral;
+  const trend = trendBadge(item.mentions_7d, item.mentions_28d);
+  const hasPrice = item.vs_prior_close_pct !== null;
 
   return (
     <Link
@@ -47,117 +80,106 @@ export function TickerCard({ item }: { item: TickerCardItem }) {
         item.auto_avoid ? "border-red-500/40 bg-red-500/5" : "border-border bg-card"
       }`}
     >
-      {/* 헤더: 티커 + vs prior close + overall stance 배지 */}
-      <div className="flex items-baseline justify-between gap-2">
-        <div className="flex items-baseline gap-2">
-          <span className="font-mono text-lg font-bold">{item.ticker}</span>
-          {financing && (
-            <span
-              className={`rounded border px-1.5 py-0.5 text-[10px] font-semibold ${
-                TIER_STYLE[financing] ?? "border-slate-500/40 bg-slate-500/20 text-slate-400"
-              }`}
-              title={`Financing tier ${financing}`}
-            >
-              F:{financing}
-            </span>
-          )}
-          {serenity && (
-            <span
-              className={`rounded border px-1.5 py-0.5 text-[10px] font-semibold ${
-                TIER_STYLE[serenity] ?? "border-slate-500/40 bg-slate-500/20 text-slate-400"
-              }`}
-              title={`Serenity conviction tier ${serenity}`}
-            >
-              S:{serenity}
-            </span>
-          )}
-          <span className={`text-xs ${prior.cls}`} title="전일 종가 대비 · vs prior close">
-            vs prior {prior.txt}
+      {/* 1행 · 정체성: 티커 + tier + Bull%(90d) */}
+      <div className="flex flex-wrap items-baseline gap-2">
+        <span className="font-mono text-lg font-bold">{item.ticker}</span>
+        {financing && (
+          <span
+            className={`rounded border px-1.5 py-0.5 text-[10px] font-semibold ${
+              TIER_STYLE[financing] ?? "border-slate-500/40 bg-slate-500/20 text-slate-400"
+            }`}
+            title={`Financing tier ${financing}`}
+          >
+            F:{financing}
           </span>
-        </div>
-        <span className={`text-sm font-bold ${stance.cls}`}>
-          {stance.icon} {stance.label}
+        )}
+        {serenity && (
+          <span
+            className={`rounded border px-1.5 py-0.5 text-[10px] font-semibold ${
+              TIER_STYLE[serenity] ?? "border-slate-500/40 bg-slate-500/20 text-slate-400"
+            }`}
+            title={`Serenity conviction tier ${serenity}`}
+          >
+            S:{serenity}
+          </span>
+        )}
+        <span className="ml-auto flex items-baseline gap-1 text-xs">
+          <span className="text-emerald-500">▲</span>
+          <span className="font-semibold">{item.bullish_pct_90d.toFixed(0)}%</span>
+          <span className="text-muted-foreground">bullish (90d)</span>
         </span>
       </div>
 
-      {/* Mentions rolling window (오늘 큰 숫자 강조) */}
-      <div className="mt-3 flex items-baseline justify-between">
-        <div>
-          <div className="text-[10px] uppercase tracking-wide text-muted-foreground">
-            Mentions today
-          </div>
-          <div className="text-4xl font-bold">{item.mentions_today}</div>
-        </div>
-        <div className="text-right text-xs text-muted-foreground">
-          <div>7d <strong className="text-foreground">{item.mentions_7d}</strong></div>
-          <div>28d <strong className="text-foreground">{item.mentions_28d}</strong></div>
-          <div>90d <strong className="text-foreground">{item.mention_count_90d}</strong></div>
-        </div>
+      {/* 2행 · 신선도 (카드의 새 주인공): 🕐 마지막 언급 · 최신 1건 방향 */}
+      <div className="mt-2 flex flex-wrap items-baseline gap-2 text-[11px]">
+        {rt.silent ? (
+          <span
+            className="text-muted-foreground"
+            title={item.last_signal_at ? `마지막 언급 ${new Date(item.last_signal_at).toLocaleString("ko-KR")}` : "언급 없음"}
+          >
+            🕸 {rt.days === null ? "언급 없음" : `${Math.round(rt.days)}일+ 침묵`}
+          </span>
+        ) : (
+          <>
+            <span
+              className="text-foreground"
+              title={item.last_signal_at ? `마지막 언급 ${new Date(item.last_signal_at).toLocaleString("ko-KR")}` : undefined}
+            >
+              🕐 마지막 언급: <strong>{rt.txt}</strong>
+            </span>
+            {item.latest_stance && (
+              <span className={`text-[11px] font-semibold ${latestStance.cls}`}>
+                {latestStance.icon} {latestStance.label}
+              </span>
+            )}
+          </>
+        )}
       </div>
 
-      {/* Stance today · bull / bear / neu / cal */}
-      <div className="mt-3 flex flex-wrap items-center gap-2 text-[11px]">
-        <span className="text-muted-foreground">Stance · today</span>
-        <span className="text-emerald-500">
-          {item.stance_today.bull} <span className="text-muted-foreground">bull</span>
-        </span>
-        <span className="text-red-500">
-          {item.stance_today.bear} <span className="text-muted-foreground">bear</span>
-        </span>
-        <span className="text-slate-400">
-          {item.stance_today.neu} <span className="text-muted-foreground">neu</span>
-        </span>
-        {item.stance_today.cal > 0 && (
-          <span className="text-amber-500">
-            {item.stance_today.cal} <span className="text-muted-foreground">cal</span>
+      {/* 3행 · 추세: 7d/28d/90d 한 줄 압축 + 배지 */}
+      <div className="mt-1 flex flex-wrap items-baseline gap-1 text-[11px] text-muted-foreground">
+        <span>📈 7d <strong className="text-foreground">{item.mentions_7d}</strong></span>
+        <span>· 28d <strong className="text-foreground">{item.mentions_28d}</strong></span>
+        <span>· 90d <strong className="text-foreground">{item.mention_count_90d}</strong></span>
+        {trend && (
+          <span className={`ml-1 font-semibold ${trend.cls}`} title={`(7d/7) ÷ (28d/28) = ${trend.ratio.toFixed(2)}`}>
+            추세 {trend.icon}×{trend.ratio.toFixed(1)}
           </span>
         )}
       </div>
 
-      {/* 90d bullish 비율 · overall 참조 */}
-      <div className="mt-2 flex items-center gap-2 text-[10px] text-muted-foreground">
-        <div className="h-1 flex-1 overflow-hidden rounded bg-muted">
-          <div
-            className="h-full bg-emerald-500/60"
-            style={{ width: `${Math.min(100, Math.max(0, item.bullish_pct_90d))}%` }}
-          />
-        </div>
-        <span>{item.bullish_pct_90d.toFixed(0)}% bullish (90d)</span>
+      {/* 4행 · 가격 또는 관찰 전용 + 태그 */}
+      <div className="mt-2 flex flex-wrap items-center gap-2 text-[10px]">
+        {hasPrice ? (
+          <span className={prior.cls} title="전일 종가 대비">
+            vs prior {prior.txt}
+          </span>
+        ) : (
+          <span
+            className="rounded bg-slate-500/20 px-1.5 py-0.5 font-semibold text-slate-300"
+            title="가격 피드 없음 · 매매 불가"
+          >
+            👁 관찰 전용
+          </span>
+        )}
+        {item.domain_tags.slice(0, 3).map((tag) => (
+          <span
+            key={tag}
+            className="rounded bg-slate-500/20 px-1.5 py-0.5 text-slate-300"
+          >
+            {tag}
+          </span>
+        ))}
+        {item.anti_pattern_flags.map((flag) => (
+          <span
+            key={flag}
+            className="rounded bg-red-500/20 px-1.5 py-0.5 text-red-400"
+          >
+            ⚠ {flag}
+          </span>
+        ))}
+        {item.auto_avoid && <span className="ml-auto font-semibold text-red-500">AVOID</span>}
       </div>
-
-      {/* 태그 · anti-pattern */}
-      {(item.domain_tags.length > 0 || item.anti_pattern_flags.length > 0) && (
-        <div className="mt-2 flex flex-wrap gap-1 text-[10px]">
-          {item.domain_tags.map((tag) => (
-            <span
-              key={tag}
-              className="rounded bg-slate-500/20 px-1.5 py-0.5 text-slate-300"
-            >
-              {tag}
-            </span>
-          ))}
-          {item.anti_pattern_flags.map((flag) => (
-            <span
-              key={flag}
-              className="rounded bg-red-500/20 px-1.5 py-0.5 text-red-400"
-            >
-              ⚠ {flag}
-            </span>
-          ))}
-        </div>
-      )}
-
-      {/* Meta · first mention */}
-      <div className="mt-2 flex items-center justify-between text-[10px] text-muted-foreground">
-        <span>First mention · {_fmtDate(item.first_mention_at)}</span>
-        {item.auto_avoid && <span className="font-semibold text-red-500">AVOID</span>}
-      </div>
-
-      {item.latest_reasoning && (
-        <p className="mt-2 line-clamp-2 text-[11px] text-muted-foreground">
-          {item.latest_reasoning}
-        </p>
-      )}
     </Link>
   );
 }

@@ -105,6 +105,7 @@ class TickerCardItem(BaseModel):
     # Meta
     first_mention_at: Optional[datetime]
     last_signal_at: Optional[datetime]
+    latest_stance: Optional[str] = None  # 최신 1건 방향 (Fable 5 · 2026-08-14)
     latest_reasoning: Optional[str] = None
 
     # Phase 2 · vs prior close (yfinance 배치)
@@ -198,6 +199,7 @@ async def _score_to_card(
         thesis_types=agg["thesis_types"],
         first_mention_at=agg["first_mention_at"],
         last_signal_at=agg["last_signal_at"],
+        latest_stance=agg.get("latest_stance"),
         latest_reasoning=latest_reasoning,
         vs_prior_close_pct=vs_prior_close_pct,
         gain_since_first_mention_pct=gain_since_first_mention_pct,
@@ -332,6 +334,7 @@ async def list_tickers(
                 thesis_types=agg["thesis_types"],
                 first_mention_at=agg["first_mention_at"],
                 last_signal_at=agg["last_signal_at"],
+                latest_stance=agg.get("latest_stance"),
                 latest_reasoning=None,
                 vs_prior_close_pct=vs_prior,
                 gain_since_first_mention_pct=gain,
@@ -458,6 +461,7 @@ async def get_ticker_detail(ticker: str, recent_limit: int = Query(10, ge=1, le=
             thesis_types=agg["thesis_types"],
             first_mention_at=agg["first_mention_at"],
             last_signal_at=agg["last_signal_at"],
+            latest_stance=agg.get("latest_stance"),
             latest_reasoning=latest_reasoning,
             vs_prior_close_pct=vs_prior,
             gain_since_first_mention_pct=gain,

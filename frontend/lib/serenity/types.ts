@@ -54,6 +54,7 @@ export type TickerCardItem = {
   // Meta
   first_mention_at: string | null;
   last_signal_at: string | null;
+  latest_stance: string | null;  // 최신 1건 방향 (bullish/bearish/neutral/calibration · Fable 5)
   latest_reasoning: string | null;
 
   // Phase 2 · yfinance vs prior close

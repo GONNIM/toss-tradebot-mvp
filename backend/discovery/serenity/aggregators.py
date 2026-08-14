@@ -128,6 +128,9 @@ async def aggregate_ticker_full(ticker: str) -> dict:
         overall = "neutral"
 
     last_at = max((r[1] for r in rows), default=None)  # posted_at 기준
+    # 최신 signal 1건의 stance (오늘 집계 아닌 개별 · Fable 5 · 2026-08-14)
+    latest_row = max(rows, key=lambda r: r[1]) if rows else None
+    latest_stance = latest_row[0] if latest_row else None
     thesis_types = sorted({r[2] for r in rows if r[2]})
 
     # 90d 전체 sentiment breakdown (테이블 UX · Bull/Bear/Neu 컬럼)
@@ -148,6 +151,7 @@ async def aggregate_ticker_full(ticker: str) -> dict:
         "stance_90d": stance_90d,
         "first_mention_at": first_at,
         "last_signal_at": last_at,
+        "latest_stance": latest_stance,  # 최신 1건 방향 (Fable 5 · 2026-08-14)
         "overall_stance": overall,
         "overall_bullish_pct": round(bullish_pct, 2),
         "thesis_types": thesis_types,
