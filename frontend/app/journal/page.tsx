@@ -104,6 +104,9 @@ export default function JournalPage() {
         </p>
       </header>
 
+      {/* 신규 판정 입력 폼 (2026-08-14 · Fable 5 · 30건 캠페인) */}
+      <NewJudgmentForm onCreated={() => load(days)} />
+
       {/* Phase E · Stage 2 진입 KPI 진행률 (roadmap-12week.md §0) */}
       <Stage2KpiProgress baseline={baseline} judgments={judgments} />
 
@@ -405,5 +408,257 @@ function JudgmentCard({ j }: { j: Judgment }) {
         {j.git_sha && <span className="font-mono">build {j.git_sha.slice(0, 7)}</span>}
       </div>
     </div>
+  );
+}
+
+// ─── 신규 판정 입력 폼 (2026-08-14 · Fable 5 · 30건 캠페인) ────────────
+
+function NewJudgmentForm({ onCreated }: { onCreated: () => void }) {
+  const [open, setOpen] = useState(false);
+  const [ticker, setTicker] = useState("");
+  const [thesis, setThesis] = useState("");
+  const [invalidation, setInvalidation] = useState("");
+  const [target, setTarget] = useState("");
+  const [entry, setEntry] = useState("");
+  const [horizon, setHorizon] = useState(30);
+  const [mood, setMood] = useState<"cool" | "neutral" | "revenge" | "fomo">("neutral");
+  const [pageSource, setPageSource] = useState("manual");
+  const [hypothesisId, setHypothesisId] = useState("manual-v1");
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
+
+  const reset = () => {
+    setTicker("");
+    setThesis("");
+    setInvalidation("");
+    setTarget("");
+    setEntry("");
+    setHorizon(30);
+    setMood("neutral");
+    setPageSource("manual");
+    setHypothesisId("manual-v1");
+  };
+
+  const submit = async () => {
+    setError(null);
+    setSuccess(null);
+    if (!ticker.trim() || !thesis.trim() || !invalidation.trim()) {
+      setError("ticker · thesis · invalidation_price 는 필수");
+      return;
+    }
+    const invNum = parseFloat(invalidation);
+    if (!Number.isFinite(invNum)) {
+      setError("invalidation_price 숫자 형식 오류");
+      return;
+    }
+    setSubmitting(true);
+    try {
+      const body: Record<string, unknown> = {
+        ticker: ticker.trim().toUpperCase(),
+        page_source: pageSource.trim() || "manual",
+        hypothesis_id: hypothesisId.trim() || "manual-v1",
+        thesis_md: thesis,
+        invalidation_price: invNum,
+        horizon_days: Math.max(1, Math.min(365, horizon)),
+        mood,
+      };
+      if (target.trim()) {
+        const t = parseFloat(target);
+        if (Number.isFinite(t)) body.target_price = t;
+      }
+      if (entry.trim()) {
+        const e = parseFloat(entry);
+        if (Number.isFinite(e)) body.entry_price = e;
+      }
+      const r = await fetch("/api/v1/judgments", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      if (!r.ok) throw new Error(`${r.status} ${(await r.text()).slice(0, 200)}`);
+      const saved = await r.json();
+      setSuccess(`✅ 저장 · id=${saved.id} · ${saved.ticker}`);
+      reset();
+      onCreated();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <section className="rounded-lg border border-border bg-card">
+      <button
+        type="button"
+        onClick={() => setOpen(!open)}
+        className="flex w-full items-center justify-between p-4 text-left"
+      >
+        <span>
+          <span className="text-sm font-semibold">📝 신규 판정 기록</span>
+          <span className="ml-2 text-xs text-muted-foreground">
+            보유 이유 · 청산 조건 · 지금 기분 3줄 (Fable 5)
+          </span>
+        </span>
+        <span className="text-xs text-muted-foreground">{open ? "▲ 접기" : "▼ 펼치기"}</span>
+      </button>
+
+      {open && (
+        <div className="space-y-3 border-t border-border/40 p-4 text-sm">
+          {/* 티커·페이지·가설 */}
+          <div className="grid gap-3 sm:grid-cols-3">
+            <label className="block">
+              <div className="text-xs text-muted-foreground">Ticker <span className="text-red-500">*</span></div>
+              <input
+                type="text"
+                value={ticker}
+                onChange={(e) => setTicker(e.target.value)}
+                placeholder="예: NBIS · 005930 · WEN"
+                className="mt-1 w-full rounded border border-border bg-background px-2 py-1 font-mono text-sm"
+              />
+            </label>
+            <label className="block">
+              <div className="text-xs text-muted-foreground">Page source</div>
+              <input
+                type="text"
+                value={pageSource}
+                onChange={(e) => setPageSource(e.target.value)}
+                placeholder="manual / positions / watchlist"
+                className="mt-1 w-full rounded border border-border bg-background px-2 py-1 text-sm"
+              />
+            </label>
+            <label className="block">
+              <div className="text-xs text-muted-foreground">Hypothesis id</div>
+              <input
+                type="text"
+                value={hypothesisId}
+                onChange={(e) => setHypothesisId(e.target.value)}
+                placeholder="manual-v1"
+                className="mt-1 w-full rounded border border-border bg-background px-2 py-1 text-sm"
+              />
+            </label>
+          </div>
+
+          {/* Thesis */}
+          <label className="block">
+            <div className="text-xs text-muted-foreground">
+              Thesis (판정 본문) <span className="text-red-500">*</span>
+              <span className="ml-2 text-muted-foreground/70">
+                권장 3줄: 보유 이유 · 청산 조건 · 지금 기분
+              </span>
+            </div>
+            <textarea
+              value={thesis}
+              onChange={(e) => setThesis(e.target.value)}
+              rows={5}
+              placeholder="보유 이유: ...&#10;청산 조건: ...&#10;지금 기분: ..."
+              className="mt-1 w-full rounded border border-border bg-background px-2 py-2 text-sm font-mono"
+            />
+          </label>
+
+          {/* 가격 · 기한 */}
+          <div className="grid gap-3 sm:grid-cols-4">
+            <label className="block">
+              <div className="text-xs text-muted-foreground">
+                Invalidation <span className="text-red-500">*</span>
+              </div>
+              <input
+                type="number"
+                step="any"
+                value={invalidation}
+                onChange={(e) => setInvalidation(e.target.value)}
+                placeholder="손절가"
+                className="mt-1 w-full rounded border border-border bg-background px-2 py-1 font-mono text-sm"
+              />
+            </label>
+            <label className="block">
+              <div className="text-xs text-muted-foreground">Target (선택)</div>
+              <input
+                type="number"
+                step="any"
+                value={target}
+                onChange={(e) => setTarget(e.target.value)}
+                placeholder="목표가"
+                className="mt-1 w-full rounded border border-border bg-background px-2 py-1 font-mono text-sm"
+              />
+            </label>
+            <label className="block">
+              <div className="text-xs text-muted-foreground">Entry (선택 · R:R)</div>
+              <input
+                type="number"
+                step="any"
+                value={entry}
+                onChange={(e) => setEntry(e.target.value)}
+                placeholder="진입가"
+                className="mt-1 w-full rounded border border-border bg-background px-2 py-1 font-mono text-sm"
+              />
+            </label>
+            <label className="block">
+              <div className="text-xs text-muted-foreground">Horizon (일)</div>
+              <input
+                type="number"
+                min={1}
+                max={365}
+                value={horizon}
+                onChange={(e) => setHorizon(parseInt(e.target.value) || 30)}
+                className="mt-1 w-full rounded border border-border bg-background px-2 py-1 font-mono text-sm"
+              />
+            </label>
+          </div>
+
+          {/* Mood */}
+          <div>
+            <div className="text-xs text-muted-foreground">Mood (Kahneman hot/cold)</div>
+            <div className="mt-1 flex flex-wrap gap-2">
+              {(["cool", "neutral", "revenge", "fomo"] as const).map((m) => (
+                <button
+                  key={m}
+                  type="button"
+                  onClick={() => setMood(m)}
+                  className={
+                    "rounded border px-3 py-1 text-xs " +
+                    (mood === m
+                      ? "border-primary bg-primary/20 text-primary"
+                      : "border-border text-muted-foreground hover:bg-muted")
+                  }
+                >
+                  {m === "cool" && "🧘 Cool"}
+                  {m === "neutral" && "😐 Neutral"}
+                  {m === "revenge" && "😡 Revenge"}
+                  {m === "fomo" && "🔥 FOMO"}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* 액션 */}
+          <div className="flex items-center justify-between border-t border-border/40 pt-3">
+            <div className="text-xs">
+              {error && <span className="text-red-500">⚠ {error}</span>}
+              {success && <span className="text-emerald-500">{success}</span>}
+            </div>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={reset}
+                disabled={submitting}
+                className="rounded border border-border px-3 py-1.5 text-xs hover:bg-muted disabled:opacity-50"
+              >
+                초기화
+              </button>
+              <button
+                type="button"
+                onClick={submit}
+                disabled={submitting}
+                className="rounded bg-primary px-4 py-1.5 text-xs font-semibold text-primary-foreground disabled:opacity-50 hover:bg-primary/80"
+              >
+                {submitting ? "저장 중..." : "저장"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </section>
   );
 }
