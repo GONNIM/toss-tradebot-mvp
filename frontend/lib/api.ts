@@ -248,6 +248,13 @@ export interface PositionExitPlan {
   trigger_reason: string | null;
 }
 
+export interface SerenitySignalPreview {
+  ts: string;
+  sentiment: "bullish" | "bearish" | "neutral" | "calibration" | string;
+  thesis_type: string | null;
+  reasoning: string | null;
+}
+
 export interface PositionCard {
   symbol: string;
   name: string | null;
@@ -262,6 +269,8 @@ export interface PositionCard {
   exit_plan: PositionExitPlan;
   activist_symbol: boolean;
   recent_filings: unknown[];
+  serenity_recent_signals: SerenitySignalPreview[];
+  serenity_bearish_alert: boolean;
 }
 
 export interface PositionsPlanResponse {

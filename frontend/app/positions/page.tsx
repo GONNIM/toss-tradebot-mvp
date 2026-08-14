@@ -200,7 +200,63 @@ function PositionCardView({ card }: { card: PositionCard }) {
 
       {/* 청산 계획 3칸 (Fable 5 핵심) */}
       <ExitPlanBlock plan={plan} symbol={card.symbol} />
+
+      {/* Serenity 최근 signal 인라인 (task #23 · 2026-08-14) */}
+      <SerenityBlock
+        signals={card.serenity_recent_signals}
+        bearishAlert={card.serenity_bearish_alert}
+      />
     </article>
+  );
+}
+
+function SerenityBlock({
+  signals,
+  bearishAlert,
+}: {
+  signals: import("@/lib/api").SerenitySignalPreview[];
+  bearishAlert: boolean;
+}) {
+  if (!signals || signals.length === 0) return null;
+  const sentimentColor: Record<string, string> = {
+    bullish: "text-emerald-500",
+    bearish: "text-red-500",
+    neutral: "text-slate-400",
+    calibration: "text-amber-500",
+  };
+  const sentimentIcon: Record<string, string> = {
+    bullish: "▲", bearish: "▼", neutral: "●", calibration: "◆",
+  };
+  return (
+    <div className="mt-3 rounded border border-border/40 bg-background/40 p-2 text-[11px]">
+      <div className="mb-1 flex items-center justify-between">
+        <span className="font-semibold text-muted-foreground">
+          🕵️ Serenity 최근 signal ({signals.length})
+        </span>
+        {bearishAlert && (
+          <span className="rounded bg-red-500/20 px-1.5 py-0.5 text-[10px] font-semibold text-red-500">
+            ⚠ bearish 감지
+          </span>
+        )}
+      </div>
+      <div className="space-y-1">
+        {signals.map((s, i) => (
+          <div key={i} className="flex items-baseline gap-2 border-b border-border/20 pb-1 last:border-0">
+            <span className={"font-semibold " + (sentimentColor[s.sentiment] ?? "text-muted-foreground")}>
+              {sentimentIcon[s.sentiment] ?? "?"} {s.sentiment}
+            </span>
+            {s.thesis_type && (
+              <span className="rounded bg-slate-500/20 px-1 py-0.5 text-[10px] text-slate-400">
+                {s.thesis_type}
+              </span>
+            )}
+            <span className="ml-auto text-[10px] text-muted-foreground">
+              {new Date(s.ts).toLocaleDateString("ko-KR")}
+            </span>
+          </div>
+        ))}
+      </div>
+    </div>
   );
 }
 

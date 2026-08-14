@@ -191,6 +191,14 @@ class PositionExitPlan(BaseModel):
     trigger_reason: Optional[str] = None                 # "invalidation_hit" | "target_reached"
 
 
+class SerenitySignalPreview(BaseModel):
+    """positions 카드 인라인 · 최근 signal 요약 (task #23 · 2026-08-14)."""
+    ts: datetime                          # signal 시각 (posted_at)
+    sentiment: str                        # bullish/bearish/neutral/calibration
+    thesis_type: Optional[str] = None
+    reasoning: Optional[str] = None       # 200자 excerpt
+
+
 class PositionCard(BaseModel):
     """종목별 작전 카드 · dashboard holdings + 저널 + activist 조합."""
     symbol: str
@@ -206,6 +214,9 @@ class PositionCard(BaseModel):
     exit_plan: PositionExitPlan
     activist_symbol: bool = False                        # activist universe 소속 여부
     recent_filings: list[dict] = []                      # 최근 SEC 필링 (activist 심볼만)
+    # Serenity signal 인라인 (task #23 · 2026-08-14)
+    serenity_recent_signals: list[SerenitySignalPreview] = []  # 최근 3건 (있으면)
+    serenity_bearish_alert: bool = False                 # 최근 bearish 감지 시 alert
 
 
 class PositionsPlanResponse(BaseModel):

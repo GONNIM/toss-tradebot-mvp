@@ -17,9 +17,10 @@ from backend.api.schemas import (
     PositionExitPlan,
     PositionResponse,
     PositionsPlanResponse,
+    SerenitySignalPreview,
 )
 from backend.services.db import get_session
-from backend.services.models import AccountPosition, UserJudgment
+from backend.services.models import AccountPosition, SerenitySignal, SerenityTweet, UserJudgment
 
 logger = logging.getLogger(__name__)
 
@@ -67,6 +68,32 @@ async def _latest_judgment(session, ticker: str) -> Optional[UserJudgment]:
         .limit(1)
     )
     return (await session.execute(stmt)).scalar_one_or_none()
+
+
+async def _serenity_recent_signals(session, ticker: str, limit: int = 3) -> list[SerenitySignalPreview]:
+    """티커별 최근 Serenity signal 조회 (task #23 · 2026-08-14).
+
+    positions 카드 인라인 표시 · bearish 감지 시 alert 발동용.
+    """
+    stmt = (
+        select(SerenitySignal, SerenityTweet.posted_at)
+        .join(SerenityTweet, SerenityTweet.tweet_id == SerenitySignal.tweet_id)
+        .where(SerenitySignal.ticker == ticker.upper())
+        .order_by(desc(SerenityTweet.posted_at))
+        .limit(limit)
+    )
+    rows = list((await session.execute(stmt)).all())
+    previews: list[SerenitySignalPreview] = []
+    for sig, ts in rows:
+        reasoning = sig.extracted_reasoning or ""
+        excerpt = reasoning[:200] + ("…" if len(reasoning) > 200 else "") if reasoning else None
+        previews.append(SerenitySignalPreview(
+            ts=ts,
+            sentiment=sig.sentiment,
+            thesis_type=sig.thesis_type,
+            reasoning=excerpt,
+        ))
+    return previews
 
 
 def _build_exit_plan(judgment: Optional[UserJudgment], current_price: Optional[float]) -> PositionExitPlan:
@@ -181,6 +208,10 @@ async def get_positions_plan():
 
             is_activist = sym.upper() in activist_symbols
 
+            # Serenity signal 인라인 조인 (task #23 · 2026-08-14)
+            serenity_previews = await _serenity_recent_signals(session, sym, limit=3)
+            bearish_alert = any(p.sentiment == "bearish" for p in serenity_previews)
+
             positions.append(PositionCard(
                 symbol=sym,
                 name=name,
@@ -195,6 +226,8 @@ async def get_positions_plan():
                 exit_plan=exit_plan,
                 activist_symbol=is_activist,
                 recent_filings=[],  # 필링 상세는 후속 (activist 라우트에 별도 endpoint 존재 시 조인)
+                serenity_recent_signals=serenity_previews,
+                serenity_bearish_alert=bearish_alert,
             ))
 
     return PositionsPlanResponse(
