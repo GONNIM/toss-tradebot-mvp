@@ -91,7 +91,8 @@ async def _seed_ticker_with_signals(ticker: str, m90: int, m7: int, bull_pct: fl
                                      auto_avoid: bool = False,
                                      anti_flags: str = "",
                                      market_cap: float | None = None,
-                                     shares_outstanding: float | None = None):
+                                     shares_outstanding: float | None = None,
+                                     domain_tags: str = ""):
     """helper · signals/tweet/price/seed 각각 fixture 로 등록."""
     now = datetime.utcnow()
     async with get_session() as session:
@@ -150,7 +151,7 @@ async def _seed_ticker_with_signals(ticker: str, m90: int, m7: int, bull_pct: fl
                 total_score=100,
                 auto_avoid=auto_avoid,
                 anti_pattern_flags=anti_flags,
-                domain_tags="",
+                domain_tags=domain_tags,
             ))
         await session.commit()
 
@@ -226,14 +227,43 @@ async def test_anti_pattern_excluded():
 
 
 @pytest.mark.asyncio
-async def test_sector_overlap_badge():
-    """같은 industry 2+ 카드 → sector_overlap=True."""
-    await _seed_ticker_with_signals("SNDK", m90=20, m7=5, bull_pct=80.0, industry="Semiconductors")
-    await _seed_ticker_with_signals("MU", m90=20, m7=5, bull_pct=80.0, industry="Semiconductors")
+async def test_sector_overlap_by_domain_tags():
+    """(task #15 · 2026-08-14) 같은 domain_tags 2+ 카드 → sector_overlap=True.
+
+    Fable 5 재설계: yfinance industry 문자열 대신 Serenity thesis 태그 기반.
+    NBIS (Internet) + AXTI (Semi Materials) 는 industry 다르지만
+    같은 optical_cpo·ai_supply_chain thesis 이면 겹침 감지.
+    """
+    await _seed_ticker_with_signals(
+        "NBIS", m90=20, m7=5, bull_pct=80.0,
+        industry="Internet Content & Information",
+        domain_tags="neocloud,optical_cpo",
+    )
+    await _seed_ticker_with_signals(
+        "AXTI", m90=20, m7=5, bull_pct=80.0,
+        industry="Semiconductor Equipment & Materials",  # 다른 industry
+        domain_tags="inp_substrates,optical_cpo",  # 하지만 optical_cpo 공유
+    )
+    result = await ac.build_action_cards()
+    for c in result["cards"]:
+        if c["ticker"] in ("NBIS", "AXTI"):
+            assert c["sector_overlap"] is True, f"{c['ticker']} · optical_cpo 공유"
+            assert "optical_cpo" in c["sector_overlap_tags"]
+
+
+@pytest.mark.asyncio
+async def test_sector_overlap_no_shared_tags():
+    """domain_tags 겹침 없음 → sector_overlap=False."""
+    await _seed_ticker_with_signals(
+        "SNDK", m90=20, m7=5, bull_pct=80.0, domain_tags="memory_hbm",
+    )
+    await _seed_ticker_with_signals(
+        "MU", m90=20, m7=5, bull_pct=80.0, domain_tags="power",  # 다른 태그
+    )
     result = await ac.build_action_cards()
     for c in result["cards"]:
         if c["ticker"] in ("SNDK", "MU"):
-            assert c["sector_overlap"] is True
+            assert c["sector_overlap"] is False, f"{c['ticker']} · 태그 겹침 없음"
 
 
 @pytest.mark.asyncio

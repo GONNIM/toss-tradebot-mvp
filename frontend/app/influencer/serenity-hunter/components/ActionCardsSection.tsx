@@ -163,9 +163,9 @@ function ActionCardItem({
         {card.sector_overlap && (
           <span
             className="rounded bg-amber-500/20 px-1.5 py-0.5 text-[10px] font-semibold text-amber-500"
-            title="같은 industry 카드 2+ · 사실상 같은 베팅"
+            title={`같은 thesis 태그 (${card.sector_overlap_tags.join(", ")}) 2+ 카드 · 사실상 같은 베팅 · Serenity 논지 축 기준`}
           >
-            ⚠ 섹터겹침
+            ⚠ 논지겹침 {card.sector_overlap_tags.length > 0 ? `(${card.sector_overlap_tags[0]}${card.sector_overlap_tags.length > 1 ? "+" : ""})` : ""}
           </span>
         )}
         {card.price_verification_failed && (

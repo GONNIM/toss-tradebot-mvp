@@ -165,7 +165,9 @@ class ActionCard(BaseModel):
     mentions_90d: int
     industry: Optional[str] = None
     sector: Optional[str] = None
+    domain_tags: list[str] = []              # Serenity thesis 축 (task #15)
     sector_overlap: bool = False
+    sector_overlap_tags: list[str] = []      # 겹치는 도메인 태그 (tooltip)
     last_close: float
     vs_prior_pct: Optional[float] = None
     price_verification_failed: bool = False

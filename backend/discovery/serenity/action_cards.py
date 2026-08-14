@@ -279,6 +279,8 @@ async def build_action_cards() -> dict:
             "tier": seed.serenity_tier if seed else None,
             "tier_rank": _tier_rank(seed.serenity_tier if seed else None),
             "financing_tier": seed.financing_tier if seed else None,
+            # domain_tags · sector_overlap 재설계용 (task #15 · 2026-08-14)
+            "domain_tags": _parse_flags(seed.domain_tags) if seed else [],
             "bull_pct": bull_pct,
             "mentions_7d": m7,
             "mentions_90d": m90,
@@ -295,12 +297,21 @@ async def build_action_cards() -> dict:
     # 정렬 · tier_rank asc · mentions_7d desc · bull_pct desc
     passed.sort(key=lambda c: (c["tier_rank"], -c["mentions_7d"], -c["bull_pct"]))
 
-    # 동일 industry 겹침 배지 (2+ 카드가 같은 industry 면 sector_overlap=True)
+    # 논지겹침 배지 재설계 (task #15 · 2026-08-14 · Fable 5):
+    #   기존: yfinance industry 문자열 매칭 (NBIS=Internet · AXTI=Semi Materials 등 어긋남 → 침묵 사고)
+    #   신규: DiscoverySerenityScore.domain_tags 교집합 (optical_cpo · inp_substrates · neocloud 등)
+    #   AI supply chain 병목 관점에서 사실상 같은 베팅 감지
     from collections import Counter
-    ind_count = Counter(c.get("industry") for c in passed if c.get("industry"))
+    tag_count: Counter = Counter()
     for c in passed:
-        ind = c.get("industry")
-        c["sector_overlap"] = bool(ind and ind_count[ind] >= 2)
+        for tag in c.get("domain_tags", []):
+            tag_count[tag] += 1
+    for c in passed:
+        tags = c.get("domain_tags", [])
+        # 하나라도 겹치는 태그 존재하면 True (2+ 카드가 같은 태그 보유)
+        shared_tags = [t for t in tags if tag_count[t] >= 2]
+        c["sector_overlap"] = len(shared_tags) > 0
+        c["sector_overlap_tags"] = shared_tags  # UI tooltip 용
 
     visible = passed[:MAX_VISIBLE_CARDS]
     rest = passed[MAX_VISIBLE_CARDS:]

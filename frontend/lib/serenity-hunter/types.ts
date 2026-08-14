@@ -129,7 +129,9 @@ export type ActionCard = {
   mentions_90d: number;
   industry: string | null;
   sector: string | null;
+  domain_tags: string[];
   sector_overlap: boolean;
+  sector_overlap_tags: string[];
   last_close: number;
   vs_prior_pct: number | null;
   price_verification_failed: boolean;
