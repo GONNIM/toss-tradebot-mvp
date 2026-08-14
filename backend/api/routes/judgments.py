@@ -13,11 +13,11 @@
 from __future__ import annotations
 
 import os
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Literal, Optional
 
 from fastapi import APIRouter, HTTPException, Query
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 from sqlalchemy import desc, func, select
 
 from backend.services.db import get_session
@@ -64,6 +64,15 @@ class JudgmentOut(BaseModel):
     invalidation_hit_ts: Optional[datetime] = None
     invalidation_hit_low: Optional[float] = None
     git_sha: Optional[str]
+
+    # SQLite func.now() 저장 시 naive UTC 반환 → 명시 UTC 마킹 (Z suffix)
+    # 브라우저 new Date() 가 로컬 (KST) 로 자동 변환 · 2026-08-14 KST 표기 사고 대응
+    @field_validator("ts", "result_computed_at", "invalidation_hit_ts", mode="before")
+    @classmethod
+    def _mark_utc(cls, v):
+        if isinstance(v, datetime) and v.tzinfo is None:
+            return v.replace(tzinfo=timezone.utc)
+        return v
 
     class Config:
         from_attributes = True
