@@ -377,7 +377,10 @@ export type JoinSignal =
   | "agree_down"
   | "disagree"
   | "neutral"
-  | "no_data";
+  | "no_data"
+  | "interim_01_10"
+  | "interim_01_20"
+  | "interim_01_31";
 
 export interface MonthlyJoinRow {
   month: string;
@@ -386,6 +389,10 @@ export interface MonthlyJoinRow {
   price_close: number | null;
   return_pct: number | null;
   signal: JoinSignal;
+  // 2026-08-15 · customs_interim (TOTAL) 부분 수출 fallback
+  interim_value_musd: number | null;
+  interim_yoy_pct: number | null;
+  interim_period: string | null;  // '01~10' / '01~20' / '01~31'
 }
 
 export interface LatestSignalHint {

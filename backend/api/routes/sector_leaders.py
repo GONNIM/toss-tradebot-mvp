@@ -72,6 +72,68 @@ router = APIRouter()
 
 
 # ─────────────────────────────────────────────────────────────────
+# 헬퍼 · customs_interim 부분 수출 (TOTAL) → monthly_join fallback
+# ─────────────────────────────────────────────────────────────────
+
+# 사이클 우선순위 · 완성도 높은 것 (말일 잠정치) 우선
+_PERIOD_PRIORITY = {"01~31": 3, "01~20": 2, "01~10": 1}
+
+
+async def _load_interim_by_month(
+    session,
+    exclude_months: set[str],
+) -> dict[str, tuple[float | None, float | None, str]]:
+    """CustomsInterimExport TOTAL 데이터 → {month: (value_musd, yoy_pct, period)}.
+
+    2026-08-15 신설:
+    - motir 발표 안된 최근 월에 관세청 잠정치 fallback 제공
+    - country_code='TOTAL' 만 · 품목별 세부 없음
+    - 각 월마다 가장 완성도 높은 period 선택 (말일 잠정치 > 20일 > 10일)
+    - exclude_months: 이미 motir 발표된 월 (interim 계산 스킵 · 성능)
+    """
+    rows = (
+        await session.execute(
+            select(CustomsInterimExport)
+            .where(CustomsInterimExport.country_code == "TOTAL")
+            .order_by(asc(CustomsInterimExport.month))
+        )
+    ).scalars().all()
+
+    # month → 가장 완성도 높은 (period, value_kusd)
+    best_by_month: dict[str, tuple[str, float]] = {}
+    for r in rows:
+        if r.month in exclude_months:
+            continue
+        cur = best_by_month.get(r.month)
+        if cur is None or _PERIOD_PRIORITY.get(r.period, 0) > _PERIOD_PRIORITY.get(cur[0], 0):
+            best_by_month[r.month] = (r.period, r.usd_amount_thousand)
+
+    if not best_by_month:
+        return {}
+
+    # YoY 계산 · 전년 동월 동사이클 조회 (같은 period)
+    result: dict[str, tuple[float | None, float | None, str]] = {}
+    for month, (period, kusd) in best_by_month.items():
+        year, mm = month.split("-")
+        prev_month = f"{int(year) - 1:04d}-{mm}"
+        prev = (
+            await session.execute(
+                select(CustomsInterimExport).where(
+                    CustomsInterimExport.month == prev_month,
+                    CustomsInterimExport.period == period,
+                    CustomsInterimExport.country_code == "TOTAL",
+                )
+            )
+        ).scalar_one_or_none()
+        yoy: float | None = None
+        if prev is not None and prev.usd_amount_thousand > 0:
+            yoy = (kusd / prev.usd_amount_thousand - 1) * 100.0
+        # kusd (천 달러) → M$ = kusd / 1000
+        result[month] = (kusd / 1000.0, yoy, period)
+    return result
+
+
+# ─────────────────────────────────────────────────────────────────
 # GET /top10  — 투자 종목 Top 10 (B-2j)
 # ─────────────────────────────────────────────────────────────────
 
@@ -292,6 +354,10 @@ async def get_ticker_analysis(
             )
         ).scalars().all()
 
+        # customs_interim TOTAL · motir 발표 안된 월에 부분 수출 fallback
+        motir_months = {e.month for e in exports}
+        interim_map = await _load_interim_by_month(session, exclude_months=motir_months)
+
     # 일봉 → 월말 종가 + 월간 수익률
     daily_pairs = [(p.date, p.close) for p in prices]
     close_map, ret_map = daily_to_monthly(daily_pairs)
@@ -306,7 +372,9 @@ async def get_ticker_analysis(
     buckets_best = compute_yoy_buckets(yoy_map, ret_map, lag_months=best_lag)
 
     join_rows = compute_monthly_join(
-        yoy_map, value_map, close_map, ret_map, correlation_sign=correlation_sign,
+        yoy_map, value_map, close_map, ret_map,
+        correlation_sign=correlation_sign,
+        interim_by_month=interim_map,
     )
 
     hint = latest_signal_hint(

@@ -41,7 +41,11 @@ class MonthlyJoinRow:
     export_yoy_pct: Optional[float]
     price_close: Optional[float]
     return_pct: Optional[float]
-    signal: str                  # 'agree_up'/'agree_down'/'disagree'/'neutral'/'no_data'
+    signal: str                  # 'agree_up'/'agree_down'/'disagree'/'neutral'/'no_data' or 'interim_01_10' / 'interim_01_20' / 'interim_01_31'
+    # 2026-08-15 · customs_interim (TOTAL · 품목 아닌 전체) 부분 수출 fallback
+    interim_value_musd: Optional[float] = None
+    interim_yoy_pct: Optional[float] = None
+    interim_period: Optional[str] = None  # '01~10' / '01~20' / '01~31'
 
 
 @dataclass(frozen=True)
@@ -148,15 +152,23 @@ def compute_monthly_join(
     monthly_close_by_month: dict[str, float],
     monthly_return_by_month: dict[str, float],
     correlation_sign: int = 1,
+    interim_by_month: Optional[dict[str, tuple[Optional[float], Optional[float], str]]] = None,
 ) -> list[MonthlyJoinRow]:
     """월별 수출 + 주가 + 시그널 라벨 정합 표.
 
     correlation_sign = +1: 정의 상관 (수출↑+주가↑ = agree_up)
     correlation_sign = -1: 음의 상관 (수출↑+주가↓ = agree_up — 동행성 일치)
+
+    interim_by_month (2026-08-15 신설): {month: (value_musd, yoy_pct, period_label)}
+      · motir 아직 미공개인 월 (당월) 에 관세청 잠정치 fallback
+      · period_label: '01~10' / '01~20' / '01~31' — 현재 반영된 사이클
+      · motir 데이터가 있으면 그 값 우선 · interim 은 참고
     """
+    interim = interim_by_month or {}
     all_months = sorted(
         set(export_yoy_by_month.keys())
         | set(monthly_close_by_month.keys())
+        | set(interim.keys())
     )
     out: list[MonthlyJoinRow] = []
     for m in all_months:
@@ -165,18 +177,31 @@ def compute_monthly_join(
         close = monthly_close_by_month.get(m)
         ret = monthly_return_by_month.get(m)
 
-        # signal 라벨
+        int_val: Optional[float] = None
+        int_yoy: Optional[float] = None
+        int_period: Optional[str] = None
+        if m in interim:
+            iv, iy, ip = interim[m]
+            int_val, int_yoy, int_period = iv, iy, ip
+
+        # 시그널 라벨 · motir 우선 · 없고 interim 있으면 interim 사이클 라벨
         signal = "no_data"
-        if yoy is not None and ret is not None:
-            yoy_up = yoy > 0
+        # 효과 yoy · motir 없으면 interim 대체 (동행성 계산용)
+        effective_yoy = yoy if yoy is not None else int_yoy
+        if effective_yoy is not None and ret is not None:
+            yoy_up = effective_yoy > 0
             ret_up = ret > 0
             effective_up = ret_up if correlation_sign >= 0 else (not ret_up)
-            if abs(yoy) < 1.0 and abs(ret) < 1.0:
+            if abs(effective_yoy) < 1.0 and abs(ret) < 1.0:
                 signal = "neutral"
             elif yoy_up == effective_up:
                 signal = "agree_up" if yoy_up else "agree_down"
             else:
                 signal = "disagree"
+
+        # motir 없고 interim 있으면 사이클 라벨로 대체 (신호 계산 결과 무관)
+        if yoy is None and int_period is not None:
+            signal = f"interim_{int_period.replace('~', '_')}"
 
         out.append(
             MonthlyJoinRow(
@@ -186,6 +211,9 @@ def compute_monthly_join(
                 price_close=close,
                 return_pct=ret,
                 signal=signal,
+                interim_value_musd=int_val,
+                interim_yoy_pct=int_yoy,
+                interim_period=int_period,
             )
         )
     return out

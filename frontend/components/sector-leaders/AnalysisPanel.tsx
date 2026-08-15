@@ -482,32 +482,56 @@ function MonthlyJoinTable({ rows }: { rows: MonthlyJoinRow[] }) {
                 </tr>
               </thead>
               <tbody>
-                {sorted.map((r) => (
-                  <tr key={r.month} className="border-b border-border/40">
-                    <td className="py-1 pr-2 font-mono">{r.month}</td>
-                    <td className="py-1 px-2 text-right font-mono">
-                      {r.export_value_musd !== null
-                        ? r.export_value_musd.toLocaleString()
-                        : "—"}
-                    </td>
-                    <td
-                      className={`py-1 px-2 text-right font-mono ${yoyClass(r.export_yoy_pct)}`}
-                    >
-                      {r.export_yoy_pct !== null ? formatPct(r.export_yoy_pct, 1) : "—"}
-                    </td>
-                    <td className="py-1 px-2 text-right font-mono">
-                      {r.price_close !== null
-                        ? r.price_close.toLocaleString()
-                        : "—"}
-                    </td>
-                    <td className={`py-1 px-2 text-right font-mono ${retClass(r.return_pct)}`}>
-                      {r.return_pct !== null ? formatPct(r.return_pct, 2) : "—"}
-                    </td>
-                    <td className="py-1 pl-2">{signalBadge(r.signal)}</td>
-                  </tr>
-                ))}
+                {sorted.map((r) => {
+                  // motir null 시 interim (관세청 전체 잠정치) fallback 표시
+                  const isInterimVal = r.export_value_musd === null && r.interim_value_musd !== null;
+                  const isInterimYoy = r.export_yoy_pct === null && r.interim_yoy_pct !== null;
+                  const displayVal = r.export_value_musd ?? r.interim_value_musd;
+                  const displayYoy = r.export_yoy_pct ?? r.interim_yoy_pct;
+                  return (
+                    <tr key={r.month} className="border-b border-border/40">
+                      <td className="py-1 pr-2 font-mono">{r.month}</td>
+                      <td className="py-1 px-2 text-right font-mono">
+                        {displayVal !== null ? (
+                          <span title={isInterimVal ? "관세청 전체 잠정치 (품목 세분 아님)" : undefined}>
+                            {Math.round(displayVal).toLocaleString()}
+                            {isInterimVal && <span className="ml-1 text-[9px] text-sky-400">*</span>}
+                          </span>
+                        ) : (
+                          "—"
+                        )}
+                      </td>
+                      <td
+                        className={`py-1 px-2 text-right font-mono ${yoyClass(displayYoy)}`}
+                      >
+                        {displayYoy !== null ? (
+                          <span title={isInterimYoy ? "관세청 전체 잠정치 YoY (품목 세분 아님)" : undefined}>
+                            {formatPct(displayYoy, 1)}
+                            {isInterimYoy && <span className="ml-1 text-[9px] text-sky-400">*</span>}
+                          </span>
+                        ) : (
+                          "—"
+                        )}
+                      </td>
+                      <td className="py-1 px-2 text-right font-mono">
+                        {r.price_close !== null
+                          ? r.price_close.toLocaleString()
+                          : "—"}
+                      </td>
+                      <td className={`py-1 px-2 text-right font-mono ${retClass(r.return_pct)}`}>
+                        {r.return_pct !== null ? formatPct(r.return_pct, 2) : "—"}
+                      </td>
+                      <td className="py-1 pl-2">{signalBadge(r.signal)}</td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
+            {rows.some((r) => r.interim_period !== null) && (
+              <div className="pt-2 text-[10px] text-muted-foreground">
+                <span className="text-sky-400">*</span> 관세청 전체 잠정치 (품목 세분 아님) · motir 미발표 월 참고용
+              </div>
+            )}
           </div>
         </div>
       )}
@@ -537,8 +561,12 @@ function signalBadge(sig: JoinSignal): React.ReactNode {
     disagree: { label: "⚪ 엇박자", cls: "text-amber-400" },
     neutral: { label: "— 횡보", cls: "text-muted-foreground" },
     no_data: { label: "—", cls: "text-muted-foreground" },
+    // 2026-08-15 · customs_interim 잠정치 사이클 라벨 (motir 미발표 월)
+    interim_01_10: { label: "🕒 10일 잠정치", cls: "text-sky-400" },
+    interim_01_20: { label: "🕒 20일 잠정치", cls: "text-sky-400" },
+    interim_01_31: { label: "🕒 말일 잠정치", cls: "text-sky-400" },
   };
-  const v = map[sig];
+  const v = map[sig] ?? { label: "—", cls: "text-muted-foreground" };
   return <span className={`text-xs ${v.cls}`}>{v.label}</span>;
 }
 

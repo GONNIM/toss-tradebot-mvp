@@ -348,7 +348,11 @@ class MonthlyJoinRowResponse(BaseModel):
     export_yoy_pct: Optional[float] = None
     price_close: Optional[float] = None
     return_pct: Optional[float] = None
-    signal: str  # agree_up / agree_down / disagree / neutral / no_data
+    signal: str  # agree_up / agree_down / disagree / neutral / no_data / interim_01_10 / interim_01_20 / interim_01_31
+    # 2026-08-15 · customs_interim (TOTAL) 부분 수출 fallback
+    interim_value_musd: Optional[float] = None
+    interim_yoy_pct: Optional[float] = None
+    interim_period: Optional[str] = None  # '01~10' / '01~20' / '01~31'
 
 
 class LatestSignalHintResponse(BaseModel):
