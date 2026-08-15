@@ -42,6 +42,7 @@ async def backfill(report_months: list[date]) -> int:
     from backend.discovery.data_sources.motir_export.discovery import refresh_kdi_cache
     from backend.discovery.sector_leaders.scheduler import (
         _customs_fetch_recent,
+        _krx_candles_refresh,
         _recompute_sector_leaders,
         monthly_ingest_job,
     )
@@ -67,7 +68,7 @@ async def backfill(report_months: list[date]) -> int:
             logger.exception(f"[backfill] {rm} motir ingest 실패: {e}")
             failures.append((rm, str(e)))
 
-    # 2) customs 최근 3개월 재수집 + 재계산 (motir 성공/실패와 독립)
+    # 2) customs + KRX 일봉 + recompute (motir 성공/실패와 독립 · KRX 는 recompute 전 필수)
     async with get_session() as session:
         try:
             cs = await _customs_fetch_recent(session, months_back=3)
@@ -75,6 +76,12 @@ async def backfill(report_months: list[date]) -> int:
         except Exception as e:  # noqa: BLE001
             logger.exception(f"[backfill] customs 실패: {e}")
             failures.append((None, f"customs: {e}"))
+        try:
+            kx = await _krx_candles_refresh(session)
+            logger.info(f"[backfill] KRX 일봉 갱신 완료 stats={kx}")
+        except Exception as e:  # noqa: BLE001
+            logger.exception(f"[backfill] KRX 일봉 실패: {e}")
+            failures.append((None, f"krx_candles: {e}"))
         try:
             rc = await _recompute_sector_leaders(session)
             logger.info(f"[backfill] SectorLeader 재계산 완료 stats={rc}")

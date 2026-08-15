@@ -29,6 +29,8 @@ from apscheduler.triggers.cron import CronTrigger
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.discovery.data_sources.customs_interim import fetch_and_save
+from backend.discovery.data_sources.krx_price.loader import ingest_24m_candles
+from backend.discovery.data_sources.mapping import iter_all_tickers
 from backend.discovery.data_sources.motir_export.discovery import refresh_kdi_cache
 from backend.discovery.data_sources.motir_export.downloader import download_kdi_pdf
 from backend.discovery.sector_leaders.analysis import (
@@ -78,6 +80,20 @@ async def monthly_ingest_job(
     async with get_session() as session:
         stats = await ingest_pdf(session, pdf_path, rm)
     logger.info(f"[motir_ingest] done report_month={rm} stats={stats}")
+    return stats
+
+
+async def _krx_candles_refresh(session: AsyncSession) -> dict:
+    """매핑 51종목 × 24개월 KRX 일봉 UPSERT (pykrx).
+
+    2026-08-15 신설 · 이전엔 초기 구축 후 갱신 크론 없어 2026-06-24 이후 방치.
+    최신 월말 종가·수익률·시그널 계산에 필수.
+    """
+    codes = sorted({t.code for t in iter_all_tickers()})
+    logger.info(f"[krx_candles_refresh] {len(codes)} 종목 24M 일봉 UPSERT 시작")
+    stats = await ingest_24m_candles(session, codes)
+    await session.commit()
+    logger.info(f"[krx_candles_refresh] done stats={stats}")
     return stats
 
 
@@ -134,13 +150,18 @@ async def monthly_full_refresh_job(
         logger.exception(f"[monthly_full_refresh] motir error: {e}")
         stats["motir"] = {"error": str(e)}
 
-    # 2) customs + recompute (motir 실패와 독립)
+    # 2) customs + KRX 일봉 + recompute (motir 실패와 독립 · KRX 는 recompute 전 필수)
     async with get_session() as session:
         try:
             stats["customs"] = await _customs_fetch_recent(session, months_back=3)
         except Exception as e:
             logger.exception(f"[monthly_full_refresh] customs error: {e}")
             stats["customs"] = {"error": str(e)}
+        try:
+            stats["krx_candles"] = await _krx_candles_refresh(session)
+        except Exception as e:
+            logger.exception(f"[monthly_full_refresh] krx_candles error: {e}")
+            stats["krx_candles"] = {"error": str(e)}
         try:
             stats["recompute"] = await _recompute_sector_leaders(session)
         except Exception as e:
@@ -152,7 +173,7 @@ async def monthly_full_refresh_job(
 
 
 async def customs_interim_10day_job() -> dict:
-    """매월 11일 12:00 — customs 1~10일 잠정 fetch + recompute."""
+    """매월 11일 12:00 — customs 1~10일 잠정 fetch + KRX 일봉 + recompute."""
     stats: dict = {}
     async with get_session() as session:
         try:
@@ -160,6 +181,11 @@ async def customs_interim_10day_job() -> dict:
         except Exception as e:
             logger.exception(f"[customs_10day] error: {e}")
             stats["customs"] = {"error": str(e)}
+        try:
+            stats["krx_candles"] = await _krx_candles_refresh(session)
+        except Exception as e:
+            logger.exception(f"[customs_10day] krx_candles error: {e}")
+            stats["krx_candles"] = {"error": str(e)}
         try:
             stats["recompute"] = await _recompute_sector_leaders(session)
         except Exception as e:
@@ -170,7 +196,7 @@ async def customs_interim_10day_job() -> dict:
 
 
 async def customs_interim_20day_job() -> dict:
-    """매월 21일 12:00 — customs 1~20일 잠정 fetch + recompute."""
+    """매월 21일 12:00 — customs 1~20일 잠정 fetch + KRX 일봉 + recompute."""
     stats: dict = {}
     async with get_session() as session:
         try:
@@ -178,6 +204,11 @@ async def customs_interim_20day_job() -> dict:
         except Exception as e:
             logger.exception(f"[customs_20day] error: {e}")
             stats["customs"] = {"error": str(e)}
+        try:
+            stats["krx_candles"] = await _krx_candles_refresh(session)
+        except Exception as e:
+            logger.exception(f"[customs_20day] krx_candles error: {e}")
+            stats["krx_candles"] = {"error": str(e)}
         try:
             stats["recompute"] = await _recompute_sector_leaders(session)
         except Exception as e:
