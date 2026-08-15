@@ -29,10 +29,11 @@ DEFAULT_PDF_DIR = (
 )
 
 
-# KDI 자료 num 카탈로그 — 발표월별 (2025-06 ~ 2026-06 검증 완료)
+# KDI 자료 num 시드 카탈로그 — 초기 신뢰 데이터 (2025-06 ~ 2026-06 검증 완료)
 #
-# **갱신 방법**: 매월 1일 새 발표 자료 게시 후 https://eiec.kdi.re.kr 검색
-# "수출입 동향" → 신규 자료 클릭 → URL 의 num 값 등재.
+# 2026-08-14 개편: 매월 수동 등재 → discovery.py 자동 크롤로 대체.
+# 본 dict 는 시드 (초기 fallback) 로만 유지 · 신규 자료는 kdi_num_cache.json 에 자동 축적.
+# 조회 순서: (1) 파일 캐시 → (2) 시드 catalog → (3) 실시간 KDI 크롤 (async 경로만).
 #
 # Key = report_month (발표월, "YYYY-MM"). Value = KDI num.
 KDI_NUM_CATALOG: dict[str, int] = {
@@ -104,21 +105,63 @@ def _report_month_key(report_month: date) -> str:
 
 
 def resolve_kdi_num(report_month: date, *, confirmed: bool = False) -> int:
-    """발표월 → KDI num 조회.
+    """발표월 → KDI num 조회 (sync · 캐시 + 시드).
+
+    조회 순서:
+      1. 파일 캐시 (kdi_num_cache.json · discovery.refresh_kdi_cache 로 갱신)
+      2. 시드 catalog (본 파일 하드코딩 · 초기 신뢰 데이터)
+      → 둘 다 miss 면 KeyError · async 컨텍스트라면 resolve_kdi_num_async 사용 권장
 
     Args:
-        confirmed: True 면 확정치 num (KDI_NUM_CONFIRMED_CATALOG) 조회.
+        confirmed: True 면 확정치 catalog (별도 · 캐시 미지원).
     """
-    catalog = KDI_NUM_CONFIRMED_CATALOG if confirmed else KDI_NUM_CATALOG
+    # 확정치는 별도 · 잠정치만 캐시 통합
+    if confirmed:
+        key = _report_month_key(report_month)
+        num = KDI_NUM_CONFIRMED_CATALOG.get(key)
+        if num is None:
+            raise KeyError(
+                f"KDI 확정치 카탈로그에 {key} 없음. "
+                f"https://eiec.kdi.re.kr 에서 확정치 자료 확인 후 catalog 갱신 필요."
+            )
+        return num
+
+    # 잠정치: 캐시 → 시드 순
+    from backend.discovery.data_sources.motir_export.discovery import resolve_num_from_cache
+
     key = _report_month_key(report_month)
-    num = catalog.get(key)
-    if num is None:
-        flavor = "확정치" if confirmed else "잠정치"
-        raise KeyError(
-            f"KDI {flavor} 카탈로그에 {key} 없음. "
-            f"https://eiec.kdi.re.kr 에서 신규 num 확인 후 catalog 갱신 필요."
+    cached = resolve_num_from_cache(report_month)
+    if cached is not None:
+        logger.debug(f"[resolve_kdi_num] {key} → {cached} (cache)")
+        return cached
+    seeded = KDI_NUM_CATALOG.get(key)
+    if seeded is not None:
+        logger.debug(f"[resolve_kdi_num] {key} → {seeded} (seed)")
+        return seeded
+    raise KeyError(
+        f"KDI 잠정치 num 미확인: {key}. "
+        f"discovery.refresh_kdi_cache() 로 캐시 갱신 후 재시도 필요."
+    )
+
+
+async def resolve_kdi_num_async(report_month: date, *, confirmed: bool = False) -> int:
+    """async · sync 조회 실패 시 KDI 실시간 크롤 → 캐시 갱신 후 재조회.
+
+    scheduler 등 async 컨텍스트에서 최신성 보장 필요 시 사용.
+    """
+    try:
+        return resolve_kdi_num(report_month, confirmed=confirmed)
+    except KeyError:
+        if confirmed:
+            raise  # 확정치는 크롤 미지원
+        logger.info(
+            f"[resolve_kdi_num_async] {_report_month_key(report_month)} miss → KDI 실시간 크롤"
         )
-    return num
+        from backend.discovery.data_sources.motir_export.discovery import refresh_kdi_cache
+
+        await refresh_kdi_cache()
+        # 재시도 (캐시 갱신됨)
+        return resolve_kdi_num(report_month, confirmed=False)
 
 
 async def download_kdi_pdf(
@@ -153,7 +196,8 @@ async def download_kdi_pdf(
         logger.info(f"[motir_download] already present: {target}")
         return target
 
-    num = resolve_kdi_num(report_month, confirmed=confirmed)
+    # async 경로 · 캐시 miss 시 KDI 크롤로 자동 fallback
+    num = await resolve_kdi_num_async(report_month, confirmed=confirmed)
     params = {"num": str(num), "filenum": "1", "dtime": DTIME_PLACEHOLDER}
     headers = {"User-Agent": "toss-tradebot-mvp/0.1 (motir export downloader)"}
 

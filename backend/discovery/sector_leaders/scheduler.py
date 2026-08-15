@@ -29,10 +29,8 @@ from apscheduler.triggers.cron import CronTrigger
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.discovery.data_sources.customs_interim import fetch_and_save
-from backend.discovery.data_sources.motir_export.downloader import (
-    KDI_NUM_CATALOG,
-    download_kdi_pdf,
-)
+from backend.discovery.data_sources.motir_export.discovery import refresh_kdi_cache
+from backend.discovery.data_sources.motir_export.downloader import download_kdi_pdf
 from backend.discovery.sector_leaders.analysis import (
     compute_sector_leaders,
     persist_sector_leaders,
@@ -74,14 +72,8 @@ async def monthly_ingest_job(
     rm = report_month or _first_of_current_month()
     logger.info(f"[motir_ingest] start report_month={rm}")
 
-    rm_key = f"{rm.year:04d}-{rm.month:02d}"
-    if rm_key not in KDI_NUM_CATALOG:
-        logger.error(
-            f"[motir_ingest] KDI_NUM_CATALOG 에 {rm_key} 미등재 — "
-            f"https://eiec.kdi.re.kr 에서 신규 num 확인 후 downloader.py 갱신 필요"
-        )
-        raise KeyError(f"catalog miss: {rm_key}")
-
+    # KDI num 조회는 download_kdi_pdf 내부에서 캐시 → 시드 → 실시간 크롤 3단 fallback.
+    # KeyError 는 3단 모두 miss 시에만 발생 (사이트 구조 변경 등 극한 상황).
     pdf_path = await download_kdi_pdf(rm, base_dir=pdf_dir)
     async with get_session() as session:
         stats = await ingest_pdf(session, pdf_path, rm)
@@ -118,14 +110,26 @@ async def monthly_full_refresh_job(
     """매월 1일 11:30 — motir + customs 최근 3개월 + sector_leaders 재계산."""
     stats: dict = {}
 
-    # 1) motir PDF (KDI catalog 미등재 시 skip)
+    # 0) KDI num 캐시 사전 refresh — 실패해도 계속 (시드 catalog fallback)
+    try:
+        cache = await refresh_kdi_cache()
+        stats["kdi_cache_refresh"] = {"entries": len(cache), "ok": True}
+        logger.info(f"[monthly_full_refresh] KDI 캐시 갱신 완료 · {len(cache)} 건")
+    except Exception as e:  # noqa: BLE001
+        logger.warning(f"[monthly_full_refresh] KDI 캐시 갱신 실패 · 시드 fallback: {e}")
+        stats["kdi_cache_refresh"] = {"ok": False, "error": str(e)}
+
+    # 1) motir PDF (KeyError 는 재발 방지 승격 · ERROR + Exception 재발생 → 알람 감지)
     try:
         stats["motir"] = await monthly_ingest_job(
             report_month=report_month, pdf_dir=pdf_dir
         )
     except KeyError as e:
-        logger.warning(f"[monthly_full_refresh] motir skip: {e}")
-        stats["motir"] = {"skipped": str(e)}
+        logger.error(
+            f"[monthly_full_refresh] motir KDI num 3단 fallback 모두 실패: {e} · "
+            f"discovery 사이트 구조 변경 가능 · 조사 필요"
+        )
+        stats["motir"] = {"error": f"catalog_miss: {e}"}
     except Exception as e:
         logger.exception(f"[monthly_full_refresh] motir error: {e}")
         stats["motir"] = {"error": str(e)}
