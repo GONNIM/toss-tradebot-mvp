@@ -167,10 +167,18 @@ def report_to_months(report_month: date) -> list[date]:
 # ─────────────────────────────────────────────────────────────────
 
 
+_MAIN_ITEM_NAMES_SET = {_n for _n in ITEM_ORDER_15}
+
+
 def _find_main_item_table(pdf: pdfplumber.PDF) -> Optional[tuple[int, list[list[Optional[str]]]]]:
     """47r × 15c 메인 품목 표 자동 탐지 (페이지 위치 무관).
 
-    검증: 헤더 row[0][0] = '품목명', 첫 데이터 row[2][0] 에 '선박' 포함.
+    검증:
+      - 헤더 row[0][0] = '품목명'
+      - 첫 데이터 row[2][0] 이 ITEM_ORDER_15 중 하나 (순서 재배치 대응 · 2026-08-15)
+
+    2026-08-15 완화: 이전엔 '선박' 하드코딩 · 2026-07 발표분부터 산업통상부가
+    첫 품목을 '반도체' 로 재배치 → 15품목 세트 매칭으로 변경.
     """
     for page_idx, page in enumerate(pdf.pages):
         for t in page.extract_tables():
@@ -178,8 +186,10 @@ def _find_main_item_table(pdf: pdfplumber.PDF) -> Optional[tuple[int, list[list[
                 continue
             if t[0][0] != "품목명":
                 continue
-            if len(t) > 2 and t[2] and t[2][0] and "선박" in t[2][0]:
-                return (page_idx, t)
+            if len(t) > 2 and t[2] and t[2][0]:
+                first_data = _norm_text(t[2][0])
+                if first_data in _MAIN_ITEM_NAMES_SET:
+                    return (page_idx, t)
     return None
 
 
@@ -224,25 +234,38 @@ def _parse_block(
 
     has_share=True: 3행 묶음 (값/증감률/비중) — 메인 15품목 표
     has_share=False: 2행 묶음 (값/증감률) — 별표 5대 유망 소비재, 지역 표
+
+    2026-08-15 개편: expected_order 는 순서가 아닌 **허용 세트**로만 사용.
+    PDF에서 읽은 실제 item_name 을 canonical 로 저장 → 발행 순서 재배치 안전.
     """
     block_size = 3 if has_share else 2
     data_rows = table[2:]  # 헤더 2행 제외
     out: list[ExportItemRecord] = []
 
-    idx = 0
+    canonical_by_norm = {_norm_text(n): n for n in expected_order}
+    seen: set[str] = set()
+
     i = 0
-    while i + (block_size - 1) < len(data_rows) and idx < len(expected_order):
+    while i + (block_size - 1) < len(data_rows):
         value_row = data_rows[i]
         if not value_row or not value_row[0]:
             i += 1
             continue
         item_name = _norm_text(value_row[0])
-        canonical = expected_order[idx]
-        if _norm_text(canonical) != item_name:
+        canonical = canonical_by_norm.get(item_name)
+        if canonical is None:
             logger.warning(
-                f"[motir_export] item mismatch idx={idx}: "
-                f"expected={canonical!r} got={item_name!r} — using canonical"
+                f"[motir_export] 표에 예상 외 품목 등장 name={item_name!r} · skip block"
             )
+            i += block_size
+            continue
+        if canonical in seen:
+            logger.warning(
+                f"[motir_export] 중복 품목 name={canonical!r} · 첫 등장만 유지"
+            )
+            i += block_size
+            continue
+        seen.add(canonical)
 
         yoy_row = data_rows[i + 1] if i + 1 < len(data_rows) else []
         share_row = data_rows[i + 2] if has_share and i + 2 < len(data_rows) else None
@@ -270,7 +293,12 @@ def _parse_block(
             )
 
         i += block_size
-        idx += 1
+
+    missing = set(expected_order) - seen
+    if missing:
+        logger.warning(
+            f"[motir_export] 예상 품목 {len(missing)}건 미발견: {sorted(missing)}"
+        )
     return out
 
 

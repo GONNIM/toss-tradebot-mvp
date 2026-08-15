@@ -20,6 +20,7 @@ from backend.discovery.data_sources.motir_export import (
     parse_region_timeseries,
     report_to_months,
 )
+from backend.discovery.data_sources.motir_export.parser import _parse_block
 from backend.discovery.data_sources.motir_export.downloader import (
     data_month,
     get_pdf_path,
@@ -185,3 +186,70 @@ def test_item_known_glyph_defect_documented():
     # 현재 추출값 = 21.2 (부호 누락). B-2b cross-validation 후 -21.2 로 정정 예정.
     # 본 assertion 은 현 상태를 명시 — 정정 후 본 테스트도 갱신.
     assert r.yoy_pct is not None and abs(r.yoy_pct - 21.2) < 0.05
+
+
+# ─────────────────────────────────────────────────────────────────
+# 순서 재배치 안전성 (2026-08-15 · KDI 발행 형식 변경 대응)
+# ─────────────────────────────────────────────────────────────────
+
+
+def _make_synthetic_table(order: tuple[str, ...]) -> list[list[str]]:
+    """15품목 임의 순서로 47행 표 합성 · 헤더 2행 + 15품목×3행."""
+    header1 = ["품목명", "구분", "2025.05", "2025.06", "2025.07", "2025.08", "2025.09",
+               "2025.10", "2025.11", "2025.12", "2026.01", "2026.02", "2026.03",
+               "2026.04", "2026.05"]
+    header2 = ["", "", "", "", "", "", "", "", "", "", "", "", "", "", ""]
+    rows: list[list[str]] = [header1, header2]
+    # 각 품목마다 (값·YoY·share) 3행 · 값=인덱스, YoY=인덱스, share=인덱스
+    for i, name in enumerate(order, start=1):
+        month_vals = [str(1000 * i + k) for k in range(13)]
+        yoy_vals = [str(i + k * 0.1) for k in range(13)]
+        share_vals = [f"{i * 0.1 + k * 0.01:.2f}" for k in range(13)]
+        rows.append([name, "값"] + month_vals)
+        rows.append(["", "증감률"] + yoy_vals)
+        rows.append(["", "비중"] + share_vals)
+    return rows
+
+
+def test_parse_block_preserves_data_when_order_changes():
+    """순서 재배치 시 각 품목의 값이 이름 기준으로 정확 매핑 (index 미의존)."""
+    # 산업통상부 2026-07 발표 실사례 · 반도체 top 재배치
+    reshuffled = (
+        "반도체", "선박", "무선통신기기", "일반기계", "석유화학",
+        "철강제품", "자동차", "석유제품", "디스플레이", "섬유",
+        "가전", "자동차부품", "컴퓨터", "바이오헬스", "이차전지",
+    )
+    table = _make_synthetic_table(reshuffled)
+    months = report_to_months(date(2026, 8, 1))
+    records = _parse_block(table, months, ITEM_ORDER_15, has_share=True)
+
+    # 반도체(재배치 후 1번째): 값 = 1000*i + k · i=1, k=0 → 1000
+    by_key = {(r.item, r.month): r for r in records}
+    semi_first = by_key[("반도체", months[0])]
+    assert semi_first.value_musd == 1000, (
+        f"순서 재배치 후 반도체 첫 월 값 mismatch · expected=1000 got={semi_first.value_musd}"
+    )
+    # 선박(재배치 후 2번째): 값 = 1000*2 + 0 = 2000
+    ship_first = by_key[("선박", months[0])]
+    assert ship_first.value_musd == 2000, (
+        f"순서 재배치 후 선박 첫 월 값 mismatch · expected=2000 got={ship_first.value_musd}"
+    )
+
+    # 15품목 전부 15×13 = 195행
+    assert len(records) == 15 * 13
+    assert {r.item for r in records} == set(ITEM_ORDER_15)
+
+
+def test_parse_block_ignores_unknown_item():
+    """예상 세트에 없는 품목 (예: 신규 추가) 는 skip · 남은 15품목 정상 파싱."""
+    # unknown 하나 앞에 삽입 + 15품목 그대로 (중복 없음)
+    order = ("미지의품목XYZ",) + ITEM_ORDER_15
+    table = _make_synthetic_table(order)
+    months = report_to_months(date(2026, 8, 1))
+    records = _parse_block(table, months, ITEM_ORDER_15, has_share=True)
+
+    items = {r.item for r in records}
+    assert "미지의품목XYZ" not in items, "예상 외 품목이 결과에 포함됨"
+    assert items == set(ITEM_ORDER_15), (
+        f"15품목 완주 실패 · missing={set(ITEM_ORDER_15) - items}"
+    )
