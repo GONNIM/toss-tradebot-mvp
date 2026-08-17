@@ -38,6 +38,7 @@ from backend.api.routes import (
     meme_watch,
     positions,
     powderkeg,
+    principles,
     rulebook,
     sector_leaders,
     serenity,
@@ -246,6 +247,8 @@ app.include_router(
 app.include_router(insights.router, prefix="/api/v1/insights", tags=["insights"])
 # ── Rulebook (Phase E · 2026-08-02 · 존마 강의 3원칙 이식 · L2 첫 항목)
 app.include_router(rulebook.router, prefix="/api/v1/rulebook", tags=["rulebook"])
+# ── Principles (2026-08-17 · v1.0 · 저평가 우량주 5원칙 헌장 + screener + gate)
+app.include_router(principles.router, prefix="/api/v1/principles", tags=["principles"])
 # ── Serenity Influencer (Phase L6 · 2026-08-02 · public read)
 app.include_router(serenity.router, prefix="/api/v1/serenity", tags=["serenity"])
 # ── Serenity Hunter (Phase L14 v6 · 2026-08-04 · Step A: /verification + /health · Step C: /hunter)

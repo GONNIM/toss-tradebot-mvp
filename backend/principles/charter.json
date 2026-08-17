@@ -1,0 +1,103 @@
+{
+  "version": "1.0",
+  "enacted_at": "2026-08-17",
+  "title": "저평가 우량주 투자원칙",
+  "summary": "정량 기준 5원칙 · 트레일링 PER, 주주환원율, 배당 지속성, 재무 건전성, 분산 규칙. 코드·문서에 그대로 사용 · 임의로 완화하지 않음.",
+  "principles": [
+    {
+      "id": 1,
+      "code": "per",
+      "name": "PER (트레일링)",
+      "definition": "최근 4개 분기 합산 지배주주순이익 기준(트레일링) PER ≤ 10",
+      "thresholds": {
+        "per_ttm_max": 10,
+        "per_operating_max": 15
+      },
+      "supporting_condition": "영업이익 기준 PER 도 15 이하 (일회성 이익 필터)"
+    },
+    {
+      "id": 2,
+      "code": "shareholder_return",
+      "name": "주주환원율",
+      "definition": "(배당총액 + 자사주 매입·소각액) ÷ 지배주주순이익, 최근 3개 회계연도 평균 ≥ 40%",
+      "thresholds": {
+        "payout_ratio_3y_avg_min": 0.40
+      }
+    },
+    {
+      "id": 3,
+      "code": "dividend_continuity",
+      "name": "배당 지속성",
+      "definition": "최근 5년 연속 배당 지급, 기간 중 감배 없음",
+      "thresholds": {
+        "consecutive_years_min": 5,
+        "cut_allowed": false
+      }
+    },
+    {
+      "id": 4,
+      "code": "financial_soundness",
+      "name": "재무 건전성",
+      "definition": "부채비율 ≤ 200%, 이자보상배율 ≥ 2",
+      "thresholds": {
+        "debt_ratio_max": 2.0,
+        "interest_coverage_min": 2.0
+      },
+      "sector_exception": "금융업(은행·증권·보험 등) 은 본 원칙 skip · 자동 감지 + manual_overrides 로 보정"
+    },
+    {
+      "id": 5,
+      "code": "diversification",
+      "name": "분산 규칙",
+      "definition": "동일 섹터 편입 비중 상한 30%",
+      "thresholds": {
+        "sector_max_weight": 0.30
+      },
+      "scope": "포트폴리오 편입 시점의 목표 비중 검증 (screener 결과에는 지표만 표기 · 게이트에서 강제)"
+    }
+  ],
+  "sell_principle": {
+    "status": "미정",
+    "note": "매도 원칙은 v1.1 에서 별도 정의 예정. 현재 버전은 매수 필터만 구현."
+  },
+  "gate_policy": {
+    "mode": "fail_closed_whitelist",
+    "exempt_signal_types": ["sniper"],
+    "note": "명시적 면제 목록의 signal type 만 게이트 skip · 미분류/신규 signal type 은 기본 게이트 통과 필수 (fail-closed)."
+  },
+  "universe": {
+    "market": "KOSPI",
+    "note": "KOSPI 전종목 (~950). KOSDAQ 은 본 원칙 범위 아님."
+  },
+  "data_pipeline": {
+    "dart_financials": {
+      "cadence": "quarterly + on-disclosure",
+      "note": "분기 1회 수집 + 신규 공시 감지 시 갱신 · DART API 호출 최소화"
+    },
+    "daily_recompute": {
+      "cadence": "매일 23:00 KST",
+      "note": "캐시된 재무 + 당일 시세로 PER 등 재계산만 수행 · DART 호출 없음"
+    }
+  },
+  "manual_overrides": {
+    "financial_sector": {
+      "_schema": "티커별 강제 지정 · KRX 산업분류 자동 감지가 애매한 경우 (지주사·여전사·특수목적법인 등) 수동 보정",
+      "_example_entry": {
+        "ticker": "000000",
+        "value": true,
+        "reason": "예시 · 지주사이지만 실질 금융지주 · 재무건전성 조건 skip"
+      },
+      "entries": []
+    }
+  },
+  "revision_history": [
+    {
+      "version": "1.0",
+      "enacted_at": "2026-08-17",
+      "changed_by": "사용자 (초기 제정)",
+      "summary": "초기 제정 · 5원칙 정의 + fail-closed 화이트리스트 게이트 정책 + KOSPI 전종목 + 금융업 자동 감지 + manual_overrides 지원",
+      "rationale": "저평가 우량주 매수 원칙 명문화 · 코드·문서에 그대로 사용 · 임의 완화 금지"
+    }
+  ],
+  "disclaimer": "본 정보는 투자 자문이 아니며, 투자 판단과 책임은 이용자 본인에게 있습니다."
+}
