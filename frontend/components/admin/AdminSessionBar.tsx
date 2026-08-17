@@ -11,7 +11,7 @@
  * 쿠키가 살아있으면 세션 유지 · 세션 만료(12h) 시 재로그인.
  */
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { login, logout, migrateLegacyToken, whoami } from "@/lib/auth";
 import type { SessionInfo } from "@/lib/auth";
 
@@ -36,6 +36,14 @@ export function AdminSessionBar({ onSessionChange, scope = "sniper" }: Props) {
   const [error, setError] = useState<string | null>(null);
   const [showHelp, setShowHelp] = useState(false);
 
+  // 2026-08-17 · 부모가 매 렌더마다 새 인라인 콜백 전달 → dependency 무한 루프 방지
+  // 콜백 참조를 ref 에 저장 · 최신값 유지 (stale closure 회피)
+  const onSessionChangeRef = useRef(onSessionChange);
+  useEffect(() => {
+    onSessionChangeRef.current = onSessionChange;
+  }, [onSessionChange]);
+
+  // whoami() 는 mount 시 1회만 · dependency [] · 부모 재렌더에 영향 없음
   useEffect(() => {
     let cancelled = false;
     (async () => {
@@ -43,12 +51,12 @@ export function AdminSessionBar({ onSessionChange, scope = "sniper" }: Props) {
       const info = await whoami();
       if (cancelled) return;
       setSession(info);
-      onSessionChange?.(info);
+      onSessionChangeRef.current?.(info);
     })();
     return () => {
       cancelled = true;
     };
-  }, [onSessionChange]);
+  }, []);
 
   const isAdmin = session?.role === "admin";
 
@@ -59,7 +67,7 @@ export function AdminSessionBar({ onSessionChange, scope = "sniper" }: Props) {
       const info = await login(draft.trim());
       setSession(info);
       setDraft("");
-      onSessionChange?.(info);
+      onSessionChangeRef.current?.(info);
     } catch (e) {
       setError(e instanceof Error ? e.message : "로그인 실패");
     } finally {
@@ -73,7 +81,7 @@ export function AdminSessionBar({ onSessionChange, scope = "sniper" }: Props) {
     try {
       const info = await logout();
       setSession(info);
-      onSessionChange?.(info);
+      onSessionChangeRef.current?.(info);
     } catch (e) {
       setError(e instanceof Error ? e.message : "로그아웃 실패");
     } finally {
