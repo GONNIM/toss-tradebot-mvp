@@ -1,8 +1,9 @@
 {
-  "version": "1.0",
+  "version": "1.0.1",
   "enacted_at": "2026-08-17",
   "title": "저평가 우량주 투자원칙",
   "summary": "정량 기준 5원칙 · 트레일링 PER, 주주환원율, 배당 지속성, 재무 건전성, 분산 규칙. 코드·문서에 그대로 사용 · 임의로 완화하지 않음.",
+  "units_convention": "모든 비율 threshold 는 소수 표현. 예: 0.40 = 40% · 2.0 = 200%. 스크리너 계산부·게이트도 동일 규약 준수.",
   "principles": [
     {
       "id": 1,
@@ -13,16 +14,19 @@
         "per_ttm_max": 10,
         "per_operating_max": 15
       },
-      "supporting_condition": "영업이익 기준 PER 도 15 이하 (일회성 이익 필터)"
+      "supporting_condition": "영업이익 기준 PER 도 15 이하 (일회성 이익 필터)",
+      "loss_handling": "지배주주순이익(TTM) ≤ 0 이면 본 원칙 자동 fail (v1.0.1)"
     },
     {
       "id": 2,
       "code": "shareholder_return",
       "name": "주주환원율",
-      "definition": "(배당총액 + 자사주 매입·소각액) ÷ 지배주주순이익, 최근 3개 회계연도 평균 ≥ 40%",
+      "definition": "(배당총액 + 자기주식 취득액) ÷ 지배주주순이익, 최근 3개 회계연도 평균 ≥ 40%",
       "thresholds": {
         "payout_ratio_3y_avg_min": 0.40
-      }
+      },
+      "buyback_definition": "자기주식 취득액 = 현금흐름표상 '자기주식 취득' 항목 단일 사용. 매입+소각 합산 금지 (이중계상 방지). (v1.0.1 확정)",
+      "loss_handling": "지배주주순이익(해당 연도) ≤ 0 이면 해당 연도 자동 fail (분모 무효). 3년 중 1개년이라도 fail 이면 원칙 fail (v1.0.1)"
     },
     {
       "id": 3,
@@ -63,7 +67,11 @@
   "gate_policy": {
     "mode": "fail_closed_whitelist",
     "exempt_signal_types": ["sniper"],
-    "note": "명시적 면제 목록의 signal type 만 게이트 skip · 미분류/신규 signal type 은 기본 게이트 통과 필수 (fail-closed)."
+    "note": "명시적 면제 목록의 signal type 만 게이트 skip · 미분류/신규 signal type 은 기본 게이트 통과 필수 (fail-closed). INSUFFICIENT_DATA 판정도 게이트 차단 대상 (v1.0.1)."
+  },
+  "screener_verdict": {
+    "values": ["PASS", "FAIL", "INSUFFICIENT_DATA"],
+    "note": "필수 재무 항목 결측·파싱 실패 종목은 INSUFFICIENT_DATA · 어떤 항목이 결측인지 기록 필수 (v1.0.1)"
   },
   "universe": {
     "market": "KOSPI",
@@ -72,7 +80,7 @@
   "data_pipeline": {
     "dart_financials": {
       "cadence": "quarterly + on-disclosure",
-      "note": "분기 1회 수집 + 신규 공시 감지 시 갱신 · DART API 호출 최소화"
+      "note": "분기 1회 수집 + 신규 공시 감지 시 갱신 · DART API 호출 최소화 · rate limit 준수 · 실패 종목 재시도 큐 · 캐시 테이블에 수집 시각·출처 공시번호 기록"
     },
     "daily_recompute": {
       "cadence": "매일 23:00 KST",
@@ -81,7 +89,7 @@
   },
   "manual_overrides": {
     "financial_sector": {
-      "_schema": "티커별 강제 지정 · KRX 산업분류 자동 감지가 애매한 경우 (지주사·여전사·특수목적법인 등) 수동 보정",
+      "_schema": "티커별 강제 지정 · KRX 산업분류 자동 감지가 애매한 경우 (지주사·여전사·특수목적법인 등) 수동 보정. entries 추가·삭제·수정 시 반드시 revision_history 에 별도 항목 남긴다 (v1.0.1).",
       "_example_entry": {
         "ticker": "000000",
         "value": true,
@@ -97,6 +105,13 @@
       "changed_by": "사용자 (초기 제정)",
       "summary": "초기 제정 · 5원칙 정의 + fail-closed 화이트리스트 게이트 정책 + KOSPI 전종목 + 금융업 자동 감지 + manual_overrides 지원",
       "rationale": "저평가 우량주 매수 원칙 명문화 · 코드·문서에 그대로 사용 · 임의 완화 금지"
+    },
+    {
+      "version": "1.0.1",
+      "enacted_at": "2026-08-17",
+      "changed_by": "사용자 (명세 보완 · 원칙 변경 아님)",
+      "summary": "명세 보완 4건 · (1) units_convention 명시 (2) 원칙 1·2 적자 처리 규칙 추가 · 지배주주순이익 ≤ 0 자동 fail (3) 원칙 2 자기주식 취득액 정의 확정 · 현금흐름표 단일 사용 · 이중계상 금지 (4) manual_overrides 변경 시 revision_history 기록 규칙 명시. 스크리너 판정 3값 (PASS/FAIL/INSUFFICIENT_DATA) 명시 · INSUFFICIENT_DATA 도 게이트 차단.",
+      "rationale": "임계값·원칙은 변경 없음 · 구현·운영 시 해석 여지를 제거하여 결과 재현성 확보. 2단계 (screener) 착수 전 명세 확정."
     }
   ],
   "disclaimer": "본 정보는 투자 자문이 아니며, 투자 판단과 책임은 이용자 본인에게 있습니다."

@@ -19,6 +19,8 @@ interface Principle {
   supporting_condition?: string;
   sector_exception?: string;
   scope?: string;
+  loss_handling?: string;
+  buyback_definition?: string;
 }
 
 interface Revision {
@@ -34,6 +36,7 @@ interface Charter {
   enacted_at: string;
   title: string;
   summary: string;
+  units_convention?: string;
   principles: Principle[];
   sell_principle: { status: string; note: string };
   gate_policy: {
@@ -41,6 +44,7 @@ interface Charter {
     exempt_signal_types: string[];
     note: string;
   };
+  screener_verdict?: { values: string[]; note: string };
   universe: { market: string; note: string };
   data_pipeline: {
     dart_financials: { cadence: string; note: string };
@@ -86,22 +90,14 @@ export default function PrinciplesPage() {
   }, []);
 
   if (error) {
-    return (
-      <div className="mx-auto max-w-4xl px-4 py-8">
-        <p className="text-sm text-red-600">⚠️ 헌장 로드 실패: {error}</p>
-      </div>
-    );
+    return <p className="text-sm text-red-600">⚠️ 헌장 로드 실패: {error}</p>;
   }
   if (!charter) {
-    return (
-      <div className="mx-auto max-w-4xl px-4 py-8">
-        <p className="text-sm text-muted-foreground">헌장 로드 중…</p>
-      </div>
-    );
+    return <p className="text-sm text-muted-foreground">헌장 로드 중…</p>;
   }
 
   return (
-    <div className="mx-auto max-w-4xl space-y-8 px-4 py-8">
+    <div className="space-y-8">
       <header className="space-y-2 border-b border-border pb-6">
         <div className="flex items-center gap-3">
           <h1 className="text-3xl font-bold">📜 {charter.title}</h1>
@@ -112,6 +108,11 @@ export default function PrinciplesPage() {
         <p className="text-sm text-muted-foreground">
           제정 {charter.enacted_at} · {charter.summary}
         </p>
+        {charter.units_convention && (
+          <p className="text-xs text-muted-foreground">
+            <strong>단위 규약:</strong> {charter.units_convention}
+          </p>
+        )}
       </header>
 
       <section className="space-y-4">
@@ -145,6 +146,16 @@ export default function PrinciplesPage() {
               {p.sector_exception && (
                 <p className="text-xs text-amber-600 dark:text-amber-400">
                   <strong>업종 예외:</strong> {p.sector_exception}
+                </p>
+              )}
+              {p.buyback_definition && (
+                <p className="text-xs text-muted-foreground">
+                  <strong>자기주식 취득액 정의:</strong> {p.buyback_definition}
+                </p>
+              )}
+              {p.loss_handling && (
+                <p className="text-xs text-rose-600 dark:text-rose-400">
+                  <strong>적자 처리:</strong> {p.loss_handling}
                 </p>
               )}
               {p.scope && (
@@ -192,6 +203,25 @@ export default function PrinciplesPage() {
           <p className="text-xs text-muted-foreground">{charter.gate_policy.note}</p>
         </div>
       </section>
+
+      {charter.screener_verdict && (
+        <section className="space-y-2 rounded-lg border border-border bg-card p-4">
+          <h2 className="text-lg font-semibold">🧪 스크리너 판정 3값</h2>
+          <div className="flex flex-wrap gap-2">
+            {charter.screener_verdict.values.map((v) => (
+              <code
+                key={v}
+                className="rounded bg-muted px-2 py-0.5 text-xs font-semibold"
+              >
+                {v}
+              </code>
+            ))}
+          </div>
+          <p className="text-xs text-muted-foreground">
+            {charter.screener_verdict.note}
+          </p>
+        </section>
+      )}
 
       <section className="space-y-3 rounded-lg border border-border bg-card p-4">
         <h2 className="text-lg font-semibold">📊 대상 종목 & 데이터 파이프라인</h2>
