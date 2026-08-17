@@ -1,9 +1,9 @@
 {
-  "version": "1.0.1",
+  "version": "1.0.2",
   "enacted_at": "2026-08-17",
   "title": "저평가 우량주 투자원칙",
   "summary": "정량 기준 5원칙 · 트레일링 PER, 주주환원율, 배당 지속성, 재무 건전성, 분산 규칙. 코드·문서에 그대로 사용 · 임의로 완화하지 않음.",
-  "units_convention": "모든 비율 threshold 는 소수 표현. 예: 0.40 = 40% · 2.0 = 200%. 스크리너 계산부·게이트도 동일 규약 준수.",
+  "units_convention": "모든 비율 threshold 는 소수 표현. 예: 0.40 = 40% · 2.0 = 200%. 스크리너 계산부·게이트도 동일 규약 준수. 현금흐름표상 자기주식 취득액은 유출(음수)을 절대값으로 변환하여 저장 (v1.0.2).",
   "principles": [
     {
       "id": 1,
@@ -79,8 +79,8 @@
   },
   "data_pipeline": {
     "dart_financials": {
-      "cadence": "quarterly + on-disclosure",
-      "note": "분기 1회 수집 + 신규 공시 감지 시 갱신 · DART API 호출 최소화 · rate limit 준수 · 실패 종목 재시도 큐 · 캐시 테이블에 수집 시각·출처 공시번호 기록"
+      "cadence": "weekly_detect (일요일 21:00 KST)",
+      "note": "주 1회 감지 배치 · 각 종목의 최신 공시 분기 vs 캐시 보유 분기 비교 → 미수집 분기만 DART 호출. 공시 일정 (분기보고서 45일, 사업보고서 90일) 에 자연 동기화 · on-disclosure 요건 충족. rate limit + 재시도 큐 + 캐시에 수집 시각·공시번호 기록 (v1.0.2)"
     },
     "daily_recompute": {
       "cadence": "매일 23:00 KST",
@@ -112,6 +112,13 @@
       "changed_by": "사용자 (명세 보완 · 원칙 변경 아님)",
       "summary": "명세 보완 4건 · (1) units_convention 명시 (2) 원칙 1·2 적자 처리 규칙 추가 · 지배주주순이익 ≤ 0 자동 fail (3) 원칙 2 자기주식 취득액 정의 확정 · 현금흐름표 단일 사용 · 이중계상 금지 (4) manual_overrides 변경 시 revision_history 기록 규칙 명시. 스크리너 판정 3값 (PASS/FAIL/INSUFFICIENT_DATA) 명시 · INSUFFICIENT_DATA 도 게이트 차단.",
       "rationale": "임계값·원칙은 변경 없음 · 구현·운영 시 해석 여지를 제거하여 결과 재현성 확보. 2단계 (screener) 착수 전 명세 확정."
+    },
+    {
+      "version": "1.0.2",
+      "enacted_at": "2026-08-17",
+      "changed_by": "사용자 (2단계 구현 반영 · 원칙 변경 아님)",
+      "summary": "구현 반영 3건 · (1) DART 배치 → 분기 첫 근무일 방식 폐기 · 주 1회 감지 배치 (일요일 21:00) 로 변경 · 미수집 분기만 호출 (2) buyback_cashflow 부호 규약 · 유출(음수) 절대값 저장 · units_convention 반영 (3) 배당 이력 5년 미만 (신규상장 등) 은 INSUFFICIENT_DATA 아닌 FAIL · reasons_json 에 'history_short' 사유 기록 · 결측과 이력짧음 구분.",
+      "rationale": "임계값·원칙 변경 없음 · 구현·운영 관례 명문화. TTM 누적 분해·산업분류·reasons_json 스키마는 코드로 명세."
     }
   ],
   "disclaimer": "본 정보는 투자 자문이 아니며, 투자 판단과 책임은 이용자 본인에게 있습니다."

@@ -151,6 +151,11 @@ async def lifespan(app: FastAPI):
     from backend.discovery.serenity.scheduler import register_serenity_jobs
     register_serenity_jobs(scheduler)
 
+    # Principles v1.0.2 크론 (2026-08-17)
+    # weekly_detect (Sun 21:00 KST · DART 감지) + daily_recompute (23:00 · 캐시+시세)
+    from backend.principles.scheduler import register_principles_jobs
+    register_principles_jobs(scheduler)
+
     # Rulebook · Blue-Chip 5단계 스크리너 (Phase E+ · 2026-08-02)
     # 매일 22:30 KST · Powderkeg 22:00 이후 · 존마 강의 원칙 1
     if _os.environ.get("RULEBOOK_BLUECHIP_ENABLED", "true").lower() in {"1", "true", "yes", "on"}:

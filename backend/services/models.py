@@ -1669,3 +1669,128 @@ class SerenityTickerPrice(Base):
     avg_dollar_volume_20d: Mapped[Optional[float]]                   # USD · Close × Volume 20일 평균
     fetched_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
 
+
+
+# ─────────────────────────────────────────────────────────────────
+# Principles v1.0.2 (2026-08-17) — 저평가 우량주 5원칙 스크리너
+#   설계: backend/principles/charter.json
+# ─────────────────────────────────────────────────────────────────
+
+
+class PrinciplesFinancialCache(Base):
+    """DART 재무 캐시 (분기별) · 감지 배치가 미수집 분기만 upsert.
+
+    복합 PK (ticker, fiscal_year, fiscal_quarter).
+    fiscal_quarter: 1=Q1, 2=Q2, 3=Q3, 4=Q4(사업보고서).
+    누적값 저장 (DART 원본) · Q단독 값은 조회 시점에 재계산 (Q4 = 사업보고서 − 3Q 누적).
+    """
+
+    __tablename__ = "principles_financial_cache"
+
+    ticker: Mapped[str] = mapped_column(String(10), primary_key=True)
+    fiscal_year: Mapped[int] = mapped_column(primary_key=True)
+    fiscal_quarter: Mapped[int] = mapped_column(primary_key=True)  # 1|2|3|4
+
+    corp_code: Mapped[Optional[str]] = mapped_column(String(10))
+
+    # 누적값 (DART 원본 · 손익계산서)
+    revenue_cum: Mapped[Optional[float]]
+    operating_income_cum: Mapped[Optional[float]]
+    net_income_owner_cum: Mapped[Optional[float]]  # 지배주주순이익
+    interest_expense_cum: Mapped[Optional[float]]  # 이자보상배율 분모
+
+    # 재무상태표 (분기말 스냅샷)
+    total_assets: Mapped[Optional[float]]
+    total_liabilities: Mapped[Optional[float]]
+    total_equity: Mapped[Optional[float]]
+
+    # 현금흐름표 (누적 · 자기주식 취득 절대값 저장 · v1.0.2)
+    buyback_cashflow_cum: Mapped[Optional[float]]
+
+    # 배당 (사업보고서 · Q4 만 유효)
+    dividend_per_share: Mapped[Optional[float]]
+    dividend_total: Mapped[Optional[float]]
+
+    # 메타
+    disclosure_no: Mapped[Optional[str]] = mapped_column(String(20))  # rcept_no
+    disclosure_date: Mapped[Optional[str]] = mapped_column(String(10))  # YYYY-MM-DD
+    fetched_at: Mapped[datetime] = mapped_column(
+        DateTime, server_default=func.now(), onupdate=func.now()
+    )
+
+    __table_args__ = (
+        Index("ix_principles_fincache_ticker_year", "ticker", "fiscal_year"),
+    )
+
+
+class PrinciplesDartRetryQueue(Base):
+    """DART 호출 실패 재시도 큐 · rate limit / 5xx / parse fail 대응."""
+
+    __tablename__ = "principles_dart_retry_queue"
+
+    ticker: Mapped[str] = mapped_column(String(10), primary_key=True)
+    fiscal_year: Mapped[int] = mapped_column(primary_key=True)
+    fiscal_quarter: Mapped[int] = mapped_column(primary_key=True)
+    attempt: Mapped[int] = mapped_column(default=0)
+    last_error: Mapped[Optional[str]] = mapped_column(String(300))
+    retry_after: Mapped[Optional[datetime]] = mapped_column(DateTime)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime, server_default=func.now(), onupdate=func.now()
+    )
+
+
+class PrinciplesRun(Base):
+    """일일 재계산 배치 헤더 · id (auto) + 통계."""
+
+    __tablename__ = "principles_runs"
+
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    started_at: Mapped[datetime] = mapped_column(
+        DateTime, server_default=func.now(), index=True
+    )
+    finished_at: Mapped[Optional[datetime]] = mapped_column(DateTime)
+    trigger: Mapped[str] = mapped_column(String(20), default="cron")
+    charter_version: Mapped[Optional[str]] = mapped_column(String(20))
+
+    universe_size: Mapped[int] = mapped_column(default=0)
+    pass_count: Mapped[int] = mapped_column(default=0)
+    fail_count: Mapped[int] = mapped_column(default=0)
+    insufficient_count: Mapped[int] = mapped_column(default=0)
+
+    dart_call_count: Mapped[int] = mapped_column(default=0)
+    elapsed_sec: Mapped[Optional[float]]
+
+
+class PrinciplesResult(Base):
+    """배치별 종목 판정 · 5원칙 지표 + reasons_json (5원칙 전체 근거)."""
+
+    __tablename__ = "principles_results"
+
+    run_id: Mapped[int] = mapped_column(primary_key=True)
+    ticker: Mapped[str] = mapped_column(String(10), primary_key=True)
+    name: Mapped[Optional[str]] = mapped_column(String(200))
+    verdict: Mapped[str] = mapped_column(String(20))  # PASS | FAIL | INSUFFICIENT_DATA
+
+    # 산업 분류 (v1.0.2 · 자동감지+override 최종값)
+    industry_code: Mapped[Optional[str]] = mapped_column(String(20))
+    is_financial_sector: Mapped[bool] = mapped_column(Boolean, default=False)
+
+    # 5원칙 지표
+    per_ttm: Mapped[Optional[float]]
+    per_operating: Mapped[Optional[float]]
+    payout_ratio_3y_avg: Mapped[Optional[float]]
+    dividend_years: Mapped[Optional[int]]        # 최근 연속 배당 지급 년수
+    dividend_cut: Mapped[Optional[bool]] = mapped_column(Boolean)  # 기간 중 감배 여부
+    debt_ratio: Mapped[Optional[float]]
+    interest_coverage: Mapped[Optional[float]]
+
+    # 근거 (5원칙 전체 · v1.0.2 reasons_json 개명)
+    reasons_json: Mapped[Optional[str]] = mapped_column(Text)
+    missing_fields_json: Mapped[Optional[str]] = mapped_column(Text)  # INSUFFICIENT_DATA 결측 항목
+
+    created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
+
+    __table_args__ = (
+        Index("ix_principles_result_run_verdict", "run_id", "verdict"),
+        Index("ix_principles_result_ticker_time", "ticker", "created_at"),
+    )

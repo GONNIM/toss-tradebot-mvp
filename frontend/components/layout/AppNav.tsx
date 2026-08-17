@@ -20,6 +20,7 @@ const NAV_L1 = [
 
 const NAV_L2_DEFAULT = [
   { href: "/principles", label: "📜 Principles" },
+  { href: "/principles/screener", label: "🧪 Screener" },
   { href: "/rulebook", label: "📏 Rulebook" },
   { href: "/powderkeg", label: "🧨 Powderkeg" },
   { href: "/activist-radar", label: "🐺 Activist" },
