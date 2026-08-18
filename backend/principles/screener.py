@@ -66,6 +66,8 @@ class ScreenerInput:
     interest_expense_ttm: Optional[float]
     # 산업
     is_financial_sector: bool
+    # 2026-08-18 신설 · TTM sanity check 참조 (사업보고서 연간 지배주주순이익)
+    latest_annual_net_income_owner: Optional[float] = None
 
 
 def screen(inp: ScreenerInput) -> ScreenerVerdict:
@@ -81,6 +83,35 @@ def screen(inp: ScreenerInput) -> ScreenerVerdict:
     reasons: list[PrincipleReason] = []
     missing: list[str] = []
     result = ScreenerVerdict(verdict="INSUFFICIENT_DATA", reasons=reasons, missing_fields=missing)
+
+    # ─── TTM sanity check (v1.0.2 · 2026-08-18 파싱 오매칭 재발 방지) ────
+    # TTM 지배주주순이익 vs 최근 사업보고서 연간값 · 괴리 ±100% 초과 시 INSUFFICIENT_DATA
+    # (4개 분기 합 vs 연간 · 정상이면 근사 · 대격차 = 파싱 오염 신호)
+    if (
+        inp.net_income_owner_ttm is not None
+        and inp.latest_annual_net_income_owner is not None
+        and inp.latest_annual_net_income_owner != 0
+    ):
+        ratio = inp.net_income_owner_ttm / inp.latest_annual_net_income_owner
+        # 부호 다르거나 배수가 이상하면 sanity fail
+        if abs(ratio) > 2.0 or abs(ratio) < 0.5:
+            reasons.append(PrincipleReason(
+                code="ttm_sanity",
+                status="insufficient",
+                value={
+                    "ttm": inp.net_income_owner_ttm,
+                    "latest_annual": inp.latest_annual_net_income_owner,
+                    "ratio": round(ratio, 3),
+                },
+                note=(
+                    f"ttm_sanity_fail · TTM {inp.net_income_owner_ttm:.3e} vs "
+                    f"연간 {inp.latest_annual_net_income_owner:.3e} · "
+                    f"비율 {ratio:.2f} (±100% 초과 · 파싱 오염 의심)"
+                ),
+            ))
+            missing.append("ttm_sanity")
+            result.verdict = "INSUFFICIENT_DATA"
+            return result
 
     # ─── 원칙 1: PER (트레일링) ─────────────────────────────
     per_ttm_max = float(get_threshold("per", "per_ttm_max"))

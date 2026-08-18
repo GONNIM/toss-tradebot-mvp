@@ -178,3 +178,42 @@ def test_diversification_always_skip_in_screener():
     result = screen(_base_input())
     r = next(r for r in result.reasons if r.code == "diversification")
     assert r.status == "skip"
+
+
+# ─── TTM sanity check (v1.0.2 · 2026-08-18 파싱 오매칭 재발 방지) ────
+
+
+def test_ttm_sanity_fail_ratio_over_2x():
+    """TTM 순이익이 사업보고서 연간의 10배 → INSUFFICIENT_DATA · ttm_sanity_fail."""
+    result = screen(_base_input(
+        net_income_owner_ttm=400_000e9,   # 자본 잘못 매핑 케이스 (400조)
+        latest_annual_net_income_owner=33_000e9,  # 실제 연간 33조 · 비율 12.1
+    ))
+    assert result.verdict == "INSUFFICIENT_DATA"
+    ttm_sanity = next(r for r in result.reasons if r.code == "ttm_sanity")
+    assert ttm_sanity.status == "insufficient"
+    assert "ttm_sanity_fail" in ttm_sanity.note
+
+
+def test_ttm_sanity_fail_ratio_under_half():
+    """TTM 이 연간의 30% (파싱 결함으로 값 누락) → INSUFFICIENT_DATA."""
+    result = screen(_base_input(
+        net_income_owner_ttm=10_000e9,
+        latest_annual_net_income_owner=80_000e9,  # 비율 0.125
+    ))
+    assert result.verdict == "INSUFFICIENT_DATA"
+
+
+def test_ttm_sanity_pass_within_tolerance():
+    """TTM 이 연간의 ±100% 이내 · sanity check 통과 · 정상 판정 진행."""
+    result = screen(_base_input(
+        net_income_owner_ttm=80_000e9,
+        latest_annual_net_income_owner=80_000e9,  # 비율 1.0
+    ))
+    assert result.verdict == "PASS"
+
+
+def test_ttm_sanity_skipped_when_latest_annual_missing():
+    """latest_annual 없으면 sanity check skip · 기존 로직으로 판정."""
+    result = screen(_base_input(latest_annual_net_income_owner=None))
+    assert result.verdict == "PASS"

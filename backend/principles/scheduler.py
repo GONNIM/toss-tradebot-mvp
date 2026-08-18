@@ -98,38 +98,41 @@ async def get_corp_code_map() -> dict[str, str]:
 # ─── 감지 배치 · 미수집 분기만 DART ─────────────────────────
 
 def _quarters_needed(today: date) -> list[tuple[int, int]]:
-    """오늘 기준 · 수집 대상 분기 (fiscal_year, fiscal_quarter) 리스트 · 최신 8분기.
+    """오늘 기준 · 수집 대상 분기 (fiscal_year, fiscal_quarter) 리스트.
 
-    공시 일정:
-      - Q1  (3월말 결산분) : 5/15까지 (45일)
-      - Q2  (반기)         : 8/14까지 (45일)
-      - Q3  (3분기)        : 11/14까지 (45일)
-      - Q4  (사업보고서)   : 익년 3/31까지 (90일)
-    보수적으로 · today 기준 최근 8개 분기 시도 (미공시 분기는 DART 013 반환 → retry_queue)
+    포함 범위 (2026-08-18 확장):
+      - 최근 8개 분기 (TTM 계산 · 최근 2년 Q1~Q4)
+      - 최근 5개 회계연도 사업보고서 (P3 배당 지속성 5년 · Q4=11011)
     """
     quarters: list[tuple[int, int]] = []
     y, m = today.year, today.month
-    # 현재 진행 중인 회계연도 · 진행 분기
+    # (1) 최근 8분기 · TTM 용
     for i in range(8):
         q = ((m - 1) // 3)  # 0-indexed
-        # 현재 진행 중 분기는 아직 공시 안 됨 · 직전 분기부터
         if i == 0:
-            q -= 1
+            q -= 1  # 현재 진행 분기는 아직 공시 안 됨
         else:
             q -= 1
         yy = y
         while q < 0:
             q += 4
             yy -= 1
-        quarters.append((yy, q + 1))  # 1-indexed (1~4)
+        quarters.append((yy, q + 1))
         m -= 3
         while m <= 0:
             m += 12
             y -= 1
-    # dedup + 최신순
+
+    # (2) P3 · 최근 5개 회계연도 Q4 (사업보고서 · DPS 5년 필요)
+    latest_year = today.year - 1 if today.month < 4 else today.year - 1
+    # 사업보고서는 익년 3/31까지 공시 · 오늘 기준 안전하게 최근 5년 (직전 회계연도부터)
+    for i in range(1, 6):
+        quarters.append((today.year - i, 4))
+
+    # dedup · 최신순 (year desc → quarter desc)
     seen: set[tuple[int, int]] = set()
     out: list[tuple[int, int]] = []
-    for q in quarters:
+    for q in sorted(quarters, reverse=True):
         if q not in seen:
             seen.add(q)
             out.append(q)
@@ -469,6 +472,13 @@ def _build_screener_input(
     total_liab = latest.total_liabilities if latest else None
     total_eq = latest.total_equity if latest else None
 
+    # v1.0.2 · TTM sanity check 참조값 (최근 사업보고서 연간 순이익)
+    latest_annual_ni = None
+    if years_desc:
+        r_fy = by_yq.get((years_desc[0], 4))
+        if r_fy:
+            latest_annual_ni = r_fy.net_income_owner_cum
+
     return ScreenerInput(
         ticker=ticker,
         name=name,
@@ -483,6 +493,7 @@ def _build_screener_input(
         total_equity=total_eq,
         interest_expense_ttm=ie_ttm,
         is_financial_sector=is_financial_sector,
+        latest_annual_net_income_owner=latest_annual_ni,
     )
 
 

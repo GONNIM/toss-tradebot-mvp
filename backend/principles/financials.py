@@ -64,7 +64,13 @@ _MAPPING_ID: dict[str, str] = {
 _MAPPING_NM_KEYWORDS: dict[str, tuple[str, ...]] = {
     "revenue": ("매출액", "영업수익", "수익(매출액)"),
     "operating_income": ("영업이익",),
-    "net_income_owner": ("지배기업의 소유주에게 귀속되는 당기순이익", "지배기업 소유주"),
+    # 2026-08-18 fix (삼성전자 자본총계 오매칭 사고):
+    # 기존 "지배기업 소유주" keyword 는 자본 계정 ("지배기업의 소유주에게 귀속되는 지분/자본") 과 substring 매칭 오염.
+    # → "당기순이익" 명시가 포함된 정확 문구만 허용.
+    "net_income_owner": (
+        "지배기업의 소유주에게 귀속되는 당기순이익",
+        "지배기업 소유주지분 당기순이익",
+    ),
     "net_income": ("당기순이익",),
     "interest_expense": ("이자비용", "금융비용"),
     "total_assets": ("자산총계",),

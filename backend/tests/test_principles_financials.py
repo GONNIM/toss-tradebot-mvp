@@ -172,3 +172,32 @@ def test_parse_by_account_nm_fallback():
     f = parse_principles_financials(items)
     assert f.total_liabilities == 3000e9
     assert f.total_equity == 2500e9
+
+
+# ─── 2026-08-18 fix · 지배주주 vs 전체 · 자본 계정 오매칭 방지 ─────
+
+
+def test_parse_rejects_equity_account_for_net_income_owner():
+    """자본 계정 ('지배기업의 소유주에게 귀속되는 지분/자본') 이 net_income_owner 로 오매칭 안됨.
+
+    사고 (2026-08-18 · 삼성전자 관측): 기존 keyword '지배기업 소유주' 가 substring 매칭이라
+    자본 계정도 잡음. keyword 를 '당기순이익' 명시 문구로 엄격화 (v1.0.2 fix).
+    """
+    items = [
+        _mk("", "지배기업의 소유주에게 귀속되는 지분", 400e12, "BS"),  # 자본 400조
+        _mk("", "당기순이익", 33e12, "IS"),  # 실제 순이익 33조
+    ]
+    f = parse_principles_financials(items)
+    # 자본 계정은 net_income_owner 로 매치되면 안 됨
+    assert f.net_income_owner is None
+    # 총 당기순이익 은 fallback net_income 로 매치
+    assert f.net_income == 33e12
+
+
+def test_parse_accepts_correct_owner_net_income():
+    """정확 문구 '지배기업의 소유주에게 귀속되는 당기순이익' 은 net_income_owner 로 매치."""
+    items = [
+        _mk("", "지배기업의 소유주에게 귀속되는 당기순이익", 33e12, "IS"),
+    ]
+    f = parse_principles_financials(items)
+    assert f.net_income_owner == 33e12
