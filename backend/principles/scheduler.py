@@ -291,9 +291,27 @@ async def _upsert_cache(
 
 
 async def daily_recompute() -> dict:
-    """캐시된 재무 + FDR 시세 → 5원칙 재계산 · PrinciplesRun/Result upsert."""
+    """캐시된 재무 + FDR 시세 → 5원칙 재계산 · PrinciplesRun/Result upsert.
+
+    가드 (2026-08-18 신설 · reset 직후 빈 캐시로 돌지 않도록):
+      principles_financial_cache 가 완전히 비어 있으면 run 생성 없이 skip.
+      "cache_empty_skip" 반환 · 로그 · 향후 유사 상황 재발 방지.
+    """
     started = datetime.now()
     charter = load_charter()
+
+    # 가드 · 캐시 empty check
+    async with get_session() as session:
+        cache_count = (
+            await session.execute(select(PrinciplesFinancialCache).limit(1))
+        ).scalars().first()
+    if cache_count is None:
+        logger.warning(
+            "[principles.daily_recompute] cache_empty_skip · "
+            "principles_financial_cache 비어있음 · run 생성 없이 종료"
+        )
+        return {"skipped": True, "reason": "cache_empty_skip"}
+
     df = await get_kospi_universe()
 
     stats = {"universe": 0, "pass": 0, "fail": 0, "insufficient": 0}
