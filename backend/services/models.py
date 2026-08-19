@@ -1812,3 +1812,19 @@ class PrinciplesIndustryCode(Base):
     fetched_at: Mapped[datetime] = mapped_column(
         DateTime, server_default=func.now(), onupdate=func.now()
     )
+
+
+class PrinciplesDividendRaw(Base):
+    """DART alotMatter 원시 응답 · 재호출 방지 (2026-08-19 · v1.0.5 이슈 C).
+
+    parser_version 부채 대비 · 향후 필드 추가 시 재호출 없이 원시 응답 재파싱.
+    """
+
+    __tablename__ = "principles_dividend_raw"
+
+    corp_code: Mapped[str] = mapped_column(String(10), primary_key=True)
+    bsns_year: Mapped[int] = mapped_column(primary_key=True)
+    raw_json: Mapped[Optional[str]] = mapped_column(Text)  # alotMatter list JSON
+    fetched_at: Mapped[datetime] = mapped_column(
+        DateTime, server_default=func.now(), onupdate=func.now()
+    )

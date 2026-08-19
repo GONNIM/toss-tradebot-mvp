@@ -151,14 +151,19 @@ def screen(inp: ScreenerInput) -> ScreenerVerdict:
     reasons.append(r1)
 
     # ─── 원칙 2: 주주환원율 3년 평균 ────────────────────────
+    # v1.0.5 (2026-08-19 · 이슈 C):
+    #   - 배당총액: DART alotMatter 공시 총액 (우선주 포함)
+    #   - buyback 결측 = 0 처리 (보수 방향 · "buyback_missing_as_zero" 기록)
     payout_min = float(get_threshold("shareholder_return", "payout_ratio_3y_avg_min"))
     r2 = PrincipleReason(code="shareholder_return", status="insufficient")
+    buyback_missing_count = 0
     if any(v is None for v in inp.net_income_owner_3y) or len(inp.net_income_owner_3y) < 3:
         missing.append("net_income_owner_3y")
         r2.note = "지배주주순이익 3년 결측"
-    elif any(v is None for v in inp.dividend_total_3y) or any(v is None for v in inp.buyback_cashflow_3y):
-        missing.append("shareholder_return_3y")
-        r2.note = "배당·자기주식 3년 결측"
+    elif any(v is None for v in inp.dividend_total_3y):
+        # 배당총액이 3년 중 하나라도 None → 결측 (0 은 확정 무배당 · 통과)
+        missing.append("dividend_total_3y")
+        r2.note = "배당총액 3년 결측"
     else:
         ratios: list[float] = []
         loss_year = False
@@ -168,7 +173,13 @@ def screen(inp: ScreenerInput) -> ScreenerVerdict:
             if ni is None or ni <= 0:
                 loss_year = True
                 break
-            total_return = (div or 0) + (buy or 0)  # buyback 은 caller 가 절대값 저장
+            # v1.0.5 · buyback 결측 = 0 처리 (보수 방향 · payout 낮게 산출)
+            if buy is None:
+                buyback_missing_count += 1
+                buy_val = 0.0
+            else:
+                buy_val = buy
+            total_return = (div or 0) + buy_val
             ratios.append(total_return / ni)
         if loss_year:
             # v1.0.1 loss_handling · 3년 중 1개년이라도 fail 이면 원칙 fail
@@ -177,14 +188,21 @@ def screen(inp: ScreenerInput) -> ScreenerVerdict:
         else:
             avg = sum(ratios) / len(ratios)
             result.payout_ratio_3y_avg = avg
-            r2.value = {"ratios": [round(x, 4) for x in ratios], "avg": round(avg, 4)}
+            r2.value = {
+                "ratios": [round(x, 4) for x in ratios],
+                "avg": round(avg, 4),
+                "buyback_missing_years": buyback_missing_count,
+            }
             r2.threshold = {"payout_ratio_3y_avg_min": payout_min}
+            buyback_note = (
+                f" · buyback_missing_as_zero: {buyback_missing_count}년" if buyback_missing_count else ""
+            )
             if avg >= payout_min:
                 r2.status = "pass"
-                r2.note = f"3년 평균 {avg * 100:.1f}% ≥ {payout_min * 100:.0f}%"
+                r2.note = f"3년 평균 {avg * 100:.1f}% ≥ {payout_min * 100:.0f}%{buyback_note}"
             else:
                 r2.status = "fail"
-                r2.note = f"3년 평균 {avg * 100:.1f}% < {payout_min * 100:.0f}%"
+                r2.note = f"3년 평균 {avg * 100:.1f}% < {payout_min * 100:.0f}%{buyback_note}"
     reasons.append(r2)
 
     # ─── 원칙 3: 배당 지속성 5년 · 감배 없음 ───────────────

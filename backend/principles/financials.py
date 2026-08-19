@@ -180,6 +180,25 @@ class DividendMatter:
     corp_code: str
     bsns_year: int
     dividend_per_share_common: Optional[float]  # 주당 현금배당금 (원) · 보통주
+    # v1.0.5 (2026-08-19 · 이슈 C) · 현금배당금총액 (원 · 우선주 포함 · 공시 총액)
+    dividend_total_krw: Optional[float] = None
+    # 원시 응답 raw list (재파싱 방지 · parser_version 부채)
+    raw_rows: Optional[list] = None
+
+
+def _parse_dart_number(v: Optional[str]) -> Optional[float]:
+    """DART 문자열 숫자 파싱 · '1,234' → 1234.0 · '-' → 0.0 (확정 무배당) · None/'' → None."""
+    if v is None:
+        return None
+    s = str(v).strip().replace(",", "")
+    if s in ("", "None"):
+        return None
+    if s == "-":
+        return 0.0  # 확정 무배당 (None 과 구분)
+    try:
+        return float(s)
+    except ValueError:
+        return None
 
 
 async def fetch_dividend_matter(
@@ -189,7 +208,13 @@ async def fetch_dividend_matter(
     """DART 배당에 관한 사항 (alotMatter.json · 사업보고서만 · reprt_code=11011).
 
     Docs: https://opendart.fss.or.kr/guide/detail.do?apiGrpCd=DS002&apiId=2019005
-    응답 필드 se (구분) 중 "주당 현금배당금(원)" · stock_knd = "보통주" 값 사용.
+    응답 필드:
+      - se (구분): "주당 현금배당금(원)" / "현금배당금총액(백만원)" 등
+      - stock_knd: "보통주" / "우선주" (또는 공백)
+    v1.0.5 · 이슈 C:
+      - dividend_per_share_common: 보통주 · 주당 현금배당금
+      - dividend_total_krw: 공시 총액 (백만원 단위 → 원 환산 · 우선주 포함)
+      - raw_rows: 원시 응답 전체 (재호출 방지 · 향후 필드 추가 대응)
     """
     if not corp_code:
         return None
@@ -219,22 +244,34 @@ async def fetch_dividend_matter(
         return None
 
     dps_common: Optional[float] = None
-    for row in data.get("list", []):
+    total_millions: Optional[float] = None  # 백만원 단위 원본
+    rows = data.get("list", []) or []
+
+    for row in rows:
         se = (row.get("se") or "").strip()
         stock_knd = (row.get("stock_knd") or "").strip()
-        # 보통주 주당 현금배당금
+        raw_thstrm = row.get("thstrm")
+
+        # (1) 보통주 · 주당 현금배당금 (원)
         if "주당 현금배당금" in se and stock_knd in ("보통주", ""):
-            raw = row.get("thstrm") or "0"
-            try:
-                v = float(str(raw).replace(",", "").strip() or 0)
-                if v > 0:
-                    dps_common = v
-                    break
-            except ValueError:
-                continue
+            v = _parse_dart_number(raw_thstrm)
+            if v is not None and v > 0 and dps_common is None:
+                dps_common = v
+
+        # (2) 현금배당금총액 (백만원) · v1.0.5 · 우선주 포함 공시 총액
+        # 주식배당(주) 행 혼입 금지 · "현금" 필수
+        if "현금배당금총액" in se:
+            v = _parse_dart_number(raw_thstrm)
+            if v is not None and total_millions is None:
+                total_millions = v
+
+    # 백만원 → 원 (v1.0.5 · units_convention · charter 명시)
+    dividend_total_krw = total_millions * 1_000_000 if total_millions is not None else None
 
     return DividendMatter(
         corp_code=corp_code,
         bsns_year=bsns_year,
         dividend_per_share_common=dps_common,
+        dividend_total_krw=dividend_total_krw,
+        raw_rows=rows,
     )
