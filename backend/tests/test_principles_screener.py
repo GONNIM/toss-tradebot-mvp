@@ -183,41 +183,115 @@ def test_diversification_always_skip_in_screener():
 # ─── TTM sanity check (v1.0.2 · 2026-08-18 파싱 오매칭 재발 방지) ────
 
 
-def test_ttm_sanity_fail_ratio_over_2x():
-    """v1.0.4 · sanity ±100% 원복 · TTM 이 연간의 2배 초과 → INSUFFICIENT."""
+def test_ttm_sanity_capital_pollution_suspected():
+    """v1.0.6-rev3 · 자본 오염 heuristic · capital_ratio > 0.80 → suspected."""
+    # 삼전 오염 시뮬레이션: TTM=440조, equity=400조 · ratio 1.1
     result = screen(_base_input(
-        net_income_owner_ttm=400_000e9,
-        latest_annual_net_income_owner=33_000e9,  # 비율 12.1 · fail
+        net_income_owner_ttm=440_000e9,
+        total_equity=400_000e9,
+        latest_annual_net_income_owner=33_000e9,
     ))
     assert result.verdict == "INSUFFICIENT_DATA"
-    ttm_sanity = next(r for r in result.reasons if r.code == "ttm_sanity")
-    assert ttm_sanity.status == "insufficient"
-    assert "ttm_sanity_fail" in ttm_sanity.note
+    r = next(r for r in result.reasons if r.code == "ttm_sanity")
+    assert "account_mismatch_suspected" in r.note
 
 
-def test_ttm_sanity_fail_ratio_under_half():
-    """v1.0.4 · TTM 이 연간의 절반 미만 → INSUFFICIENT."""
-    result = screen(_base_input(
-        net_income_owner_ttm=30_000e9,
-        latest_annual_net_income_owner=80_000e9,  # 비율 0.375 · fail
-    ))
-    assert result.verdict == "INSUFFICIENT_DATA"
-
-
-def test_ttm_sanity_fail_semiconductor_boom_case():
-    """v1.0.4 · 반도체 급증 (2.5배) 도 sanity 발동 · 사용자 판단으로만 완화 결정."""
+def test_ttm_sanity_semiconductor_boom_surge_verified():
+    """v1.0.6-rev3 · 실 실적 급증 (반도체) · Q YoY +100% → surge_verified 통과."""
+    # 삼전 실값 시뮬레이션: TTM 110조 vs 연간 44조 (ratio 2.5) · Q YoY +1300% (초호황)
     result = screen(_base_input(
         net_income_owner_ttm=110_000e9,
-        latest_annual_net_income_owner=44_000e9,  # 비율 2.5 · fail (v1.0.4 원복)
+        latest_annual_net_income_owner=44_000e9,
+        total_equity=400_000e9,  # capital_ratio 0.275 (통과)
+        q_yoy=13.46,             # 삼전 2026 반기 71.27 / 2025 반기 4.93 - 1
+        q_yoy_base_current=71_270e9,
+        q_yoy_base_prev=4_930e9,
+    ))
+    r = next(r for r in result.reasons if r.code == "ttm_sanity")
+    assert r.status == "pass"
+    assert "ttm_surge_verified" in r.note
+    assert "1346%" in r.note
+
+
+def test_ttm_sanity_decline_verified():
+    """v1.0.6-rev3 · 실 실적 급감 (Q YoY < -33%) · decline_verified 통과."""
+    result = screen(_base_input(
+        net_income_owner_ttm=30_000e9,
+        latest_annual_net_income_owner=80_000e9,  # ratio 0.375
+        total_equity=400_000e9,
+        q_yoy=-0.50,
+        q_yoy_base_current=15_000e9,
+        q_yoy_base_prev=30_000e9,
+    ))
+    r = next(r for r in result.reasons if r.code == "ttm_sanity")
+    assert r.status == "pass"
+    assert "ttm_decline_verified" in r.note
+
+
+def test_ttm_sanity_yoy_base_missing():
+    """v1.0.6-rev3 · 전년 동기 행 부재 → yoy_base_missing · INSUFFICIENT."""
+    result = screen(_base_input(
+        net_income_owner_ttm=110_000e9,
+        latest_annual_net_income_owner=44_000e9,
+        total_equity=400_000e9,
+        q_yoy=None,
+        q_yoy_fail_reason="yoy_base_missing",
     ))
     assert result.verdict == "INSUFFICIENT_DATA"
+    r = next(r for r in result.reasons if r.code == "ttm_sanity")
+    assert "yoy_base_missing" in r.note
+
+
+def test_ttm_sanity_yoy_base_invalid():
+    """v1.0.6-rev3 · 전년동기 절대값 < 0.10 × 당기동기 → yoy_base_invalid."""
+    result = screen(_base_input(
+        net_income_owner_ttm=110_000e9,
+        latest_annual_net_income_owner=44_000e9,
+        total_equity=400_000e9,
+        q_yoy=None,
+        q_yoy_fail_reason="yoy_base_invalid",
+        q_yoy_base_current=100_000e9,
+        q_yoy_base_prev=5_000e9,  # 5%
+    ))
+    assert result.verdict == "INSUFFICIENT_DATA"
+    r = next(r for r in result.reasons if r.code == "ttm_sanity")
+    assert "yoy_base_invalid" in r.note
+
+
+def test_ttm_sanity_equity_nonpositive_skip():
+    """v1.0.6-rev3 · 자본잠식 (equity <= 0) → skip · equity_nonpositive 기록."""
+    result = screen(_base_input(
+        total_equity=-10_000e9,  # 자본잠식
+    ))
+    r = next(r for r in result.reasons if r.code == "ttm_sanity")
+    assert r.status == "skip"
+    assert "equity_nonpositive" in r.note
+
+
+def test_ttm_sanity_account_mismatch_source_wrong():
+    """v1.0.6-rev3 · source_account 허용 아님 → account_mismatch · INSUFFICIENT."""
+    result = screen(_base_input(
+        net_income_source_account="ifrs-full_Equity",  # 자본 계정 · 잘못
+    ))
+    assert result.verdict == "INSUFFICIENT_DATA"
+    r = next(r for r in result.reasons if r.code == "ttm_sanity")
+    assert "account_mismatch" in r.note
+
+
+def test_ttm_sanity_account_mismatch_source_correct():
+    """v1.0.6-rev3 · source_account 허용 목록 매치 → pass · 후속 판정 진행."""
+    result = screen(_base_input(
+        net_income_source_account="ifrs-full_ProfitLossAttributableToOwnersOfParent",
+    ))
+    assert result.verdict == "PASS"  # 다른 원칙 모두 pass 시
 
 
 def test_ttm_sanity_pass_within_tolerance():
-    """v1.0.4 · TTM 이 연간과 근접 · sanity 통과."""
+    """TTM 이 연간과 근접 · sanity 통과."""
     result = screen(_base_input(
         net_income_owner_ttm=80_000e9,
         latest_annual_net_income_owner=80_000e9,  # 비율 1.0
+        total_equity=400_000e9,
     ))
     assert result.verdict == "PASS"
 

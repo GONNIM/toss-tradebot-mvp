@@ -264,6 +264,12 @@ async def _upsert_cache(
     ).scalar_one_or_none()
     # v1.0.2 · buyback 절대값 저장
     buy_abs = abs(parsed.buyback_cashflow) if parsed.buyback_cashflow else None
+    # v1.0.6-rev3 · 파서가 매칭한 source_account 저장 (계정 검증용)
+    source_account = None
+    if parsed.net_income_owner is not None:
+        source_account = parsed.matched.get("net_income_owner")
+    elif parsed.net_income is not None:
+        source_account = parsed.matched.get("net_income")
     fields = dict(
         corp_code=corp_code,
         revenue_cum=parsed.revenue,
@@ -276,6 +282,7 @@ async def _upsert_cache(
         buyback_cashflow_cum=buy_abs,
         dividend_per_share=dps,
         dividend_total=dtotal,
+        net_income_owner_source_account=source_account,
     )
     if existing is None:
         session.add(
@@ -512,13 +519,39 @@ def _build_screener_input(
     total_eq = latest.total_equity if latest else None
 
     # v1.0.2 · TTM sanity check 참조값 (최근 사업보고서 연간 순이익)
-    # v1.0.3 (2026-08-19): 최신 분기 (Q4 이후 · 예: 2026 Q1·Q2) 존재하는데
-    # TTM 이 최근 연간과 완전 일치하면 ttm_stale 로 판정
     latest_annual_ni = None
     if years_desc:
         r_fy = by_yq.get((years_desc[0], 4))
         if r_fy:
             latest_annual_ni = r_fy.net_income_owner_cum
+
+    # v1.0.6-rev3 · q_yoy 계산 (최신 분기 vs 전년 동기 누적) · 호출 0회
+    # 사용자 rev3 · yoy_base 사유 구분: missing (전년 행 부재) vs invalid (하한 미달)
+    q_yoy: Optional[float] = None
+    q_yoy_base_current: Optional[float] = None
+    q_yoy_base_prev: Optional[float] = None
+    q_yoy_fail_reason: Optional[str] = None
+    if by_yq:
+        latest_yq = max(by_yq.keys())
+        ly_year, ly_q = latest_yq
+        cur = by_yq.get(latest_yq)
+        prv = by_yq.get((ly_year - 1, ly_q))
+        if cur is None or cur.net_income_owner_cum is None:
+            q_yoy_fail_reason = "yoy_base_missing"  # 당기 자체 결측 (드묾)
+        elif prv is None or prv.net_income_owner_cum is None:
+            q_yoy_fail_reason = "yoy_base_missing"  # 전년 동기 행 부재
+        else:
+            q_yoy_base_current = cur.net_income_owner_cum
+            q_yoy_base_prev = prv.net_income_owner_cum
+            if abs(q_yoy_base_prev) < abs(q_yoy_base_current) * 0.10:
+                q_yoy_fail_reason = "yoy_base_invalid"  # 하한 미달 · 판정 불가
+            else:
+                q_yoy = (q_yoy_base_current - q_yoy_base_prev) / abs(q_yoy_base_prev)
+
+    # v1.0.6-rev3 · source_account (파서 이후 수집분만 존재)
+    source_account: Optional[str] = None
+    if latest and hasattr(latest, "net_income_owner_source_account"):
+        source_account = latest.net_income_owner_source_account
 
     return ScreenerInput(
         ticker=ticker,
@@ -535,6 +568,11 @@ def _build_screener_input(
         interest_expense_ttm=ie_ttm,
         is_financial_sector=is_financial_sector,
         latest_annual_net_income_owner=latest_annual_ni,
+        q_yoy=q_yoy,
+        q_yoy_base_current=q_yoy_base_current,
+        q_yoy_base_prev=q_yoy_base_prev,
+        q_yoy_fail_reason=q_yoy_fail_reason,
+        net_income_source_account=source_account,
     )
 
 

@@ -1,5 +1,5 @@
 {
-  "version": "1.0.5",
+  "version": "1.0.6",
   "enacted_at": "2026-08-17",
   "title": "저평가 우량주 투자원칙",
   "summary": "정량 기준 5원칙 · 트레일링 PER, 주주환원율, 배당 지속성, 재무 건전성, 분산 규칙. 코드·문서에 그대로 사용 · 임의로 완화하지 않음.",
@@ -142,6 +142,13 @@
       "changed_by": "사용자 (2단계 큐 · 이슈 B/C 정의 갱신 · 임계값 변경 없음)",
       "summary": "정의 갱신 3건 · (1) 이슈 B · KSIC induty_code 기반 금융업 판정 (KSIC 64/65/66) · manual_overrides 병행 · DART company.json 캐시 (2) 이슈 C · 배당총액은 alotMatter '현금배당금총액' 공시 총액 (우선주 포함) · 백만원→원 환산 units_convention 명시 · v1.0.2 의 '우선주 누락 한계' 폐기 (3) buyback 결측 = 0 처리 · buyback_missing_as_zero 기록.",
       "rationale": "임계값 (PER 10 · payout 40% · 부채 200% · 이자보상 2) 모두 변경 없음. 데이터 소스·파싱·결측 처리 규약 확정. 유니버스 거버넌스 및 tickers_json 스냅샷은 후속 항목에 반영."
+    },
+    {
+      "version": "1.0.6",
+      "enacted_at": "2026-08-19",
+      "changed_by": "사용자 (rev3 조건부 승인 · 완화 아닌 개선)",
+      "summary": "sanity check 재설계 (2단) · [1차] 계정 검증 (source_account whitelist · ifrs-full_ProfitLossAttributableToOwnersOfParent 등) + fallback heuristic (capital_ratio > 0.80 · 실 오염 케이스 삼전 1.11 감지 vs 초호황 하이닉스 ROE ~30% 통과 판별력) · [2차] YoY 검증 (TTM vs 연간 [0.5, 2.0] 초과 시 · 최신 분기 vs 전년 동기 누적 Q YoY 원값 확인 · surge > +50% / decline < -33% verified 통과 · yoy_base_invalid: |전년동기| < 0.10 × |당기동기| / yoy_base_missing: 전년 동기 행 부재) · 자본잠식 (equity <= 0) skip + equity_nonpositive 기록 · 임계값 [0.5, 2.0] 유지 · verified 통과는 실 실적 확진 후에만.",
+      "rationale": "v1.0.5 원복으로 137 종목 sanity_fail 대량 오탐 · 실 실적 급증 (반도체 초호황 · 삼전 Q1'26 47조 · DART 원본 검증 완료) 이 정탐 대상과 뒤섞임. 계정 검증으로 v1.0.1 자본 오염 직접 방어 · YoY 원값으로 실 급변동 verified. **절대 우회 금지**: sanity·게이트·임계값 완화 변경은 사용자 사전 승인 없이 커밋 금지 (v1.0.3 재발 방지 원칙 유지 · 이번 rev3 는 절차 준수하여 개정)."
     }
   ],
   "disclaimer": "본 정보는 투자 자문이 아니며, 투자 판단과 책임은 이용자 본인에게 있습니다."

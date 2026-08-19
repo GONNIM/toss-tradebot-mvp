@@ -1711,6 +1711,10 @@ class PrinciplesFinancialCache(Base):
     dividend_per_share: Mapped[Optional[float]]
     dividend_total: Mapped[Optional[float]]
 
+    # v1.0.6-rev3 (2026-08-19) · 파서 매칭한 account_id/nm 저장 (계정 검증)
+    # 이후 수집분부터만 채워짐 · 과거분은 heuristic (capital_ratio) fallback
+    net_income_owner_source_account: Mapped[Optional[str]] = mapped_column(String(100))
+
     # 메타
     disclosure_no: Mapped[Optional[str]] = mapped_column(String(20))  # rcept_no
     disclosure_date: Mapped[Optional[str]] = mapped_column(String(10))  # YYYY-MM-DD

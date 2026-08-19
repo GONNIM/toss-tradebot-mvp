@@ -68,6 +68,12 @@ class ScreenerInput:
     is_financial_sector: bool
     # 2026-08-18 신설 · TTM sanity check 참조 (사업보고서 연간 지배주주순이익)
     latest_annual_net_income_owner: Optional[float] = None
+    # v1.0.6-rev3 (2026-08-19) · sanity check 재설계 참조 필드
+    q_yoy: Optional[float] = None                    # 최신 분기 vs 전년 동기 누적 (감사 원값)
+    q_yoy_base_current: Optional[float] = None
+    q_yoy_base_prev: Optional[float] = None
+    q_yoy_fail_reason: Optional[str] = None          # yoy_base_missing / yoy_base_invalid
+    net_income_source_account: Optional[str] = None  # 파서 매칭 계정 (이후 수집분만)
 
 
 def screen(inp: ScreenerInput) -> ScreenerVerdict:
@@ -84,34 +90,104 @@ def screen(inp: ScreenerInput) -> ScreenerVerdict:
     missing: list[str] = []
     result = ScreenerVerdict(verdict="INSUFFICIENT_DATA", reasons=reasons, missing_fields=missing)
 
-    # ─── TTM sanity check (v1.0.4 · 2026-08-19 v1.0.3 완화 철회) ────────
-    # 사용자 지시 (2026-08-19): v1.0.3 완화 (4배) 는 정탐 발동을 오탐으로 오해한 오판.
-    # 향후 sanity·게이트·임계값 완화 변경은 사용자 사전 승인 없이 커밋 금지.
-    # 임계값 원복: TTM vs 최근 사업보고서 연간 · 비율 [1/2, 2] 이내 정상 · 초과 시 INSUFFICIENT
-    if (
-        inp.net_income_owner_ttm is not None
-        and inp.latest_annual_net_income_owner is not None
-        and inp.latest_annual_net_income_owner != 0
-    ):
-        ratio = inp.net_income_owner_ttm / inp.latest_annual_net_income_owner
-        if abs(ratio) > 2.0 or abs(ratio) < 0.5:
-            reasons.append(PrincipleReason(
-                code="ttm_sanity",
-                status="insufficient",
-                value={
-                    "ttm": inp.net_income_owner_ttm,
-                    "latest_annual": inp.latest_annual_net_income_owner,
-                    "ratio": round(ratio, 3),
-                },
-                note=(
-                    f"ttm_sanity_fail · TTM {inp.net_income_owner_ttm:.3e} vs "
-                    f"연간 {inp.latest_annual_net_income_owner:.3e} · "
-                    f"비율 {ratio:.2f} (±100% 초과 · 파싱 오염 or 실적 급변동)"
-                ),
-            ))
-            missing.append("ttm_sanity")
-            result.verdict = "INSUFFICIENT_DATA"
-            return result
+    # ─── Sanity check v1.0.6-rev3 · 2단 검증 (계정 → YoY) ────────────
+    # 사용자 rev3 조건부 승인 (2026-08-19):
+    #   1차 · 계정 검증 (source_account whitelist) OR heuristic (capital_ratio > 0.80)
+    #   2차 · YoY 검증 · TTM vs 연간 [0.5, 2.0] 초과 시 · Q YoY 원값으로 verified/invalid 판정
+    #   자본잠식 (equity <= 0) skip · equity_nonpositive 기록
+    if inp.total_equity is not None and inp.total_equity <= 0:
+        reasons.append(PrincipleReason(
+            code="ttm_sanity", status="skip",
+            note="equity_nonpositive · 자본잠식 or 결측 · sanity skip (P4 자연 fail 예상)",
+        ))
+    else:
+        # 1차 · 계정 검증
+        _ALLOWED_ACCOUNT_IDS = ("ifrs-full_ProfitLossAttributableToOwnersOfParent",)
+        _ALLOWED_ACCOUNT_NM_SUB = (
+            "지배기업의 소유주에게 귀속되는 당기순이익",
+            "지배기업 소유주지분",
+            "지배회사지분",
+        )
+        if inp.net_income_source_account:
+            src = inp.net_income_source_account
+            if src not in _ALLOWED_ACCOUNT_IDS and not any(
+                nm in src for nm in _ALLOWED_ACCOUNT_NM_SUB
+            ):
+                reasons.append(PrincipleReason(
+                    code="ttm_sanity", status="insufficient",
+                    value={"source_account": src},
+                    note=f"account_mismatch · '{src[:60]}' 허용 계정 아님",
+                ))
+                missing.append("ttm_sanity")
+                result.verdict = "INSUFFICIENT_DATA"
+                return result
+        elif (inp.net_income_owner_ttm is not None
+              and inp.total_equity is not None and inp.total_equity > 0):
+            capital_ratio = abs(inp.net_income_owner_ttm) / abs(inp.total_equity)
+            if capital_ratio > 0.80:  # 실 오염 케이스 (삼전 1.11) 감지 · 초호황 (ROE ~30%) 통과
+                reasons.append(PrincipleReason(
+                    code="ttm_sanity", status="insufficient",
+                    value={"capital_ratio": round(capital_ratio, 3)},
+                    note=f"account_mismatch_suspected · TTM/자본 비율 {capital_ratio:.2f} > 0.80",
+                ))
+                missing.append("ttm_sanity")
+                result.verdict = "INSUFFICIENT_DATA"
+                return result
+
+        # 2차 · YoY 검증 (TTM vs 연간 대비 급변동 시)
+        if (inp.net_income_owner_ttm is not None
+            and inp.latest_annual_net_income_owner is not None
+            and inp.latest_annual_net_income_owner != 0):
+            ratio = inp.net_income_owner_ttm / inp.latest_annual_net_income_owner
+            if abs(ratio) > 2.0 or abs(ratio) < 0.5:
+                # YoY 판정
+                if inp.q_yoy is None:
+                    # sub-reason 분리 · missing vs invalid
+                    fail_reason = inp.q_yoy_fail_reason or "yoy_base_missing"
+                    reasons.append(PrincipleReason(
+                        code="ttm_sanity", status="insufficient",
+                        value={
+                            "ratio": round(ratio, 3),
+                            "yoy_base_current": inp.q_yoy_base_current,
+                            "yoy_base_prev": inp.q_yoy_base_prev,
+                        },
+                        note=f"{fail_reason} · ratio {ratio:.2f} · Q YoY 판정 불가",
+                    ))
+                    missing.append("ttm_sanity")
+                    result.verdict = "INSUFFICIENT_DATA"
+                    return result
+                elif inp.q_yoy > 0.50:
+                    reasons.append(PrincipleReason(
+                        code="ttm_sanity", status="pass",
+                        value={
+                            "q_yoy": round(inp.q_yoy, 3),
+                            "ratio": round(ratio, 3),
+                            "yoy_base_current": inp.q_yoy_base_current,
+                            "yoy_base_prev": inp.q_yoy_base_prev,
+                        },
+                        note=f"ttm_surge_verified · Q YoY +{inp.q_yoy*100:.0f}% · ratio {ratio:.2f}",
+                    ))
+                elif inp.q_yoy < -0.33:
+                    reasons.append(PrincipleReason(
+                        code="ttm_sanity", status="pass",
+                        value={
+                            "q_yoy": round(inp.q_yoy, 3),
+                            "ratio": round(ratio, 3),
+                            "yoy_base_current": inp.q_yoy_base_current,
+                            "yoy_base_prev": inp.q_yoy_base_prev,
+                        },
+                        note=f"ttm_decline_verified · Q YoY {inp.q_yoy*100:.0f}% · ratio {ratio:.2f}",
+                    ))
+                else:
+                    # 급변동 아닌데 ratio 초과 · 데이터 이상 (계절성? 특별 손익?)
+                    reasons.append(PrincipleReason(
+                        code="ttm_sanity", status="insufficient",
+                        value={"ratio": round(ratio, 3), "q_yoy": round(inp.q_yoy, 3)},
+                        note=f"ttm_sanity_fail · ratio {ratio:.2f} · Q YoY {inp.q_yoy*100:.0f}% (surge/decline 미달)",
+                    ))
+                    missing.append("ttm_sanity")
+                    result.verdict = "INSUFFICIENT_DATA"
+                    return result
 
     # ─── 원칙 1: PER (트레일링) ─────────────────────────────
     per_ttm_max = float(get_threshold("per", "per_ttm_max"))
