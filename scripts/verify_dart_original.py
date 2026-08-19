@@ -15,6 +15,8 @@ if str(_PROJECT_ROOT) not in sys.path:
 
 
 async def verify() -> int:
+    # config import → backend/.env 자동 로드 (DART_API_KEY 포함)
+    from backend.services import config  # noqa: F401
     from backend.discovery.data_sources.dart.client import fetch_financial_statement
 
     CORP = "00126380"  # 삼성전자
