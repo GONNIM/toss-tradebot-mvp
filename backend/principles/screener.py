@@ -84,17 +84,17 @@ def screen(inp: ScreenerInput) -> ScreenerVerdict:
     missing: list[str] = []
     result = ScreenerVerdict(verdict="INSUFFICIENT_DATA", reasons=reasons, missing_fields=missing)
 
-    # ─── TTM sanity check (v1.0.3 · 2026-08-19 임계값 완화) ────────────
-    # 목적: 파싱 오매칭 (자본 계정 오염 · 12배 이상) 감지
-    # 완화: 정상 실적 급등락 (반도체 초호황 등 · 2~3배 자연) 은 통과
-    # 임계값: TTM vs 최근 사업보고서 연간 · 비율 [1/4, 4] 이내 정상 · 초과 시 stale/오염
+    # ─── TTM sanity check (v1.0.4 · 2026-08-19 v1.0.3 완화 철회) ────────
+    # 사용자 지시 (2026-08-19): v1.0.3 완화 (4배) 는 정탐 발동을 오탐으로 오해한 오판.
+    # 향후 sanity·게이트·임계값 완화 변경은 사용자 사전 승인 없이 커밋 금지.
+    # 임계값 원복: TTM vs 최근 사업보고서 연간 · 비율 [1/2, 2] 이내 정상 · 초과 시 INSUFFICIENT
     if (
         inp.net_income_owner_ttm is not None
         and inp.latest_annual_net_income_owner is not None
         and inp.latest_annual_net_income_owner != 0
     ):
         ratio = inp.net_income_owner_ttm / inp.latest_annual_net_income_owner
-        if abs(ratio) > 4.0 or abs(ratio) < 0.25:
+        if abs(ratio) > 2.0 or abs(ratio) < 0.5:
             reasons.append(PrincipleReason(
                 code="ttm_sanity",
                 status="insufficient",
@@ -106,7 +106,7 @@ def screen(inp: ScreenerInput) -> ScreenerVerdict:
                 note=(
                     f"ttm_sanity_fail · TTM {inp.net_income_owner_ttm:.3e} vs "
                     f"연간 {inp.latest_annual_net_income_owner:.3e} · "
-                    f"비율 {ratio:.2f} (배수 4배 초과 · 파싱 오염 의심)"
+                    f"비율 {ratio:.2f} (±100% 초과 · 파싱 오염 or 실적 급변동)"
                 ),
             ))
             missing.append("ttm_sanity")
