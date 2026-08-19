@@ -254,6 +254,47 @@ async def fetch_financial_statement(
 
 
 @dataclass(frozen=True)
+class DartCompanyInfo:
+    """DART 기업개황 · company.json 응답 (2026-08-19 · principles 이슈 B)."""
+    corp_code: str
+    corp_name: str
+    stock_code: Optional[str]
+    induty_code: Optional[str]  # KSIC 5자리 (표준산업분류)
+    est_dt: Optional[str]       # 설립일
+
+
+async def fetch_company_info(corp_code: str) -> Optional[DartCompanyInfo]:
+    """DART 기업개황 조회 (company.json).
+
+    Docs: https://opendart.fss.or.kr/guide/detail.do?apiGrpCd=DS001&apiId=2019002
+    응답 필드 induty_code = KSIC 5자리 · 대분류 K (64·65·66) = 금융업.
+    """
+    if not corp_code:
+        return None
+    params = {"crtfc_key": _api_key(), "corp_code": corp_code}
+    async with httpx.AsyncClient() as client:
+        try:
+            resp = await client.get(
+                f"{_BASE}/company.json", params=params, timeout=_TIMEOUT_SEC
+            )
+            resp.raise_for_status()
+            data = resp.json()
+        except Exception as e:
+            logger.warning(f"[dart.company] {corp_code} 실패: {e}")
+            return None
+
+    if data.get("status") != "000":
+        return None
+    return DartCompanyInfo(
+        corp_code=(data.get("corp_code") or "").strip(),
+        corp_name=(data.get("corp_name") or "").strip(),
+        stock_code=(data.get("stock_code") or "").strip() or None,
+        induty_code=(data.get("induty_code") or "").strip() or None,
+        est_dt=(data.get("est_dt") or "").strip() or None,
+    )
+
+
+@dataclass(frozen=True)
 class DartAuditOpinion:
     """감사의견 · accnutAdtorNmNdAdtOpinion.json 응답."""
     bsns_year: str

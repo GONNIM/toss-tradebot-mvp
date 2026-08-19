@@ -42,6 +42,7 @@ from backend.services.db import get_session
 from backend.services.models import (
     PrinciplesDartRetryQueue,
     PrinciplesFinancialCache,
+    PrinciplesIndustryCode,
     PrinciplesResult,
     PrinciplesRun,
 )
@@ -335,10 +336,17 @@ async def daily_recompute() -> dict:
         for r in cache_rows:
             by_ticker.setdefault(r.ticker, []).append(r)
 
+        # v1.0.5 · induty_code 캐시 로드 (이슈 B · 금융업 판정)
+        industry_rows = (
+            await session.execute(select(PrinciplesIndustryCode))
+        ).scalars().all()
+        industry_by_ticker: dict[str, str] = {
+            r.ticker: r.induty_code for r in industry_rows if r.induty_code
+        }
+
         for _, row in df.iterrows():
             ticker = str(row["Code"])
             name = str(row.get("Name") or "")
-            industry_name = str(row.get("Sector") or row.get("Industry") or "")
             market_cap = None
             marcap = row.get("Marcap")
             if marcap is not None and not pd.isna(marcap):
@@ -347,7 +355,8 @@ async def daily_recompute() -> dict:
                 except (ValueError, TypeError):
                     pass
 
-            sector = detect_financial(ticker, industry_name)
+            induty_code = industry_by_ticker.get(ticker)
+            sector = detect_financial(ticker, induty_code)
             fin_rows = by_ticker.get(ticker, [])
 
             inp = _build_screener_input(

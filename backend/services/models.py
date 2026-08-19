@@ -1794,3 +1794,21 @@ class PrinciplesResult(Base):
         Index("ix_principles_result_run_verdict", "run_id", "verdict"),
         Index("ix_principles_result_ticker_time", "ticker", "created_at"),
     )
+
+
+class PrinciplesIndustryCode(Base):
+    """DART 기업개황 induty_code 캐시 (2026-08-19 · 이슈 B).
+
+    KSIC (한국표준산업분류) 5자리. 대분류 K (64·65·66) = 금융업.
+    ticker → corp_code + induty_code 캐시 · 일회성 수집 (신규 상장 시 갱신).
+    """
+
+    __tablename__ = "principles_industry_codes"
+
+    ticker: Mapped[str] = mapped_column(String(10), primary_key=True)
+    corp_code: Mapped[str] = mapped_column(String(10))
+    induty_code: Mapped[Optional[str]] = mapped_column(String(10))  # KSIC 5자리
+    corp_name: Mapped[Optional[str]] = mapped_column(String(200))
+    fetched_at: Mapped[datetime] = mapped_column(
+        DateTime, server_default=func.now(), onupdate=func.now()
+    )
