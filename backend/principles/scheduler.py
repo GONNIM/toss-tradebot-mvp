@@ -420,36 +420,48 @@ def _build_screener_input(
     fin_rows: list[PrinciplesFinancialCache],
     is_financial_sector: bool,
 ) -> ScreenerInput:
-    """캐시 rows → ScreenerInput · TTM 누적 분해 + 3년 · 5년 시계열 조립."""
+    """캐시 rows → ScreenerInput · TTM 누적 분해 + 3년 · 5년 시계열 조립.
+
+    2026-08-19 fix (이슈 D · TTM 창 정체):
+      기존: `years_desc[:2]` (Q4 있는 최근 2년) 만 사용 · 최신 분기 (예: 2026 Q1/Q2)
+             는 사업보고서 없어 제외 → TTM = 최근 사업보고서 연간과 완전 일치 = stale.
+      개선: 모든 (year, quarter) 시간순 정렬 · Q단독 분해 · 최근 4개 합산 = 진짜 TTM.
+    """
     # (year, quarter) → row
     by_yq: dict[tuple[int, int], PrinciplesFinancialCache] = {
         (r.fiscal_year, r.fiscal_quarter): r for r in fin_rows
     }
-    # 최근 회계연도 (Q4 있는 연도 기준)
+    # 최근 회계연도 (Q4 있는 연도 기준) · 3년/5년 시계열 조립용
     years_desc = sorted({y for y, q in by_yq if q == 4}, reverse=True)
 
-    # ─── TTM (최근 4개 분기 단독) ─────
-    ni_owner_ttm = None
-    op_ttm = None
-    ie_ttm = None
-    if years_desc:
-        # 각 필드의 누적 값 시계열 · Q1~Q4 각 연도별
-        def _quarter_flow(attr: str) -> list[Optional[float]]:
-            """8개 분기 단독 시계열 (오래된 순)."""
-            series: list[Optional[float]] = []
-            for y in reversed(years_desc[:2]):  # 최근 2년
-                cum = {
-                    q: getattr(by_yq[(y, q)], attr) if (y, q) in by_yq else None
-                    for q in (1, 2, 3, 4)
-                }
-                q_flow = cumulative_to_quarter(cum)
-                for q in (1, 2, 3, 4):
-                    series.append(q_flow[q])
-            return series
+    def _standalone_series(attr: str) -> list[Optional[float]]:
+        """모든 (year, quarter) 시간순 · Q단독 값 시계열.
 
-        ni_owner_ttm = ttm_sum(_quarter_flow("net_income_owner_cum"))
-        op_ttm = ttm_sum(_quarter_flow("operating_income_cum"))
-        ie_ttm = ttm_sum(_quarter_flow("interest_expense_cum"))
+        Q단독 = 해당 분기 누적 − 직전 분기 누적 (같은 year 내). Q1 은 그 자체.
+        직전 분기 없거나 값 None 이면 Q단독 None.
+        """
+        all_yq = sorted(by_yq.keys())  # (year, q) 오름차순
+        series: list[Optional[float]] = []
+        for (y, q) in all_yq:
+            row = by_yq[(y, q)]
+            cum = getattr(row, attr, None)
+            if cum is None:
+                series.append(None)
+                continue
+            if q == 1:
+                series.append(cum)  # 첫 분기 · 그대로
+                continue
+            prev = by_yq.get((y, q - 1))
+            prev_cum = getattr(prev, attr, None) if prev else None
+            if prev_cum is None:
+                series.append(None)  # 이전 분기 누적 없음 · 분해 불가
+            else:
+                series.append(cum - prev_cum)
+        return series
+
+    ni_owner_ttm = ttm_sum(_standalone_series("net_income_owner_cum"))
+    op_ttm = ttm_sum(_standalone_series("operating_income_cum"))
+    ie_ttm = ttm_sum(_standalone_series("interest_expense_cum"))
 
     # ─── 3년 연간값 (Q4 = 사업보고서) ─
     ni_3y: list[Optional[float]] = []
@@ -491,6 +503,8 @@ def _build_screener_input(
     total_eq = latest.total_equity if latest else None
 
     # v1.0.2 · TTM sanity check 참조값 (최근 사업보고서 연간 순이익)
+    # v1.0.3 (2026-08-19): 최신 분기 (Q4 이후 · 예: 2026 Q1·Q2) 존재하는데
+    # TTM 이 최근 연간과 완전 일치하면 ttm_stale 로 판정
     latest_annual_ni = None
     if years_desc:
         r_fy = by_yq.get((years_desc[0], 4))
