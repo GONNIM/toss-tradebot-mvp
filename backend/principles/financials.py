@@ -80,6 +80,24 @@ _MAPPING_NM_KEYWORDS: dict[str, tuple[str, ...]] = {
 }
 
 
+# v1.0.6-rev4 (2026-08-20) · sj_div 필터 (재무제표 영역별 계정 분리)
+# BS = 재무상태표 · IS = 손익계산서 · CIS = 포괄손익계산서
+# CF = 현금흐름표 · SCE = 자본변동표
+# 사고 (verified 표본 대조): sj_div 필터 없이 account_id 만 매칭 · SCE (자본변동표) 안의
+# ifrs-full_ProfitLossAttributableToOwnersOfParent 잡음 → 순이익 위치의 자본 변동 값 저장
+_FIELD_TO_SJ_DIV: dict[str, tuple[str, ...]] = {
+    "revenue": ("IS", "CIS"),
+    "operating_income": ("IS", "CIS"),
+    "net_income_owner": ("IS", "CIS"),
+    "net_income": ("IS", "CIS"),
+    "interest_expense": ("IS", "CIS"),
+    "total_assets": ("BS",),
+    "total_liabilities": ("BS",),
+    "total_equity": ("BS",),
+    "buyback_cashflow": ("CF",),
+}
+
+
 @dataclass
 class PrinciplesFinancials:
     """principles 원칙 계산용 재무 파싱 결과 (한 분기 · 누적값)."""
@@ -103,15 +121,22 @@ def _norm(s: str) -> str:
 def parse_principles_financials(items: Iterable[DartFinancialItem]) -> PrinciplesFinancials:
     """DART 응답 → PrinciplesFinancials.
 
-    account_id 매칭 우선 · 실패 시 account_nm keyword substring.
-    net_income_owner 미매치 시 net_income 로 fallback (호출자 결정).
+    매칭 우선순위 (v1.0.6-rev4 · sj_div 필터 추가):
+      1. sj_div 일치 + account_id 매칭
+      2. sj_div 일치 + account_nm keyword substring 매칭
+      sj_div 불일치 행은 account_id 가 맞아도 배제.
+
+    사고 방지 (2026-08-20 verified 표본 대조): SCE (자본변동표) 안의
+    'ifrs-full_ProfitLossAttributableToOwnersOfParent' account_id 는
+    자본 변동 값 (당기 순이익 표시 위치) 을 반환 · 실제 IS 순이익 아님.
     """
     out = PrinciplesFinancials()
     for item in items:
-        # 1. account_id 매칭 (재무제표만 · 현금흐름표는 sj_div=CF)
+        sj = item.sj_div or ""
+        # 1. account_id 매칭
         field_name = _MAPPING_ID.get(item.account_id)
+        # 2. account_nm 매칭 (fallback)
         if field_name is None:
-            # 2. account_nm 매칭
             nm = _norm(item.account_nm)
             for f, kws in _MAPPING_NM_KEYWORDS.items():
                 if any(kw in nm for kw in kws):
@@ -119,13 +144,17 @@ def parse_principles_financials(items: Iterable[DartFinancialItem]) -> Principle
                     break
         if field_name is None:
             continue
+        # 3. sj_div 필터 (v1.0.6-rev4 · 계정 영역 확인)
+        allowed_sj = _FIELD_TO_SJ_DIV.get(field_name, ())
+        if allowed_sj and sj not in allowed_sj:
+            continue  # sj_div 불일치 · 배제 (예: SCE 안의 순이익 계정 오매칭 방지)
         if getattr(out, field_name) is not None:
             continue  # 이미 매칭 · 첫 매칭 유지
         val = item.thstrm_amount
         if val is None:
             continue
         setattr(out, field_name, val)
-        out.matched[field_name] = item.account_nm
+        out.matched[field_name] = f"{item.account_nm}[{sj}]"
     return out
 
 

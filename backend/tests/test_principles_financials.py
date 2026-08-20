@@ -201,3 +201,94 @@ def test_parse_accepts_correct_owner_net_income():
     ]
     f = parse_principles_financials(items)
     assert f.net_income_owner == 33e12
+
+
+# ─── v1.0.6-rev4 · sj_div 필터 회귀 (2026-08-20 verified 표본 사고) ───
+
+
+def test_parse_sce_rejected_for_net_income_owner():
+    """SCE (자본변동표) 안의 ProfitLossAttributableToOwnersOfParent 는 배제 (신규 fix).
+
+    사고: 2026-08-20 verified 표본 대조에서 4/5 종목이 SCE 값 (자본 변동) 을
+    순이익으로 저장해 부풀림 (S-Oil 5145억 vs 원본 10.09조 등).
+    """
+    items = [
+        _mk("ifrs-full_ProfitLossAttributableToOwnersOfParent",
+            "지배기업 소유주지분", 500e9, "SCE"),  # SCE · 배제되어야
+        _mk("ifrs-full_ProfitLossAttributableToOwnersOfParent",
+            "지배기업 소유주지분", 10_090e9, "IS"),  # IS · 채택
+    ]
+    f = parse_principles_financials(items)
+    assert f.net_income_owner == 10_090e9  # IS 값 · SCE 값 배제
+
+
+def test_parse_cis_accepted_for_net_income_owner():
+    """CIS (포괄손익계산서) 는 IS 대신 허용 · 포괄손익만 있는 기업 대응."""
+    items = [
+        _mk("ifrs-full_ProfitLossAttributableToOwnersOfParent",
+            "지배기업 소유주지분", 5_000e9, "CIS"),
+    ]
+    f = parse_principles_financials(items)
+    assert f.net_income_owner == 5_000e9
+
+
+def test_parse_bs_only_for_equity_accounts():
+    """자본총계 는 BS 만 매치 · SCE 안의 Equity 계정 배제."""
+    items = [
+        _mk("ifrs-full_Equity", "자본총계", 100e12, "SCE"),  # 배제
+        _mk("ifrs-full_Equity", "자본총계", 200e12, "BS"),   # 채택
+    ]
+    f = parse_principles_financials(items)
+    assert f.total_equity == 200e12
+
+
+def test_parse_cf_only_for_buyback():
+    """자기주식 취득은 CF (현금흐름표) 만 · SCE 안의 자기주식 항목 배제."""
+    items = [
+        _mk("ifrs-full_PaymentsForRepurchaseOfEntitysOwnShares",
+            "자기주식의 취득", 100e9, "SCE"),  # 배제
+        _mk("ifrs-full_PaymentsForRepurchaseOfEntitysOwnShares",
+            "자기주식의 취득", -150e9, "CF"),  # 채택
+    ]
+    f = parse_principles_financials(items)
+    assert f.buyback_cashflow == -150e9
+
+
+def test_parse_ssdi_regression_2026_q2():
+    """삼성SDI 2026 Q2 반기 · 회귀 방지 (정상 케이스 · 파서 정확 매치).
+
+    실제 DART 원본: 지배기업 소유주지분 +3421.9억 (IS)
+    """
+    items = [
+        _mk("ifrs-full_ProfitLossAttributableToOwnersOfParent",
+            "지배기업 소유주지분", 342190000000.0, "IS"),
+    ]
+    f = parse_principles_financials(items)
+    assert f.net_income_owner == 342190000000.0
+    assert "IS" in f.matched.get("net_income_owner", "")
+
+
+def test_parse_fixtures_verified_sample_recovery():
+    """verified 표본 4종 (두산·S-Oil·대한항공·한진칼) 실 응답 시뮬레이션.
+
+    fix 전: SCE 안의 계정 잡음 → 부풀림 (7~20배)
+    fix 후: IS 안의 계정 정확 매치
+    """
+    # 두산 2026 Q2 · DART 원본 +2.61조 (IS) · 이전 API 값 3551억 (SCE 오염)
+    items_doosan = [
+        _mk("ifrs-full_ProfitLossAttributableToOwnersOfParent",
+            "지배기업 소유주지분", 355148000000.0, "SCE"),  # 이전 오염 값
+        _mk("ifrs-full_ProfitLossAttributableToOwnersOfParent",
+            "지배기업 소유주지분", 2_614e9, "IS"),  # 실 값
+    ]
+    f = parse_principles_financials(items_doosan)
+    assert f.net_income_owner == 2_614e9
+    # S-Oil · 원본 10.09조 vs 이전 5145억 (SCE)
+    items_soil = [
+        _mk("ifrs-full_ProfitLossAttributableToOwnersOfParent",
+            "지배기업 소유주지분", 514584000000.0, "SCE"),
+        _mk("ifrs-full_ProfitLossAttributableToOwnersOfParent",
+            "지배기업 소유주지분", 10_090e9, "IS"),
+    ]
+    f = parse_principles_financials(items_soil)
+    assert f.net_income_owner == 10_090e9
