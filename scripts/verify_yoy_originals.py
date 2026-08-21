@@ -12,7 +12,7 @@ principles_financial_cache 와 대조함.
 
 JSON 스키마 (파일 레벨 unit 고정 · 종목별 상이 단위 금지)
     {
-      "unit": "million_krw",
+      "unit": "krw",
       "note": "설명",
       "entries": [
         {
@@ -20,8 +20,8 @@ JSON 스키마 (파일 레벨 unit 고정 · 종목별 상이 단위 금지)
           "name": "삼성SDI",
           "year": 2026,
           "quarter": 2,
-          "owner_ni": 342190,
-          "doc": "삼성SDI 2026 반기보고서 · 연결 CIS · 지배기업지분 (백만원)"
+          "owner_ni": 342190000000,
+          "doc": "삼성SDI 2026 반기보고서 · 연결 CIS · 지배기업지분 (원 단위)"
         },
         ...
       ]
@@ -32,9 +32,14 @@ JSON 스키마 (파일 레벨 unit 고정 · 종목별 상이 단위 금지)
 - owner_ni (number · 지배주주 반기순이익 · 파일 unit 단위 · 손실은 -X)
 - doc (str · 문서명·페이지·항목명 그대로)
 
-단위 처리
-- 파일 unit="million_krw" → owner_ni × 1,000,000 후 원 단위 캐시와 대조
-- unit 누락 or 미지원 → 실행 거부 (조용한 미환산 방지)
+단위 처리 (화이트리스트)
+- "krw"         → ×1              (DART 뷰어 원 단위 표기)
+- "million_krw" → ×1,000,000       (백만원 단위 표기)
+- 그 외/누락 → 실행 거부 (조용한 미환산 방지)
+
+입력 실수 방어
+- unit="krw" 인데 |owner_ni| < 1억 (1e8) → "단위 오입력 의심
+  (백만원 값을 원 단위 필드에 넣었을 가능성)" 경고 ⚠ · 실행은 계속
 
 허용 오차
 - ±0.1% 이내 일치 → OK (반올림·표기 자릿수 감안)
@@ -56,8 +61,11 @@ if str(_PROJECT_ROOT) not in sys.path:
 TOL_RATIO = 0.001  # 0.1% 허용 (반올림·표기 자릿수 차이)
 
 _UNITS: dict[str, int] = {
+    "krw": 1,
     "million_krw": 1_000_000,
 }
+
+_KRW_MIN_SANITY = 100_000_000  # 1억 · unit="krw" 하한 sanity
 
 
 async def verify(entries: list[dict], multiplier: int, unit_label: str) -> int:
@@ -70,6 +78,7 @@ async def verify(entries: list[dict], multiplier: int, unit_label: str) -> int:
     ok = 0
     mismatch = 0
     missing = 0
+    warn = 0
     print(f"UNIT = {unit_label} (multiplier ×{multiplier:,})")
     print(f"TOL  = ±{TOL_RATIO * 100:.2f}%")
     print()
@@ -98,6 +107,13 @@ async def verify(entries: list[dict], multiplier: int, unit_label: str) -> int:
 
             original = float(raw_val) * multiplier  # 원 단위 환산
 
+            unit_warn = (
+                unit_label == "krw" and abs(original) < _KRW_MIN_SANITY
+            )
+            if unit_warn:
+                warn += 1
+            warn_tag = "  ⚠단위 오입력 의심(백만원→원 착오?)" if unit_warn else ""
+
             row = (await session.execute(
                 select(PrinciplesFinancialCache)
                 .where(PrinciplesFinancialCache.ticker == ticker)
@@ -107,7 +123,7 @@ async def verify(entries: list[dict], multiplier: int, unit_label: str) -> int:
             if row is None:
                 print(
                     f"{ticker:<8} {name[:8]:<10} {year}Q{q:>2}   "
-                    f"{_fmt_pair(original):>36} {'CACHE ROW MISSING':>36} {'❓':>6}  {doc[:60]}"
+                    f"{_fmt_pair(original):>36} {'CACHE ROW MISSING':>36} {'❓':>6}  {doc[:60]}{warn_tag}"
                 )
                 missing += 1
                 continue
@@ -115,7 +131,7 @@ async def verify(entries: list[dict], multiplier: int, unit_label: str) -> int:
             if cache_v is None:
                 print(
                     f"{ticker:<8} {name[:8]:<10} {year}Q{q:>2}   "
-                    f"{_fmt_pair(original):>36} {'net_income_owner=None':>36} {'❓':>6}  {doc[:60]}"
+                    f"{_fmt_pair(original):>36} {'net_income_owner=None':>36} {'❓':>6}  {doc[:60]}{warn_tag}"
                 )
                 missing += 1
                 continue
@@ -128,11 +144,11 @@ async def verify(entries: list[dict], multiplier: int, unit_label: str) -> int:
             print(
                 f"{ticker:<8} {name[:8]:<10} {year}Q{q:>2}   "
                 f"{_fmt_pair(original):>36} {_fmt_pair(cache_v):>36} "
-                f"{'✅' if match else '❌':>6}  {doc[:60]}"
+                f"{'✅' if match else '❌':>6}  {doc[:60]}{warn_tag}"
             )
 
     print()
-    print(f"OK={ok} · MISMATCH={mismatch} · MISSING={missing}")
+    print(f"OK={ok} · MISMATCH={mismatch} · MISSING={missing} · WARN={warn}")
     return 0 if (mismatch == 0 and missing == 0) else 1
 
 
