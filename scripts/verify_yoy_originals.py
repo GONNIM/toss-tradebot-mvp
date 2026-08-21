@@ -127,7 +127,7 @@ async def verify(entries: list[dict], multiplier: int, unit_label: str) -> int:
                 )
                 missing += 1
                 continue
-            cache_v = row.net_income_owner
+            cache_v = row.net_income_owner_cum
             if cache_v is None:
                 print(
                     f"{ticker:<8} {name[:8]:<10} {year}Q{q:>2}   "
