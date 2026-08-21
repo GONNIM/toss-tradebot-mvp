@@ -308,50 +308,45 @@ def test_parse_fixtures_verified_sample_recovery():
 # (c) add 부재 fallback 케이스 · 플래그 세팅 확인 (a 와 동일 · 명시 케이스)
 
 
-def test_reg_a_samsung_style_thstrm_only_reprt_2_fallback_and_ttm_equiv():
-    """삼전 스타일 (반기 · CIS Owner · thstrm=누적·add=None) · fallback 발동 +
-    누적 저장 후 _standalone_series 차분 → TTM 110.60조 등가.
+def test_reg_a_samsung_standard_regime_add_used_and_q_decomposition():
+    """삼전 실측 (2026-08-21 dump6.log) · 표준 규약 · thstrm=Q2단독·add=H1누적.
 
-    캐시 실값 (2025Q3=+12.006, 2025Q4=+44.261, 2026Q1=+47.101, 2026Q2=+71.269 · 조)
-    _standalone_series (누적 전제) →
-      (2025Q3 단독) = 12.006 − 4.934 (2025Q2 반기누적) = 7.072
-      (2025Q4 단독) = 44.261 − 12.006 = 32.255
-      (2026Q1 단독) = 47.101
-      (2026Q2 단독) = 71.269 − 47.101 = 24.168
-    TTM = 7.072 + 32.255 + 47.101 + 24.168 = 110.596 ≈ 110.60조
+    2026-08-21 [2a] dump 로 확진:
+      IS `ifrs-full_ProfitLossAttributableToOwnersOfParent`
+        · thstrm = 71.269조 (Q2 단독 3M)
+        · add    = 118.371조 (H1 누적 6M · = 원문 확인 대기)
+        · 검증: Q1 캐시 47.101 + Q2 단독 71.269 ≈ 118.370 ≈ add · 표준 규약 정합
+    add 우선 채택 → fallback 미발동 · 파서 결과 net_income_owner = add (누적).
+
+    폐기된 단언 (2026-08-21):
+      - "thstrm=누적 · add=None" 특이 케이스 · 실존 미확인 (add 부재 방어는
+        test_reg_c 가 커버). 픽스처 삭제.
+      - TTM 110.60 등가 · 폐기된 [0] 감사 전제 (삼전 캐시=H1 누적) 의 산물.
+        실제로는 캐시 71.269 가 Q2 단독 · TTM 정합은 우연 상쇄였음.
+
+    대체 단언:
+      - 원문 누적 픽스처의 분해값 (Q2단독 = H1 − Q1 = 118.371 − 47.101 = 71.270)
+        이 실측 thstrm (71.269) 과 ±0.1% 이내 정합.
     """
-    # 반기 · CIS Owner · thstrm=누적 71.269조 · add=None (삼전 특이 케이스)
+    # 삼전 2026 Q2 반기 · IS Owner · 실측 값
     items = [
         _mk("ifrs-full_ProfitLossAttributableToOwnersOfParent",
-            "지배기업지분", 71.269e12, "CIS", add_amount=None),
+            "지배회사지분 반기순이익", 71.269e12, "IS",
+            add_amount=118.371e12),
     ]
     f = parse_principles_financials(items, reprt_code="11012")
-    assert f.net_income_owner == 71.269e12
-    assert "net_income_owner_cum" in f.fallback_fields
+    # 파서는 add 우선 채택 · 캐시 저장값 = H1 누적
+    assert f.net_income_owner == 118.371e12
+    # fallback 미발동 (표준 규약 정합)
+    assert not f.fallback_fields
 
-    # TTM 등가 계산 (누적 시리즈 · Q단독 분해 · 최근 4Q 합)
-    cum_ttm = {
-        (2025, 2): 4.934e12,
-        (2025, 3): 12.006e12,
-        (2025, 4): 44.261e12,
-        (2026, 1): 47.101e12,
-        (2026, 2): 71.269e12,
-    }
-    standalone = []
-    all_yq = sorted(cum_ttm.keys())
-    for (y, q) in all_yq:
-        cum = cum_ttm[(y, q)]
-        if q == 1:
-            standalone.append(cum)
-        else:
-            prev = cum_ttm.get((y, q - 1))
-            if prev is None:
-                standalone.append(None)
-            else:
-                standalone.append(cum - prev)
-    ttm = ttm_sum(standalone)
-    assert ttm is not None
-    assert abs(ttm - 110.60e12) < 0.02e12  # 반올림 오차 ±0.02조 허용
+    # 분해값 정합 · Q2 단독 = H1 − Q1 = 118.371 − 47.101 = 71.270
+    q1_cum = 47.101e12
+    h1_cum = f.net_income_owner
+    q2_standalone = h1_cum - q1_cum
+    assert q2_standalone > 0
+    # 실측 thstrm (Q2 단독) 71.269 와 ±0.1% 이내
+    assert abs(q2_standalone - 71.269e12) / 71.269e12 < 0.001
 
 
 def test_reg_b_standard_regime_thstrm_and_add_present_uses_add():
