@@ -101,7 +101,7 @@ async def backfill(tickers: list[str] | None) -> int:
                     continue
                 if not items:
                     continue
-                parsed = parse_principles_financials(items)
+                parsed = parse_principles_financials(items, REPRT[row.fiscal_quarter])
                 source_account = None
                 if parsed.net_income_owner is not None:
                     source_account = parsed.matched.get("net_income_owner")

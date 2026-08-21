@@ -146,7 +146,8 @@ async def weekly_detect_and_fetch() -> dict:
     호출 최소화: 종목당 캐시된 (fiscal_year, fiscal_quarter) 집합 조회 → diff.
     """
     started = datetime.now()
-    stats = {"tickers": 0, "dart_calls": 0, "cache_upserts": 0, "retries": 0, "skipped": 0}
+    stats = {"tickers": 0, "dart_calls": 0, "cache_upserts": 0, "retries": 0, "skipped": 0,
+             "cum_fallback_rows": 0}
 
     df = await get_kospi_universe()
     tickers = df["Code"].astype(str).tolist()
@@ -190,7 +191,9 @@ async def weekly_detect_and_fetch() -> dict:
                 if not items:
                     # 미공시 (013) · retry 안 함 · 다음 주 재시도
                     continue
-                parsed = parse_principles_financials(items)
+                parsed = parse_principles_financials(items, reprt)
+                if parsed.fallback_fields:
+                    stats["cum_fallback_rows"] += 1
                 # 배당 (Q4=사업보고서에만)
                 dps = None
                 dtotal = None
@@ -208,6 +211,15 @@ async def weekly_detect_and_fetch() -> dict:
         await session.commit()
 
     stats["elapsed_sec"] = (datetime.now() - started).total_seconds()
+    # v1.0.7 · cum_fallback 비율 요약 (5% 초과 시 경고)
+    upserts = max(stats["cache_upserts"], 1)
+    fallback_ratio = stats["cum_fallback_rows"] / upserts
+    stats["cum_fallback_ratio"] = round(fallback_ratio, 4)
+    if fallback_ratio > 0.05:
+        logger.warning(
+            f"[principles.weekly_detect] cum_fallback_ratio={fallback_ratio:.2%} > 5% · "
+            f"계약 위험 (thstrm_add 부재 다수) · {stats['cum_fallback_rows']}/{upserts}"
+        )
     logger.info(f"[principles.weekly_detect] done · {stats}")
     return stats
 
@@ -270,6 +282,10 @@ async def _upsert_cache(
         source_account = parsed.matched.get("net_income_owner")
     elif parsed.net_income is not None:
         source_account = parsed.matched.get("net_income")
+    # v1.0.7 · cum_fallback_fields JSON 저장 (add 부재로 thstrm 사용 필드)
+    cum_fallback = None
+    if parsed.fallback_fields:
+        cum_fallback = json.dumps(sorted(parsed.fallback_fields))
     fields = dict(
         corp_code=corp_code,
         revenue_cum=parsed.revenue,
@@ -283,6 +299,7 @@ async def _upsert_cache(
         dividend_per_share=dps,
         dividend_total=dtotal,
         net_income_owner_source_account=source_account,
+        cum_fallback_fields=cum_fallback,
     )
     if existing is None:
         session.add(
@@ -553,6 +570,19 @@ def _build_screener_input(
     if latest and hasattr(latest, "net_income_owner_source_account"):
         source_account = latest.net_income_owner_source_account
 
+    # v1.0.7 · cum_fallback_fields 집계 (최근 4Q 중 하나라도 fallback 이면 반영)
+    ttm_yq_series = sorted(by_yq.keys())[-4:] if len(by_yq) >= 4 else []
+    cum_fallback_fields: set[str] = set()
+    for yq in ttm_yq_series:
+        row = by_yq.get(yq)
+        raw = getattr(row, "cum_fallback_fields", None) if row else None
+        if raw:
+            try:
+                for f in json.loads(raw):
+                    cum_fallback_fields.add(f)
+            except (ValueError, TypeError):
+                pass
+
     return ScreenerInput(
         ticker=ticker,
         name=name,
@@ -573,6 +603,7 @@ def _build_screener_input(
         q_yoy_base_prev=q_yoy_base_prev,
         q_yoy_fail_reason=q_yoy_fail_reason,
         net_income_source_account=source_account,
+        cum_fallback_fields=sorted(cum_fallback_fields),
     )
 
 

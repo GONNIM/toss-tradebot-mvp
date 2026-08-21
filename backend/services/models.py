@@ -1715,6 +1715,11 @@ class PrinciplesFinancialCache(Base):
     # 이후 수집분부터만 채워짐 · 과거분은 heuristic (capital_ratio) fallback
     net_income_owner_source_account: Mapped[Optional[str]] = mapped_column(String(100))
 
+    # v1.0.7 (2026-08-21) · cum_fallback 플래그 (JSON list of cum 컬럼명).
+    # thstrm_add_amount 없어 thstrm_amount 로 fallback 한 필드 기록.
+    # None = fallback 없음 (표준 규약 정합). 값 있음 = 정합성 미검증.
+    cum_fallback_fields: Mapped[Optional[str]] = mapped_column(String(200))
+
     # 메타
     disclosure_no: Mapped[Optional[str]] = mapped_column(String(20))  # rcept_no
     disclosure_date: Mapped[Optional[str]] = mapped_column(String(10))  # YYYY-MM-DD

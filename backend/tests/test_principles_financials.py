@@ -99,7 +99,13 @@ def test_ttm_sum_loss_year_valid():
 # ─── parse_principles_financials ───────────────────────────────
 
 
-def _mk(account_id: str, account_nm: str, amount: float, sj_div: str = "BS") -> DartFinancialItem:
+def _mk(
+    account_id: str,
+    account_nm: str,
+    amount: float,
+    sj_div: str = "BS",
+    add_amount: float | None = None,
+) -> DartFinancialItem:
     return DartFinancialItem(
         account_id=account_id,
         account_nm=account_nm,
@@ -107,6 +113,7 @@ def _mk(account_id: str, account_nm: str, amount: float, sj_div: str = "BS") -> 
         fs_div="CFS",
         fs_nm="",
         thstrm_amount=amount,
+        thstrm_add_amount=add_amount,
         frmtrm_amount=None,
         ord=1,
     )
@@ -292,3 +299,135 @@ def test_parse_fixtures_verified_sample_recovery():
     ]
     f = parse_principles_financials(items_soil)
     assert f.net_income_owner == 10_090e9
+
+
+# ─── v1.0.7 회귀 · thstrm_add_amount 계약 (2026-08-21) ─────────
+#
+# (a) 삼전 케이스 · 특이 회사 · thstrm 에 누적이 담김 · add=None → fallback 발동
+# (b) 표준 규약 케이스 · thstrm=단독·add=누적 · add 우선 채택 · fallback 없음
+# (c) add 부재 fallback 케이스 · 플래그 세팅 확인 (a 와 동일 · 명시 케이스)
+
+
+def test_reg_a_samsung_style_thstrm_only_reprt_2_fallback_and_ttm_equiv():
+    """삼전 스타일 (반기 · CIS Owner · thstrm=누적·add=None) · fallback 발동 +
+    누적 저장 후 _standalone_series 차분 → TTM 110.60조 등가.
+
+    캐시 실값 (2025Q3=+12.006, 2025Q4=+44.261, 2026Q1=+47.101, 2026Q2=+71.269 · 조)
+    _standalone_series (누적 전제) →
+      (2025Q3 단독) = 12.006 − 4.934 (2025Q2 반기누적) = 7.072
+      (2025Q4 단독) = 44.261 − 12.006 = 32.255
+      (2026Q1 단독) = 47.101
+      (2026Q2 단독) = 71.269 − 47.101 = 24.168
+    TTM = 7.072 + 32.255 + 47.101 + 24.168 = 110.596 ≈ 110.60조
+    """
+    # 반기 · CIS Owner · thstrm=누적 71.269조 · add=None (삼전 특이 케이스)
+    items = [
+        _mk("ifrs-full_ProfitLossAttributableToOwnersOfParent",
+            "지배기업지분", 71.269e12, "CIS", add_amount=None),
+    ]
+    f = parse_principles_financials(items, reprt_code="11012")
+    assert f.net_income_owner == 71.269e12
+    assert "net_income_owner_cum" in f.fallback_fields
+
+    # TTM 등가 계산 (누적 시리즈 · Q단독 분해 · 최근 4Q 합)
+    cum_ttm = {
+        (2025, 2): 4.934e12,
+        (2025, 3): 12.006e12,
+        (2025, 4): 44.261e12,
+        (2026, 1): 47.101e12,
+        (2026, 2): 71.269e12,
+    }
+    standalone = []
+    all_yq = sorted(cum_ttm.keys())
+    for (y, q) in all_yq:
+        cum = cum_ttm[(y, q)]
+        if q == 1:
+            standalone.append(cum)
+        else:
+            prev = cum_ttm.get((y, q - 1))
+            if prev is None:
+                standalone.append(None)
+            else:
+                standalone.append(cum - prev)
+    ttm = ttm_sum(standalone)
+    assert ttm is not None
+    assert abs(ttm - 110.60e12) < 0.02e12  # 반올림 오차 ±0.02조 허용
+
+
+def test_reg_b_standard_regime_thstrm_and_add_present_uses_add():
+    """표준 규약 · 반기 CIS Owner · thstrm=단독 · add=누적 · add 우선 채택.
+
+    5종목 (삼성SDI·두산·S-Oil·대한항공·한진칼) 이 이 케이스 · 원문 반기값 = add.
+    """
+    # 006400 삼성SDI 반기 · thstrm=Q2단독 3421.9억 · add=반기누적 3140.5억 (원문값)
+    items = [
+        _mk("ifrs-full_ProfitLossAttributableToOwnersOfParent",
+            "지배기업지분", 342.19e9, "CIS", add_amount=314.05e9),
+    ]
+    f = parse_principles_financials(items, reprt_code="11012")
+    assert f.net_income_owner == 314.05e9  # add 우선
+    assert not f.fallback_fields  # fallback 없음 (정합)
+
+    # 000150 두산 반기 · thstrm=Q2단독 3551.5억 · add=반기누적 3942.7억
+    items_doosan = [
+        _mk("ifrs-full_ProfitLossAttributableToOwnersOfParent",
+            "지배기업 소유주지분", 355.148e9, "IS", add_amount=394.268e9),
+    ]
+    f = parse_principles_financials(items_doosan, reprt_code="11012")
+    assert f.net_income_owner == 394.268e9
+    assert not f.fallback_fields
+
+
+def test_reg_c_add_missing_fallback_flag_set():
+    """add 부재 fallback 케이스 · thstrm 사용 + fallback_fields 플래그 발생.
+
+    회사 응답이 반기·3분기에서 add 를 안 주는 특이 케이스 (삼전 스타일 확장).
+    필드별 (revenue/op/ni_owner/interest_expense/buyback) 모두 add=None 이면 각각 fallback.
+    """
+    # 반기 · 5개 흐름 계정 · 모두 add=None · thstrm 만
+    items = [
+        _mk("ifrs-full_Revenue", "매출액", 1e12, "IS", add_amount=None),
+        _mk("ifrs-full_ProfitLossFromOperatingActivities", "영업이익",
+            2e11, "IS", add_amount=None),
+        _mk("ifrs-full_ProfitLossAttributableToOwnersOfParent",
+            "지배기업지분", 5e10, "CIS", add_amount=None),
+        _mk("ifrs-full_FinanceCosts", "금융비용", 3e9, "IS", add_amount=None),
+        _mk("ifrs-full_PaymentsForRepurchaseOfEntitysOwnShares",
+            "자기주식의 취득", -1e9, "CF", add_amount=None),
+    ]
+    f = parse_principles_financials(items, reprt_code="11012")
+    assert f.revenue == 1e12
+    assert f.operating_income == 2e11
+    assert f.net_income_owner == 5e10
+    assert f.interest_expense == 3e9
+    assert f.buyback_cashflow == -1e9
+    # 5개 흐름 계정 모두 fallback 플래그 세팅
+    assert f.fallback_fields == {
+        "revenue_cum",
+        "operating_income_cum",
+        "net_income_owner_cum",
+        "interest_expense_cum",
+        "buyback_cashflow_cum",
+    }
+
+
+def test_reg_c_add_missing_q1_no_fallback():
+    """1분기(11013) · add 부재는 정상 (needs_add=False · thstrm=누적=단독)."""
+    items = [
+        _mk("ifrs-full_ProfitLossAttributableToOwnersOfParent",
+            "지배기업지분", 5e10, "CIS", add_amount=None),
+    ]
+    f = parse_principles_financials(items, reprt_code="11013")
+    assert f.net_income_owner == 5e10
+    assert not f.fallback_fields  # Q1·사업보고서는 fallback 개념 없음
+
+
+def test_reg_c_add_missing_annual_no_fallback():
+    """사업보고서(11011) · add 부재도 정상 (thstrm=연간 누적)."""
+    items = [
+        _mk("ifrs-full_ProfitLossAttributableToOwnersOfParent",
+            "지배기업지분", 1e12, "CIS", add_amount=None),
+    ]
+    f = parse_principles_financials(items, reprt_code="11011")
+    assert f.net_income_owner == 1e12
+    assert not f.fallback_fields

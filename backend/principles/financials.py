@@ -98,6 +98,26 @@ _FIELD_TO_SJ_DIV: dict[str, tuple[str, ...]] = {
 }
 
 
+# v1.0.7 (2026-08-21) · 파서 계약 계약: `_cum` 컬럼은 누적 저장 강제.
+# 반기(11012)·3분기(11014) 보고서의 흐름 계정 (IS/CIS/CF/SCE) 은 `thstrm_add_amount`
+# (당기누적) 우선 · 부재 시 `thstrm_amount` (Q 단독) fallback.
+# 1분기(11013)·사업(11011) 은 thstrm_amount 가 이미 누적 = 정합.
+# BS 는 스냅샷이라 accumulation 개념 없음 · 항상 thstrm_amount.
+_ADD_REQUIRED_REPRT: frozenset[str] = frozenset({"11012", "11014"})
+_ADD_REQUIRED_SJ: frozenset[str] = frozenset({"IS", "CIS", "CF", "SCE"})
+
+# fallback 발생 시 caller(scheduler) 가 캐시 컬럼에 기록하기 위한 매핑.
+# net_income 은 net_income_owner 미매치 시 대체로 net_income_owner_cum 컬럼에 저장됨.
+_FIELD_TO_CUM_COLUMN: dict[str, str] = {
+    "revenue": "revenue_cum",
+    "operating_income": "operating_income_cum",
+    "net_income_owner": "net_income_owner_cum",
+    "net_income": "net_income_owner_cum",
+    "interest_expense": "interest_expense_cum",
+    "buyback_cashflow": "buyback_cashflow_cum",
+}
+
+
 @dataclass
 class PrinciplesFinancials:
     """principles 원칙 계산용 재무 파싱 결과 (한 분기 · 누적값)."""
@@ -112,13 +132,19 @@ class PrinciplesFinancials:
     total_equity: Optional[float] = None
     buyback_cashflow: Optional[float] = None  # 원본 부호 (음수 = 유출)
     matched: dict[str, str] = field(default_factory=dict)  # field → account_nm 로그
+    # v1.0.7 · cum_fallback (add 없이 thstrm 사용) 발생 필드 (cum 컬럼명 단위).
+    # 삼전 등 특이 회사가 thstrm 에 누적을 담는 케이스 처리용. 정합성 미검증 표시.
+    fallback_fields: set[str] = field(default_factory=set)
 
 
 def _norm(s: str) -> str:
     return " ".join((s or "").split())
 
 
-def parse_principles_financials(items: Iterable[DartFinancialItem]) -> PrinciplesFinancials:
+def parse_principles_financials(
+    items: Iterable[DartFinancialItem],
+    reprt_code: str = "11011",
+) -> PrinciplesFinancials:
     """DART 응답 → PrinciplesFinancials.
 
     매칭 우선순위 (v1.0.6-rev4 · sj_div 필터 추가):
@@ -129,6 +155,11 @@ def parse_principles_financials(items: Iterable[DartFinancialItem]) -> Principle
     사고 방지 (2026-08-20 verified 표본 대조): SCE (자본변동표) 안의
     'ifrs-full_ProfitLossAttributableToOwnersOfParent' account_id 는
     자본 변동 값 (당기 순이익 표시 위치) 을 반환 · 실제 IS 순이익 아님.
+
+    v1.0.7 (2026-08-21) · 계약: `_cum` 컬럼은 누적 저장 강제.
+      - reprt_code ∈ (11012, 11014) 이고 sj_div ∈ (IS, CIS, CF, SCE) →
+        thstrm_add_amount 우선 · 부재 시 thstrm_amount fallback + fallback_fields 기록
+      - reprt_code ∈ (11013, 11011) 또는 BS → thstrm_amount 그대로 (누적=단독 정합)
     """
     out = PrinciplesFinancials()
     for item in items:
@@ -150,7 +181,18 @@ def parse_principles_financials(items: Iterable[DartFinancialItem]) -> Principle
             continue  # sj_div 불일치 · 배제 (예: SCE 안의 순이익 계정 오매칭 방지)
         if getattr(out, field_name) is not None:
             continue  # 이미 매칭 · 첫 매칭 유지
-        val = item.thstrm_amount
+        # 4. v1.0.7 · 누적 값 선택 (add 우선 · fallback thstrm)
+        needs_add = (reprt_code in _ADD_REQUIRED_REPRT) and (sj in _ADD_REQUIRED_SJ)
+        if needs_add:
+            val = item.thstrm_add_amount
+            if val is None:
+                val = item.thstrm_amount
+                if val is not None:
+                    cum_col = _FIELD_TO_CUM_COLUMN.get(field_name)
+                    if cum_col:
+                        out.fallback_fields.add(cum_col)
+        else:
+            val = item.thstrm_amount
         if val is None:
             continue
         setattr(out, field_name, val)

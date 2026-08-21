@@ -74,6 +74,9 @@ class ScreenerInput:
     q_yoy_base_prev: Optional[float] = None
     q_yoy_fail_reason: Optional[str] = None          # yoy_base_missing / yoy_base_invalid
     net_income_source_account: Optional[str] = None  # 파서 매칭 계정 (이후 수집분만)
+    # v1.0.7 (2026-08-21) · cum_fallback (add 부재로 thstrm 사용) 발생 필드 · TTM 경로
+    # 사용 시 reasons 에 cum_fallback_unverified 기록 (정합성 미검증 표시).
+    cum_fallback_fields: list[str] = field(default_factory=list)
 
 
 def screen(inp: ScreenerInput) -> ScreenerVerdict:
@@ -89,6 +92,21 @@ def screen(inp: ScreenerInput) -> ScreenerVerdict:
     reasons: list[PrincipleReason] = []
     missing: list[str] = []
     result = ScreenerVerdict(verdict="INSUFFICIENT_DATA", reasons=reasons, missing_fields=missing)
+
+    # v1.0.7 (2026-08-21) · cum_fallback_unverified · TTM 경로 필드 fallback 발생 시 기록.
+    # 정합성 미검증 표시 · 판정에 영향 없음 (warn) · 원문 대조로 후속 검증 필요.
+    _TTM_FIELDS = {"net_income_owner_cum", "operating_income_cum", "interest_expense_cum"}
+    if inp.cum_fallback_fields:
+        used_fallback = sorted(f for f in inp.cum_fallback_fields if f in _TTM_FIELDS)
+        if used_fallback:
+            reasons.append(PrincipleReason(
+                code="cum_fallback_unverified", status="warn",
+                value={"fields": used_fallback},
+                note=(
+                    f"cum_fallback_unverified · thstrm_add 부재로 thstrm_amount fallback · "
+                    f"{', '.join(used_fallback)} · 정합성 미검증 · 원문 대조 권장"
+                ),
+            ))
 
     # ─── Sanity check v1.0.6-rev3 · 2단 검증 (계정 → YoY) ────────────
     # 사용자 rev3 조건부 승인 (2026-08-19):

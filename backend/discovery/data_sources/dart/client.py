@@ -197,9 +197,10 @@ class DartFinancialItem:
     sj_div: str              # BS / IS / CIS / CF / SCE
     fs_div: str              # CFS(연결) / OFS(별도)
     fs_nm: str               # "연결재무제표" / "재무제표"
-    thstrm_amount: Optional[float]   # 당기금액
-    frmtrm_amount: Optional[float]   # 전기금액
-    ord: Optional[int]               # 정렬 순서
+    thstrm_amount: Optional[float]        # 당기금액 (반기·분기 = 당해 분기 단독 · 사업 = 연간)
+    thstrm_add_amount: Optional[float]    # 당기누적 (반기 = H1 · 3분기 = 9M · 표준 규약)
+    frmtrm_amount: Optional[float]        # 전기금액
+    ord: Optional[int]                    # 정렬 순서
 
 
 async def fetch_financial_statement(
@@ -247,6 +248,7 @@ async def fetch_financial_statement(
             fs_div=(item.get("fs_div") or "").strip(),
             fs_nm=(item.get("fs_nm") or "").strip(),
             thstrm_amount=_to_float(item.get("thstrm_amount")),
+            thstrm_add_amount=_to_float(item.get("thstrm_add_amount")),
             frmtrm_amount=_to_float(item.get("frmtrm_amount")),
             ord=int(item["ord"]) if str(item.get("ord", "")).isdigit() else None,
         ))
