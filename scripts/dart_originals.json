@@ -1,0 +1,42 @@
+[
+  {
+    "ticker": "006400",
+    "name": "삼성SDI",
+    "year": 2026,
+    "quarter": 2,
+    "owner_ni_krw": null,
+    "doc": "TODO · DART 뷰어 삼성SDI 2026 반기보고서 · 연결 CIS · '지배기업의 소유주에게 귀속되는 반기순이익' 값 기입"
+  },
+  {
+    "ticker": "000150",
+    "name": "두산",
+    "year": 2026,
+    "quarter": 2,
+    "owner_ni_krw": null,
+    "doc": "TODO · DART 뷰어 두산 2026 반기보고서 · 연결 IS · '지배기업 소유주지분 반기순이익' 값 기입"
+  },
+  {
+    "ticker": "010950",
+    "name": "S-Oil",
+    "year": 2026,
+    "quarter": 2,
+    "owner_ni_krw": null,
+    "doc": "TODO · DART 뷰어 S-Oil 2026 반기보고서 · 연결 CIS · 지배주주 별도 계정 없으면 '당기순이익' 대체 명시"
+  },
+  {
+    "ticker": "003490",
+    "name": "대한항공",
+    "year": 2026,
+    "quarter": 2,
+    "owner_ni_krw": null,
+    "doc": "TODO · DART 뷰어 대한항공 2026 반기보고서 · 연결 CIS · '지배기업의 소유주' 반기순이익(손실) 값 기입"
+  },
+  {
+    "ticker": "180640",
+    "name": "한진칼",
+    "year": 2026,
+    "quarter": 2,
+    "owner_ni_krw": null,
+    "doc": "TODO · DART 뷰어 한진칼 2026 반기보고서 · 연결 CIS · '지배기업의 소유주' 반기순이익(손실) 값 기입"
+  }
+]
