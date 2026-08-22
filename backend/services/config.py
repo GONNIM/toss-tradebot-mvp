@@ -11,6 +11,13 @@ import logging
 import os
 from pathlib import Path
 
+from backend.services.logging_setup import setup_secure_logging
+
+# 2026-08-22 · DART_API_KEY 로그 노출 사고 대응 · 모든 backend 진입점 공통 부팅.
+# config 는 어떤 backend 모듈이든 첫 import 하는 지점이므로 여기서 자동 setup.
+# idempotent · 여러 번 호출해도 필터 중복 등록 안 됨.
+setup_secure_logging()
+
 logger = logging.getLogger(__name__)
 
 
