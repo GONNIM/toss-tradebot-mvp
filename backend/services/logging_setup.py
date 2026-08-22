@@ -62,11 +62,16 @@ _QUIET_LOGGERS = (
 def setup_secure_logging() -> None:
     """앱 부팅 시 1회 호출 · idempotent.
 
-    - httpx / httpcore 로거 → WARNING (INFO URL 로그 억제)
-    - 루트 로거 및 모든 핸들러 → SecretMaskingFilter 장착
+    - httpx / httpcore 로거 → WARNING (INFO URL 로그 억제 · 1차 방어)
+    - logging.setLogRecordFactory 후킹 → 모든 로거·모든 record 마스킹 (2차 방어)
+      Python logging 규칙상 Logger.filter 는 자기 로거의 record 만 체크 ·
+      하위 로거 (httpx 등) record 가 상위 filter 를 통과하지 않는 문제 회피.
+    - 루트 로거 및 모든 handler → SecretMaskingFilter 장착 (3차 방어 · 백업)
     """
     for name in _QUIET_LOGGERS:
         logging.getLogger(name).setLevel(logging.WARNING)
+
+    _install_masking_record_factory()
 
     root = logging.getLogger()
     if not any(isinstance(f, SecretMaskingFilter) for f in root.filters):
@@ -74,3 +79,33 @@ def setup_secure_logging() -> None:
     for h in list(root.handlers):
         if not any(isinstance(f, SecretMaskingFilter) for f in h.filters):
             h.addFilter(SecretMaskingFilter())
+
+
+def _install_masking_record_factory() -> None:
+    """logging.setLogRecordFactory 후킹 · idempotent (sentinel 로 중복 설치 방지).
+
+    setLogRecordFactory 는 모든 record 생성 시 호출 · Logger.filter 를 우회하는
+    하위 로거 (httpx 등) record 도 100% 커버.
+    """
+    if getattr(logging, "_toss_secret_mask_installed", False):
+        return
+    original_factory = logging.getLogRecordFactory()
+
+    def _masking_factory(*args, **kwargs):
+        record = original_factory(*args, **kwargs)
+        try:
+            record.msg = _mask(record.msg)
+        except Exception:
+            pass
+        if record.args:
+            try:
+                if isinstance(record.args, tuple):
+                    record.args = tuple(_mask(a) for a in record.args)
+                elif isinstance(record.args, dict):
+                    record.args = {k: _mask(v) for k, v in record.args.items()}
+            except Exception:
+                pass
+        return record
+
+    logging.setLogRecordFactory(_masking_factory)
+    logging._toss_secret_mask_installed = True  # type: ignore[attr-defined]
