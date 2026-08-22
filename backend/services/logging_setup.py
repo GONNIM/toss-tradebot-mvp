@@ -29,8 +29,25 @@ _MASKED_REPL = r"\1=***MASKED***"
 
 
 def _mask(v):
+    """자격증명 파라미터 마스킹.
+
+    str: 직접 마스킹.
+    비-str (예: httpx.URL 객체): str() 변환 후 패턴 매치 발동 시 str 로 대체.
+      마스킹 발동 없으면 원본 반환 (int/float 등 · %d formatting 유지).
+
+    2026-08-22 실증: httpx logger.info() 는 request.url 을 httpx.URL 객체로
+    전달 · str 아님 · 원 로직은 그대로 반환 · Formatter 가 %s formatting 시
+    URL.__str__() 호출하며 crtfc_key 노출. 이 fix 로 URL 객체도 커버.
+    """
     if isinstance(v, str):
         return _MASK_PATTERN.sub(_MASKED_REPL, v)
+    try:
+        s = str(v)
+    except Exception:
+        return v
+    masked = _MASK_PATTERN.sub(_MASKED_REPL, s)
+    if masked != s:
+        return masked  # 마스킹 발동 시만 str 로 반환 (int/float 등은 원본 유지)
     return v
 
 

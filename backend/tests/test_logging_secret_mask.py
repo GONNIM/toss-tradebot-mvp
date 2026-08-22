@@ -124,6 +124,63 @@ def test_masking_via_child_logger_bypasses_root_filter_but_factory_covers():
     assert "bgn_de=20260822" in out  # 타 파라미터 보존
 
 
+def test_masking_via_httpx_style_url_object_args():
+    """CRITICAL 회귀 · 2026-08-22 probe 3차 실증 사고.
+
+    httpx logger.info('HTTP Request: %s %s "%s %d %s"', method, url_obj, ver, status, reason)
+    - args[1] 이 httpx.URL 객체 (not str) · 원 _mask 는 그대로 반환 (str 만 처리)
+    - Formatter 가 %s formatting 시 URL.__str__() 호출 · crtfc_key 평문 노출
+    fix: str 아닌 args 도 str() 변환 후 패턴 매치 · 마스킹 발동 시 str 대체.
+    """
+    setup_secure_logging()
+
+    class _FakeUrl:
+        """httpx.URL 대역 · __str__ 로 URL 문자열 반환."""
+        def __init__(self, s: str):
+            self._s = s
+        def __str__(self) -> str:
+            return self._s
+
+    stream = io.StringIO()
+    handler = logging.StreamHandler(stream)
+    handler.setFormatter(logging.Formatter("%(message)s"))
+    fake_key = "3" * 40
+    url_obj = _FakeUrl(f"https://opendart.fss.or.kr/api/list.json?crtfc_key={fake_key}&bgn_de=1")
+
+    child = logging.getLogger("httpx")
+    prev_level = child.level
+    child.setLevel(logging.INFO)
+    child.addHandler(handler)
+    try:
+        child.info('HTTP Request: %s %s "%s %d %s"',
+                   "GET", url_obj, "HTTP/1.1", 200, "OK")
+    finally:
+        child.removeHandler(handler)
+        child.setLevel(prev_level)
+
+    out = stream.getvalue()
+    assert "***MASKED***" in out, f"URL 객체 args 마스킹 미발동 · out={out!r}"
+    assert fake_key not in out, f"평문 재노출 · out={out!r}"
+
+
+def test_masking_preserves_int_args():
+    """int/float args 는 원형 유지 (%d formatting 깨짐 방지)."""
+    setup_secure_logging()
+    stream = io.StringIO()
+    handler = logging.StreamHandler(stream)
+    handler.setFormatter(logging.Formatter("%(message)s"))
+    child = logging.getLogger("test.int_args")
+    child.setLevel(logging.INFO)
+    child.addHandler(handler)
+    try:
+        child.info("count=%d ratio=%.2f", 42, 3.14)
+    finally:
+        child.removeHandler(handler)
+    out = stream.getvalue()
+    assert "count=42" in out
+    assert "3.14" in out
+
+
 def test_masking_via_basicConfig_new_handler_covered_by_factory():
     """setup 이후 basicConfig 로 추가된 handler 도 factory 로 마스킹 커버."""
     setup_secure_logging()
