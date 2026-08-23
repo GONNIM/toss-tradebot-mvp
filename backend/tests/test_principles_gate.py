@@ -22,8 +22,9 @@ from sqlalchemy import delete, select
 os.environ.setdefault("DATABASE_URL", "sqlite+aiosqlite:///:memory:")
 
 from backend.services import config  # noqa: F401 · logging setup + env load
-from backend.services.db import Base, engine, get_session
+from backend.services.db import engine, get_session
 from backend.services.models import (
+    Base,
     PrinciplesGateBlockLog,
     PrinciplesResult,
     PrinciplesRun,
