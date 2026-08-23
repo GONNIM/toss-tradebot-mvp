@@ -1,5 +1,5 @@
 {
-  "version": "1.0.8",
+  "version": "1.0.9",
   "enacted_at": "2026-08-23",
   "title": "저평가 우량주 투자원칙",
   "summary": "정량 기준 5원칙 · 트레일링 PER, 주주환원율, 배당 지속성, 재무 건전성, 분산 규칙. 코드·문서에 그대로 사용 · 임의로 완화하지 않음.",
@@ -173,6 +173,13 @@
       "changed_by": "사용자 (재수집 후 유니버스 거버넌스 진입)",
       "summary": "universe 제외 기준 명문화 · 우선주 (Name 접미어 + 6자리 종목코드 특수 접미 K/L) 자동 제외. 우선주 배당은 P2 배당총액에 계속 포함 (공시 총액 기준). principles_runs.tickers_json 스냅샷 컬럼 신규 · 재현성 확보 (run 단위 대상 티커 리스트).",
       "rationale": "재수집 (2026-08-22 · run_id 10) 후 skipped=110 종목 조사 결과 100% 우선주 (일반 107 · 전환 3). 조용한 누락 방지 위해 명시 제외 목록화. 기업 단위 재무는 보통주 티커로 단일 판정하면 충분. 임계값 변경 없음."
+    },
+    {
+      "version": "1.0.9",
+      "enacted_at": "2026-08-23",
+      "changed_by": "사용자 (INSUFFICIENT 38 백필 · run_id 13 재판정 후 account_mismatch 19종 실 조사)",
+      "summary": "sanity check 1차 계정 검증 whitelist 확장 (완화 아닌 오탐 교정) + Owner 세분 없는 회사 net_income 프록시 (NCI≈0 검증 조건부). 임계값 무변경.\n\n[A] _ALLOWED_ACCOUNT_NM_SUB 신규 추가 substring 7종 (기존 3 + 신규 7 = 10):\n  - '지배기업소유주지분' (실증: 006650·013990 등 6종 · account_id 표준)\n  - '지배기업의 소유주지분' (실증: 000660 SK하이닉스 등 6종 · account_id 표준)\n  - '지배주주지분' (실증: 1종 · account_id 표준 축약)\n  - '지배기업소유주지분 순이익(손실)' (실증: 1종 · 순이익 명시 표기)\n  - '지배기업지분 반기순이익' (예방 커버 · 반기순이익 표기 회사 대응)\n  - '지배기업지분 반기손이익' (실증: 012800 대창 2026Q2 · account_id 표준 · dump add +222.4억 = 캐시 +222.4억 완전 일치)\n  - '지배기업의 소유지분' (실증: 183190 아세아시멘트 2026Q2 · account_id 표준 · dump add +192.5억 = 캐시 +192.5억 완전 일치)\n  - '당기순이익의 귀속 - 지배기업의 소유주' (실증: 1종 · 귀속 표시 명확)\n\n[B] Owner 세분 없는 회사 (net_income 대체 · 예: 010950 S-Oil) net_income 프록시 규약:\n  파싱: ifrs-full_NoncontrollingInterests (sj_div=BS · 계정명 '비지배지분') · noncontrolling_interest_snapshot 컬럼 신규.\n  프록시 조건 (모두 만족):\n    1. source_account whitelist 미매치 (Owner 세분 부재)\n    2. total_equity NOT NULL (BS 파싱 성공)\n    3. NCI 부재 (파싱 실패) OR |NCI| < total_equity × 0.01\n  프록시 허용 시 reasons: 'owner_ni_proxy_total (NCI absent)' 또는 'owner_ni_proxy_total (NCI ratio X.XX%)'\n  실증: 010950 S-Oil · 2026Q2 자본총계 10.086조 · 지배귀속자본 = 자본총계 (사용자 원문 확인 · NCI=0 · 100% 지배 회사).",
+      "rationale": "run_id 13 재판정에서 account_mismatch 19종 발견. 사용자 결정: 즉시 허용 5 + 표본 검증 후 허용 2 (대창·아세아시멘트 dump raw ±0.1% 완전 일치 실증) · 정규식·키워드 AND 채택 X (BS 자본 계정명과 충돌 여지 · 종심 방어 유지). 실 저장 계정명은 회사별 표기 이형이지만 account_id 는 표준 (ifrs-full_ProfitLossAttributableToOwnersOfParent) · substring whitelist 확장이 최소 침습. Owner 세분 없는 회사는 NCI≈0 실증 조건부로만 프록시 허용 · 임계값 변경 없음."
     }
   ],
   "disclaimer": "본 정보는 투자 자문이 아니며, 투자 판단과 책임은 이용자 본인에게 있습니다."

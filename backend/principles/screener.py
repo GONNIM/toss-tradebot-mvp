@@ -77,6 +77,8 @@ class ScreenerInput:
     # v1.0.7 (2026-08-21) · cum_fallback (add 부재로 thstrm 사용) 발생 필드 · TTM 경로
     # 사용 시 reasons 에 cum_fallback_unverified 기록 (정합성 미검증 표시).
     cum_fallback_fields: list[str] = field(default_factory=list)
+    # v1.0.9 (2026-08-23) · Owner 세분 없는 회사 (net_income 대체) NCI≈0 프록시 판정용
+    noncontrolling_interest_snapshot: Optional[float] = None
 
 
 def screen(inp: ScreenerInput) -> ScreenerVerdict:
@@ -119,26 +121,80 @@ def screen(inp: ScreenerInput) -> ScreenerVerdict:
             note="equity_nonpositive · 자본잠식 or 결측 · sanity skip (P4 자연 fail 예상)",
         ))
     else:
-        # 1차 · 계정 검증
+        # 1차 · 계정 검증 (v1.0.9 · substring whitelist 확장 · 오탐 교정 · 실증 근거 charter §revision v1.0.9)
         _ALLOWED_ACCOUNT_IDS = ("ifrs-full_ProfitLossAttributableToOwnersOfParent",)
         _ALLOWED_ACCOUNT_NM_SUB = (
+            # v1.0.6-rev3 기존 3
             "지배기업의 소유주에게 귀속되는 당기순이익",
-            "지배기업 소유주지분",
+            "지배기업 소유주지분",     # 공백 사이
             "지배회사지분",
+            # v1.0.9 신규 7 (2026-08-23 · account_mismatch 19종 실 조사 · 표본 검증 완료)
+            "지배기업소유주지분",       # 공백 없음 · 6종 · account_id 표준
+            "지배기업의 소유주지분",   # SK하이닉스 등 6종 · '의' 붙음
+            "지배주주지분",             # 1종 · 축약형
+            "지배기업의 소유지분",       # 아세아시멘트 dump add +192.5억 실증 · account_id 표준
+            "지배기업지분 반기순이익",   # 예방 커버 · 반기순이익 표기 회사 대응
+            "지배기업지분 반기손이익",   # 대창 dump add +222.4억 실증 · account_id 표준
+            "당기순이익의 귀속 - 지배기업의 소유주",  # 1종 · 귀속 표시 명확
         )
+        # v1.0.9 · Owner 세분 없는 회사 (net_income 대체) 프록시 판정
+        # source_account 가 "당기순이익" 등 total 계정이고 · NCI 부재/1% 이하 → 허용
+        _OWNER_PROXY_NM_SUB = ("당기순이익(손실)", "당기순이익")
         if inp.net_income_source_account:
             src = inp.net_income_source_account
             if src not in _ALLOWED_ACCOUNT_IDS and not any(
                 nm in src for nm in _ALLOWED_ACCOUNT_NM_SUB
             ):
-                reasons.append(PrincipleReason(
-                    code="ttm_sanity", status="insufficient",
-                    value={"source_account": src},
-                    note=f"account_mismatch · '{src[:60]}' 허용 계정 아님",
-                ))
-                missing.append("ttm_sanity")
-                result.verdict = "INSUFFICIENT_DATA"
-                return result
+                # v1.0.9 · Owner 프록시 판정 (당기순이익 등 total 계정)
+                # 조건: (1) source_account 가 net_income 대체 계정 (2) BS 파싱 성공
+                # (total_equity NOT NULL) (3) NCI 부재 or 1% 이하.
+                # ⚠ 주의 (2026-08-23 사용자 보강): NCI is None = "부재" 로 간주는
+                # 신규 파서 (v1.0.9) 수집 행에서만 유효. 구 캐시 (NCI 컬럼 자체가
+                # NULL) 는 "미파싱 unknown" 이므로 이를 absent 로 오해석하면
+                # 오탐 PASS 경로가 열림. 이 구분은 표적 재수집 (프록시 후보 종목
+                # BS 재fetch → NCI 실측 저장) 으로 보장. total_equity IS NULL
+                # 조건은 별도 방어 (BS 자체 미파싱 시 프록시 후보 자격 상실).
+                is_proxy_candidate = any(nm in src for nm in _OWNER_PROXY_NM_SUB)
+                if is_proxy_candidate and inp.total_equity is not None:
+                    nci = inp.noncontrolling_interest_snapshot
+                    if nci is None:
+                        # NCI 파싱 결과 계정 부재 (100% 지배 회사 · 프록시 허용)
+                        # 전제: 이 코드 경로는 BS 재수집 완료된 종목만. 미재수집
+                        # 종목은 total_equity 는 있어도 NCI 컬럼 자체가 NULL 이므로
+                        # 표적 재수집을 통해 신규 파서로 값 확정 후 판정할 것.
+                        reasons.append(PrincipleReason(
+                            code="ttm_sanity", status="pass",
+                            value={"source_account": src},
+                            note="owner_ni_proxy_total (NCI absent)",
+                        ))
+                    elif abs(nci) < abs(inp.total_equity) * 0.01:
+                        nci_ratio = abs(nci) / abs(inp.total_equity)
+                        reasons.append(PrincipleReason(
+                            code="ttm_sanity", status="pass",
+                            value={"source_account": src, "nci_ratio": round(nci_ratio, 5)},
+                            note=f"owner_ni_proxy_total (NCI ratio {nci_ratio*100:.2f}%)",
+                        ))
+                    else:
+                        # NCI ≥ 1% · 프록시 불허 · INSUFFICIENT
+                        nci_ratio = abs(nci) / abs(inp.total_equity)
+                        reasons.append(PrincipleReason(
+                            code="ttm_sanity", status="insufficient",
+                            value={"source_account": src, "nci_ratio": round(nci_ratio, 5)},
+                            note=f"owner_proxy_denied · NCI ratio {nci_ratio*100:.2f}% > 1%",
+                        ))
+                        missing.append("ttm_sanity")
+                        result.verdict = "INSUFFICIENT_DATA"
+                        return result
+                else:
+                    # 프록시 후보 아님 or total_equity 결측 → account_mismatch (기존 로직)
+                    reasons.append(PrincipleReason(
+                        code="ttm_sanity", status="insufficient",
+                        value={"source_account": src},
+                        note=f"account_mismatch · '{src[:60]}' 허용 계정 아님",
+                    ))
+                    missing.append("ttm_sanity")
+                    result.verdict = "INSUFFICIENT_DATA"
+                    return result
         elif (inp.net_income_owner_ttm is not None
               and inp.total_equity is not None and inp.total_equity > 0):
             capital_ratio = abs(inp.net_income_owner_ttm) / abs(inp.total_equity)

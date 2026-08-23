@@ -59,6 +59,8 @@ _MAPPING_ID: dict[str, str] = {
     "ifrs-full_Equity": "total_equity",
     # 현금흐름표 · 자기주식 취득 (음수 유출)
     "ifrs-full_PaymentsForRepurchaseOfEntitysOwnShares": "buyback_cashflow",
+    # v1.0.9 · 비지배지분 (BS · Owner 프록시 NCI≈0 검증용)
+    "ifrs-full_NoncontrollingInterests": "noncontrolling_interest",
 }
 
 _MAPPING_NM_KEYWORDS: dict[str, tuple[str, ...]] = {
@@ -77,6 +79,7 @@ _MAPPING_NM_KEYWORDS: dict[str, tuple[str, ...]] = {
     "total_liabilities": ("부채총계",),
     "total_equity": ("자본총계",),
     "buyback_cashflow": ("자기주식의 취득", "자기주식 취득", "자기주식취득"),
+    "noncontrolling_interest": ("비지배지분",),
 }
 
 
@@ -95,6 +98,7 @@ _FIELD_TO_SJ_DIV: dict[str, tuple[str, ...]] = {
     "total_liabilities": ("BS",),
     "total_equity": ("BS",),
     "buyback_cashflow": ("CF",),
+    "noncontrolling_interest": ("BS",),
 }
 
 
@@ -115,6 +119,7 @@ _FIELD_TO_CUM_COLUMN: dict[str, str] = {
     "net_income": "net_income_owner_cum",
     "interest_expense": "interest_expense_cum",
     "buyback_cashflow": "buyback_cashflow_cum",
+    # noncontrolling_interest 는 BS 스냅샷 · fallback 대상 아님 (needs_add=False)
 }
 
 
@@ -131,6 +136,8 @@ class PrinciplesFinancials:
     total_liabilities: Optional[float] = None
     total_equity: Optional[float] = None
     buyback_cashflow: Optional[float] = None  # 원본 부호 (음수 = 유출)
+    # v1.0.9 · 비지배지분 (BS 스냅샷 · Owner 프록시 NCI≈0 검증용)
+    noncontrolling_interest: Optional[float] = None
     matched: dict[str, str] = field(default_factory=dict)  # field → account_nm 로그
     # v1.0.7 · cum_fallback (add 없이 thstrm 사용) 발생 필드 (cum 컬럼명 단위).
     # 삼전 등 특이 회사가 thstrm 에 누적을 담는 케이스 처리용. 정합성 미검증 표시.

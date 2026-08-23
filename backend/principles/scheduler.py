@@ -323,6 +323,7 @@ async def _upsert_cache(
         dividend_total=dtotal,
         net_income_owner_source_account=source_account,
         cum_fallback_fields=cum_fallback,
+        noncontrolling_interest_snapshot=parsed.noncontrolling_interest,
     )
     if existing is None:
         session.add(
@@ -615,6 +616,11 @@ def _build_screener_input(
     if latest and hasattr(latest, "net_income_owner_source_account"):
         source_account = latest.net_income_owner_source_account
 
+    # v1.0.9 · NCI 스냅샷 (Owner 프록시 판정용 · latest 분기 값)
+    nci_snapshot: Optional[float] = None
+    if latest and hasattr(latest, "noncontrolling_interest_snapshot"):
+        nci_snapshot = latest.noncontrolling_interest_snapshot
+
     # v1.0.7 · cum_fallback_fields 집계 (최근 4Q 중 하나라도 fallback 이면 반영)
     ttm_yq_series = sorted(by_yq.keys())[-4:] if len(by_yq) >= 4 else []
     cum_fallback_fields: set[str] = set()
@@ -649,6 +655,7 @@ def _build_screener_input(
         q_yoy_fail_reason=q_yoy_fail_reason,
         net_income_source_account=source_account,
         cum_fallback_fields=sorted(cum_fallback_fields),
+        noncontrolling_interest_snapshot=nci_snapshot,
     )
 
 

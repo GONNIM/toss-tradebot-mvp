@@ -1720,6 +1720,10 @@ class PrinciplesFinancialCache(Base):
     # None = fallback 없음 (표준 규약 정합). 값 있음 = 정합성 미검증.
     cum_fallback_fields: Mapped[Optional[str]] = mapped_column(String(200))
 
+    # v1.0.9 (2026-08-23) · 비지배지분 스냅샷 (BS · Owner 프록시 NCI≈0 검증용)
+    # None = 파싱 실패 or 계정 부재 (100% 지배 회사 · 프록시 허용 가능)
+    noncontrolling_interest_snapshot: Mapped[Optional[float]]
+
     # 메타
     disclosure_no: Mapped[Optional[str]] = mapped_column(String(20))  # rcept_no
     disclosure_date: Mapped[Optional[str]] = mapped_column(String(10))  # YYYY-MM-DD
