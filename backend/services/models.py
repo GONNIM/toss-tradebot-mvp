@@ -1831,12 +1831,40 @@ class PrinciplesResult(Base):
     reasons_json: Mapped[Optional[str]] = mapped_column(Text)
     missing_fields_json: Mapped[Optional[str]] = mapped_column(Text)  # INSUFFICIENT_DATA 결측 항목
 
+    # gate-design-v1 §3-3 · 실체 검증 태그 (PASS 종목만 · JSON list of str · 세션 B 2026-08-23)
+    # 예: ["single_quarter_outlier"] · ["ttm_concentration"] · []
+    verification_tags: Mapped[Optional[str]] = mapped_column(Text)
+
     created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
 
     __table_args__ = (
         Index("ix_principles_result_run_verdict", "run_id", "verdict"),
         Index("ix_principles_result_ticker_time", "ticker", "created_at"),
     )
+
+
+# ─── PrinciplesVerificationConfirm · 사용자 확인 기록 (세션 B) ────
+
+
+class PrinciplesVerificationConfirm(Base):
+    """실체 검증 확인 이력 (gate-design-v1 §3-3 · 세션 B · 2026-08-23).
+
+    확인 스코프: (ticker, tags_hash) 이중키 (사용자 지시 2026-08-23).
+    run_id 는 감사 필드로만 (매일 recompute 마다 실효 시 재확인 피로 방지).
+    태그 구성 동일 → 확인 유지 · 구성 변경 → hash 불일치 자동 실효.
+    """
+
+    __tablename__ = "principles_verification_confirm"
+
+    ticker: Mapped[str] = mapped_column(String(10), primary_key=True)
+    tags_hash: Mapped[str] = mapped_column(String(16), primary_key=True)
+    # 감사 필드
+    tags_json: Mapped[str] = mapped_column(String(300))  # 원본 태그 리스트 (감사)
+    confirmed_at: Mapped[datetime] = mapped_column(
+        DateTime, server_default=func.now()
+    )
+    confirmed_by: Mapped[Optional[str]] = mapped_column(String(80))  # 사용자 · api token 등
+    run_id_at_confirm: Mapped[Optional[int]]  # 확인 시점 run_id · 감사
 
 
 class PrinciplesIndustryCode(Base):

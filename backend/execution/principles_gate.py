@@ -21,6 +21,7 @@ from backend.services.models import (
     PrinciplesGateBlockLog,
     PrinciplesResult,
     PrinciplesRun,
+    PrinciplesVerificationConfirm,
 )
 
 logger = logging.getLogger(__name__)
@@ -39,6 +40,17 @@ class PrinciplesCheckResult:
     detail: Optional[str] = None     # 사유 상세 (로그·UI용)
     run_id: Optional[int] = None     # 판정에 사용한 run
     bypass: bool = False             # whitelist 우회 여부
+    tags: list[str] = field(default_factory=list)  # PASS 종목의 verification_tags
+
+
+@dataclass(frozen=True)
+class VerificationCheckResult:
+    """실체 검증 게이트 판정 결과 (gate-design-v1 §3-3)."""
+    passed: bool
+    reason: Optional[str] = None     # verification_required (미확인) or None (통과)
+    detail: Optional[str] = None
+    tags: list[str] = field(default_factory=list)
+    tags_hash: Optional[str] = None
 
 
 class PrinciplesGateChecker:
@@ -135,13 +147,22 @@ class PrinciplesGateChecker:
                     run_id=latest.id,
                 )
 
-            # ⑤ 통과
+            # ⑤ 통과 · verification_tags 로드 (실체 검증 판정용)
+            import json as _json
+            raw_tags = pass_row.verification_tags
+            tags: list[str] = []
+            if raw_tags:
+                try:
+                    tags = list(_json.loads(raw_tags))
+                except (ValueError, TypeError):
+                    tags = []
             return PrinciplesCheckResult(
                 passed=True,
                 reason=None,
                 detail=None,
                 run_id=latest.id,
                 bypass=False,
+                tags=tags,
             )
 
     async def _block(
@@ -178,8 +199,58 @@ class PrinciplesGateChecker:
         )
 
 
+class VerificationChecker:
+    """실체 검증 게이트 (gate-design-v1 §3-3 · 세션 B).
+
+    사용:
+        result = await VerificationChecker().check(ticker, tags)
+        · tags 없으면 즉시 통과
+        · tags 있으면 PrinciplesVerificationConfirm 조회 (ticker, tags_hash 이중키)
+          매치 → 통과 · 없음 → verification_required 차단
+    """
+
+    async def check(
+        self,
+        *,
+        ticker: str,
+        tags: list[str],
+    ) -> VerificationCheckResult:
+        if not tags:
+            return VerificationCheckResult(passed=True)
+        from backend.principles.verification_tagger import tags_hash as _hash
+        h = _hash(tags)
+        async with get_session() as s:
+            confirm = (await s.execute(
+                select(PrinciplesVerificationConfirm)
+                .where(PrinciplesVerificationConfirm.ticker == ticker)
+                .where(PrinciplesVerificationConfirm.tags_hash == h)
+            )).scalar_one_or_none()
+            if confirm is None:
+                logger.warning(
+                    f"[VerificationGate] BLOCK · ticker={ticker} · tags={tags} · "
+                    f"tags_hash={h} · reason=verification_required · 사용자 확인 필요"
+                )
+                return VerificationCheckResult(
+                    passed=False,
+                    reason="verification_required",
+                    detail=f"태그 {tags} 미확인 · POST /api/v1/principles/verification/confirm 필요",
+                    tags=tags,
+                    tags_hash=h,
+                )
+            logger.info(
+                f"[VerificationGate] 확인 유지 · ticker={ticker} · tags={tags} · "
+                f"confirmed_at={confirm.confirmed_at}"
+            )
+            return VerificationCheckResult(
+                passed=True,
+                tags=tags,
+                tags_hash=h,
+            )
+
+
 # 프로세스 lifetime 싱글턴
 _checker: Optional[PrinciplesGateChecker] = None
+_verifier: Optional[VerificationChecker] = None
 
 
 def get_principles_gate() -> PrinciplesGateChecker:
@@ -191,5 +262,13 @@ def get_principles_gate() -> PrinciplesGateChecker:
 
 def reset_principles_gate() -> None:
     """테스트·재구성용."""
-    global _checker
+    global _checker, _verifier
     _checker = None
+    _verifier = None
+
+
+def get_verification_checker() -> VerificationChecker:
+    global _verifier
+    if _verifier is None:
+        _verifier = VerificationChecker()
+    return _verifier

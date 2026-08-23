@@ -369,6 +369,7 @@ async def daily_recompute() -> dict:
     preferred_filter_conflict_count = len(conflicts)
 
     stats = {"universe": 0, "pass": 0, "fail": 0, "insufficient": 0,
+             "tagged_pass": 0,  # gate-design-v1 §3-3 · 실체 검증 태깅 종목 수
              "excluded_count": excluded_count,
              "preferred_filter_conflict_count": preferred_filter_conflict_count}
     async with get_session() as session:
@@ -440,6 +441,9 @@ async def daily_recompute() -> dict:
             stats["universe"] += 1
             if verdict.verdict == "PASS":
                 stats["pass"] += 1
+                # gate-design-v1 §3-3 · 태깅 종목 카운트
+                if verdict.verification_tags:
+                    stats["tagged_pass"] = stats.get("tagged_pass", 0) + 1
             elif verdict.verdict == "FAIL":
                 stats["fail"] += 1
             else:
@@ -476,6 +480,9 @@ async def daily_recompute() -> dict:
                     missing_fields_json=json.dumps(
                         verdict.missing_fields, ensure_ascii=False
                     ),
+                    verification_tags=json.dumps(
+                        verdict.verification_tags, ensure_ascii=False
+                    ) if verdict.verification_tags else None,
                 )
             )
         run.finished_at = datetime.now()
@@ -559,6 +566,8 @@ def _build_screener_input(
     ni_owner_ttm = ttm_sum(_standalone_series("net_income_owner_cum"))
     op_ttm = ttm_sum(_standalone_series("operating_income_cum"))
     ie_ttm = ttm_sum(_standalone_series("interest_expense_cum"))
+    # gate-design-v1 §3-3 · 실체 검증 태깅용 · 최근 8Q 단독 시리즈 (net_income_owner)
+    ni_owner_standalone_series = _standalone_series("net_income_owner_cum")[-8:]
 
     # ─── 3년 연간값 (Q4 = 사업보고서) ─
     ni_3y: list[Optional[float]] = []
@@ -674,6 +683,7 @@ def _build_screener_input(
         net_income_source_account=source_account,
         cum_fallback_fields=sorted(cum_fallback_fields),
         noncontrolling_interest_snapshot=nci_snapshot,
+        recent_standalone_series=ni_owner_standalone_series,
     )
 
 

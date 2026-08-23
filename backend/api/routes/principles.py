@@ -10,7 +10,7 @@ from __future__ import annotations
 import json
 from typing import Optional
 
-from fastapi import APIRouter, Query
+from fastapi import APIRouter, Body, HTTPException, Query
 from sqlalchemy import desc, select
 
 from backend.principles.charter import load_charter
@@ -19,6 +19,7 @@ from backend.services.models import (
     PrinciplesGateBlockLog,
     PrinciplesResult,
     PrinciplesRun,
+    PrinciplesVerificationConfirm,
 )
 
 router = APIRouter()
@@ -75,9 +76,11 @@ async def get_latest() -> dict:
         for r in results:
             reasons: Optional[list] = None
             missing: Optional[list] = None
+            vtags: Optional[list] = None
             try:
                 reasons = json.loads(r.reasons_json) if r.reasons_json else None
                 missing = json.loads(r.missing_fields_json) if r.missing_fields_json else None
+                vtags = json.loads(r.verification_tags) if r.verification_tags else None
             except json.JSONDecodeError:
                 pass
             grouped.setdefault(r.verdict, []).append({
@@ -94,6 +97,7 @@ async def get_latest() -> dict:
                 "interest_coverage": r.interest_coverage,
                 "reasons": reasons,
                 "missing_fields": missing,
+                "verification_tags": vtags,
             })
         return {
             "run": {
@@ -164,4 +168,160 @@ async def list_blocked_recent(
                 }
                 for r in recent_rows
             ],
+        }
+
+
+# ─── gate-design-v1 §3-3 · 실체 검증 확인 (세션 B · 2026-08-23) ────
+
+
+@router.get("/verification/pending")
+async def list_pending_verifications() -> dict:
+    """최신 PASS 종목 중 태깅 있는데 미확인 (재확인 필요) 리스트.
+
+    스코프 = (ticker, tags_hash) 이중키 · 태그 구성 동일 확인만 통과.
+    """
+    from backend.principles.verification_tagger import tags_hash as _hash
+    async with get_session() as session:
+        latest_run = (
+            await session.execute(
+                select(PrinciplesRun)
+                .where(PrinciplesRun.finished_at.is_not(None))
+                .order_by(desc(PrinciplesRun.id))
+                .limit(1)
+            )
+        ).scalar_one_or_none()
+        if latest_run is None:
+            return {"run_id": None, "pending": []}
+        pass_rows = (
+            await session.execute(
+                select(PrinciplesResult)
+                .where(PrinciplesResult.run_id == latest_run.id)
+                .where(PrinciplesResult.verdict == "PASS")
+            )
+        ).scalars().all()
+        pending: list[dict] = []
+        for r in pass_rows:
+            if not r.verification_tags:
+                continue
+            try:
+                tags = list(json.loads(r.verification_tags))
+            except (ValueError, TypeError):
+                continue
+            if not tags:
+                continue
+            h = _hash(tags)
+            # 확인 조회
+            confirm = (
+                await session.execute(
+                    select(PrinciplesVerificationConfirm)
+                    .where(PrinciplesVerificationConfirm.ticker == r.ticker)
+                    .where(PrinciplesVerificationConfirm.tags_hash == h)
+                )
+            ).scalar_one_or_none()
+            if confirm is None:
+                pending.append({
+                    "ticker": r.ticker,
+                    "name": r.name,
+                    "tags": tags,
+                    "tags_hash": h,
+                    "per_ttm": r.per_ttm,
+                })
+        return {"run_id": latest_run.id, "pending": pending}
+
+
+@router.post("/verification/confirm")
+async def confirm_verification(
+    body: dict = Body(...),
+) -> dict:
+    """실체 검증 확인 저장 · 스코프 (ticker, tags_hash) 이중키.
+
+    보완 (2026-08-23 사용자 지시 · 선승인 방지):
+      최신 유효 run 의 해당 ticker verification_tags 를 조회 · 제출 tags 와
+      정렬 비교 (hash 일치) 시에만 저장. 불일치 or 미태깅 → 400 + 현재 실제 태그 반환.
+      사유: 임의 (ticker, tags_hash) 선승인 시 미래 태그 발생 순간 자동 통과 백지
+      승인 구멍. 확인 = 현재 근거에 대한 승인.
+
+    Body: {"ticker": "033530", "tags": ["single_quarter_outlier"], "confirmed_by": "user@x"}
+    """
+    from backend.principles.verification_tagger import tags_hash as _hash
+    ticker = body.get("ticker")
+    tags = body.get("tags") or []
+    confirmed_by = body.get("confirmed_by")
+    if not ticker or not isinstance(tags, list) or not tags:
+        raise HTTPException(400, "ticker 와 비어있지 않은 tags 필수")
+    submitted_hash = _hash(tags)
+    tags_json_str = json.dumps(sorted(tags), ensure_ascii=False)
+    async with get_session() as session:
+        latest_run = (
+            await session.execute(
+                select(PrinciplesRun)
+                .where(PrinciplesRun.finished_at.is_not(None))
+                .order_by(desc(PrinciplesRun.id))
+                .limit(1)
+            )
+        ).scalar_one_or_none()
+        if latest_run is None:
+            raise HTTPException(400, {"error": "no_valid_run", "message": "완료된 principles_runs 없음"})
+
+        # 보완 · 최신 run 의 해당 ticker verification_tags 조회 · 정렬 비교
+        result_row = (
+            await session.execute(
+                select(PrinciplesResult)
+                .where(PrinciplesResult.run_id == latest_run.id)
+                .where(PrinciplesResult.ticker == ticker)
+            )
+        ).scalar_one_or_none()
+        current_tags: list[str] = []
+        if result_row and result_row.verification_tags:
+            try:
+                current_tags = list(json.loads(result_row.verification_tags))
+            except (ValueError, TypeError):
+                current_tags = []
+        current_hash = _hash(current_tags) if current_tags else None
+        if not current_tags:
+            raise HTTPException(400, {
+                "error": "not_tagged",
+                "message": f"ticker {ticker} 는 최신 run #{latest_run.id} 에서 태깅되지 않음 (확인 불필요)",
+                "current_tags": [],
+                "current_hash": None,
+            })
+        if submitted_hash != current_hash:
+            raise HTTPException(400, {
+                "error": "tags_mismatch",
+                "message": f"제출 태그가 현재 근거와 불일치 (선승인 방지 · 백지 승인 차단)",
+                "submitted_tags": sorted(tags),
+                "submitted_hash": submitted_hash,
+                "current_tags": sorted(current_tags),
+                "current_hash": current_hash,
+            })
+
+        # 검증 통과 · 저장 (idempotent)
+        existing = (
+            await session.execute(
+                select(PrinciplesVerificationConfirm)
+                .where(PrinciplesVerificationConfirm.ticker == ticker)
+                .where(PrinciplesVerificationConfirm.tags_hash == submitted_hash)
+            )
+        ).scalar_one_or_none()
+        if existing:
+            return {
+                "status": "already_confirmed",
+                "ticker": ticker,
+                "tags_hash": submitted_hash,
+                "confirmed_at": existing.confirmed_at.isoformat() if existing.confirmed_at else None,
+            }
+        session.add(PrinciplesVerificationConfirm(
+            ticker=ticker,
+            tags_hash=submitted_hash,
+            tags_json=tags_json_str,
+            confirmed_by=confirmed_by,
+            run_id_at_confirm=latest_run.id,
+        ))
+        await session.commit()
+        return {
+            "status": "confirmed",
+            "ticker": ticker,
+            "tags_hash": submitted_hash,
+            "tags": sorted(tags),
+            "run_id_at_confirm": latest_run.id,
         }

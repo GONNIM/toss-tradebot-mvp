@@ -31,7 +31,12 @@ from .exceptions import (
     RiskBudgetViolation,
 )
 from .kill_switch import KillSwitch, get_kill_switch
-from .principles_gate import PrinciplesGateChecker, get_principles_gate
+from .principles_gate import (
+    PrinciplesGateChecker,
+    VerificationChecker,
+    get_principles_gate,
+    get_verification_checker,
+)
 from .models import (
     BrokerKind,
     OrderRequest,
@@ -96,12 +101,14 @@ class SignalRouter:
         kill_switch: Optional[KillSwitch] = None,
         params_store: Optional[ExecutionParamsStore] = None,
         principles_gate: Optional[PrinciplesGateChecker] = None,
+        verification_checker: Optional[VerificationChecker] = None,
     ):
         self._om = order_manager
         self._risk = risk_checker or RiskBudgetChecker(params_store)
         self._ks = kill_switch or get_kill_switch()
         self._params = params_store or get_params_store()
         self._principles_gate = principles_gate or get_principles_gate()
+        self._verification = verification_checker or get_verification_checker()
 
     # ─── 전역 스위치 ───
     @staticmethod
@@ -206,6 +213,28 @@ class SignalRouter:
                 except Exception as exc:  # noqa: BLE001
                     logger.warning("[Router] 감사 로그 실패 — %s", exc)
                 return rejected
+
+            # ④.6 VerificationRequiredGate (gate-design-v1 §3-3 · 세션 B)
+            # bypass (sniper) 는 태그 무관 · verification 도 우회
+            if not pg.bypass and pg.tags:
+                vg = await self._verification.check(ticker=event.ticker, tags=pg.tags)
+                if not vg.passed:
+                    logger.warning(
+                        "[Router] VerificationGate 차단 · ticker=%s · tags=%s · reason=%s",
+                        event.ticker, vg.tags, vg.reason,
+                    )
+                    rejected = OrderResult(
+                        order_uuid=req.order_uuid,
+                        broker_order_id=None,
+                        status=OrderStatus.REJECTED,
+                        error_code=f"verification-{vg.reason}",
+                        error_message=vg.detail,
+                    )
+                    try:
+                        await record_order_result(self._om.broker_kind, req, rejected)
+                    except Exception as exc:  # noqa: BLE001
+                        logger.warning("[Router] 감사 로그 실패 — %s", exc)
+                    return rejected
 
         # ⑤ Risk Budget
         balance = self._om.get_balance()

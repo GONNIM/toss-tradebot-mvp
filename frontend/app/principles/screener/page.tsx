@@ -27,6 +27,7 @@ interface Result {
   interest_coverage: number | null;
   reasons: Reason[] | null;
   missing_fields: string[] | null;
+  verification_tags: string[] | null;
 }
 
 interface Run {
@@ -189,7 +190,17 @@ export default function ScreenerPage() {
                       className="border-b border-border/40 hover:bg-muted/20 cursor-pointer"
                       onClick={() => setOpenTicker(openTicker === r.ticker ? null : r.ticker)}
                     >
-                      <td className="py-1 pr-3 font-mono">{r.ticker}</td>
+                      <td className="py-1 pr-3 font-mono">
+                        {r.ticker}
+                        {r.verification_tags && r.verification_tags.length > 0 && (
+                          <span
+                            title={`실체 검증 필요 · ${r.verification_tags.join(", ")}`}
+                            className="ml-1 text-amber-600"
+                          >
+                            ⚠
+                          </span>
+                        )}
+                      </td>
                       <td className="py-1 pr-3">{r.name ?? "—"}</td>
                       <td className="py-1 pr-3 text-right font-mono">{fmtNum(r.per_ttm)}</td>
                       <td className="py-1 pr-3 text-right font-mono">

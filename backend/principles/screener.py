@@ -34,6 +34,8 @@ class ScreenerVerdict:
     """5원칙 종합 판정 결과."""
     verdict: VerdictType
     reasons: list[PrincipleReason] = field(default_factory=list)
+    # gate-design-v1 §3-3 · 실체 검증 태그 (PASS 종목만)
+    verification_tags: list[str] = field(default_factory=list)
     missing_fields: list[str] = field(default_factory=list)
 
     # 저장용 요약 지표 (models.PrinciplesResult 컬럼)
@@ -79,6 +81,8 @@ class ScreenerInput:
     cum_fallback_fields: list[str] = field(default_factory=list)
     # v1.0.9 (2026-08-23) · Owner 세분 없는 회사 (net_income 대체) NCI≈0 프록시 판정용
     noncontrolling_interest_snapshot: Optional[float] = None
+    # gate-design-v1 §3-3 · 실체 검증 태깅용 · 최근 8Q 단독 시리즈 (시간순 · net_income_owner)
+    recent_standalone_series: list[Optional[float]] = field(default_factory=list)
 
 
 def screen(inp: ScreenerInput) -> ScreenerVerdict:
@@ -456,5 +460,19 @@ def screen(inp: ScreenerInput) -> ScreenerVerdict:
         result.verdict = "INSUFFICIENT_DATA"
     else:
         result.verdict = "PASS"
+
+    # gate-design-v1 §3-3 · PASS 종목만 실체 검증 태깅 (verdict 확정 후)
+    if result.verdict == "PASS":
+        try:
+            from backend.principles.verification_tagger import compute_tags
+            tags = compute_tags(
+                ttm=inp.net_income_owner_ttm,
+                recent_standalone_series=inp.recent_standalone_series,
+            )
+            result.verification_tags = tags
+        except Exception:
+            result.verification_tags = []
+    else:
+        result.verification_tags = []
 
     return result
