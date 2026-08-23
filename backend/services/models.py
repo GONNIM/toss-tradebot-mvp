@@ -1769,6 +1769,13 @@ class PrinciplesRun(Base):
     dart_call_count: Mapped[int] = mapped_column(default=0)
     elapsed_sec: Mapped[Optional[float]]
 
+    # charter v1.0.8 (2026-08-23) · 재현성 스냅샷 · run 단위 대상 티커 리스트 (JSON list of str)
+    # 유니버스 우선주 제외 (universe_filter) 적용 후 실제 판정 대상만.
+    tickers_json: Mapped[Optional[str]] = mapped_column(String(65535))
+    # charter v1.0.8 보정 · 오탐 방어 관측성 (조용한 누락 감지)
+    excluded_count: Mapped[Optional[int]]  # raw 유니버스 대비 필터로 제외된 우선주 수
+    preferred_filter_conflict_count: Mapped[Optional[int]]  # 이름 우선주 매치 but corp_code 있어 배제 안 한 종목 수
+
 
 class PrinciplesResult(Base):
     """배치별 종목 판정 · 5원칙 지표 + reasons_json (5원칙 전체 근거)."""

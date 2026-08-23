@@ -1,6 +1,6 @@
 {
-  "version": "1.0.6",
-  "enacted_at": "2026-08-17",
+  "version": "1.0.8",
+  "enacted_at": "2026-08-23",
   "title": "저평가 우량주 투자원칙",
   "summary": "정량 기준 5원칙 · 트레일링 PER, 주주환원율, 배당 지속성, 재무 건전성, 분산 규칙. 코드·문서에 그대로 사용 · 임의로 완화하지 않음.",
   "units_convention": "모든 비율 threshold 는 소수 표현. 예: 0.40 = 40% · 2.0 = 200%. 스크리너 계산부·게이트도 동일 규약 준수. 현금흐름표상 자기주식 취득액은 유출(음수)을 절대값으로 변환하여 저장 (v1.0.2). alotMatter API 의 현금배당금총액(백만원)은 원 단위(×1,000,000)로 환산하여 저장 (v1.0.5).",
@@ -77,7 +77,17 @@
   },
   "universe": {
     "market": "KOSPI",
-    "note": "KOSPI 전종목 (~950). KOSDAQ 은 본 원칙 범위 아님."
+    "note": "KOSPI 전종목 (~950 · 우선주 자동 제외 · v1.0.8). KOSDAQ 은 본 원칙 범위 아님.",
+    "exclude": {
+      "preferred_stock": {
+        "note": "우선주 종목코드는 판정 대상 제외 (기업 단위 재무는 보통주 티커로 단일 판정) · 단 우선주 배당은 P2 배당총액에 포함됨 (공시 총액 기준).",
+        "rule": "Name 접미어 매치 OR 6자리 종목코드 특수 접미 (K/L). 교차 검증 (오탐 방어): 이름 매치 종목 중 DART corp_code 매핑 존재 시 preferred_filter_conflict 로그 + 배제 안 함 (우선주는 corp_code 매핑이 없다는 110종 실증 성질을 안전장치로 사용).",
+        "name_suffix": ["우", "우B", "1우", "2우B", "3우B", "우전환", "우C"],
+        "special_code_suffix": ["K", "L"],
+        "impl": "backend/principles/universe_filter.py::is_preferred_stock",
+        "empirical_basis": "2026-08-22 · run_id 10 재수집에서 corp_code 매핑 실패 110종 조사 결과 100% 우선주 (일반 107 + 전환 3) 확인."
+      }
+    }
   },
   "data_pipeline": {
     "dart_financials": {
@@ -149,6 +159,20 @@
       "changed_by": "사용자 (rev3 조건부 승인 · 완화 아닌 개선)",
       "summary": "sanity check 재설계 (2단) · [1차] 계정 검증 (source_account whitelist · ifrs-full_ProfitLossAttributableToOwnersOfParent 등) + fallback heuristic (capital_ratio > 0.80 · 실 오염 케이스 삼전 1.11 감지 vs 초호황 하이닉스 ROE ~30% 통과 판별력) · [2차] YoY 검증 (TTM vs 연간 [0.5, 2.0] 초과 시 · 최신 분기 vs 전년 동기 누적 Q YoY 원값 확인 · surge > +50% / decline < -33% verified 통과 · yoy_base_invalid: |전년동기| < 0.10 × |당기동기| / yoy_base_missing: 전년 동기 행 부재) · 자본잠식 (equity <= 0) skip + equity_nonpositive 기록 · 임계값 [0.5, 2.0] 유지 · verified 통과는 실 실적 확진 후에만.",
       "rationale": "v1.0.5 원복으로 137 종목 sanity_fail 대량 오탐 · 실 실적 급증 (반도체 초호황 · 삼전 Q1'26 47조 · DART 원본 검증 완료) 이 정탐 대상과 뒤섞임. 계정 검증으로 v1.0.1 자본 오염 직접 방어 · YoY 원값으로 실 급변동 verified. **절대 우회 금지**: sanity·게이트·임계값 완화 변경은 사용자 사전 승인 없이 커밋 금지 (v1.0.3 재발 방지 원칙 유지 · 이번 rev3 는 절차 준수하여 개정)."
+    },
+    {
+      "version": "1.0.7",
+      "enacted_at": "2026-08-21",
+      "changed_by": "사용자 (파서·verify 자기 채점 사고 회고 후 · 표준 규약 확진)",
+      "summary": "파서 계약 · _cum 컬럼 누적 저장 강제. IS/CIS/CF/SCE × 반기(11012)/3분기(11014) 응답의 thstrm_add_amount 우선 · 부재 시 thstrm_amount fallback + cum_fallback_fields 플래그. screener 는 TTM 경로 (net_income_owner_cum/operating_income_cum/interest_expense_cum) fallback 감지 시 cum_fallback_unverified reason (warn · verdict 무영향). 배치 요약에 cum_fallback_ratio > 5% 경고 라인.",
+      "rationale": "6종목 원문 대조 (사용자 실측 · 삼전 118.371조 포함 6/6) 결과 회사별 DART API 응답 규약 표준 확진 · 파서가 thstrm 만 저장하면 Q 단독 이질 저장. add 우선으로 표준 규약 (누적) 종속. 임계값 변경 없음."
+    },
+    {
+      "version": "1.0.8",
+      "enacted_at": "2026-08-23",
+      "changed_by": "사용자 (재수집 후 유니버스 거버넌스 진입)",
+      "summary": "universe 제외 기준 명문화 · 우선주 (Name 접미어 + 6자리 종목코드 특수 접미 K/L) 자동 제외. 우선주 배당은 P2 배당총액에 계속 포함 (공시 총액 기준). principles_runs.tickers_json 스냅샷 컬럼 신규 · 재현성 확보 (run 단위 대상 티커 리스트).",
+      "rationale": "재수집 (2026-08-22 · run_id 10) 후 skipped=110 종목 조사 결과 100% 우선주 (일반 107 · 전환 3). 조용한 누락 방지 위해 명시 제외 목록화. 기업 단위 재무는 보통주 티커로 단일 판정하면 충분. 임계값 변경 없음."
     }
   ],
   "disclaimer": "본 정보는 투자 자문이 아니며, 투자 판단과 책임은 이용자 본인에게 있습니다."

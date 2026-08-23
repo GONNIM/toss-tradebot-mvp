@@ -82,18 +82,39 @@ _corp_code_map: Optional[dict[str, str]] = None
 
 
 async def get_corp_code_map() -> dict[str, str]:
-    """DART corp_code 매핑 (프로세스 lifetime 캐시)."""
+    """DART corp_code 매핑 (프로세스 lifetime 캐시).
+
+    charter v1.0.8 (2026-08-23) · raw 유니버스 전체 매핑 (필터 이전).
+    filter_common_stock 이 이 매핑을 교차 검증에 사용하므로 · 매핑은 raw 대상.
+    """
     global _corp_code_map
     if _corp_code_map is not None:
         return _corp_code_map
     from backend.powderkeg.collectors.corp_codes import resolve_many
 
-    df = await get_kospi_universe()
-    tickers = df["Code"].astype(str).tolist()
+    df_raw = await get_kospi_universe()
+    tickers = df_raw["Code"].astype(str).tolist()
     result = await resolve_many(tickers)
     _corp_code_map = {k: v for k, v in result.items() if v}
     logger.info(f"[principles] corp_code 매핑 완료 · {len(_corp_code_map)} / {len(tickers)}")
     return _corp_code_map
+
+
+async def get_common_universe():
+    """보통주만 필터링된 KOSPI 유니버스 + 교차 검증 conflict 리스트.
+
+    charter v1.0.8 · corp_map 교차 검증으로 오탐 방어. 반환 (df, conflicts).
+    """
+    from backend.principles.universe_filter import filter_common_stock
+
+    df_raw = await get_kospi_universe()
+    corp_map = await get_corp_code_map()
+    df, conflicts = filter_common_stock(df_raw, corp_map=corp_map)
+    logger.info(
+        f"[principles] universe · raw={len(df_raw)} → common={len(df)} · "
+        f"excluded={len(df_raw) - len(df)} · conflicts={len(conflicts)}"
+    )
+    return df, conflicts
 
 
 # ─── 감지 배치 · 미수집 분기만 DART ─────────────────────────
@@ -149,10 +170,12 @@ async def weekly_detect_and_fetch() -> dict:
     stats = {"tickers": 0, "dart_calls": 0, "cache_upserts": 0, "retries": 0, "skipped": 0,
              "cum_fallback_rows": 0}
 
-    df = await get_kospi_universe()
+    # charter v1.0.8 · 우선주 자동 제외 (corp_map 교차 검증) · 공통 유니버스 사용
+    df, conflicts = await get_common_universe()
     tickers = df["Code"].astype(str).tolist()
     corp_map = await get_corp_code_map()
     quarters_target = _quarters_needed(date.today())
+    stats["preferred_filter_conflict_count"] = len(conflicts)
 
     async with get_session() as session:
         # 캐시된 (ticker, year, quarter) 세트 조회
@@ -337,16 +360,38 @@ async def daily_recompute() -> dict:
         )
         return {"skipped": True, "reason": "cache_empty_skip"}
 
-    df = await get_kospi_universe()
+    # charter v1.0.8 · 우선주 자동 제외 (corp_map 교차 검증) · 재현성 스냅샷 저장
+    df_raw = await get_kospi_universe()
+    df, conflicts = await get_common_universe()
+    tickers_snapshot = df["Code"].astype(str).tolist()
+    excluded_count = len(df_raw) - len(df)
+    preferred_filter_conflict_count = len(conflicts)
 
-    stats = {"universe": 0, "pass": 0, "fail": 0, "insufficient": 0}
+    stats = {"universe": 0, "pass": 0, "fail": 0, "insufficient": 0,
+             "excluded_count": excluded_count,
+             "preferred_filter_conflict_count": preferred_filter_conflict_count}
     async with get_session() as session:
+        # 직전 run 의 excluded_count 대비 ±10 초과 시 경고 (조용한 누락 감지)
+        prev_run = (await session.execute(
+            select(PrinciplesRun).order_by(PrinciplesRun.id.desc()).limit(1)
+        )).scalar_one_or_none()
+        if prev_run and prev_run.excluded_count is not None:
+            delta = abs(excluded_count - prev_run.excluded_count)
+            if delta > 10:
+                logger.warning(
+                    f"[principles.recompute] excluded_count 변동 · 이번 {excluded_count} "
+                    f"vs 직전 run#{prev_run.id} {prev_run.excluded_count} · Δ{delta} > 10 · "
+                    f"조용한 누락 감지 · 우선주 필터 오탐 확인 필요"
+                )
         run = PrinciplesRun(
             started_at=started,
             trigger="cron",
             charter_version=charter["version"],
             universe_size=len(df),
             dart_call_count=0,
+            tickers_json=json.dumps(tickers_snapshot),
+            excluded_count=excluded_count,
+            preferred_filter_conflict_count=preferred_filter_conflict_count,
         )
         session.add(run)
         await session.flush()
