@@ -35,10 +35,15 @@ def test_sjg세종_single_quarter_outlier_fixture():
 
 
 def test_dooul_single_quarter_outlier_fixture():
-    """두올 2025 Q4 -13.8억 (직전 4Q 평균 ~100억) · 편차 113억 > 100억 · 태깅."""
+    """두올 2025 Q4 -13.8억 (직전 4Q 흑자 대비 음전환) · 태깅.
+
+    직전 4Q 확보 위해 2024 Q3·Q4 안정 시드 (실측 근사 · 두올 2024 규모).
+    idx=5 (2025Q4) 직전 4Q = [2024Q3, 2024Q4, 2025Q1, 2025Q2] · avg 90+ ·
+    |-13.8 - avg| > avg · True.
+    """
     series = [
-        None,
-        None,
+        60e8,          # 2024Q3 시드 (안정)
+        80e8,          # 2024Q4 시드
         123.4e8,       # 2025Q1
         66.9e8,        # 2025Q2
         111.9e8,       # 2025Q3
