@@ -1724,6 +1724,28 @@ class PrinciplesFinancialCache(Base):
     # None = 파싱 실패 or 계정 부재 (100% 지배 회사 · 프록시 허용 가능)
     noncontrolling_interest_snapshot: Mapped[Optional[float]]
 
+
+# ─── PrinciplesGate 세션 A · 차단 로그 (gate-design-v1 §3-1) ──────
+
+
+class PrinciplesGateBlockLog(Base):
+    """PrinciplesGate 차단 이력 로그 (관리 화면 병치 · 90일 자동 정리).
+
+    daily_recompute 말미 90일 초과 DELETE 자동 · 사용자 지시 (2026-08-23).
+    """
+
+    __tablename__ = "principles_gate_block_log"
+
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime, server_default=func.now(), index=True
+    )
+    ticker: Mapped[str] = mapped_column(String(10))
+    source: Mapped[Optional[str]] = mapped_column(String(40))
+    reason: Mapped[str] = mapped_column(String(40))  # principles_fail_closed / stale / missing 등
+    detail: Mapped[Optional[str]] = mapped_column(String(300))
+    run_id: Mapped[Optional[int]]  # 판정에 사용한 run · None 가능 (run 부재 케이스)
+
     # 메타
     disclosure_no: Mapped[Optional[str]] = mapped_column(String(20))  # rcept_no
     disclosure_date: Mapped[Optional[str]] = mapped_column(String(10))  # YYYY-MM-DD

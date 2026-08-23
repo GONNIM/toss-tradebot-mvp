@@ -197,6 +197,11 @@ async def execute_entry(
         signal_id=f"sniper-{candidate.ticker}-{int(candidate.detected_at.timestamp())}",
     )
 
+    # gate-design-v1 §3-1 · 직접 호출 경로 감사 (SignalRouter 미경유 · 완전 강제는 부채)
+    logger.warning(
+        "[direct_order_unrouted] source=sniper · ticker=%s · qty=%s · signal_id=%s",
+        req.ticker, req.qty, req.signal_id,
+    )
     try:
         result = order_manager.submit_order(req)
     except KillSwitchActive:

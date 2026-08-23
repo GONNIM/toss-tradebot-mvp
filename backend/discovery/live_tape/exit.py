@@ -99,6 +99,11 @@ async def execute_exit(
         signal_id=f"sniper-exit-{signal_id}-{trigger_reason}",
     )
 
+    # gate-design-v1 §3-1 · 직접 호출 경로 감사 (매도 · SignalRouter 미경유)
+    logger.warning(
+        "[direct_order_unrouted] source=sniper · side=sell · ticker=%s · qty=%s · signal_id=%s",
+        req.ticker, req.qty, req.signal_id,
+    )
     try:
         result = order_manager.submit_order(req)
     except KillSwitchActive:

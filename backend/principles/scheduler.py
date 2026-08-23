@@ -485,6 +485,24 @@ async def daily_recompute() -> dict:
         run.elapsed_sec = (run.finished_at - run.started_at).total_seconds()
         await session.commit()
 
+        # gate-design-v1 §3-1 · PrinciplesGateBlockLog 90일 초과 정리 (2026-08-23)
+        try:
+            from backend.services.models import PrinciplesGateBlockLog
+            from sqlalchemy import delete
+            cutoff = datetime.now() - timedelta(days=90)
+            r = await session.execute(
+                delete(PrinciplesGateBlockLog).where(
+                    PrinciplesGateBlockLog.created_at < cutoff
+                )
+            )
+            await session.commit()
+            if r.rowcount:
+                logger.info(
+                    f"[principles.gate_log_cleanup] 90일 초과 block log {r.rowcount} 삭제"
+                )
+        except Exception as exc:  # noqa: BLE001
+            logger.warning(f"[principles.gate_log_cleanup] 실패 (무시) · {exc}")
+
     stats["run_id"] = run_id
     stats["elapsed_sec"] = (datetime.now() - started).total_seconds()
     logger.info(f"[principles.daily_recompute] done · run_id={run_id} · {stats}")

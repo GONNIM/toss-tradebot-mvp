@@ -31,6 +31,13 @@
        └─ 태깅 있음 ("실체 검증 필요") → 자동 매수 보류 + 사용자 확인 요구
 ```
 
+## 적용 범위 · 매수 (BUY) 전용
+
+**게이트는 매수 (BUY) 신호에만 적용 · 매도는 우회** (포지션 청산 방해 금지).
+- 매도는 리스크 축소 · 관문 통과 요구 없음
+- 구현: `signal_router.py::route()` 안 `if req.side == OrderSide.BUY:` 조건부 삽입
+- 근거: 이미 PASS 통과해 진입한 종목이 후에 PASS 리스트에서 빠져도 청산 자유
+
 ## 3-1 PrinciplesGate
 
 **목적**: 매수 신호가 PrinciplesRun 의 최신 PASS 리스트에 포함된 종목만 실행 진입 가능.
@@ -46,19 +53,19 @@
       return GateResult(allowed=False, reason='principles_fail_closed',
                          detail=f"ticker {signal.ticker} not in PASS list of run {latest_run.id}")
   ```
-- **fail-closed**: PrinciplesRun 자체가 없거나 (cache_empty_skip) · 최근 run 이 24시간 이상 stale → **차단** (신호 소스 무관 · charter 원안). 예외 화이트리스트만 통과.
+- **fail-closed**: PrinciplesRun 자체가 없거나 (cache_empty_skip) · 최근 run 이 26시간 이상 stale → **차단** (신호 소스 무관 · charter 원안). 예외 화이트리스트만 통과.
 - **화이트리스트**: `sniper` 소스 (사용자 명시 대안 · 짧은 스캘핑 목적 · PASS 무관). 화이트리스트 소스는 게이트 우회 · 하지만 사유 로그에 `whitelist_bypass=sniper` 명기.
 
 **차단 사유 로그** (관리 화면 병치):
 - `principles_fail_closed` · PASS 아님
-- `principles_run_stale` · 최근 run > 24h 경과
+- `principles_run_stale` · 최근 run > 26h 경과
 - `principles_run_missing` · principles_runs 비어있음
 - `sector_over_limit` (3-2 에서)
 - `verification_required` (3-3 에서 · 자동 차단 아니라 사용자 확인 요구 상태)
 
 **관리 화면 병치**: 
 - `/principles/screener` 페이지에 최근 차단 이력 (최근 20건) 표 표시
-- 각 사유별 카운트 (지난 24h) · 이상 급증 시 알림 (예: `sector_over_limit` 시간당 10건 이상 → 게이트 로직 재검토)
+- 각 사유별 카운트 (지난 26h) · 이상 급증 시 알림 (예: `sector_over_limit` 시간당 10건 이상 → 게이트 로직 재검토)
 
 **구현 지점**:
 - `backend/execution/signal_router.py::PrinciplesGate` (신규 클래스 · 예상 60~80 라인)
@@ -162,7 +169,7 @@
 
 ## 리스크·미결 항목
 
-- **PrinciplesRun 최신성 판단**: "24시간 이내" 임계값 사용자 검토 필요 (daily_recompute 는 매일 23:00 · 24h 이상 stale 은 배치 실패 신호)
+- **PrinciplesRun 최신성 판단**: "26시간 이내" 임계값 사용자 검토 필요 (daily_recompute 는 매일 23:00 · 26h 이상 stale 은 배치 실패 신호)
 - **화이트리스트 소스 확정**: 사용자 언급 `sniper` 외 추가 후보 (VIP · MemeWatch 등) 은 별도 검토
 - **broker_positions 데이터 소스**: 자동 매수 broker 확정 후 3-2 구현 착수
 - **verification_tags 표시 UX**: 스크리너 리스트에서 태그 라벨 위치·색상·클릭 시 상세 뷰 별도 디자인 필요

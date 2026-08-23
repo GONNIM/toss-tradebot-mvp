@@ -15,7 +15,11 @@ from sqlalchemy import desc, select
 
 from backend.principles.charter import load_charter
 from backend.services.db import get_session
-from backend.services.models import PrinciplesResult, PrinciplesRun
+from backend.services.models import (
+    PrinciplesGateBlockLog,
+    PrinciplesResult,
+    PrinciplesRun,
+)
 
 router = APIRouter()
 
@@ -105,4 +109,59 @@ async def get_latest() -> dict:
                 "elapsed_sec": run.elapsed_sec,
             },
             "results": grouped,
+        }
+
+
+# ─── gate-design-v1 §3-1 · PrinciplesGate 차단 이력 (세션 A · 2026-08-23) ────
+
+
+@router.get("/gate/blocked-recent")
+async def list_blocked_recent(
+    limit: int = Query(20, ge=1, le=200),
+) -> dict:
+    """최근 차단 이력 (관리 화면 병치용).
+
+    Returns:
+      {"total_24h": N, "by_reason_24h": {reason: count, ...}, "recent": [...]}
+    """
+    from datetime import datetime, timedelta
+    async with get_session() as session:
+        cutoff_24h = datetime.now() - timedelta(hours=24)
+        recent_rows = (
+            await session.execute(
+                select(PrinciplesGateBlockLog)
+                .order_by(desc(PrinciplesGateBlockLog.id))
+                .limit(limit)
+            )
+        ).scalars().all()
+        last_24h_rows = (
+            await session.execute(
+                select(PrinciplesGateBlockLog)
+                .where(PrinciplesGateBlockLog.created_at >= cutoff_24h)
+            )
+        ).scalars().all()
+        by_reason: dict[str, int] = {}
+        bypass_24h = 0
+        for r in last_24h_rows:
+            by_reason[r.reason] = by_reason.get(r.reason, 0) + 1
+            if r.reason == "whitelist_bypass":
+                bypass_24h += 1
+        block_24h = len(last_24h_rows) - bypass_24h
+        return {
+            "total_24h": len(last_24h_rows),
+            "block_24h": block_24h,
+            "bypass_24h": bypass_24h,
+            "by_reason_24h": by_reason,
+            "recent": [
+                {
+                    "id": r.id,
+                    "created_at": r.created_at.isoformat() if r.created_at else None,
+                    "ticker": r.ticker,
+                    "source": r.source,
+                    "reason": r.reason,
+                    "detail": r.detail,
+                    "run_id": r.run_id,
+                }
+                for r in recent_rows
+            ],
         }

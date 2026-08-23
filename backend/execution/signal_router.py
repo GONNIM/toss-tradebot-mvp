@@ -31,6 +31,7 @@ from .exceptions import (
     RiskBudgetViolation,
 )
 from .kill_switch import KillSwitch, get_kill_switch
+from .principles_gate import PrinciplesGateChecker, get_principles_gate
 from .models import (
     BrokerKind,
     OrderRequest,
@@ -94,11 +95,13 @@ class SignalRouter:
         risk_checker: Optional[RiskBudgetChecker] = None,
         kill_switch: Optional[KillSwitch] = None,
         params_store: Optional[ExecutionParamsStore] = None,
+        principles_gate: Optional[PrinciplesGateChecker] = None,
     ):
         self._om = order_manager
         self._risk = risk_checker or RiskBudgetChecker(params_store)
         self._ks = kill_switch or get_kill_switch()
         self._params = params_store or get_params_store()
+        self._principles_gate = principles_gate or get_principles_gate()
 
     # ─── 전역 스위치 ───
     @staticmethod
@@ -173,6 +176,36 @@ class SignalRouter:
         req = self._to_order_request(event, market_info.last_price)
         if req is None:
             return None
+
+        # ④.5 PrinciplesGate (fail-closed 화이트리스트 · gate-design-v1 §3-1)
+        # 매수 신호만 대상 (매도는 리스크 축소 · 관문 우회 · 문서 명문화)
+        if req.side == OrderSide.BUY:
+            pg = await self._principles_gate.check(
+                ticker=event.ticker, source=event.source,
+            )
+            # 보완 · bypass 가시화 (예외 통로 발동 이력)
+            if pg.bypass:
+                logger.info(
+                    "[principles_gate] whitelist_bypass · source=%s · ticker=%s",
+                    event.source, event.ticker,
+                )
+            if not pg.passed:
+                logger.warning(
+                    "[Router] PrinciplesGate 차단 · ticker=%s · source=%s · reason=%s · %s",
+                    event.ticker, event.source, pg.reason, pg.detail,
+                )
+                rejected = OrderResult(
+                    order_uuid=req.order_uuid,
+                    broker_order_id=None,
+                    status=OrderStatus.REJECTED,
+                    error_code=f"principles-{pg.reason}",
+                    error_message=pg.detail,
+                )
+                try:
+                    await record_order_result(self._om.broker_kind, req, rejected)
+                except Exception as exc:  # noqa: BLE001
+                    logger.warning("[Router] 감사 로그 실패 — %s", exc)
+                return rejected
 
         # ⑤ Risk Budget
         balance = self._om.get_balance()
