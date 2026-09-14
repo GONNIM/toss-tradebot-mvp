@@ -45,14 +45,19 @@ def git_sha() -> str:
 
 
 def load_targets(sha: str) -> dict[str, str]:
-    """CIK → 회사명 (targets_v2 우선 · SEC company_tickers fallback)."""
+    """CIK → 회사명 (targets_v2 우선 · SEC company_tickers fallback).
+
+    WP61 정정 (2026-09-14): h3_targets_v2 실 컬럼 이름은 `target_name` · 이전에는
+    company_name/name 만 참조하여 파일 로드가 0건 · SEC fallback 만 채워짐 →
+    잔여 107 CIK 커버 못함. target_name 우선 순위 추가.
+    """
     m: dict[str, str] = {}
     p = DATA_DIR / f"h3_targets_v2_{sha}.csv"
     if p.exists():
         with p.open() as f:
             for r in csv.DictReader(f):
                 cik = (r.get("target_cik") or "").zfill(10)
-                name = (r.get("company_name") or r.get("name") or "").strip()
+                name = (r.get("target_name") or r.get("company_name") or r.get("name") or "").strip()
                 if cik and name:
                     m[cik] = name
     sp = DATA_DIR / "sec_company_tickers.json"
