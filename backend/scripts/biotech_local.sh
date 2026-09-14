@@ -7,7 +7,7 @@ export PATH="/usr/local/bin:/opt/homebrew/bin:/usr/bin:/bin:/usr/sbin:/sbin:$PAT
 set -euo pipefail
 cd /Users/gonnim/Project-MVP/Source/toss-tradebot-mvp
 
-PORT="${BIOTECH_VIEWER_PORT:-4000}"
+PORT="${BIOTECH_VIEWER_PORT:-4010}"
 PIDFILE="backend/data/biotech/community_daily/viewer.pid"
 LOGFILE="backend/data/biotech/community_daily/viewer.log"
 VENV=backend/venv/bin/python

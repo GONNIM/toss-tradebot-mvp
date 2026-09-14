@@ -1,7 +1,8 @@
 """WP55 · 최소 열람 페이지 (3탭 md 렌더 · biotech 이름공간 · 기존 메뉴 무수정).
 
-실행: `backend/venv/bin/python -m backend.scripts.biotech_h55_viewer` → http://localhost:4000/
-포트 변경: `BIOTECH_VIEWER_PORT=8080` 환경변수 (기본 4000 · WP67-2 · 2026-09-14)
+실행: `backend/venv/bin/python -m backend.scripts.biotech_h55_viewer` → http://localhost:4010/
+포트 변경: `BIOTECH_VIEWER_PORT=8080` 환경변수 (기본 4010 · WP68-0 · 2026-09-14)
+※ 4000 은 기존 Next.js 프론트 (`npm run dev`) 예약 · 바이오 뷰어는 4010
 
 3탭:
 - /radar   → docs/plans/biotech/watchlist/radar-v1.3-*.md 중 최신
@@ -150,7 +151,7 @@ def phase_a_final():
 def main():
     require_secure_logging()
     import uvicorn
-    port = int(os.environ.get("BIOTECH_VIEWER_PORT", "4000"))
+    port = int(os.environ.get("BIOTECH_VIEWER_PORT", "4010"))
     print(f"Biotech Catalyst Radar Viewer → http://localhost:{port}/")
     print("  / · /radar · /rumor · /map · /glossary · /phase-a-final")
     uvicorn.run(app, host="127.0.0.1", port=port, log_level="warning")
