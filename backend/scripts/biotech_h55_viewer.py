@@ -1,6 +1,7 @@
 """WP55 · 최소 열람 페이지 (3탭 md 렌더 · biotech 이름공간 · 기존 메뉴 무수정).
 
-실행: `backend/venv/bin/python -m backend.scripts.biotech_h55_viewer` → http://127.0.0.1:8765
+실행: `backend/venv/bin/python -m backend.scripts.biotech_h55_viewer` → http://localhost:4000/
+포트 변경: `BIOTECH_VIEWER_PORT=8080` 환경변수 (기본 4000 · WP67-2 · 2026-09-14)
 
 3탭:
 - /radar   → docs/plans/biotech/watchlist/radar-v1.3-*.md 중 최신
@@ -16,6 +17,7 @@ from backend.services import config  # noqa: F401
 from backend.scripts._biotech_bootstrap import require_secure_logging
 
 import glob
+import os
 import re
 from pathlib import Path
 
@@ -80,13 +82,24 @@ def render_md(md_path: Path, title_prefix: str = "") -> str:
 @app.get("/", response_class=HTMLResponse)
 def index():
     return HEADER + """
-    <h1>Biotech Catalyst Radar · 열람</h1>
-    <p>3개 탭에서 최신 정보 확인. 하루 1회 후보 종목만 확인 (상시 순찰 없음).</p>
+    <h1>Biotech Catalyst Radar · 열람 (로컬)</h1>
+
+    <h2>확인 순서 5줄 (WP67-2 · 2026-09-14)</h2>
+    <ol>
+      <li><b>① 순위표</b>: <a href="/radar">📡 레이더</a> · 오늘 상위 30 (뉴스 예정일 임박순 · 이유 병기)</li>
+      <li><b>② 소문 확인</b>: <a href="/rumor">🗣️ rumor daily</a> · 표 1 (살 자리) · 표 2 (뉴스 통과) · 표 3 (언급 있음 원값) · 표 4 (임원·대주주 매수 · 유보 pending)</li>
+      <li><b>③ 상태판 결론 4줄</b>: <a href="/map">🗺️ STATUS</a> · 오늘 알아낸 것 5줄 (H1b/H8 검정 3/WP54-3/F4 유보)</li>
+      <li><b>④ 용어집</b>: <a href="/glossary">📖 GLOSSARY</a> · 코드·상태·가설 뜻</li>
+      <li><b>⑤ crontab</b>: 터미널에서 <code>crontab -l | grep biotech</code> · 2줄 (daily · forward) 확인</li>
+    </ol>
+
+    <h2>추가 링크</h2>
     <ul>
-      <li><a href="/radar">📡 레이더 순위표</a> — 오늘의 상위 30 (예정일 표기 · 이유)</li>
-      <li><a href="/rumor">🗣️ 소문 확인</a> — 후보 종목 커뮤니티 급증 여부</li>
-      <li><a href="/map">🗺️ 가능성 지도</a> — 밝은 자리 · 죽은 자리 · 다음 자리</li>
+      <li><a href="/phase-a-final">📄 Phase A 최종 (2026-09-14 종결본)</a></li>
+      <li>날짜별 소문: <a href="/rumor?date=2026-09-14">/rumor?date=2026-09-14</a></li>
     </ul>
+
+    <p><b>종료 명령</b>: 터미널에서 <code>backend/scripts/biotech_local.sh stop</code></p>
     """ + FOOTER
 
 
@@ -137,9 +150,10 @@ def phase_a_final():
 def main():
     require_secure_logging()
     import uvicorn
-    print("Biotech Catalyst Radar Viewer → http://127.0.0.1:8765")
-    print("  /radar · /rumor · /map · /glossary · /phase-a-final")
-    uvicorn.run(app, host="127.0.0.1", port=8765, log_level="warning")
+    port = int(os.environ.get("BIOTECH_VIEWER_PORT", "4000"))
+    print(f"Biotech Catalyst Radar Viewer → http://localhost:{port}/")
+    print("  / · /radar · /rumor · /map · /glossary · /phase-a-final")
+    uvicorn.run(app, host="127.0.0.1", port=port, log_level="warning")
 
 
 if __name__ == "__main__":
