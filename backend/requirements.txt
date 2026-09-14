@@ -42,6 +42,7 @@ rich>=13.9.0
 # Utilities
 python-dotenv>=1.0.0
 tenacity>=9.0.0
+markdown>=3.10  # Biotech Catalyst Radar WP55 · md 열람 페이지 렌더
 
 # Toss API (Phase K)
 pyjwt>=2.10.0

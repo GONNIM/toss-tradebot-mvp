@@ -54,6 +54,8 @@ next-env.d.ts
 *.sh
 # scripts/ 폴더 및 하위 디렉터리 스크립트는 추적
 !scripts/**/*.sh
+# biotech 이름공간 shell 스크립트 추적 (WP48v3 daily cron 파이프)
+!backend/scripts/biotech_*.sh
 
 # 백업 디렉토리
 .backup/
