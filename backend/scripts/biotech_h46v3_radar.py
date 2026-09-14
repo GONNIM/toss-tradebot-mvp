@@ -97,8 +97,14 @@ def load_xbi_90d(sha: str) -> float:
 
 def main():
     require_secure_logging()
+    from backend.scripts._biotech_bootstrap import data_sha
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
     sha = git_sha()
+    if not (DATA_DIR / f"h3_events_{sha}.csv").exists():
+        fb = data_sha(DATA_DIR)
+        if fb:
+            LOG.info("git_sha %s 데이터 부재 · data_sha fallback → %s", sha, fb)
+            sha = fb
     today_str = datetime.now(timezone.utc).strftime("%Y%m%d")
 
     v3_path = DATA_DIR / "biotech" / "candidates" / f"biotech_candidates_v3_{today_str}.csv"

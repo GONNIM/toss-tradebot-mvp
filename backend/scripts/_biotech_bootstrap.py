@@ -11,8 +11,12 @@
 """
 from __future__ import annotations
 
+import glob
 import logging
+import os
+import re
 import sys
+from pathlib import Path
 
 
 def require_secure_logging() -> None:
@@ -45,3 +49,24 @@ def require_secure_logging() -> None:
             file=sys.stderr,
         )
         raise SystemExit(97)
+
+
+def data_sha(data_dir: Path | str, anchor_pattern: str = "h3_targets_v2_*.csv") -> str:
+    """일일 파이프용 · 데이터 파일 최신 sha 추출 (git_sha 와 별개).
+
+    git commit 후 git_sha 가 바뀌면 이전 sha 로 저장된 데이터 파일 참조가 깨진다.
+    파이프 진입점은 실행 시점 커밋이 아닌 **실제 존재하는 최신 데이터 파일 sha** 를 써야 한다.
+
+    - 원칙: 데이터 재현성은 `git log --follow` + 원시 데이터 재수집으로 확보 (봉인 파일에는 실행 sha 병기)
+    - fallback 순서: (1) anchor_pattern 최신 mtime 파일의 sha 추출 → (2) git_sha 원본 그대로
+
+    사용 예:
+        from backend.scripts._biotech_bootstrap import data_sha
+        sha = data_sha(DATA_DIR)  # h3_targets_v2_*.csv 중 최신
+    """
+    data_dir = Path(data_dir)
+    matches = sorted(data_dir.glob(anchor_pattern), key=lambda p: p.stat().st_mtime, reverse=True)
+    if not matches:
+        return ""
+    m = re.search(r"_([a-f0-9]{7,40})\.csv$", matches[0].name)
+    return m.group(1) if m else ""

@@ -222,8 +222,14 @@ def source_d_adcom(sha: str, days_around: int = 60) -> list[dict]:
 
 def main():
     require_secure_logging()
+    from backend.scripts._biotech_bootstrap import data_sha
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
     sha = git_sha()
+    if not (DATA_DIR / f"h3_targets_v2_{sha}.csv").exists():
+        fb = data_sha(DATA_DIR)
+        if fb:
+            LOG.info("git_sha %s 데이터 부재 · data_sha fallback → %s", sha, fb)
+            sha = fb
 
     cik_meta, tk_meta = load_cik_ticker_map(sha)
     close, shares = load_prices_and_mcap(sha)
