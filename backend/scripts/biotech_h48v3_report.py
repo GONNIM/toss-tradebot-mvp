@@ -159,13 +159,15 @@ def main():
             f4_rows = []
         lines += ["", "## 표 4 · 임원·대주주 매수 (Form 4 P · 최근 20 거래일 · WP65)", ""]
         if f4_rows:
-            lines += ["| # | 발행사 | 신고일 | 매수일 | 경과일 | 주식수 | 제출자 CIK |",
-                      "|---|---|---|---|---|---|---|"]
+            lines += ["| # | 발행사 | 신고일 | 매수일 | 경과일 | 제출자 유형 | 주식수 | 매수 금액 (USD 근사) |",
+                      "|---|---|---|---|---|---|---|---|"]
             for i, r in enumerate(f4_rows[:15], 1):
                 name = (r.get("issuer_name") or "")[:30]
-                lines.append(f"| {i} | {name} ({r.get('issuer_cik','')}) | {r.get('filing_date','')} | {r.get('tx_date','')} | D+{r.get('elapsed_days',0)} | {r.get('shares','0')} | {r.get('filer_cik','')} |")
+                amount = r.get("amount_usd_approx", "")
+                amount_str = f"${int(amount):,}" if amount and str(amount).replace("-", "").isdigit() else "—"
+                lines.append(f"| {i} | {name} ({r.get('issuer_cik','')}) | {r.get('filing_date','')} | {r.get('tx_date','')} | D+{r.get('elapsed_days',0)} | {r.get('filer_type','기타')} | {r.get('shares','0')} | {amount_str} |")
             lines.append("")
-            lines.append("> 🟡 **F4 30d 전략 = 유보 강등** (WP63-3 견고성 (d) 13D 중복 제외 CI 하한 < 0) · 30일 평균 관측 +5%대 · **2026-11-15 전향 재평가 (WP56)** · 소액 실전 규칙 8항 적용")
+            lines.append("> 🟡 **F4 30d 전략 = 유보 (pending · 결론 5분류)** · WP63-3 견고성 (a) 미해결 + (d) 13D 중복 제외 CI 하한 < 0 · **과거 재실행 금지** · **2026-11-15 전향 평가 (WP56) 재현 시 확인 승격** · 소액 실전 규칙 8항")
         else:
             lines.append("- (최근 20 거래일 내 F4_buy 이벤트 없음)")
 

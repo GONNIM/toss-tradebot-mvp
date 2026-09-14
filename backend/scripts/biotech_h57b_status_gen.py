@@ -88,15 +88,15 @@ def main():
     h3f4_extreme_note = ""
     h3f4_summary_note = ""
     if h3f4_v3:
-        # v3: 견고성 5건 · 판정 결과 우선
+        # v3: 견고성 5건 · 판정 결과 우선 (2026-09-14 정정: (a) 미해결 · 유보 확정 · 과거 재실행 금지)
         verdict = h3f4_v3.get("verdict", {})
-        v_passed = verdict.get("passed", False)
-        v_status = verdict.get("status", "유보")
         a_h30 = h3f4_v3.get("a_h30d", {})
         d_info = h3f4_v3.get("d_13d_dupes", {})
-        h3f4_summary_note = f"WP63-3 F4 견고성 (5건 · a+d 통과 시 유지): 판정 **{v_status}** · (a) 재실행 n={a_h30.get('n', 0)} CI 하한 {a_h30.get('ci_block_lo', 0):+.2f}% · (d) 13D 중복 {d_info.get('excluded', 0)} 제외 CI 하한 {d_info.get('h_30d_ci_block_lo', 0):+.2f}%"
-        if not v_passed:
-            h3f4_summary_note = f"WP63-3 F4 견고성 (5건): **유보 강등** · (d) 13D 중복 제외 CI 하한 < 0 · 잠정 확인 조건 미달 · 60일 전향 재평가 (WP56)"
+        a_added = h3f4_v3.get("a_enriched_mcap_coverage", {}).get("added_via_companyfacts", 0)
+        h3f4_summary_note = (
+            f"WP63-3 F4 견고성: **유보 (pending · 결론 5분류) 확정** · (a) 미해결 (companyfacts dei 부재 · 시총 부재 이벤트 98건 미판정) · (d) 13D 중복 제외 CI 하한 < 0 · "
+            f"**F4 검정 과거 재실행 금지 · 2026-11-15 전향 평가 (WP56) 까지 유보**"
+        )
     elif h3f4_v2:
         # v2: WP64 안전장치 자동 발동 · alpha_pass_machine 판정
         h30 = (h3f4_v2.get("horizons", {}) or {}).get("h_30d", {})
@@ -197,7 +197,7 @@ def main():
         "| **H6** · 분야 순위 point-in-time | 관문 3 대기 · dry-run 완결 | 8세트 46분기 · 상위 3분위 2020Q1 · 소속 38 | membership 확장 (WP27-2) | `H6-design.md` |",
         "| **H7** · 초기 매집 후 분할 매도 | 설계 완료 · 대기 | 사전 커밋 13항 | H6·H8 알파 확인 후 실행 | `H7-design.md` |",
         f"| **H8** · 소문 지수 선행성 | **부분 풀 지지 (검정 3)** | post {post_mean*100:+.2f}% CI 상한 {post_ci[1]*100:+.2f}% · sell_supported={sell} | 채널 확장 후 WP54-3 재검 | `verification/H8/H8-signal-presence-full-2026-09-14.md` |",
-        (f"| **H3-F4** · Form 4 매수 추종 (별도 · WP63) | ⚠️ **held_for_review** | {h3f4_extreme_note} | 격리 검토 후 재실행 | `verification/H3/H3-F4-report-v3-*.md` |" if h3f4_held else (f"| **H3-F4 v3** · Form 4 매수 추종 (별도 · WP63-3 견고성) | **{h3f4_v3.get('verdict', {}).get('status', '?') if h3f4_v3 else '?'}** (5분류) | {h3f4_summary_note} | 2026-11-15 전향 재평가 | `verification/H3/H3-F4-report-v3-*.md` |" if h3f4_summary_note else "")),
+        (f"| **H3-F4** · Form 4 매수 추종 (별도 · WP63) | ⚠️ **held_for_review** | {h3f4_extreme_note} | 격리 검토 후 재실행 | `verification/H3/H3-F4-report-v3-*.md` |" if h3f4_held else (f"| **H3-F4 v3** · Form 4 매수 추종 (별도 · WP63-3 견고성) | **유보 (pending)** (5분류 · 과거 재실행 금지) | {h3f4_summary_note} | 2026-11-15 전향 평가 (WP56) 재현 시 확인 승격 | `verification/H3/H3-F4-report-v3-*.md` |" if h3f4_summary_note else "")),
         "| **Security** · 자격증명 가드레일 | WP8 (설정 강제 부트스트랩) | 156/156 (+2 skip) pytest · SEC WP23 헤더 | 신규 스크립트 자동 강제 | `Security-Audit.md` |",
         "",
         "---",

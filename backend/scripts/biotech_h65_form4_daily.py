@@ -104,22 +104,65 @@ def main():
     LOG.info("증분 · 신규 buys: +%d · 전체 filers cached: %d", new_buys, len(cache))
 
     # 표 4 · 최근 20 거래일 F4 매수 (rumor daily 확장용)
+    # 정정 (2026-09-14): 제출자 유형 (전문 펀드/임원·이사/기타) + 매수 금액 근사 열 추가
     cutoff_20d = (datetime.now(timezone.utc) - timedelta(days=30)).strftime("%Y-%m-%d")  # 20 거래일 ≈ 30 달력일
+
+    # 제출자 유형 판정 · h41_filer_classification 활용
+    filer_class_path = DATA_DIR / "h41_filer_classification.json"
+    filer_class = json.loads(filer_class_path.read_text()) if filer_class_path.exists() else {}
+
+    def _filer_type(filer_cik: str) -> str:
+        info = filer_class.get(filer_cik, {})
+        bucket = info.get("bucket", "")
+        name = info.get("name", "")
+        et = info.get("entityType", "").lower()
+        if bucket == "fund":
+            return "전문 펀드"
+        if bucket == "individual" or "individual" in et:
+            return "임원·이사"
+        if bucket == "strategic_corporate":
+            return "기타 (전략적 기업)"
+        return "기타"
+
+    # 발행사 티커·가격 매핑 (매수일 종가 조회용)
+    from backend.scripts.biotech_h63_f4_backtest import load_cik_ticker
+    from backend.scripts.biotech_h3_backtest import load_prices
+    cik2tk = load_cik_ticker(sha)
+    prices = load_prices(DATA_DIR / f"h3_prices_merged_{sha}.csv")
+
+    def _price_on(ticker: str, date_str: str) -> float | None:
+        sp = prices.get(ticker, {})
+        if not sp or not date_str:
+            return None
+        keys = sorted(sp.keys())
+        for k in keys:
+            if k >= date_str:
+                return sp[k]
+        return None
+
     table4 = []
     for filer_cik, info in cache.items():
         for b in info.get("buys", []):
             tx_date = b.get("tx_date", "")
             if tx_date >= cutoff_20d:
-                # 발행사 시총 부재/필터는 뷰어 단계 · 여기는 원값
                 elapsed_days = (datetime.now(timezone.utc).date() - datetime.strptime(tx_date, "%Y-%m-%d").date()).days if tx_date else 0
+                issuer_cik = (b.get("issuer_cik", "") or "").zfill(10)
+                shares = float(b.get("shares", 0) or 0)
+                # 매수 금액 근사 = 주식수 × 매수일 종가
+                tk = cik2tk.get(issuer_cik, "")
+                price = _price_on(tk, tx_date) if tk else None
+                amount_usd = shares * price if (price and shares) else None
                 table4.append({
                     "filing_date": b.get("filing_date", ""),
                     "tx_date": tx_date,
                     "elapsed_days": elapsed_days,
-                    "issuer_cik": b.get("issuer_cik", ""),
+                    "issuer_cik": issuer_cik,
                     "issuer_name": b.get("issuer_name", ""),
                     "filer_cik": filer_cik,
-                    "shares": b.get("shares", 0),
+                    "filer_type": _filer_type(filer_cik),
+                    "shares": int(shares) if shares else 0,
+                    "price_on_tx": round(price, 4) if price else None,
+                    "amount_usd_approx": round(amount_usd) if amount_usd else None,
                     "accession": b.get("accession", ""),
                 })
     table4.sort(key=lambda x: x["tx_date"], reverse=True)
@@ -129,11 +172,12 @@ def main():
     with out_csv.open("w", newline="") as f:
         w = csv.writer(f)
         w.writerow(["filing_date", "tx_date", "elapsed_days", "issuer_cik", "issuer_name",
-                    "filer_cik", "shares", "accession"])
+                    "filer_cik", "filer_type", "shares", "price_on_tx", "amount_usd_approx", "accession"])
         for row in table4:
             w.writerow([row["filing_date"], row["tx_date"], row["elapsed_days"],
                         row["issuer_cik"], row["issuer_name"], row["filer_cik"],
-                        row["shares"], row["accession"]])
+                        row.get("filer_type", ""), row["shares"], row.get("price_on_tx", ""),
+                        row.get("amount_usd_approx", ""), row["accession"]])
 
     # 순위표 꼬리표용 issuer_cik 세트
     tagged_ciks = {row["issuer_cik"] for row in table4}
