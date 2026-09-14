@@ -2,66 +2,67 @@
 
 > **📖 용어집 보기**: [`GLOSSARY.md`](GLOSSARY.md) · 코드 · 가설 · 상태 정의 · 첫 등장 시 (뜻) 병기
 > **🚀 배포 절차**: [`DEPLOY.md`](DEPLOY.md) · 운영 구조 · 배포 명령 · 롤백
+> **⚙️ 자동 갱신**: 본 상태판은 `biotech_h57b_status_gen.py` 가 매일 자동 생성 · '가능성 지도 (수동)' 절만 손 편집
 
-## 오늘 알아낸 것 (5줄 · 쉬운 말)
+## 오늘 알아낸 것 (5줄 · 쉬운 말 · 자동)
 
-1. **임상 결과 발표 한 달 전에 사면 평균 +1.62%** (H1b · Phase 3 (3상 임상) · 표본 4,611건 · CI (신뢰구간) [+0.73%, +2.61%] · **우연 아님** · 임계 +2% 미달)
-2. **발표 직후 한 달은 -0.74%** (H8 검정 3 · post D+1~D+30 · CI 상한 < 0 · **"뉴스에 팔아라" 격언 데이터로 확인**)
-3. **소문 신호 있는 종목 +2.89% vs 없는 종목 +1.28%** (WP54 · 신호 유무 검정 · 차이 +1.61%p · **방향만 · 통계 확정 아님** · 채널 3/5 부분 · CI 하한 -0.86%p)
-4. **뉴스 보고 사는 전략 2건은 효과 없음**: H5 (미국 승인 뉴스 → 국내 관련주) 폐기 · H3 (큰손 activist 13D 추종) 폐기
-5. **오늘의 순위표 · 소문 확인은 화면 3탭** (레이더 · 소문 · 지도 · `/radar` · `/rumor` · `/map`) · **소액 실전 규칙 8항 적용** (시드 30% · 종목당 5만원 · 사다리 청산 · 손절 없음 · 자동매매 없음 등)
+1. **임상 결과 발표 한 달 전에 사면 평균 +1.62%** (H1b (Phase 3 (3상 임상) guidance) · 표본 4611건 · CI (신뢰구간) [+0.73%, +2.61%] · **CI 하한 > 0 = 우연 아님** · 임계 +2% 미달)
+2. **발표 직후 한 달은 -0.74%** (H8 검정 3 · CI 상한 -0.07% · sell_supported=True · **뉴스에 팔아라 격언 데이터로 확인**)
+3. **소문 채널 신호 유무 (WP54-2 · 채널 3.5/5 (Form 4 미수집 · h6_membership 이 CT.gov 상태 변경 대체))**: 신호 있음 1866건 mean **+2.50%** [+1.02%, +4.16%] · 신호 없음 2745건 mean **+1.02%** [-0.05%, +2.17%] · **차이 +1.48%p** CI [-0.39%p, +3.45%p] · 판정: **불지지** (차이 CI 하한 < 0) · 단 **신호 있음 집단만 CI > 0 확정**
+4. **뉴스 보고 사는 전략 2건은 효과 없음**: H5 (해외→국내) 폐기 · H3 (activist 전체) 폐기
+5. **오늘의 순위표 · 소문 확인은 화면 3탭** (`/radar` · `/rumor` · `/map`) · 최신: `radar-v1.3-20260914.md` · `2026-09-14.md` · **소액 실전 규칙 8항 적용**
 
----
+**최종 갱신 (자동)**: 2026-09-14 · git_sha (git 커밋 짧은 해시) `add7af7`
 
-**최종 갱신**: 2026-09-14 · 세션 21 (3회차 · 배포 승인) · git_sha (git 커밋 짧은 해시) `add7af7`
-
-**Phase A (검증 단계 · 알파 존재 여부 판정) 종결 (Fable 최종 검수 통과)**: WP52 (용어집) · WP53 (H8 검정 1 재계산) · WP46-4/5 (레이더 v1.3) · WP43-4 (완주 풀 재검) · WP54 (신호 유무 검정) · WP55 (열람 페이지) 완료
-**Phase B (UI 배포 단계)** = 3탭 + 용어집 + Phase A 최종 · WP55 최소 FastAPI 뷰어 (`biotech_h55_viewer.py`)
-**Phase C (확장 단계) 1 진척 (2026-09-14 · 세션 1)**:
-- **h57 (PubMed 게재 yoY)** 인덱스 200 CIK / 307 targets (65% 커버) · [AD]+[EDAT] 필터 · 나머지 후속
-- **h58 (Preprint yoY · PubMed [SB=preprint])** 부분 40 CIK / 307 (13% · rate limit timeout 다수) · 재실행 후속
-- **CT.gov 상태 변경 (AACT 스냅샷)** 접근 실측 완료 (2.5GB × 4 분기 = 10GB) · 실 다운로드/파싱 후속 · h6_membership (테마 소속) 이 대체 근사 유지
-- **WP54-2 신호 유무 재판정 (채널 5/5)**: 신호 있음 1854 vs 없음 2757 · 차이 **+1.57%p** (임계 +1.0%p 초과) · CI [-0.27%p, +3.56%p] (하한 여전히 < 0 · 하지만 **WP54 [-0.86%p] 대비 크게 상승 · 0 접근**) · 판정 **불지지 (방향 관측 지지)**
-- **레이더 v1.4** = h_radar_params expert 채널 5/5 · 가중치 동일 유지 (60일 전 조정 금지 · WP46-4 원칙)
-- **WP56 dry-run 검증** = 2026-10-15 시점 창 미도달 정상 출력 (virtual_n=0 · alpha_pass=False)
-
-이 문서는 사용자 진입 시 첫 페이지. 각 가설의 현 상태 · 핵심 수치 1줄 · 다음 액션 · 최신 리포트 링크를 요약.
+**Phase A (검증 단계 · 알파 존재 여부 판정) 종결 (Fable 최종 검수 통과)**: `PHASE-A-FINAL.md` 종결본 참조 (2026-09-14 동결)
+**Phase B (UI 배포 단계)** = 3탭 + 용어집 · WP55 최소 FastAPI 뷰어 `biotech_h55_viewer.py` (로컬 :8765)
+**Phase C (확장 단계) 진행 중** = 소문 채널 완비 진척 · h57 PubMed 200/307 · h58 Preprint 200/307 · 실채움 채널 3.5/5 (Form 4 미수집 · h6_membership 이 CT.gov 상태 변경 대체)
 
 ---
 
-## 가설별 상태
+## 가설별 상태 (자동)
 
 | 가설 | 상태 | 핵심 수치 | 다음 액션 | 최신 리포트 |
 |---|---|---|---|---|
-| **H1a** · FDA (미국 식약처) AdCom (자문위 회의) 사전 공지 | **유보 후보** | 회의일 파싱 398/457=87% · 신청사 매핑 2/26 · 적격 v4=**2** | Big Pharma 이름/약물명 조인 확장 · 표본 확대 후 재판정 | `H1a-design.md` |
-| **H1b** · Phase 3 (3상 임상) guidance | **부분 풀 관찰 · WP39 완주 대기** | 부분 풀 3567 events · 평균 **+1.39%** · alpha_pass (임계 통과) False · CI (신뢰구간) 하한 > 0 = **첫 유의 발표 전 초과 수익** | WP39 (임상 결과 발표일 목록 만들기) 완주 후 정식 판정 | `verification/H8/H8-H1b-report-20260914.md` |
-| **H2** · 테마 클러스터 확산 | **미착수** | — | 코드 전수 추출 룰 확정 · 20D +50% 이벤트 스캔 | `README.md §2 H2` |
-| **H3** · Activist (지분 매집형 투자자) 신규 13D/13G (5%+ 지분 신고) | **관문 2 · alpha_pass=False 확정** | 이벤트 346 · alpha_pass 전건 False · 13D 30d mean **+4.43%** (n=16 · CI 하한 <0) | H3b 로 계승 | `verification/H3/H3-report-20260912.md` |
-| **H3b** · 소형주 activist 검정 (사전 등록) | **부분 관측 · 임계 미달** | 300M-1B/fund/180d · n=42 · mean +2.85% · 임계 (+15%) 미달 | 표본 확대 · Fable 옵션 A/B 승인 | `design/H3b-design.md` |
-| **H4** · Reddit 소셜 첫 언급 | **전향 수집 중 (Reddit RSS만)** | apewisdom (레딧 종합기) watcher · burn-in (초기 관찰) 60일 게이트 · biotech hits 6/300 | 60일/60건 게이트 · 이후 백테스트 | `H4-design.md` |
-| **H5** · 해외 촉매 → 국내 연계 | **종결 (폐기 · deprecation_triggered=true)** | pre +0.22% (hit 50.8%) · imm -0.52% (hit 29%) · sus -0.67% · alpha_pass 전건 False | 재개 조건 = 촉매 풀 확장 · 마찰 2단계 티켓 | `verification/H5-report-20260912.md` |
-| **H6** · 분야 순위 point-in-time (그 시점 기준) | **관문 3 대기 · dry-run 완결** | 8세트 46분기 · 비만·GLP-1 상위 3분위 진입 (smoothed 4Q) **2020Q1** · 소속 38 티커 | h6_params 최종 · Fable 관문 3 · membership (테마 소속) 확장 (WP27-2 · CT.gov 전체 스폰서 재매핑) | `H6-design.md` |
-| **H7** · 초기 매집 후 분할 매도 | **설계 완료 · H6·H8 개별 알파 대기** | 사전 커밋 13항 · 로그 지표 5종 · 실행 금지 | H6·H8 알파 확인 후 실행 (개별→확증→결합 순서) | `H7-design.md` |
-| **H8** · 소문 지수 (사전 신호 증가율) 선행성 | **부분 풀 지지 (검정 3) · 검정 1 v2 부분 자료 역방향** | 검정 3 (뉴스에 팔기): pre 양수 & post CI 상한 -1.01% = **격언 지지** · 검정 1 v2: 채널 2/4~5 부분 자료 diff -0.83% (역방향) | 채널 확장 (PubMed · bioRxiv · CT.gov 상태 변경) 후 재검 | `verification/H8/H8-test1-v2-report-20260914.md` |
-| **Security** · 자격증명 가드레일 | **WP8 (설정 강제 부트스트랩) 강제 구조** | 78/78 (+1 skip) pytest · SEC 지정 헤더 (WP23) · DART 4차 재발 방지 | 신규 스크립트 추가 시 test_biotech_secure_entry 자동 강제 | `Security-Audit.md` |
+| **H1a** · FDA (미국 식약처) AdCom (자문위 회의) 사전 공지 | 유보 후보 | 회의일 87% · 매핑 2/26 | Big Pharma 이름 매핑 확장 | `H1a-design.md` |
+| **H1b** · Phase 3 (3상 임상) guidance | **완주 풀 유의 · 임계 미달** | n=4611 · mean **+1.62%** · CI [+0.73%, +2.61%] | 임계 통과 아님 · **작지만 실재** | `verification/H8/H8-H1b-full-report-20260914.md` |
+| **H2** · 테마 클러스터 확산 | 미착수 | — | 코드 룰 확정 | `README.md §2 H2` |
+| **H3** · Activist 신규 13D/13G | 폐기 (관문 2 · alpha_pass=False) | 이벤트 346 · 13D 30d +4.43% CI 하한 <0 | H3b 로 계승 | `verification/H3/H3-report-20260912.md` |
+| **H3b** · 소형주 activist 검정 | 부분 관측 · 임계 미달 | 300M-1B/fund/180d · n=42 · mean +2.85% | 표본 확대 · Fable 옵션 승인 | `design/H3b-design.md` |
+| **H4** · Reddit 소셜 첫 언급 | 전향 수집 중 (RSS만) | apewisdom 매치 6/300 | 60일 게이트 후 백테스트 | `H4-design.md` |
+| **H5** · 해외 촉매 → 국내 연계 | **종결 (폐기)** | pre +0.22% · imm -0.52% · sus -0.67% | 재개 조건 = 촉매 풀 확장 | `verification/H5-report-20260912.md` |
+| **H6** · 분야 순위 point-in-time | 관문 3 대기 · dry-run 완결 | 8세트 46분기 · 상위 3분위 2020Q1 · 소속 38 | membership 확장 (WP27-2) | `H6-design.md` |
+| **H7** · 초기 매집 후 분할 매도 | 설계 완료 · 대기 | 사전 커밋 13항 | H6·H8 알파 확인 후 실행 | `H7-design.md` |
+| **H8** · 소문 지수 선행성 | **부분 풀 지지 (검정 3)** | post -0.74% CI 상한 -0.07% · sell_supported=True | 채널 확장 후 WP54-3 재검 | `verification/H8/H8-signal-presence-full-2026-09-14.md` |
+| **Security** · 자격증명 가드레일 | WP8 (설정 강제 부트스트랩) | 156/156 (+2 skip) pytest · SEC WP23 헤더 | 신규 스크립트 자동 강제 | `Security-Audit.md` |
 
 ---
 
-## 최상위 액션 (Fable 검수 대기)
+## Phase C 순서 (배포 후 첫 작업 = 1)
 
-1. **H3 관문 2 (WP32)** · 봉인·bias·params 검수 · alpha_pass=False 확정
-2. **H3b 사전 등록 (WP33)** · 소형주 검정 옵션 A/B 승인
-3. **H5 재개 조건** · 촉매 풀 확장 마찰 2단계 티켓 판정
-4. **H6 관문 3** · h6_params · dry-run 커버율 검수
-
-## 진행 중 백그라운드 (다음 세션 재개)
-
-- **WP27-2**: H6 CT.gov 스폰서 전체 재매핑 (name_match v2 활용 · 분기별 종목 수 확장)
-- **WP28-2**: Form 4 EFTS 재정의 · fixture 통과 후 백그라운드
-- **WP34 (파일 이동)**: 이번 세션 색인 3종 신설만 · 실 이동은 다음 세션 (pytest 안전 검증 부담)
-- **원장 v6**: 파산 회수 2 반영 · bias v2 재산출
+1. **소문 채널 완비 (진행 중)**: h57 PubMed 잔여 107 CIK 재시도 · **Form 4 채널 e 실채움 (WP28-2)** · CT.gov 상태 변경 (AACT 스냅샷 2~4개 · 2.5GB × 4 = 10GB) → **WP54-3 재실행** (규칙 동일)
+2. **H6 소속 확장** (CT.gov 스폰서 전체 재매핑) → 재검
+3. **반자동 티켓 탭** (실전 기록 화면화 · trades_manual.csv 편집기)
+4. **H3b 전향 검정** (2026-09-14 이후 신규 13D · 소형~중형)
+5. **파산 종목 가격 복구** (원장 v6 · B60 파산 8건)
 
 ---
+
+## 사용자 액션
+
+- [ ] **crontab 등록** (필수 · 로컬 macOS · 사용자 액션):
+  ```bash
+  crontab -e
+  # 매일 KST 07:00 (UTC 22:00 전날) · 파이프 실행
+  0 22 * * * /Users/gonnim/Project-MVP/Source/toss-tradebot-mvp/backend/scripts/biotech_h48v3_daily.sh >> /Users/gonnim/Project-MVP/Source/toss-tradebot-mvp/backend/data/biotech/community_daily/cron.log 2>&1
+  # 매월 15일 KST 08:00 (UTC 23:00 14일) · 60일 전향 평가
+  0 23 14 * * cd /Users/gonnim/Project-MVP/Source/toss-tradebot-mvp && backend/venv/bin/python -m backend.scripts.biotech_h56_forward_eval --window 60d >> backend/data/biotech/community_daily/forward.log 2>&1
+  ```
+  확인: `crontab -l | grep biotech`
+
+- [ ] **로컬 뷰어 실행**: `backend/venv/bin/python -m backend.scripts.biotech_h55_viewer` → 브라우저 `http://127.0.0.1:8765`
+
+- [ ] **실전 기록 (선택)**: `backend/data/biotech/trades/trades_manual.csv` 에 매수/청산 기록 (18열 헤더)
 
 ---
 
@@ -69,36 +70,15 @@
 
 **규칙**: "정답 찾기 아니라 가능성 돌파" · 확증 트랙에서 폐기된 가설도 방향은 여기 유지 · 재도전 경로는 사전 등록 (H3b 예)
 
-### 큰 통찰 (WP38-2 · 2026-09-13 · 쉬운 말)
-
-- **"승인일은 뉴스가 아니다 — 결과 발표일이 뉴스"** (WP40)
-  - FDA 승인일은 이미 시장이 예상한 날 · 승인 자체가 서프라이즈 아님 (원개발사 LLY 도 승인 직후 imm 창 CI 전부 음수 · WP38 실증)
-  - "소문에 사서 뉴스에 팔아라" 의 진짜 "뉴스" = **예상 못 한 임상 결과 발표** (topline · primary endpoint met/failed)
-  - H8 이벤트 풀 1순위 변경: 결과 발표일 (WP39) · 승인일은 비교군 2순위 (H8-design v2.2)
-- **WP38 국내 GLP-1 후발주 매수는 죽은 자리** (탐색용 · 병합 전 198 표본 · imm 창 CI 상한 -0.11% 음수 유의)
-- **다음 파야 할 곳**: 결과 발표일 기준 이벤트 풀 (WP39) 확보 후 H3b (소형주 activist) 와 교차 · 최적 조건 사전 등록
-
-### 가장 밝은 자리 (Bright Spots · **WP41-3 v3 정정 2026-09-13**)
-- ⚠️ **WP33-3 out_of_seed +15.93% 는 filer 분류 오류 · 사용 금지** (WP41-2 정확 분류 후 fund → mean +2.85% 로 5.6배 축소)
-- **관측 후보** (n<30 · 표본 확대 후 재검): **300M-1B / other filer / 180d · n=19 · mean +23.76% hit 63.2%** · CI [-6.62%, +63.83%]
-- **n≥30 유일 양수**: 300M-1B/fund/180d · n=42 · mean +2.85% · §2 임계 +15% 미달
-- H3 소형주 activist (50M-300M / 2834) · 부수 관측 (기존 seed 55만)
-- H6 비만·GLP-1 · 소속 14 · smoothed 4Q 2020Q1 진입 후 유지
-
-### 죽은 자리 (Dead Ends · 사전 등록 없이 재도전 금지)
-- **H5 (미국 GLP-1 승인 → 국내 관련주 매수)** · pre +0.22% · imm -0.52% · sus -0.67% · 부호 (-) 우세 · B8 방향 지지 · 재개 = 촉매 풀 확장
-- **H3 대형주 (1B-5B) / SIC 2836 biologics** · 180d -9.48% · 300M-1B/2836 180d -27.33%
-
-### 다음에 팔 자리 (Next Dig · 다음 세션 우선)
-- **WP39 재실행 (ciks=zero-padded 수정)** → 임상 결과 발표 이벤트 풀 확보 → WP37-2 관찰목록 v2 · 방향 분포
-- **H3b 사전 등록 확증 트랙 실행 (2026-09-13 이후 전향 또는 미사용 기간 표본)** · 최적 조건 300M-1B/out_of_seed/180d
-- **WP27-2 H6 CT.gov 스폰서 전체 재매핑** (name_match v2) · 분기별 종목 수 확장
-
 ---
 
-## 진입 문서 3종
+## 진입 문서 (자동)
 
-- `docs/plans/biotech/STATUS.md` (본 문서 · 사용자 진입점)
-- `docs/plans/biotech/INDEX.md` (문서 목록·용도·상태)
-- `backend/data/MANIFEST.csv` (데이터 목록·산출 WP·상태)
-- `backend/scripts/SCRIPTS.md` (스크립트 단계별 용도·상태)
+- `STATUS.md` (본 문서 · 사용자 진입점 · 자동 갱신)
+- `PHASE-A-FINAL.md` (2026-09-14 종결본 · 동결)
+- `GLOSSARY.md` (용어집)
+- `DEPLOY.md` (배포 절차서)
+- `PENDING.md` (미완 지시 원문 보관)
+- `INDEX.md` (문서 목록·용도·상태)
+- `verification/H8/H8-signal-presence-full-2026-09-14.md` (WP54-2 채널 5/5 리포트)
+- `verification/H8/H8-H1b-full-report-20260914.md` (H1b 완주 풀 리포트)

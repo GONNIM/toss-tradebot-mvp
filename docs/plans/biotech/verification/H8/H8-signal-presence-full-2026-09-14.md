@@ -1,12 +1,18 @@
-# H8 · 신호 유무 검정 (채널 5/5 완비) 리포트 (WP54-2 · 2026-09-14 · git_sha add7af7)
+# H8 · 신호 유무 검정 (채널 3.5/5 (Form 4 미수집 · h6_membership 이 CT.gov 상태 변경 대체)) 리포트 (WP54-2 · WP59 정정 · 2026-09-14 · git_sha add7af7)
 
 > 📖 [`GLOSSARY.md`](../../GLOSSARY.md) · 코드 · 상태 · 가설 뜻
+
+## WP59 정정 (Fable · 2026-09-14)
+
+- **채널 표기 정정**: 이전 '5/5' → **'3.5/5 (Form 4 미수집 · h6_membership 이 CT.gov 상태 변경 대체)'** · Form 4 hits=0 (h3_events event_type 태깅 부재 · WP28-2 실채움 대상) · h6_membership 이 CT.gov 상태 변경 대체 근사
+- **확정 검정은 채널 완비 후 WP54-3** (Form 4 실채움 + AACT 스냅샷 phase/status 변경 감지 채널 추가 후 규칙 동일 재실행)
+- 서술: 차이는 불지지 (CI 하한 < 0) · 그러나 **신호 있음 집단만 CI > 0 확정** · 신호 없음은 CI 가 0 포함
 
 ## 사전 등록 (WP54 동일 · 실행 전 고정)
 
 - **가설**: 발표 전 D-180~D-31 소문 채널 신호 1개 이상 있는 이벤트는 없는 이벤트보다 D-30~D-1 순초과수익이 높다.
 - **규칙**: 두 집단 평균 차이 · 날짜 클러스터 CI (신뢰구간) 95% 하한 > 0 이면 지지 · 임계 차이 ≥ +1.0%p
-- **채널 (5/5 완비)**: 13D · F4_P · h6 membership + **PubMed 게재 (h57 · Phase C 1)** + **Preprint (h58 · Phase C 1)**
+- **채널 (3.5/5 (Form 4 미수집 · h6_membership 이 CT.gov 상태 변경 대체))**: 13D · h6 membership (CT.gov 활동 근사) + PubMed 게재 (h57) + Preprint (h58) · **Form 4 (F4_P) 는 event_type 태깅 부재 · WP28-2 실채움 대상**
 
 ## 채널 커버 통계
 

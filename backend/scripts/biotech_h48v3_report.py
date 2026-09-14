@@ -120,15 +120,25 @@ def main():
         d = c["_days"] if c["_days"] < 9999 else 0
         lines.append(f"| {i} | **{c['ticker']}** | {(c.get('name') or '')[:30]} | {c.get('mcap_bucket','')} | D+{d} | {dir_v} |")
 
-    lines += ["", "## 표 3 · 언급 있는 후보", "",
-              "| # | 상태 | 티커 | 회사 | 시총 | 시간 | ST 24h | 단계 | 유형 |",
-              "|---|---|---|---|---|---|---|---|---|"]
-    for i, c in enumerate(active[:15], 1):
+    # WP60 · 표 3 는 st_24h > 0 인 종목 (baseline 미확보 포함 · 원값 표시 · 판정 규칙 불변)
+    lines += ["", "## 표 3 · 언급 있는 후보 (WP60 · baseline 미확보도 원값 표시)", "",
+              "| # | 상태 | 티커 | 회사 | 시총 | 시간 | ST 24h | 기준선 (n일) | 단계 | 유형 |",
+              "|---|---|---|---|---|---|---|---|---|---|"]
+    all_with_st = sorted(
+        [c for c in cands if int((c["_conf"].get("st_24h") or 0) or 0) > 0],
+        key=lambda c: -int((c["_conf"].get("st_24h") or 0) or 0),
+    )
+    for i, c in enumerate(all_with_st[:20], 1):
         conf = c["_conf"]
         state_icon = {"A": "🟢", "B": "🔴", "C": "⚪"}.get(c["_state"], "?")
         d = c["_days"]
         t_str = (f"D+{d}" if 0 < d < 9999 else (f"D-{abs(d)}" if d < 0 else "—"))
-        lines.append(f"| {i} | {state_icon} | **{c['ticker']}** | {(c.get('name') or '')[:25]} | {c.get('mcap_bucket','')} | {t_str} | {conf.get('st_24h','0')} | {c['_stage']} | {conf.get('keywords','')} |")
+        st_24h_v = conf.get("st_24h", "0")
+        baseline_n = int((conf.get("st_baseline_n") or 0) or 0)
+        baseline_str = f"{baseline_n}/7일" + (" (수집 중)" if baseline_n < 7 else " (확보)")
+        lines.append(f"| {i} | {state_icon} | **{c['ticker']}** | {(c.get('name') or '')[:25]} | {c.get('mcap_bucket','')} | {t_str} | {st_24h_v} | {baseline_str} | {c['_stage']} | {conf.get('keywords','')} |")
+    if not all_with_st:
+        lines.append("| — | (st_24h > 0 후보 없음) | — | — | — | — | — | — | — | — |")
 
     frenzy = [c for c in active if c["_conf"].get("stage") == "frenzy"]
     lines += ["", "## 급등 경보 (frenzy)", ""]

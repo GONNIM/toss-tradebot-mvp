@@ -26,7 +26,10 @@ $VENV -m backend.scripts.biotech_h48v3_confirm
 # 3. 소문 확인 일일 리포트 (rumor-daily/YYYY-MM-DD.md)
 $VENV -m backend.scripts.biotech_h48v3_report
 
-# 4. 레이더 리스트 v1.3 (watchlist/radar-v1.3-YYYYMMDD.md)
+# 4. 레이더 리스트 v1.3/v1.4 (watchlist/radar-v1.X-YYYYMMDD.md)
 $VENV -m backend.scripts.biotech_h46v3_radar
+
+# 5. STATUS.md 자동 생성 (WP57 · 매일 갱신 · '가능성 지도 (수동)' 절만 보존)
+$VENV -m backend.scripts.biotech_h57b_status_gen
 
 echo "=== $(date -u +%Y-%m-%dT%H:%M:%SZ) biotech daily done ==="
