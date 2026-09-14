@@ -191,7 +191,8 @@ def main():
 
     ws_ci_lower_positive = (ws_ci[0] is not None and ws_ci[0] > 0)
 
-    completeness = "5/5" if ch_stats["ch2_F4P_hits"] > 0 else "4.5/5 (Form 4 P 병합 완료 · AACT 상태 변경은 스폰서→회사 매핑 미완)"
+    # Fable 확정 (2026-09-14 · Phase C 세션 4): AACT 옵션 미포함 · 채널 4.5/5 로 확정 · 2026-11-15 재실행 금지
+    completeness = "4.5/5 (AACT 옵션 미포함 · Form 4 P 병합 완료 · ch1~ch5 실채움 · CT.gov 상태 변경은 h6_membership 대체 근사)"
 
     seal = {
         "git_sha": sha,

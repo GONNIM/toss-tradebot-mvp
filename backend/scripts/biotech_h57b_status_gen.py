@@ -103,9 +103,14 @@ def main():
     diff_ci = h54v2.get("diff_ci95_bootstrap", [0, 0]) or [0, 0]
     ch_stats = h54v2.get("channel_stats", {})
 
-    # 채널 실채움 판정 (Form 4 hits=0 이면 대체 · "3.5/5")
+    # 채널 실채움 판정 (Fable 확정 · 2026-09-14 Phase C 세션 4):
+    # · AACT 옵션 미포함 → 채널 4.5/5 로 확정
+    # · Form 4 hits=0 이면 3.5/5 (WP28-3 병합 전)
     ch2_hits = ch_stats.get("ch2_F4P_hits", 0)
-    channel_completeness = "5/5" if ch2_hits > 0 else "3.5/5 (Form 4 미수집 · h6_membership 이 CT.gov 상태 변경 대체)"
+    if ch2_hits > 0:
+        channel_completeness = "4.5/5 (AACT 옵션 미포함 · Form 4 P 병합 · ch1~ch5 실채움)"
+    else:
+        channel_completeness = "3.5/5 (Form 4 미수집 · h6_membership 대체)"
 
     latest_radar = latest_file("watchlist/radar-v1.*-*.md")
     latest_rumor = latest_file("rumor-daily/*.md")
@@ -126,7 +131,7 @@ def main():
         "",
         f"1. **임상 결과 발표 한 달 전에 사면 평균 +{h1b_mean*100:.2f}%** (H1b (Phase 3 (3상 임상) guidance) · 표본 {h1b_n}건 · CI (신뢰구간) [{h1b_ci[0]*100:+.2f}%, {h1b_ci[1]*100:+.2f}%] · **CI 하한 > 0 = 우연 아님** · 임계 +2% 미달)",
         f"2. **발표 직후 한 달은 {post_mean*100:.2f}%** (H8 검정 3 · CI 상한 {post_ci[1]*100:+.2f}% · sell_supported={sell} · **뉴스에 팔아라 격언 데이터로 확인**)",
-        f"3. **소문 채널 신호 유무 (WP54-2 · 채널 {channel_completeness})**: 신호 있음 {ws_n}건 mean **{ws_mean*100:+.2f}%** [{ws_ci[0]*100:+.2f}%, {ws_ci[1]*100:+.2f}%] · 신호 없음 {wo_n}건 mean **{wo_mean*100:+.2f}%** [{wo_ci[0]*100:+.2f}%, {wo_ci[1]*100:+.2f}%] · **차이 {diff*100:+.2f}%p** CI [{diff_ci[0]*100:+.2f}%p, {diff_ci[1]*100:+.2f}%p] · 판정: **{'지지' if h54v2.get('supported') else '불지지'}** (차이 CI 하한 < 0) · 단 **신호 있음 집단만 CI > 0 확정**",
+        f"3. **소문 채널 신호 유무 (WP54-3 확정 · 채널 {channel_completeness} · 2026-11-15 재실행 금지)**: 신호 있음 {ws_n}건 mean **{ws_mean*100:+.2f}%** [{ws_ci[0]*100:+.2f}%, {ws_ci[1]*100:+.2f}%] · 신호 없음 {wo_n}건 mean **{wo_mean*100:+.2f}%** [{wo_ci[0]*100:+.2f}%, {wo_ci[1]*100:+.2f}%] · **차이 {diff*100:+.2f}%p** CI [{diff_ci[0]*100:+.2f}%p, {diff_ci[1]*100:+.2f}%p] · 판정: **{'지지' if h54v2.get('supported') else '불지지'}** (차이 CI 하한 < 0) · 단 **신호 있음 집단만 CI > 0 확정**",
         "4. **뉴스 보고 사는 전략 2건은 효과 없음**: H5 (해외→국내) 폐기 · H3 (activist 전체) 폐기",
         f"5. **오늘의 순위표 · 소문 확인은 화면 3탭** (`/radar` · `/rumor` · `/map`) · 최신: `{latest_radar}` · `{latest_rumor}` · **소액 실전 규칙 8항 적용**",
         "",
