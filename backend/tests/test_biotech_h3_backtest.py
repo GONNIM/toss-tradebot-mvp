@@ -188,3 +188,65 @@ def test_g_alpha_threshold_alignment():
         got = alpha.get("h_30d_alpha_confirmed", False)
         assert got == expected, \
             f"planted={planted}% expected alpha={expected} but got {got} · mean_ne={result['summary']['horizons']['h_30d']['mean_net_excess']}"
+
+
+def test_i_wp64_extreme_value_isolation():
+    """(i) WP64 · 극단값 격리 (net_excess > +300% or < -95%) 통계 제외 + 목록 출력."""
+    events = []; prices = {}
+    # 정상 20건 (+3% drift · 30d 창 · net excess 정상 범위)
+    for i in range(20):
+        tkr = f"NORM{i}"
+        pre = _gen_price_series("2024-01-01", 100, 100.0, 0.0, seed=2000+i, noise_std=0)
+        post = _gen_price_series("2024-04-15", 60, 103.0, 0.0, seed=2100+i, noise_std=0)
+        prices[tkr] = {**pre, **post}
+        events.append({"event_id": f"n{i}", "target_cik": f"N{i}", "ticker": tkr,
+                       "event_type": "13D_new", "event_date": "2024-04-10", "accession": "", "institution": "T"})
+    # 극단 1건: 이벤트 후 400% 급등 (400% > +300% 임계 → 격리)
+    tkr_ext = "EXT400"
+    pre = _gen_price_series("2024-01-01", 100, 100.0, 0.0, seed=2200, noise_std=0)
+    post = _gen_price_series("2024-04-15", 60, 500.0, 0.0, seed=2201, noise_std=0)  # 100 → 500 = +400%
+    prices[tkr_ext] = {**pre, **post}
+    events.append({"event_id": "e_ext", "target_cik": "EXT", "ticker": tkr_ext,
+                   "event_type": "13D_new", "event_date": "2024-04-10", "accession": "", "institution": "T"})
+    bench = _gen_price_series("2024-01-01", 200, 100.0, 0.0, seed=99, noise_std=0)
+
+    result = run_backtest(events, prices, bench, {}, {}, seed=42)
+    # 격리 발생 확인
+    extreme = result["summary"]["extreme_review"]
+    assert extreme["count"] >= 1, f"extreme count={extreme['count']} · 400% 이벤트 최소 1건 격리 예상"
+    # 격리 대상 티커 확인
+    ext_tickers = {i["ticker"] for i in extreme["items"]}
+    assert tkr_ext in ext_tickers, f"EXT400 격리 예상 · 실제 {ext_tickers}"
+    # 통계는 격리 제외 (20건만 · 21건 아님)
+    s30 = result["summary"]["horizons"]["h_30d"]
+    assert s30["n"] == 20, f"h_30d n={s30['n']} · 격리 후 20 예상 (총 21 - 극단 1)"
+    # extreme_count 필드 존재
+    assert s30.get("extreme_count", 0) >= 1
+
+
+def test_j_wp64_held_for_review_alpha_pass():
+    """(j) WP64 · 격리 발생 시 alpha_pass_machine=held_for_review (True 출력 금지)."""
+    events = []; prices = {}
+    # 30 이벤트 · 이벤트 후 +6% 알파 심음 (평균 통과 조건) + 극단 1건 (+400%)
+    for i in range(30):
+        tkr = f"ALP{i}"
+        pre = _gen_price_series("2024-01-01", 100, 100.0, 0.0, seed=3000+i, noise_std=0)
+        post = _gen_price_series("2024-04-15", 60, 106.0, 0.0, seed=3100+i, noise_std=0)
+        prices[tkr] = {**pre, **post}
+        events.append({"event_id": f"a{i}", "target_cik": f"A{i}", "ticker": tkr,
+                       "event_type": "13D_new", "event_date": "2024-04-10", "accession": "", "institution": "T"})
+    # 극단 1건
+    prices["EXTREME"] = {**_gen_price_series("2024-01-01", 100, 100.0, 0.0, seed=3200, noise_std=0),
+                          **_gen_price_series("2024-04-15", 60, 600.0, 0.0, seed=3201, noise_std=0)}
+    events.append({"event_id": "e_ext", "target_cik": "EX", "ticker": "EXTREME",
+                   "event_type": "13D_new", "event_date": "2024-04-10", "accession": "", "institution": "T"})
+    bench = _gen_price_series("2024-01-01", 200, 100.0, 0.0, seed=99, noise_std=0)
+
+    result = run_backtest(events, prices, bench, {}, {}, seed=42)
+    alpha = result["summary"]["alpha_confirmed"]
+    # 격리 발생 시 alpha_pass_machine = 'held_for_review' (True 출력 금지)
+    apm = alpha.get("h_30d_alpha_pass_machine")
+    assert apm == "held_for_review", f"alpha_pass_machine={apm} · 격리 있으면 held_for_review 예상"
+    # 기존 필드 alpha_confirmed 는 False 로 강제
+    assert alpha.get("h_30d_alpha_confirmed") is False, "alpha_confirmed 는 격리 시 False 강제"
+    assert "extreme_review_note" in alpha

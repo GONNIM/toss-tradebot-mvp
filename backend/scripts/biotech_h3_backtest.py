@@ -60,6 +60,12 @@ BENCHMARK_REF_TICKER = "IWM"
 ENTRY_LAG_MAX_DAYS = 7
 # B101-2 · exit overshoot 임계 (달력일 · 목표일 이후)
 EXIT_OVERSHOOT_DAYS = 15
+# WP64 · 극단값 격리 임계 (사후 조정 금지 · 데이터 오류 신호 차단)
+# · net excess > +300% 또는 < -95% 는 데이터 오류로 판정하여 통계 제외
+# · 격리 건 ≥1 이면 alpha_pass_machine 을 'held_for_review' 로 (True 출력 금지)
+# · biotech_h3_backtest 는 net_excess 를 percentage (5.0 = 5%) 형태로 저장 · 임계도 percentage
+EXTREME_NE_UPPER = 300.0  # +300%
+EXTREME_NE_LOWER = -95.0  # -95%
 
 # B100 · H3 알파 임계 (§2 H3 커밋값 · 사후 조정 금지)
 ALPHA_THRESHOLDS = {
@@ -327,19 +333,48 @@ def run_backtest(events: list[dict], prices_by_tkr: dict[str, dict[str, float]],
     # 요약
     summary = {"per_event_count": len(per_event), "excluded": excluded,
                "shortened_counts": shortened_counts, "overshoot_counts": overshoot_counts,
+               "extreme_review": {"count": 0, "items": []},  # WP64 · 극단값 격리
                "horizons": {}, "buckets": {}, "subsector_buckets": {}, "sensitivity": {}}
     for h in HORIZONS:
-        vals = [r["net_excess"].get(f"ne_{h}d") for r in per_event if r["net_excess"].get(f"ne_{h}d") is not None]
-        block_keys = [r["ticker"] for r in per_event if r["net_excess"].get(f"ne_{h}d") is not None]
+        raw_pairs = [(r, r["net_excess"].get(f"ne_{h}d")) for r in per_event if r["net_excess"].get(f"ne_{h}d") is not None]
+        # WP64 · 극단값 격리 (통계 제외 · 목록 출력)
+        clean_pairs = []
+        extreme_items = []
+        for r, v in raw_pairs:
+            if v > EXTREME_NE_UPPER or v < EXTREME_NE_LOWER:
+                extreme_items.append({
+                    "ticker": r.get("ticker", ""), "event_date": r.get("event_date", ""),
+                    "horizon_d": h, "net_excess": round(v, 4),
+                    "reason": "extreme_review · > +300% or < -95%",
+                })
+            else:
+                clean_pairs.append((r, v))
+        vals = [v for _, v in clean_pairs]
+        block_keys = [r["ticker"] for r, _ in clean_pairs]
+        summary["extreme_review"]["count"] += len(extreme_items)
+        summary["extreme_review"]["items"].extend(extreme_items)
         if not vals:
-            summary["horizons"][f"h_{h}d"] = {"n": 0}
+            summary["horizons"][f"h_{h}d"] = {"n": 0, "extreme_count": len(extreme_items)}
             continue
         mean_ne = sum(vals) / len(vals)
         hr = hit_rate(vals)
         lo, mid, hi = bootstrap_ci(vals, BOOTSTRAP_ITER, seed)
         lo_b, mid_b, hi_b = bootstrap_ci(vals, BOOTSTRAP_ITER, seed, block_key=block_keys)
+        # WP64 · 절사 평균 병기 (1/99 백분위)
+        vals_sorted = sorted(vals)
+        n = len(vals_sorted)
+        k = max(1, n // 100)
+        trimmed = vals_sorted[k:n - k] if n > 2 * k else vals_sorted
+        trimmed_mean = sum(trimmed) / len(trimmed) if trimmed else 0
+        # 로그 수익률 평균 (참고 · 큰 극단 축소) · v 는 percentage → decimal 로 변환
+        import math
+        log_vals = [math.log(1 + v / 100.0) if v > -99 else math.log(0.01) for v in vals]
+        log_mean = sum(log_vals) / len(log_vals) if log_vals else 0
         summary["horizons"][f"h_{h}d"] = {
             "n": len(vals), "mean_net_excess": round(mean_ne, 4),
+            "trimmed_mean_1_99": round(trimmed_mean, 4),
+            "log_return_mean": round(log_mean, 4),
+            "extreme_count": len(extreme_items),
             "hit_rate_pct": round(hr, 2),
             "ci_iid_95_lo": round(lo, 4), "ci_iid_95_mid": round(mid, 4), "ci_iid_95_hi": round(hi, 4),
             "ci_block_95_lo": round(lo_b, 4), "ci_block_95_mid": round(mid_b, 4), "ci_block_95_hi": round(hi_b, 4),
@@ -383,6 +418,8 @@ def run_backtest(events: list[dict], prices_by_tkr: dict[str, dict[str, float]],
                 summary["subsector_buckets"][f"h_{h}d"][sic_key] = {"n": 0}
 
     # B100 · alpha_confirmed (H3 커밋값 · §2 · Fable 검수 대기)
+    # WP64 · 극단값 격리 건 ≥1 이면 alpha_pass_machine = 'held_for_review' (True 출력 금지)
+    extreme_total = summary.get("extreme_review", {}).get("count", 0)
     alpha = {"status": "Fable 검수 대기", "hypothesis": "H3", "thresholds": ALPHA_THRESHOLDS["H3"]}
     for h in HORIZONS:
         s = summary["horizons"].get(f"h_{h}d", {})
@@ -391,13 +428,22 @@ def run_backtest(events: list[dict], prices_by_tkr: dict[str, dict[str, float]],
             pass_ci = s.get("ci_iid_95_lo", 0) > 0 if th.get("ci_lo_positive") else True
             pass_mean = s.get("mean_net_excess", 0) >= th.get("mean_ne_min", 0)
             pass_hr = s.get("hit_rate_pct", 0) >= th.get("hit_min", 0)
-            # §2-0 서열: 1차 mean · 2차 hit. mean 미달 시 hit 무관 alpha 부재
             alpha[f"h_{h}d_conditions"] = {
                 "ci_lo>0": pass_ci,
                 f"mean>={th['mean_ne_min']}%": pass_mean,
                 f"hr>={th['hit_min']}%": pass_hr,
             }
-            alpha[f"h_{h}d_alpha_confirmed"] = pass_ci and pass_mean and pass_hr
+            raw_pass = pass_ci and pass_mean and pass_hr
+            # WP64 · 격리 건 존재 시 held_for_review (True 출력 금지)
+            if extreme_total > 0:
+                alpha[f"h_{h}d_alpha_pass_machine"] = "held_for_review"
+                alpha[f"h_{h}d_extreme_count"] = extreme_total
+            else:
+                alpha[f"h_{h}d_alpha_pass_machine"] = raw_pass
+            # 하위 호환 (기존 필드 유지 · 하지만 held 시 False 로 강제)
+            alpha[f"h_{h}d_alpha_confirmed"] = raw_pass if extreme_total == 0 else False
+    if extreme_total > 0:
+        alpha["extreme_review_note"] = f"극단값 {extreme_total}건 격리 · alpha_pass_machine=held_for_review (WP64)"
     summary["alpha_confirmed"] = alpha
 
     return {"per_event": per_event, "summary": summary}

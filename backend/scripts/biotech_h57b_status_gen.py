@@ -78,7 +78,30 @@ def main():
             sha = fb
 
     h8 = load_seal("h8_h1b_full_seal", sha)
-    h54v2 = load_seal("h54v2_signal_full_seal", sha)
+    # WP54-3 최종 봉인 우선 로드 · fallback WP54-2
+    h54v2 = load_seal("h54v3_signal_final_seal", sha) or load_seal("h54v2_signal_full_seal", sha)
+    # WP64 · H3-F4 (WP63/WP63-2) held/무효/유효 상태 판정 · v2 우선 로드
+    h3f4_v2 = load_seal("h3f4_v2_seal", sha)
+    h3f4_v1 = load_seal("h3f4_seal", sha)
+    h3f4_held = False
+    h3f4_extreme_note = ""
+    h3f4_summary_note = ""
+    if h3f4_v2:
+        # v2: WP64 안전장치 자동 발동 · alpha_pass_machine 판정
+        h30 = (h3f4_v2.get("horizons", {}) or {}).get("h_30d", {})
+        h180 = (h3f4_v2.get("horizons", {}) or {}).get("h_180d", {})
+        h30_pass = h30.get("alpha_pass_machine")
+        h180_pass = h180.get("alpha_pass_machine")
+        extreme = h3f4_v2.get("extreme_review", {}).get("count", 0)
+        if extreme > 0:
+            h3f4_held = True
+            h3f4_extreme_note = f"WP63-2 F4 검정: 극단값 {extreme}건 격리 · **held_for_review (데이터 오류 검토)**"
+        else:
+            h3f4_summary_note = f"WP63-2 F4 v2 (시총 필터 · WP64 안전장치): 30d n={h30.get('n', 0)} mean {h30.get('mean', 0):+.2f}% alpha_pass={h30_pass} · 180d n={h180.get('n', 0)} mean {h180.get('mean', 0):+.2f}% alpha_pass={h180_pass}"
+    elif h3f4_v1 and "WP63" in str(h3f4_v1.get("version", "")):
+        # v1 만 있는 경우: 무효 처리
+        h3f4_held = True
+        h3f4_extreme_note = "WP63 F4 검정 v1: 시총 필터 미적용 · **무효 (WP63-2 재검 대상)**"
 
     # 핵심 수치 추출
     h1b = h8.get("H1b", {})
@@ -135,6 +158,8 @@ def main():
         "4. **뉴스 보고 사는 전략 2건은 효과 없음**: H5 (해외→국내) 폐기 · H3 (activist 전체) 폐기",
         f"5. **오늘의 순위표 · 소문 확인은 화면 3탭** (`/radar` · `/rumor` · `/map`) · 최신: `{latest_radar}` · `{latest_rumor}` · **소액 실전 규칙 8항 적용**",
         "",
+        (f"⚠️ **{h3f4_extreme_note}**" if h3f4_held else (f"🟡 {h3f4_summary_note}" if h3f4_summary_note else "")),
+        "",
         f"**최종 갱신 (자동)**: {now_dash} · git_sha (git 커밋 짧은 해시) `{sha}`",
         "",
         "**Phase A (검증 단계 · 알파 존재 여부 판정) 종결 (Fable 최종 검수 통과)**: `PHASE-A-FINAL.md` 종결본 참조 (2026-09-14 동결)",
@@ -157,6 +182,7 @@ def main():
         "| **H6** · 분야 순위 point-in-time | 관문 3 대기 · dry-run 완결 | 8세트 46분기 · 상위 3분위 2020Q1 · 소속 38 | membership 확장 (WP27-2) | `H6-design.md` |",
         "| **H7** · 초기 매집 후 분할 매도 | 설계 완료 · 대기 | 사전 커밋 13항 | H6·H8 알파 확인 후 실행 | `H7-design.md` |",
         f"| **H8** · 소문 지수 선행성 | **부분 풀 지지 (검정 3)** | post {post_mean*100:+.2f}% CI 상한 {post_ci[1]*100:+.2f}% · sell_supported={sell} | 채널 확장 후 WP54-3 재검 | `verification/H8/H8-signal-presence-full-2026-09-14.md` |",
+        (f"| **H3-F4** · Form 4 매수 추종 (별도 · WP63) | ⚠️ **held_for_review (데이터 오류 검토)** | {h3f4_extreme_note} | 격리 검토 후 재실행 | `verification/H3/H3-F4-report-v2-*.md` |" if h3f4_held else (f"| **H3-F4 v2** · Form 4 매수 추종 (별도 · WP63-2) | **30d alpha_pass_machine=True (조건 통과)** | {h3f4_summary_note} | 180d 임계 미달 · 60일 전향 관찰 | `verification/H3/H3-F4-report-v2-*.md` |" if h3f4_summary_note else "")),
         "| **Security** · 자격증명 가드레일 | WP8 (설정 강제 부트스트랩) | 156/156 (+2 skip) pytest · SEC WP23 헤더 | 신규 스크립트 자동 강제 | `Security-Audit.md` |",
         "",
         "---",
