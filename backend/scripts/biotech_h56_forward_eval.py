@@ -25,7 +25,7 @@
 from __future__ import annotations
 
 from backend.services import config  # noqa: F401
-from backend.scripts._biotech_bootstrap import require_secure_logging
+from backend.scripts._biotech_bootstrap import require_secure_logging, data_sha
 from backend.scripts.biotech_h43_h8_h1b import (
     git_sha, load_prices, load_bench, load_cik_ticker,
     net_excess, bootstrap_ci,
@@ -154,11 +154,21 @@ def main():
 
     parser = argparse.ArgumentParser()
     parser.add_argument("--window", choices=["60d", "180d"], default="60d")
+    parser.add_argument("--simulate-today", help="dry-run · YYYY-MM-DD (기본: 실제 오늘)")
     args = parser.parse_args()
 
     sha = git_sha()
+    if not (PROJECT_ROOT / "backend" / "data" / f"h3_prices_merged_{sha}.csv").exists():
+        fb = data_sha(PROJECT_ROOT / "backend" / "data")
+        if fb:
+            LOG.info("git_sha %s 데이터 부재 · data_sha fallback → %s", sha, fb)
+            sha = fb
     anchor = datetime.strptime(DEPLOYMENT_ANCHOR, "%Y-%m-%d").date()
-    today = datetime.now(timezone.utc).date()
+    if args.simulate_today:
+        today = datetime.strptime(args.simulate_today, "%Y-%m-%d").date()
+        LOG.info("SIMULATE today=%s (--simulate-today)", today)
+    else:
+        today = datetime.now(timezone.utc).date()
     window_days = 60 if args.window == "60d" else 180
     cutoff = anchor + timedelta(days=window_days)
     cutoff_str = cutoff.strftime("%Y-%m-%d")

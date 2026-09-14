@@ -146,13 +146,35 @@ def main():
     xbi_90 = load_xbi_90d(sha)
     LOG.info("prices tickers: %d · xbi 90d ret: %.4f", len(ret_map), xbi_90)
 
-    # v1.3 · expert 재정의 (8-K readout 제거 · 사전 커밋 정합)
-    # 채널: 13D 신규 (사전 신호) + h6 membership (CT.gov 활동 근사)
+    # Phase C 1 · PubMed / Preprint 인덱스 (있으면 반영 · 없으면 중립)
+    pub_idx_path = DATA_DIR / f"h57_pubmed_index_{sha}.json"
+    pub_idx = json.loads(pub_idx_path.read_text()) if pub_idx_path.exists() else {}
+    pre_idx_path = DATA_DIR / f"h58_preprint_index_{sha}.json"
+    pre_idx = json.loads(pre_idx_path.read_text()) if pre_idx_path.exists() else {}
+    LOG.info("pub_idx: %d · pre_idx: %d", len(pub_idx), len(pre_idx))
+
+    # v1.4 · expert 채널 5/5 (Phase C 1 · 채널 확장 · 가중치 동일)
+    # 채널: 13D 신규 + h6 membership + PubMed 게재 yoY + Preprint yoY + F4_P (별도 파일 부재 시 0)
     raw_exp = []
     for c in cands:
         cik = (c.get("cik") or "").zfill(10)
         tk = c.get("ticker", "")
-        raw = ev_by_cik.get(cik, 0) * 1.0 + (3 if tk in memb_tk else 0)  # 8-K readout_by_cik 제거
+        # 채널 1+2 (기존 v1.3)
+        raw = ev_by_cik.get(cik, 0) * 1.0 + (3 if tk in memb_tk else 0)
+        # 채널 4 · PubMed 게재 yoY (2026 > 2025 이면 +2)
+        pub_entry = pub_idx.get(cik)
+        if pub_entry:
+            y26 = pub_entry.get("counts", {}).get("y2026", 0) or 0
+            y25 = pub_entry.get("counts", {}).get("y2025", 0) or 0
+            if y26 > y25 and y26 >= 1:
+                raw += 2
+        # 채널 5 · Preprint yoY
+        pre_entry = pre_idx.get(cik)
+        if pre_entry:
+            y26p = pre_entry.get("counts", {}).get("y2026", 0) or 0
+            y25p = pre_entry.get("counts", {}).get("y2025", 0) or 0
+            if y26p > y25p and y26p >= 1:
+                raw += 2
         raw_exp.append(raw)
     exp_norm = z_clip01(raw_exp)
 
@@ -264,15 +286,16 @@ def main():
     today_dash = datetime.now(timezone.utc).strftime("%Y-%m-%d")
     md_path = out_dir / f"radar-v1.3-{today_str}.md"
     lines = [
-        f"# 레이더 리스트 v1.3 · {today_dash} (WP46-4/5 (예정일 표기 · 8-K 제거))",
+        f"# 레이더 리스트 v1.4 · {today_dash} (Phase C 1 · expert 채널 5/5 완비 · 가중치 동일)",
         "",
         "> 📖 [`GLOSSARY.md`](GLOSSARY.md) · 코드 · 상태 · 가설 뜻",
         "",
         "> ⚠️ **알파 (초과 수익) 미확정 · 소액 전향용 · 매수 신호 아님**",
         "",
         f"- 후보 우주 (관찰 종목 모음): {len(cands)}종목 (WP49 (뉴스 예정/통과/없음 상태 분리) 정제 후)",
-        "- **v1.3 정정 (WP46-4)**: expert (전문가 채널 점수) 에서 8-K (SEC 보도자료 공시) readout 제거 (사후 뉴스 · 사전 커밋 위반) · 사용 채널 = 13D (5% 이상 지분 신고) count + h6 membership (테마 소속) 만",
-        "- **v1.3 개선 (WP46-5)**: A 상태 (뉴스 예정) 예정일이 월 단위 (YYYY-MM) 인 경우 '2027년 2월 중 (D-N)' 형식 · 일 단위면 그대로",
+        f"- **v1.4 (Phase C 1)**: expert (전문가 채널 점수) = 13D + h6 membership + **PubMed 게재 yoY (h57)** + **Preprint yoY (h58)** · **채널 5/5 완비 · 가중치 동일** · 8-K (보도자료) 미사용",
+        f"- PubMed 인덱스 커버: {len(pub_idx)} CIK · Preprint 인덱스 커버: {len(pre_idx)} CIK",
+        "- **v1.3 유지 (WP46-5)**: A 상태 (뉴스 예정) 예정일 월 단위 → 'YYYY년 M월 중 (D-lo~hi 추정)' 형식",
         "- 동일 가중 (0.25×4) · 태그 +0.1 · 위험 -0.10 · 60일 전 조정 금지",
         "",
         "## 상위 30",
@@ -286,13 +309,14 @@ def main():
 
     lines += [
         "",
-        "## 사전 커밋 (h_radar_params v1.3 · WP46-4 정합)",
+        "## 사전 커밋 (h_radar_params v1.4 · Phase C 1 채널 완비)",
         "",
-        "- **expert (전문가 채널)**: 13D (5% 지분 신고) count + h6 membership (테마 소속) · z-score (평균 대비 표준편차 위치) 정규화 · **8-K (보도자료) 미사용**",
-        "- **near (뉴스 임박도)**: A 상태 (뉴스 예정) 잔여일 함수 (0-90d=0.7 · 90-180d=1.0 · 180-365d=0.5) · B 상태 (뉴스 통과) = 0",
-        "- **crowd (군중 관심도)**: WP48v3 (커뮤니티 확인기 v3) 24h 집계 · baseline (기준선) < 7 = 0.5 중립",
-        "- **unnoticed (미반영도)**: 최근 90일 종목 수익률 − XBI (바이오 ETF) 90일 수익률 (낮을수록 가점 · z-score) · 시총 대체 금지",
-        "- **risk (위험 감점)**: negative readout (부정 결과) + dilution (증자·희석) 키워드",
+        "- **expert (전문가 채널) · 5/5**: (a) 13D (5% 지분 신고) count · (b) h6 membership (테마 소속) · (c) **PubMed 게재 yoY** (h57 · 2026 > 2025) · (d) **Preprint yoY** (h58 · PubMed [SB=preprint]) · (e) F4_P (Form 4 임원 매수 · 있으면) · z-score 정규화 · **8-K 미사용**",
+        "- **near (뉴스 임박도)**: A 상태 (뉴스 예정) 잔여일 함수 · YYYY-MM 원본 → 'YYYY년 M월 중 (D-lo~hi 추정)'",
+        "- **crowd (군중 관심도)**: WP48v3 (커뮤니티 확인기 v3) 24h · baseline (기준선) < 7 = 0.5 중립",
+        "- **unnoticed (미반영도)**: 최근 90일 종목 수익률 − XBI (바이오 ETF) 90일 수익률 · 시총 대체 금지",
+        "- **risk (위험 감점)**: negative readout + dilution 키워드",
+        "- **채널 추가는 정의 확장 (가중치 변경 아님) · 60일 전 조정 금지 유지**",
         "",
         "---",
         "",

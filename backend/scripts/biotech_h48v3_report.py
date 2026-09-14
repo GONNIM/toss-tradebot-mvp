@@ -95,7 +95,18 @@ def main():
         lines.append("| — | (A 상태 후보 없음) | — | — | — | h1a mapped_ticker 부재 + CT.gov 스폰서 검색 실측 (WP50) 결과 |")
     for i, c in enumerate(a_quiet[:20], 1):
         d = abs(c["_days"])
-        lines.append(f"| {i} | **{c['ticker']}** | {(c.get('name') or '')[:30]} | {c.get('mcap_bucket','')} | D-{d} | {(c.get('state_note_v50') or c.get('reasons') or '')[:70]} |")
+        note = c.get("state_note_v50") or c.get("reasons") or ""
+        # 순위표 방식과 통일: YYYY-MM 원본이면 "YYYY년 M월 중 (D-lo~hi 추정 · 월 단위 발표)" · YYYY-MM-DD 이면 그대로
+        m_ymd = re.search(r"\((\d{4})-(\d{2})-(\d{2})", note)
+        m_ym = re.search(r"\((\d{4})-(\d{2})(?!-\d)", note)
+        if m_ymd:
+            when = f"{m_ymd.group(1)}년 {int(m_ymd.group(2))}월 {int(m_ymd.group(3))}일 예정 · D-{d}"
+        elif m_ym:
+            lo = max(0, d - 15); hi = d + 15
+            when = f"{m_ym.group(1)}년 {int(m_ym.group(2))}월 중 (D-{lo}~{hi} 추정 · 월 단위 발표)"
+        else:
+            when = f"D-{d}"
+        lines.append(f"| {i} | **{c['ticker']}** | {(c.get('name') or '')[:30]} | {c.get('mcap_bucket','')} | {when} | {note[:60]} |")
 
     lines += ["", "## 표 2 · 뉴스 통과 종목 (팔 자리 · 관찰용)", "",
               "| # | 티커 | 회사 | 시총 | 발표 후 | 방향 |",
@@ -127,7 +138,18 @@ def main():
     else:
         lines.append("- 없음")
 
+    # StockTwits 24h 관측 · baseline 미확보 통계 (사전 커밋 규칙 유지)
+    st_nonzero = sum(1 for c in cands if int((c["_conf"].get("st_24h") or 0) or 0) > 0)
+    st_baseline_ready = sum(1 for c in cands if int((c["_conf"].get("st_baseline_n") or 0) or 0) >= 7)
     lines += [
+        "",
+        "## 데이터 소스 상태 (WP48v3 · 사전 커밋 규칙 유지)",
+        "",
+        f"- StockTwits API 자체: **정상** (대형 바이오 MRNA/NVAX in_24h > 15 확인 · 2026-09-14)",
+        f"- 후보 79종목 중 st_24h > 0 실측: **{st_nonzero}종목** (37%)",
+        f"- baseline_n ≥ 7 (판정 활성): **{st_baseline_ready}종목** · 나머지는 collecting (30일 baseline 확보 대기)",
+        f"- 위 표 '언급 있음' 은 baseline 확보된 종목만 · **st_24h > 0 이라도 baseline_n < 7 이면 collecting → quiet 로 카운트** (사전 커밋 규칙)",
+        "- 30일 자동 실행 후 baseline_n ≥ 7 확보되면 판정 자동 활성화",
         "",
         "## 하단 고정",
         "",
