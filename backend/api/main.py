@@ -31,6 +31,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from backend.api.routes import (
+    biotech,
     dashboard,
     insights,
     judgments,
@@ -270,6 +271,7 @@ app.include_router(settings.router, prefix="/api/v1/settings", tags=["settings"]
 app.include_router(session.router, prefix="/api/v1/admin/session", tags=["session"])
 # ── Webhooks (Phase D 주 8 · 2026-07-31 · 결제 훅 스텁)
 app.include_router(webhooks.router, prefix="/api/v1/webhooks", tags=["webhooks"])
+app.include_router(biotech.router, prefix="/api/v1/biotech", tags=["biotech"])
 # ── 이월 dead (include 제외 · Phase A 주 2)
 #    crazy · moonshot · super_signals · backtest · execution
 #    파일은 backend/api/routes/ 에 유지 (참조·재활성 대비) · main 등록만 제거
