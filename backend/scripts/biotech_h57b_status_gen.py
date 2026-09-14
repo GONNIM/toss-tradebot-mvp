@@ -80,24 +80,39 @@ def main():
     h8 = load_seal("h8_h1b_full_seal", sha)
     # WP54-3 최종 봉인 우선 로드 · fallback WP54-2
     h54v2 = load_seal("h54v3_signal_final_seal", sha) or load_seal("h54v2_signal_full_seal", sha)
-    # WP64 · H3-F4 (WP63/WP63-2) held/무효/유효 상태 판정 · v2 우선 로드
+    # WP64 · H3-F4 (WP63/WP63-2/WP63-3) held/무효/유효 상태 판정 · v3 → v2 → v1 우선순위
+    h3f4_v3 = load_seal("h3f4_v3_seal", sha)
     h3f4_v2 = load_seal("h3f4_v2_seal", sha)
     h3f4_v1 = load_seal("h3f4_seal", sha)
     h3f4_held = False
     h3f4_extreme_note = ""
     h3f4_summary_note = ""
-    if h3f4_v2:
+    if h3f4_v3:
+        # v3: 견고성 5건 · 판정 결과 우선
+        verdict = h3f4_v3.get("verdict", {})
+        v_passed = verdict.get("passed", False)
+        v_status = verdict.get("status", "유보")
+        a_h30 = h3f4_v3.get("a_h30d", {})
+        d_info = h3f4_v3.get("d_13d_dupes", {})
+        h3f4_summary_note = f"WP63-3 F4 견고성 (5건 · a+d 통과 시 유지): 판정 **{v_status}** · (a) 재실행 n={a_h30.get('n', 0)} CI 하한 {a_h30.get('ci_block_lo', 0):+.2f}% · (d) 13D 중복 {d_info.get('excluded', 0)} 제외 CI 하한 {d_info.get('h_30d_ci_block_lo', 0):+.2f}%"
+        if not v_passed:
+            h3f4_summary_note = f"WP63-3 F4 견고성 (5건): **유보 강등** · (d) 13D 중복 제외 CI 하한 < 0 · 잠정 확인 조건 미달 · 60일 전향 재평가 (WP56)"
+    elif h3f4_v2:
         # v2: WP64 안전장치 자동 발동 · alpha_pass_machine 판정
         h30 = (h3f4_v2.get("horizons", {}) or {}).get("h_30d", {})
         h180 = (h3f4_v2.get("horizons", {}) or {}).get("h_180d", {})
         h30_pass = h30.get("alpha_pass_machine")
         h180_pass = h180.get("alpha_pass_machine")
         extreme = h3f4_v2.get("extreme_review", {}).get("count", 0)
+        # 결론 5분류 판정 (README §3-☆)
+        # h30: alpha_pass_machine=True + n<100 + 시총 부재 다수 = 잠정 확인 (전향 검증 조건부)
+        h30_status = "잠정 확인 (전향 검증 조건부)" if h30_pass is True else ("held_for_review" if extreme > 0 else ("유보" if (h30.get("ci_block_lo", 0) or 0) > 0 else "부재"))
+        h180_status = "잠정 확인" if h180_pass is True else ("유보" if (h180.get("ci_block_lo", 0) or 0) > 0 else "부재")
         if extreme > 0:
             h3f4_held = True
             h3f4_extreme_note = f"WP63-2 F4 검정: 극단값 {extreme}건 격리 · **held_for_review (데이터 오류 검토)**"
         else:
-            h3f4_summary_note = f"WP63-2 F4 v2 (시총 필터 · WP64 안전장치): 30d n={h30.get('n', 0)} mean {h30.get('mean', 0):+.2f}% alpha_pass={h30_pass} · 180d n={h180.get('n', 0)} mean {h180.get('mean', 0):+.2f}% alpha_pass={h180_pass}"
+            h3f4_summary_note = f"WP63-2 F4 v2 (시총 필터 + WP64 안전장치): **30d = {h30_status}** (n={h30.get('n', 0)} mean {h30.get('mean', 0):+.2f}% CI 하한 {h30.get('ci_block_lo', 0):+.2f}%) · **180d = {h180_status}** (n={h180.get('n', 0)} mean {h180.get('mean', 0):+.2f}%)"
     elif h3f4_v1 and "WP63" in str(h3f4_v1.get("version", "")):
         # v1 만 있는 경우: 무효 처리
         h3f4_held = True
@@ -182,7 +197,7 @@ def main():
         "| **H6** · 분야 순위 point-in-time | 관문 3 대기 · dry-run 완결 | 8세트 46분기 · 상위 3분위 2020Q1 · 소속 38 | membership 확장 (WP27-2) | `H6-design.md` |",
         "| **H7** · 초기 매집 후 분할 매도 | 설계 완료 · 대기 | 사전 커밋 13항 | H6·H8 알파 확인 후 실행 | `H7-design.md` |",
         f"| **H8** · 소문 지수 선행성 | **부분 풀 지지 (검정 3)** | post {post_mean*100:+.2f}% CI 상한 {post_ci[1]*100:+.2f}% · sell_supported={sell} | 채널 확장 후 WP54-3 재검 | `verification/H8/H8-signal-presence-full-2026-09-14.md` |",
-        (f"| **H3-F4** · Form 4 매수 추종 (별도 · WP63) | ⚠️ **held_for_review (데이터 오류 검토)** | {h3f4_extreme_note} | 격리 검토 후 재실행 | `verification/H3/H3-F4-report-v2-*.md` |" if h3f4_held else (f"| **H3-F4 v2** · Form 4 매수 추종 (별도 · WP63-2) | **30d alpha_pass_machine=True (조건 통과)** | {h3f4_summary_note} | 180d 임계 미달 · 60일 전향 관찰 | `verification/H3/H3-F4-report-v2-*.md` |" if h3f4_summary_note else "")),
+        (f"| **H3-F4** · Form 4 매수 추종 (별도 · WP63) | ⚠️ **held_for_review** | {h3f4_extreme_note} | 격리 검토 후 재실행 | `verification/H3/H3-F4-report-v3-*.md` |" if h3f4_held else (f"| **H3-F4 v3** · Form 4 매수 추종 (별도 · WP63-3 견고성) | **{h3f4_v3.get('verdict', {}).get('status', '?') if h3f4_v3 else '?'}** (5분류) | {h3f4_summary_note} | 2026-11-15 전향 재평가 | `verification/H3/H3-F4-report-v3-*.md` |" if h3f4_summary_note else "")),
         "| **Security** · 자격증명 가드레일 | WP8 (설정 강제 부트스트랩) | 156/156 (+2 skip) pytest · SEC WP23 헤더 | 신규 스크립트 자동 강제 | `Security-Audit.md` |",
         "",
         "---",

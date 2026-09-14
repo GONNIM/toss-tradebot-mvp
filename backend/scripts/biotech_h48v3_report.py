@@ -148,6 +148,27 @@ def main():
     else:
         lines.append("- 없음")
 
+    # WP65 · 표 4: 최근 20 거래일 Form 4 매수 (h65 CSV 로드)
+    import glob
+    h65_csvs = sorted(glob.glob(str(DATA / f".." / f"h65_form4_daily_table_*.csv")))
+    if h65_csvs:
+        try:
+            with open(h65_csvs[-1]) as fh:
+                f4_rows = list(csv.DictReader(fh))
+        except Exception:
+            f4_rows = []
+        lines += ["", "## 표 4 · 임원·대주주 매수 (Form 4 P · 최근 20 거래일 · WP65)", ""]
+        if f4_rows:
+            lines += ["| # | 발행사 | 신고일 | 매수일 | 경과일 | 주식수 | 제출자 CIK |",
+                      "|---|---|---|---|---|---|---|"]
+            for i, r in enumerate(f4_rows[:15], 1):
+                name = (r.get("issuer_name") or "")[:30]
+                lines.append(f"| {i} | {name} ({r.get('issuer_cik','')}) | {r.get('filing_date','')} | {r.get('tx_date','')} | D+{r.get('elapsed_days',0)} | {r.get('shares','0')} | {r.get('filer_cik','')} |")
+            lines.append("")
+            lines.append("> 🟡 **F4 30d 전략 = 유보 강등** (WP63-3 견고성 (d) 13D 중복 제외 CI 하한 < 0) · 30일 평균 관측 +5%대 · **2026-11-15 전향 재평가 (WP56)** · 소액 실전 규칙 8항 적용")
+        else:
+            lines.append("- (최근 20 거래일 내 F4_buy 이벤트 없음)")
+
     # StockTwits 24h 관측 · baseline 미확보 통계 (사전 커밋 규칙 유지)
     st_nonzero = sum(1 for c in cands if int((c["_conf"].get("st_24h") or 0) or 0) > 0)
     st_baseline_ready = sum(1 for c in cands if int((c["_conf"].get("st_baseline_n") or 0) or 0) >= 7)

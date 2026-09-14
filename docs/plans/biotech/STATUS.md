@@ -12,7 +12,7 @@
 4. **뉴스 보고 사는 전략 2건은 효과 없음**: H5 (해외→국내) 폐기 · H3 (activist 전체) 폐기
 5. **오늘의 순위표 · 소문 확인은 화면 3탭** (`/radar` · `/rumor` · `/map`) · 최신: `radar-v1.3-20260914.md` · `2026-09-14.md` · **소액 실전 규칙 8항 적용**
 
-🟡 WP63-2 F4 v2 (시총 필터 · WP64 안전장치): 30d n=68 mean +5.85% alpha_pass=True · 180d n=63 mean +2.10% alpha_pass=False
+🟡 WP63-3 F4 견고성 (5건): **유보 강등** · (d) 13D 중복 제외 CI 하한 < 0 · 잠정 확인 조건 미달 · 60일 전향 재평가 (WP56)
 
 **최종 갱신 (자동)**: 2026-09-14 · git_sha (git 커밋 짧은 해시) `add7af7`
 
@@ -36,7 +36,7 @@
 | **H6** · 분야 순위 point-in-time | 관문 3 대기 · dry-run 완결 | 8세트 46분기 · 상위 3분위 2020Q1 · 소속 38 | membership 확장 (WP27-2) | `H6-design.md` |
 | **H7** · 초기 매집 후 분할 매도 | 설계 완료 · 대기 | 사전 커밋 13항 | H6·H8 알파 확인 후 실행 | `H7-design.md` |
 | **H8** · 소문 지수 선행성 | **부분 풀 지지 (검정 3)** | post -0.74% CI 상한 -0.07% · sell_supported=True | 채널 확장 후 WP54-3 재검 | `verification/H8/H8-signal-presence-full-2026-09-14.md` |
-| **H3-F4 v2** · Form 4 매수 추종 (별도 · WP63-2) | **30d alpha_pass_machine=True (조건 통과)** | WP63-2 F4 v2 (시총 필터 · WP64 안전장치): 30d n=68 mean +5.85% alpha_pass=True · 180d n=63 mean +2.10% alpha_pass=False | 180d 임계 미달 · 60일 전향 관찰 | `verification/H3/H3-F4-report-v2-*.md` |
+| **H3-F4 v3** · Form 4 매수 추종 (별도 · WP63-3 견고성) | **유보 강등** (5분류) | WP63-3 F4 견고성 (5건): **유보 강등** · (d) 13D 중복 제외 CI 하한 < 0 · 잠정 확인 조건 미달 · 60일 전향 재평가 (WP56) | 2026-11-15 전향 재평가 | `verification/H3/H3-F4-report-v3-*.md` |
 | **Security** · 자격증명 가드레일 | WP8 (설정 강제 부트스트랩) | 156/156 (+2 skip) pytest · SEC WP23 헤더 | 신규 스크립트 자동 강제 | `Security-Audit.md` |
 
 ---
@@ -72,6 +72,8 @@
 ## 가능성 지도 (WP35·WP36 · 2026-09-13)
 
 **규칙**: "정답 찾기 아니라 가능성 돌파" · 확증 트랙에서 폐기된 가설도 방향은 여기 유지 · 재도전 경로는 사전 등록 (H3b 예)
+
+---
 
 ---
 
