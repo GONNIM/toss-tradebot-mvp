@@ -49,6 +49,16 @@ from backend.api.routes import (
     watchlist,
     webhooks,
 )
+
+# WP69-2b · biotech 라우터는 지연 import + try/except (본체 보호)
+# · import 실패 시 logger.warning · biotech 라우터만 비활성화 · 본체 정상 기동
+try:
+    from backend.api.routes import biotech as _biotech_mod
+except Exception as _biotech_exc:  # noqa: BLE001
+    _biotech_mod = None
+    _biotech_import_error = repr(_biotech_exc)
+else:
+    _biotech_import_error = None
 from backend.services import config
 from backend.services.db import init_db
 
@@ -270,6 +280,18 @@ app.include_router(settings.router, prefix="/api/v1/settings", tags=["settings"]
 app.include_router(session.router, prefix="/api/v1/admin/session", tags=["session"])
 # ── Webhooks (Phase D 주 8 · 2026-07-31 · 결제 훅 스텁)
 app.include_router(webhooks.router, prefix="/api/v1/webhooks", tags=["webhooks"])
+# WP69-2b · biotech 라우터 등록 (실패 시 warning · 본체 무영향)
+if _biotech_mod is not None:
+    try:
+        app.include_router(_biotech_mod.router, prefix="/api/v1/biotech", tags=["biotech"])
+    except Exception as _biotech_reg_exc:  # noqa: BLE001
+        logging.getLogger("main").warning(
+            "biotech router registration failed: %s", _biotech_reg_exc,
+        )
+else:
+    logging.getLogger("main").warning(
+        "biotech router disabled: import error = %s", _biotech_import_error,
+    )
 # ── 이월 dead (include 제외 · Phase A 주 2)
 #    crazy · moonshot · super_signals · backtest · execution
 #    파일은 backend/api/routes/ 에 유지 (참조·재활성 대비) · main 등록만 제거

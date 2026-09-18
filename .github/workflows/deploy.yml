@@ -198,6 +198,14 @@ jobs:
           cd backend
           .venv/bin/pip install -e ".[dev]" -q
 
+          echo "[2.5/7] backend import smoke (WP69-2b · 앱 전체 import 검증 · 실패 시 배포 중단)"
+          # backend/api/main 이 clean venv 로 정상 import 되는지 확인 · 의존성 누락 조기 감지.
+          .venv/bin/python -c "import backend.api.main" 2>&1 || {
+            echo "❌ import backend.api.main 실패 · pyproject 의존성 누락 가능성 · 배포 중단"
+            exit 1
+          }
+          echo "  ✓ backend.api.main import OK"
+
           echo "[3/7] alembic upgrade (Phase A 주 1 · 스키마 마이그레이션 · idempotent)"
           # 첫 실행: baseline stamp 없으면 e859d822c111 부터 시작 · pass (baseline)
           #          + 42970a316e10 (user_id 7 tables) 실행
