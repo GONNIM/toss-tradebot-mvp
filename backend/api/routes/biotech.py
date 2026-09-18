@@ -185,10 +185,18 @@ def _latest_radar_csv() -> Path | None:
 
 @router.get("/radar.json", response_model=RadarJson)
 async def get_radar_json(_admin: str = Depends(require_sniper_token)) -> RadarJson:
-    """레이더 JSON (표 렌더용 · WP71-2)."""
+    """레이더 JSON (표 렌더용 · WP71-2).
+
+    서버 파이프 (WP69-3) 배포 전에는 CSV 파일 미존재 → 200 · rows=[] fallback.
+    프론트 BiotechTable 이 "표시할 행이 없습니다" 빈 상태 렌더.
+    """
     path = _latest_radar_csv()
     if not path or not path.exists():
-        raise HTTPException(status_code=404, detail="radar CSV 없음")
+        return RadarJson(
+            generated=datetime.now(timezone.utc).isoformat(),
+            source_csv="(파일 없음 · 서버 파이프 대기 · WP69-3)",
+            rows=[],
+        )
     rows: list[RadarRow] = []
     with path.open() as f:
         for idx, r in enumerate(csv.DictReader(f), 1):
@@ -245,11 +253,16 @@ async def get_rumor_json(
     _admin: str = Depends(require_sniper_token),
 ) -> RumorJson:
     """소문 확인 표 (표 1~4 통합 JSON · WP71-2)."""
-    files = sorted((DATA_DIR / "biotech" / "candidates").glob("biotech_candidates_v3_*.csv"))
-    if not files:
-        raise HTTPException(status_code=404, detail="candidates CSV 없음")
     if date and not re.match(r"^\d{4}-\d{2}-\d{2}$", date):
         raise HTTPException(status_code=400, detail="date 형식 YYYY-MM-DD")
+    files = sorted((DATA_DIR / "biotech" / "candidates").glob("biotech_candidates_v3_*.csv"))
+    if not files:
+        # 서버 파이프 (WP69-3) 배포 전 · 빈 응답 fallback
+        return RumorJson(
+            date=(date or datetime.now(timezone.utc).strftime("%Y-%m-%d")),
+            generated=datetime.now(timezone.utc).isoformat(),
+            rows=[],
+        )
     # 오늘 없으면 최신
     today_str = (date or datetime.now(timezone.utc).strftime("%Y-%m-%d")).replace("-", "")
     cand_path = DATA_DIR / "biotech" / "candidates" / f"biotech_candidates_v3_{today_str}.csv"
