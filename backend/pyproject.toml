@@ -49,6 +49,7 @@ dependencies = [
     # Utilities
     "python-dotenv>=1.0.0",
     "tenacity>=9.0.0",              # 재시도 + 백오프
+    "markdown>=3.10",               # Biotech Radar WP69 · md → HTML (라우터 · 뷰어 렌더)
 
     # Toss API (Phase K — OAuth 2.0)
     "pyjwt>=2.10.0",

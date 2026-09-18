@@ -1,10 +1,11 @@
-"""Biotech Radar 라우터 (WP69-1 · 2026-09-14 · admin 전용 · 읽기 전용).
+"""Biotech Radar 라우터 (WP69-2b · 2026-09-18 · admin 전용 · 읽기 전용 · 지연 import).
 
-**설계 원칙 (SITE-ANALYSIS.md §2 준수)**:
+**설계 원칙 (SITE-ANALYSIS.md §2 준수 + WP69-2b 본체 보호)**:
 - 기존 응용 무접촉 · biotech 이름공간 격리
 - docs/plans/biotech/**/*.md 를 읽어 HTML + 메타 JSON 반환
 - 기존 admin 인증 (require_sniper_token) 재사용
 - 파일 없음 = 404 · 캐시 60s (in-memory · TTL)
+- **markdown 은 핸들러 내부 지연 import** · 부재 시 text/plain 원문 md 반환 + 경고 로그 (본체 무영향)
 
 **경로 (모두 admin 세션 필요)**:
 - GET /api/v1/biotech/radar          → 최신 watchlist/radar-v1.X-*.md
@@ -17,18 +18,19 @@
 from __future__ import annotations
 
 import glob
+import logging
 import re
 import time
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Optional
 
-import markdown as md_lib
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel
 
 from backend.api.auth import require_sniper_token
 
+logger = logging.getLogger("biotech_router")
 router = APIRouter()
 
 # 프로젝트 루트 = backend/api/routes/biotech.py → parents[3]
@@ -45,8 +47,9 @@ class BiotechDoc(BaseModel):
     path: str            # 상대 경로
     title: str           # 문서 제목 (# 첫 줄)
     generated_utc: str   # 생성 시각 (mtime)
-    html: str            # 렌더된 HTML
+    html: str            # 렌더된 HTML (markdown 부재 시 원문 md 그대로)
     raw_md_size: int     # 원본 크기
+    render_mode: str = "html"  # "html" | "plain_md_fallback" · WP69-2b
 
 
 class RumorDates(BaseModel):
@@ -55,23 +58,33 @@ class RumorDates(BaseModel):
 
 
 def _render(path: Path) -> BiotechDoc:
-    """md 파일 → HTML + 메타 · TTL 캐시."""
+    """md 파일 → HTML + 메타 · TTL 캐시.
+
+    WP69-2b: markdown 지연 import · ImportError 시 원문 md 반환 (본체 무영향).
+    """
     if not path.exists():
         raise HTTPException(status_code=404, detail=f"파일 없음: {path.name}")
 
     key = str(path)
     mtime = path.stat().st_mtime
     now = time.time()
+    md_text = path.read_text()
+    render_mode = "html"
+
     cached = _CACHE.get(key)
     if cached and cached[0] == mtime and (now - cached[2]) < CACHE_TTL_SEC:
         html = cached[1]
     else:
-        md_text = path.read_text()
-        html = md_lib.markdown(md_text, extensions=["tables", "fenced_code"])
+        try:
+            import markdown as md_lib  # 지연 import · WP69-2b 본체 보호
+            html = md_lib.markdown(md_text, extensions=["tables", "fenced_code"])
+        except Exception as exc:  # ImportError · 기타
+            logger.warning("biotech render fallback (markdown unavailable): %s · path=%s", exc, path.name)
+            html = f"<pre>{md_text}</pre>"
+            render_mode = "plain_md_fallback"
         _CACHE[key] = (mtime, html, now)
 
-    md_text_for_title = path.read_text()
-    title_match = re.search(r"^#\s+(.+)", md_text_for_title, re.MULTILINE)
+    title_match = re.search(r"^#\s+(.+)", md_text, re.MULTILINE)
     title = title_match.group(1).strip() if title_match else path.stem
 
     return BiotechDoc(
@@ -80,6 +93,7 @@ def _render(path: Path) -> BiotechDoc:
         generated_utc=datetime.fromtimestamp(mtime, tz=timezone.utc).isoformat(),
         html=html,
         raw_md_size=path.stat().st_size,
+        render_mode=render_mode,
     )
 
 

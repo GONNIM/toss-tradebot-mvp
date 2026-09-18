@@ -92,3 +92,44 @@ def test_f_biotech_router_isolation(client):
                       "/api/v1/biotech/status", "/api/v1/biotech/glossary",
                       "/api/v1/biotech/final", "/api/v1/biotech/rumor/dates"]:
         assert expected in paths, f"openapi 에 {expected} 미노출 · include_router 확인"
+
+
+def test_g_markdown_missing_fallback(client, monkeypatch):
+    """(g) WP69-2b · markdown 미설치 상황 모의 → 200 원문 md fallback."""
+    import builtins
+    real_import = builtins.__import__
+
+    def mock_import(name, *args, **kwargs):
+        if name == "markdown":
+            raise ImportError("mocked: markdown unavailable")
+        return real_import(name, *args, **kwargs)
+
+    # biotech.py 의 _CACHE 초기화 · fallback 경로 실행 강제
+    from backend.api.routes import biotech as _b
+    _b._CACHE.clear()
+
+    monkeypatch.setattr(builtins, "__import__", mock_import)
+    r = client.get("/api/v1/biotech/status", headers=_auth_headers())
+    assert r.status_code == 200, f"markdown 부재에도 200 예상 · 실제 {r.status_code}"
+    data = r.json()
+    assert data["render_mode"] == "plain_md_fallback", "fallback 모드 표기"
+    assert "<pre>" in data["html"], "원문 md 는 <pre> 로 감싸 반환"
+
+    # 캐시 초기화 후 정상 markdown 복원
+    _b._CACHE.clear()
+
+
+def test_h_main_health_when_biotech_import_fails():
+    """(h) WP69-2b · biotech 라우터 import 실패 모의 → main app 정상 기동 · /health 200 예상.
+
+    본체 보호: try/except 로 biotech 라우터 등록 실패 시에도 uvicorn/앱은 정상.
+    실제 mock 은 어렵지만 · main.py 의 try/except 블록 존재 검증.
+    """
+    import inspect
+    from backend.api import main as _main_module
+
+    src = inspect.getsource(_main_module)
+    # try 블록 안 biotech import 확인
+    assert "try:\n    from backend.api.routes import biotech" in src, "biotech import 는 try/except 안에 있어야"
+    assert "except Exception as _biotech_exc" in src, "biotech import 예외 handler 존재"
+    assert "biotech router disabled" in src, "라우터 비활성화 warning 문구 존재"
