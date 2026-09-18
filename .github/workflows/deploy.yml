@@ -200,7 +200,8 @@ jobs:
 
           echo "[2.5/7] backend import smoke (WP69-2b · 앱 전체 import 검증 · 실패 시 배포 중단)"
           # backend/api/main 이 clean venv 로 정상 import 되는지 확인 · 의존성 누락 조기 감지.
-          .venv/bin/python -c "import backend.api.main" 2>&1 || {
+          # cwd 는 backend/ · 프로젝트 루트에서 backend.api.main 을 import 하도록 PYTHONPATH 조정.
+          (cd .. && backend/.venv/bin/python -c "import backend.api.main") 2>&1 || {
             echo "❌ import backend.api.main 실패 · pyproject 의존성 누락 가능성 · 배포 중단"
             exit 1
           }
