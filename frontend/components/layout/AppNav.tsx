@@ -10,7 +10,6 @@ import { usePathname } from "next/navigation";
 
 const NAV_L1 = [
   { href: "/journal", label: "📓 Journal" },
-  { href: "/biotech", label: "🧬 Biotech Radar" },
   { href: "/watchlist", label: "🌙 Watchlist" },
   { href: "/sniper", label: "🚀 Sniper" },
   { href: "/positions", label: "💼 Positions" },
