@@ -149,7 +149,22 @@ def _download_zip(url: str, dst: Path) -> bool:
 
 
 def _unzip_test(zip_path: Path) -> bool:
-    """unzip -t 무결성 검증 (사용자 지시)."""
+    """무결성 검증 · zipfile.testzip() 우선 (내장 · 서버 unzip 바이너리 미의존) · unzip -tq fallback."""
+    # Python 내장 · CRC 전수 검증
+    try:
+        with zipfile.ZipFile(zip_path, "r") as zf:
+            bad = zf.testzip()
+            if bad is None:
+                LOG.info("zipfile.testzip() OK · CRC 전수 통과")
+                return True
+            LOG.error("zipfile.testzip() 실패 · 첫 손상 항목 = %s", bad)
+            return False
+    except zipfile.BadZipFile as e:
+        LOG.error("BadZipFile · %s", e)
+        return False
+    except Exception as e:
+        LOG.warning("zipfile.testzip() 예외 · %s · unzip -tq fallback 시도", e.__class__.__name__)
+    # fallback: unzip -tq (있으면)
     try:
         r = subprocess.run(
             ["unzip", "-tq", str(zip_path)],
@@ -159,6 +174,9 @@ def _unzip_test(zip_path: Path) -> bool:
         if not ok:
             LOG.error("unzip -t 실패 · rc=%d · stderr=%s", r.returncode, r.stderr[:200])
         return ok
+    except FileNotFoundError:
+        LOG.error("unzip 바이너리 없음 · zipfile.testzip 도 실패 · 무결성 미확증")
+        return False
     except Exception as e:
         LOG.error("unzip -t 예외 · %s", e.__class__.__name__)
         return False
