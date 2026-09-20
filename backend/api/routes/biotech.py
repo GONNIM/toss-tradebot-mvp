@@ -175,24 +175,48 @@ class RadarJson(BaseModel):
     rows: list[RadarRow]
 
 
+import os
+
 DATA_DIR = PROJECT_ROOT / "backend" / "data"
 # WP72-3 · 산출 CSV git 추적 폴더 (소용량 · 서버 rows>0 확보)
 DATA_DIR_DOCS = PROJECT_ROOT / "docs" / "plans" / "biotech" / "data"
+# WP69-3b · 서버 파이프 런타임 폴더 (git 추적 밖 · 배포 reset --hard 영향 없음)
+# 환경변수 BIOTECH_RUNTIME_DIR 미설정 시 None → 기존 동작 (docs → backend/data)
+_rt = os.environ.get("BIOTECH_RUNTIME_DIR", "").strip()
+DATA_DIR_RUNTIME: Path | None = Path(_rt) if _rt else None
+
+
+def _search_dirs(subrel: str) -> list[Path]:
+    """WP69-3b · 조회 순서 결정.
+
+    순서: BIOTECH_RUNTIME_DIR > docs/plans/biotech/data > backend/data/biotech/<subrel>
+    subrel 은 backend/data 하위 상대 경로 (예: "candidates", "community_daily").
+    RUNTIME/DOCS 는 flat 구조 (전 산출 CSV 한 폴더) · backend/data 만 subrel 사용.
+    """
+    dirs: list[Path] = []
+    if DATA_DIR_RUNTIME is not None:
+        dirs.append(DATA_DIR_RUNTIME / subrel)  # 서버는 subrel 하위 유지 · 예: var/biotech/candidates
+        dirs.append(DATA_DIR_RUNTIME)            # flat fallback (h65 form4 처럼 subrel 없이 저장 시)
+    dirs.append(DATA_DIR_DOCS)
+    dirs.append(DATA_DIR / "biotech" / subrel)
+    return dirs
 
 
 def _latest(*patterns: tuple[Path, str]) -> Path | None:
-    """폴더 여러 곳에서 패턴 매치 · 최신 mtime 반환. WP72-3 · docs/ 우선 · backend/data fallback."""
+    """폴더 여러 곳에서 패턴 매치 · 최신 mtime 반환."""
     hits: list[Path] = []
     for base, pat in patterns:
-        hits.extend(base.glob(pat))
+        if base.exists():
+            hits.extend(base.glob(pat))
     return max(hits, key=lambda p: p.stat().st_mtime) if hits else None
 
 
 def _latest_radar_csv() -> Path | None:
-    return _latest(
-        (DATA_DIR_DOCS, "radar_v1_3_*.csv"),
-        (DATA_DIR / "biotech" / "candidates", "radar_v1_3_*.csv"),
-    )
+    """radar CSV 최신 · WP69-3b · RUNTIME > docs > backend/data."""
+    patterns: list[tuple[Path, str]] = []
+    for d in _search_dirs("candidates"):
+        patterns.append((d, "radar_v1_3_*.csv"))
+    return _latest(*patterns)
 
 
 @router.get("/radar.json", response_model=RadarJson)
@@ -267,9 +291,12 @@ async def get_rumor_json(
     """소문 확인 표 (표 1~4 통합 JSON · WP71-2)."""
     if date and not re.match(r"^\d{4}-\d{2}-\d{2}$", date):
         raise HTTPException(status_code=400, detail="date 형식 YYYY-MM-DD")
-    # WP72-3 · docs/ 우선 조회 · backend/data fallback
-    cand_files = sorted(DATA_DIR_DOCS.glob("biotech_candidates_v3_*.csv")) + \
-                 sorted((DATA_DIR / "biotech" / "candidates").glob("biotech_candidates_v3_*.csv"))
+    # WP69-3b · RUNTIME > docs > backend/data
+    cand_dirs = _search_dirs("candidates")
+    cand_files: list[Path] = []
+    for d in cand_dirs:
+        if d.exists():
+            cand_files.extend(sorted(d.glob("biotech_candidates_v3_*.csv")))
     if not cand_files:
         return RumorJson(
             date=(date or datetime.now(timezone.utc).strftime("%Y-%m-%d")),
@@ -277,9 +304,9 @@ async def get_rumor_json(
             rows=[],
         )
     today_str = (date or datetime.now(timezone.utc).strftime("%Y-%m-%d")).replace("-", "")
-    # docs → backend 순으로 date 매치 찾기
+    # date 매치 찾기 (조회 순서대로)
     cand_path: Path | None = None
-    for base in (DATA_DIR_DOCS, DATA_DIR / "biotech" / "candidates"):
+    for base in cand_dirs:
         p = base / f"biotech_candidates_v3_{today_str}.csv"
         if p.exists():
             cand_path = p
@@ -290,9 +317,9 @@ async def get_rumor_json(
         today_str = m.group(1) if m else datetime.now(timezone.utc).strftime("%Y%m%d")
     date_dash = f"{today_str[:4]}-{today_str[4:6]}-{today_str[6:]}"
 
-    # confirm 도 두 폴더 순회
+    # confirm 도 조회 순서 준수
     confirm_map: dict[str, dict[str, Any]] = {}
-    for base in (DATA_DIR_DOCS, DATA_DIR / "biotech" / "community_daily"):
+    for base in _search_dirs("community_daily"):
         p = base / f"community_confirm_{today_str}.csv"
         if p.exists():
             with p.open() as f:
@@ -376,10 +403,17 @@ async def get_rumor_json(
             baseline_n=_to_int(conf.get("st_baseline_n") or 0),
         ))
 
-    # 표4: F4 최근 20 거래일 (h65 CSV · WP72-3 · docs/ 우선 · 없으면 backend/data fallback)
-    f4_docs = sorted(DATA_DIR_DOCS.glob("h65_form4_daily_table_*.csv"))
-    f4_back = sorted(DATA_DIR.glob("h65_form4_daily_table_*.csv"))
-    f4_pick = f4_docs[-1] if f4_docs else (f4_back[-1] if f4_back else None)
+    # 표4: F4 최근 20 거래일 (h65 CSV · WP69-3b · RUNTIME > docs > backend/data)
+    f4_pick: Path | None = None
+    f4_search = [DATA_DIR_DOCS, DATA_DIR]
+    if DATA_DIR_RUNTIME is not None:
+        f4_search = [DATA_DIR_RUNTIME] + f4_search
+    for base in f4_search:
+        if base.exists():
+            files = sorted(base.glob("h65_form4_daily_table_*.csv"))
+            if files:
+                f4_pick = files[-1]
+                break
     if f4_pick:
         with f4_pick.open() as f:
             for r in csv.DictReader(f):
@@ -411,13 +445,18 @@ class BiotechKpi(BaseModel):
 @router.get("/kpi.json", response_model=BiotechKpi)
 async def get_kpi(_admin: str = Depends(require_sniper_token)) -> BiotechKpi:
     """KPI 4칸 · 총후보·뉴스예정A·임원매수20d·급등경보."""
-    # candidates_total · news_a_ready
-    cand_files = sorted(DATA_DIR_DOCS.glob("biotech_candidates_v3_*.csv")) + \
-                 sorted((DATA_DIR / "biotech" / "candidates").glob("biotech_candidates_v3_*.csv"))
+    # candidates_total · news_a_ready · WP69-3b · RUNTIME > docs > backend/data
+    cand_pick: Path | None = None
+    for base in _search_dirs("candidates"):
+        if base.exists():
+            files = sorted(base.glob("biotech_candidates_v3_*.csv"))
+            if files:
+                cand_pick = files[-1]
+                break
     candidates_total = 0
     news_a_ready = 0
-    if cand_files:
-        with cand_files[-1].open() as f:
+    if cand_pick:
+        with cand_pick.open() as f:
             for r in csv.DictReader(f):
                 candidates_total += 1
                 state = r.get("time_state_v50") or r.get("time_state", "C")
@@ -425,9 +464,16 @@ async def get_kpi(_admin: str = Depends(require_sniper_token)) -> BiotechKpi:
                     news_a_ready += 1
 
     # insider_buy_20d (h65_form4_daily_table)
-    f4_docs = sorted(DATA_DIR_DOCS.glob("h65_form4_daily_table_*.csv"))
-    f4_back = sorted(DATA_DIR.glob("h65_form4_daily_table_*.csv"))
-    f4_pick = f4_docs[-1] if f4_docs else (f4_back[-1] if f4_back else None)
+    f4_pick: Path | None = None
+    f4_search = [DATA_DIR_DOCS, DATA_DIR]
+    if DATA_DIR_RUNTIME is not None:
+        f4_search = [DATA_DIR_RUNTIME] + f4_search
+    for base in f4_search:
+        if base.exists():
+            files = sorted(base.glob("h65_form4_daily_table_*.csv"))
+            if files:
+                f4_pick = files[-1]
+                break
     insider_buy_20d = 0
     if f4_pick:
         with f4_pick.open() as f:

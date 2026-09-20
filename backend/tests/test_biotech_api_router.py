@@ -163,6 +163,35 @@ def test_j_rumor_json_endpoint(client):
         assert tables.intersection({"표1", "표2", "표3", "표4"}), f"table 필드 예상 표1~4 · 실제 {tables}"
 
 
+def test_n_runtime_dir_priority(tmp_path, monkeypatch):
+    """(n) WP69-3b · BIOTECH_RUNTIME_DIR 우선 조회 계약.
+
+    - 환경변수 미설정 시: 기존 동작 (docs → backend/data · 회귀 없음)
+    - 환경변수 설정 시: RUNTIME 폴더 안의 파일이 최우선 반환
+    """
+    import importlib
+    import backend.api.routes.biotech as biotech_mod
+
+    # 1) 환경변수 미설정 → DATA_DIR_RUNTIME is None (기존 동작)
+    monkeypatch.delenv("BIOTECH_RUNTIME_DIR", raising=False)
+    reloaded = importlib.reload(biotech_mod)
+    assert reloaded.DATA_DIR_RUNTIME is None, "env 미설정 시 RUNTIME 은 None"
+
+    # 2) 환경변수 설정 + 파일 배치 → 우선 반환
+    runtime = tmp_path / "var_biotech"
+    (runtime / "candidates").mkdir(parents=True)
+    fake_csv = runtime / "candidates" / "radar_v1_3_20261231.csv"
+    fake_csv.write_text("rank,ticker,name,mcap,score,time_state,why_easy\n1,TEST,Fake,1B,0.9,A,test\n")
+    monkeypatch.setenv("BIOTECH_RUNTIME_DIR", str(runtime))
+    reloaded = importlib.reload(biotech_mod)
+    picked = reloaded._latest_radar_csv()
+    assert picked == fake_csv, f"RUNTIME 파일 우선 예상 · 실제 {picked}"
+
+    # 정리: 다시 unset · 다음 테스트 격리
+    monkeypatch.delenv("BIOTECH_RUNTIME_DIR", raising=False)
+    importlib.reload(biotech_mod)
+
+
 def test_l_kpi_json_endpoint(client):
     """(l) WP72-2 · /kpi.json · admin 200 · 4개 수치 필드 · rows>0 로컬 검증 데이터에서."""
     r = client.get("/api/v1/biotech/kpi.json", headers=_auth_headers())
