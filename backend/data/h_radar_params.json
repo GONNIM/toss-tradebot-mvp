@@ -1,0 +1,42 @@
+{
+  "spec": "레이더 점수 v1.5 사전 커밋 (WP69-3d · crowd 채널 재정의 + 급등 경보 재정의 · 가중치 동일 · 2026-09-20)",
+  "version": "v1.5",
+  "generated": "2026-09-20",
+  "commit_rule": "동일 가중 (4요소 평균) + 꼬리표 +0.1 · 위험 -가중 · **60일 전 조정 금지 (WP46-4 유지)** · **채널 추가·교체는 정의 확장이며 가중치 변경 아님을 명시 (WP54-2 · WP69-3d)**",
+  "weights": {
+    "expert": 0.25,
+    "near": 0.25,
+    "crowd": 0.25,
+    "unnoticed": 0.25,
+    "risk_penalty": 0.10,
+    "tag_bonus": 0.10
+  },
+  "expert_definition_v1_5": "채널 5/5 (Phase C 1 완비 · v1.4 동일 유지): (a) 13D 신규 · (b) h6_membership 소속 · (c) PubMed h57 · (d) Preprint h58 · (e) Form 4 P (h3_events event_type). **8-K 사후 뉴스 사용 금지**.",
+  "near_definition_v1_5": "A 상태 (뉴스 예정) 판정: **AACT 주간 스냅샷 (WP69-3d)** primary_completion_date 미래 OR 자문위 회의일 미래. 잔여일 함수: (0~90d = 0.7, 90~180d = 1.0, 180~365d = 0.5, 없음 = 0.1). B 상태 = 0. **CT.gov API 호출 없음 (서버 IP 차단 우회 없음)**. AACT 스냅샷 7일 초과 시 'stale' 표기.",
+  "crowd_definition_v1_5": "**γ 대안** (WP69-3d · StockTwits 서버 차단 대응): 서버 채널 = apewisdom (24h 언급) + Reddit RSS (title 매치). **StockTwits 삭제 (서버 IP 차단 우회 금지)**. 로컬 st_24h 는 있으면 표3 α 보조 열 (선택). 기준선 확보 (baseline_n ≥ 7) 전 = 0.5 중립 · collecting 태그.",
+  "unnoticed_definition_v1_5": "최근 90일 종목 수익률 − XBI 90일 수익률 (낮을수록 가점 · z-score) · 시총 대체 금지 · v1.4 동일 유지.",
+  "risk_definition_v1_5": "WP39 direction=negative 또는 dilution 키워드 → 감점 · v1.4 동일 유지.",
+  "expert_normalization": "z-score across all candidates · clip [0, 1] (포화 방지)",
+  "gate_status": "탐색 트랙 · 알파 미확정 · 소액 전향용 서비스",
+  "stage_rules_v1_5": {
+    "spec": "단계 규칙 사전 고정 (WP69-3d · 60일 전 조정 금지)",
+    "collecting": "baseline_n < 7 (판정 유보)",
+    "quiet": "apewisdom 미등장 AND baseline_mean_24h ≤ 5 AND apewisdom_24h == 0",
+    "frenzy": "apewisdom rank ≤ 100 OR (baseline_n ≥ 7 AND apewisdom_24h ≥ 5 × mean) OR reddit_matches ≥ 5",
+    "early": "baseline_n ≥ 7 AND apewisdom_24h ≥ 3 × mean AND mean > 0",
+    "spread": "그 외"
+  },
+  "alerts_definition_v1_5": {
+    "spec": "급등 경보 (KPI 4칸 4번째 · rose 섹션) 재정의 · WP69-3d",
+    "rule": "표3 (언급 있는 종목) 중 apewisdom baseline_mult ≥ 5 (5배 이상) OR reddit_rss_matches ≥ 3 (RSS 급증) 인 티커 수",
+    "note": "이전 정의 (StockTwits 100+) 폐기 · StockTwits 서버 IP 차단 (WP69-3b) 로 사용 불가"
+  },
+  "changelog": {
+    "v1.0": "초기 4요소 평균",
+    "v1.1": "expert z-score 정규화 (포화 완화)",
+    "v1.2": "unnoticed 90d XBI 대비로 재정의",
+    "v1.3": "WP46-4 expert 에서 8-K readout 제거 + WP46-5 예정일 월 단위 표기 개선",
+    "v1.4": "Phase C 1 · expert 채널 5/5 완비 (PubMed h57 + Preprint h58 추가) · 가중치 동일 유지 · 채널 추가는 정의 확장",
+    "v1.5": "WP69-3d · crowd 채널 재정의 (StockTwits 서버 차단으로 삭제 · apewisdom + Reddit RSS 만 · 로컬 st_24h 는 α 보조) · near 소스 AACT 주간 스냅샷 이식 (CT.gov API 호출 완전 제거) · 급등 경보 apewisdom 5배 or RSS 급증 재정의 · 단계 규칙 사전 고정 명문화 · 가중치 동일 · 60일 전 조정 금지 계속"
+  }
+}
