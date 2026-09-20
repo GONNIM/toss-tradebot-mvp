@@ -163,6 +163,30 @@ def test_j_rumor_json_endpoint(client):
         assert tables.intersection({"표1", "표2", "표3", "표4"}), f"table 필드 예상 표1~4 · 실제 {tables}"
 
 
+def test_l_kpi_json_endpoint(client):
+    """(l) WP72-2 · /kpi.json · admin 200 · 4개 수치 필드 · rows>0 로컬 검증 데이터에서."""
+    r = client.get("/api/v1/biotech/kpi.json", headers=_auth_headers())
+    assert r.status_code == 200, r.text
+    data = r.json()
+    for field in ("generated", "candidates_total", "news_a_ready", "insider_buy_20d", "alerts"):
+        assert field in data, f"kpi 필드 누락: {field}"
+    # 모든 값 int (generated 제외)
+    for k in ("candidates_total", "news_a_ready", "insider_buy_20d", "alerts"):
+        assert isinstance(data[k], int) and data[k] >= 0
+
+
+def test_m_frontend_contract_shared_stat_box_import():
+    """(m) WP72-2a · activist-radar 와 biotech 모두 @/components/ui/stat-box import (승격 확인)."""
+    from pathlib import Path
+    frontend = Path(__file__).resolve().parents[2] / "frontend"
+    activist_src = (frontend / "app" / "activist-radar" / "page.tsx").read_text()
+    biotech_src = (frontend / "app" / "biotech" / "page.tsx").read_text()
+    assert '@/components/ui/stat-box' in activist_src, "activist-radar 가 shared StatBox 미참조"
+    assert '@/components/ui/stat-box' in biotech_src, "biotech 가 shared StatBox 미참조"
+    # activist-radar 안에 로컬 StatBox 함수 정의 없음
+    assert 'function StatBox(' not in activist_src, "activist-radar 에 로컬 StatBox 잔존"
+
+
 def test_k_frontend_contract_biotech_md_absent():
     """(k) WP71-2 계약 · frontend/app/biotech/page.tsx 에 실 .biotech-md CSS 클래스 사용 0건.
 
