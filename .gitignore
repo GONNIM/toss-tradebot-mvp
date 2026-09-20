@@ -8,6 +8,9 @@ __pycache__/
 *$py.class
 BKUP/
 data/
+# WP72-3 · docs/plans/biotech/data/ 는 git 추적 (서버 rows>0 확보 · <1MB 소용량)
+!docs/plans/biotech/data/
+!docs/plans/biotech/data/*.csv
 
 # Environment — 평문 자격증명 절대 커밋 금지 (글로벌 §1)
 .env

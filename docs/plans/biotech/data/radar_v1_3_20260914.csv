@@ -1,0 +1,80 @@
+ticker,name,mcap,time_state,score,expert,crowd,near,unnoticed,risk,tag_bonus,why_easy
+LRMR,"Larimar Therapeutics, Inc.",50M-300M,A,0.806,0.72,0.5,1.0,0.6,0.0,0.1,뉴스 예정 · 2027년 1월 중 (D-108~138 추정 · 월 단위 발표)
+BIOA,"BioAge Labs, Inc.",300M-1B,A,0.774,0.61,0.5,0.7,0.88,0.0,0.1,뉴스 예정 · 2026년 11월 30일 예정 · D-77
+AMLX,"Amylyx Pharmaceuticals, Inc.",1B-5B,A,0.716,1.0,0.5,1.0,0.12,0.4,0.1,뉴스 예정 · 2027년 2월 중 (D-139~169 추정 · 월 단위 발표)
+TVTX,"Travere Therapeutics, Inc.",1B-5B,A,0.716,0.61,0.5,1.0,0.55,0.5,0.1,뉴스 예정 · 2027년 3월 12일 예정 · D-179
+SGMT,Sagimet Biosciences Inc.,unknown,A,0.715,0.61,0.5,1.0,0.35,0.0,0.1,뉴스 예정 · 2027년 1월 중 (D-108~138 추정 · 월 단위 발표)
+KURA,"Kura Oncology, Inc.",1B-5B,A,0.703,0.83,0.5,1.0,0.49,0.0,0.0,뉴스 예정 · 2026년 12월 중 (D-77~107 추정 · 월 단위 발표)
+RGNX,REGENXBIO Inc.,300M-1B,A,0.683,0.61,0.5,0.7,0.52,0.0,0.1,뉴스 예정 · 2026년 9월 중 (D-0~16 추정 · 월 단위 발표)
+VRCA,Verrica Pharmaceuticals Inc.,50M-300M,A,0.676,1.0,0.5,0.5,0.7,0.0,0.0,뉴스 예정 · 2027년 5월 중 (D-228~258 추정 · 월 단위 발표)
+EWTX,"Edgewise Therapeutics, Inc.",1B-5B,A,0.673,0.93,0.5,0.7,0.56,0.0,0.0,뉴스 예정 · 2026년 9월 중 (D-0~16 추정 · 월 단위 발표)
+NRIX,"Nurix Therapeutics, Inc.",1B-5B,A,0.668,0.72,0.5,1.0,0.45,0.0,0.0,뉴스 예정 · 2027년 1월 중 (D-108~138 추정 · 월 단위 발표)
+SYRE,"Spyre Therapeutics, Inc.",300M-1B,A,0.639,0.72,0.5,0.7,0.64,0.0,0.0,뉴스 예정 · 2026년 10월 31일 예정 · D-47
+FBRX,"Forte Biosciences, Inc.",1B-5B,A,0.605,0.72,0.5,1.0,0.0,0.5,0.1,뉴스 예정 · 2026년 12월 31일 예정 · D-108
+AVIR,"Atea Pharmaceuticals, Inc.",300M-1B,A,0.602,0.51,0.5,0.7,0.5,0.5,0.1,뉴스 예정 · 2026년 9월 중 (D-0~16 추정 · 월 단위 발표)
+OCUL,"OCULAR THERAPEUTIX, INC",300M-1B,A,0.592,0.29,0.5,1.0,0.58,0.0,0.0,뉴스 예정 · 2027년 1월 8일 예정 · D-116
+STOK,"Stoke Therapeutics, Inc.",1B-5B,A,0.591,0.72,0.5,0.5,0.64,0.0,0.0,뉴스 예정 · 2027년 3월 중 (D-167~197 추정 · 월 단위 발표)
+SPRY,"ARS Pharmaceuticals, Inc.",300M-1B,A,0.585,0.51,0.5,0.5,0.83,0.0,0.0,뉴스 예정 · 2027년 4월 중 (D-198~228 추정 · 월 단위 발표)
+ENTA,ENANTA PHARMACEUTICALS INC,300M-1B,A,0.573,0.51,0.5,0.7,0.59,0.0,0.0,뉴스 예정 · 2026년 11월 중 (D-47~77 추정 · 월 단위 발표)
+COGT,"Cogent Biosciences, Inc.",1B-5B,A,0.568,0.72,0.5,0.5,0.63,0.2,0.0,뉴스 예정 · 2027년 3월 중 (D-167~197 추정 · 월 단위 발표)
+VSTM,"Verastem, Inc.",50M-300M,A,0.566,0.83,0.5,0.5,0.24,0.5,0.1,뉴스 예정 · 2027년 6월 중 (D-259~289 추정 · 월 단위 발표)
+AVBP,"ArriVent BioPharma, Inc.",50M-300M,A,0.565,0.61,0.5,0.5,0.65,0.0,0.0,뉴스 예정 · 2027년 8월 중 (D-320~350 추정 · 월 단위 발표)
+BMEA,"Biomea Fusion, Inc.",50M-300M,A,0.552,0.83,0.5,0.5,0.38,0.0,0.0,뉴스 예정 · 2027년 3월 중 (D-167~197 추정 · 월 단위 발표)
+KOD,Kodiak Sciences Inc.,1B-5B,A,0.551,0.29,0.5,1.0,0.61,0.5,0.0,뉴스 예정 · 2027년 2월 중 (D-139~169 추정 · 월 단위 발표)
+MNPR,Monopar Therapeutics,300M-1B,A,0.55,0.51,0.5,1.0,0.27,0.2,0.0,뉴스 예정 · 2026년 12월 중 (D-77~107 추정 · 월 단위 발표)
+CCCC,"C4 Therapeutics, Inc.",50M-300M,A,0.547,0.4,0.5,0.7,0.67,0.2,0.0,뉴스 예정 · 2026년 9월 30일 예정 · D-16
+ANNX,"Annexon, Inc.",300M-1B,A,0.503,0.18,0.5,0.7,0.63,0.0,0.0,뉴스 예정 · 2026년 10월 31일 예정 · D-47
+RXRX,"RECURSION PHARMACEUTICALS, INC.",300M-1B,A,0.478,0.29,0.5,0.5,0.62,0.0,0.0,뉴스 예정 · 2027년 6월 중 (D-259~289 추정 · 월 단위 발표)
+ABCL,AbCellera Biologics Inc.,1B-5B,A,0.477,0.29,0.5,1.0,0.12,0.0,0.0,뉴스 예정 · 2027년 2월 중 (D-139~169 추정 · 월 단위 발표)
+PMVP,"PMV Pharmaceuticals, Inc.",50M-300M,A,0.471,0.29,0.5,0.5,0.59,0.0,0.0,뉴스 예정 · 2027년 3월 중 (D-167~197 추정 · 월 단위 발표)
+CRVS,"Corvus Pharmaceuticals, Inc.",1B-5B,A,0.434,0.18,0.5,0.5,0.55,0.0,0.0,뉴스 예정 · 2027년 6월 중 (D-259~289 추정 · 월 단위 발표)
+SLN,Silence Therapeutics plc,1B-5B,A,0.409,0.29,0.5,0.7,0.15,0.0,0.0,뉴스 예정 · 2026년 9월 중 (D-0~16 추정 · 월 단위 발표)
+URGN,UroGen Pharma Ltd.,1B-5B,A,0.404,0.29,0.5,0.5,0.49,0.4,0.0,뉴스 예정 · 2027년 3월 중 (D-167~197 추정 · 월 단위 발표)
+ACAD,ACADIA PHARMACEUTICALS INC,1B-5B,A,0.375,0.18,0.5,0.5,0.52,0.5,0.0,뉴스 예정 · 2027년 8월 중 (D-320~350 추정 · 월 단위 발표)
+AUPH,Aurinia Pharmaceuticals Inc.,1B-5B,C,0.645,1.0,0.5,0.1,0.66,0.2,0.1,전문가 채널 신호 강함 (13D · membership · 8-K 미사용)
+QTTB,Q32 Bio Inc.,50M-300M,C,0.594,0.72,0.5,0.1,0.66,0.0,0.1,전문가 채널 신호 강함 (13D · membership · 8-K 미사용)
+NGNE,Neurogene Inc.,1B-5B,C,0.591,0.83,0.5,0.1,0.54,0.0,0.1,전문가 채널 신호 강함 (13D · membership · 8-K 미사용)
+VERU,VERU INC.,unknown,C,0.571,0.72,0.5,0.1,0.57,0.0,0.1,전문가 채널 신호 강함 (13D · membership · 8-K 미사용)
+ALT,"Altimmune, Inc.",unknown,C,0.518,0.51,0.5,0.1,0.57,0.0,0.1,복합 관측
+RCKT,"ROCKET PHARMACEUTICALS, INC.",300M-1B,C,0.503,0.51,0.5,0.1,0.51,0.0,0.1,복합 관측
+PASG,"Passage BIO, Inc.",50M-300M,C,0.482,0.61,0.5,0.1,0.71,0.0,0.0,전문가 채널 신호 강함 (13D · membership · 8-K 미사용)
+RLMD,"RELMADA THERAPEUTICS, INC.",50M-300M,C,0.476,0.51,0.5,0.1,0.8,0.0,0.0,최근 90일 XBI 대비 저조 · 미반영
+AGIO,"AGIOS PHARMACEUTICALS, INC.",1B-5B,C,0.463,0.61,0.5,0.1,0.64,0.0,0.0,전문가 채널 신호 강함 (13D · membership · 8-K 미사용)
+ELDN,"Eledon Pharmaceuticals, Inc.",50M-300M,C,0.457,0.51,0.5,0.1,0.72,0.0,0.0,최근 90일 XBI 대비 저조 · 미반영
+CRBP,"Corbus Pharmaceuticals Holdings, In",50M-300M,C,0.449,0.93,0.5,0.1,0.46,0.5,0.0,전문가 채널 신호 강함 (13D · membership · 8-K 미사용)
+MLYS,"Mineralys Therapeutics, Inc.",50M-300M,C,0.448,0.61,0.5,0.1,0.58,0.0,0.0,전문가 채널 신호 강함 (13D · membership · 8-K 미사용)
+ARDX,"ARDELYX, INC.",300M-1B,C,0.424,0.29,0.5,0.1,0.8,0.0,0.0,최근 90일 XBI 대비 저조 · 미반영
+TECX,"Tectonic Therapeutic, Inc.",1B-5B,C,0.414,0.4,0.5,0.1,0.66,0.0,0.0,복합 관측
+EDIT,"Editas Medicine, Inc.",50M-300M,C,0.408,0.51,0.5,0.1,0.53,0.0,0.0,복합 관측
+MREO,Mereo BioPharma Group plc,50M-300M,C,0.401,0.4,0.5,0.1,0.69,0.2,0.0,복합 관측
+FDMT,"4D Molecular Therapeutics, Inc.",300M-1B,C,0.394,0.61,0.5,0.1,0.36,0.0,0.0,전문가 채널 신호 강함 (13D · membership · 8-K 미사용)
+ACRS,"Aclaris Therapeutics, Inc.",300M-1B,C,0.388,0.61,0.5,0.1,0.5,0.4,0.0,전문가 채널 신호 강함 (13D · membership · 8-K 미사용)
+IMNM,Immunome Inc.,300M-1B,C,0.386,0.51,0.5,0.1,0.44,0.0,0.0,복합 관측
+STTK,"Shattuck Labs, Inc.",300M-1B,C,0.376,0.51,0.5,0.1,0.4,0.0,0.0,복합 관측
+DNTH,"Dianthus Therapeutics, Inc. /DE/",1B-5B,C,0.375,0.4,0.5,0.1,0.5,0.0,0.0,복합 관측
+ELVN,"Enliven Therapeutics, Inc.",1B-5B,C,0.371,0.4,0.5,0.1,0.49,0.0,0.0,복합 관측
+CRBU,"Caribou Biosciences, Inc.",50M-300M,C,0.368,0.18,0.5,0.1,0.69,0.0,0.0,복합 관측
+VRDN,"Viridian Therapeutics, Inc.\DE",1B-5B,C,0.368,0.4,0.5,0.1,0.47,0.0,0.0,복합 관측
+VXRT,"Vaxart, Inc.",50M-300M,C,0.364,0.29,0.5,0.1,0.57,0.0,0.0,복합 관측
+GERN,GERON CORP,300M-1B,C,0.357,0.29,0.5,0.1,0.54,0.0,0.0,복합 관측
+KROS,"Keros Therapeutics, Inc.",50M-300M,C,0.356,0.29,0.5,0.1,0.61,0.2,0.0,복합 관측
+IMCR,Immunocore Holdings plc,1B-5B,C,0.352,0.29,0.5,0.1,0.52,0.0,0.0,복합 관측
+ALEC,"Alector, Inc.",50M-300M,C,0.351,0.61,0.5,0.1,0.39,0.5,0.0,전문가 채널 신호 강함 (13D · membership · 8-K 미사용)
+ABOS,"Acumen Pharmaceuticals, Inc.",50M-300M,C,0.35,0.29,0.5,0.1,0.51,0.0,0.0,복합 관측
+ATRA,"Atara Biotherapeutics, Inc.",50M-300M,C,0.348,0.29,0.5,0.1,0.66,0.4,0.0,복합 관측
+BCRX,BIOCRYST PHARMACEUTICALS INC,1B-5B,C,0.346,0.18,0.5,0.1,0.6,0.0,0.0,복합 관측
+IMUX,"IMMUNIC, INC.",300M-1B,C,0.345,0.29,0.5,0.1,0.69,0.5,0.0,복합 관측
+CALC,"CalciMedica, Inc.",50M-300M,C,0.337,0.83,0.5,0.1,0.0,0.2,0.0,전문가 채널 신호 강함 (13D · membership · 8-K 미사용)
+BDTX,"Black Diamond Therapeutics, Inc.",50M-300M,C,0.334,0.18,0.5,0.1,0.55,0.0,0.0,복합 관측
+SRRK,Scholar Rock Holding Corp,1B-5B,C,0.323,0.29,0.5,0.1,0.56,0.4,0.0,복합 관측
+MCRB,"Seres Therapeutics, Inc.",50M-300M,C,0.316,0.18,0.5,0.1,0.68,0.5,0.0,복합 관측
+FATE,FATE THERAPEUTICS INC,50M-300M,C,0.311,0.18,0.5,0.1,0.54,0.2,0.0,복합 관측
+IOVA,"IOVANCE BIOTHERAPEUTICS, INC.",1B-5B,C,0.232,0.29,0.5,0.1,0.11,0.2,0.0,복합 관측
+AGEN,AGENUS INC,1B-5B,C,0.203,0.29,0.5,0.1,0.0,0.2,0.0,복합 관측
+ENTX,Entera Bio Ltd.,300M-1B,C,0.201,0.18,0.5,0.1,0.02,0.0,0.0,복합 관측
+CYPH,CYPHERPUNK TECHNOLOGIES INC.,50M-300M,C,0.176,0.18,0.5,0.1,0.0,0.2,0.0,복합 관측
+FULC,"Fulcrum Therapeutics, Inc.",50M-300M,B,0.484,0.83,0.5,0.0,0.61,0.0,0.0,뉴스 통과 · 발표 통과
+LONA,"LeonaBio, Inc.",50M-300M,B,0.405,0.61,0.5,0.0,0.67,0.4,0.0,뉴스 통과 · 발표 통과
+GYRE,"GYRE THERAPEUTICS, INC.",50M-300M,B,0.351,0.29,0.5,0.0,0.61,0.0,0.0,뉴스 통과 · 발표 통과
+TBPH,"Theravance Biopharma, Inc.",300M-1B,B,0.336,0.4,0.5,0.0,0.65,0.5,0.0,뉴스 통과 · 발표 통과
+ASMB,"ASSEMBLY BIOSCIENCES, INC.",1B-5B,B,0.304,0.29,0.5,0.0,0.42,0.0,0.0,뉴스 통과 · 발표 통과

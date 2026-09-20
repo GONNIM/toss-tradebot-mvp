@@ -176,11 +176,23 @@ class RadarJson(BaseModel):
 
 
 DATA_DIR = PROJECT_ROOT / "backend" / "data"
+# WP72-3 · 산출 CSV git 추적 폴더 (소용량 · 서버 rows>0 확보)
+DATA_DIR_DOCS = PROJECT_ROOT / "docs" / "plans" / "biotech" / "data"
+
+
+def _latest(*patterns: tuple[Path, str]) -> Path | None:
+    """폴더 여러 곳에서 패턴 매치 · 최신 mtime 반환. WP72-3 · docs/ 우선 · backend/data fallback."""
+    hits: list[Path] = []
+    for base, pat in patterns:
+        hits.extend(base.glob(pat))
+    return max(hits, key=lambda p: p.stat().st_mtime) if hits else None
 
 
 def _latest_radar_csv() -> Path | None:
-    matches = sorted((DATA_DIR / "biotech" / "candidates").glob("radar_v1_3_*.csv"))
-    return matches[-1] if matches else None
+    return _latest(
+        (DATA_DIR_DOCS, "radar_v1_3_*.csv"),
+        (DATA_DIR / "biotech" / "candidates", "radar_v1_3_*.csv"),
+    )
 
 
 @router.get("/radar.json", response_model=RadarJson)
@@ -255,30 +267,38 @@ async def get_rumor_json(
     """소문 확인 표 (표 1~4 통합 JSON · WP71-2)."""
     if date and not re.match(r"^\d{4}-\d{2}-\d{2}$", date):
         raise HTTPException(status_code=400, detail="date 형식 YYYY-MM-DD")
-    files = sorted((DATA_DIR / "biotech" / "candidates").glob("biotech_candidates_v3_*.csv"))
-    if not files:
-        # 서버 파이프 (WP69-3) 배포 전 · 빈 응답 fallback
+    # WP72-3 · docs/ 우선 조회 · backend/data fallback
+    cand_files = sorted(DATA_DIR_DOCS.glob("biotech_candidates_v3_*.csv")) + \
+                 sorted((DATA_DIR / "biotech" / "candidates").glob("biotech_candidates_v3_*.csv"))
+    if not cand_files:
         return RumorJson(
             date=(date or datetime.now(timezone.utc).strftime("%Y-%m-%d")),
             generated=datetime.now(timezone.utc).isoformat(),
             rows=[],
         )
-    # 오늘 없으면 최신
     today_str = (date or datetime.now(timezone.utc).strftime("%Y-%m-%d")).replace("-", "")
-    cand_path = DATA_DIR / "biotech" / "candidates" / f"biotech_candidates_v3_{today_str}.csv"
-    if not cand_path.exists():
-        cand_path = files[-1]
-        # 파일명에서 날짜 역추출
+    # docs → backend 순으로 date 매치 찾기
+    cand_path: Path | None = None
+    for base in (DATA_DIR_DOCS, DATA_DIR / "biotech" / "candidates"):
+        p = base / f"biotech_candidates_v3_{today_str}.csv"
+        if p.exists():
+            cand_path = p
+            break
+    if cand_path is None:
+        cand_path = cand_files[-1]
         m = re.search(r"_(\d{8})\.csv$", cand_path.name)
         today_str = m.group(1) if m else datetime.now(timezone.utc).strftime("%Y%m%d")
     date_dash = f"{today_str[:4]}-{today_str[4:6]}-{today_str[6:]}"
 
-    confirm_path = DATA_DIR / "biotech" / "community_daily" / f"community_confirm_{today_str}.csv"
+    # confirm 도 두 폴더 순회
     confirm_map: dict[str, dict[str, Any]] = {}
-    if confirm_path.exists():
-        with confirm_path.open() as f:
-            for r in csv.DictReader(f):
-                confirm_map[r.get("ticker", "")] = r
+    for base in (DATA_DIR_DOCS, DATA_DIR / "biotech" / "community_daily"):
+        p = base / f"community_confirm_{today_str}.csv"
+        if p.exists():
+            with p.open() as f:
+                for r in csv.DictReader(f):
+                    confirm_map[r.get("ticker", "")] = r
+            break
 
     # candidates
     cands = list(csv.DictReader(cand_path.open()))
@@ -356,10 +376,12 @@ async def get_rumor_json(
             baseline_n=_to_int(conf.get("st_baseline_n") or 0),
         ))
 
-    # 표4: F4 최근 20 거래일 (h65 CSV)
-    f4_csvs = sorted(DATA_DIR.glob("h65_form4_daily_table_*.csv"))
-    if f4_csvs:
-        with f4_csvs[-1].open() as f:
+    # 표4: F4 최근 20 거래일 (h65 CSV · WP72-3 · docs/ 우선 · 없으면 backend/data fallback)
+    f4_docs = sorted(DATA_DIR_DOCS.glob("h65_form4_daily_table_*.csv"))
+    f4_back = sorted(DATA_DIR.glob("h65_form4_daily_table_*.csv"))
+    f4_pick = f4_docs[-1] if f4_docs else (f4_back[-1] if f4_back else None)
+    if f4_pick:
+        with f4_pick.open() as f:
             for r in csv.DictReader(f):
                 rows.append(RumorRow(
                     table="표4",
@@ -374,4 +396,47 @@ async def get_rumor_json(
         date=date_dash,
         generated=datetime.now(timezone.utc).isoformat(),
         rows=rows,
+    )
+
+
+class BiotechKpi(BaseModel):
+    """KPI 4칸 · WP72-2 · 상단 요약."""
+    generated: str
+    candidates_total: int      # 총 후보 (모든 상태)
+    news_a_ready: int           # A 상태 (뉴스 예정)
+    insider_buy_20d: int        # 임원·대주주 매수 최근 20 거래일
+    alerts: int                 # 급등 경보 (rose 섹션 · 향후 신호 채널) · 현재 0
+
+
+@router.get("/kpi.json", response_model=BiotechKpi)
+async def get_kpi(_admin: str = Depends(require_sniper_token)) -> BiotechKpi:
+    """KPI 4칸 · 총후보·뉴스예정A·임원매수20d·급등경보."""
+    # candidates_total · news_a_ready
+    cand_files = sorted(DATA_DIR_DOCS.glob("biotech_candidates_v3_*.csv")) + \
+                 sorted((DATA_DIR / "biotech" / "candidates").glob("biotech_candidates_v3_*.csv"))
+    candidates_total = 0
+    news_a_ready = 0
+    if cand_files:
+        with cand_files[-1].open() as f:
+            for r in csv.DictReader(f):
+                candidates_total += 1
+                state = r.get("time_state_v50") or r.get("time_state", "C")
+                if state == "A":
+                    news_a_ready += 1
+
+    # insider_buy_20d (h65_form4_daily_table)
+    f4_docs = sorted(DATA_DIR_DOCS.glob("h65_form4_daily_table_*.csv"))
+    f4_back = sorted(DATA_DIR.glob("h65_form4_daily_table_*.csv"))
+    f4_pick = f4_docs[-1] if f4_docs else (f4_back[-1] if f4_back else None)
+    insider_buy_20d = 0
+    if f4_pick:
+        with f4_pick.open() as f:
+            insider_buy_20d = sum(1 for _ in csv.DictReader(f))
+
+    return BiotechKpi(
+        generated=datetime.now(timezone.utc).isoformat(),
+        candidates_total=candidates_total,
+        news_a_ready=news_a_ready,
+        insider_buy_20d=insider_buy_20d,
+        alerts=0,
     )
