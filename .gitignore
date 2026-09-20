@@ -11,6 +11,8 @@ data/
 # WP72-3 · docs/plans/biotech/data/ 는 git 추적 (서버 rows>0 확보 · <1MB 소용량)
 !docs/plans/biotech/data/
 !docs/plans/biotech/data/*.csv
+# WP73 · 스크린샷은 git 제외 (검수 필요 시 zip 첨부만) · 로컬 최근 2세트만 보관
+docs/plans/biotech/screenshots/**
 
 # Environment — 평문 자격증명 절대 커밋 금지 (글로벌 §1)
 .env
