@@ -11,6 +11,39 @@
 
 ## PENDING
 
+### [Biotech Catalyst Radar · WP69-3e · 상위 파이프 산출물 서버 이식] · 2026-09-20 발행 · dry-run 1/6 실패 후속
+
+**dry-run 결과 (2026-09-20 KST 14:57 · main = `cc8c899`)**:
+- 1/6 candidates 단계 실패 · `FileNotFoundError`
+- 요구 파일: `/root/toss-tradebot-mvp/backend/data/h3_targets_v2_<sha>.csv` (sha = 현재 git rev-parse)
+- 원인: `biotech_h48v3_candidates.py:57` 이 `h3_targets_v2_<sha>.csv` 를 로드 · 이 파일은 상위 파이프 (`h3_targets_census` · `h3_efts_sc13d` 등) 가 만듬 · 서버에는 없음 (로컬 mac 만 존재)
+- 부작용: 텔레그램 알림 무시 (`TELEGRAM_BOT_TOKEN`/`TELEGRAM_CHAT_ID` 서버 .env 미설정)
+- **crontab 등록 금지** (사용자 규칙 · dry-run 실패 시 중단·보고 준수)
+- **서버 무변경** (systemd env · 런타임 폴더 유지 · 이 실행은 파일 하나만 시도 실패)
+
+**다음 세션 첫 지시 (사용자 결정 필요)**:
+
+Fable 검수 관점 · 상위 파이프 산출물 이식 방안 3가지 · 하나 승인 필요:
+
+1. **α (권장 · 커밋 이식)**: `h3_targets_v2_<sha>.csv` (그리고 downstream `h1a_events_v2` · `h39_readouts_checkpoint.json` · `h3_prices_merged`) 를 `docs/plans/biotech/data/` 로 커밋 (git 추적 · 소용량 확인) · `biotech_h48v3_candidates.py` 도 `_search_dirs` 를 쓰도록 개조 (RUNTIME > docs > backend/data). 서버 무권한 · 배포 시 자동 반영.
+   - 리스크: sha 붙은 파일명이 배포 커밋마다 바뀜 → git_sha 로직을 anchor 파일 (mtime 최신) 로 교체 필요. `_biotech_bootstrap.data_sha()` 이미 이 방식 지원.
+
+2. **β (rsync 이식)**: 로컬 mac 에서 서버 `/root/toss-tradebot-mvp/var/biotech/upstream/` 로 rsync (git 추적 밖). daily.sh 첫 단계에서 파일 존재 확인 후 실행. 사용자 mac 이 켜져 있어야 한 번 이식.
+
+3. **γ (파이프 완전 이식)**: 상위 스크립트 (`h3_targets_census`, `h3_efts_sc13d`, `h39_readouts`, `h1a_v3` 등) 도 daily 파이프에 포함 · 서버가 스스로 h3_targets 생성. 크론 소요 시간 증가 (몇 분 → 30분+).
+
+**보조 처리**:
+- 서버 `.env` 에 `TELEGRAM_BOT_TOKEN` · `TELEGRAM_CHAT_ID` 확인 (SOPS decrypt 상태) · 알림 활성화 여부 별도 승인 요청
+- `git_sha()` 를 `data_sha()` 로 대체 (파이프 sha 불일치 fix · WP108 기존 사례 정합)
+
+**PR #11 배포 결과 (성공)**:
+- main = `cc8c899` (WP69-3d 병합)
+- pytest 14/14 · /health 200 · 8 admin 라우트 401 (미회귀)
+- kpi/rows 값 유지 (기존 docs/plans/biotech/data/ CSV 참조 · 신 로직도 무회귀 계약)
+- ⚠️ dry-run 실패로 데이터 갱신 없음 · KPI 는 여전히 candidates_v3 = 79 (2026-09-14 자)
+
+---
+
 ### [Biotech Catalyst Radar · WP69-3 서버 파이프 이식 · in-progress] · 2026-09-20 발행
 
 **현재 상태 (2026-09-20 세션 종료 시점)**:
