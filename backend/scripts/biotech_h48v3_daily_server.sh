@@ -27,6 +27,14 @@ mkdir -p \
 
 cd "$ROOT"
 
+# 옵션: --aact-weekly-only (월요일 06:00 cron 용 · 주간 스냅샷만 실행 후 종료)
+if [ "${1:-}" = "--aact-weekly-only" ]; then
+    echo "=== $(date -u +%Y-%m-%dT%H:%M:%SZ) AACT weekly only ==="
+    $VENV -m backend.scripts.biotech_h69_aact_weekly || { _notify_failure "aact_weekly" "exit $?"; exit 20; }
+    echo "=== $(date -u +%Y-%m-%dT%H:%M:%SZ) AACT weekly done ==="
+    exit 0
+fi
+
 STARTED=$(date -u +%Y-%m-%dT%H:%M:%SZ)
 echo "=== $STARTED biotech daily start (server · KST $(date +%H:%M)) ==="
 

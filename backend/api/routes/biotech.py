@@ -479,10 +479,36 @@ async def get_kpi(_admin: str = Depends(require_sniper_token)) -> BiotechKpi:
         with f4_pick.open() as f:
             insider_buy_20d = sum(1 for _ in csv.DictReader(f))
 
+    # 급등 경보 (WP69-3d 재정의 · h_radar_params v1.5 alerts_definition):
+    #   apewisdom baseline_mult ≥ 5 OR reddit_rss_matches ≥ 3 인 티커 수
+    alerts = 0
+    confirm_pick: Path | None = None
+    for base in _search_dirs("community_daily"):
+        if base.exists():
+            files = sorted(base.glob("community_confirm_*.csv"))
+            if files:
+                confirm_pick = files[-1]
+                break
+    if confirm_pick:
+        with confirm_pick.open() as f:
+            for r in csv.DictReader(f):
+                mult_raw = r.get("st_baseline_mult", "")
+                rss_raw = r.get("reddit_rss_matches", "0")
+                try:
+                    rss = int(rss_raw)
+                except (ValueError, TypeError):
+                    rss = 0
+                try:
+                    mult = float(mult_raw) if mult_raw and mult_raw != "collecting" else 0.0
+                except (ValueError, TypeError):
+                    mult = 0.0
+                if mult >= 5.0 or rss >= 3:
+                    alerts += 1
+
     return BiotechKpi(
         generated=datetime.now(timezone.utc).isoformat(),
         candidates_total=candidates_total,
         news_a_ready=news_a_ready,
         insider_buy_20d=insider_buy_20d,
-        alerts=0,
+        alerts=alerts,
     )
