@@ -11,6 +11,66 @@
 
 ## PENDING
 
+### [Biotech Catalyst Radar · WP69-3 서버 파이프 이식 · in-progress] · 2026-09-20 발행
+
+**현재 상태 (2026-09-20 세션 종료 시점)**:
+
+- **배포 커밋**: `main` 이 `7ffd260` (WP69-3c hotfix) · 이전 상위 커밋 `bac7166`(AACT 스크립트) · `b1ed936`(BIOTECH_RUNTIME_DIR 지원) · `5378710`(WP72 정보 구조)
+- **systemd 수동 변경 완료** (자동 배포 범위 밖 · 승인 포함 실행):
+  - `/etc/systemd/system/tradebot-api.service` 에 `Environment="BIOTECH_RUNTIME_DIR=/root/toss-tradebot-mvp/var/biotech"` 라인 1개 추가 (백업 파일 `*.bak.20260920_*` 있음)
+  - `systemctl daemon-reload && systemctl restart tradebot-api` 완료 · `/health` 200
+- **런타임 폴더**: `/root/toss-tradebot-mvp/var/biotech/{logs}` (git 추적 밖 · reset --hard 무영향)
+- **crontab -l**: 여전히 비어 있음 (등록 안 함 · (c) 조건부 승인 대기)
+- **접근 확정 (서버 IP · biotech_sec_common 상수)**:
+  - SEC EDGAR = **200 OK** ✅
+  - CT.gov v2 = **403 BLOCKED** ⚠️ → AACT 대안
+  - StockTwits = **403 BLOCKED** ⚠️ → γ+α 대안 (사용자 결정)
+  - apewisdom = **200 OK** ✅
+  - Reddit RSS (r/biotechplays) = **200 OK** ✅
+
+- **AACT 스크립트 완주 (WP69-3c · 2026-09-20 14:32 KST)**:
+  - `biotech_h69_aact_weekly.py` 신규 · 서버 배포 완료
+  - PR #8 (`bac7166`) → PR #9 hotfix (`7ffd260`) 병합 · main = `6c1a211`
+  - **hotfix**: `unzip` 바이너리 부재 → `zipfile.testzip()` fallback · CRC 전수 통과 확증
+  - 서버 다운 · 파싱 완주:
+    - 스냅샷 = 2026-09-20 (오늘) · zip 2,405 MB · 2m 30s 다운
+    - sponsors.txt = 962,048 행 · 후보 스폰서 매칭 733 nct
+    - studies.txt = 603,488 행 · 매칭 study 733
+    - **JSON 저장** = `/root/toss-tradebot-mvp/var/biotech/ctgov_snapshot.json` · 226 KB
+    - **55 unique ticker** (79 후보 v3 중 · 70% 매칭)
+    - zip 삭제 · 2.4 GB 회수
+    - 예정 top5 (D-10 · 2026-09-30): CCCC · RGNX · **AVIR** · SLN · EWTX (AVIR = rumor 표1 최상단 종목과 정합)
+  - **아직 파이프에 연결 안 됨** — h50/h49 가 이 JSON 을 참조하도록 개조 필요 (다음 세션 첫 작업)
+
+**다음 세션 첫 지시 (사용자 발행 원문)**:
+
+> "CT.gov = AACT 주간 스냅샷(서버 · 실측 경로 · studies만 추출 · JSON 저장 · zip 삭제 · 실패 시 로컬 주간 JSON 커밋 예비). 스톡트윗 = γ(apewisdom+레딧 RSS로 열기·단계 산정 · 기준선 재축적)+α(로컬 가용 시 보조 열). β·δ 제외. (b)(c) 조건부 승인: 구현·소스 점검 통과 → dry-run 성공 시에만 crontab 0 7 등록 · 실패 시 중단·보고."
+>
+> "WP69-3c · AACT 주간 잡 (서버): URL 실측 (실측 확증: `daily/YYYY-MM-DD_daily-clinical-trials.zip` · 2.35 GB). biotech_h69_aact_weekly.py: 최신 스냅샷 다운 (재시도 3 · unzip -t → zipfile.testzip fallback 이미 반영) → studies.txt 스트리밍 파싱 (nct_id · lead_sponsor · phase · overall_status · primary_completion_date · study_first_posted) → 후보 우주 스폰서 매칭 → var/biotech/ctgov_snapshot.json → zip 삭제 · 로그 · 실패 시 텔레그램. 매일 파이프 A 상태 = JSON 읽기 (CT.gov API 호출 제거) · JSON 7일 초과 시 '예정일 자료 오래됨' 경고. cron 0 6 * * 1. 예비: 실패 3회 시 로컬 주간 JSON."
+>
+> "WP69-3d · 대중 열기 v1.5 (γ+α): 서버 채널 = apewisdom + Reddit RSS · 24h 집계 · 30일 기준선 재축적 (서버) · 7일 미만 '수집 중' · 임계 사전 고정 후 h_radar_params v1.5 changelog 기재 · 가중치 동일. 스톡트윗 = 로컬 보조 (있으면 st_24h CSV 저장소 data 커밋 선택 · 없으면 '미수집'). 표 3·KPI 급등 경보 = 서버 채널 기준 재정의 (apewisdom 24h 5배 or RSS 급증) · 문서 반영."
+>
+> "(b) dry-run · 서버 수동 1회 · biotech_h48v3_daily_server.sh → 6단계 성공 · 런타임 폴더 산출 · KPI/rows 갱신 (오늘 날짜) · 화면 /biotech 소문 탭 날짜 = 오늘. (c) crontab · dry-run 성공 시에만 · 0 7 daily + 0 6 * * 1 aact · crontab -l · 24h 관측."
+
+**다음 세션 실행 순서 (조건부)**:
+
+1. AACT 스크립트 재실행 (서버 SSH · 기존 zip 재사용 · `_download_zip()` 이 `if zip_path.exists(): LOG.info("기존 zip 재사용")` 로 skip) → `ctgov_snapshot.json` 생성 · study_matches · unique_tickers 확인
+2. `biotech_h50_ct_upcoming.py` · `biotech_h49_time_state.py` 를 `ctgov_snapshot.json` 참조하도록 개조 (CT.gov API 콜 제거)
+3. `biotech_h48v3_confirm.py` γ 재작성: `fetch_stocktwits_paged()` 제거 · apewisdom + Reddit RSS 만 · 30일 기준선 폴더는 `$BIOTECH_RUNTIME_DIR/st_baseline/` (서버) 로 재축적 시작 (7일 미만 "수집 중") · 임계 재검토 후 `h_radar_params.v1.5.md` changelog 기재
+4. 표3/KPI "급등 경보" 재정의: apewisdom 24h 5배 or Reddit RSS 매치 급증
+5. **문서**: STATUS.md 상단 안내 문구에 "서버 파이프 (일별 07:00 KST · 주간 AACT 월요일 06:00)" 반영
+6. **(b) dry-run**: 서버 SSH · `bash biotech_h48v3_daily_server.sh` 수동 1회 · 6단계 성공 여부 확인 · `/api/v1/biotech/kpi.json` 값 갱신 확인 (화면 소문 탭 날짜 = 오늘)
+7. **(c) crontab** (dry-run 성공 시에만): 서버 crontab -e 로 2줄 추가 · 24h 관측 · 실패 시 등록 취소·보고
+
+**다음 세션 보안 규칙 (변경 없음)**:
+- biotech_sec_common.{SEC_UA, SEC_FROM, SEC_ACCEPT_ENCODING} 상수 참조 · 하드코딩 금지
+- 403/429 즉시 중단·기록 (소스별 · 전체 중단 아님)
+- 우회 금지 (사용자 결정 β·δ 제외)
+- 자격증명 스캔 커밋 전 필수
+- SSH 는 사용자 승인 시에만
+
+---
+
 ### [Biotech Catalyst Radar · 배포 승인 (조건 2건) · 9/20 단일 배포 · Phase C 진입] · 2026-09-14 발행
 
 **Fable 최종 검수**: 완주 풀 재검 통과 · Phase A (검증 단계) 종결 승인.
