@@ -3,6 +3,7 @@
 > **📖 용어집 보기**: [`GLOSSARY.md`](GLOSSARY.md) · 코드 · 가설 · 상태 정의 · 첫 등장 시 (뜻) 병기
 > **🚀 배포 절차**: [`DEPLOY.md`](DEPLOY.md) · 운영 구조 · 배포 명령 · 롤백
 > **⚙️ 자동 갱신**: 본 상태판은 `biotech_h57b_status_gen.py` 가 매일 자동 생성 · '가능성 지도 (수동)' 절만 손 편집
+> **🖥 서버 파이프** (WP69-3d · v1.5): 일별 daily 07:00 KST · 주간 AACT 스냅샷 월요일 06:00 KST · 산출 = `/root/toss-tradebot-mvp/var/biotech/` (git 밖) · CT.gov API 호출 없음 (AACT 이식) · StockTwits 서버 IP 차단 → apewisdom + Reddit RSS 만
 
 ## 오늘 알아낸 것 (5줄 · 쉬운 말 · 자동)
 
