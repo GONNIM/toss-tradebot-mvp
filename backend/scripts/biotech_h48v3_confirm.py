@@ -49,8 +49,10 @@ import httpx
 logging.getLogger("httpx").setLevel(logging.WARNING)
 LOG = logging.getLogger("biotech_h48v3_confirm")
 
-PROJECT_ROOT = Path(__file__).resolve().parents[2]
-DATA_DIR = PROJECT_ROOT / "backend" / "data"
+# WP69-3g · 경로는 공용 헬퍼 _biotech_paths 사용
+from backend.scripts import _biotech_paths as _P
+PROJECT_ROOT = _P.PROJECT_ROOT
+DATA_DIR = _P.DATA_DIR
 
 _rt = os.environ.get("BIOTECH_RUNTIME_DIR", "").strip()
 RUNTIME_DIR = Path(_rt) if _rt else None

@@ -1,6 +1,10 @@
-"""WP48v2 정비 report v3 (WP51 정식) · 뉴스일 정렬 · 조용 후보 상단 · Reddit 오류 명확."""
+"""WP48v2 정비 report v3 (WP51 정식) · 뉴스일 정렬 · 조용 후보 상단 · Reddit 오류 명확.
+
+WP69-3g: 경로 해석기 _biotech_paths 로 전환 (RUNTIME > docs > backend/data).
+"""
 from backend.services import config  # noqa: F401
 from backend.scripts._biotech_bootstrap import require_secure_logging
+from backend.scripts import _biotech_paths as _P
 
 import csv
 import json
@@ -35,17 +39,24 @@ def next_news_days(reasons_str: str, state_note: str = ""):
 
 def main():
     require_secure_logging()
-    DATA = Path("backend/data/biotech")
     today_str = datetime.now(timezone.utc).strftime("%Y%m%d")
     today_dash = datetime.now(timezone.utc).strftime("%Y-%m-%d")
 
+    # WP69-3g: 경로 해석기 · candidates 는 v3 > v2 > v1 순서 선호
+    cp = None
     for suffix in ("v3", "v2", ""):
         name = f"biotech_candidates_{suffix + '_' if suffix else ''}{today_str}.csv"
-        cp = DATA / "candidates" / name
-        if cp.exists():
+        cp = _P.find(name, subdir="candidates")
+        if cp:
             break
+    if cp is None:
+        raise SystemExit(f"candidates_{today_str}.csv 없음 (RUNTIME > docs > backend/data 순회)")
     cands = list(csv.DictReader(cp.open()))
-    confirm = {r["ticker"]: r for r in csv.DictReader((DATA / "community_daily" / f"community_confirm_{today_str}.csv").open())}
+
+    confirm_path = _P.find(f"community_confirm_{today_str}.csv", subdir="community_daily")
+    if confirm_path is None:
+        raise SystemExit(f"community_confirm_{today_str}.csv 없음")
+    confirm = {r["ticker"]: r for r in csv.DictReader(confirm_path.open())}
 
     active = []
     quiet = []
@@ -68,7 +79,8 @@ def main():
     quiet.sort(key=lambda c: (0 if c["_state"] == "A" else 1, abs(c["_days"]) if c["_days"] < 9999 else 9999))
     active.sort(key=lambda c: (abs(c["_days"]) if c["_days"] < 9999 else 9999, -int(c["_conf"].get("st_24h") or 0)))
 
-    out_dir = Path("docs/plans/biotech/rumor-daily")
+    # WP69-3g: 산출 = RUNTIME/rumor-daily (서버) 또는 docs 유지 (로컬 backward compat)
+    out_dir = _P.out_dir("rumor-daily") if _P.RUNTIME_DIR else (_P.PROJECT_ROOT / "docs" / "plans" / "biotech" / "rumor-daily")
     out_dir.mkdir(parents=True, exist_ok=True)
     md_path = out_dir / f"{today_dash}.md"
 
@@ -193,7 +205,7 @@ def main():
         "---",
         "",
         f"- 후보 CSV: `{cp}`",
-        f"- 확인 CSV: `backend/data/biotech/community_daily/community_confirm_{today_str}.csv`",
+        f"- 확인 CSV: `{confirm_path}`",
         f"- 생성 UTC: {datetime.now(timezone.utc).isoformat()}",
     ]
     md_path.write_text("\n".join(lines))

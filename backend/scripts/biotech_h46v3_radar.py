@@ -11,6 +11,7 @@ from __future__ import annotations
 
 from backend.services import config  # noqa: F401
 from backend.scripts._biotech_bootstrap import require_secure_logging
+from backend.scripts import _biotech_paths as _P
 
 import csv
 import json
@@ -25,9 +26,6 @@ from statistics import mean, pstdev
 
 logging.getLogger("httpx").setLevel(logging.WARNING)
 LOG = logging.getLogger("biotech_h46v3_radar")
-
-PROJECT_ROOT = Path(__file__).resolve().parents[2]
-DATA_DIR = PROJECT_ROOT / "backend" / "data"
 
 
 def git_sha() -> str:
@@ -45,9 +43,12 @@ def z_clip01(vals: list[float]) -> list[float]:
 
 
 def load_returns_90d(sha: str) -> dict[str, float]:
-    """티커별 최근 90일 수익률 (h3_prices_merged 재사용)."""
-    p = DATA_DIR / f"h3_prices_merged_{sha}.csv"
-    if not p.exists():
+    """티커별 최근 90일 수익률 (h3_prices_merged 재사용).
+
+    WP69-3g: h3_prices_merged (47MB) 커밋 제외 · 서버 부재 시 빈 dict 반환.
+    """
+    p = _P.find(f"h3_prices_merged_{sha}.csv") or _P.find_glob("h3_prices_merged_*.csv")
+    if p is None or not p.exists():
         return {}
     latest = {}
     with p.open() as f:
@@ -76,8 +77,8 @@ def load_returns_90d(sha: str) -> dict[str, float]:
 
 
 def load_xbi_90d(sha: str) -> float:
-    p = DATA_DIR / f"benchmarks_{sha}.csv"
-    if not p.exists():
+    p = _P.find(f"benchmarks_{sha}.csv") or _P.find_glob("benchmarks_*.csv")
+    if p is None or not p.exists():
         return 0.0
     xbi = {}
     with p.open() as f:
@@ -100,32 +101,39 @@ def main():
     from backend.scripts._biotech_bootstrap import data_sha
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
     sha = git_sha()
-    if not (DATA_DIR / f"h3_events_{sha}.csv").exists():
-        fb = data_sha(DATA_DIR)
+    # WP69-3g · h3_events_{sha}.csv 부재 시 anchor 파일에서 sha 추출
+    if _P.find(f"h3_events_{sha}.csv") is None:
+        fb = _P.data_sha_auto("h3_targets_v2_*.csv")
         if fb:
             LOG.info("git_sha %s 데이터 부재 · data_sha fallback → %s", sha, fb)
             sha = fb
     today_str = datetime.now(timezone.utc).strftime("%Y%m%d")
 
-    v3_path = DATA_DIR / "biotech" / "candidates" / f"biotech_candidates_v3_{today_str}.csv"
-    if v3_path.exists():
+    # WP69-3g · candidates v3 > v2 순 · _P 경로 해석기
+    v3_path = _P.find(f"biotech_candidates_v3_{today_str}.csv", subdir="candidates")
+    if v3_path:
         cands = list(csv.DictReader(v3_path.open()))
     else:
-        v2_path = DATA_DIR / "biotech" / "candidates" / f"biotech_candidates_v2_{today_str}.csv"
+        v2_path = _P.find(f"biotech_candidates_v2_{today_str}.csv", subdir="candidates")
+        if v2_path is None:
+            raise SystemExit(f"candidates_{today_str}.csv 없음")
         cands = list(csv.DictReader(v2_path.open()))
 
-    confirm = {r["ticker"]: r for r in csv.DictReader((DATA_DIR / "biotech" / "community_daily" / f"community_confirm_{today_str}.csv").open())}
+    confirm_path = _P.find(f"community_confirm_{today_str}.csv", subdir="community_daily")
+    if confirm_path is None:
+        raise SystemExit(f"community_confirm_{today_str}.csv 없음")
+    confirm = {r["ticker"]: r for r in csv.DictReader(confirm_path.open())}
 
     # expert 재료: 13D count · h6 membership · h39 readout count (30일)
     ev_by_cik = defaultdict(int)
-    p = DATA_DIR / f"h3_events_{sha}.csv"
-    if p.exists():
+    p = _P.find(f"h3_events_{sha}.csv") or _P.find_glob("h3_events_*.csv")
+    if p is not None and p.exists():
         with p.open() as f:
             for r in csv.DictReader(f):
                 ev_by_cik[(r.get("target_cik") or "").zfill(10)] += 1
     memb_tk = set()
-    mp = DATA_DIR / f"h6_membership_{sha}.csv"
-    if mp.exists():
+    mp = _P.find(f"h6_membership_{sha}.csv") or _P.find_glob("h6_membership_*.csv")
+    if mp is not None and mp.exists():
         with mp.open() as f:
             for r in csv.DictReader(f):
                 for t in (r.get("tiingo_matched_tickers") or "").split("|"):
@@ -133,8 +141,8 @@ def main():
                         memb_tk.add(t.strip())
     readout_by_cik = defaultdict(int)
     neg_by_cik = defaultdict(int)
-    cp = DATA_DIR / "h39_readouts_checkpoint.json"
-    if cp.exists():
+    cp = _P.find("h39_readouts_checkpoint.json")
+    if cp is not None and cp.exists():
         for e in json.loads(cp.read_text()).get("events", []):
             c = (e.get("cik") or "").zfill(10)
             readout_by_cik[c] += 1
@@ -147,10 +155,10 @@ def main():
     LOG.info("prices tickers: %d · xbi 90d ret: %.4f", len(ret_map), xbi_90)
 
     # Phase C 1 · PubMed / Preprint 인덱스 (있으면 반영 · 없으면 중립)
-    pub_idx_path = DATA_DIR / f"h57_pubmed_index_{sha}.json"
-    pub_idx = json.loads(pub_idx_path.read_text()) if pub_idx_path.exists() else {}
-    pre_idx_path = DATA_DIR / f"h58_preprint_index_{sha}.json"
-    pre_idx = json.loads(pre_idx_path.read_text()) if pre_idx_path.exists() else {}
+    pub_idx_path = _P.find(f"h57_pubmed_index_{sha}.json") or _P.find_glob("h57_pubmed_index_*.json")
+    pub_idx = json.loads(pub_idx_path.read_text()) if pub_idx_path is not None and pub_idx_path.exists() else {}
+    pre_idx_path = _P.find(f"h58_preprint_index_{sha}.json") or _P.find_glob("h58_preprint_index_*.json")
+    pre_idx = json.loads(pre_idx_path.read_text()) if pre_idx_path is not None and pre_idx_path.exists() else {}
     LOG.info("pub_idx: %d · pre_idx: %d", len(pub_idx), len(pre_idx))
 
     # v1.4 · expert 채널 5/5 (Phase C 1 · 채널 확장 · 가중치 동일)
@@ -281,7 +289,8 @@ def main():
     scored.sort(key=lambda x: (state_order.get(x["time_state"], 3), -x["score"]))
     top30 = scored[:30]
 
-    out_dir = PROJECT_ROOT / "docs" / "plans" / "biotech" / "watchlist"
+    # WP69-3g: 산출 = RUNTIME/watchlist (서버) 또는 docs/watchlist (로컬)
+    out_dir = _P.out_dir("watchlist") if _P.RUNTIME_DIR else (_P.PROJECT_ROOT / "docs" / "plans" / "biotech" / "watchlist")
     out_dir.mkdir(parents=True, exist_ok=True)
     today_dash = datetime.now(timezone.utc).strftime("%Y-%m-%d")
     md_path = out_dir / f"radar-v1.3-{today_str}.md"
@@ -320,12 +329,13 @@ def main():
         "",
         "---",
         "",
-        f"- CSV: `backend/data/biotech/candidates/radar_v1_3_{today_str}.csv`",
+        f"- CSV: (candidates 폴더 안 radar_v1_3_{today_str}.csv)",
         f"- 생성 UTC: {datetime.now(timezone.utc).isoformat()}",
     ]
     md_path.write_text("\n".join(lines))
 
-    csv_path = DATA_DIR / "biotech" / "candidates" / f"radar_v1_3_{today_str}.csv"
+    # WP69-3g: candidates 산출 폴더에 radar CSV 저장
+    csv_path = _P.out_dir("candidates") / f"radar_v1_3_{today_str}.csv"
     with csv_path.open("w", newline="") as f:
         w = csv.DictWriter(f, fieldnames=list(scored[0].keys()))
         w.writeheader()
