@@ -11,6 +11,41 @@
 
 ## PENDING
 
+### [Biotech Catalyst Radar · WP69-3g · report/radar/status/form4 개조] · 2026-09-21 발행 · dry-run 2/6 → 3/6 실패 후속
+
+**진전 (2026-09-21 KST 13:32 · main = `6ac3ee3` · PR #13 병합)**:
+
+WP69-3e-α + WP69-3f 배포 성공 · 서버 dry-run 재시도 결과:
+
+- ✅ **[1/6] candidates 성공** — `var/biotech/candidates/biotech_candidates_20260921.csv` 생성 · final=80 · sources a_readout 80 · **h3_prices_merged 없음 → mcap_distribution: unknown=80 (미산정 · 사용자 조건 통과)**
+- ✅ **[2/6] confirm 성공** — `var/biotech/community_daily/community_confirm_20260921.csv` 생성 · apewisdom 300 tickers OK · **Reddit 3/4 sub 429 (pennystocks·wallstreetbets·stocks) · biotechplays 만 OK · 소스별 중단 규칙 정상** · stage_dist: collecting 79 (baseline < 7 · 첫 실행)
+- ✅ **텔레그램 env source 작동** — Notifier "미설정" 오류 사라짐
+- ❌ **[3/6] report 실패** — `biotech_h48v3_report.py:47` `backend/data/biotech/candidates/biotech_candidates_20260921.csv` 하드코딩 경로 · 서버는 var/biotech/candidates/ 에 저장 · report 는 backend/data 만 조회 → FileNotFoundError
+- 4/6 radar · 5/6 form4 · 6/6 status_gen 미실행 (즉시 중단)
+
+**crontab 등록 금지** (규칙 준수 · 서버 무변경)
+
+**다음 세션 첫 지시 (재개 시 실행)**:
+
+1. **h48v3_report.py 개조** — `_find/_find_glob` 로 candidates·confirm CSV 조회 (RUNTIME > docs > backend/data)
+2. **h46v3_radar.py 개조** — candidates·confirm 파일 조회 + 산출 경로 (RUNTIME/watchlist)
+3. **h65_form4_daily.py 개조** — candidates 조회 + 산출 경로 (RUNTIME 최상위)
+4. **h57b_status_gen.py 개조** — 각 리포트 조회 + STATUS.md 산출 경로 (docs 유지 · git 추적)
+5. **dry-run 재시도** — 6단계 모두 성공 시 KPI/rows 오늘 갱신 확인
+6. **crontab** (성공 시에만) — `0 7 * * *` daily + `0 6 * * 1 --aact-weekly-only`
+
+**보조 개선 (선택)**:
+- h3_prices_merged 대체 Tiingo fallback 로직 (사용자 조건 α · 후보 ≤100 심볼) — 현재 시총 unknown=80 · 서비스는 mcap_bucket 필터 skip 상태
+- Reddit 3 sub 429 는 IP rate limit · 서버가 매일 반복 실행하면 rate 완화 관측 필요 (biotechplays 만으로도 파이프 진행 가능)
+
+**서버 상태 (변경 없음)**:
+- crontab -l: 여전히 비어 있음
+- 런타임 폴더: `var/biotech/{candidates, community_daily, logs, ctgov_snapshot.json}` (2/6 산출)
+- systemd env: BIOTECH_RUNTIME_DIR 유지
+- .env source: 작동 확증
+
+---
+
 ### [Biotech Catalyst Radar · WP69-3e · 상위 파이프 산출물 서버 이식] · 2026-09-20 발행 · dry-run 1/6 실패 후속
 
 **dry-run 결과 (2026-09-20 KST 14:57 · main = `cc8c899`)**:
