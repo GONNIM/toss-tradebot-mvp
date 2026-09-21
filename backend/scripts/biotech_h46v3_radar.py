@@ -109,15 +109,16 @@ def main():
             sha = fb
     today_str = datetime.now(timezone.utc).strftime("%Y%m%d")
 
-    # WP69-3g · candidates v3 > v2 순 · _P 경로 해석기
-    v3_path = _P.find(f"biotech_candidates_v3_{today_str}.csv", subdir="candidates")
-    if v3_path:
-        cands = list(csv.DictReader(v3_path.open()))
-    else:
-        v2_path = _P.find(f"biotech_candidates_v2_{today_str}.csv", subdir="candidates")
-        if v2_path is None:
-            raise SystemExit(f"candidates_{today_str}.csv 없음")
-        cands = list(csv.DictReader(v2_path.open()))
+    # WP69-3g hotfix · candidates v3 > v2 > v1 순 · _P 경로 해석기
+    cp = None
+    for suffix in ("v3", "v2", ""):
+        name = f"biotech_candidates_{suffix + '_' if suffix else ''}{today_str}.csv"
+        cp = _P.find(name, subdir="candidates")
+        if cp:
+            break
+    if cp is None:
+        raise SystemExit(f"biotech_candidates_{today_str}.csv 없음 (v3·v2·v1 모두)")
+    cands = list(csv.DictReader(cp.open()))
 
     confirm_path = _P.find(f"community_confirm_{today_str}.csv", subdir="community_daily")
     if confirm_path is None:
