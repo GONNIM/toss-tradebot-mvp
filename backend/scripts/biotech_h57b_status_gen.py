@@ -22,12 +22,13 @@ import subprocess
 from datetime import datetime, timezone
 from pathlib import Path
 
+from backend.scripts import _biotech_paths as _P
+
 logging.getLogger("httpx").setLevel(logging.WARNING)
 LOG = logging.getLogger("biotech_h57b_status_gen")
 
-PROJECT_ROOT = Path(__file__).resolve().parents[2]
-DATA_DIR = PROJECT_ROOT / "backend" / "data"
-DOCS = PROJECT_ROOT / "docs" / "plans" / "biotech"
+# 문서 편집 대상은 저장소 docs 고정 (git 추적 · 사용자 진입점 STATUS.md)
+DOCS = _P.PROJECT_ROOT / "docs" / "plans" / "biotech"
 
 
 def git_sha() -> str:
@@ -38,8 +39,8 @@ def git_sha() -> str:
 
 
 def load_seal(name: str, sha: str) -> dict:
-    p = DATA_DIR / "biotech" / "seals" / f"{name}_{sha}.json"
-    if p.exists():
+    p = _P.find(f"{name}_{sha}.json", subdir="seals")
+    if p is not None and p.exists():
         try:
             return json.loads(p.read_text())
         except Exception:
@@ -71,8 +72,8 @@ def main():
     require_secure_logging()
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
     sha = git_sha()
-    if not (DATA_DIR / f"h3_targets_v2_{sha}.csv").exists():
-        fb = data_sha(DATA_DIR)
+    if _P.find(f"h3_targets_v2_{sha}.csv") is None:
+        fb = _P.data_sha_auto("h3_targets_v2_*.csv")
         if fb:
             LOG.info("git_sha %s 데이터 부재 · data_sha fallback → %s", sha, fb)
             sha = fb

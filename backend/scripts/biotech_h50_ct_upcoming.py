@@ -32,12 +32,12 @@ from pathlib import Path
 
 LOG = logging.getLogger("biotech_h50_ct_upcoming")
 
-PROJECT_ROOT = Path(__file__).resolve().parents[2]
-DATA_DIR = PROJECT_ROOT / "backend" / "data"
-
-_rt = os.environ.get("BIOTECH_RUNTIME_DIR", "").strip()
-RUNTIME_DIR = Path(_rt) if _rt else None
-FALLBACK_DIR = PROJECT_ROOT / "docs" / "plans" / "biotech" / "data"
+# WP69-3g · 경로는 공용 헬퍼 _biotech_paths 사용
+from backend.scripts import _biotech_paths as _P
+PROJECT_ROOT = _P.PROJECT_ROOT
+DATA_DIR = _P.DATA_DIR
+RUNTIME_DIR = _P.RUNTIME_DIR
+FALLBACK_DIR = _P.DATA_DIR_DOCS
 
 STALE_DAYS = 7  # JSON 이 7일 초과 시 경고
 

@@ -29,11 +29,10 @@ from pathlib import Path
 
 import httpx
 
+from backend.scripts import _biotech_paths as _P
+
 logging.getLogger("httpx").setLevel(logging.WARNING)
 LOG = logging.getLogger("biotech_h65_form4_daily")
-
-PROJECT_ROOT = Path(__file__).resolve().parents[2]
-DATA_DIR = PROJECT_ROOT / "backend" / "data"
 
 
 def git_sha() -> str:
@@ -47,8 +46,8 @@ def main():
     require_secure_logging()
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
     sha = git_sha()
-    if not (DATA_DIR / f"h3_events_{sha}.csv").exists():
-        fb = data_sha(DATA_DIR)
+    if _P.find(f"h3_events_{sha}.csv") is None:
+        fb = _P.data_sha_auto("h3_targets_v2_*.csv")
         if fb:
             LOG.info("git_sha %s 데이터 부재 · data_sha fallback → %s", sha, fb)
             sha = fb
@@ -56,8 +55,10 @@ def main():
     fund_ciks = load_fund_ciks()
     LOG.info("filers (WP28-2 55 CIK): %d", len(fund_ciks))
 
-    cache_path = DATA_DIR / f"h28v2_form4_issuer_buys_{sha}.json"
-    cache = json.loads(cache_path.read_text()) if cache_path.exists() else {}
+    cache_read = _P.find(f"h28v2_form4_issuer_buys_{sha}.json") or _P.find_glob("h28v2_form4_issuer_buys_*.json")
+    cache = json.loads(cache_read.read_text()) if cache_read is not None and cache_read.exists() else {}
+    # 산출 위치는 flat (RUNTIME 최상위 or backend/data)
+    cache_path = _P.out_flat(f"h28v2_form4_issuer_buys_{sha}.json")
 
     # 최근 30일 컷오프
     cutoff = (datetime.now(timezone.utc) - timedelta(days=30)).strftime("%Y-%m-%d")
@@ -108,8 +109,8 @@ def main():
     cutoff_20d = (datetime.now(timezone.utc) - timedelta(days=30)).strftime("%Y-%m-%d")  # 20 거래일 ≈ 30 달력일
 
     # 제출자 유형 판정 · h41_filer_classification 활용
-    filer_class_path = DATA_DIR / "h41_filer_classification.json"
-    filer_class = json.loads(filer_class_path.read_text()) if filer_class_path.exists() else {}
+    filer_class_path = _P.find("h41_filer_classification.json")
+    filer_class = json.loads(filer_class_path.read_text()) if filer_class_path is not None and filer_class_path.exists() else {}
 
     def _filer_type(filer_cik: str) -> str:
         info = filer_class.get(filer_cik, {})
@@ -128,7 +129,9 @@ def main():
     from backend.scripts.biotech_h63_f4_backtest import load_cik_ticker
     from backend.scripts.biotech_h3_backtest import load_prices
     cik2tk = load_cik_ticker(sha)
-    prices = load_prices(DATA_DIR / f"h3_prices_merged_{sha}.csv")
+    # WP69-3g: h3_prices_merged 없으면 빈 dict (미산정)
+    _p_prices = _P.find(f"h3_prices_merged_{sha}.csv") or _P.find_glob("h3_prices_merged_*.csv")
+    prices = load_prices(_p_prices) if _p_prices is not None else {}
 
     def _price_on(ticker: str, date_str: str) -> float | None:
         sp = prices.get(ticker, {})
@@ -168,7 +171,7 @@ def main():
     table4.sort(key=lambda x: x["tx_date"], reverse=True)
     table4 = table4[:30]  # 최근 30건
 
-    out_csv = DATA_DIR / f"h65_form4_daily_table_{sha}.csv"
+    out_csv = _P.out_flat(f"h65_form4_daily_table_{sha}.csv")
     with out_csv.open("w", newline="") as f:
         w = csv.writer(f)
         w.writerow(["filing_date", "tx_date", "elapsed_days", "issuer_cik", "issuer_name",
@@ -181,7 +184,7 @@ def main():
 
     # 순위표 꼬리표용 issuer_cik 세트
     tagged_ciks = {row["issuer_cik"] for row in table4}
-    tag_out = DATA_DIR / f"h65_f4_tag_ciks_{sha}.json"
+    tag_out = _P.out_flat(f"h65_f4_tag_ciks_{sha}.json")
     tag_out.write_text(json.dumps(sorted(tagged_ciks), ensure_ascii=False, indent=2))
 
     print(json.dumps({

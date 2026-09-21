@@ -163,6 +163,44 @@ def test_j_rumor_json_endpoint(client):
         assert tables.intersection({"표1", "표2", "표3", "표4"}), f"table 필드 예상 표1~4 · 실제 {tables}"
 
 
+def test_o_no_hardcoded_data_paths():
+    """(o) WP69-3g · daily_server.sh 파이프 (6 단계) 스크립트에 backend/data/docs Path 리터럴 직접 사용 0건.
+
+    - 검사 대상 = 서버 daily 파이프가 실행하는 6 스크립트 (사용자 지시 · WP69-3g 스펙)
+    - upstream/utility 스크립트 (h1a·h39·h28·h33·h6 등) 는 서버 미실행 · 예외
+    - 검사: `Path("backend/data...")` · `Path("docs/plans/biotech...")` · `DATA_DIR = PROJECT_ROOT / "backend"` 형태
+    """
+    import re
+    from pathlib import Path
+    scripts_dir = Path(__file__).resolve().parents[2] / "backend" / "scripts"
+    # daily_server.sh 6 단계 + AACT weekly + 지원 스크립트 (h50 A 상태)
+    PIPELINE = [
+        "biotech_h48v3_candidates.py",
+        "biotech_h48v3_confirm.py",
+        "biotech_h48v3_report.py",
+        "biotech_h46v3_radar.py",
+        "biotech_h65_form4_daily.py",
+        "biotech_h57b_status_gen.py",
+        "biotech_h69_aact_weekly.py",
+        "biotech_h50_ct_upcoming.py",
+    ]
+    pats = [
+        re.compile(r'\bPath\(\s*[frbu]?["\']backend/data'),
+        re.compile(r'\bPath\(\s*[frbu]?["\']docs/plans/biotech'),
+        re.compile(r'^DATA_DIR\s*=\s*PROJECT_ROOT\s*/\s*["\']backend["\']', re.MULTILINE),
+    ]
+    hits = []
+    for name in PIPELINE:
+        p = scripts_dir / name
+        if not p.exists():
+            continue
+        text = p.read_text()
+        for pat in pats:
+            for m in pat.finditer(text):
+                hits.append(f"{name}: {text[max(0,m.start()-20):m.end()+40]!r}")
+    assert not hits, "WP69-3g 재발 방지 위반 (daily_server.sh 파이프 스크립트):\n" + "\n".join(hits[:10])
+
+
 def test_n_runtime_dir_priority(tmp_path, monkeypatch):
     """(n) WP69-3b · BIOTECH_RUNTIME_DIR 우선 조회 계약.
 

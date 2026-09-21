@@ -32,13 +32,12 @@ import os
 logging.getLogger("httpx").setLevel(logging.WARNING)
 LOG = logging.getLogger("biotech_h48v3_candidates")
 
-PROJECT_ROOT = Path(__file__).resolve().parents[2]
-DATA_DIR = PROJECT_ROOT / "backend" / "data"
-
-# WP69-3e · RUNTIME > docs/plans/biotech/data > backend/data (사용자 결정 α · 커밋 이식)
-_rt = os.environ.get("BIOTECH_RUNTIME_DIR", "").strip()
-RUNTIME_DIR = Path(_rt) if _rt else None
-FALLBACK_DIR = PROJECT_ROOT / "docs" / "plans" / "biotech" / "data"
+# WP69-3g · 경로는 공용 헬퍼 _biotech_paths 사용 (하드코딩 금지 pytest 검증)
+from backend.scripts import _biotech_paths as _P
+PROJECT_ROOT = _P.PROJECT_ROOT
+DATA_DIR = _P.DATA_DIR
+RUNTIME_DIR = _P.RUNTIME_DIR
+FALLBACK_DIR = _P.DATA_DIR_DOCS
 
 OUT_DIR = (RUNTIME_DIR / "candidates") if RUNTIME_DIR else (DATA_DIR / "biotech" / "candidates")
 OUT_DIR.mkdir(parents=True, exist_ok=True)
