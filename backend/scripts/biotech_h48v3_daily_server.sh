@@ -17,6 +17,15 @@ VENV=$ROOT/backend/.venv/bin/python
 export BIOTECH_RUNTIME_DIR=$ROOT/var/biotech
 export PYTHONPATH=$ROOT
 
+# WP69-3f · systemd 서비스가 로드하는 EnvironmentFile 을 cron 셸에서도 source
+# (TELEGRAM_BOT_TOKEN · TELEGRAM_CHAT_ID 등 · 변수 새로 추가 안 함 · 이미 있음)
+if [ -f "$ROOT/backend/.env" ]; then
+    set -a
+    # shellcheck disable=SC1091
+    . "$ROOT/backend/.env"
+    set +a
+fi
+
 # 런타임 폴더 생성 (idempotent)
 mkdir -p \
   "$BIOTECH_RUNTIME_DIR/candidates" \
