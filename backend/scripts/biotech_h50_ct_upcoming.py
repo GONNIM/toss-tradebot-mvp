@@ -63,16 +63,18 @@ def _find_snapshot() -> Path | None:
 
 
 def _find_candidates_v2(today_str: str) -> Path | None:
-    """candidates_v2 CSV · RUNTIME candidates > docs > backend/data 순."""
+    """candidates 입력 · v2 > v1 (suffix 없음) 순 · WP69-3h fallback (서버 daily 는 v1 생성)."""
     dirs = []
     if RUNTIME_DIR is not None:
         dirs.append(RUNTIME_DIR / "candidates")
     dirs.append(FALLBACK_DIR)
     dirs.append(DATA_DIR / "biotech" / "candidates")
-    for d in dirs:
-        p = d / f"biotech_candidates_v2_{today_str}.csv"
-        if p.exists():
-            return p
+    # v2 우선 → v1 fallback (같은 스키마 · h48v3_candidates 산출 파일)
+    for suffix in ("v2_", ""):
+        for d in dirs:
+            p = d / f"biotech_candidates_{suffix}{today_str}.csv"
+            if p.exists():
+                return p
     return None
 
 
