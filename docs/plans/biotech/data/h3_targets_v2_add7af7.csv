@@ -1,0 +1,443 @@
+ticker,ticker_source,target_cik,target_name,sic,sic_biotech,institutions,sc13d_new,sc13g_new,form4_all,form_amendment_count,form_other_count,total_events,first_event_date,accession_first_event,listing_status,form25_accession,form25_date
+SPRY,submissions.tickers,0001671858,"ARS Pharmaceuticals, Inc.",2834,True,OrbiMed;RA Capital,1,0,0,4,0,1,2023-08-31,0001104659-23-097323,ACTIVE,,
+TYRA,submissions.tickers,0001863127,"Tyra Biosciences, Inc.",2834,True,RA Capital,1,0,0,5,0,1,2021-09-27,0001104659-21-119792,ACTIVE,,
+PEPG,submissions.tickers,0001835597,PepGen Inc.,2834,True,RA Capital,1,0,0,3,0,1,2022-05-20,0001104659-22-063397,ACTIVE,,
+MLYS,submissions.tickers,0001933414,"Mineralys Therapeutics, Inc.",2834,True,RA Capital,1,0,0,1,0,1,2023-02-24,0001104659-23-025333,ACTIVE,,
+,미복구 · no 10-K/10-Q found,0001610618,"Cidara Therapeutics, Inc.",2836,True,RA Capital,1,0,0,1,0,1,2024-07-25,0001104659-24-082640,DELISTED,0001354457-26-000017,2026-01-07
+ARTV,submissions.tickers,0001817241,"Artiva Biotherapeutics, Inc.",2836,True,RA Capital,1,0,0,1,0,1,2024-07-29,0001104659-24-083555,ACTIVE,,
+SEPN,submissions.tickers,0001984086,"Septerna, Inc.",2834,True,RA Capital,1,0,0,0,0,1,2024-11-04,0001104659-24-113930,ACTIVE,,
+ACRV,submissions.tickers,0001781174,"Acrivon Therapeutics, Inc.",2834,True,Perceptive;RA Capital,1,1,0,5,0,2,2022-11-18,0001193125-22-289031,ACTIVE,,
+,미복구 · no 10-K/10-Q found,0001645569,"DICE Therapeutics, Inc.",2834,True,RA Capital,1,0,0,4,0,1,2021-09-27,0001104659-21-119800,DELISTED,0001354457-23-000569,2023-08-09
+BCAX,submissions.tickers,0002023658,Bicara Therapeutics Inc.,2834,True,RA Capital,1,0,0,0,0,1,2024-09-23,0001104659-24-102048,ACTIVE,,
+LENZ,submissions.tickers,0001815776,"LENZ Therapeutics, Inc.",2836,True,RA Capital,1,0,0,0,0,1,2024-03-28,0001104659-24-040539,ACTIVE,,
+CTKB,submissions.tickers,0001831915,"Cytek Biosciences, Inc.",3826,False,RA Capital,0,1,0,3,0,1,2024-02-22,0001104659-24-026668,ACTIVE,,
+,미복구 · no 10-K/10-Q found,0001785173,"89bio, Inc.",2834,True,Deep Track;OrbiMed;RA Capital,0,1,0,12,0,1,2022-07-06,0001172661-22-001557,DELISTED,0001354457-25-001073,2025-10-30
+CLYM,submissions.tickers,0001768446,"Climb Bio, Inc.",2834,True,Deep Track;RA Capital,0,1,0,8,0,1,2024-07-02,0001172661-24-002631,ACTIVE,,
+JBIO,submissions.tickers,0001798749,"Jade Biosciences, Inc.",2834,True,Baker Bros;RA Capital,0,1,0,6,0,1,2022-02-14,0001104659-22-022817,ACTIVE,,
+NKTX,submissions.tickers,0001787400,"Nkarta, Inc.",2834,True,Deep Track;RA Capital,0,1,0,3,0,1,2022-02-18,0001172661-22-000996,ACTIVE,,
+KALA,submissions.tickers,0001479419,"KALA BIO, Inc.",2834,True,Baker Bros;OrbiMed;RA Capital,1,1,0,7,0,2,2023-02-14,0001104659-23-021484,ACTIVE,,
+,미복구 · no 10-K/10-Q found,0001692830,"Satsuma Pharmaceuticals, Inc.",2834,True,RA Capital,0,0,0,3,0,0,,,DELISTED,0001354457-23-000385,2023-06-08
+VOR,submissions.tickers,0001817229,Vor Biopharma Inc.,2836,True,RA Capital,0,0,0,3,0,0,,,ACTIVE,,
+,미복구 · no 10-K/10-Q found,0001538927,"Forma Therapeutics Holdings, Inc.",2836,True,Deep Track;RA Capital,0,1,0,4,0,1,2022-06-03,0001172661-22-001526,DELISTED,0001354457-22-000574,2022-10-14
+CNTB,submissions.tickers,0001835268,Connect Biopharma Holdings Ltd,2834,True,RA Capital,0,0,0,4,0,0,,,ACTIVE,,
+WVE,submissions.tickers,0001631574,"Wave Life Sciences, Inc.",2834,True,RA Capital,0,0,0,3,0,0,,,ACTIVE,,
+,미복구 · no 10-K/10-Q found,0001786255,"Icosavax, Inc.",2836,True,RA Capital,0,0,0,2,0,0,,,DELISTED,0001354457-24-000098,2024-02-20
+,미복구 · no 10-K/10-Q found,0001830749,Achilles Therapeutics plc,2836,True,Baker Bros;RA Capital;Redmile,0,2,0,7,0,2,2022-02-14,0001104659-22-022800,DELISTED,0001193125-25-051423,2025-03-11
+BDTX,submissions.tickers,0001701541,"Black Diamond Therapeutics, Inc.",2836,True,RA Capital,0,0,0,1,0,0,,,ACTIVE,,
+,미복구 · no 10-K/10-Q found,0001811764,POINT Biopharma Global Inc.,2834,True,Perceptive;RA Capital,0,0,0,5,0,0,,,DELISTED,0001354457-23-001006,2023-12-27
+ABOS,submissions.tickers,0001576885,"Acumen Pharmaceuticals, Inc.",2836,True,Deep Track;RA Capital,0,1,0,4,0,1,2022-01-27,0001172661-22-000196,ACTIVE,,
+HOWL,submissions.tickers,0001785530,"Werewolf Therapeutics, Inc.",2834,True,RA Capital,0,0,0,4,0,0,,,ACTIVE,,
+JANX,submissions.tickers,0001817713,"Janux Therapeutics, Inc.",2834,True,OrbiMed;RA Capital,0,0,0,6,0,0,,,ACTIVE,,
+SLDB,submissions.tickers,0001707502,Solid Biosciences Inc.,2836,True,Perceptive;RA Capital,0,0,0,10,0,0,,,ACTIVE,,
+,미복구 · no 10-K/10-Q found,0001808865,"iTeos Therapeutics, Inc.",2836,True,RA Capital,0,0,0,2,0,0,,,DELISTED,0001354457-25-000857,2025-08-29
+FTH,submissions.tickers,0001829802,"Faeth Therapeutics, Inc.",2834,True,RA Capital,0,0,0,1,0,0,,,ACTIVE,,
+EWTX,submissions.tickers,0001710072,"Edgewise Therapeutics, Inc.",2834,True,Baker Bros;Deep Track;OrbiMed;RA Capital,0,4,0,5,0,4,2022-02-14,0001104659-22-022778,ACTIVE,,
+VXRT,submissions.tickers,0000072444,"Vaxart, Inc.",2836,True,RA Capital,0,1,0,0,0,1,2024-01-19,0001104659-24-005241,DELISTED,0001354457-25-001171,2025-11-21
+,미복구 · no 10-K/10-Q found,0001042074,"CymaBay Therapeutics, Inc.",2834,True,Perceptive;RA Capital,0,2,0,1,0,2,2023-03-10,0001193125-23-067374,DELISTED,0001354457-24-000200,2024-03-22
+EVH,submissions.tickers,0001628908,"Evolent Health, Inc.",8741,False,RA Capital,0,1,0,0,0,1,2024-06-17,0001104659-24-072466,ACTIVE,,
+,미복구 · no 10-K/10-Q found,0001599901,"Avidity Biosciences, Inc.",2834,True,RA Capital,0,2,0,2,0,2,2022-12-30,0001104659-22-131370,DELISTED,0001354457-26-000224,2026-02-27
+DNTH,submissions.tickers,0001690585,"Dianthus Therapeutics, Inc. /DE/",2834,True,Deep Track;RA Capital,0,2,0,4,0,2,2022-09-26,0001104659-22-103011,ACTIVE,,
+,미복구 · no 10-K/10-Q found,0001626199,"ALPINE IMMUNE SCIENCES, INC.",2834,True,OrbiMed;RA Capital,0,1,0,6,0,1,2022-10-03,0001104659-22-105295,DELISTED,0001354457-24-000354,2024-05-20
+,미복구 · no 10-K/10-Q found,0001827506,"Tourmaline Bio, Inc.",2836,True,Deep Track;RA Capital,0,3,0,3,0,3,2023-07-06,0001104659-23-078764,DELISTED,0001354457-25-001066,2025-10-28
+LAB,submissions.tickers,0001162194,STANDARD BIOTOOLS INC.,2834,True,OrbiMed;RA Capital,0,1,0,2,0,1,2022-03-24,0001104659-22-037517,DELISTED,0001571049-17-007165,2017-08-02
+,미복구 · no 10-K/10-Q found,0001493566,"OTONOMY, INC.",2834,True,Baker Bros;OrbiMed;RA Capital,0,1,0,6,0,1,2021-10-25,0001104659-21-129528,DELISTED,0001354457-22-000800,2022-12-29
+RLMD,submissions.tickers,0001553643,"RELMADA THERAPEUTICS, INC.",2834,True,Deep Track;Perceptive;RA Capital,0,3,0,5,0,3,2021-12-20,0001104659-21-151724,ACTIVE,,
+,미복구 · no 10-K/10-Q found,0001505512,Regulus Therapeutics Inc.,2834,True,Deep Track;RA Capital,0,2,0,1,0,2,2024-03-22,0001172661-24-001694,DELISTED,0001354457-25-000571,2025-06-25
+TIL,submissions.tickers,0001789769,"Instil Bio, Inc.",2836,True,Perceptive;RA Capital,0,2,0,1,0,2,2022-06-22,0001104659-22-073528,ACTIVE,,
+COGT,submissions.tickers,0001622229,"Cogent Biosciences, Inc.",2834,True,RA Capital,0,1,0,2,0,1,2022-09-06,0001104659-22-097869,ACTIVE,,
+URGN,submissions.tickers,0001668243,UroGen Pharma Ltd.,2834,True,RA Capital,0,1,0,2,0,1,2023-12-29,0001104659-23-130500,ACTIVE,,
+,미복구 · no 10-K/10-Q found,0001822711,"PARDES BIOSCIENCES, INC.",2834,True,RA Capital,0,1,0,1,0,1,2022-01-10,0001104659-22-002791,DELISTED,0001354457-23-000611,2023-08-31
+ANTX,submissions.tickers,0001880438,"AN2 Therapeutics, Inc.",2834,True,RA Capital,0,1,0,3,0,1,2022-04-08,0001104659-22-044249,ACTIVE,,
+,미복구 · no 10-K/10-Q found,0001739614,"Inhibrx, Inc.",2836,True,Perceptive;RA Capital,0,2,0,5,0,2,2022-07-19,0001193125-22-196480,DELISTED,0001354457-24-000361,2024-05-30
+SERA,submissions.tickers,0001534969,"SERA PROGNOSTICS, INC.",8071,False,Baker Bros;RA Capital,0,2,0,1,0,2,2024-01-10,0001104659-24-003008,ACTIVE,,
+ZURA,submissions.tickers,0001855644,Zura Bio Ltd,2836,True,Deep Track;RA Capital,0,2,0,2,0,2,2023-06-15,0001172661-23-002376,DELISTED,0001354457-24-000594,2024-08-27
+GPCR,submissions.tickers,0001888886,Structure Therapeutics Inc.,2834,True,Deep Track;RA Capital,0,2,0,2,0,2,2023-02-03,0001172661-23-000436,ACTIVE,,
+VERA,submissions.tickers,0001831828,"Vera Therapeutics, Inc.",2834,True,RA Capital,0,1,0,1,0,1,2022-02-24,0001104659-22-026621,ACTIVE,,
+LRMR,submissions.tickers,0001374690,"Larimar Therapeutics, Inc.",2834,True,OrbiMed;Perceptive;RA Capital,0,2,0,4,0,2,2023-02-14,0001193125-23-038711,ACTIVE,,
+,미복구 · no 10-K/10-Q found,0001832168,"Longboard Pharmaceuticals, Inc.",2834,True,Farallon;RA Capital,0,1,0,4,0,1,2024-01-12,0001104659-24-003746,DELISTED,0001354457-24-000898,2024-12-02
+,미복구 · no 10-K/10-Q found,0001401708,"NS Wind Down Co., Inc.",2836,True,Farallon;RA Capital,0,3,0,2,0,3,2022-04-28,0001104659-22-052374,DELISTED,0001354457-24-000250,2024-04-09
+CCCC,submissions.tickers,0001662579,"C4 Therapeutics, Inc.",2836,True,OrbiMed;Perceptive;RA Capital,0,2,0,1,0,2,2023-12-26,0001104659-23-129222,ACTIVE,,
+DYN,submissions.tickers,0001818794,"Dyne Therapeutics, Inc.",2834,True,Deep Track;RA Capital,0,3,0,7,0,3,2022-01-20,0001172661-22-000161,ACTIVE,,
+HELP,submissions.tickers,0001833141,CYBIN INC.,2834,True,Deep Track;OrbiMed;RA Capital,0,3,0,1,0,3,2022-02-11,0000947871-22-000197,DELISTED,0001062993-26-000002,2026-01-02
+,미복구 · no 10-K/10-Q found,0001809122,CureVac N.V.,2834,True,RA Capital,0,1,0,1,0,1,2023-03-27,0001104659-23-037170,DELISTED,0001354457-26-000010,2026-01-06
+,미복구 · no 10-K/10-Q found,0001117480,CHIMERIX INC,2834,True,RA Capital,0,1,0,1,0,1,2023-09-29,0001104659-23-105374,DELISTED,0001354457-25-000340,2025-04-21
+VERU,submissions.tickers,0000863894,VERU INC.,2834,True,Perceptive;RA Capital,0,2,0,2,0,2,2022-04-21,0001104659-22-048415,DELISTED,0001042167-09-000109,2009-06-08
+NKTR,submissions.tickers,0000906709,NEKTAR THERAPEUTICS,2834,True,Deep Track;RA Capital,0,2,0,3,0,2,2023-04-14,0001172661-23-001702,ACTIVE,,
+FRNM,submissions.tickers,0002017526,"Freenome, Inc.",8071,False,RA Capital,0,1,0,0,0,1,2024-06-24,0001104659-24-074387,DELISTED,0001354457-26-000709,2026-07-20
+OBIO,submissions.tickers,0001814114,"Orchestra BioMed Holdings, Inc.",3841,False,Perceptive;RA Capital,0,2,0,2,0,2,2023-02-14,0001104659-23-021810,ACTIVE,,
+,미복구 · no 10-K/10-Q found,0001259942,BELLUS Health Inc.,2834,True,OrbiMed;Perceptive;RA Capital,0,2,0,5,0,2,2021-12-06,0001193125-21-349034,DELISTED,0001354457-23-000434,2023-06-28
+PRAX,submissions.tickers,0001689548,"Praxis Precision Medicines, Inc.",2834,True,Perceptive;RA Capital,0,2,0,1,0,2,2024-07-01,0001104659-24-077011,ACTIVE,,
+,미복구 · no 10-K/10-Q found,0001923840,"Third Harmonic Bio, Inc.",2834,True,OrbiMed;RA Capital,1,2,0,3,0,3,2022-09-26,0001104659-22-103003,DELISTED,0001193125-25-169817,2025-07-31
+SYBX,submissions.tickers,0001527599,"SYNLOGIC, INC.",2834,True,OrbiMed;RA Capital,0,1,0,3,0,1,2021-10-01,0001104659-21-122000,DELISTED,0001354457-26-000470,2026-05-18
+AVTX,submissions.tickers,0001534120,"Avalo Therapeutics, Inc.",2834,True,Deep Track;OrbiMed;RA Capital,0,3,0,0,0,3,2024-04-05,0001172661-24-001737,DELISTED,0001354457-18-000415,2018-10-17
+ANRO,submissions.tickers,0001999480,"Alto Neuroscience, Inc.",2834,True,RA Capital,0,1,0,1,0,1,2024-03-29,0001104659-24-041071,ACTIVE,,
+MDNAF,submissions.tickers,0001807983,Medicenna Therapeutics Corp.,2834,True,RA Capital,0,1,0,0,0,1,2024-05-10,0001104659-24-060023,DELISTED,0001354457-23-000876,2023-11-20
+NAMS,submissions.tickers,0001936258,NewAmsterdam Pharma Co N.V.,2834,True,RA Capital,0,1,0,3,0,1,2022-12-02,0001104659-22-124124,ACTIVE,,
+ACRS,submissions.tickers,0001557746,"Aclaris Therapeutics, Inc.",2834,True,RA Capital,0,1,0,1,0,1,2022-04-25,0001104659-22-049665,ACTIVE,,
+ELVN,submissions.tickers,0001672619,"Enliven Therapeutics, Inc.",2834,True,OrbiMed;RA Capital,1,1,0,5,0,2,2022-10-24,0001104659-22-110941,ACTIVE,,
+DSGN,submissions.tickers,0001807120,"Design Therapeutics, Inc.",2834,True,RA Capital,0,1,0,1,0,1,2022-10-13,0001104659-22-108513,ACTIVE,,
+,미복구 · no 10-K/10-Q found,0001831283,LianBio,2834,True,Perceptive;RA Capital,1,1,0,2,0,2,2021-11-15,0001104659-21-139244,DELISTED,0001628280-24-010146,2024-03-11
+ACET,submissions.tickers,0001720580,"Adicet Bio, Inc.",2834,True,OrbiMed;RA Capital,0,2,0,6,0,2,2022-10-17,0001104659-22-109351,ACTIVE,,
+FDMT,submissions.tickers,0001650648,"4D Molecular Therapeutics, Inc.",2836,True,Deep Track;RA Capital,0,2,0,7,0,2,2021-11-04,0001172661-21-002113,ACTIVE,,
+RXRX,submissions.tickers,0001601830,"RECURSION PHARMACEUTICALS, INC.",2836,True,RA Capital,0,1,0,0,0,1,2024-07-08,0001104659-24-078315,ACTIVE,,
+ADGM,submissions.tickers,0002006986,"Adagio Medical Holdings, Inc.",3841,False,Perceptive;RA Capital,0,2,0,0,0,2,2024-08-12,0001104659-24-088367,ACTIVE,,
+MGNX,submissions.tickers,0001125345,MACROGENICS INC,2834,True,RA Capital,0,1,0,3,0,1,2023-10-30,0001104659-23-112608,ACTIVE,,
+FULC,submissions.tickers,0001680581,"Fulcrum Therapeutics, Inc.",2834,True,RA Capital,0,1,0,4,0,1,2022-08-26,0001104659-22-095158,ACTIVE,,
+,미복구 · no 10-K/10-Q found,0001888012,"HilleVax, Inc.",2836,True,Deep Track;RA Capital,0,2,0,3,0,2,2023-02-14,0001104659-23-021809,DELISTED,0001354457-25-000913,2025-09-17
+PYXS,submissions.tickers,0001782223,"Pyxis Oncology, Inc.",2834,True,Deep Track;RA Capital,0,2,0,2,0,2,2021-10-25,0001104659-21-129526,ACTIVE,,
+,미복구 · no 10-K/10-Q found,0001484565,SOLENO THERAPEUTICS INC,2834,True,Perceptive;RA Capital,1,1,0,8,0,2,2023-05-18,0001193125-23-148210,DELISTED,0001354457-26-000469,2026-05-18
+IOBTQ,submissions.tickers,0001865494,"IO Biotech, Inc.",2834,True,RA Capital,0,1,0,1,0,1,2021-11-19,0001104659-21-141912,DELISTED,0001354457-26-000541,2026-06-08
+,미복구 · no 10-K/10-Q found,0001826492,Gracell Biotechnologies Inc.,2834,True,OrbiMed;RA Capital,1,2,0,3,0,3,2022-02-11,0000947871-22-000200,DELISTED,0001354457-24-000103,2024-02-22
+TARA,submissions.tickers,0001359931,"Protara Therapeutics, Inc.",2836,True,OrbiMed;Perceptive;RA Capital,0,2,0,3,0,2,2022-02-11,0000947871-22-000210,ACTIVE,,
+BOLD,submissions.tickers,0001782303,"Boundless Bio, Inc.",2834,True,RA Capital,0,1,0,0,0,1,2024-04-12,0001104659-24-046791,ACTIVE,,
+,미복구 · no 10-K/10-Q found,0001748907,Orchard Therapeutics plc,2836,True,Deep Track;RA Capital,0,2,0,4,0,2,2023-03-20,0001104659-23-034475,DELISTED,0001354457-24-000027,2024-01-24
+CRVO,submissions.tickers,0001053691,CervoMed Inc.,2834,True,RA Capital,0,1,0,0,0,1,2024-04-11,0001104659-24-046428,ACTIVE,,
+,미복구 · no 10-K/10-Q found,0001708493,"Harpoon Therapeutics, Inc.",2836,True,OrbiMed;RA Capital,0,1,0,3,0,1,2023-11-06,0001104659-23-114778,DELISTED,0001354457-24-000134,2024-03-11
+UNCY,submissions.tickers,0001766140,"Unicycive Therapeutics, Inc.",2834,True,RA Capital,0,1,0,2,0,1,2023-07-06,0001104659-23-078756,ACTIVE,,
+TSHA,submissions.tickers,0001806310,"Taysha Gene Therapies, Inc.",2836,True,RA Capital,0,1,0,2,0,1,2023-08-25,0001104659-23-095393,ACTIVE,,
+SRZN,submissions.tickers,0001824893,"Surrozen, Inc./DE",2836,True,Baker Bros;RA Capital,0,2,0,1,0,2,2022-02-14,0001104659-22-022840,DELISTED,0001354457-26-000770,2026-08-07
+CELC,submissions.tickers,0001603454,Celcuity Inc.,8071,False,Baker Bros;Perceptive;RA Capital,0,3,0,4,0,3,2022-05-25,0001104659-22-064656,ACTIVE,,
+APGE,submissions.tickers,0001974640,"Apogee Therapeutics, Inc.",2836,True,Deep Track;RA Capital,0,2,0,3,0,2,2023-07-24,0001172661-23-002601,ACTIVE,,
+XLO,submissions.tickers,0001840233,"Xilio Therapeutics, Inc.",2834,True,RA Capital,0,1,0,2,0,1,2021-11-05,0001104659-21-135061,ACTIVE,,
+ELDN,submissions.tickers,0001404281,"Eledon Pharmaceuticals, Inc.",2834,True,RA Capital,0,1,0,0,0,1,2024-11-05,0001104659-24-114322,ACTIVE,,
+ALEC,submissions.tickers,0001653087,"Alector, Inc.",2836,True,RA Capital,0,1,0,0,0,1,2024-12-06,0001104659-24-126367,ACTIVE,,
+MNPR,submissions.tickers,0001645469,Monopar Therapeutics,2834,True,RA Capital,0,1,0,0,0,1,2024-10-31,0001104659-24-113067,ACTIVE,,
+BIOA,submissions.tickers,0001709941,"BioAge Labs, Inc.",2834,True,RA Capital,0,1,0,0,0,1,2024-10-07,0001104659-24-106678,ACTIVE,,
+ENSC,submissions.tickers,0001716947,"Ensysce Biosciences, Inc.",2834,True,Perceptive;RA Capital,0,2,0,0,0,2,2024-10-29,0001193125-24-246648,ACTIVE,,
+DRUG,submissions.tickers,0001827401,BRIGHT MINDS BIOSCIENCES INC.,2834,True,Perceptive;RA Capital,0,2,0,0,0,2,2024-10-16,0001193125-24-238029,ACTIVE,,
+,미복구 · no 10-K/10-Q found,0001786205,"Arcellx, Inc.",2836,True,Perceptive;RA Capital,0,2,0,2,0,2,2023-02-14,0001193125-23-038717,DELISTED,0001354457-26-000381,2026-04-28
+,미복구 · no 10-K/10-Q found,0001454789,"Astria Therapeutics, Inc.",2834,True,Deep Track;Perceptive;RA Capital,0,2,0,9,0,2,2022-12-22,0001172661-22-002615,DELISTED,0001354457-26-000075,2026-01-23
+KURA,submissions.tickers,0001422143,"Kura Oncology, Inc.",2834,True,Deep Track;RA Capital,0,2,0,1,0,2,2022-02-04,0001172661-22-000237,ACTIVE,,
+CBIO,submissions.tickers,0001253689,"CRESCENT BIOPHARMA, INC.",2834,True,RA Capital,0,1,0,0,0,1,2024-11-06,0001104659-24-114867,ACTIVE,,
+BCYC,submissions.tickers,0001761612,BICYCLE THERAPEUTICS PLC,2834,True,Baker Bros;Deep Track;RA Capital,1,3,0,5,0,4,2022-01-27,0001172661-22-000197,ACTIVE,,
+CRBP,submissions.tickers,0001595097,"Corbus Pharmaceuticals Holdings, Inc.",2834,True,OrbiMed;RA Capital,0,2,0,0,0,2,2024-02-12,0001104659-24-014646,ACTIVE,,
+,미복구 · no 10-K/10-Q found,0001722271,"Akouos, Inc.",2834,True,RA Capital,0,0,0,2,0,0,,,DELISTED,0001354457-22-000674,2022-12-01
+,미복구 · no 10-K/10-Q found,0001604950,scPharmaceuticals Inc.,2834,True,OrbiMed;RA Capital,0,0,0,5,0,0,,,DELISTED,0001354457-25-000996,2025-10-07
+TNGX,submissions.tickers,0001819133,"Tango Therapeutics, Inc.",2834,True,RA Capital,0,0,0,1,0,0,,,ACTIVE,,
+,미복구 · no 10-K/10-Q found,0001797768,Kinnate Biopharma Inc.,2834,True,OrbiMed;RA Capital,0,0,0,11,0,0,,,DELISTED,0001354457-24-000225,2024-04-03
+OLMA,submissions.tickers,0001750284,"Olema Pharmaceuticals, Inc.",2834,True,Deep Track;RA Capital,0,1,0,4,0,1,2024-03-22,0001172661-24-001695,ACTIVE,,
+,미복구 · no 10-K/10-Q found,0001375151,"ZOGENIX, INC.",2834,True,RA Capital,0,0,0,2,0,0,,,DELISTED,0001354457-22-000167,2022-03-07
+RYTM,submissions.tickers,0001649904,"RHYTHM PHARMACEUTICALS, INC.",2834,True,Baker Bros;Perceptive;RA Capital,1,2,0,10,0,3,2024-02-12,0001193125-24-032072,ACTIVE,,
+PHAT,submissions.tickers,0001783183,"Phathom Pharmaceuticals, Inc.",2834,True,RA Capital,0,0,0,2,0,0,,,ACTIVE,,
+,미복구 · no 10-K/10-Q found,0001823465,5:01 Acquisition Corp.,6770,False,RA Capital,0,0,0,2,0,0,,,DELISTED,0001354457-22-000576,2022-10-17
+GERN,submissions.tickers,0000886744,GERON CORP,2834,True,Deep Track;RA Capital,0,1,0,6,0,1,2023-01-13,0001172661-23-000180,ACTIVE,,
+TVTX,submissions.tickers,0001438533,"Travere Therapeutics, Inc.",2834,True,Deep Track;Perceptive;RA Capital,0,1,0,8,0,1,2022-05-16,0001172661-22-001492,ACTIVE,,
+NAUT,submissions.tickers,0001808805,"Nautilus Biotechnology, Inc.",3826,False,Perceptive;RA Capital,0,0,0,3,0,0,,,ACTIVE,,
+,미복구 · no 10-K/10-Q found,0001823200,BCLS Acquisition Corp.,6770,False,Perceptive;RA Capital,0,0,0,3,0,0,,,DELISTED,0001354457-22-000595,2022-10-26
+,미복구 · no 10-K/10-Q found,0001657312,Verona Pharma plc,2834,True,Deep Track;OrbiMed;Perceptive;RA Capital,0,3,0,10,0,3,2023-04-20,0001193125-23-108440,DELISTED,0001354457-25-000995,2025-10-07
+,미복구 · no 10-K/10-Q found,0000855654,"ImmunoGen, Inc.",2834,True,RA Capital;Redmile,0,0,0,6,0,0,,,DELISTED,0001354457-24-000070,2024-02-12
+ENTX,submissions.tickers,0001638097,Entera Bio Ltd.,2836,True,RA Capital,0,0,0,1,0,0,,,ACTIVE,,
+,미복구 · no 10-K/10-Q found,0001367920,"CONCERT PHARMACEUTICALS, INC.",2834,True,Perceptive;RA Capital,0,0,0,4,0,0,,,DELISTED,0001354457-23-000156,2023-03-06
+MIST,submissions.tickers,0001408443,Milestone Pharmaceuticals Inc.,2834,True,OrbiMed;RA Capital,0,0,0,4,0,0,,,ACTIVE,,
+ASND,submissions.tickers,0001612042,Ascendis Pharma A/S,2834,True,Baker Bros;RA Capital,0,0,0,8,0,0,,,ACTIVE,,
+,미복구 · no 10-K/10-Q found,0001340652,"ChemoCentryx, Inc.",2834,True,RA Capital,0,0,0,1,0,0,,,DELISTED,0001354457-22-000581,2022-10-20
+GHRS,submissions.tickers,0001855129,GH Research PLC,2834,True,RA Capital,0,0,0,5,0,0,,,ACTIVE,,
+,미복구 · no 10-K/10-Q found,0001348911,"KalVista Pharmaceuticals, Inc.",2834,True,Deep Track;RA Capital,0,1,0,4,0,1,2021-10-25,0001172661-21-002058,DELISTED,0001354457-26-000565,2026-06-11
+,미복구 · no 10-K/10-Q found,0001845337,"Day One Biopharmaceuticals, Inc.",2834,True,RA Capital,0,0,0,2,0,0,,,DELISTED,0001354457-26-000366,2026-04-23
+,미복구 · no 10-K/10-Q found,0001828326,Frazier Lifesciences Acquisition Corp,6770,False,RA Capital,0,0,0,1,0,0,,,DELISTED,0001354457-22-000662,2022-11-22
+XFOR,submissions.tickers,0001501697,"X4 Pharmaceuticals, Inc",2836,True,OrbiMed;RA Capital,0,0,0,4,0,0,,,ACTIVE,,
+,미복구 · no 10-K/10-Q found,0001169245,PhaseBio Pharmaceuticals Inc,2834,True,RA Capital,0,0,0,2,0,0,,,DELISTED,0001354457-22-000754,2022-12-21
+EYPT,submissions.tickers,0001314102,"EyePoint, Inc.",3826,False,RA Capital,0,0,0,2,0,0,,,ACTIVE,,
+NVAX,submissions.tickers,0001000694,NOVAVAX INC,2836,True,RA Capital,0,0,0,1,0,0,,,ACTIVE,,
+,미복구 · no 10-K/10-Q found,0001863294,DA32 Life Science Tech Acquisition Corp.,6770,False,RA Capital,0,0,0,1,0,0,,,DELISTED,0001354457-23-000548,2023-07-28
+TNYA,submissions.tickers,0001858848,"Tenaya Therapeutics, Inc.",2836,True,RA Capital,0,0,0,3,0,0,,,ACTIVE,,
+PCVX,submissions.tickers,0001649094,"Vaxcyte, Inc.",2836,True,RA Capital,0,0,0,3,0,0,,,ACTIVE,,
+BOLT,submissions.tickers,0001641281,"Bolt Biotherapeutics, Inc.",2834,True,RA Capital,0,0,0,1,0,0,,,ACTIVE,,
+,미복구 · no 10-K/10-Q found,0001662244,"Cyteir Therapeutics, Inc.",2834,True,Baker Bros;RA Capital,0,1,0,3,0,1,2023-02-14,0001104659-23-021473,DELISTED,0001193125-24-069610,2024-03-18
+TCRX,submissions.tickers,0001783328,"TScan Therapeutics, Inc.",2836,True,Baker Bros;RA Capital,0,0,0,4,0,0,,,ACTIVE,,
+MCRB,submissions.tickers,0001609809,"Seres Therapeutics, Inc.",2834,True,RA Capital,0,0,0,1,0,0,,,ACTIVE,,
+VRDN,submissions.tickers,0001590750,"Viridian Therapeutics, Inc.\DE",2834,True,Deep Track;Perceptive;RA Capital,0,2,0,4,0,2,2021-09-24,0001172661-21-001921,ACTIVE,,
+,미복구 · no 10-K/10-Q found,0001852432,ARYA Sciences Acquisition Corp V,6770,False,RA Capital,0,0,0,1,0,0,,,DELISTED,0001354457-23-000506,2023-07-14
+AVIR,submissions.tickers,0001593899,"Atea Pharmaceuticals, Inc.",2834,True,RA Capital,0,0,0,1,0,0,,,ACTIVE,,
+CTMX,submissions.tickers,0001501989,"CytomX Therapeutics, Inc.",2834,True,RA Capital,0,0,0,1,0,0,,,ACTIVE,,
+,미복구 · no 10-K/10-Q found,0001616212,Trillium Therapeutics Inc.,2834,True,RA Capital,0,0,0,1,0,0,,,DELISTED,0001354457-21-001345,2021-11-17
+ARDX,submissions.tickers,0001437402,"ARDELYX, INC.",2834,True,Deep Track;RA Capital,0,1,0,2,0,1,2022-09-12,0001172661-22-002087,ACTIVE,,
+,미복구 · no 10-K/10-Q found,0001693011,"Inozyme Pharma, Inc.",2834,True,Baker Bros;Deep Track;RA Capital,0,2,0,4,0,2,2022-04-18,0001172661-22-001138,DELISTED,0001354457-25-000600,2025-07-01
+MLTX,submissions.tickers,0001821586,MoonLake Immunotherapeutics,2834,True,RA Capital,0,0,0,1,0,0,,,ACTIVE,,
+CRIS,submissions.tickers,0001108205,CURIS INC,2836,True,RA Capital,0,0,0,1,0,0,,,ACTIVE,,
+RXST,submissions.tickers,0001111485,"RxSight, Inc.",3851,False,OrbiMed;RA Capital,0,1,0,3,0,1,2022-02-11,0000947871-22-000211,ACTIVE,,
+WHWK,submissions.tickers,0001422142,"Whitehawk Therapeutics, Inc.",2834,True,OrbiMed;RA Capital,0,0,0,2,0,0,,,ACTIVE,,
+,미복구 · no 10-K/10-Q found,0001838821,ARYA Sciences Acquisition Corp IV,6770,False,Farallon;RA Capital,0,0,0,4,0,0,,,DELISTED,0001354457-24-000541,2024-07-31
+,,0001619841,Shah Rajeev M.,,False,RA Capital,0,0,3,0,0,3,2022-06-13,0001104659-22-070650,ACTIVE,,
+,,0001865119,Stoppel Laura,,False,RA Capital,0,0,6,0,0,6,2022-06-17,0001209191-22-037887,ACTIVE,,
+,,0001816523,Scheiner Zachary,,False,RA Capital,0,0,9,0,0,9,2022-06-10,0001209191-22-035834,ACTIVE,,
+,,0001792061,DiRocco Derek,,False,RA Capital,0,0,12,0,0,12,2022-06-03,0000899243-22-020988,ACTIVE,,
+,,0001690959,Resnick Joshua,,False,RA Capital,0,0,14,0,0,14,2022-05-10,0000899243-22-017502,ACTIVE,,
+,,0001867539,Levin Andrew David,,False,RA Capital,0,0,7,0,0,7,2022-06-01,0001209191-22-033210,ACTIVE,,
+,,0002020464,Tadvalkar Laura,,False,RA Capital,0,0,2,0,0,2,2024-04-30,0001610618-24-000062,ACTIVE,,
+,,0001863094,Simson Jake,,False,RA Capital,0,0,17,0,0,17,2022-06-08,0001209191-22-035081,ACTIVE,,
+,,0002085062,Reed Sarah Burgess,,False,RA Capital,0,0,1,0,0,1,2025-09-10,0001415889-25-024086,ACTIVE,,
+,,0002137903,Celebi Breanna Maurine,,False,RA Capital,0,0,1,0,0,1,2026-07-01,0001193125-26-292640,ACTIVE,,
+KYMR,submissions.tickers,0001815442,"Kymera Therapeutics, Inc.",2836,True,Baker Bros;Redmile,1,1,0,4,0,2,2023-02-14,0001104659-23-021478,ACTIVE,,
+MDGL,submissions.tickers,0001157601,"MADRIGAL PHARMACEUTICALS, INC.",2834,True,Baker Bros;Deep Track,1,1,0,6,0,2,2022-05-19,0001172661-22-001503,ACTIVE,,
+HOOK,submissions.tickers,0001760542,HOOKIPA Pharma Inc.,2834,True,Baker Bros;Deep Track;Redmile,1,2,0,5,0,3,2022-03-04,0001172661-22-001012,DELISTED,0001104659-25-071748,2025-07-29
+VTVT,submissions.tickers,0001641489,vTv Therapeutics Inc.,2834,True,Baker Bros,1,0,0,0,0,1,2024-03-05,0001104659-24-031033,ACTIVE,,
+TRDA,submissions.tickers,0001689375,"Entrada Therapeutics, Inc.",2834,True,Baker Bros;Redmile,1,2,0,3,0,3,2021-11-10,0001104659-21-137008,ACTIVE,,
+,미복구 · no 10-K/10-Q found,0001358403,"BELLICUM PHARMACEUTICALS, INC",2834,True,Baker Bros,1,0,0,1,0,1,2023-05-05,0001104659-23-056574,DELISTED,0001354457-23-000485,2023-07-10
+IMCR,submissions.tickers,0001671927,Immunocore Holdings plc,2836,True,Baker Bros,1,0,0,8,0,1,2022-07-21,0000950142-22-002280,ACTIVE,,
+ACAD,submissions.tickers,0001070494,ACADIA PHARMACEUTICALS INC,2834,True,Baker Bros,0,0,0,2,0,0,,,ACTIVE,,
+INCY,submissions.tickers,0000879169,INCYTE CORP,8731,False,Baker Bros,0,0,0,6,0,0,,,ACTIVE,,
+,미복구 · no 10-K/10-Q found,0001060736,Seagen Inc.,2836,True,Baker Bros,0,0,0,4,0,0,,,DELISTED,0001354457-23-000938,2023-12-14
+ONC,submissions.tickers,0001651308,BeOne Medicines Ltd.,2834,True,Baker Bros,0,0,0,3,0,0,,,ACTIVE,,
+,미복구 · no 10-K/10-Q found,0001584751,Talis Biomedical Corp,3826,False,Baker Bros,0,0,0,3,0,0,,,DELISTED,0001354457-24-000710,2024-09-20
+NGNE,submissions.tickers,0001404644,Neurogene Inc.,2834,True,Baker Bros;Redmile,1,0,0,8,0,1,2023-07-27,0001104659-23-084840,ACTIVE,,
+,미복구 · no 10-K/10-Q found,0001496323,"IGM Biosciences, Inc.",2834,True,Baker Bros;Redmile,0,0,0,8,0,0,,,DELISTED,0001354457-25-000811,2025-08-14
+KOD,submissions.tickers,0001468748,Kodiak Sciences Inc.,2836,True,Baker Bros,0,0,0,4,0,0,,,ACTIVE,,
+PRLD,submissions.tickers,0001678660,Prelude Therapeutics Inc,2834,True,Baker Bros;OrbiMed,0,0,0,3,0,0,,,ACTIVE,,
+SYRE,submissions.tickers,0001636282,"Spyre Therapeutics, Inc.",2834,True,Baker Bros;Deep Track;OrbiMed;Perceptive,0,3,0,8,0,3,2023-02-14,0001104659-23-021466,ACTIVE,,
+DBVT,submissions.tickers,0001613780,DBV Technologies S.A.,2836,True,Baker Bros;Perceptive,0,0,0,2,0,0,,,ACTIVE,,
+KNSA,submissions.tickers,0001730430,"Kiniksa Pharmaceuticals International, plc",2834,True,Baker Bros,0,0,0,1,0,0,,,ACTIVE,,
+ALGS,submissions.tickers,0001799448,"Aligos Therapeutics, Inc.",2836,True,Baker Bros;Deep Track,0,2,0,1,0,2,2022-02-14,0001104659-22-022802,ACTIVE,,
+GLUE,submissions.tickers,0001826457,"Monte Rosa Therapeutics, Inc.",2836,True,Baker Bros,0,1,0,0,0,1,2024-02-14,0001104659-24-023735,ACTIVE,,
+,미복구 · no 10-K/10-Q found,0001576263,"Mirati Therapeutics, Inc.",2834,True,Baker Bros;Perceptive,0,1,0,2,0,1,2024-02-14,0001104659-24-023741,DELISTED,0001354457-24-000023,2024-01-23
+,미복구 · no 10-K/10-Q found,0001744659,"Akero Therapeutics, Inc.",2834,True,Baker Bros;Redmile,0,2,0,3,0,2,2023-02-14,0001104659-23-021467,DELISTED,0001354457-25-001233,2025-12-09
+LONA,submissions.tickers,0001620463,"LeonaBio, Inc.",2836,True,Baker Bros;Perceptive,0,1,0,4,0,1,2024-02-14,0001104659-24-023744,ACTIVE,,
+NRIX,submissions.tickers,0001549595,"Nurix Therapeutics, Inc.",2834,True,Baker Bros;Deep Track;Redmile,0,3,0,9,0,3,2022-02-14,0001104659-22-022826,ACTIVE,,
+BMEA,submissions.tickers,0001840439,"Biomea Fusion, Inc.",2834,True,Baker Bros,0,1,0,1,0,1,2023-02-14,0001104659-23-021471,ACTIVE,,
+STOK,submissions.tickers,0001623526,"Stoke Therapeutics, Inc.",2834,True,Baker Bros;Redmile,0,1,0,4,0,1,2024-11-14,0001104659-24-118991,ACTIVE,,
+ABCL,submissions.tickers,0001703057,AbCellera Biologics Inc.,2834,True,Baker Bros,0,1,0,1,0,1,2024-02-14,0001104659-24-023719,ACTIVE,,
+IMTX,submissions.tickers,0001809196,Immatics N.V.,2836,True,Baker Bros;Perceptive,1,1,0,3,0,2,2022-02-14,0001104659-22-022822,DELISTED,0001354457-25-000599,2025-07-01
+,미복구 · no 10-K/10-Q found,0001860782,"2seventy bio, Inc.",2834,True,Baker Bros,0,1,0,1,0,1,2023-02-14,0001104659-23-021485,DELISTED,0001354457-25-000408,2025-05-13
+,미복구 · no 10-K/10-Q found,0001629137,"Global Blood Therapeutics, Inc.",2834,True,Baker Bros;Deep Track;Perceptive,0,2,0,2,0,2,2022-02-14,0001104659-22-022818,DELISTED,0001354457-22-000558,2022-10-05
+SGMT,submissions.tickers,0001400118,Sagimet Biosciences Inc.,2834,True,Baker Bros,0,1,0,1,0,1,2024-02-14,0001104659-24-023739,ACTIVE,,
+,미복구 · no 10-K/10-Q found,0001532346,"Atreca, Inc.",2834,True,Baker Bros;Redmile,0,1,0,1,0,1,2024-01-10,0001104659-24-003000,DELISTED,0001104659-24-036738,2024-03-20
+CABA,submissions.tickers,0001759138,"Cabaletta Bio, Inc.",2836,True,Baker Bros;Redmile,0,1,0,2,0,1,2023-02-14,0001104659-23-021472,ACTIVE,,
+REPL,submissions.tickers,0001737953,"Replimune Group, Inc.",2836,True,Baker Bros;Redmile,0,1,0,6,0,1,2023-02-14,0001104659-23-021475,ACTIVE,,
+,미복구 · no 10-K/10-Q found,0001513818,"Aravive, Inc.",2834,True,Baker Bros,0,1,0,1,0,1,2023-02-14,0001104659-23-021468,DELISTED,0001437749-24-002443,2024-01-29
+,,0001651311,Merus N.V.,2834,True,Baker Bros,0,0,0,1,0,0,,,ACTIVE,,
+CERS,submissions.tickers,0001020214,CERUS CORP,3841,False,Baker Bros,0,0,0,3,0,0,,,ACTIVE,,
+VSTM,submissions.tickers,0001526119,"Verastem, Inc.",2834,True,Baker Bros;OrbiMed,0,1,0,6,0,1,2023-02-14,0000947871-23-000191,ACTIVE,,
+AMRN,submissions.tickers,0000897448,AMARIN CORP PLC\UK,2834,True,Baker Bros,0,0,0,2,0,0,,,ACTIVE,,
+,미복구 · no 10-K/10-Q found,0001501134,Invitae Corp,8071,False,Baker Bros,0,0,0,1,0,0,,,DELISTED,0000876661-24-000106,2024-02-21
+CKDXF,submissions.tickers,0001815620,Opthea Ltd,2836,True,Baker Bros,0,0,0,3,0,0,,,DELISTED,0001193125-25-273377,2025-11-10
+BCRX,submissions.tickers,0000882796,BIOCRYST PHARMACEUTICALS INC,2836,True,Baker Bros,0,0,0,3,0,0,,,ACTIVE,,
+HRTX,submissions.tickers,0000818033,"HERON THERAPEUTICS, INC. /DE/",2834,True,Baker Bros;Deep Track,0,1,0,3,0,1,2022-08-19,0001172661-22-002028,DELISTED,0001354457-11-000128,2011-06-03
+,미복구 · no 10-K/10-Q found,0001621227,Adaptimmune Therapeutics PLC,2836,True,Baker Bros,0,0,0,1,0,0,,,DELISTED,0001104659-25-102828,2025-10-28
+ZYME,submissions.tickers,0001937653,Zymeworks Inc.,2834,True,Baker Bros;Perceptive;Redmile,0,1,0,7,0,1,2022-10-17,0001104659-22-109394,DELISTED,0001193125-22-305914,2022-12-15
+ALT,submissions.tickers,0001326190,"Altimmune, Inc.",2834,True,Baker Bros,0,0,0,1,0,0,,,DELISTED,0001144204-17-024770,2017-05-05
+MREO,submissions.tickers,0001719714,Mereo BioPharma Group plc,2834,True,Baker Bros;OrbiMed,0,0,0,6,0,0,,,ACTIVE,,
+,미복구 · no 10-K/10-Q found,0001403752,Zymeworks BC Inc.,2834,True,Baker Bros;Perceptive;Redmile,0,1,0,2,0,1,2022-08-08,0001104659-22-087361,DELISTED,0000876661-22-000832,2022-10-13
+,,0001087939,BAKER JULIAN,,False,Baker Bros,0,0,126,0,0,126,2021-09-09,0001638599-21-000706,ACTIVE,,
+,미복구 · no 10-K/10-Q found,0001822691,"GreenLight Biosciences Holdings, PBC",2836,True,Baker Bros,1,0,0,0,0,1,2023-06-08,0001193125-23-163625,DELISTED,0001354457-23-000521,2023-07-24
+,미복구 · no 10-K/10-Q found,0001300699,"Athenex, Inc.",2834,True,Perceptive,1,0,0,2,0,1,2023-02-02,0001193125-23-022824,DELISTED,0001354457-23-000482,2023-07-10
+,미복구 · no 10-K/10-Q found,0001092662,"CHEMBIO DIAGNOSTICS, INC.",2834,True,Perceptive,1,0,0,2,0,1,2023-04-07,0001193125-23-095377,DELISTED,0001354457-23-000304,2023-04-27
+,미복구 · no 10-K/10-Q found,0001178879,"AMICUS THERAPEUTICS, INC.",2834,True,Perceptive;Redmile,1,1,0,8,0,2,2022-02-22,0001193125-22-048723,DELISTED,0001354457-26-000371,2026-04-27
+,미복구 · no 10-K/10-Q found,0001805387,"Cerevel Therapeutics Holdings, Inc.",2834,True,Perceptive,1,0,0,2,0,1,2023-04-21,0001193125-23-110738,DELISTED,0001354457-24-000549,2024-08-01
+TRIB,submissions.tickers,0000888721,TRINITY BIOTECH PLC,2835,False,Perceptive,1,0,0,2,0,1,2024-02-09,0001193125-24-030515,ACTIVE,,
+,미복구 · no 10-K/10-Q found,0001253176,VAPOTHERM INC,3841,False,Perceptive,1,0,0,2,0,1,2024-06-25,0001193125-24-168118,DELISTED,0000876661-23-000999,2023-12-18
+LYRA,submissions.tickers,0001327273,"Lyra Therapeutics, Inc.",3841,False,Perceptive,0,0,0,5,0,0,,,DELISTED,0001193125-26-164179,2026-04-20
+MGTX,submissions.tickers,0001735438,MeiraGTx Holdings plc,2836,True,OrbiMed;Perceptive,0,0,0,5,0,0,,,ACTIVE,,
+,미복구 · no 10-K/10-Q found,0001785345,"Landos Biopharma, Inc.",2834,True,Perceptive,0,0,0,6,0,0,,,DELISTED,0001354457-24-000356,2024-05-23
+,미복구 · no 10-K/10-Q found,0000764195,VBI Vaccines Inc/BC,2834,True,Perceptive,0,0,0,3,0,0,,,DELISTED,0001354457-24-000661,2024-09-06
+CRNX,submissions.tickers,0001658247,"Crinetics Pharmaceuticals, Inc.",2834,True,Deep Track;OrbiMed;Perceptive,0,0,0,7,0,0,,,DELISTED,0001354457-26-000839,2026-09-01
+FBRX,submissions.tickers,0001419041,"Forte Biosciences, Inc.",2834,True,Farallon;OrbiMed;Perceptive,0,2,0,9,0,2,2023-08-10,0000908834-23-000094,DELISTED,0001354457-26-000824,2026-08-27
+DTIL,submissions.tickers,0001357874,PRECISION BIOSCIENCES INC,2836,True,Perceptive,0,1,0,1,0,1,2024-03-14,0001193125-24-067909,ACTIVE,,
+,미복구 · no 10-K/10-Q found,0001358762,REATA PHARMACEUTICALS INC,2834,True,Perceptive,0,1,0,0,0,1,2023-03-07,0001193125-23-062652,DELISTED,0001354457-23-000700,2023-09-26
+,미복구 · no 10-K/10-Q found,0001697532,"Applied Therapeutics, Inc.",2834,True,OrbiMed;Perceptive,0,1,0,5,0,1,2023-12-06,0001193125-23-289911,DELISTED,0001354457-26-000130,2026-02-03
+OKUR,submissions.tickers,0001637715,"OnKure Therapeutics, Inc.",2834,True,Deep Track;Perceptive,0,2,0,1,0,2,2024-10-10,0001193125-24-236085,ACTIVE,,
+AORT,submissions.tickers,0000784199,"ARTIVION, INC.",3841,False,Perceptive,0,1,0,0,0,1,2024-03-11,0001193125-24-065012,ACTIVE,,
+,미복구 · no 10-K/10-Q found,0001868734,"CinCor Pharma, Inc.",2834,True,Perceptive,0,1,0,0,0,1,2023-02-14,0001193125-23-038710,DELISTED,0001354457-23-000111,2023-02-24
+AMLX,submissions.tickers,0001658551,"Amylyx Pharmaceuticals, Inc.",2834,True,Perceptive,0,2,0,2,0,2,2022-06-21,0001193125-22-177148,ACTIVE,,
+IKT,submissions.tickers,0001750149,"Inhibikase Therapeutics, Inc.",2836,True,Perceptive,0,1,0,0,0,1,2024-10-22,0001193125-24-241067,ACTIVE,,
+NUVL,submissions.tickers,0001861560,"Nuvalent, Inc.",2834,True,Perceptive,0,1,0,1,0,1,2024-01-02,0001193125-24-000689,DELISTED,0001354457-26-000693,2026-07-15
+CTNM,submissions.tickers,0001855175,"Contineum Therapeutics, Inc.",2834,True,Perceptive,0,1,0,0,0,1,2024-04-15,0001193125-24-096240,ACTIVE,,
+,미복구 · no 10-K/10-Q found,0001966494,"CARGO Therapeutics, Inc.",2836,True,Perceptive,0,1,0,1,0,1,2023-11-14,0001193125-23-277115,DELISTED,0001354457-25-000828,2025-08-19
+NVNO,submissions.tickers,0001661053,enVVeno Medical Corp,3841,False,Perceptive,0,1,0,5,0,1,2021-09-17,0001193125-21-276241,DELISTED,0001354457-23-000366,2023-05-26
+EOLS,submissions.tickers,0001570562,"Evolus, Inc.",2834,True,Perceptive,0,1,0,2,0,1,2023-11-27,0001193125-23-283362,ACTIVE,,
+INBX,submissions.tickers,0002007919,"Inhibrx Biosciences, Inc.",2836,True,Perceptive,0,1,0,0,0,1,2024-11-14,0001193125-24-259034,ACTIVE,,
+IOVA,submissions.tickers,0001425205,"IOVANCE BIOTHERAPEUTICS, INC.",2836,True,Perceptive,0,1,0,4,0,1,2024-03-01,0001193125-24-056337,ACTIVE,,
+,미복구 · no 10-K/10-Q found,0001600132,"Bellerophon Therapeutics, Inc.",2834,True,Perceptive,0,1,0,1,0,1,2023-03-14,0001193125-23-069782,DELISTED,0001354457-23-000994,2023-12-27
+,미복구 · no 10-K/10-Q found,0001805890,Fusion Pharmaceuticals Inc.,2836,True,OrbiMed;Perceptive,0,1,0,2,0,1,2024-01-19,0001193125-24-011292,DELISTED,0001354457-24-000389,2024-06-05
+,미복구 · no 10-K/10-Q found,0001615055,IsoPlexis Corp,3826,False,Perceptive,0,1,0,3,0,1,2021-10-22,0001193125-21-305534,DELISTED,0001354457-23-000198,2023-03-21
+BDSX,submissions.tickers,0001439725,BIODESIX INC,8071,False,Perceptive,0,1,0,0,0,1,2024-05-13,0001193125-24-137327,ACTIVE,,
+COLL,submissions.tickers,0001267565,"COLLEGIUM PHARMACEUTICAL, INC",2834,True,Perceptive,0,0,0,1,0,0,,,ACTIVE,,
+ADMA,submissions.tickers,0001368514,"ADMA BIOLOGICS, INC.",2836,True,Perceptive,0,0,0,4,0,0,,,ACTIVE,,
+,미복구 · no 10-K/10-Q found,0001322505,"ALBIREO PHARMA, INC.",2834,True,Deep Track;Perceptive,0,1,0,4,0,1,2022-10-03,0001172661-22-002111,DELISTED,0001354457-23-000140,2023-03-02
+ANAB,submissions.tickers,0001370053,"ANAPTYSBIO, INC",2834,True,Deep Track;Perceptive,0,1,0,3,0,1,2023-10-02,0001172661-23-003268,ACTIVE,,
+YARW,submissions.tickers,0001566044,"Yarrow Bioscience, Inc.",2834,True,Perceptive,0,0,0,1,0,0,,,ACTIVE,,
+RCKT,submissions.tickers,0001281895,"ROCKET PHARMACEUTICALS, INC.",2834,True,Perceptive,0,0,0,1,0,0,,,ACTIVE,,
+,미복구 · no 10-K/10-Q found,0001410939,"IVERIC bio, Inc.",2834,True,Deep Track;Perceptive,0,1,0,4,0,1,2022-09-16,0001172661-22-002093,DELISTED,0001354457-23-000493,2023-07-11
+TARS,submissions.tickers,0001819790,"Tarsus Pharmaceuticals, Inc.",2836,True,Perceptive,0,0,0,2,0,0,,,ACTIVE,,
+,미복구 · no 10-K/10-Q found,0001596946,Quotient Ltd,2835,False,Perceptive,0,0,0,2,0,0,,,DELISTED,0001193125-22-310604,2022-12-22
+VRCA,submissions.tickers,0001660334,Verrica Pharmaceuticals Inc.,2834,True,OrbiMed;Perceptive,0,0,0,5,0,0,,,ACTIVE,,
+,미복구 · no 10-K/10-Q found,0001819724,Research Alliance Corp. II,6770,False,Perceptive,0,0,0,2,0,0,,,DELISTED,0001354457-22-000684,2022-12-06
+OM,submissions.tickers,0001484612,"Outset Medical, Inc.",3845,False,Perceptive,0,0,0,1,0,0,,,ACTIVE,,
+,미복구 · no 10-K/10-Q found,0001773427,"SpringWorks Therapeutics, Inc.",2836,True,Deep Track;OrbiMed;Perceptive,0,1,0,7,0,1,2023-04-14,0001172661-23-001703,DELISTED,0001354457-25-000604,2025-07-01
+CYPH,submissions.tickers,0001509745,CYPHERPUNK TECHNOLOGIES INC.,2834,True,Perceptive,0,0,0,3,0,0,,,ACTIVE,,
+SCYX,submissions.tickers,0001178253,SCYNEXIS INC,2834,True,Perceptive,0,0,0,1,0,0,,,ACTIVE,,
+ALDX,submissions.tickers,0001341235,"Aldeyra Therapeutics, Inc.",2834,True,Perceptive,0,0,0,5,0,0,,,ACTIVE,,
+BBIO,submissions.tickers,0001743881,"BridgeBio Pharma, Inc.",2834,True,Perceptive,0,0,0,1,0,0,,,ACTIVE,,
+,미복구 · no 10-K/10-Q found,0001718852,"Prometheus Biosciences, Inc.",2834,True,Perceptive,0,0,0,2,0,0,,,DELISTED,0001354457-23-000406,2023-06-16
+CHRS,submissions.tickers,0001512762,"Coherus Oncology, Inc.",2836,True,Perceptive,0,0,0,2,0,0,,,ACTIVE,,
+,미복구 · no 10-K/10-Q found,0001261249,AGILE THERAPEUTICS INC,2834,True,Perceptive,0,0,0,2,0,0,,,DELISTED,0001354457-24-000378,2024-06-03
+KRRO,submissions.tickers,0001703647,"Korro Bio, Inc.",2834,True,Deep Track;Perceptive,0,1,0,2,0,1,2024-04-26,0001172661-24-001941,ACTIVE,,
+,미복구 · no 10-K/10-Q found,0001724979,Rain Oncology Inc.,2834,True,Perceptive,0,0,0,3,0,0,,,DELISTED,0001354457-24-000038,2024-01-26
+,미복구 · no 10-K/10-Q found,0001671818,"Oncorus, Inc.",2834,True,Perceptive,0,0,0,1,0,0,,,DELISTED,0001354457-23-000491,2023-07-10
+,미복구 · no 10-K/10-Q found,0001673772,"RAPT Therapeutics, Inc.",2834,True,Deep Track;Perceptive;Redmile,0,2,0,7,0,2,2022-06-03,0001104659-22-068166,DELISTED,0001354457-26-000226,2026-03-03
+,미복구 · no 10-K/10-Q found,0001695357,"Provention Bio, Inc.",2834,True,Perceptive,0,0,0,1,0,0,,,DELISTED,0001354457-23-000303,2023-04-27
+,미복구 · no 10-K/10-Q found,0001401395,Neptune Wellness Solutions Inc.,2834,True,Perceptive,0,0,0,2,0,0,,,DELISTED,0001354457-24-000298,2024-04-25
+,,0001164426,EDELMAN JOSEPH,,False,Perceptive,0,0,99,0,0,99,2021-09-28,0001062993-21-008980,ACTIVE,,
+,,0001727440,Stone Adam Leo,,False,Perceptive,0,0,6,0,0,6,2022-06-09,0001062993-22-014590,ACTIVE,,
+,미복구 · no 10-K/10-Q found,0001029142,DYNAVAX TECHNOLOGIES CORP,2834,True,Deep Track,1,1,0,2,0,2,2023-05-19,0001172661-23-002355,DELISTED,0001354457-26-000154,2026-02-10
+SLN,submissions.tickers,0001479615,Silence Therapeutics plc,2834,True,Deep Track,0,1,0,2,0,1,2022-08-22,0001172661-22-002030,ACTIVE,,
+NUVB,submissions.tickers,0001811063,Nuvation Bio Inc.,2834,True,Deep Track,0,1,0,1,0,1,2022-06-23,0001172661-22-001537,DELISTED,0000876661-26-000118,2026-02-10
+PLRX,submissions.tickers,0001746473,"PLIANT THERAPEUTICS, INC.",2834,True,Deep Track;Redmile,0,2,0,4,0,2,2023-03-20,0001172661-23-001545,ACTIVE,,
+IVVD,submissions.tickers,0001832038,"Invivyd, Inc.",2836,True,Deep Track,0,1,0,1,0,1,2024-02-12,0001172661-24-000706,ACTIVE,,
+,미복구 · no 10-K/10-Q found,0001831363,"Terns Pharmaceuticals, Inc.",2834,True,Deep Track;OrbiMed,0,1,0,6,0,1,2023-07-28,0001172661-23-002664,DELISTED,0001354457-26-000405,2026-05-05
+ENGN,submissions.tickers,0001980845,enGene Therapeutics Inc.,2836,True,Deep Track,0,1,0,0,0,1,2024-02-23,0001172661-24-001669,ACTIVE,,
+,미복구 · no 10-K/10-Q found,0001556263,"Syros Pharmaceuticals, Inc.",2834,True,Deep Track,0,1,0,0,0,1,2022-09-19,0001172661-22-002095,DELISTED,0001193125-25-050859,2025-03-10
+KROS,submissions.tickers,0001664710,"Keros Therapeutics, Inc.",2834,True,Deep Track;OrbiMed,0,1,0,4,0,1,2021-12-30,0001172661-21-002445,ACTIVE,,
+OCUL,submissions.tickers,0001393434,"OCULAR THERAPEUTIX, INC",2834,True,Deep Track,0,1,0,0,0,1,2023-12-22,0001172661-23-004087,ACTIVE,,
+,,0001990550,"Ambrx Biopharma, Inc.",2836,True,Deep Track,0,1,0,2,0,1,2023-11-02,0001172661-23-003593,ACTIVE,,
+ASMB,submissions.tickers,0001426800,"ASSEMBLY BIOSCIENCES, INC.",2834,True,Deep Track,0,1,0,2,0,1,2021-10-12,0001172661-21-002028,ACTIVE,,
+AGEN,submissions.tickers,0001098972,AGENUS INC,2836,True,Deep Track,0,1,0,3,0,1,2022-04-08,0001172661-22-001085,ACTIVE,,
+IMVT,submissions.tickers,0001764013,"Immunovant, Inc.",2836,True,Deep Track,0,1,0,2,0,1,2022-02-11,0001172661-22-000395,DELISTED,0001354457-20-000251,2020-06-15
+AUTL,submissions.tickers,0001730463,Autolus Therapeutics plc,2836,True,Deep Track,0,1,0,3,0,1,2022-12-19,0001172661-22-002614,ACTIVE,,
+,미복구 · no 10-K/10-Q found,0001808158,Repare Therapeutics Inc.,2834,True,Deep Track;OrbiMed;Redmile,0,1,0,9,0,1,2021-10-29,0001172661-21-002073,DELISTED,0001354457-26-000100,2026-01-28
+,미복구 · no 10-K/10-Q found,0001492422,"Apellis Pharmaceuticals, Inc.",2834,True,Deep Track,0,1,0,1,0,1,2024-11-22,0001172661-24-005353,DELISTED,0001354457-26-000449,2026-05-14
+IMUX,submissions.tickers,0001280776,"IMMUNIC, INC.",2834,True,Deep Track,0,1,0,2,0,1,2022-10-20,0001172661-22-002221,ACTIVE,,
+ABVX,submissions.tickers,0001956827,Abivax S.A.,2834,True,Deep Track,0,1,0,1,0,1,2023-10-30,0001172661-23-003538,ACTIVE,,
+EDIT,submissions.tickers,0001650664,"Editas Medicine, Inc.",2836,True,Deep Track,0,1,0,1,0,1,2023-08-04,0001172661-23-002763,ACTIVE,,
+,미복구 · no 10-K/10-Q found,0001564824,Allakos Inc.,2834,True,Deep Track;Redmile,0,2,0,4,0,2,2022-09-30,0001172661-22-002100,DELISTED,0001354457-25-000422,2025-05-15
+,미복구 · no 10-K/10-Q found,0001640455,"Jounce Therapeutics, Inc.",2836,True,Deep Track;OrbiMed,0,2,0,4,0,2,2021-09-01,0001172661-21-001908,DELISTED,0001354457-23-000336,2023-05-04
+GH,submissions.tickers,0001576280,"Guardant Health, Inc.",8071,False,Deep Track,0,2,0,1,0,2,2024-04-12,0001172661-24-001836,ACTIVE,,
+,미복구 · no 10-K/10-Q found,0001434868,"Esperion Therapeutics, Inc.",2834,True,Deep Track,0,1,0,1,0,1,2021-12-09,0001172661-21-002426,DELISTED,0001354457-26-000668,2026-07-13
+DFTX,submissions.tickers,0001813814,"Definium Therapeutics, Inc.",2833,False,Deep Track,0,1,0,0,0,1,2024-03-15,0001172661-24-001691,ACTIVE,,
+CNTX,submissions.tickers,0001842952,Context Therapeutics Inc.,2834,True,Deep Track,0,1,0,0,0,1,2024-05-10,0001172661-24-002164,ACTIVE,,
+,미복구 · no 10-K/10-Q found,0001435049,"CHINOOK THERAPEUTICS, INC.",2834,True,Deep Track;Farallon,1,1,0,1,0,2,2022-02-16,0001172661-22-000986,DELISTED,0001354457-23-000573,2023-08-11
+PASG,submissions.tickers,0001787297,"Passage BIO, Inc.",2836,True,Deep Track;OrbiMed,0,1,0,5,0,1,2021-10-25,0001172661-21-002057,ACTIVE,,
+AUPH,submissions.tickers,0001600620,Aurinia Pharmaceuticals Inc.,2834,True,Deep Track,0,1,0,1,0,1,2022-10-28,0001172661-22-002260,ACTIVE,,
+,미복구 · no 10-K/10-Q found,0001827087,"Vigil Neuroscience, Inc.",2836,True,Deep Track,0,1,0,2,0,1,2022-08-22,0001172661-22-002029,DELISTED,0001354457-25-000762,2025-08-05
+,미복구 · no 10-K/10-Q found,0001595585,"Tricida, Inc.",2834,True,Deep Track;OrbiMed,0,1,0,2,0,1,2021-11-17,0001172661-21-002410,DELISTED,0001354457-23-000148,2023-03-03
+MBX,submissions.tickers,0001776111,"MBX Biosciences, Inc.",2834,True,Deep Track;OrbiMed,1,1,0,0,0,2,2024-09-23,0001172661-24-004091,ACTIVE,,
+VALN,submissions.tickers,0001836564,Valneva SE,2836,True,Deep Track,0,1,0,1,0,1,2022-10-07,0001172661-22-002147,ACTIVE,,
+INO,submissions.tickers,0001055726,"INOVIO PHARMACEUTICALS, INC.",2834,True,Deep Track,0,1,0,0,0,1,2024-04-26,0001172661-24-001942,DELISTED,0001193125-14-340363,2014-09-12
+TECX,submissions.tickers,0001681087,"Tectonic Therapeutic, Inc.",2836,True,Deep Track;Farallon,0,1,0,2,0,1,2023-02-17,0001175707-23-000089,ACTIVE,,
+,,0001397513,KROIN DAVID,,False,Deep Track,0,0,7,0,0,7,2024-05-13,0000950170-24-058720,ACTIVE,,
+,미복구 · no 10-K/10-Q found,0001496963,"Squarespace, Inc.",7372,False,Farallon,1,0,0,0,0,1,2024-10-16,0000908834-24-000262,DELISTED,0000876661-24-001010,2024-10-17
+EXEL,submissions.tickers,0000939767,"EXELIXIS, INC.",2836,True,Farallon,2,0,0,5,0,2,2023-03-20,0001175707-23-000096,ACTIVE,,
+,미복구 · no 10-K/10-Q found,0001756497,Change Healthcare Inc.,7374,False,Farallon,1,0,0,0,0,1,2022-10-07,0000908834-22-000119,DELISTED,0001354457-22-000557,2022-10-03
+,미복구 · no 10-K/10-Q found,0001859639,Cazoo Group Ltd,5500,False,Farallon,3,0,0,19,0,3,2023-03-24,0001175707-23-000099,DELISTED,0000876661-24-000389,2024-05-23
+,미복구 · no 10-K/10-Q found,0001865408,Exscientia plc,2836,True,Farallon,1,0,0,0,0,1,2021-10-15,0001193125-21-300074,DELISTED,0001354457-24-000880,2024-11-20
+,미복구 · no 10-K/10-Q found,0001606457,Atento S.A.,4813,False,Farallon,0,0,0,2,0,0,,,DELISTED,0000876661-23-000640,2023-08-07
+,미복구 · no 10-K/10-Q found,0001692412,Playa Hotels & Resorts N.V.,7011,False,Farallon,0,0,0,1,0,0,,,DELISTED,0001104659-25-059872,2025-06-16
+,미복구 · no 10-K/10-Q found,0001365916,"AMYRIS, INC.",2860,False,Farallon,0,1,0,2,0,1,2022-02-24,0000908834-22-000100,DELISTED,0001354457-23-000646,2023-09-08
+,미복구 · no 10-K/10-Q found,0001783032,"Elevation Oncology, Inc.",2836,True,Farallon;OrbiMed,0,2,0,2,0,2,2024-01-22,0000908834-24-000014,DELISTED,0001354457-25-000732,2025-07-23
+NYT,submissions.tickers,0000071691,NEW YORK TIMES CO,2711,False,Farallon,0,1,0,0,0,1,2024-01-02,0000908834-24-000003,ACTIVE,,
+,미복구 · no 10-K/10-Q found,0001840161,Forest Road Acquisition Corp. II,6770,False,Farallon,0,1,0,1,0,1,2023-04-06,0001175707-23-000105,DELISTED,0000876661-23-000965,2023-12-13
+LUNR,submissions.tickers,0001844452,"Intuitive Machines, Inc.",3812,False,Farallon,0,1,0,2,0,1,2021-10-01,0001104659-21-121894,DELISTED,0001354457-25-000232,2025-03-21
+LNTH,submissions.tickers,0001521036,"Lantheus Holdings, Inc.",2835,False,Farallon,0,1,0,0,0,1,2024-11-14,0000908834-24-000339,ACTIVE,,
+,미복구 · no 10-K/10-Q found,0001869673,Berenson Acquisition Corp. I,6770,False,Farallon,0,1,0,3,0,1,2021-10-08,0001104659-21-124611,DELISTED,0001143313-24-000103,2024-10-16
+BEAM,submissions.tickers,0001745999,Beam Therapeutics Inc.,2836,True,Farallon;Redmile,0,2,0,4,0,2,2022-07-14,0000908834-22-000110,ACTIVE,,
+,미복구 · no 10-K/10-Q found,0001838513,Marblegate Acquisition Corp.,6770,False,Farallon,0,1,0,4,0,1,2021-10-12,0001104659-21-125234,DELISTED,0001193125-25-079148,2025-04-11
+,미복구 · no 10-K/10-Q found,0001832415,"Better Therapeutics, Inc.",8000,False,Farallon,0,1,0,2,0,1,2021-11-08,0001104659-21-135511,DELISTED,0001354457-24-000345,2024-05-16
+CLVT,submissions.tickers,0001764046,CLARIVATE PLC,7374,False,Farallon,0,1,0,1,0,1,2022-09-07,0000908834-22-000114,DELISTED,0000876661-24-000449,2024-06-03
+RVMD,submissions.tickers,0001628171,"Revolution Medicines, Inc.",2836,True,Farallon,0,1,0,1,0,1,2023-11-09,0000908834-23-000147,ACTIVE,,
+AGIO,submissions.tickers,0001439222,"AGIOS PHARMACEUTICALS, INC.",2834,True,Farallon,0,1,0,2,0,1,2023-11-09,0000908834-23-000146,ACTIVE,,
+ARMK,submissions.tickers,0001584509,Aramark,5812,False,Farallon,0,1,0,4,0,1,2023-10-16,0000908834-23-000124,ACTIVE,,
+,미복구 · no 10-K/10-Q found,0001846975,SDCL EDGE Acquisition Corp,6770,False,Farallon,0,1,0,3,0,1,2021-11-09,0001104659-21-136187,DELISTED,0000876661-24-001081,2024-11-18
+ANNA,submissions.tickers,0001845123,"AleAnna, Inc.",1311,False,Farallon,0,1,0,4,0,1,2021-12-27,0000908834-21-000035,DELISTED,0001354457-24-000938,2024-12-13
+,미복구 · no 10-K/10-Q found,0001849902,SEP Acquisition Corp.,3841,False,Farallon,0,0,0,2,0,0,,,DELISTED,0001354457-24-000488,2024-07-16
+ENTA,submissions.tickers,0001177648,ENANTA PHARMACEUTICALS INC,2834,True,Farallon,0,0,0,3,0,0,,,ACTIVE,,
+,미복구 · no 10-K/10-Q found,0001846804,"Big Sky Growth Partners, Inc.",6770,False,Farallon,0,0,0,2,0,0,,,DELISTED,0001354457-22-000716,2022-12-12
+,미복구 · no 10-K/10-Q found,0001838831,Disruptive Acquisition Corp I,6770,False,Farallon,0,0,0,3,0,0,,,DELISTED,0001354457-24-000090,2024-02-15
+NXDR,submissions.tickers,0001846069,"Nextdoor Holdings, Inc.",7370,False,Farallon,0,0,0,1,0,0,,,DELISTED,0001628280-21-021969,2021-11-05
+CRBU,submissions.tickers,0001619856,"Caribou Biosciences, Inc.",2836,True,Farallon,0,0,0,1,0,0,,,ACTIVE,,
+,미복구 · no 10-K/10-Q found,0001844908,Shelter Acquisition Corp I,6770,False,Farallon,0,0,0,2,0,0,,,DELISTED,0001354457-22-000762,2022-12-21
+,미복구 · no 10-K/10-Q found,0001733294,Generation Bio Co.,2834,True,Farallon,0,0,0,2,0,0,,,DELISTED,0001354457-26-000149,2026-02-09
+,미복구 · no 10-K/10-Q found,0001623715,"Imago BioSciences, Inc.",2834,True,Farallon,0,0,0,2,0,0,,,DELISTED,0001354457-23-000013,2023-01-11
+BCAB,submissions.tickers,0001826892,"BioAtla, Inc.",2836,True,Farallon,0,0,0,1,0,0,,,ACTIVE,,
+SLDP,submissions.tickers,0001844862,"Solid Power, Inc.",3690,False,Farallon,0,0,0,1,0,0,,,DELISTED,0001354457-21-001435,2021-12-08
+PTGX,submissions.tickers,0001377121,"Protagonist Therapeutics, Inc",2834,True,Farallon,0,0,0,3,0,0,,,ACTIVE,,
+,미복구 · no 10-K/10-Q found,0000835887,PROGENICS PHARMACEUTICALS INC,2834,True,Farallon,0,0,0,1,0,0,,,DELISTED,0001354457-20-000263,2020-06-22
+,,0001461492,Savara Inc.,,False,Farallon,0,0,0,2,0,0,,,ACTIVE,,
+SVRA,submissions.tickers,0001160308,Savara Inc,2834,True,Farallon,0,0,0,2,0,0,,,DELISTED,0001193125-17-143159,2017-04-27
+,미복구 · no 10-K/10-Q found,0001784797,Broadmark Realty Capital Inc.,6798,False,Farallon,0,0,0,1,0,0,,,DELISTED,0000876661-23-000458,2023-05-31
+,미복구 · no 10-K/10-Q found,0001819615,Clever Leaves Holdings Inc.,2834,True,Farallon,0,0,0,3,0,0,,,DELISTED,0001213900-24-040093,2024-05-06
+,미복구 · no 10-K/10-Q found,0001853021,Metals Acquisition Corp,6770,False,Farallon,0,0,0,2,0,0,,,DELISTED,0000876661-23-000501,2023-06-16
+,,0001245635,WEHRLY MARK C,,False,Farallon,0,0,2,0,0,2,2021-11-15,0001209191-21-064383,ACTIVE,,
+,,0001245637,FRIED RICHARD B,,False,Farallon,0,0,2,0,0,2,2021-11-15,0001209191-21-064384,ACTIVE,,
+,미복구 · no 10-K/10-Q found,0001745020,"Theseus Pharmaceuticals, Inc.",2834,True,OrbiMed,1,0,0,6,0,1,2021-10-19,0000947871-21-001068,DELISTED,0001354457-24-000073,2024-02-14
+AVBP,submissions.tickers,0001868279,"ArriVent BioPharma, Inc.",2834,True,OrbiMed,1,0,0,0,0,1,2024-02-05,0000947871-24-000091,ACTIVE,,
+UPB,submissions.tickers,0002022626,"Upstream Bio, Inc.",2834,True,OrbiMed,1,0,0,0,0,1,2024-10-17,0000947871-24-000805,ACTIVE,,
+,미복구 · no 10-K/10-Q found,0001764974,Turnstone Biologics Corp.,2836,True,OrbiMed,1,0,0,0,0,1,2023-07-24,0000947871-23-000776,DELISTED,0001354457-25-000800,2025-08-11
+,미복구 · no 10-K/10-Q found,0001836379,VectivBio Holding AG,2836,True,OrbiMed,1,1,0,1,0,2,2022-02-11,0000947871-22-000216,DELISTED,0001193125-23-184214,2023-07-10
+,,0001900520,"Lomond Therapeutics Holdings, Inc.",2834,True,OrbiMed,2,0,0,0,0,2,2024-11-08,0000947871-24-000868,ACTIVE,,
+APLM,submissions.tickers,0001944885,Apollomics Inc.,2834,True,OrbiMed,1,0,0,6,0,1,2023-04-12,0000947871-23-000450,ACTIVE,,
+QTTB,submissions.tickers,0001661998,Q32 Bio Inc.,2834,True,OrbiMed,1,0,0,0,0,1,2024-03-28,0000947871-24-000321,ACTIVE,,
+TRAW,submissions.tickers,0001130598,"Traws Pharma, Inc.",2834,True,OrbiMed,2,0,0,1,0,2,2024-04-08,0000929638-24-001418,DELISTED,0001354457-21-000843,2021-07-23
+PMVP,submissions.tickers,0001699382,"PMV Pharmaceuticals, Inc.",2834,True,OrbiMed,0,0,0,2,0,0,,,ACTIVE,,
+ARQT,submissions.tickers,0001787306,"Arcutis Biotherapeutics, Inc.",2834,True,OrbiMed,0,0,0,4,0,0,,,ACTIVE,,
+CMPX,submissions.tickers,0001738021,"Compass Therapeutics, Inc.",2836,True,OrbiMed,0,0,0,3,0,0,,,ACTIVE,,
+DMRA,submissions.tickers,0001800315,"Damora Therapeutics, Inc.",2834,True,OrbiMed,0,0,0,6,0,0,,,ACTIVE,,
+IRON,submissions.tickers,0001816736,"Disc Medicine, Inc.",2834,True,OrbiMed,0,0,0,4,0,0,,,DELISTED,0001354457-21-000178,2021-02-05
+,미복구 · no 10-K/10-Q found,0001290149,"Sierra Oncology, Inc.",2834,True,OrbiMed,0,0,0,3,0,0,,,DELISTED,0001354457-22-000377,2022-07-01
+NXTC,submissions.tickers,0001661059,"NextCure, Inc.",2834,True,OrbiMed,0,0,0,1,0,0,,,ACTIVE,,
+TELA,submissions.tickers,0001561921,"TELA Bio, Inc.",3841,False,OrbiMed,0,0,0,5,0,0,,,ACTIVE,,
+CRVS,submissions.tickers,0001626971,"Corvus Pharmaceuticals, Inc.",2834,True,OrbiMed,0,0,0,3,0,0,,,ACTIVE,,
+ORIC,submissions.tickers,0001796280,"Oric Pharmaceuticals, Inc.",2834,True,OrbiMed,0,0,0,1,0,0,,,ACTIVE,,
+CALC,submissions.tickers,0001534133,"CalciMedica, Inc.",2834,True,OrbiMed,0,0,0,2,0,0,,,ACTIVE,,
+IMA,submissions.tickers,0001835579,"ImageneBio, Inc.",2836,True,OrbiMed,0,0,0,2,0,0,,,ACTIVE,,
+XTNT,submissions.tickers,0001453593,"Xtant Medical Holdings, Inc.",3841,False,OrbiMed,0,0,0,4,0,0,,,DELISTED,0001143313-15-000014,2015-05-06
+,,0001385359,"CalciMedica Subsidiary, Inc.",2834,True,OrbiMed,0,0,0,1,0,0,,,INACTIVE_FILER,,
+,미복구 · no 10-K/10-Q found,0001522860,"Acutus Medical, Inc.",3841,False,OrbiMed,0,0,0,1,0,0,,,DELISTED,0001354457-24-000349,2024-05-16
+,미복구 · no 10-K/10-Q found,0001551986,"9 METERS BIOPHARMA, INC.",2834,True,OrbiMed,0,0,0,1,0,0,,,DELISTED,0001354457-23-000652,2023-09-08
+CMMB,submissions.tickers,0001534248,Chemomab Therapeutics Ltd.,2834,True,OrbiMed,0,0,0,1,0,0,,,ACTIVE,,
+NSPR,submissions.tickers,0001433607,"InspireMD, Inc.",3841,False,OrbiMed,0,1,0,1,0,1,2024-02-14,0000947871-24-000162,DELISTED,0001354457-22-000186,2022-03-15
+,미복구 · no 10-K/10-Q found,0001407973,"Sonendo, Inc.",3843,False,OrbiMed,0,1,0,1,0,1,2022-02-11,0000947871-22-000213,DELISTED,0000876661-24-000270,2024-04-11
+GYRE,submissions.tickers,0001124105,"GYRE THERAPEUTICS, INC.",2834,True,OrbiMed,0,1,0,1,0,1,2022-02-11,0000947871-22-000195,ACTIVE,,
+ALXO,submissions.tickers,0001810182,ALX ONCOLOGY HOLDINGS INC,2834,True,OrbiMed;Redmile,0,2,0,3,0,2,2023-02-14,0000947871-23-000164,ACTIVE,,
+KZR,submissions.tickers,0001645666,"Kezar Life Sciences, Inc.",2834,True,OrbiMed,0,1,0,1,0,1,2023-02-14,0000947871-23-000176,DELISTED,0001354457-26-000433,2026-05-11
+SRRK,submissions.tickers,0001727196,Scholar Rock Holding Corp,2836,True,OrbiMed;Redmile,0,1,0,7,0,1,2024-02-14,0000947871-24-000158,ACTIVE,,
+,미복구 · no 10-K/10-Q found,0001442836,"Mersana Therapeutics, Inc.",2834,True,OrbiMed,0,1,0,1,0,1,2023-02-14,0000947871-23-000180,DELISTED,0001354457-26-000008,2026-01-06
+,,0001843499,AFA ASSET BASED LENDING FUND,,False,OrbiMed,0,1,0,0,0,1,2022-05-13,0000947871-22-000560,ACTIVE,,
+NPCE,submissions.tickers,0001528287,NeuroPace Inc,3841,False,OrbiMed,0,0,0,4,0,0,,,ACTIVE,,
+SIBN,submissions.tickers,0001459839,"SI-BONE, Inc.",3841,False,OrbiMed,0,1,0,3,0,1,2022-02-11,0000947871-22-000212,ACTIVE,,
+,미복구 · no 10-K/10-Q found,0000891293,CTI BIOPHARMA CORP,2834,True,OrbiMed,0,0,0,1,0,0,,,DELISTED,0001354457-23-000428,2023-06-26
+,미복구 · no 10-K/10-Q found,0001634432,Strongbridge Biopharma plc,2834,True,OrbiMed,0,0,0,1,0,0,,,DELISTED,0001354457-21-001127,2021-10-05
+TBPH,submissions.tickers,0001583107,"Theravance Biopharma, Inc.",2834,True,OrbiMed,0,0,0,2,0,0,,,ACTIVE,,
+XENE,submissions.tickers,0001582313,Xenon Pharmaceuticals Inc.,2834,True,OrbiMed,0,0,0,1,0,0,,,ACTIVE,,
+VTGN,submissions.tickers,0001411685,"Vistagen Therapeutics, Inc.",2834,True,OrbiMed,0,0,0,2,0,0,,,ACTIVE,,
+,미복구 · no 10-K/10-Q found,0001807901,"Pandion Therapeutics, Inc.",2834,True,OrbiMed,0,0,0,1,0,0,,,DELISTED,0001354457-21-000437,2021-04-01
+,미복구 · no 10-K/10-Q found,0001501756,"Adverum Biotechnologies, Inc.",2836,True,OrbiMed,0,0,0,1,0,0,,,DELISTED,0001354457-25-001236,2025-12-09
+,,0001282930,GORDON CARL L,,False,OrbiMed,0,0,52,0,0,52,2021-10-06,0000899243-21-039455,ACTIVE,,
+,,0001537370,Gupta Rishi,,False,OrbiMed,0,0,9,0,0,9,2022-12-27,0000947871-22-001256,ACTIVE,,
+,,0001706399,Chimovits Erez,,False,OrbiMed,0,0,6,0,0,6,2024-10-15,0000950170-24-114685,ACTIVE,,
+,,0001357522,Thompson Peter A.,,False,OrbiMed,0,0,49,0,0,49,2021-09-13,0001567619-21-017009,ACTIVE,,
+,,0001794070,Ashiya Mona,,False,OrbiMed,0,0,20,0,0,20,2022-01-28,0001209191-22-005512,ACTIVE,,
+,,0001572451,Bonita David P,,False,OrbiMed,0,0,21,1,0,21,2021-09-02,0000947871-21-000978,ACTIVE,,
+,,0001995088,Xu Diyong,,False,OrbiMed,0,0,5,1,0,5,2024-03-27,0000950170-24-037395,ACTIVE,,
+,,0001732521,Eggenberg Michael,,False,OrbiMed,0,0,1,0,0,1,2022-08-17,0001235802-22-000095,INACTIVE_FILER,,
+,,0001231954,SQUINTO STEPHEN P,,False,OrbiMed,0,0,1,0,0,1,2022-05-20,0001104659-22-063509,INACTIVE_FILER,,
+,,0001732511,Rizzo Matthew,,False,OrbiMed,0,0,1,0,0,1,2022-08-17,0001235802-22-000094,INACTIVE_FILER,,
+APTOF,submissions.tickers,0000882361,Aptose Biosciences Inc.,2836,True,OrbiMed,0,0,0,1,0,0,,,DELISTED,0001354457-25-000704,2025-07-21
+,미복구 · no 10-K/10-Q found,0001819113,"Science 37 Holdings, Inc.",8731,False,Redmile,3,0,0,3,0,3,2021-10-18,0001104659-21-127160,DELISTED,0001354457-24-000138,2024-03-12
+,미복구 · no 10-K/10-Q found,0001402479,"MedAvail Holdings, Inc.",5912,False,Redmile,0,0,0,7,0,0,,,DELISTED,0001354457-24-000195,2024-03-21
+ABSI,submissions.tickers,0001672688,Absci Corp,8731,False,Redmile,0,0,0,1,0,0,,,ACTIVE,,
+,미복구 · no 10-K/10-Q found,0001769804,"Augmedix, Inc.",7389,False,Redmile,0,0,0,8,0,0,,,DELISTED,0001354457-24-000740,2024-10-02
+STTK,submissions.tickers,0001680367,"Shattuck Labs, Inc.",2834,True,Redmile,0,0,0,2,0,0,,,ACTIVE,,
+FATE,submissions.tickers,0001434316,FATE THERAPEUTICS INC,2836,True,Redmile,0,0,0,3,0,0,,,ACTIVE,,
+IMNM,submissions.tickers,0001472012,Immunome Inc.,2834,True,Redmile,0,1,0,1,0,1,2023-10-12,0001104659-23-108862,ACTIVE,,
+,미복구 · no 10-K/10-Q found,0001654151,"Deciphera Pharmaceuticals, Inc.",2834,True,Redmile,0,1,0,3,0,1,2022-05-09,0001104659-22-057623,DELISTED,0001354457-24-000399,2024-06-11
+,미복구 · no 10-K/10-Q found,0001100397,"Ayala Pharmaceuticals, Inc.",2834,True,Redmile,0,1,0,1,0,1,2023-02-08,0001104659-23-014621,DELISTED,0001354457-22-000116,2022-02-09
+RGNX,submissions.tickers,0001590877,REGENXBIO Inc.,2836,True,Redmile,0,1,0,3,0,1,2023-11-17,0001104659-23-119604,ACTIVE,,
+,미복구 · no 10-K/10-Q found,0001656634,"Gritstone bio, Inc.",2836,True,Redmile,0,1,0,4,0,1,2024-10-07,0001104659-24-106722,DELISTED,0001354457-25-000176,2025-03-05
+KRYS,submissions.tickers,0001711279,"Krystal Biotech, Inc.",2836,True,Redmile,0,0,0,4,0,0,,,ACTIVE,,
+,미복구 · no 10-K/10-Q found,0001445283,"KINETA, INC./DE",2834,True,Redmile,0,0,0,1,0,0,,,DELISTED,0001354457-24-000793,2024-10-15
+CLDX,submissions.tickers,0000744218,"Celldex Therapeutics, Inc.",2835,False,Redmile,0,0,0,1,0,0,,,ACTIVE,,
+ATRA,submissions.tickers,0001604464,"Atara Biotherapeutics, Inc.",2836,True,Redmile,0,0,0,4,0,0,,,ACTIVE,,
+ANNX,submissions.tickers,0001528115,"Annexon, Inc.",2834,True,Redmile,0,0,0,4,0,0,,,ACTIVE,,
+ADCT,submissions.tickers,0001771910,ADC Therapeutics SA,2834,True,Redmile,0,0,0,4,0,0,,,ACTIVE,,
+,,0001840748,LAVA Therapeutics NV,2834,True,Redmile,0,0,0,2,0,0,,,ACTIVE,,
+,미복구 · no 10-K/10-Q found,0001571498,"Epizyme, Inc.",2834,True,Redmile,0,0,0,1,0,0,,,DELISTED,0001354457-22-000461,2022-08-12
+RCEL,submissions.tickers,0001762303,"AVITA Medical, Inc.",3841,False,Redmile,0,0,0,1,0,0,,,ACTIVE,,
+STXS,submissions.tickers,0001289340,"Stereotaxis, Inc.",3845,False,Redmile,0,0,0,3,0,0,,,DELISTED,0001354457-16-000551,2016-11-10
+,미복구 · no 10-K/10-Q found,0001750019,TCR2 THERAPEUTICS INC.,2836,True,Redmile,0,0,0,1,0,0,,,DELISTED,0001354457-23-000372,2023-06-01
+,미복구 · no 10-K/10-Q found,0001797336,"Old Ayala, Inc",2836,True,Redmile,0,0,0,2,0,0,,,DELISTED,0001354457-23-000028,2023-01-19
+SNTI,submissions.tickers,0001854270,"Senti Biosciences Holdings, Inc.",2836,True,Redmile,0,0,0,1,0,0,,,ACTIVE,,
+APRE,submissions.tickers,0001781983,"Aprea Therapeutics, Inc.",2834,True,Redmile,0,0,0,1,0,0,,,ACTIVE,,
+ZNTL,submissions.tickers,0001725160,"Zentalis Pharmaceuticals, Inc.",2834,True,Redmile,0,0,0,1,0,0,,,ACTIVE,,
+,,0001748010,Lee Michael Stewart,,False,Redmile,0,0,29,0,0,29,2021-10-04,0001104659-21-122675,ACTIVE,,
+,,0001831991,Faulkner Robert C.,,False,Redmile,0,0,11,0,0,11,2021-10-12,0001104659-21-125513,ACTIVE,,
+,,0001859522,Nagpal Amrit,,False,Redmile,0,0,3,0,0,3,2022-06-10,0001104659-22-070288,INACTIVE_FILER,,
+,,0001827577,van Hamel Platerink Gerard,,False,Redmile,0,0,1,0,0,1,2022-01-12,0001104659-22-003721,INACTIVE_FILER,,

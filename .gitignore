@@ -9,8 +9,10 @@ __pycache__/
 BKUP/
 data/
 # WP72-3 · docs/plans/biotech/data/ 는 git 추적 (서버 rows>0 확보 · <1MB 소용량)
+# WP69-3e · 상위 파이프 산출물 (h39_readouts_checkpoint.json 등) 도 이식 · json 예외 추가
 !docs/plans/biotech/data/
 !docs/plans/biotech/data/*.csv
+!docs/plans/biotech/data/*.json
 # WP73 · 스크린샷은 git 제외 (검수 필요 시 zip 첨부만) · 로컬 최근 2세트만 보관
 docs/plans/biotech/screenshots/**
 

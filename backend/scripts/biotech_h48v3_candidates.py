@@ -27,13 +27,51 @@ from collections import defaultdict
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
+import os
+
 logging.getLogger("httpx").setLevel(logging.WARNING)
 LOG = logging.getLogger("biotech_h48v3_candidates")
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 DATA_DIR = PROJECT_ROOT / "backend" / "data"
-OUT_DIR = DATA_DIR / "biotech" / "candidates"
+
+# WP69-3e · RUNTIME > docs/plans/biotech/data > backend/data (사용자 결정 α · 커밋 이식)
+_rt = os.environ.get("BIOTECH_RUNTIME_DIR", "").strip()
+RUNTIME_DIR = Path(_rt) if _rt else None
+FALLBACK_DIR = PROJECT_ROOT / "docs" / "plans" / "biotech" / "data"
+
+OUT_DIR = (RUNTIME_DIR / "candidates") if RUNTIME_DIR else (DATA_DIR / "biotech" / "candidates")
 OUT_DIR.mkdir(parents=True, exist_ok=True)
+
+
+def _search_paths(name: str) -> list[Path]:
+    """RUNTIME > docs > backend/data 순회 · WP69-3e."""
+    paths: list[Path] = []
+    if RUNTIME_DIR is not None:
+        paths.append(RUNTIME_DIR / name)
+    paths.append(FALLBACK_DIR / name)
+    paths.append(DATA_DIR / name)
+    return paths
+
+
+def _find(name: str) -> Path | None:
+    for p in _search_paths(name):
+        if p.exists():
+            return p
+    return None
+
+
+def _find_glob(pattern: str) -> Path | None:
+    """RUNTIME > docs > backend/data 순 · 첫 매치."""
+    if RUNTIME_DIR is not None:
+        hits = sorted(RUNTIME_DIR.glob(pattern), key=lambda p: p.stat().st_mtime, reverse=True)
+        if hits:
+            return hits[0]
+    hits = sorted(FALLBACK_DIR.glob(pattern), key=lambda p: p.stat().st_mtime, reverse=True)
+    if hits:
+        return hits[0]
+    hits = sorted(DATA_DIR.glob(pattern), key=lambda p: p.stat().st_mtime, reverse=True)
+    return hits[0] if hits else None
 
 
 def git_sha() -> str:
@@ -53,8 +91,11 @@ def load_cik_ticker_map(sha: str) -> tuple[dict, dict]:
     cik_meta = {}
     tk_meta = {}
 
-    # 1) h3_targets_v2 sic_biotech
-    with (DATA_DIR / f"h3_targets_v2_{sha}.csv").open() as f:
+    # 1) h3_targets_v2 sic_biotech (WP69-3e · _find_glob 조회 · anchor sha 자동)
+    tp = _find(f"h3_targets_v2_{sha}.csv") or _find_glob("h3_targets_v2_*.csv")
+    if tp is None:
+        raise SystemExit("h3_targets_v2 파일 없음 (WP69-3e · docs/plans/biotech/data 로 이식 필요)")
+    with tp.open() as f:
         for r in csv.DictReader(f):
             if r.get("sic_biotech") != "True":
                 continue
@@ -67,8 +108,8 @@ def load_cik_ticker_map(sha: str) -> tuple[dict, dict]:
                 tk_meta[tk] = {"cik": cik, "name": nm}
 
     # 2) h3_efts_sc13d_universe · subject SIC 2834/2836
-    ep = DATA_DIR / f"h3_efts_sc13d_universe_{sha}.csv"
-    if ep.exists():
+    ep = _find(f"h3_efts_sc13d_universe_{sha}.csv") or _find_glob("h3_efts_sc13d_universe_*.csv")
+    if ep is not None and ep.exists():
         with ep.open() as f:
             for r in csv.DictReader(f):
                 if r.get("sic") not in ("2834", "2836"):
@@ -79,7 +120,7 @@ def load_cik_ticker_map(sha: str) -> tuple[dict, dict]:
                 cik_meta[cik] = {"ticker": "", "name": "", "source": "efts_sc13d"}
 
     # 3) SEC company_tickers → 위 CIK 에 ticker 채움 · 이름 채움
-    sec_p = DATA_DIR / "sec_company_tickers.json"
+    sec_p = _find("sec_company_tickers.json") or (DATA_DIR / "sec_company_tickers.json")
     if sec_p.exists():
         for _, e in json.loads(sec_p.read_text()).items():
             cik = str(e.get("cik_str", "")).zfill(10)
@@ -97,23 +138,30 @@ def load_cik_ticker_map(sha: str) -> tuple[dict, dict]:
 
 
 def load_prices_and_mcap(sha: str) -> tuple[dict, dict]:
-    """ticker → 최근 close · cik → shares."""
-    close = {}
-    p = DATA_DIR / f"h3_prices_merged_{sha}.csv"
-    with p.open() as f:
-        for r in csv.DictReader(f):
-            try:
-                c = float(r["close"])
-            except Exception:
-                continue
-            tk = r["ticker"]
-            d = r["date"]
-            if tk not in close or d > close[tk][0]:
-                close[tk] = (d, c)
-    close = {tk: v[1] for tk, v in close.items()}
-    shares = {}
-    p2 = DATA_DIR / f"h3_mcap_{sha}.csv"
-    if p2.exists():
+    """ticker → 최근 close · cik → shares.
+
+    WP69-3e · h3_prices_merged (47MB · 커밋 제외) 부재 시 "미산정" 진행 (사용자 결정).
+    Tiingo fallback 은 후속 (키 부재 시 미산정 표기).
+    """
+    close: dict = {}
+    p = _find(f"h3_prices_merged_{sha}.csv") or _find_glob("h3_prices_merged_*.csv")
+    if p is not None and p.exists():
+        with p.open() as f:
+            for r in csv.DictReader(f):
+                try:
+                    c = float(r["close"])
+                except Exception:
+                    continue
+                tk = r["ticker"]
+                d = r["date"]
+                if tk not in close or d > close[tk][0]:
+                    close[tk] = (d, c)
+        close = {tk: v[1] for tk, v in close.items()}
+    else:
+        LOG.warning("h3_prices_merged 파일 없음 · 시총 미산정 진행 (WP69-3e · Tiingo fallback 후속)")
+    shares: dict = {}
+    p2 = _find(f"h3_mcap_{sha}.csv") or _find_glob("h3_mcap_*.csv")
+    if p2 is not None and p2.exists():
         with p2.open() as f:
             for r in csv.DictReader(f):
                 try:
@@ -128,12 +176,12 @@ def load_prices_and_mcap(sha: str) -> tuple[dict, dict]:
 def source_a_readout(sha: str, days_recent: int = 90) -> list[dict]:
     """WP39 결과 발표 최근 N일 · checkpoint 우선 (csv 미갱신 대응)."""
     events: list[dict] = []
-    cp = DATA_DIR / "h39_readouts_checkpoint.json"
-    if cp.exists():
+    cp = _find("h39_readouts_checkpoint.json")
+    if cp is not None and cp.exists():
         events = json.loads(cp.read_text()).get("events", [])
     if not events:
-        p = DATA_DIR / f"h_readout_events_{sha}.csv"
-        if p.exists():
+        p = _find(f"h_readout_events_{sha}.csv") or _find_glob("h_readout_events_*.csv")
+        if p is not None and p.exists():
             with p.open() as f:
                 events = list(csv.DictReader(f))
     today = datetime.now(timezone.utc).date()
@@ -156,8 +204,8 @@ def source_a_readout(sha: str, days_recent: int = 90) -> list[dict]:
 
 
 def source_b_ctgov(sha: str) -> list[dict]:
-    p = DATA_DIR / f"h6_membership_{sha}.csv"
-    if not p.exists():
+    p = _find(f"h6_membership_{sha}.csv") or _find_glob("h6_membership_*.csv")
+    if p is None or not p.exists():
         return []
     out = []
     with p.open() as f:
@@ -170,8 +218,8 @@ def source_b_ctgov(sha: str) -> list[dict]:
 
 
 def source_c_recent_13d(sha: str, days: int = 30) -> list[dict]:
-    p = DATA_DIR / f"h3_efts_sc13d_universe_{sha}.csv"
-    if not p.exists():
+    p = _find(f"h3_efts_sc13d_universe_{sha}.csv") or _find_glob("h3_efts_sc13d_universe_*.csv")
+    if p is None or not p.exists():
         return []
     today = datetime.now(timezone.utc).date()
     cutoff = today - timedelta(days=days)
@@ -185,9 +233,9 @@ def source_c_recent_13d(sha: str, days: int = 30) -> list[dict]:
             if d >= cutoff:
                 out.append({"cik": r["subject_cik"], "date": r["date"], "filer_cik": r["filer_cik"]})
     # filer 유형 병기
-    fp = DATA_DIR / "h41_filer_classification.json"
-    filer_bucket = {}
-    if fp.exists():
+    fp = _find("h41_filer_classification.json")
+    filer_bucket: dict = {}
+    if fp is not None and fp.exists():
         for cik, info in json.loads(fp.read_text()).items():
             filer_bucket[cik] = info.get("bucket", "other")
     for r in out:
@@ -196,8 +244,8 @@ def source_c_recent_13d(sha: str, days: int = 30) -> list[dict]:
 
 
 def source_d_adcom(sha: str, days_around: int = 60) -> list[dict]:
-    p = DATA_DIR / f"h1a_events_v2_{sha}.csv"
-    if not p.exists():
+    p = _find(f"h1a_events_v2_{sha}.csv") or _find_glob("h1a_events_v2_*.csv")
+    if p is None or not p.exists():
         return []
     today = datetime.now(timezone.utc).date()
     out = []
@@ -225,11 +273,14 @@ def main():
     from backend.scripts._biotech_bootstrap import data_sha
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
     sha = git_sha()
-    if not (DATA_DIR / f"h3_targets_v2_{sha}.csv").exists():
-        fb = data_sha(DATA_DIR)
-        if fb:
-            LOG.info("git_sha %s 데이터 부재 · data_sha fallback → %s", sha, fb)
-            sha = fb
+    if not _find(f"h3_targets_v2_{sha}.csv"):
+        # 여러 폴더 순회 fallback (WP69-3e · docs > backend/data)
+        for base in (FALLBACK_DIR, DATA_DIR):
+            fb = data_sha(base)
+            if fb and (base / f"h3_targets_v2_{fb}.csv").exists():
+                LOG.info("git_sha %s 데이터 부재 · %s 에서 data_sha fallback → %s", sha, base.name, fb)
+                sha = fb
+                break
 
     cik_meta, tk_meta = load_cik_ticker_map(sha)
     close, shares = load_prices_and_mcap(sha)
