@@ -160,9 +160,9 @@ def main():
     else:
         lines.append("- 없음")
 
-    # WP65 · 표 4: 최근 20 거래일 Form 4 매수 (h65 CSV 로드)
-    import glob
-    h65_csvs = sorted(glob.glob(str(DATA / f".." / f"h65_form4_daily_table_*.csv")))
+    # WP65 · 표 4: 최근 20 거래일 Form 4 매수 (h65 CSV 로드 · WP69-3g · _P.find_glob)
+    _h65 = _P.find_glob("h65_form4_daily_table_*.csv")
+    h65_csvs = [str(_h65)] if _h65 else []
     if h65_csvs:
         try:
             with open(h65_csvs[-1]) as fh:
