@@ -291,12 +291,14 @@ async def get_rumor_json(
     """소문 확인 표 (표 1~4 통합 JSON · WP71-2)."""
     if date and not re.match(r"^\d{4}-\d{2}-\d{2}$", date):
         raise HTTPException(status_code=400, detail="date 형식 YYYY-MM-DD")
-    # WP69-3b · RUNTIME > docs > backend/data
+    # WP69-3b · RUNTIME > docs > backend/data · 관측 Day 2 hotfix (mtime 최신 우선)
     cand_dirs = _search_dirs("candidates")
     cand_files: list[Path] = []
     for d in cand_dirs:
         if d.exists():
-            cand_files.extend(sorted(d.glob("biotech_candidates_v3_*.csv")))
+            cand_files.extend(d.glob("biotech_candidates_v3_*.csv"))
+    # 관측 Day 2 fix: mtime 최신 순 정렬 (base 순서·이름 순 대신)
+    cand_files.sort(key=lambda p: p.stat().st_mtime)
     if not cand_files:
         return RumorJson(
             date=(date or datetime.now(timezone.utc).strftime("%Y-%m-%d")),
