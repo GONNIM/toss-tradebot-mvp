@@ -210,8 +210,8 @@ def main():
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
     sha = git_sha()
 
-    today_str = datetime.now(timezone.utc).strftime("%Y%m%d")
-    today_dash = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    today_str = _P.today_kst_str("%Y%m%d")
+    today_dash = _P.today_kst_str("%Y-%m-%d")
 
     cands_path = _find_candidates_v3_input(today_str)
     if not cands_path:

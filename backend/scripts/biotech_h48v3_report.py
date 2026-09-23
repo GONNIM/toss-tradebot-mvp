@@ -39,8 +39,8 @@ def next_news_days(reasons_str: str, state_note: str = ""):
 
 def main():
     require_secure_logging()
-    today_str = datetime.now(timezone.utc).strftime("%Y%m%d")
-    today_dash = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    today_str = _P.today_kst_str("%Y%m%d")
+    today_dash = _P.today_kst_str("%Y-%m-%d")
 
     # WP69-3g: 경로 해석기 · candidates 는 v3 > v2 > v1 순서 선호
     cp = None

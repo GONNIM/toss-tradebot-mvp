@@ -107,7 +107,7 @@ def main():
         if fb:
             LOG.info("git_sha %s 데이터 부재 · data_sha fallback → %s", sha, fb)
             sha = fb
-    today_str = datetime.now(timezone.utc).strftime("%Y%m%d")
+    today_str = _P.today_kst_str("%Y%m%d")
 
     # WP69-3g hotfix · candidates v3 > v2 > v1 순 · _P 경로 해석기
     cp = None
@@ -293,7 +293,7 @@ def main():
     # WP69-3g: 산출 = RUNTIME/watchlist (서버) 또는 docs/watchlist (로컬)
     out_dir = _P.out_dir("watchlist") if _P.RUNTIME_DIR else (_P.PROJECT_ROOT / "docs" / "plans" / "biotech" / "watchlist")
     out_dir.mkdir(parents=True, exist_ok=True)
-    today_dash = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    today_dash = _P.today_kst_str("%Y-%m-%d")
     md_path = out_dir / f"radar-v1.3-{today_str}.md"
     lines = [
         f"# 레이더 리스트 v1.4 · {today_dash} (Phase C 1 · expert 채널 5/5 완비 · 가중치 동일)",
