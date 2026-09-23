@@ -371,7 +371,7 @@ def main():
     filtered.sort(key=lambda c: (-len(c["sources"]), 0 if c["mcap_bucket"] != "unknown" else 1, c["ticker"] or c["cik"]))
     final = filtered[:80]  # 상한 80 (30~50 요구지만 소스 확장 시 여유)
 
-    today = datetime.now(timezone.utc).strftime("%Y%m%d")
+    today = _P.today_kst_str("%Y%m%d")
     out_path = OUT_DIR / f"biotech_candidates_{today}.csv"
     with out_path.open("w", newline="") as f:
         w = csv.DictWriter(f, fieldnames=["ticker", "cik", "name", "mcap_usd", "mcap_bucket", "sources", "reasons"])

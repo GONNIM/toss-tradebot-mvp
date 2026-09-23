@@ -77,6 +77,13 @@ def out_flat(name: str) -> Path:
     return root / name
 
 
+def today_kst_str(fmt: str = "%Y%m%d") -> str:
+    """서버 로컬 KST 기준 오늘 날짜 문자열 (WP69-3h+ · UTC/KST 어긋남 방지)."""
+    from datetime import datetime, timezone, timedelta
+    kst = timezone(timedelta(hours=9))
+    return datetime.now(kst).strftime(fmt)
+
+
 def data_sha_auto(anchor_pattern: str = "h3_targets_v2_*.csv") -> str:
     """anchor 파일에서 sha 추출 · search_bases 순회 · 첫 매치."""
     import re
