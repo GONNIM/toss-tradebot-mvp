@@ -30,10 +30,11 @@ from backend.scripts.biotech_h43_h8_h1b import (
     git_sha, load_prices, load_bench, load_cik_ticker,
     net_excess, bootstrap_ci,
 )
+# WP69-3g · 경로는 공용 헬퍼 _biotech_paths 사용
+from backend.scripts import _biotech_paths as _P
 
 import argparse
 import csv
-import glob
 import json
 import logging
 import re
@@ -45,8 +46,8 @@ from statistics import mean
 logging.getLogger("httpx").setLevel(logging.WARNING)
 LOG = logging.getLogger("biotech_h56_forward_eval")
 
-PROJECT_ROOT = Path(__file__).resolve().parents[2]
-DATA_DIR = PROJECT_ROOT / "backend" / "data"
+PROJECT_ROOT = _P.PROJECT_ROOT
+DATA_DIR = _P.DATA_DIR
 
 DEPLOYMENT_ANCHOR = "2026-09-14"  # Phase A 종결 배포일 (사전 커밋)
 COST_BPS = 100
@@ -60,8 +61,13 @@ def parse_days_from_note(note: str) -> int | None:
 
 
 def load_radar_snapshots() -> list[dict]:
-    """매주 저장된 레이더 CSV 로드 · [{save_date, ticker, expected_days_at_save, ...}]."""
-    files = sorted(glob.glob(str(DATA_DIR / "biotech" / "candidates" / "radar_v1_3_*.csv")))
+    """매주 저장된 레이더 CSV 로드 · WP69-3h · 모든 base 순회 (RUNTIME > docs > backend/data)."""
+    files: list[str] = []
+    for base in _P.search_bases():
+        cand_dir = base / "candidates"
+        if cand_dir.exists():
+            files.extend(str(p) for p in cand_dir.glob("radar_v1_3_*.csv"))
+    files = sorted(set(files))  # 중복 제거 (같은 이름 중복 시)
     out = []
     for f in files:
         m = re.search(r"radar_v1_3_(\d{8})\.csv", f)
@@ -140,8 +146,12 @@ def evaluate_virtual_rule(snapshots: list[dict], prices: dict, bench: dict, cuto
 
 
 def load_trades_manual() -> list[dict]:
-    """trades_manual.csv 실전 기록 로드."""
-    p = DATA_DIR / "biotech" / "trades" / "trades_manual.csv"
+    """trades_manual.csv 실전 기록 로드 · WP69-3h · docs/plans/biotech/data/ 우선.
+
+    경로: RUNTIME > docs/plans/biotech/data/trades_manual.csv > backend/data/biotech/trades/trades_manual.csv
+    없으면 [] · 리포트에 "실전 기록 없음" 표기.
+    """
+    p = _P.find("trades_manual.csv") or (DATA_DIR / "biotech" / "trades" / "trades_manual.csv")
     if not p.exists():
         return []
     with p.open() as f:
@@ -158,8 +168,8 @@ def main():
     args = parser.parse_args()
 
     sha = git_sha()
-    if not (PROJECT_ROOT / "backend" / "data" / f"h3_prices_merged_{sha}.csv").exists():
-        fb = data_sha(PROJECT_ROOT / "backend" / "data")
+    if _P.find(f"h3_prices_merged_{sha}.csv") is None:
+        fb = _P.data_sha_auto("h3_targets_v2_*.csv")
         if fb:
             LOG.info("git_sha %s 데이터 부재 · data_sha fallback → %s", sha, fb)
             sha = fb
@@ -190,7 +200,8 @@ def main():
     # 실전 기록: 같은 창 청산 · net_excess 근사 (사용자 입력 금액 기준)
     trades_in_window = [t for t in trades if (t.get("timestamp_utc", "") >= DEPLOYMENT_ANCHOR and t.get("timestamp_utc", "") <= cutoff_str + "T23:59:59Z")]
 
-    report_dir = PROJECT_ROOT / "docs" / "plans" / "biotech" / "verification" / "forward"
+    # 산출 = RUNTIME/verification/forward (서버) 또는 docs 유지 (로컬 backward compat)
+    report_dir = _P.out_dir("verification/forward") if _P.RUNTIME_DIR else (PROJECT_ROOT / "docs" / "plans" / "biotech" / "verification" / "forward")
     report_dir.mkdir(parents=True, exist_ok=True)
 
     ci_str = f"[{virtual['ci95'][0]*100:.2f}%, {virtual['ci95'][1]*100:.2f}%]" if virtual['ci95'][0] is not None else "[표본 없음]"
