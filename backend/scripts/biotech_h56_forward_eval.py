@@ -191,8 +191,17 @@ def main():
     snapshots = load_radar_snapshots()
     LOG.info("radar snapshots (A state · with D-N): %d", len(snapshots))
 
-    prices = load_prices(sha)
-    bench = load_bench(sha)
+    # WP69-3g · h3_prices_merged (47MB 커밋 제외) 부재 시 빈 dict → n=0 · "표본 없음" 리포트
+    try:
+        prices = load_prices(sha)
+    except FileNotFoundError:
+        LOG.warning("h3_prices_merged 부재 · prices={} (가상 규칙 표본 0)")
+        prices = {}
+    try:
+        bench = load_bench(sha)
+    except FileNotFoundError:
+        LOG.warning("benchmarks 부재 · bench={}")
+        bench = {}
 
     virtual = evaluate_virtual_rule(snapshots, prices, bench, cutoff_str)
     trades = load_trades_manual()
