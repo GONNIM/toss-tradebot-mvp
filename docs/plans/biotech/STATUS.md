@@ -66,7 +66,8 @@
 
 - [ ] **로컬 뷰어 실행**: `backend/venv/bin/python -m backend.scripts.biotech_h55_viewer` → 브라우저 `http://127.0.0.1:8765`
 
-- [ ] **실전 기록 (선택)**: `backend/data/biotech/trades/trades_manual.csv` 에 매수/청산 기록 (18열 헤더)
+- [ ] **실전 기록 (선택 · 주 1회 git push)**: `docs/plans/biotech/data/trades_manual.csv` 편집 → `git push` → 서버 전향 평가가 자동으로 읽음 (WP69-3h)
+- [ ] **웹 열람**: `https://optimus8.cafe24.com/biotech` · admin 토큰 로그인 (로컬 뷰어·crontab 불필요)
 
 ---
 
