@@ -46,8 +46,11 @@ def git_sha() -> str:
 
 
 def load_fund_ciks() -> list[str]:
-    p = DATA_DIR / "h41_filer_classification.json"
-    if not p.exists():
+    # WP78 · 경로 해석기 (RUNTIME > docs/plans/biotech/data > backend/data) · 서버는 docs 이식본
+    from backend.scripts import _biotech_paths as _P
+    p = _P.find("h41_filer_classification.json")
+    if p is None or not p.exists():
+        LOG.error("h41_filer_classification.json 없음 · Form 4 filer 0 (단계 실패로 기록)")
         return []
     data = json.loads(p.read_text())
     funds = [(cik, info) for cik, info in data.items()

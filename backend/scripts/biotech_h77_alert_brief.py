@@ -1,7 +1,6 @@
 """WP77-1 · 급등 브리핑 수집 (경보 종목만 · 하루 최대 5종목) + WP77-2 자동 요약 호출.
 
-경보 기준 = /api/v1/biotech/kpi.json 과 같음 (h_radar_params v1.5 alerts_definition):
-    apewisdom 평소 대비 배수 ≥ 5  OR  reddit RSS 매치 ≥ 3
+경보 기준 = backend/scripts/biotech_alert_rule.py judge() (kpi.json 과 공용 · WP78 alerts_definition_wp78)
 판정·점수·후보 선정은 바꾸지 않는다 · 이 스크립트는 사실 수집·표시용 파일만 만든다.
 
 패널 항목 (모두 수집 자료 필드 · 지어내는 문장 없음):
@@ -30,12 +29,11 @@ from pathlib import Path
 from typing import Any
 
 from backend.scripts import _biotech_paths as _P
+from backend.scripts.biotech_alert_rule import judge
 from backend.scripts.biotech_sec_common import REQ_INTERVAL, SecBlockedError, build_client
 
 LOG = logging.getLogger("biotech_h77_alert_brief")
 
-ALERT_MULT = 5.0        # kpi.json 과 같은 기준
-ALERT_RSS = 3
 MAX_TICKERS = 5         # 하루 최대 5종목
 BUSINESS_DAYS_8K = 5    # 최근 5거래일 (주말 제외 · 휴장일 미반영)
 FORM4_DAYS = 20
@@ -55,13 +53,13 @@ def _f(v: Any) -> float:
 
 
 def pick_alerts(confirm_rows: list[dict]) -> list[dict]:
-    """경보 종목 · 배수·매치 큰 순 · 최대 5."""
+    """경보 종목 (공용 규칙 biotech_alert_rule.judge) · 배수·매치 큰 순 · 최대 5."""
     hits = []
     for r in confirm_rows:
-        mult = 0.0 if r.get("st_baseline_mult") in ("", "collecting", None) else _f(r.get("st_baseline_mult"))
-        rss = int(_f(r.get("reddit_rss_matches")))
-        if mult >= ALERT_MULT or rss >= ALERT_RSS:
-            hits.append((mult, rss, r))
+        ok, _why = judge(r)
+        if ok:
+            mult = 0.0 if r.get("st_baseline_mult") in ("", "collecting", None) else _f(r.get("st_baseline_mult"))
+            hits.append((mult, int(_f(r.get("reddit_rss_matches"))), r))
     hits.sort(key=lambda x: (-x[0], -x[1], x[2].get("ticker", "")))
     return [h[2] for h in hits[:MAX_TICKERS]]
 

@@ -7,11 +7,14 @@
 - 키 = config 로더가 읽은 환경변수 ZAI_API_KEY · 요청 헤더로만 전달 · 로그·예외 메시지에 키 미포함
 - 매 호출 로그에 선택된 모델 이름 기록 (키 아님)
 
-모델 선택 resolve_zai_model() (사전 고정 · 3단계):
-  ① 환경변수 ZAI_MODEL 이 있으면 사용
-  ② 없거나 비면 z.ai 모델 목록 API 조회 → 제공자가 기본·권장으로 표시한 모델 · 표시가 없으면 목록의 첫 정식 (비실험) 모델
-  ③ 조회 실패 시 코드 기본값 상수 ZAI_MODEL_FALLBACK (이 파일에만 존재)
-  목록 조회 결과는 하루 1회 캐시 (KST 날짜 기준)
+모델 선택 resolve_zai_model() (WP78 · 2026-09-28 개정 · 최신 우선 · 사전 고정 · 3단계):
+  ① z.ai 모델 목록에서 정식 모델 중 최신
+     정식 = glm 계열 · 이름에 preview·beta·exp·flash·air·vision·turbo 등 변형 표시 없음
+     최신 = 이름의 버전 숫자 최대 · 동률이면 생성 시각 (created) 최신
+  ② 목록 조회 실패 시 환경변수 ZAI_MODEL
+  ③ 그것도 없으면 코드 상수 ZAI_MODEL_FALLBACK (이 파일에만 존재)
+  목록 조회는 하루 1회 캐시 (KST 날짜) · 선택 모델이 전날과 다르면 텔레그램 info 1회
+  (서버 환경변수 ZAI_MODEL 과 다른 모듈 (backend/services/llm.py 등) 은 이 규칙과 무관 · 무변경)
 """
 from __future__ import annotations
 
@@ -36,8 +39,9 @@ ZAI_BASE_URL = "https://api.z.ai/api/paas/v4"   # z.ai OpenAI 호환 (backend/se
 ZAI_MODEL_FALLBACK = "glm-4.6"                  # ③ 마지막 수단 · 2026-09-28 목록에 존재 확인
 TIMEOUT_SEC = 20.0
 MAX_LINES = 3
-_EXPERIMENTAL_RE = re.compile(r"preview|exp|beta|alpha|test|dev", re.IGNORECASE)
-_DEFAULT_FLAG_KEYS = ("default", "is_default", "recommended", "is_recommended")
+# 정식 판별 · 변형 표시 (미리보기·실험·경량·비전 등) 가 이름에 있으면 정식 아님
+_VARIANT_RE = re.compile(r"preview|beta|exp|alpha|test|dev|flash|air|vision|turbo|mini|lite|\dv\b", re.IGNORECASE)
+_VERSION_RE = re.compile(r"^glm-(\d+(?:\.\d+)*)", re.IGNORECASE)
 
 # 권유·전망 금지어 (문장 폐기) · 사실 서술 ("임원 매수 신고") 은 허용되도록 권유·예측 형태만
 FORBIDDEN_RE = re.compile(
@@ -65,44 +69,65 @@ def _kst_today() -> str:
     return datetime.now(timezone(timedelta(hours=9))).strftime("%Y-%m-%d")
 
 
-def _pick_from_list(items: list[dict]) -> str | None:
-    """제공자 표시 (기본·권장) 우선 · 없으면 첫 정식 (비실험) 모델."""
-    for it in items:
-        if any(bool(it.get(k)) for k in _DEFAULT_FLAG_KEYS):
-            return str(it.get("id") or "") or None
-    for it in items:
-        mid = str(it.get("id") or "")
-        if mid and not _EXPERIMENTAL_RE.search(mid):
-            return mid
-    return None
+def is_stable(model_id: str) -> bool:
+    """정식 = glm 계열 · 변형 표시 없음 · 버전 숫자로 끝나는 이름 (예: glm-5.3)."""
+    m = _VERSION_RE.match(model_id or "")
+    return bool(m) and m.group(0).lower() == model_id.lower() and not _VARIANT_RE.search(model_id)
+
+
+def _version_key(item: dict) -> tuple:
+    m = _VERSION_RE.match(str(item.get("id", "")))
+    ver = tuple(int(x) for x in m.group(1).split(".")) if m else ()
+    ver = ver + (0,) * (4 - len(ver))  # glm-5 == glm-5.0
+    return ver, int(item.get("created") or 0)
+
+
+def pick_latest_stable(items: list[dict]) -> str | None:
+    stable = [it for it in items if is_stable(str(it.get("id", "")))]
+    return str(max(stable, key=_version_key)["id"]) if stable else None
+
+
+def _notify_model_change(prev: str, new: str) -> None:
+    """선택 모델이 전날과 다르면 텔레그램 info 1회 (실패해도 요약 진행)."""
+    try:
+        import asyncio
+        from backend.services.notifier import TelegramNotifier
+        asyncio.run(TelegramNotifier().send_info(
+            title="biotech 요약 모델 변경", body=f"z.ai 요약 모델: {prev} → {new} (목록 최신 정식 모델 규칙)"))
+    except Exception as e:
+        LOG.warning("모델 변경 알림 실패 · %s", e.__class__.__name__)
 
 
 def resolve_zai_model(
     fetch_models: Callable[[], list[dict]] | None = None,
     cache_path: Path | None = None,
     today: str | None = None,
+    notify: Callable[[str, str], None] | None = None,
 ) -> tuple[str, str]:
-    """(모델 이름, 선택 근거) · 근거 = env | list | list_cache | fallback."""
+    """(모델 이름, 선택 근거) · 근거 = list | list_cache | env | fallback."""
+    today = today or _kst_today()
+    cache_path = cache_path or (_P.out_dir("briefs") / "zai_models_cache.json")
+    cache: dict = {}
+    try:
+        if cache_path.exists():
+            cache = json.loads(cache_path.read_text())
+            if cache.get("date") == today and cache.get("model"):
+                return cache["model"], "list_cache"
+    except Exception:
+        cache = {}
+    try:
+        picked = pick_latest_stable((fetch_models or _fetch_models)())
+        if picked:
+            prev = cache.get("model")
+            cache_path.write_text(json.dumps({"date": today, "model": picked, "prev_model": prev}))
+            if prev and prev != picked:
+                (notify or _notify_model_change)(prev, picked)
+            return picked, "list"
+    except Exception as e:  # 조회 실패 → ②
+        LOG.warning("z.ai 모델 목록 조회 실패 · %s", e.__class__.__name__)
     env = (os.environ.get("ZAI_MODEL") or "").strip()
     if env:
         return env, "env"
-    today = today or _kst_today()
-    cache_path = cache_path or (_P.out_dir("briefs") / "zai_models_cache.json")
-    try:
-        if cache_path.exists():
-            c = json.loads(cache_path.read_text())
-            if c.get("date") == today and c.get("model"):
-                return c["model"], "list_cache"
-    except Exception:
-        pass
-    try:
-        items = (fetch_models or _fetch_models)()
-        picked = _pick_from_list(items)
-        if picked:
-            cache_path.write_text(json.dumps({"date": today, "model": picked, "n": len(items)}))
-            return picked, "list"
-    except Exception as e:  # 조회 실패 → ③
-        LOG.warning("z.ai 모델 목록 조회 실패 · %s", e.__class__.__name__)
     return ZAI_MODEL_FALLBACK, "fallback"
 
 

@@ -80,6 +80,7 @@ type BiotechKpi = {
   alerts: number;
   alert_tickers?: string[];
   alert_briefs?: AlertBrief[];
+  alerts_collecting?: number;
 };
 
 async function apiFetch<T>(path: string): Promise<T> {
@@ -527,14 +528,17 @@ export default function BiotechPage() {
         <div id="sec-alerts" className={ring("sec-alerts")}>
           <SectionCard tone="rose" icon="🚨" label="급등 경보" count={kpi.alerts} hint="오늘 언급이 급증한 종목" collapsible defaultOpen={kpi.alerts > 0}>
             {kpi.alerts === 0 ? (
-              <div className="text-xs text-muted-foreground">오늘 언급이 급증한 종목이 없습니다.</div>
+              <div className="text-xs text-muted-foreground">
+                오늘 언급이 급증한 종목이 없습니다.
+                {(kpi.alerts_collecting ?? 0) > 0 && ` 기준선이 7일 미만인 ${kpi.alerts_collecting}개 종목은 수집 중이라 판정에서 뺐습니다.`}
+              </div>
             ) : (
               <div className="space-y-2 text-xs">
                 <div className="flex flex-wrap gap-2">
                   {(kpi.alert_tickers ?? []).map((tk) => (
                     <span key={tk} className="rounded bg-rose-100 px-2 py-0.5 font-mono font-bold text-rose-800 dark:bg-rose-900/40 dark:text-rose-200">{tk}</span>
                   ))}
-                  <span className="text-muted-foreground">기준: 언급량이 평소의 5배 이상이거나 레딧 매치 3건 이상 · 카드를 누르면 브리핑이 펼쳐집니다.</span>
+                  <span className="text-muted-foreground">기준: 기준선 7일 이상 종목 중 오늘 언급 5건 이상이면서 평소의 5배 이상, 또는 레딧 매치 3건 이상 · 카드를 누르면 브리핑이 펼쳐집니다.</span>
                 </div>
                 {(kpi.alert_briefs ?? []).map((b) => (
                   <AlertBriefCard key={b.ticker} b={b} />

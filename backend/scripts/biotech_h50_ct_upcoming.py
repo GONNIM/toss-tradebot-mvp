@@ -127,6 +127,8 @@ def _build_ct_map(snapshot_path: Path) -> tuple[dict[str, list[dict]], str, bool
         stale = age_days > STALE_DAYS
     ct_map: dict[str, list[dict]] = defaultdict(list)
     for m in data.get("matches", []):
+        if m.get("role") == "collaborator":  # WP78 · 공동연구 등재 시험은 A/B/C 상태 판정에 쓰지 않음 (표시 전용)
+            continue
         d = m.get("days_to")
         if d is None or d < 0:
             continue
