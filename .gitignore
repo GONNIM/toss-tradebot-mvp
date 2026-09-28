@@ -90,3 +90,6 @@ data/*.db*
 
 # 서버 .env 백업본 (자격증명 포함 · 커밋 금지 · 2026-09-28)
 backend/.env.bak*
+
+# Fable 검수 번들 zip (로컬 생성물 · 전달용 · 2026-09-28)
+docs/plans/biotech/fable-bundles/
