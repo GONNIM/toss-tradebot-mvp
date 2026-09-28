@@ -176,8 +176,11 @@ def sources_for(b: dict) -> list[str]:
     src = []
     h = b["mentions"]["history"]
     if h:
-        src.append(f"언급량 (apewisdom 24시간): 어제 {b['mentions']['yesterday']} → 오늘 {b['mentions']['today']} · "
-                   f"평소 대비 배수 {b['mentions']['mult']} · 레딧 RSS 매치 오늘 {b['mentions']['reddit_today']}건")
+        mult = b["mentions"]["mult"]
+        mult_txt = "수집 중 (7일 미만)" if mult in ("collecting", "", None) else f"{mult}배"
+        src.append(f"apewisdom (커뮤니티 언급 집계 사이트) 24시간 언급 수: 어제 {b['mentions']['yesterday']} → 오늘 {b['mentions']['today']} · "
+                   f"apewisdom 평소 대비 {mult_txt}")
+        src.append(f"레딧 RSS 제목 매치 오늘 {b['mentions']['reddit_today']}건")
     for p in b["reddit"]:
         src.append(f"레딧 글 제목{'' if b.get('reddit_time_checked', True) else ' (게시 시각 미확인)'}: {p['title']}")
     for f in b["sec_8k"]:
