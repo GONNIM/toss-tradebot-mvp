@@ -19,6 +19,15 @@
 
 ## PENDING
 
+### [Biotech Catalyst Radar · WP74 화면 고도화 (표시 계층만)] · 2026-09-28 발행 → 1~5단계 배포 완료
+
+- 배포: PR #28 (1단계) · #29 (2단계) · #30 (3단계) · #31 (4단계) · #32 + #33 (5단계 · 툴팁 보정) · 매 단계 13 경로 200
+- 스크린샷: `docs/plans/biotech/screenshots/20260928_sha_2ef221e/` (전) → `..._sha_a7a7a80/` (후) · git 제외 · 로컬만
+- **남은 확인 (다음 세션 첫 관측과 함께)**: 2026-09-29 07:00 자동 갱신 후 헤더가 "9월 29일 07:00 갱신" 으로 바뀌는지 · 파이프 코드는 WP74 에서 수정하지 않았음
+- **대기 (사용자 승인)**: 시총 매일 산정 설계 (주식수 = SEC companyfacts 주 1회 · 가격 = Tiingo 일 1회 80종목) · 설계만 보고됨 · 실행 금지
+
+---
+
 ### [Biotech Catalyst Radar · H6 관문 3 통과 (조건 3건) · 10월 가격 수집 · 본 실행 조건부] · 2026-09-28 발행
 
 **확정 규칙**: `docs/plans/biotech/data/h6_params_v2.json` (구 draft 이름 변경 · `gate3_conditions` a·b·c 기재 · backend/data 사본 없음)
