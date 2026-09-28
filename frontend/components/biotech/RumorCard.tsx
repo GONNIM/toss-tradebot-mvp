@@ -11,12 +11,16 @@ type Props = {
   score?: number;      // 있으면 우측 표기
   sentence?: string | null; // 쉬운 말 본문
   sourceUrl?: string | null; // ClinicalTrials.gov 원문
+  order?: number;            // WP74 3단계 · 목록 안 순서 (정렬이 눈에 보이게)
 };
 
-export function RumorCard({ ticker, name, mcap_bucket, days_hint, detail, score, sentence, sourceUrl }: Props) {
+export function RumorCard({ ticker, name, mcap_bucket, days_hint, detail, score, sentence, sourceUrl, order }: Props) {
   return (
     <div className="rounded-lg border border-slate-200 bg-white p-3 text-sm text-slate-800 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100">
       <div className="flex items-baseline gap-2 flex-wrap">
+        {typeof order === "number" && (
+          <span className="w-6 text-right font-mono text-xs text-muted-foreground">{order}</span>
+        )}
         <span className="rounded bg-sky-600 px-2 py-0.5 font-mono text-xs font-bold text-white">
           {ticker}
         </span>
