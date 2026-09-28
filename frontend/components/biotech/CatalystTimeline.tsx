@@ -1,6 +1,6 @@
 // WP74 5단계 · 오늘~90일 가로 타임라인 (점 = 종목 · 위치 = 임상 완료 예정일)
 // dataviz 규칙: 단일 계열 (범례 없음 · 제목이 설명) · 점 ≥8px + 2px 표면색 테두리 · 히트 영역 > 점
-// · 호버와 키보드 포커스에 같은 툴팁 · 축/격자 약하게 · 색 검증 (validate_palette: light #0284c7 · dark #0c95d6 PASS)
+// · 호버와 키보드 포커스에 같은 툴팁 (양 끝 20% 안쪽 정렬 · 잘림 방지) · 축/격자 약하게 · 색 검증 (validate_palette: light #0284c7 · dark #0c95d6 PASS)
 // 표 대체 = 바로 아래 카드 목록 (툴팁 정보는 카드에도 모두 있음)
 "use client";
 
@@ -80,7 +80,9 @@ export function CatalystTimeline({ items, onSelect }: { items: TimelineItem[]; o
               {tip === item.ticker && (
                 <span
                   role="tooltip"
-                  className="pointer-events-none absolute bottom-full left-1/2 z-10 mb-1 -translate-x-1/2 whitespace-nowrap rounded border border-border bg-background px-2 py-1 text-left text-xs shadow"
+                  className={`pointer-events-none absolute bottom-full z-10 mb-1 whitespace-nowrap rounded border border-border bg-background px-2 py-1 text-left text-xs shadow ${
+                    pct < 20 ? "left-0" : pct > 80 ? "right-0" : "left-1/2 -translate-x-1/2"
+                  }`}
                 >
                   <strong className="font-mono">{item.ticker}</strong>
                   <span className="text-muted-foreground"> · {phaseLabel(item.phase)} · {item.event_date} ({item.days_to}일 뒤)</span>
