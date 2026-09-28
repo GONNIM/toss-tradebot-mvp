@@ -30,6 +30,9 @@ def _zip(tmp_path):
         "6|NCT5|INDUSTRY|lead|Kintor Pharmaceutical Co., Ltd.\n"
     )
     with zipfile.ZipFile(p, "w") as zf:
+        # 실 AACT zip 처럼 browse_* (MeSH 용어 · name 열 없음) 가 먼저 오는 순서 · 오선택 회귀 방지
+        zf.writestr("browse_conditions.txt", "id|nct_id|mesh_term|downcase_mesh_term|mesh_type\n1|NCT9|Obesity|obesity|x\n")
+        zf.writestr("browse_interventions.txt", "id|nct_id|mesh_term|downcase_mesh_term|mesh_type\n")
         zf.writestr("studies.txt", studies)
         zf.writestr("conditions.txt", conditions)
         zf.writestr("interventions.txt", interventions)
@@ -115,3 +118,14 @@ def test_price_plan_budget_split():
     memb = [{"ticker": f"T{i}", "n_studies": 1} for i in range(1000)]
     p = mv.price_plan({f"T{i}" for i in range(1000)}, {"T0"}, memb)
     assert p["need_tiingo"] == 999 and p["months_needed"] == 3 and p["allocatable_per_month"] == 450
+
+
+def test_alias_front_and_universe_guard():
+    sec = [{"ticker": "LLY", "name": "ELI LILLY & Co", "exchange": ""}]
+    uni = {"LLY": {"first_bar_date": "1990-01-02", "last_bar_date": "2026-09-04"}}
+    base = mv.SponsorMatcher(sec, uni)
+    assert base.match("Eli Lilly and Company", "INDUSTRY")["status"] == "unmatched"      # v2 단독 미매칭
+    m = mv.SponsorMatcher(sec, uni, {"Eli Lilly and Company": "LLY", "Foo Pharma": "ZZZZ"})
+    r = m.match("Eli Lilly and Company", "INDUSTRY")
+    assert (r["ticker"], r["method"]) == ("LLY", "alias")
+    assert m.match("Foo Pharma", "INDUSTRY")["status"] == "unmatched"                  # 우주 밖 티커 별칭 무시

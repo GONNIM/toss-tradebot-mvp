@@ -109,8 +109,9 @@ def _reader(zf: zipfile.ZipFile, name: str):
     return csv.DictReader(io.TextIOWrapper(f, encoding="utf-8", errors="replace"), delimiter="|")
 
 
-def _member(names: list[str], suffix: str) -> str | None:
-    return next((n for n in names if n.endswith(suffix)), None)
+def _member(names: list[str], base: str) -> str | None:
+    """zip 안 파일 · 파일명 정확 일치 (endswith 금지 · browse_conditions.txt 오선택 사고 2026-09-28)."""
+    return next((n for n in names if n.rsplit("/", 1)[-1] == base), None)
 
 
 def extract(zip_path: Path, themes: dict[str, list[str]] | None = None) -> tuple[list[dict], dict]:
