@@ -1,0 +1,36 @@
+{
+  "git_sha": "add7af7",
+  "rule_precommit": "발표 전 D-180~D-31 소문 채널 신호 유무 로 두 집단 · D-30~D-1 순초과수익 차이 · 임계 +1.0%p · CI 하한 > 0 지지",
+  "channels_used": [
+    "ch1_13D_new (h3_events)",
+    "ch2_F4_P (h3_events event_type F4_buy)",
+    "ch3_h6_membership_flag (h6_membership · 시점 무관 · 부분 근사)"
+  ],
+  "channels_missing_note": "PubMed 게재 증가율 · bioRxiv · CT.gov 상태 변경 · 회사별 조회 부담 미포함 · 부분 3/5",
+  "threshold_diff": 0.01,
+  "with_signal": {
+    "n": 976,
+    "unique_dates": 581,
+    "mean_pre": 0.0289,
+    "ci95": [
+      0.0063,
+      0.0558
+    ]
+  },
+  "without_signal": {
+    "n": 3635,
+    "unique_dates": 1217,
+    "mean_pre": 0.0128,
+    "ci95": [
+      0.0035,
+      0.0231
+    ]
+  },
+  "diff_with_minus_without": 0.0161,
+  "diff_ci95_bootstrap": [
+    -0.0086,
+    0.0437
+  ],
+  "supported": false,
+  "note_relation_to_WP53": "WP53 관찰 (신호 있음 861건 +3.87%) 대비 · 채널 정의 유사 (13D+membership · F4 추가) · 완주 풀 정식 판정"
+}

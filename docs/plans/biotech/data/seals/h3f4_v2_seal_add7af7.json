@@ -1,0 +1,125 @@
+{
+  "git_sha": "add7af7",
+  "version": "WP63-2 · Form 4 매수 추종 (시총 필터 + $1 filter + WP64 안전장치)",
+  "principle": "H3 리포트 불변 · Form 4 별도 · WP63 v1 무효 이력 보존",
+  "input_f4_events": 984,
+  "merged_20d_first": 191,
+  "filter_stats": {
+    "total_merged": 191,
+    "no_mcap": 98,
+    "mcap_out_of_range": 13,
+    "entry_price_lt_1": 1,
+    "no_entry_price": 7,
+    "no_prices": 0
+  },
+  "filtered_events": 72,
+  "backtest_n": 68,
+  "extreme_review": {
+    "count": 0,
+    "items": []
+  },
+  "extreme_top5_precheck": [
+    {
+      "ticker": "KYMR",
+      "event_date": "2023-11-02",
+      "horizon": 180,
+      "entry_price": 12.08,
+      "exit_price": 33.62,
+      "raw_return_pct": 178.31,
+      "cause_hint": "normal"
+    },
+    {
+      "ticker": "TNYA",
+      "event_date": "2022-11-17",
+      "horizon": 180,
+      "entry_price": 2.5,
+      "exit_price": 6.73,
+      "raw_return_pct": 169.2,
+      "cause_hint": "normal"
+    },
+    {
+      "ticker": "ELDN",
+      "event_date": "2024-05-09",
+      "horizon": 180,
+      "entry_price": 2.4,
+      "exit_price": 4.99,
+      "raw_return_pct": 107.92,
+      "cause_hint": "normal"
+    },
+    {
+      "ticker": "KYMR",
+      "event_date": "2022-05-20",
+      "horizon": 180,
+      "entry_price": 14.79,
+      "exit_price": 29.19,
+      "raw_return_pct": 97.36,
+      "cause_hint": "normal"
+    },
+    {
+      "ticker": "TNGX",
+      "event_date": "2022-10-04",
+      "horizon": 30,
+      "entry_price": 3.82,
+      "exit_price": 7.49,
+      "raw_return_pct": 96.07,
+      "cause_hint": "normal"
+    }
+  ],
+  "horizons": {
+    "h_30d": {
+      "n": 68,
+      "mean": 5.8497,
+      "trimmed_mean_1_99": 5.1207,
+      "log_return_mean": 0.0371,
+      "hit_pct": 57.35,
+      "ci_block_lo": 0.9097,
+      "ci_block_hi": 11.2719,
+      "extreme_count": 0,
+      "threshold": 5.0,
+      "alpha_pass_machine": true
+    },
+    "h_180d": {
+      "n": 63,
+      "mean": 2.1046,
+      "trimmed_mean_1_99": 0.2645,
+      "log_return_mean": -0.0949,
+      "hit_pct": 39.68,
+      "ci_block_lo": -11.1673,
+      "ci_block_hi": 14.2803,
+      "extreme_count": 0,
+      "threshold": 15.0,
+      "alpha_pass_machine": false
+    }
+  },
+  "alpha_confirmed": {
+    "status": "Fable 검수 대기",
+    "hypothesis": "H3",
+    "thresholds": {
+      "h_30d": {
+        "mean_ne_min": 5.0,
+        "hit_min": 35.0,
+        "ci_lo_positive": true
+      },
+      "h_180d": {
+        "mean_ne_min": 15.0,
+        "hit_min": 35.0,
+        "ci_lo_positive": true
+      }
+    },
+    "h_30d_conditions": {
+      "ci_lo>0": true,
+      "mean>=5.0%": true,
+      "hr>=35.0%": true
+    },
+    "h_30d_alpha_pass_machine": true,
+    "h_30d_alpha_confirmed": true,
+    "h_180d_conditions": {
+      "ci_lo>0": false,
+      "mean>=15.0%": false,
+      "hr>=35.0%": true
+    },
+    "h_180d_alpha_pass_machine": false,
+    "h_180d_alpha_confirmed": false
+  },
+  "deprecation_triggered": false
+}

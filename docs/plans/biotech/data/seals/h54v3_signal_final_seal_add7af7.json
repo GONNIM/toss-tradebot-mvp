@@ -1,0 +1,51 @@
+{
+  "git_sha": "add7af7",
+  "version": "WP54-3 · 마지막 재실행 · 채널 4.5/5 (AACT 옵션 미포함 · Form 4 P 병합 완료 · ch1~ch5 실채움 · CT.gov 상태 변경은 h6_membership 대체 근사)",
+  "commit_rule": "결과와 무관하게 60일 전향 평가 (2026-11-15) 까지 확정 · 그 전 재실행 금지 (Fable 신규 규칙 · README §3)",
+  "rule_precommit": "발표 전 D-180~D-31 소문 채널 신호 유무 · D-30~D-1 순초과수익 차이 · 임계 +1.0%p AND CI 하한 > 0",
+  "channels_used": [
+    "ch1_13D_new (h3_events)",
+    "ch2_F4_P (h3_events · WP28-3 병합 · F4_buy 804건)",
+    "ch3_h6_membership_flag",
+    "ch4_PubMed_yoY (h57 · 307/307 커버)",
+    "ch5_Preprint_yoY (h58 · 200/307 부분)"
+  ],
+  "aact_channel_c_note": "CT.gov 상태 변경 (h62 · WP62) 은 옵션 · 스폰서→회사 매핑 미완이므로 이번 검정에서는 미사용 · 참고 이벤트만",
+  "channel_stats": {
+    "ch1_13D_hits": 306,
+    "ch2_F4P_hits": 133,
+    "ch3_memb_hits": 950,
+    "ch4_pub_hits": 1311,
+    "ch5_preprint_hits": 125,
+    "pub_idx_coverage": 307,
+    "pre_idx_coverage": 200,
+    "aact_channel_optional": false
+  },
+  "threshold_diff": 0.01,
+  "with_signal": {
+    "n": 1940,
+    "unique_dates": 813,
+    "mean_pre": 0.0247,
+    "ci95": [
+      0.0107,
+      0.0406
+    ],
+    "ci_lower_positive": true
+  },
+  "without_signal": {
+    "n": 2671,
+    "unique_dates": 1058,
+    "mean_pre": 0.01,
+    "ci95": [
+      -0.0011,
+      0.0216
+    ]
+  },
+  "diff_with_minus_without": 0.0147,
+  "diff_ci95_bootstrap": [
+    -0.0037,
+    0.0338
+  ],
+  "supported": false,
+  "verdict_locked_until": "2026-11-15 (60일 전향 평가)"
+}

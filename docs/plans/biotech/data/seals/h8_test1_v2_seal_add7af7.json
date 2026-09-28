@@ -1,0 +1,30 @@
+{
+  "git_sha": "add7af7",
+  "rule": "사전 커밋 · 소문 지수 = (D-180~D-31 채널 신호수 - 기준선 D-360~D-181) / max(기준선,1)",
+  "channels": [
+    "ch1_13D_new (h3_events)",
+    "ch2_membership_flag (h6_membership · 근사)"
+  ],
+  "note_partial": "PubMed/bioRxiv 회사별 게재 조회 미포함 · 부분 · 원 규칙 ≥2 유효 채널 → 완화 ≥1 (명시)",
+  "events_input": 6388,
+  "events_scored_valid_ch_ge_1": 861,
+  "lo_half": {
+    "n": 430,
+    "unique_dates": 336,
+    "mean_net_excess_pre": 0.0387,
+    "cluster_ci95": [
+      0.0092,
+      0.071
+    ]
+  },
+  "hi_half": {
+    "n": 431,
+    "unique_dates": 307,
+    "mean_net_excess_pre": 0.0303,
+    "cluster_ci95": [
+      -0.0062,
+      0.0827
+    ]
+  },
+  "diff_hi_minus_lo": -0.0083
+}
