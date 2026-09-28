@@ -38,3 +38,11 @@ def test_note_fields_parse_and_fallback():
     f = b._note_fields("CT.gov (AACT 2026-09-27) NCT06868264 완료 예정 D-3 (2026-09-30 · PHASE3)")
     assert f == {"nct_id": "NCT06868264", "days_to": 3, "event_date": "2026-09-30", "phase": "PHASE3"}
     assert b._note_fields("FDA AdCom 2026-10-01")  == {}       # 형식 불일치 → 화면은 원문 표시
+
+
+def test_rumor_rows_have_display_fields():
+    # 표1 과 A 전체 행은 카드 펼침용 필드 (stage · baseline_n) 를 가진다 (기본값 허용)
+    r = b.RumorRow(table="A", ticker="X", name="n", mcap_bucket="", days_hint="D-1", detail="d")
+    assert r.stage == "" and r.baseline_n is None and r.days_to is None
+    k = b.BiotechKpi(generated="t", candidates_total=0, news_a_ready=0, insider_buy_20d=0, alerts=0)
+    assert k.alert_tickers == []

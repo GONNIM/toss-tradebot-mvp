@@ -73,3 +73,32 @@ export function checkedAtLabel(generatedIso: string, now: Date = new Date()): st
   const day = g.y === n.y && g.m === n.m && g.d === n.d ? "오늘" : `${g.m}월 ${g.d}일`;
   return `${day} ${pad(g.hh)}:${pad(g.mm)}`;
 }
+
+// ── 4단계 · 카드 정렬·필터 (표시 순서만 · 점수 계산 없음) ─────────
+export type CardSort = "date" | "score";
+export type CardRowLike = { ticker: string; phase?: string; days_to?: number | null };
+
+export function sortFilterCards<T extends CardRowLike>(
+  rows: T[],
+  opts: { sort: CardSort; phase3Only: boolean; within7: boolean },
+  scoreOf: (ticker: string) => number | undefined,
+): T[] {
+  const far = Number.MAX_SAFE_INTEGER;
+  let out = rows.filter((r) => {
+    if (opts.phase3Only && !(r.phase ?? "").includes("PHASE3")) return false;
+    if (opts.within7 && !(typeof r.days_to === "number" && r.days_to <= 7)) return false;
+    return true;
+  });
+  out = [...out].sort((a, b) => {
+    if (opts.sort === "score") {
+      const sa = scoreOf(a.ticker);
+      const sb = scoreOf(b.ticker);
+      if (sa === undefined && sb === undefined) return 0;
+      if (sa === undefined) return 1; // 순위표 밖 종목은 뒤로
+      if (sb === undefined) return -1;
+      return sb - sa;
+    }
+    return (a.days_to ?? far) - (b.days_to ?? far);
+  });
+  return out;
+}
