@@ -13,12 +13,22 @@
 
 - **Fable 확인 문서 = 번들 zip (2026-09-28~)**: Fable 에게 확인받아야 할 문서는 번들 zip 파일로 제공한다. 생성 = `python3 scripts/fable_bundle.py <주제> <파일·폴더...> --question "<검수 질문>"` · 출력 = `docs/plans/biotech/fable-bundles/<YYYYMMDD>_<주제>.zip` (git 제외) · zip 안 첫 파일 `MANIFEST.md` (커밋 해시 · 파일별 SHA-256 · 검수 질문) · 자격증명 의심 패턴이 있으면 생성 중단. 보고에는 zip 전체 경로를 적는다.
 - **보고 문체 (2026-09-28~)**: 완전한 문장으로 쓴다. 명사를 나열하는 전보식 문장은 쓰지 않는다. 비유를 쓰지 않는다. 쉬운 어휘를 쓴다. 한 문장에는 한 내용만 담는다. 영어 용어는 처음 나올 때 한국어 뜻을 함께 적는다. 표와 수치는 유지하되, 표 밖 설명은 말로 풀어 쓴다.
-- **세션 첫 작업 = 관측 (2026-09-28~)**: 매 세션 시작 시 서버 `/root/toss-tradebot-mvp/var/biotech/logs/daily.log` 최신 실행과 /biotech 두 탭 (레이더·소문) 날짜를 확인하고, 정상이면 한 줄로 보고한다.
+- **세션 첫 작업 = 관측 (2026-09-28~)**: 매 세션 시작 시 서버 `/root/toss-tradebot-mvp/var/biotech/logs/daily.log` 최신 실행 (2026-09-29 부터 8단계 · [7/8] alert_brief 는 skip 허용) 과 /biotech 두 탭 (레이더·소문) 날짜를 확인하고, 정상이면 한 줄로 보고한다.
 - **보고 시 전체 경로 (2026-09-28~)**: 문서·파일·산출물 언급은 전체 경로로 적는다. 저장소 파일 = 저장소 루트 기준 (예: `docs/plans/biotech/data/sponsor_aliases.csv`) · 서버 파일 = 절대 경로 (예: `/root/toss-tradebot-mvp/var/biotech/h6/aact_theme_studies_2026-09-28.csv`). 파일 이름만 적지 않는다.
 
 ---
 
 ## PENDING
+
+### [Biotech Catalyst Radar · WP76 카드 내용 강화 · WP77 급등 브리핑 + z.ai 요약] · 2026-09-28 발행 → 배포 완료
+
+- 배포: PR #36 · #37 · #38 · #39 · #40 (#37·#39·#40 은 push 배포가 안 떠서 workflow_dispatch 수동 실행) · 매번 13 경로 200
+- 서버 수동 실행 1회씩: AACT 주간 잡 (상세 필드 · `/root/toss-tradebot-mvp/var/biotech/ctgov_snapshot.json` 632 KB) · alert_brief (SEC 2회 · z.ai 요약 4회 · 모델 glm-5.2 env)
+- 사전 v1: `docs/plans/biotech/data/condition_categories.csv` 303 · `docs/plans/biotech/data/ko_terms.csv` 197 · 사람 검수 전 (`docs/plans/biotech/data/dictionaries_changelog.md`)
+- **남은 확인**: 2026-09-29 07:00 첫 8단계 실행 소요 시간 · reddit_posts 열 생성 (24시간 판정 시작) · 요약 캐시
+- **알려진 한계**: 후보 80 중 39 은 AACT 스폰서 매칭 실패로 시험 자료 없음 (카드는 기존 문장) · Form 4 서버 filers 0 (자료 비어 있음)
+
+---
 
 ### [Biotech Catalyst Radar · WP74 화면 고도화 (표시 계층만)] · 2026-09-28 발행 → 1~5단계 배포 완료
 
