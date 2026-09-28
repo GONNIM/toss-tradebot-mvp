@@ -12,6 +12,7 @@
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { BiotechSessionControl } from "@/components/biotech/BiotechSessionControl";
+import { CatalystTimeline } from "@/components/biotech/CatalystTimeline";
 import { StatBox } from "@/components/ui/stat-box";
 import { SectionCard } from "@/components/ui/section-card";
 import { BiotechTable, BiotechTableColumn } from "@/components/biotech/BiotechTable";
@@ -314,6 +315,12 @@ export default function BiotechPage() {
                 </select>
               </label>
             </div>
+            {cards.length > 0 && (
+              <CatalystTimeline
+                items={cards}
+                onSelect={(tk) => { setExpanded(tk); flash(`card-${tk}`); }}
+              />
+            )}
             {cards.length === 0 ? (
               <div className="text-xs text-muted-foreground">조건에 맞는 종목이 없습니다.</div>
             ) : (
