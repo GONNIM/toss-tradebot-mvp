@@ -18,8 +18,8 @@ import { SectionCard } from "@/components/ui/section-card";
 import { BiotechTable, BiotechTableColumn } from "@/components/biotech/BiotechTable";
 import { RumorCard } from "@/components/biotech/RumorCard";
 import type { SessionInfo } from "@/lib/auth";
-import { checkedAtLabel, ctgovUrl, mcapBadge, refreshLabel, sortFilterCards, trialSentence } from "@/lib/biotech-display";
-import type { CardSort } from "@/lib/biotech-display";
+import { cardText, checkedAtLabel, ctgovUrl, mcapBadge, refreshLabel, sortFilterCards, trialSentence } from "@/lib/biotech-display";
+import type { CardSort, ThemeRank, TrialDisplay } from "@/lib/biotech-display";
 
 // 백엔드 스키마
 type RadarRow = {
@@ -51,6 +51,23 @@ type RumorRow = {
   event_date?: string;
   days_to?: number | null;
   stage?: string;
+  trial?: TrialDisplay;
+  theme_rank?: ThemeRank;
+};
+
+// WP77 · 급등 브리핑 (수집 사실 + 자동 요약)
+type AlertBrief = {
+  ticker: string;
+  name: string;
+  note: string;
+  brief_date?: string;
+  mentions: { yesterday: number | null; today: number | null; mult: string; reddit_today: number; history: { date: string; apewisdom_24h: number; reddit_matches: number }[] };
+  reddit: { title: string; link: string; updated: string }[];
+  sec_8k: { filing_date: string; items: string; description: string; url: string; ex99_1_title: string }[];
+  sec_status: string;
+  form4: { available: boolean; n?: number };
+  schedule: string;
+  summary?: { ok: boolean; model?: string; lines?: string[] };
 };
 type RumorJson = { date: string; generated: string; rows: RumorRow[] };
 
@@ -61,6 +78,7 @@ type BiotechKpi = {
   insider_buy_20d: number;
   alerts: number;
   alert_tickers?: string[];
+  alert_briefs?: AlertBrief[];
 };
 
 async function apiFetch<T>(path: string): Promise<T> {
@@ -109,6 +127,81 @@ function KpiButton({ onClick, children, label }: { onClick: () => void; children
     >
       {children}
     </button>
+  );
+}
+
+// ── WP77 · 급등 브리핑 카드 (펼침) ─────────────────────────
+function AlertBriefCard({ b }: { b: AlertBrief }) {
+  const [open, setOpen] = useState(false);
+  const m = b.mentions;
+  return (
+    <div className="rounded-lg border border-rose-200 bg-white dark:border-rose-900 dark:bg-slate-900">
+      <button type="button" aria-expanded={open} onClick={() => setOpen((v) => !v)} className="flex w-full items-baseline gap-2 p-3 text-left">
+        <span className="rounded bg-rose-600 px-2 py-0.5 font-mono text-xs font-bold text-white">{b.ticker}</span>
+        <span className="text-muted-foreground">{b.name}</span>
+        <span className="ml-auto text-muted-foreground">{open ? "접기 ▲" : "브리핑 보기 ▼"}</span>
+      </button>
+      {open && (
+        <div className="space-y-2 border-t border-rose-100 p-3 dark:border-rose-900">
+          <div className="rounded border-l-4 border-amber-500 bg-amber-50 p-2 dark:border-amber-600 dark:bg-amber-950/40">⚠️ {b.note}</div>
+          {b.summary?.ok && (b.summary.lines ?? []).length > 0 && (
+            <div className="rounded border border-sky-300 bg-sky-50 p-2 dark:border-sky-800 dark:bg-sky-950/40">
+              <div className="mb-1 text-[10px] font-bold uppercase tracking-wider text-sky-800 dark:text-sky-300">
+                자동 요약 · 진위 미검증{b.summary.model ? ` · ${b.summary.model}` : ""}
+              </div>
+              {(b.summary.lines ?? []).map((l, i) => <div key={i}>{l}</div>)}
+            </div>
+          )}
+          <div>
+            <div className="font-semibold">(a) 언급량 · apewisdom 24시간</div>
+            <div>
+              어제 {m.yesterday ?? "기록 없음"} → 오늘 {m.today ?? "기록 없음"} · 평소 대비 배수 {m.mult === "collecting" ? "수집 중 (7일 미만)" : m.mult} · 레딧 매치 오늘 {m.reddit_today}건
+            </div>
+            <div className="font-mono text-muted-foreground">
+              최근 {m.history.length}일: {m.history.map((h) => h.apewisdom_24h).join(" · ")}
+            </div>
+          </div>
+          <div>
+            <div className="font-semibold">(b) 커뮤니티 · 최근 24시간 매치 레딧 글 (제목만)</div>
+            {b.reddit.length === 0 ? (
+              <div className="text-muted-foreground">최근 24시간 매치 글이 없습니다.</div>
+            ) : (
+              <ul className="list-disc pl-5">
+                {b.reddit.map((p, i) => (
+                  <li key={i}><a href={p.link} target="_blank" rel="noopener noreferrer" className="text-sky-700 hover:underline dark:text-sky-300">{p.title}</a></li>
+                ))}
+              </ul>
+            )}
+          </div>
+          <div>
+            <div className="font-semibold">(c) 회사 공시 · 최근 5거래일 8-K</div>
+            {b.sec_status !== "ok" ? (
+              <div className="text-muted-foreground">SEC 조회 안 됨 ({b.sec_status === "no_cik" ? "CIK 없음" : "차단으로 중단"})</div>
+            ) : b.sec_8k.length === 0 ? (
+              <div className="text-muted-foreground">최근 5거래일 8-K 없음</div>
+            ) : (
+              <ul className="list-disc pl-5">
+                {b.sec_8k.map((f, i) => (
+                  <li key={i}>
+                    <a href={f.url} target="_blank" rel="noopener noreferrer" className="text-sky-700 hover:underline dark:text-sky-300">{f.filing_date} · 항목 {f.items || "-"}</a>
+                    {f.description && ` · ${f.description}`}
+                    {f.ex99_1_title && ` · 보도자료: ${f.ex99_1_title}`}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+          <div>
+            <div className="font-semibold">(d) Form 4 · 최근 20거래일</div>
+            <div className="text-muted-foreground">{b.form4.available ? `매수·매도 신고 ${b.form4.n ?? 0}건` : "자료 없음"}</div>
+          </div>
+          <div>
+            <div className="font-semibold">(e) 일정</div>
+            <div className="text-muted-foreground">{b.schedule}</div>
+          </div>
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -349,7 +442,8 @@ export default function BiotechPage() {
                         mcap_bucket={mcapBadge(r.mcap_bucket, r.mcap_asof) ?? ""}
                         days_hint={r.days_hint}
                         detail={r.detail}
-                        sentence={trialSentence(r.phase, r.event_date, r.days_to)}
+                        sentence={cardText(r.trial, r.phase, r.event_date, r.days_to).main ?? trialSentence(r.phase, r.event_date, r.days_to)}
+                        subline={cardText(r.trial, r.phase, r.event_date, r.days_to, r.theme_rank).theme}
                         sourceUrl={ctgovUrl(r.nct_id)}
                       />
                       {open && (
@@ -370,6 +464,17 @@ export default function BiotechPage() {
                             </>
                           ) : (
                             <div className="text-muted-foreground">이 종목은 순위표 상위 30 밖이라 점수 요소가 없습니다.</div>
+                          )}
+                          {r.trial?.official_title && (
+                            <div className="mt-2">
+                              <div className="font-semibold">시험 정식 제목 (원문)</div>
+                              <div className="text-muted-foreground">{r.trial.official_title}</div>
+                            </div>
+                          )}
+                          {(r.trial?.conditions ?? []).length > 0 && (
+                            <div className="mt-1">
+                              대상 질환: {(r.trial?.conditions ?? []).map((c) => (c.ko ? `${c.ko} (${c.en})` : c.en)).join(" · ")}
+                            </div>
                           )}
                           <div className="mt-2">
                             근거 원문:{" "}
@@ -420,11 +525,16 @@ export default function BiotechPage() {
             {kpi.alerts === 0 ? (
               <div className="text-xs text-muted-foreground">오늘 언급이 급증한 종목이 없습니다.</div>
             ) : (
-              <div className="flex flex-wrap gap-2 text-xs">
-                {(kpi.alert_tickers ?? []).map((tk) => (
-                  <span key={tk} className="rounded bg-rose-100 px-2 py-0.5 font-mono font-bold text-rose-800 dark:bg-rose-900/40 dark:text-rose-200">{tk}</span>
+              <div className="space-y-2 text-xs">
+                <div className="flex flex-wrap gap-2">
+                  {(kpi.alert_tickers ?? []).map((tk) => (
+                    <span key={tk} className="rounded bg-rose-100 px-2 py-0.5 font-mono font-bold text-rose-800 dark:bg-rose-900/40 dark:text-rose-200">{tk}</span>
+                  ))}
+                  <span className="text-muted-foreground">기준: 언급량이 평소의 5배 이상이거나 레딧 매치 3건 이상 · 카드를 누르면 브리핑이 펼쳐집니다.</span>
+                </div>
+                {(kpi.alert_briefs ?? []).map((b) => (
+                  <AlertBriefCard key={b.ticker} b={b} />
                 ))}
-                <span className="text-muted-foreground">기준: 언급량이 평소의 5배 이상이거나 레딧 매치 3건 이상</span>
               </div>
             )}
           </SectionCard>

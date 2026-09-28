@@ -18,6 +18,7 @@
 from __future__ import annotations
 
 import csv
+import json
 import glob
 import logging
 import re
@@ -339,9 +340,101 @@ class RumorRow(BaseModel):
     event_date: str = ""  # 임상 완료 예정일 (primary completion · 결과 발표일 아님)
     days_to: Optional[int] = None
     stage: str = ""       # WP74 4단계 · 언급 단계 (quiet · collecting · 기타) · 표시용
+    trial: dict[str, Any] = {}      # WP76 · AACT 시험 상세 (원문 필드 + 사전 대응) · 없으면 빈 dict
+    theme_rank: dict[str, Any] = {}  # WP76 · H6 봉인 순위 (읽기만) · 소속 없으면 빈 dict
 
 
 _NOTE_RE = re.compile(r"(NCT\d{8}).*?D-(\d+)\s*\((\d{4}-\d{2}-\d{2})\s*·\s*([A-Z0-9_/]*)")
+
+
+# ── WP76 · 카드 상세 (표시 전용 · 지어내는 문장 없음) ──────────────────────
+_FILE_CACHE: dict[str, tuple[float, Any]] = {}
+THEME_KO = {  # H6 테마 사전 v1 이름 (H6-design §2 고정)
+    "obesity_glp1": "비만·GLP-1", "hair_loss": "탈모", "longevity_rejuvenation": "장수·회춘",
+    "meal_replacement_metabolic": "식사대용·대사", "hibernation_hypothermia": "동면·저체온", "cognitive_memory": "신경·기억",
+}
+
+
+def _cached(path: Path | None, loader) -> Any:
+    if path is None or not path.exists():
+        return None
+    key, mt = str(path), path.stat().st_mtime
+    hit = _FILE_CACHE.get(key)
+    if hit and hit[0] == mt:
+        return hit[1]
+    val = loader(path)
+    _FILE_CACHE[key] = (mt, val)
+    return val
+
+
+def _csv_rows(path: Path) -> list[dict[str, str]]:
+    with path.open() as f:
+        return list(csv.DictReader(f))
+
+
+def _snapshot_by_nct() -> dict[str, dict[str, Any]]:
+    cands = ([DATA_DIR_RUNTIME / "ctgov_snapshot.json"] if DATA_DIR_RUNTIME else []) + [DATA_DIR_DOCS / "ctgov_snapshot.json"]
+    path = next((p for p in cands if p.exists()), None)
+    data = _cached(path, lambda p: json.loads(p.read_text()))
+    return {m.get("nct_id", ""): m for m in (data or {}).get("matches", [])}
+
+
+def _dict_map(name: str, key: str) -> dict[str, dict[str, str]]:
+    rows = _cached(DATA_DIR_DOCS / name, _csv_rows) or []
+    return {r[key].strip().lower(): r for r in rows if r.get(key)}
+
+
+def _ko(term: str) -> str:
+    """ko_terms.csv 완전 일치만 · 없으면 빈 값 (화면은 영어 원문 유지 · 임의 번역 금지)."""
+    return (_dict_map("ko_terms.csv", "en").get((term or "").strip().lower()) or {}).get("ko", "")
+
+
+def _trial_display(nct: str) -> dict[str, Any]:
+    m = _snapshot_by_nct().get(nct)
+    if not m:
+        return {}
+    cats = _dict_map("condition_categories.csv", "term")
+    category, cat_src = "", ""
+    for t in m.get("mesh_terms", []) + m.get("conditions", []):
+        hit = cats.get((t or "").strip().lower())
+        if hit:
+            category, cat_src = hit.get("category", ""), t
+            break
+    conds = m.get("conditions", [])
+    if not category and conds:
+        category, cat_src = f"기타 ({conds[0]})", conds[0]
+    ivs = [{"name": i.get("name", ""), "type": i.get("type", ""), "type_ko": _ko(i.get("type", "")), "name_ko": _ko(i.get("name", ""))}
+           for i in m.get("interventions", [])]
+    placebo = any("placebo" in (i.get("name") or "").lower() for i in m.get("interventions", []))
+    outs = [{**o, "measure_ko": _ko(o.get("measure", ""))} for o in m.get("primary_outcomes", [])]
+    return {
+        "nct_id": nct, "brief_title": m.get("brief_title", ""), "official_title": m.get("official_title", ""),
+        "category": category, "category_source": cat_src,
+        "conditions": [{"en": c, "ko": _ko(c)} for c in conds],
+        "interventions": ivs, "placebo": placebo,
+        "enrollment": m.get("enrollment", ""), "enrollment_type": m.get("enrollment_type", ""),
+        "study_type": m.get("study_type", ""),
+        "allocation": m.get("allocation", ""), "allocation_ko": _ko(m.get("allocation", "")),
+        "masking": m.get("masking", ""), "masking_ko": _ko(m.get("masking", "")),
+        "primary_outcomes": outs, "overall_status": m.get("overall_status", ""),
+    }
+
+
+def _theme_rank(ticker: str) -> dict[str, Any]:
+    """H6 소속 v2 × 봉인 순위 최신 분기 · 여러 테마면 최고 순위 (H6-design §3) · 읽기만."""
+    memb_p = DATA_DIR_DOCS.parent / "verification" / "H6" / "c3-20260928" / "h6_membership_v2_2026-09-28.csv"
+    rank_hits = sorted(DATA_DIR_DOCS.glob("h6_rank_growth_*.csv"))
+    memb = _cached(memb_p, _csv_rows) or []
+    ranks = _cached(rank_hits[-1], _csv_rows) if rank_hits else []
+    themes = {r["theme"] for r in memb if r.get("ticker") == ticker and r.get("theme") in THEME_KO}
+    if not themes or not ranks:
+        return {}
+    latest = max((int(r["year"]), int(r["quarter"])) for r in ranks)
+    cur = {r["theme"]: int(r["rank"]) for r in ranks if (int(r["year"]), int(r["quarter"])) == latest}
+    best = min((t for t in themes if t in cur), key=lambda t: cur[t], default=None)
+    if best is None:
+        return {}
+    return {"theme": best, "theme_ko": THEME_KO[best], "rank": cur[best], "of": len(cur), "quarter": f"{latest[0]}Q{latest[1]}"}
 
 
 def _note_fields(note: str) -> dict[str, Any]:
@@ -530,6 +623,9 @@ async def get_rumor_json(
                 ))
 
     for row in rows:
+        if row.table in ("A", "표1"):
+            row.trial = _trial_display(row.nct_id) if row.nct_id else {}
+            row.theme_rank = _theme_rank(row.ticker)
         if row.table in ("A", "표1", "표2", "표3"):
             row.mcap_bucket, row.mcap_asof = _mcap_display(row.ticker, row.mcap_bucket)
         elif row.mcap_bucket in ("unknown", "—"):
@@ -550,6 +646,7 @@ class BiotechKpi(BaseModel):
     insider_buy_20d: int        # 임원·대주주 매수 최근 20 거래일
     alerts: int                 # 급등 경보 (rose 섹션 · 향후 신호 채널) · 현재 0
     alert_tickers: list[str] = []  # WP74 4단계 · 경보 종목 (표시용 · 판정 무변경)
+    alert_briefs: list[dict[str, Any]] = []  # WP77 · 급등 브리핑 패널 + 자동 요약 (수집 자료 · 판정 무변경)
 
 
 @router.get("/kpi.json", response_model=BiotechKpi)
@@ -624,4 +721,16 @@ async def get_kpi(_admin: str = Depends(require_sniper_token)) -> BiotechKpi:
         insider_buy_20d=insider_buy_20d,
         alerts=alerts,
         alert_tickers=alert_tickers,
+        alert_briefs=_latest_alert_briefs(),
     )
+
+
+def _latest_alert_briefs() -> list[dict[str, Any]]:
+    """briefs/alert_brief_<날짜>.json 최신 · RUNTIME > backend/data/biotech."""
+    dirs = ([DATA_DIR_RUNTIME / "briefs"] if DATA_DIR_RUNTIME else []) + [DATA_DIR / "biotech" / "briefs"]
+    for d in dirs:
+        hits = sorted(d.glob("alert_brief_*.json")) if d.exists() else []
+        if hits:
+            data = _cached(hits[-1], lambda p: json.loads(p.read_text())) or {}
+            return [{**b, "brief_date": data.get("date", "")} for b in data.get("briefs", [])]
+    return []

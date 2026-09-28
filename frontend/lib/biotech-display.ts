@@ -102,3 +102,72 @@ export function sortFilterCards<T extends CardRowLike>(
   });
   return out;
 }
+
+// ── WP76-3 · 카드 문장 틀 (수집 필드 + 사전만 · 없는 항목은 생략 · 추정 금지) ──────
+// 단계 설명 고정 문구 (사용자 지시 · 사전 고정)
+const PHASE_DESC: Record<string, string> = {
+  "1상": "안전성 확인",
+  "초기 1상": "안전성 확인",
+  "2상": "효과 탐색",
+  "3상": "승인 전 대규모 확인",
+  "4상": "승인 후 관찰",
+};
+
+export type TrialDisplay = {
+  category?: string;
+  interventions?: { name: string; type: string; type_ko?: string; name_ko?: string }[];
+  placebo?: boolean;
+  enrollment?: string;
+  enrollment_type?: string;
+  allocation?: string;
+  allocation_ko?: string;
+  primary_outcomes?: { measure: string; time_frame?: string; measure_ko?: string }[];
+  official_title?: string;
+  conditions?: { en: string; ko?: string }[];
+};
+export type ThemeRank = { theme_ko?: string; rank?: number; of?: number; quarter?: string };
+
+const clip = (s: string, n: number) => (s.length > n ? `${s.slice(0, n - 1)}…` : s);
+
+export function cardText(
+  trial: TrialDisplay | undefined,
+  phase: string | undefined,
+  eventDate: string | undefined,
+  daysTo: number | null | undefined,
+  theme?: ThemeRank,
+): { main: string | null; theme: string | null } {
+  const parts: string[] = [];
+  const t = trial ?? {};
+  if (t.category) parts.push(t.category);
+  const drugs = (t.interventions ?? []).filter((i) => !/placebo/i.test(i.name));
+  if (drugs.length > 0) {
+    const d = drugs[0];
+    const type = d.type_ko || d.type;
+    parts.push(`${d.name_ko || d.name}${type ? ` (${type})` : ""}${drugs.length > 1 ? ` 외 ${drugs.length - 1}개` : ""}`);
+  }
+  const ph = phase ? phaseLabel(phase) : "";
+  if (ph && ph !== "임상") {
+    const desc = PHASE_DESC[ph] ?? (ph === "1·2상" ? "안전성 확인·효과 탐색" : ph === "2·3상" ? "효과 탐색·승인 전 대규모 확인" : "");
+    parts.push(desc ? `${ph}(${desc})` : ph);
+  }
+  const n = Number(t.enrollment);
+  if (t.enrollment && Number.isFinite(n) && n > 0) {
+    parts.push(`참가자 ${n.toLocaleString("ko-KR")}명${t.enrollment_type === "ESTIMATED" ? " (예정)" : ""}`);
+  }
+  const design: string[] = [];
+  if (t.allocation) design.push(t.allocation_ko || t.allocation);
+  if (t.placebo) design.push("위약 대조");
+  if (design.length) parts.push(design.join(" · "));
+  const po = (t.primary_outcomes ?? [])[0];
+  if (po?.measure) parts.push(`1차 목표: ${clip(po.measure_ko || po.measure, 90)}`);
+  if (eventDate && typeof daysTo === "number") {
+    const [, m, d] = eventDate.split("-").map(Number);
+    parts.push(`${m}월 ${d}일(D-${daysTo}) 종료 예정 · 결과 발표일은 아님`);
+  }
+  const main = parts.length >= 2 ? parts.join(" · ") : null; // 필드가 거의 없으면 기존 문장 (trialSentence) 사용
+  const themeLine =
+    theme && theme.rank && theme.theme_ko
+      ? `이 분야(${theme.theme_ko})의 최근 테마 순위 ${theme.rank}위${theme.of ? ` (${theme.of}개 중` : " ("}${theme.quarter ? ` · ${theme.quarter}` : ""} · 논문·임상 증가율 기준)`
+      : null;
+  return { main, theme: themeLine };
+}

@@ -197,8 +197,8 @@ def _parse_studies_and_sponsors(zip_path: Path, candidate_norm_map: dict[str, st
     with zipfile.ZipFile(zip_path, "r") as zf:
         names = zf.namelist()
         # 파일명 실측 · AACT daily zip 내부 최상위에 파일들
-        studies_name = next((n for n in names if n.endswith("studies.txt")), None)
-        sponsors_name = next((n for n in names if n.endswith("sponsors.txt")), None)
+        studies_name = _member(names, "studies.txt")
+        sponsors_name = _member(names, "sponsors.txt")
         LOG.info("zip 내부 · studies=%s · sponsors=%s · total_entries=%d",
                  studies_name, sponsors_name, len(names))
         if not studies_name or not sponsors_name:
@@ -260,12 +260,66 @@ def _parse_studies_and_sponsors(zip_path: Path, candidate_norm_map: dict[str, st
                     "overall_status": row.get("overall_status", ""),
                     "primary_completion_date": pcd_raw,
                     "days_to": days_to,
-                    "brief_title": (row.get("brief_title") or "")[:120],
+                    "brief_title": (row.get("brief_title") or "")[:300],
+                    # WP76-1 · 카드 문장용 시험 필드 (원문 · 후보 매칭분만)
+                    "official_title": (row.get("official_title") or "")[:500],
+                    "enrollment": row.get("enrollment", ""),
+                    "enrollment_type": row.get("enrollment_type", ""),
+                    "study_type": row.get("study_type", ""),
                 })
                 if processed % 100_000 == 0:
                     LOG.info("  studies 진행 · %d 행 · 매칭 study %d", processed, len(matches))
         LOG.info("studies 파싱 완료 · 총 %d 행 · 매칭 study %d", processed, len(matches))
+
+        # 3) WP76-1 · 상세 필드 (질환 원문 · MeSH · 약물 · 설계 · 1차 목표) · 매칭 nct 만
+        details = _parse_details(zf, names, {m["nct_id"] for m in matches})
+        for m in matches:
+            m.update(details.get(m["nct_id"], {}))
     return matches
+
+
+def _member(names: list[str], base: str) -> str | None:
+    """zip 안 파일 · 파일명 정확 일치 (endswith 금지 · browse_conditions.txt 오선택 사고 2026-09-28)."""
+    return next((n for n in names if n.rsplit("/", 1)[-1] == base), None)
+
+
+def _rows(zf: zipfile.ZipFile, name: str | None):
+    if not name:
+        return
+    with zf.open(name, "r") as f:
+        yield from csv.DictReader(io.TextIOWrapper(f, encoding="utf-8", errors="replace"), delimiter="|")
+
+
+def _parse_details(zf: zipfile.ZipFile, names: list[str], ncts: set[str]) -> dict[str, dict]:
+    """WP76-1 · 매칭 시험별 상세 필드 (AACT 원문 · 가공 없음).
+
+    - conditions (질환명 원문) · browse_conditions (MeSH 용어 · mesh-list 만 · 상위 개념 mesh-ancestor 제외)
+    - interventions (name · type) · designs (allocation · masking) · design_outcomes (primary 만 · measure · time_frame)
+    """
+    out: dict[str, dict] = {n: {"conditions": [], "mesh_terms": [], "interventions": [], "primary_outcomes": []} for n in ncts}
+    for r in _rows(zf, _member(names, "conditions.txt")):
+        if r.get("nct_id") in out:
+            out[r["nct_id"]]["conditions"].append(r.get("name", ""))
+    for r in _rows(zf, _member(names, "browse_conditions.txt")):
+        if r.get("nct_id") in out and (r.get("mesh_type") or "").lower() == "mesh-list":
+            out[r["nct_id"]]["mesh_terms"].append(r.get("mesh_term", ""))
+    for r in _rows(zf, _member(names, "interventions.txt")):
+        if r.get("nct_id") in out:
+            out[r["nct_id"]]["interventions"].append({"name": r.get("name", ""), "type": r.get("intervention_type", "")})
+    for r in _rows(zf, _member(names, "designs.txt")):
+        if r.get("nct_id") in out:
+            out[r["nct_id"]]["allocation"] = r.get("allocation", "")
+            out[r["nct_id"]]["masking"] = r.get("masking", "")
+    for r in _rows(zf, _member(names, "design_outcomes.txt")):
+        if r.get("nct_id") in out and (r.get("outcome_type") or "").lower() == "primary":
+            out[r["nct_id"]]["primary_outcomes"].append(
+                {"measure": (r.get("measure") or "")[:300], "time_frame": (r.get("time_frame") or "")[:200]})
+    for d in out.values():
+        d["primary_outcomes"] = d["primary_outcomes"][:3]
+    LOG.info("상세 필드 · 시험 %d · 질환 있음 %d · MeSH 있음 %d · 약물 있음 %d · 1차 목표 있음 %d", len(out),
+             sum(1 for d in out.values() if d["conditions"]), sum(1 for d in out.values() if d["mesh_terms"]),
+             sum(1 for d in out.values() if d["interventions"]), sum(1 for d in out.values() if d["primary_outcomes"]))
+    return out
 
 
 def _load_candidate_norm_map() -> tuple[dict[str, str], int]:
@@ -354,6 +408,7 @@ def main():
         "matches": matches,
     }
     OUT_JSON.write_text(json.dumps(out, ensure_ascii=False, indent=2))
+    LOG.info("ctgov_snapshot.json 크기 · %d KB", OUT_JSON.stat().st_size // 1024)
     LOG.info("ctgov_snapshot.json · %d study · %d unique ticker · %s",
              len(matches), len({m["ticker"] for m in matches}), OUT_JSON)
 
