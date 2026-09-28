@@ -115,3 +115,17 @@ def test_reddit_block_fallback_marks_unchecked():
     assert posts == [{"title": "t", "link": "l", "updated": ""}] and checked is False
     posts, checked = br.reddit_block({"reddit_posts": "[]", "reddit_samples": "[]"}, now)
     assert posts == [] and checked is True
+
+
+def test_payload_disables_thinking(monkeypatch):
+    monkeypatch.setenv("ZAI_API_KEY", FAKE_KEY)
+    monkeypatch.setenv("ZAI_MODEL", "glm-x")
+    seen = {}
+
+    def fake_post(url, payload):
+        seen.update(payload)
+        return {"choices": [{"message": {"content": "a [1]"}}]}
+
+    llm.summarize("X", ["s"], post=fake_post)
+    assert seen["thinking"] == {"type": "disabled"} and seen["max_tokens"] >= 800
+    assert "출처 이름" in llm.SYSTEM_PROMPT

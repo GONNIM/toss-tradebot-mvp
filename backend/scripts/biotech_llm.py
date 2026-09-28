@@ -54,7 +54,8 @@ SYSTEM_PROMPT = (
     "2) 최대 3줄. 한 줄에 한 문장. 문장 끝마다 근거 자료 번호를 [1] 처럼 붙인다.\n"
     "3) 매수·매도 권유, 주가 전망, 목표가, 추천 표현을 쓰지 않는다.\n"
     "4) 자료가 부족하면 '자료 부족' 한 줄만 쓰지 말고, 있는 사실만 적는다.\n"
-    "5) 줄 앞에 기호나 번호 목록을 붙이지 않는다."
+    "5) 줄 앞에 기호나 번호 목록을 붙이지 않는다.\n"
+    "6) 자료에 적힌 출처 이름 (apewisdom · 레딧 · SEC 8-K · Form 4) 을 바꾸거나 섞지 않고 그대로 쓴다."
 )
 
 
@@ -157,7 +158,9 @@ def summarize(ticker: str, sources: list[str], post: Callable[[str, dict], dict]
             {"role": "user", "content": build_user_prompt(ticker, sources)},
         ],
         "temperature": 0.1,
-        "max_tokens": 400,
+        "max_tokens": 800,
+        # glm-5.x 는 추론 모드 기본 · 추론이 토큰을 소진해 본문이 잘리는 사례 (2026-09-28 ENTX "레" 한 글자) → 끔
+        "thinking": {"type": "disabled"},
     }
     try:
         data = (post or _post)(f"{ZAI_BASE_URL}/chat/completions", payload)
