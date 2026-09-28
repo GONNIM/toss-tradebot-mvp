@@ -54,11 +54,17 @@ export function phaseLabel(phase?: string): string {
 }
 
 // "3상 시험이 9월 30일(3일 뒤)에 끝날 예정입니다. 결과 발표일은 아닙니다."
+// 올해 날짜는 "9월 30일" · 다른 해는 "2027년 1월 31일" (KST 기준 올해)
+export function ymdLabel(ymd: string, now: Date = new Date()): string {
+  const [y, m, d] = ymd.split("-").map(Number);
+  const thisYear = kstParts(now.toISOString()).y;
+  return y === thisYear ? `${m}월 ${d}일` : `${y}년 ${m}월 ${d}일`;
+}
+
 export function trialSentence(phase?: string, eventDate?: string, daysTo?: number | null): string | null {
   if (!eventDate || typeof daysTo !== "number") return null;
-  const [, m, d] = eventDate.split("-").map(Number);
   const when = daysTo === 0 ? "오늘" : `${daysTo}일 뒤`;
-  return `${phaseLabel(phase)} 시험이 ${m}월 ${d}일(${when})에 끝날 예정입니다. 결과 발표일은 아닙니다.`;
+  return `${phaseLabel(phase)} 시험이 ${ymdLabel(eventDate)}(${when})에 끝날 예정입니다. 결과 발표일은 아닙니다.`;
 }
 
 export function ctgovUrl(nctId?: string): string | null {
@@ -155,14 +161,13 @@ export function cardText(
     parts.push(`참가자 ${n.toLocaleString("ko-KR")}명${t.enrollment_type === "ESTIMATED" ? " (예정)" : ""}`);
   }
   const design: string[] = [];
-  if (t.allocation) design.push(t.allocation_ko || t.allocation);
+  if (t.allocation && t.allocation !== "NA") design.push(t.allocation_ko || t.allocation); // NA = 배정 해당 없음 (단일군) → 생략
   if (t.placebo) design.push("위약 대조");
   if (design.length) parts.push(design.join(" · "));
   const po = (t.primary_outcomes ?? [])[0];
   if (po?.measure) parts.push(`1차 목표: ${clip(po.measure_ko || po.measure, 90)}`);
   if (eventDate && typeof daysTo === "number") {
-    const [, m, d] = eventDate.split("-").map(Number);
-    parts.push(`${m}월 ${d}일(D-${daysTo}) 종료 예정 · 결과 발표일은 아님`);
+    parts.push(`${ymdLabel(eventDate)}(D-${daysTo}) 종료 예정 · 결과 발표일은 아님`);
   }
   const main = parts.length >= 2 ? parts.join(" · ") : null; // 필드가 거의 없으면 기존 문장 (trialSentence) 사용
   const themeLine =
