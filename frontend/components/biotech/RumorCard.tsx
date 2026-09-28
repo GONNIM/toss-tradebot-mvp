@@ -12,9 +12,10 @@ type Props = {
   sentence?: string | null; // 쉬운 말 본문
   sourceUrl?: string | null; // ClinicalTrials.gov 원문
   order?: number;            // WP74 3단계 · 목록 안 순서 (정렬이 눈에 보이게)
+  subline?: string | null;   // WP76 · 테마 순위 한 줄 (H6 봉인 순위 · 소속 종목만)
 };
 
-export function RumorCard({ ticker, name, mcap_bucket, days_hint, detail, score, sentence, sourceUrl, order }: Props) {
+export function RumorCard({ ticker, name, mcap_bucket, days_hint, detail, score, sentence, sourceUrl, order, subline }: Props) {
   return (
     <div className="rounded-lg border border-slate-200 bg-white p-3 text-sm text-slate-800 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100">
       <div className="flex items-baseline gap-2 flex-wrap">
@@ -58,6 +59,7 @@ export function RumorCard({ ticker, name, mcap_bucket, days_hint, detail, score,
           </>
         )}
       </div>
+      {subline && <div className="mt-1 text-xs text-sky-800 dark:text-sky-300">{subline}</div>}
     </div>
   );
 }

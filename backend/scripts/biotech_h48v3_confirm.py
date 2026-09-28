@@ -298,6 +298,10 @@ def main():
                 # StockTwits 삭제 · 로컬 α 있으면 별도 CSV 병기 (미구현 · 다음 세션)
                 "st_samples": "[]",
                 "reddit_samples": json.dumps(reddit_samples[:3], ensure_ascii=False),
+                # WP77-1 · 급등 브리핑 표시 전용 (제목 원문·링크·RSS 갱신 시각 · 최대 5) · 키워드·단계·점수에 쓰지 않음
+                "reddit_posts": json.dumps(
+                    [{"title": p["title"][:200], "link": p["link"], "sub": p.get("sub", ""), "updated": p.get("updated", "")}
+                     for p in reddit_hits[:5]], ensure_ascii=False),
             })
 
     out_path = OUT_DIR / f"community_confirm_{today_str}.csv"
