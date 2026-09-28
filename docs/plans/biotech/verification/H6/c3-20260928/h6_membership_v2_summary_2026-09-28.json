@@ -1,0 +1,169 @@
+{
+  "aact_snapshot_date": "2026-09-28",
+  "studies_csv": "aact_theme_studies_2026-09-28.csv",
+  "matched_studies": 15631,
+  "matched_rows": 15903,
+  "aliases_loaded": 99,
+  "alias_effect": {
+    "before": {
+      "sponsors_listed": 65,
+      "sponsor_listed_rate": 0.017,
+      "studies_listed": 391,
+      "study_listed_rate": 0.025
+    },
+    "after": {
+      "sponsors_listed": 87,
+      "sponsor_listed_rate": 0.0228,
+      "studies_listed": 1224,
+      "study_listed_rate": 0.0783
+    },
+    "alias_hits": 37
+  },
+  "sponsors_unique": 3820,
+  "sponsors_listed": 87,
+  "sponsor_listed_rate": 0.0228,
+  "studies_listed": 1224,
+  "study_listed_rate": 0.0783,
+  "unmatched_breakdown": {
+    "비상장": 511,
+    "대학·병원": 3068,
+    "이름": 0,
+    "해외": 154
+  },
+  "membership_pairs": 108,
+  "member_tickers": 76,
+  "quarterly_stats_2015Q1_2026Q3": {
+    "obesity_glp1": {
+      "min": 20,
+      "median": 27,
+      "max": 52
+    },
+    "hair_loss": {
+      "min": 6,
+      "median": 7,
+      "max": 10
+    },
+    "longevity_rejuvenation": {
+      "min": 3,
+      "median": 3,
+      "max": 6
+    },
+    "meal_replacement_metabolic": {
+      "min": 2,
+      "median": 2,
+      "max": 3
+    },
+    "hibernation_hypothermia": {
+      "min": 0,
+      "median": 0,
+      "max": 0
+    },
+    "cognitive_memory": {
+      "min": 0,
+      "median": 0,
+      "max": 0
+    },
+    "control_nash": {
+      "min": 7,
+      "median": 25,
+      "max": 33
+    },
+    "control_amyloid": {
+      "min": 3,
+      "median": 3,
+      "max": 4
+    },
+    "main_union": {
+      "min": 21,
+      "median": 29,
+      "max": 59
+    }
+  },
+  "price_plan": {
+    "unique_member_tickers": 76,
+    "have_prices": 17,
+    "need_tiingo": 59,
+    "monthly_budget": 500,
+    "reserve": 50,
+    "allocatable_per_month": 450,
+    "months_needed": 1,
+    "batches": [
+      {
+        "month_index": 1,
+        "n": 59,
+        "first": [
+          "NVO",
+          "LLY",
+          "GSK",
+          "PFE",
+          "AZN"
+        ]
+      }
+    ],
+    "priority_rule": "소속 임상 수 많은 순 (1 티커 = 1 호출 · 전 기간 일봉)"
+  },
+  "gate": {
+    "ranked_quarters": 42,
+    "good_quarters_top_ge3": 33,
+    "good_quarters_top_and_bot_ge3": 23,
+    "auto_go": true,
+    "auto_go_strict_both": true
+  },
+  "gate_rule_a": {
+    "rule": "a-1안 (소속<3 테마 순위 제외 · 다음 순위로 채움)",
+    "quarters_used": 42,
+    "quarters_skipped_lt3_themes": 0,
+    "good_quarters_top_ge3": 42,
+    "good_quarters_top_and_bot_ge3": 42,
+    "auto_go": true,
+    "auto_go_strict_both": true
+  },
+  "matched_in_by_theme": {
+    "obesity_glp1": {
+      "condition": 11760,
+      "title": 5592,
+      "intervention": 1542
+    },
+    "hair_loss": {
+      "intervention": 261,
+      "title": 410,
+      "condition": 243
+    },
+    "longevity_rejuvenation": {
+      "title": 297,
+      "condition": 80,
+      "intervention": 28
+    },
+    "meal_replacement_metabolic": {
+      "intervention": 127,
+      "title": 381,
+      "condition": 73
+    },
+    "hibernation_hypothermia": {
+      "title": 102,
+      "intervention": 39,
+      "condition": 12
+    },
+    "cognitive_memory": {
+      "title": 43,
+      "condition": 1,
+      "intervention": 3
+    },
+    "control_nash": {
+      "condition": 498,
+      "title": 479,
+      "intervention": 50
+    },
+    "control_amyloid": {
+      "intervention": 50,
+      "condition": 7,
+      "title": 61
+    }
+  },
+  "caveats": [
+    "비상장 분류에 폐지 상장사 혼입 가능 · 과거 소속 과소 방향 (SEC company_tickers = 현재 상장사만 · 생존편향)",
+    "별칭 사전 = 자체명 변형 + 2015Q1 이전 완전자회사만 · 2015 이후 인수 (Allergan·Shire·Celgene 등) 제외 (point-in-time)",
+    "AACT 스냅샷 = 현재 시점 lead_sponsor·제목 · 사후 스폰서 변경 (인수 등) 은 현재 이름 기준",
+    "study_first_posted = 최초 공개일 · point-in-time 편입 기준 (이탈 없음)"
+  ]
+}

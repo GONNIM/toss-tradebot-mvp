@@ -1,0 +1,109 @@
+ticker,theme,entry_quarter,entry_date,n_studies,first_nct,sponsor
+AAPL,meal_replacement_metabolic,2025Q2,2025-05-06,1,NCT06958523,Apple Inc.
+AARD,obesity_glp1,2021Q4,2021-11-16,2,NCT05121441,"Aardvark Therapeutics, Inc."
+ABBV,hair_loss,2025Q2,2025-06-16,1,NCT07023302,AbbVie
+ABBV,obesity_glp1,2025Q4,2025-12-18,4,NCT07291232,AbbVie
+ABT,control_nash,2012Q4,2012-12-21,1,NCT01754714,Abbott
+ABT,longevity_rejuvenation,2012Q4,2012-12-21,1,NCT01754064,Abbott Medical Devices
+ABT,obesity_glp1,2005Q4,2005-10-10,9,NCT00234832,Abbott
+ACIU,obesity_glp1,2026Q1,2026-03-11,1,NCT07463196,AC Immune SA
+ACRS,hair_loss,2018Q2,2018-04-12,1,NCT03495817,"Aclaris Therapeutics, Inc."
+ALGS,control_nash,2021Q4,2021-10-22,2,NCT05090111,Aligos Therapeutics
+ALNY,control_nash,2020Q3,2020-09-25,1,NCT04565717,Alnylam Pharmaceuticals
+ALNY,obesity_glp1,2026Q1,2026-03-11,2,NCT07463846,Alnylam Pharmaceuticals
+ALT,control_nash,2020Q3,2020-09-23,4,NCT04561245,"Altimmune, Inc."
+ALT,obesity_glp1,2020Q3,2020-09-23,3,NCT04561245,"Altimmune, Inc."
+AMGN,obesity_glp1,2018Q4,2018-11-28,29,NCT03757130,Amgen
+APMD,obesity_glp1,2024Q2,2024-05-06,1,NCT06400615,Apnimed
+ARWR,control_nash,2019Q4,2019-12-17,1,NCT04202354,Arrowhead Pharmaceuticals
+ARWR,obesity_glp1,2024Q4,2024-11-22,2,NCT06700538,Arrowhead Pharmaceuticals
+AZN,control_nash,2012Q4,2012-10-10,9,NCT01703260,AstraZeneca
+AZN,obesity_glp1,2005Q2,2005-05-30,42,NCT00112021,AstraZeneca
+BAX,obesity_glp1,2007Q4,2007-12-04,1,NCT00566943,Baxter Healthcare Corporation
+BIIB,control_amyloid,2012Q3,2012-09-03,11,NCT01677572,Biogen
+BIOA,obesity_glp1,2024Q3,2024-07-23,2,NCT06515418,"BioAge Labs, Inc."
+BMEA,obesity_glp1,2025Q4,2025-10-31,2,NCT07223216,Biomea Fusion Inc.
+BMRN,control_nash,2024Q4,2024-12-17,1,NCT06738017,BioMarin Pharmaceutical
+BMY,control_nash,2015Q2,2015-04-09,9,NCT02413372,Bristol-Myers Squibb
+BMY,obesity_glp1,2006Q4,2006-10-17,3,NCT00388609,Bristol-Myers Squibb
+BODI,obesity_glp1,2016Q4,2016-12-02,1,NCT02979717,Beachbody
+BSX,longevity_rejuvenation,2014Q1,2014-03-19,1,NCT02091011,Boston Scientific Corporation
+BSX,obesity_glp1,2011Q3,2011-09-07,5,NCT01429194,Boston Scientific Corporation
+CANF,control_nash,2016Q4,2016-10-07,2,NCT02927314,Can-Fite BioPharma
+CGTX,control_amyloid,2018Q2,2018-05-11,1,NCT03522129,Cognition Therapeutics
+CORT,control_nash,2019Q1,2019-01-30,8,NCT03823703,Corcept Therapeutics
+CRBP,obesity_glp1,2025Q4,2025-12-30,1,NCT07310901,Corbus Pharmaceuticals Inc.
+ENTA,control_nash,2017Q2,2017-06-15,9,NCT03187496,"Enanta Pharmaceuticals, Inc"
+GALT,control_nash,2013Q3,2013-07-16,4,NCT01899859,Galectin Therapeutics Inc.
+GILD,control_nash,2008Q3,2008-08-25,16,NCT00740610,Gilead Sciences
+GILD,obesity_glp1,2019Q2,2019-06-14,2,NCT03987074,Gilead Sciences
+GLMD,control_nash,2023Q2,2023-05-24,1,NCT05874336,Galmed Pharmaceuticals Ltd
+GSK,control_nash,2008Q2,2008-05-15,11,NCT00678587,GlaxoSmithKline
+GSK,hair_loss,2003Q1,2003-03-13,41,NCT00056407,GlaxoSmithKline
+GSK,obesity_glp1,2006Q1,2006-02-28,16,NCT00297180,GlaxoSmithKline
+GUTS,obesity_glp1,2024Q3,2024-07-03,1,NCT06484114,Fractyl Health Inc.
+HUM,obesity_glp1,2021Q2,2021-04-28,1,NCT04862858,Humana Inc.
+IBIO,obesity_glp1,2026Q1,2026-03-23,1,NCT07487376,"iBio, Inc."
+IMRN,control_nash,2011Q4,2011-11-08,2,NCT01466894,Immuron Ltd.
+INCY,obesity_glp1,2006Q4,2006-11-14,2,NCT00398619,Incyte Corporation
+INGR,obesity_glp1,2012Q2,2012-05-01,1,NCT01588600,Ingredion Incorporated
+IONS,obesity_glp1,2015Q2,2015-06-19,1,NCT02476019,"Ionis Pharmaceuticals, Inc."
+ISRG,obesity_glp1,2023Q1,2023-01-12,1,NCT05682742,Intuitive Surgical
+JNJ,control_amyloid,2013Q4,2013-11-07,1,NCT01978548,"Janssen Research & Development, LLC"
+JNJ,hair_loss,2005Q3,2005-09-09,3,NCT00151515,Johnson & Johnson Consumer and Personal Products Worldwide
+JNJ,longevity_rejuvenation,2010Q2,2010-04-08,1,NCT01100190,"Ethicon, Inc."
+JNJ,obesity_glp1,2005Q3,2005-09-14,35,NCT00166205,Ethicon Endo-Surgery
+LEXX,obesity_glp1,2024Q4,2024-10-18,1,NCT06648031,Lexaria Bioscience Corp.
+LLY,control_amyloid,2008Q4,2008-10-02,4,NCT00765115,Eli Lilly and Company
+LLY,control_nash,2019Q4,2019-11-18,2,NCT04166773,Eli Lilly and Company
+LLY,hair_loss,2010Q2,2010-06-09,2,NCT01139762,Eli Lilly and Company
+LLY,obesity_glp1,2002Q3,2002-08-23,159,NCT00044187,Eli Lilly and Company
+LPCN,control_nash,2019Q4,2019-10-21,2,NCT04134091,Lipocine Inc.
+MANE,hair_loss,2024Q3,2024-07-30,4,NCT06527365,"Veradermics, Inc."
+MBX,obesity_glp1,2025Q3,2025-08-27,1,NCT07142707,MBX Biosciences
+MDGL,control_nash,2016Q3,2016-09-23,12,NCT02912260,"Madrigal Pharmaceuticals, Inc."
+MDT,obesity_glp1,2013Q2,2013-04-04,1,NCT01823705,Medtronic Corporate Technologies and New Ventures
+MED,meal_replacement_metabolic,2012Q3,2012-08-10,2,NCT01662830,"Medifast, Inc."
+MED,obesity_glp1,2009Q4,2009-11-11,5,NCT01011491,"Medifast, Inc."
+MIRM,control_nash,2016Q2,2016-06-01,1,NCT02787304,"Mirum Pharmaceuticals, Inc."
+MNOV,control_nash,2016Q1,2016-02-12,1,NCT02681055,MediciNova
+MRK,control_nash,2020Q4,2020-10-12,4,NCT04583423,Merck Sharp & Dohme LLC
+MRK,hair_loss,2012Q1,2012-02-16,1,NCT01534351,Merck Sharp & Dohme LLC
+MRK,obesity_glp1,2004Q3,2004-09-28,25,NCT00092859,Merck Sharp & Dohme LLC
+NVO,control_nash,2021Q1,2021-03-30,7,NCT04822181,Novo Nordisk A/S
+NVO,obesity_glp1,2005Q3,2005-09-12,484,NCT00154401,Novo Nordisk A/S
+NVS,control_nash,2016Q3,2016-08-04,6,NCT02855164,Novartis Pharmaceuticals
+NVS,obesity_glp1,2004Q1,2004-01-23,14,NCT00076362,Novartis Pharmaceuticals
+OGN,hair_loss,2005Q3,2005-08-05,3,NCT00127179,Organon and Co
+OGN,longevity_rejuvenation,2004Q3,2004-08-27,1,NCT00090259,Organon and Co
+OMDA,obesity_glp1,2016Q1,2016-01-26,1,NCT02664064,"Omada Health, Inc."
+OPK,control_nash,2026Q2,2026-04-06,1,NCT07512427,"OPKO Health, Inc."
+OPK,obesity_glp1,2016Q1,2016-02-26,1,NCT02692781,"OPKO Health, Inc."
+PFE,control_nash,2008Q2,2008-06-27,4,NCT00706537,Pfizer
+PFE,hair_loss,2012Q1,2012-03-07,3,NCT01547299,Pfizer
+PFE,meal_replacement_metabolic,2006Q4,2006-10-03,1,NCT00383253,Pfizer
+PFE,obesity_glp1,2005Q3,2005-08-24,52,NCT00134199,Pfizer
+PRE,longevity_rejuvenation,2024Q4,2024-12-03,1,NCT06714162,Prenetics Global
+PTN,obesity_glp1,2024Q3,2024-08-22,1,NCT06565611,"Palatin Technologies, Inc"
+RANI,obesity_glp1,2025Q1,2025-03-24,1,NCT06891287,RANI Therapeutics
+REGN,control_nash,2022Q2,2022-06-21,5,NCT05423327,Regeneron Pharmaceuticals
+REGN,obesity_glp1,2021Q1,2021-01-14,9,NCT04710056,Regeneron Pharmaceuticals
+RMD,obesity_glp1,2010Q3,2010-08-03,4,NCT01174316,ResMed
+RYTM,obesity_glp1,2013Q2,2013-06-04,22,NCT01867437,"Rhythm Pharmaceuticals, Inc."
+SGMT,control_nash,2019Q2,2019-05-06,5,NCT03938246,Sagimet Biosciences Inc.
+SKYE,obesity_glp1,2024Q3,2024-08-29,1,NCT06577090,"Skye Bioscience, Inc."
+SNY,control_nash,2007Q4,2007-12-19,3,NCT00576667,Sanofi
+SNY,obesity_glp1,2002Q1,2002-01-24,41,NCT00029835,Sanofi
+TAK,control_nash,2025Q3,2025-07-06,1,NCT07052682,Takeda
+TAK,obesity_glp1,2008Q4,2008-10-20,1,NCT00775814,Takeda
+TEVA,control_nash,2016Q2,2016-05-11,1,NCT02769091,"Teva Branded Pharmaceutical Products R&D, Inc."
+TEVA,hair_loss,2009Q1,2009-02-04,2,NCT00835666,Teva Pharmaceuticals USA
+TLSA,control_nash,2017Q3,2017-09-25,1,NCT03291249,Tiziana Life Sciences LTD
+UNH,obesity_glp1,2011Q2,2011-06-16,2,NCT01374646,UnitedHealth Group
+VANI,obesity_glp1,2023Q1,2023-01-04,2,NCT05670379,"Vivani Medical, Inc"
+VERU,obesity_glp1,2024Q1,2024-02-28,2,NCT06282458,Veru Inc.
+VKTX,control_nash,2019Q4,2019-11-21,2,NCT04173065,"Viking Therapeutics, Inc."
+VNDA,obesity_glp1,2025Q1,2025-02-03,2,NCT06804603,Vanda Pharmaceuticals
+VTVT,obesity_glp1,2008Q4,2008-10-24,1,NCT00779519,vTv Therapeutics
+WW,obesity_glp1,2024Q3,2024-09-20,2,NCT06605703,WW International Inc
+ZBH,longevity_rejuvenation,2021Q1,2021-02-15,3,NCT04754087,Zimmer Biomet

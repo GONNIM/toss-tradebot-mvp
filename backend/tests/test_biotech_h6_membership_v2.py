@@ -129,3 +129,14 @@ def test_alias_front_and_universe_guard():
     r = m.match("Eli Lilly and Company", "INDUSTRY")
     assert (r["ticker"], r["method"]) == ("LLY", "alias")
     assert m.match("Foo Pharma", "INDUSTRY")["status"] == "unmatched"                  # 우주 밖 티커 별칭 무시
+
+
+def test_gate_rule_a_excludes_small_themes():
+    per = {"obesity_glp1": {"A", "B", "C"}, "hair_loss": {"D", "E", "F"}, "longevity_rejuvenation": {"G", "H", "I"},
+           "hibernation_hypothermia": set(), "cognitive_memory": {"J"}}
+    order = {(2020, 1): ["hibernation_hypothermia", "obesity_glp1", "cognitive_memory", "hair_loss",
+                         "longevity_rejuvenation", "meal_replacement_metabolic"]}
+    g = mv.gate_counts_rule_a({(2020, 1): per}, order)
+    assert g["quarters_used"] == 1 and g["good_quarters_top_and_bot_ge3"] == 1   # 동면(0)·신경(1) 제외 후 3테마 재정렬
+    g2 = mv.gate_counts_rule_a({(2020, 1): {"obesity_glp1": {"A", "B", "C"}}}, order)
+    assert g2["quarters_skipped_lt3_themes"] == 1

@@ -230,6 +230,45 @@ def load_rank_terciles() -> dict[tuple[int, int, str], str]:
         return {(int(r["year"]), int(r["quarter"]), r["theme"]): r["tercile"] for r in csv.DictReader(f)}
 
 
+def load_rank_order() -> dict[tuple[int, int], list[str]]:
+    """분기 → 주 테마 순위 순 목록 (봉인 순위 rank 열 · 1 = 최상위)."""
+    p = _P.find_glob("h6_rank_growth_*.csv")
+    if p is None:
+        return {}
+    tmp: dict[tuple[int, int], list[tuple[int, str]]] = defaultdict(list)
+    with p.open() as f:
+        for r in csv.DictReader(f):
+            if r["theme"] in MAIN_THEMES:
+                tmp[(int(r["year"]), int(r["quarter"]))].append((int(r["rank"]), r["theme"]))
+    return {k: [t for _, t in sorted(v)] for k, v in tmp.items()}
+
+
+def gate_counts_rule_a(qmembers: dict[tuple[int, int], dict[str, set[str]]],
+                       order: dict[tuple[int, int], list[str]]) -> dict:
+    """규칙 (a) 1안 · 소속 < 3 테마는 그 분기 순위에서 제외 → 남은 테마로 3분위 재구성 (다음 순위로 채움).
+
+    남은 테마 k 개 · 상위 = 앞 max(1, round(k/3)) 개 · 하위 = 뒤 같은 수 · k < 3 이면 그 분기 제외.
+    """
+    good_top = good_both = used = skipped = 0
+    for yq, ranked in sorted(order.items()):
+        per = qmembers.get(yq, {})
+        elig = [t for t in ranked if len(per.get(t, set())) >= AUTO_GO_MIN_MEMBERS]
+        if len(elig) < 3:
+            skipped += 1
+            continue
+        used += 1
+        n = max(1, round(len(elig) / 3))
+        top, bot = elig[:n], elig[-n:]
+        n_top = len(set().union(*(per[t] for t in top)))
+        n_bot = len(set().union(*(per[t] for t in bot)))
+        good_top += n_top >= AUTO_GO_MIN_MEMBERS
+        good_both += (n_top >= AUTO_GO_MIN_MEMBERS and n_bot >= AUTO_GO_MIN_MEMBERS)
+    return {"rule": "a-1안 (소속<3 테마 순위 제외 · 다음 순위로 채움)", "quarters_used": used,
+            "quarters_skipped_lt3_themes": skipped, "good_quarters_top_ge3": good_top,
+            "good_quarters_top_and_bot_ge3": good_both, "auto_go": good_top >= AUTO_GO_MIN_QUARTERS,
+            "auto_go_strict_both": good_both >= AUTO_GO_MIN_QUARTERS}
+
+
 def load_studies(path: Path) -> list[dict]:
     with path.open() as f:
         return list(csv.DictReader(f))
@@ -379,6 +418,13 @@ def main():
     member_tickers = {r["ticker"] for r in membership}
     plan = price_plan(member_tickers, load_price_tickers(), membership)
     gate = gate_counts(qmembers, load_rank_terciles())
+    gate_a = gate_counts_rule_a(qmembers, load_rank_order())
+    # 매치 위치 분해 (임상 기준 · 제목 / 질환명 / 약물명 · 한 임상이 여러 곳 매치 가능)
+    where = defaultdict(lambda: defaultdict(set))
+    for s in studies:
+        for w in (s.get("matched_in") or "").split("|"):
+            if w:
+                where[s["theme"]][w].add(s["nct_id"])
 
     out = _P.out_dir("h6")
     _write_csv(out / f"h6_membership_v2_{snap}.csv", membership,
@@ -406,6 +452,8 @@ def main():
         "quarterly_stats_2015Q1_2026Q3": theme_stats,
         "price_plan": plan,
         "gate": {k: v for k, v in gate.items() if k != "per_quarter"},
+        "gate_rule_a": gate_a,
+        "matched_in_by_theme": {t: {w: len(v) for w, v in where[t].items()} for t in all_themes},
         "caveats": [
             "비상장 분류에 폐지 상장사 혼입 가능 · 과거 소속 과소 방향 (SEC company_tickers = 현재 상장사만 · 생존편향)",
             "별칭 사전 = 자체명 변형 + 2015Q1 이전 완전자회사만 · 2015 이후 인수 (Allergan·Shire·Celgene 등) 제외 (point-in-time)",

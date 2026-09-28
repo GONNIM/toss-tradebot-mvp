@@ -9,7 +9,24 @@
 
 ---
 
+## 영구 규칙
+
+- **보고 시 전체 경로 (2026-09-28~)**: 문서·파일·산출물 언급은 전체 경로로 적는다. 저장소 파일 = 저장소 루트 기준 (예: `docs/plans/biotech/data/sponsor_aliases.csv`) · 서버 파일 = 절대 경로 (예: `/root/toss-tradebot-mvp/var/biotech/h6/aact_theme_studies_2026-09-28.csv`). 파일 이름만 적지 않는다.
+
+---
+
 ## PENDING
+
+### [Biotech Catalyst Radar · Phase C 3 재추출 · 관문 3 요청] · 2026-09-28 발행 → Fable 검수 대기
+
+- PR #26 병합·배포 (`c2885b1`) · 스모크 13/13 200
+- 서버 재추출 완료 · `/root/toss-tradebot-mvp/var/biotech/h6/aact_theme_studies_2026-09-28.csv` · 매치 임상 15,631 · 스폰서 3,820
+- 소속 v2 확정 · 유니크 티커 76 · 자동 GO 충족 (기존 3분위 33/42 · 규칙 (a) 42/42)
+- 규칙 (a)(b) 사전 선택 · `docs/plans/biotech/data/h6_params_v2_draft.json`
+- 검수 요청서: `docs/plans/biotech/verification/H6/H6-gate3-request-20260928.md` · **본 실행 금지**
+- 다음: Fable 판정 → 통과 시 Tiingo 59 티커 가격 수집 (승인 후) → 본 백테스트 (승인 후)
+
+---
 
 ### [Biotech Catalyst Radar · 관측 마감 (무사고 7일 판정) → Phase C 3 (H6 소속 확장)] · 2026-09-28 발행
 

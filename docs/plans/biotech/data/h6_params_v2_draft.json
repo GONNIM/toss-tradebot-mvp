@@ -64,53 +64,131 @@
   "controls_reporting": {
     "note": "NASH·아밀로이드는 상위 3분위 진입 시점·기간 관측만 · 대조군 알파 판정 규칙 없음 (실측 정합성 검증 참조)"
   },
-  "gate_status": "관문 3 재요청 초안 · Fable 검수 대기 · 백테스트 본 실행 금지",
+  "gate_status": "관문 3 검수 요청 · Fable 검수 대기 · 백테스트 본 실행 금지",
   "changelog": [
-    "v2-draft (2026-09-28) · membership 절만 교체 (CT.gov API 300건 상한 → AACT 스냅샷 전량) · signal·rank·backtest·bootstrap·decision_rule 무변경"
+    "v2-draft (2026-09-28) · membership 절만 교체 (CT.gov API 300건 상한 → AACT 스냅샷 전량) · signal·rank·backtest·bootstrap·decision_rule 무변경",
+    "v2-draft (2026-09-28 · 재추출 확정) · 질환명·약물명 매치 포함 최종 수치 · 실행 전 규칙 (a)(b) 사전 선택"
   ],
   "gate3_request": {
-    "auto_go_rule": "분기별 상위 3분위 주 테마 소속 종목 합 ≥ 3 인 분기 ≥ 20 (h42 정의 승계) · 보조 표기 = 상위·하위 모두 ≥ 3",
+    "auto_go_rule": "분기별 상위 3분위 주 테마 소속 종목 합 ≥ 3 인 분기 ≥ 20 (h42 정의 승계) · 보조 = 상위·하위 모두 ≥ 3",
     "result": {
-      "basis": "잠정 · AACT 2026-09-28 · 제목 매치만 (질환명·약물명 누락 버그 · 수정 후 재추출 대기) · 재추출은 매치 상위집합 → 소속 수 감소 없음 → 판정 뒤집힘 없음",
-      "ranked_quarters": 42,
-      "good_quarters_top_ge3": 31,
-      "good_quarters_top_and_bot_ge3": 21,
-      "auto_go": true,
-      "auto_go_strict_both": true,
-      "member_tickers": 61,
+      "basis": "확정 · AACT 2026-09-28 · 제목+질환명+약물명 매치 · 별칭 사전 적용",
+      "matched_studies": 15631,
+      "sponsors_unique": 3820,
       "alias_effect": {
         "before": {
-          "sponsors_listed": 51,
-          "sponsor_listed_rate": 0.0212,
-          "studies_listed": 265,
-          "study_listed_rate": 0.0363
+          "sponsors_listed": 65,
+          "sponsor_listed_rate": 0.017,
+          "studies_listed": 391,
+          "study_listed_rate": 0.025
         },
         "after": {
-          "sponsors_listed": 72,
-          "sponsor_listed_rate": 0.0299,
-          "studies_listed": 960,
-          "study_listed_rate": 0.1316
+          "sponsors_listed": 87,
+          "sponsor_listed_rate": 0.0228,
+          "studies_listed": 1224,
+          "study_listed_rate": 0.0783
         },
-        "alias_hits": 34
+        "alias_hits": 37
       },
       "unmatched_breakdown": {
-        "비상장": 325,
-        "대학·병원": 1902,
+        "비상장": 511,
+        "대학·병원": 3068,
         "이름": 0,
-        "해외": 107
+        "해외": 154
+      },
+      "member_tickers": 76,
+      "quarterly_stats": {
+        "obesity_glp1": {
+          "min": 20,
+          "median": 27,
+          "max": 52
+        },
+        "hair_loss": {
+          "min": 6,
+          "median": 7,
+          "max": 10
+        },
+        "longevity_rejuvenation": {
+          "min": 3,
+          "median": 3,
+          "max": 6
+        },
+        "meal_replacement_metabolic": {
+          "min": 2,
+          "median": 2,
+          "max": 3
+        },
+        "hibernation_hypothermia": {
+          "min": 0,
+          "median": 0,
+          "max": 0
+        },
+        "cognitive_memory": {
+          "min": 0,
+          "median": 0,
+          "max": 0
+        },
+        "control_nash": {
+          "min": 7,
+          "median": 25,
+          "max": 33
+        },
+        "control_amyloid": {
+          "min": 3,
+          "median": 3,
+          "max": 4
+        },
+        "main_union": {
+          "min": 21,
+          "median": 29,
+          "max": 59
+        }
+      },
+      "gate_v1_terciles": {
+        "ranked_quarters": 42,
+        "good_quarters_top_ge3": 33,
+        "good_quarters_top_and_bot_ge3": 23,
+        "auto_go": true,
+        "auto_go_strict_both": true
+      },
+      "gate_rule_a": {
+        "rule": "a-1안 (소속<3 테마 순위 제외 · 다음 순위로 채움)",
+        "quarters_used": 42,
+        "quarters_skipped_lt3_themes": 0,
+        "good_quarters_top_ge3": 42,
+        "good_quarters_top_and_bot_ge3": 42,
+        "auto_go": true,
+        "auto_go_strict_both": true
       },
       "price_plan": {
-        "unique_member_tickers": 61,
-        "have_prices": 16,
-        "need_tiingo": 45,
+        "unique_member_tickers": 76,
+        "have_prices": 17,
+        "need_tiingo": 59,
         "months_needed": 1
-      },
-      "fable_flags": [
-        "hibernation_hypothermia·cognitive_memory 소속 0 · meal_replacement 1 → 해당 테마 3분위 분기는 빈 바구니",
-        "obesity_glp1 = 대형 제약 (NVO·LLY 등) 비중 큼 → 테마 순수도 희석",
-        "비상장 분류에 폐지 상장사 혼입 가능 · 과거 소속 과소 방향"
-      ]
+      }
     },
-    "status": "자동 GO 충족 (잠정) · Fable 검수 대기 · 본 실행 금지"
+    "fable_flags": [
+      "규칙 (a) 1안 적용 시 비교 테마가 3개 (비만·탈모·장수) 로 축소 · 동면·신경 상시 0 · 식사대용 2~3",
+      "비만 테마 소속 52 중 대형 제약 22 → 테마 순수도 희석 · 규칙 (b) 대형 제외 열로 관측",
+      "비상장 분류에 폐지 상장사 혼입 가능 · 과거 소속 과소 방향 (생존편향)"
+    ],
+    "status": "자동 GO 충족 · Fable 검수 대기 · 본 실행 금지"
+  },
+  "pre_run_rules": {
+    "a_small_theme_quarter": {
+      "selected": "1안",
+      "1안": "분기 q 에 소속 < 3 인 주 테마는 그 분기 순위 산정에서 제외 · 남은 k 테마를 봉인 순위 (h6_rank_growth rank) 순서로 재정렬 · 상위 = 앞 max(1, round(k/3)) · 하위 = 뒤 같은 수 · k < 3 이면 그 분기 제외 (다음 순위로 채움)",
+      "대안 2": "순위 그대로 · 빈 바구니 테마는 기여 0 (같은 3분위의 다른 테마 종목만 보유) · 바구니 < 3 이면 그 분기 제외",
+      "대안 3": "소속 < 3 테마가 상위·하위 3분위에 1개라도 들면 그 분기 전체 제외",
+      "selection_reason": "1안 = 빈 바구니 없이 모든 분기 사용 (42/42) · 순위 자체 (봉인) 는 무변경 · 대안 2 는 상·하 바구니 크기 불균형 · 대안 3 은 분기 손실 (동면·신경 상시 0)",
+      "effect_observed": "적용 시 주 테마 3개 분기 37 · 4개 분기 5 → 사실상 비만·탈모·장수 (+ 식사대용 일부) 순위 비교로 축소 (Fable 쟁점)"
+    },
+    "b_obesity_mcap_split": {
+      "selected": "산출물에 비만 테마 2열 병기 = 전체 / 대형 5B+ 제외",
+      "mcap_definition": "리밸런싱 분기 첫 영업일 (point-in-time) 시총 = adj_close × 발행주식수 (SEC companyfacts dei:EntityCommonStockSharesOutstanding · 그 시점 이전 최신 공시)",
+      "unknown_handling": "발행주식수 미확보 = unknown · '대형 제외' 열에서도 유지 (확인된 5B+ 만 제외)",
+      "timing": "가격 수집 (Tiingo) 후 산정 · 현재 소속표는 '전체' 만 · 비만 소속 52 중 별칭 사전 (대형 제약) 22",
+      "judgement": "알파 판정은 전체 열 기준 (사전 커밋 무변경) · 대형 제외 열은 희석 영향 관측용"
+    }
   }
 }
