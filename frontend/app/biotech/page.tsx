@@ -9,6 +9,7 @@
 // - 미로그인: 상단 잠금 배너 1개만 · 섹션·글 숨김
 "use client";
 
+import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { BiotechSessionControl } from "@/components/biotech/BiotechSessionControl";
 import { StatBox } from "@/components/ui/stat-box";
@@ -58,22 +59,6 @@ type BiotechKpi = {
   alerts: number;
 };
 
-type BiotechDoc = {
-  path: string;
-  title: string;
-  generated_utc: string;
-  html: string;
-  raw_md_size: number;
-  render_mode?: string;
-};
-
-type DocTabKey = "status" | "glossary" | "final";
-const DOC_TABS: { key: DocTabKey; label: string }[] = [
-  { key: "status", label: "상태판" },
-  { key: "glossary", label: "용어집" },
-  { key: "final", label: "Phase A 최종" },
-];
-
 async function apiFetch<T>(path: string): Promise<T> {
   const res = await fetch(`/api/v1/biotech${path}`, { credentials: "include", cache: "no-store" });
   if (!res.ok) {
@@ -82,26 +67,6 @@ async function apiFetch<T>(path: string): Promise<T> {
     throw err;
   }
   return res.json();
-}
-
-// md HTML → 계약 클래스 주입 (h1/h2/h3/p/li/blockquote/table/th/td)
-function applyContractToHtml(html: string): string {
-  let out = html;
-  out = out.replace(/<h1(\s[^>]*)?>/gi, '<h1 class="text-lg font-bold mt-3 mb-1">');
-  out = out.replace(/<h2(\s[^>]*)?>/gi, '<h2 class="text-base font-semibold mt-3 mb-1">');
-  out = out.replace(/<h3(\s[^>]*)?>/gi, '<h3 class="text-sm font-medium mt-2 mb-1">');
-  out = out.replace(/<p(\s[^>]*)?>/gi, '<p class="text-sm leading-5 my-1">');
-  out = out.replace(/<li(\s[^>]*)?>/gi, '<li class="text-sm leading-5">');
-  out = out.replace(/<blockquote(\s[^>]*)?>/gi, '<blockquote class="border-l-2 border-border pl-2 text-sm leading-5 text-muted-foreground my-1">');
-  out = out.replace(/<table(\s[^>]*)?>/gi, '<table class="w-full border-collapse text-xs my-2">');
-  out = out.replace(/<th(\s[^>]*)?>/gi, '<th class="border-b border-border bg-slate-50 dark:bg-slate-900 p-1.5 text-left font-semibold">');
-  out = out.replace(/<td(\s[^>]*)?>/gi, '<td class="border-b border-border p-1.5">');
-  out = out.replace(/<code(\s[^>]*)?>/gi, '<code class="rounded bg-slate-100 dark:bg-slate-800 px-1 py-0.5 font-mono text-xs">');
-  out = out.replace(/<pre(\s[^>]*)?>/gi, '<pre class="rounded bg-slate-100 dark:bg-slate-800 p-2 overflow-x-auto text-xs my-2">');
-  out = out.replace(/<a(\s[^>]*)?>/gi, '<a class="text-sky-700 hover:underline dark:text-sky-300"$1>');
-  out = out.replace(/<ul(\s[^>]*)?>/gi, '<ul class="list-disc pl-5 my-1">');
-  out = out.replace(/<ol(\s[^>]*)?>/gi, '<ol class="list-decimal pl-5 my-1">');
-  return out;
 }
 
 // ── 순위표 (섹션 5) 컬럼 ────────────────────────────────
@@ -174,8 +139,6 @@ export default function BiotechPage() {
   const [kpi, setKpi] = useState<BiotechKpi | null>(null);
   const [radar, setRadar] = useState<RadarJson | null>(null);
   const [rumor, setRumor] = useState<RumorJson | null>(null);
-  const [docs, setDocs] = useState<Record<DocTabKey, BiotechDoc | null>>({ status: null, glossary: null, final: null });
-  const [activeDoc, setActiveDoc] = useState<DocTabKey>("status");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -185,18 +148,14 @@ export default function BiotechPage() {
     setLoading(true);
     setError(null);
     try {
-      const [k, r, ru, s, g, fi] = await Promise.all([
+      const [k, r, ru] = await Promise.all([
         apiFetch<BiotechKpi>("/kpi.json"),
         apiFetch<RadarJson>("/radar.json"),
         apiFetch<RumorJson>("/rumor.json"),
-        apiFetch<BiotechDoc>("/status"),
-        apiFetch<BiotechDoc>("/glossary"),
-        apiFetch<BiotechDoc>("/final"),
       ]);
       setKpi(k);
       setRadar(r);
       setRumor(ru);
-      setDocs({ status: s, glossary: g, final: fi });
     } catch (e) {
       const err = e as Error & { status?: number };
       setError(`${err.message} (status=${err.status ?? "?"})`);
@@ -214,8 +173,6 @@ export default function BiotechPage() {
   const t2 = rumor?.rows.filter((r) => r.table === "표2") ?? [];  // 뉴스 통과
   const t3 = rumor?.rows.filter((r) => r.table === "표3") ?? [];  // 언급 있는 종목
   const t4 = rumor?.rows.filter((r) => r.table === "표4") ?? [];  // 임원 매수
-
-  const activeDocData = docs[activeDoc];
 
   return (
     <div className="space-y-4">
@@ -270,10 +227,12 @@ export default function BiotechPage() {
           {t1.length === 0 ? (
             <div className="text-xs text-muted-foreground">해당 종목 없음</div>
           ) : (
-            <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+            <div className="space-y-2">
+              <div className="text-xs text-muted-foreground">임상 완료 예정일이 가까운 순서 ↓ (위가 가장 임박)</div>
               {t1.map((r, i) => (
                 <RumorCard
                   key={i}
+                  order={i + 1}
                   ticker={r.ticker}
                   name={r.name}
                   mcap_bucket={mcapBadge(r.mcap_bucket, r.mcap_asof) ?? ""}
@@ -344,41 +303,14 @@ export default function BiotechPage() {
         </SectionCard>
       )}
 
-      {/* 글 탭 3개 · 하단 · applyContractToHtml */}
+      {/* WP74 3단계 · 문서는 /biotech/docs 로 분리 · 첫 화면에는 링크 3개만 */}
       {isAdmin && (
-        <div className="space-y-2">
-          <nav className="flex flex-wrap gap-2 border-b border-border">
-            {DOC_TABS.map((t) => (
-              <button
-                key={t.key}
-                onClick={() => setActiveDoc(t.key)}
-                className={
-                  activeDoc === t.key
-                    ? "px-3 py-1.5 text-sm font-bold border-b-2 border-sky-600 text-sky-700 dark:text-sky-300"
-                    : "px-3 py-1.5 text-sm text-muted-foreground hover:text-foreground"
-                }
-              >
-                {t.label}
-              </button>
-            ))}
-          </nav>
-          {activeDocData && (
-            <article className="space-y-2">
-              <div className="text-xs text-muted-foreground font-mono">
-                📁 {activeDocData.path} · 생성 UTC {activeDocData.generated_utc} · {activeDocData.raw_md_size.toLocaleString()} B
-                {activeDocData.render_mode === "plain_md_fallback" && (
-                  <span className="ml-2 rounded bg-amber-500/20 px-1.5 py-0.5 text-[10px] font-semibold text-amber-700 dark:text-amber-300">
-                    fallback
-                  </span>
-                )}
-              </div>
-              <div
-                className="rounded border border-border bg-card p-4"
-                dangerouslySetInnerHTML={{ __html: applyContractToHtml(activeDocData.html) }}
-              />
-            </article>
-          )}
-        </div>
+        <nav className="flex flex-wrap gap-4 border-t border-border pt-3 text-sm">
+          <span className="text-muted-foreground">📄 문서</span>
+          <Link href="/biotech/docs?tab=status" className="text-sky-700 hover:underline dark:text-sky-300">상태판</Link>
+          <Link href="/biotech/docs?tab=glossary" className="text-sky-700 hover:underline dark:text-sky-300">용어집</Link>
+          <Link href="/biotech/docs?tab=final" className="text-sky-700 hover:underline dark:text-sky-300">최종 리포트</Link>
+        </nav>
       )}
     </div>
   );
