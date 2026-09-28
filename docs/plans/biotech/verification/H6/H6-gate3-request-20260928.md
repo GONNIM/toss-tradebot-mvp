@@ -1,10 +1,10 @@
 # H6 관문 3 검수 요청 · 소속 v2 (Phase C 3 · 2026-09-28)
 
-**상태**: 자동 GO 충족 · **Fable 검수 대기 · 본 실행 금지** (백테스트·수익률 계산 없음)
+**상태**: **관문 3 통과 (Fable · 2026-09-28 · 조건 3건)** · 확정 규칙 = `docs/plans/biotech/data/h6_params_v2.json` · 본 실행은 10월 가격 수집·커버율 보고 후 (조건부 승인)
 
 ## 무엇이 바뀌었나
 - 소속 (테마별 종목 명단) 을 CT.gov API 300건 상한 표본 → **AACT 스냅샷 전량** 으로 교체
-- 규칙 파일: `docs/plans/biotech/data/h6_params_v2_draft.json` (membership 절 + 실행 전 규칙 (a)(b) · 나머지 사전 커밋 무변경)
+- 규칙 파일: `docs/plans/biotech/data/h6_params_v2.json` (확정 · 구 draft · membership 절 + 실행 전 규칙 (a)(b) · 나머지 사전 커밋 무변경)
 - 별칭 사전: `docs/plans/biotech/data/sponsor_aliases.csv` (39사 99행 · 근거 = SEC company_tickers 명칭 · 2015 이후 인수 제외)
 - 산출물 사본: `docs/plans/biotech/verification/H6/c3-20260928/` · 서버 원본 `/root/toss-tradebot-mvp/var/biotech/h6/aact_theme_studies_2026-09-28.csv`
 - 코드: `backend/scripts/biotech_h6_aact_theme_extract.py` · `backend/scripts/biotech_h6_membership_v2.py`

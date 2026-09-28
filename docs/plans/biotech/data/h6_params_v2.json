@@ -1,6 +1,6 @@
 {
-  "spec": "H6 백테스트 파라미터 v2 초안 (Phase C 3 · 소속 v2 반영 · 백테스트 규칙은 v1 사전 커밋 그대로 · 사후 조정 금지)",
-  "version": "v2-draft",
+  "spec": "H6 백테스트 파라미터 v2 (관문 3 통과 · Fable 조건 3건 반영 · 사후 조정 금지)",
+  "version": "v2",
   "generated": "2026-09-28",
   "themes": {
     "main": [
@@ -64,10 +64,11 @@
   "controls_reporting": {
     "note": "NASH·아밀로이드는 상위 3분위 진입 시점·기간 관측만 · 대조군 알파 판정 규칙 없음 (실측 정합성 검증 참조)"
   },
-  "gate_status": "관문 3 검수 요청 · Fable 검수 대기 · 백테스트 본 실행 금지",
+  "gate_status": "관문 3 통과 · 가격 수집 (10월) → 커버율 보고 → 본 실행 (조건부 승인) → 관문 2 제출",
   "changelog": [
     "v2-draft (2026-09-28) · membership 절만 교체 (CT.gov API 300건 상한 → AACT 스냅샷 전량) · signal·rank·backtest·bootstrap·decision_rule 무변경",
-    "v2-draft (2026-09-28 · 재추출 확정) · 질환명·약물명 매치 포함 최종 수치 · 실행 전 규칙 (a)(b) 사전 선택"
+    "v2-draft (2026-09-28 · 재추출 확정) · 질환명·약물명 매치 포함 최종 수치 · 실행 전 규칙 (a)(b) 사전 선택",
+    "v2 확정 (2026-09-28) · Fable 관문 3 통과 (조건 3건) · draft 에서 이름 변경 · 아래 gate3_conditions 가 decision_rule 보다 우선"
   ],
   "gate3_request": {
     "auto_go_rule": "분기별 상위 3분위 주 테마 소속 종목 합 ≥ 3 인 분기 ≥ 20 (h42 정의 승계) · 보조 = 상위·하위 모두 ≥ 3",
@@ -172,7 +173,7 @@
       "비만 테마 소속 52 중 대형 제약 22 → 테마 순수도 희석 · 규칙 (b) 대형 제외 열로 관측",
       "비상장 분류에 폐지 상장사 혼입 가능 · 과거 소속 과소 방향 (생존편향)"
     ],
-    "status": "자동 GO 충족 · Fable 검수 대기 · 본 실행 금지"
+    "status": "관문 3 통과 (Fable · 2026-09-28 · 조건 3건)"
   },
   "pre_run_rules": {
     "a_small_theme_quarter": {
@@ -181,7 +182,8 @@
       "대안 2": "순위 그대로 · 빈 바구니 테마는 기여 0 (같은 3분위의 다른 테마 종목만 보유) · 바구니 < 3 이면 그 분기 제외",
       "대안 3": "소속 < 3 테마가 상위·하위 3분위에 1개라도 들면 그 분기 전체 제외",
       "selection_reason": "1안 = 빈 바구니 없이 모든 분기 사용 (42/42) · 순위 자체 (봉인) 는 무변경 · 대안 2 는 상·하 바구니 크기 불균형 · 대안 3 은 분기 손실 (동면·신경 상시 0)",
-      "effect_observed": "적용 시 주 테마 3개 분기 37 · 4개 분기 5 → 사실상 비만·탈모·장수 (+ 식사대용 일부) 순위 비교로 축소 (Fable 쟁점)"
+      "effect_observed": "적용 시 주 테마 3개 분기 37 · 4개 분기 5 → 사실상 비만·탈모·장수 (+ 식사대용 일부) 순위 비교로 축소 (Fable 쟁점)",
+      "status": "확정 (1안 · Fable 관문 3 조건 a)"
     },
     "b_obesity_mcap_split": {
       "selected": "산출물에 비만 테마 2열 병기 = 전체 / 대형 5B+ 제외",
@@ -190,5 +192,27 @@
       "timing": "가격 수집 (Tiingo) 후 산정 · 현재 소속표는 '전체' 만 · 비만 소속 52 중 별칭 사전 (대형 제약) 22",
       "judgement": "알파 판정은 전체 열 기준 (사전 커밋 무변경) · 대형 제외 열은 희석 영향 관측용"
     }
+  },
+  "gate3_conditions": {
+    "a_primary_decision": {
+      "rule": "1차 판정 = 규칙 (a) 1안으로 재구성한 상위 묶음과 하위 묶음의 로그 초과수익 차이 (XBI 대비)",
+      "windows_quarters": [
+        1,
+        4
+      ],
+      "bootstrap": "분기 클러스터 bootstrap · seed 42 · 10,000회",
+      "pass": "두 창 모두 차이 CI 하한 > 0 = 알파 통과 · 한 창만 = 부분 지지 · 두 창 모두 ≤ 0 = 폐기",
+      "reference": "기존 3분위 방식 (h6_rank_growth tercile 그대로) 결과는 참고로 병기 · 판정 미사용"
+    },
+    "b_report_required": [
+      "결론은 '상장사가 있는 3개 테마 (비만·탈모·장수) 안에서의 비교' 로 한정해 서술한다",
+      "분기별 상위·하위 테마 명단 표를 첨부한다 (근거 = docs/plans/biotech/verification/H6/c3-20260928/h6_gate_per_quarter_v2_2026-09-28.json)",
+      "상위 묶음 수익의 테마별 기여를 분해해 비만 테마가 지배하는지 관측한다 (판정 미사용)"
+    ],
+    "c_obesity_mcap_split": "pre_run_rules.b_obesity_mcap_split 유지 · '전체' 와 '대형 5B+ 제외' 두 열 병기 · 판정은 '전체' 열"
+  },
+  "price_collection": {
+    "approved": "2026-10-01 부터 · Tiingo 59종목 · 임상 수 많은 순 · 월 450회 이내 · 1티커 1호출",
+    "coverage_report": "완료 후 커버 n/76 · 창 커버 판정식 v2.1 원문 = 'first_bar ≤ 창시작+7d AND last_bar ≥ event-30d' (docs/plans/biotech/B83-collection-plan.md) · H6 적용 시 창시작 = 리밸런싱 분기 첫 영업일 · event = 보유 창 종료일"
   }
 }
