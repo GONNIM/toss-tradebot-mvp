@@ -10,13 +10,13 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { AdminSessionBar } from "@/components/admin/AdminSessionBar";
+import { BiotechSessionControl } from "@/components/biotech/BiotechSessionControl";
 import { StatBox } from "@/components/ui/stat-box";
 import { SectionCard } from "@/components/ui/section-card";
 import { BiotechTable, BiotechTableColumn } from "@/components/biotech/BiotechTable";
 import { RumorCard } from "@/components/biotech/RumorCard";
 import type { SessionInfo } from "@/lib/auth";
-import { mcapBadge, refreshLabel } from "@/lib/biotech-display";
+import { checkedAtLabel, ctgovUrl, mcapBadge, refreshLabel, trialSentence } from "@/lib/biotech-display";
 
 // 백엔드 스키마
 type RadarRow = {
@@ -43,6 +43,10 @@ type RumorRow = {
   st_24h?: number | null;
   baseline_n?: number | null;
   mcap_asof?: string;
+  nct_id?: string;
+  phase?: string;
+  event_date?: string;
+  days_to?: number | null;
 };
 type RumorJson = { date: string; generated: string; rows: RumorRow[] };
 
@@ -215,31 +219,24 @@ export default function BiotechPage() {
 
   return (
     <div className="space-y-4">
-      <AdminSessionBar onSessionChange={setSession} />
-
-      <header>
-        <h1 className="flex items-center gap-2 text-3xl font-bold">
-          🧬 Biotech Catalyst Radar
-          <span
-            className="rounded bg-sky-500/20 px-2 py-0.5 text-[10px] font-semibold text-sky-700 dark:text-sky-300"
-            title="Phase A 종결 · 2026-09-14 · Fable 최종 검수 통과"
-          >
-            PHASE A DONE
-          </span>
-        </h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          급등 이전 바이오 종목 사전 감지 · admin 전용
-          {radar && radar.rows.length > 0 && <> · {refreshLabel(radar.generated)}</>}
-        </p>
+      <header className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h1 className="flex items-center gap-2 text-3xl font-bold">🧬 Biotech Catalyst Radar</h1>
+          <p className="mt-1 text-sm text-muted-foreground">
+            급등 이전 바이오 종목 사전 감지 · admin 전용
+            {radar && radar.rows.length > 0 && <> · {refreshLabel(radar.generated)}</>}
+          </p>
+        </div>
+        <BiotechSessionControl onSessionChange={setSession} />
       </header>
 
       <div className="rounded border-l-4 border-amber-500 bg-amber-50 p-3 text-sm dark:border-amber-600 dark:bg-amber-950/40">
-        알파 (초과 수익) 미확정 · 소액 전향용 · 매수 신호 아님 · 자동매매 없음
+        ⚠️ 이 화면은 관찰용입니다. 매수 추천이 아니며 자동으로 주문하지 않습니다. 투자하더라도 소액만 권합니다.
       </div>
 
       {!isAdmin && (
         <div className="rounded border border-rose-500/50 bg-rose-500/10 p-4 text-sm text-rose-700 dark:text-rose-300">
-          admin 세션 필요 · 상단 로그인 바에서 관리자 토큰으로 로그인 후 이용
+          🔒 관리자 로그인이 필요합니다. 오른쪽 위 입력칸에 관리자 토큰을 넣어 로그인하세요.
         </div>
       )}
 
@@ -256,16 +253,20 @@ export default function BiotechPage() {
       {/* KPI 4칸 · activist-radar StatBox 공용 부품 · grid grid-cols-1 gap-2 sm:grid-cols-4 */}
       {isAdmin && kpi && (
         <div className="grid grid-cols-1 gap-2 sm:grid-cols-4">
-          <StatBox label="후보 (총)" value={`${kpi.candidates_total}`} hint="candidates v3 전 상태" />
-          <StatBox label="뉴스 예정 (A)" value={`${kpi.news_a_ready}`} hint="임박 발표 전" />
-          <StatBox label="임원·대주주 매수 (20d)" value={`${kpi.insider_buy_20d}`} hint="Form 4 최근 20 거래일" />
-          <StatBox label="급등 경보" value={`${kpi.alerts}`} hint="D+0 이내 급등 감지" />
+          <StatBox label="후보 (총)" value={`${kpi.candidates_total}`} hint={`관찰 중인 종목 ${kpi.candidates_total}개`} />
+          <StatBox label="뉴스 예정 (A)" value={`${kpi.news_a_ready}`} hint="발표 임박 종목" />
+          <StatBox
+            label="임원·대주주 매수 (20d)"
+            value={`${kpi.insider_buy_20d}`}
+            hint={`최근 20거래일 임원·대주주 매수 신고 ${kpi.insider_buy_20d}건${radar ? ` (${checkedAtLabel(radar.generated)} 확인)` : ""}`}
+          />
+          <StatBox label="급등 경보" value={`${kpi.alerts}`} hint="오늘 언급이 급증한 종목" />
         </div>
       )}
 
       {/* 섹션 1: 소문에 살 자리 · sky · 표1 카드 피드 */}
       {isAdmin && rumor && (
-        <SectionCard tone="sky" icon="💡" label="소문에 살 자리" count={t1.length} hint="A 상태 · 조용/초기 · 예정일 가까운 순">
+        <SectionCard tone="sky" icon="💡" label="소문에 살 자리" count={t1.length} hint={`발표가 다가오는데 아직 조용한 종목 ${t1.length}개 (임박한 순)`}>
           {t1.length === 0 ? (
             <div className="text-xs text-muted-foreground">해당 종목 없음</div>
           ) : (
@@ -278,6 +279,8 @@ export default function BiotechPage() {
                   mcap_bucket={mcapBadge(r.mcap_bucket, r.mcap_asof) ?? ""}
                   days_hint={r.days_hint}
                   detail={r.detail}
+                  sentence={trialSentence(r.phase, r.event_date, r.days_to)}
+                  sourceUrl={ctgovUrl(r.nct_id)}
                 />
               ))}
             </div>

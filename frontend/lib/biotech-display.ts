@@ -37,3 +37,39 @@ export function mcapBadge(bucket?: string, asof?: string): string | null {
   return `${bucket} · ${m}/${d} 종가 기준`;
 }
 
+
+// ── 2단계 · 카드 문장 ─────────────────────────────────────────
+const PHASE_KO: Record<string, string> = {
+  EARLY_PHASE1: "초기 1상",
+  PHASE1: "1상",
+  PHASE2: "2상",
+  PHASE3: "3상",
+  PHASE4: "4상",
+  "PHASE1/PHASE2": "1·2상",
+  "PHASE2/PHASE3": "2·3상",
+};
+
+export function phaseLabel(phase?: string): string {
+  return (phase && PHASE_KO[phase]) || "임상";
+}
+
+// "3상 시험이 9월 30일(3일 뒤)에 끝날 예정입니다. 결과 발표일은 아닙니다."
+export function trialSentence(phase?: string, eventDate?: string, daysTo?: number | null): string | null {
+  if (!eventDate || typeof daysTo !== "number") return null;
+  const [, m, d] = eventDate.split("-").map(Number);
+  const when = daysTo === 0 ? "오늘" : `${daysTo}일 뒤`;
+  return `${phaseLabel(phase)} 시험이 ${m}월 ${d}일(${when})에 끝날 예정입니다. 결과 발표일은 아닙니다.`;
+}
+
+export function ctgovUrl(nctId?: string): string | null {
+  return nctId && /^NCT\d{8}$/.test(nctId) ? `https://clinicaltrials.gov/study/${nctId}` : null;
+}
+
+// KPI 보조 문구용 · "오늘 07:00" 또는 "9월 27일 07:00"
+export function checkedAtLabel(generatedIso: string, now: Date = new Date()): string {
+  const g = kstParts(generatedIso);
+  const n = kstParts(now.toISOString());
+  const pad = (x: number) => String(x).padStart(2, "0");
+  const day = g.y === n.y && g.m === n.m && g.d === n.d ? "오늘" : `${g.m}월 ${g.d}일`;
+  return `${day} ${pad(g.hh)}:${pad(g.mm)}`;
+}

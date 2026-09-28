@@ -32,3 +32,9 @@ def test_mcap_display_freshness(tmp_path, monkeypatch):
     assert b._mcap_display("DDD")[0] == "5B+"
     assert b._mcap_display("ZZZ") == ("", "")
     assert b._mcap_display("AAA", "1B-5B") == ("1B-5B", "")      # CSV 실제 값 우선
+
+
+def test_note_fields_parse_and_fallback():
+    f = b._note_fields("CT.gov (AACT 2026-09-27) NCT06868264 완료 예정 D-3 (2026-09-30 · PHASE3)")
+    assert f == {"nct_id": "NCT06868264", "days_to": 3, "event_date": "2026-09-30", "phase": "PHASE3"}
+    assert b._note_fields("FDA AdCom 2026-10-01")  == {}       # 형식 불일치 → 화면은 원문 표시
