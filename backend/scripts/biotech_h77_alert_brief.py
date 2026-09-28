@@ -80,6 +80,7 @@ def mention_history(ticker: str, days: int = 30) -> list[dict]:
 
 
 def recent_posts(row: dict, now: datetime) -> list[dict]:
+    """최근 24시간 매치 글 (reddit_posts · 시각 있음) · 이 열이 없는 옛 confirm 은 reddit_posts_fallback 사용."""
     try:
         posts = json.loads(row.get("reddit_posts") or "[]")
     except Exception:
@@ -93,6 +94,17 @@ def recent_posts(row: dict, now: datetime) -> list[dict]:
         if now - upd <= timedelta(hours=24):
             out.append({"title": p.get("title", ""), "link": p.get("link", ""), "updated": p.get("updated", "")})
     return out[:5]
+
+
+def reddit_block(row: dict, now: datetime) -> tuple[list[dict], bool]:
+    """(글 목록, 24시간 확인 여부) · reddit_posts 열 없으면 reddit_samples 제목·링크 (시각 없음 → 24시간 미확인)."""
+    if "reddit_posts" in row:
+        return recent_posts(row, now), True
+    try:
+        samples = json.loads(row.get("reddit_samples") or "[]")
+    except Exception:
+        samples = []
+    return [{"title": p.get("title", ""), "link": p.get("link", ""), "updated": ""} for p in samples][:5], False
 
 
 def business_days_back(today: date, n: int) -> date:
@@ -167,7 +179,7 @@ def sources_for(b: dict) -> list[str]:
         src.append(f"언급량 (apewisdom 24시간): 어제 {b['mentions']['yesterday']} → 오늘 {b['mentions']['today']} · "
                    f"평소 대비 배수 {b['mentions']['mult']} · 레딧 RSS 매치 오늘 {b['mentions']['reddit_today']}건")
     for p in b["reddit"]:
-        src.append(f"레딧 글 제목: {p['title']}")
+        src.append(f"레딧 글 제목{'' if b.get('reddit_time_checked', True) else ' (게시 시각 미확인)'}: {p['title']}")
     for f in b["sec_8k"]:
         src.append(f"SEC 8-K ({f['filing_date']}) 항목 {f['items'] or '-'} · {f['description'] or ''} · "
                    f"보도자료 제목: {f['ex99_1_title'] or '없음'}")
@@ -213,11 +225,12 @@ def main():
                 "reddit_today": int(_f(r.get("reddit_rss_matches"))),
                 "history": hist,
             },
-            "reddit": recent_posts(r, now),
+            "reddit": [],
             "sec_8k": [], "sec_status": "ok",
             "form4": form4_summary(ciks.get(tk, "")) if ciks.get(tk) else {"available": False},
             "schedule": schedule_note(cands.get(tk)),
         }
+        b["reddit"], b["reddit_time_checked"] = reddit_block(r, now)
         if sec_blocked:
             b["sec_status"] = "blocked_earlier"
         elif not ciks.get(tk):

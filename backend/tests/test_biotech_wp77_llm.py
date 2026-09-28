@@ -107,3 +107,11 @@ def test_business_days_and_schedule():
     assert br.schedule_note({"state_note_v50": "CT.gov (AACT 2026-09-27) NCT1 완료 예정 D-3 (2026-09-30 · PHASE3)"}) \
         == "임상 종료 예정일 2026-09-30 (D-3)"
     assert br.schedule_note(None) == "예정 일정 없음"
+
+
+def test_reddit_block_fallback_marks_unchecked():
+    now = datetime(2026, 9, 28, 12, tzinfo=timezone.utc)
+    posts, checked = br.reddit_block({"reddit_samples": json.dumps([{"title": "t", "link": "l"}])}, now)
+    assert posts == [{"title": "t", "link": "l", "updated": ""}] and checked is False
+    posts, checked = br.reddit_block({"reddit_posts": "[]", "reddit_samples": "[]"}, now)
+    assert posts == [] and checked is True
