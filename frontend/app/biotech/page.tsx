@@ -159,16 +159,16 @@ function AlertBriefCard({ b }: { b: AlertBrief }) {
               어제 {m.yesterday ?? "기록 없음"} → 오늘 {m.today ?? "기록 없음"} · 평소 대비 배수 {m.mult === "collecting" ? "수집 중 (7일 미만)" : m.mult} · 레딧 매치 오늘 {m.reddit_today}건
             </div>
             <div className="font-mono text-muted-foreground">
-              최근 {m.history.length}일: {m.history.map((h) => h.apewisdom_24h).join(" · ")}
+              최근 {m.history.length}일 (날짜 언급 수): {m.history.map((h) => `${Number(h.date.slice(4, 6))}/${Number(h.date.slice(6, 8))} ${h.apewisdom_24h}`).join(" · ")}
             </div>
           </div>
           <div>
             <div className="font-semibold">(b) 커뮤니티 · 최근 24시간 매치 레딧 글 (제목만)</div>
-            {b.reddit_time_checked === false && (
+            {b.reddit_time_checked === false && b.reddit.length > 0 && (
               <div className="text-muted-foreground">이 날짜 자료에는 게시 시각이 없어 24시간 안의 글인지 확인하지 못했습니다.</div>
             )}
             {b.reddit.length === 0 ? (
-              <div className="text-muted-foreground">최근 24시간 매치 글이 없습니다.</div>
+              <div className="text-muted-foreground">{b.reddit_time_checked === false ? "매치된 글이 없습니다." : "최근 24시간 매치 글이 없습니다."}</div>
             ) : (
               <ul className="list-disc pl-5">
                 {b.reddit.map((p, i) => (
