@@ -333,6 +333,22 @@ class RumorRow(BaseModel):
     st_24h: Optional[int] = None
     baseline_n: Optional[int] = None
     mcap_asof: str = ""   # WP74 · 시총 배지 기준 종가일 (빈 값 = 배지 미표시)
+    # WP74 2단계 · 카드 문장용 구조화 필드 (원문 state_note 에서 추출 · 없으면 빈 값)
+    nct_id: str = ""      # ClinicalTrials.gov 임상 번호
+    phase: str = ""       # PHASE3 · PHASE1/PHASE2 등 원문 표기
+    event_date: str = ""  # 임상 완료 예정일 (primary completion · 결과 발표일 아님)
+    days_to: Optional[int] = None
+
+
+_NOTE_RE = re.compile(r"(NCT\d{8}).*?D-(\d+)\s*\((\d{4}-\d{2}-\d{2})\s*·\s*([A-Z0-9_/]*)")
+
+
+def _note_fields(note: str) -> dict[str, Any]:
+    """state_note 원문 → 카드 문장용 필드 (형식 불일치 시 빈 dict · 화면은 원문 표시)."""
+    m = _NOTE_RE.search(note or "")
+    if not m:
+        return {}
+    return {"nct_id": m.group(1), "days_to": int(m.group(2)), "event_date": m.group(3), "phase": m.group(4)}
 
 
 class RumorJson(BaseModel):
@@ -428,6 +444,7 @@ async def get_rumor_json(
             mcap_bucket=c.get("mcap_bucket", ""),
             days_hint=_days(note),
             detail=note[:80],
+            **_note_fields(note),
         ))
 
     # 표2: B 상태 · 뉴스 통과
