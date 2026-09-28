@@ -20,6 +20,18 @@
 
 ## PENDING
 
+### [Biotech Catalyst Radar · WP78 모델 최신 우선 · 경보 정합 · 매칭률 · 결함 조회] · 2026-09-28 발행 → 배포 완료 (PR #42 · #43)
+
+- 모델: 목록 정식 최신 = glm-5.3 (2026-09-28 첫 선택 · 이전 glm-5.2 는 env 경로라 비교 기록 없어 변경 알림 미발송)
+- 경보: 기준선 7일 미만 제외 · 배수 ≥5 AND 오늘 ≥5건 · 레딧 ≥3 · 9/28 기준 2 → 0 (79종목 수집 중)
+- AACT 매칭: 시험 자료 보유 41 → 71 (리드 69 · 공동연구만 2) · 레이더 전용 별칭 `docs/plans/biotech/data/sponsor_aliases_radar.csv` 는 2026-10-05 06:00 주간 잡부터 반영 (최대 +5 예상)
+- Form 4: 서버 입력 파일 부재 (단계 실패) → `docs/plans/biotech/data/h41_filer_classification.json` 이식 · 55 filer · 매수 2건 (OrbiMed → Electra Therapeutics 1 filing 2 lines)
+- **남은 확인 (2026-09-29 07:00 첫 8단계)**: 소요 시간 · [6/8] form4 SEC 요청 · [7/8] 경보 (기준선 7일 도달) · z.ai 호출 · h50 A 상태 수 변화 (매칭 확대로 리드 시험 증가)
+- **대기 (사용자)**: 사전 검수 · `docs/plans/biotech/verification/dictionaries/README.md` · 번들 `docs/plans/biotech/fable-bundles/20260928_dictionaries-review-v1.zip`
+- **보고만 (수정은 승인 후)**: PR #37 배포 미시작 = GitHub 쪽 push 이벤트 누락 추정 (같은 커밋에 Vercel 체크도 없음 · 설정 원인 아님)
+
+---
+
 ### [Biotech Catalyst Radar · WP76 카드 내용 강화 · WP77 급등 브리핑 + z.ai 요약] · 2026-09-28 발행 → 배포 완료
 
 - 배포: PR #36 · #37 · #38 · #39 · #40 (#37·#39·#40 은 push 배포가 안 떠서 workflow_dispatch 수동 실행) · 매번 13 경로 200
