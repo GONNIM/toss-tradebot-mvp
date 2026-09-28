@@ -17,9 +17,11 @@ export function RumorCard({ ticker, name, mcap_bucket, days_hint, detail, score 
         <span className="rounded bg-sky-600 px-2 py-0.5 font-mono text-xs font-bold text-white">
           {ticker}
         </span>
-        <span className="rounded bg-slate-100 px-1.5 py-0.5 text-[10px] font-mono text-slate-700 dark:bg-slate-800 dark:text-slate-200">
-          {mcap_bucket}
-        </span>
+        {mcap_bucket && (
+          <span className="rounded bg-slate-100 px-1.5 py-0.5 text-[10px] font-mono text-slate-700 dark:bg-slate-800 dark:text-slate-200">
+            {mcap_bucket}
+          </span>
+        )}
         <span className="rounded bg-amber-500 px-2 py-0.5 font-mono text-[10px] font-bold text-slate-900">
           {days_hint}
         </span>

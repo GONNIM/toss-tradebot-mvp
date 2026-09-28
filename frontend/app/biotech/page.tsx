@@ -16,6 +16,7 @@ import { SectionCard } from "@/components/ui/section-card";
 import { BiotechTable, BiotechTableColumn } from "@/components/biotech/BiotechTable";
 import { RumorCard } from "@/components/biotech/RumorCard";
 import type { SessionInfo } from "@/lib/auth";
+import { mcapBadge, refreshLabel } from "@/lib/biotech-display";
 
 // 백엔드 스키마
 type RadarRow = {
@@ -23,6 +24,7 @@ type RadarRow = {
   ticker: string;
   name: string;
   mcap_bucket: string;
+  mcap_asof?: string;
   score: number;
   state: string;
   news_window: string;
@@ -40,6 +42,7 @@ type RumorRow = {
   detail: string;
   st_24h?: number | null;
   baseline_n?: number | null;
+  mcap_asof?: string;
 };
 type RumorJson = { date: string; generated: string; rows: RumorRow[] };
 
@@ -102,7 +105,7 @@ const RADAR_COLUMNS: BiotechTableColumn<RadarRow>[] = [
   { key: "rank", label: "#", align: "right", render: (r) => r.rank },
   { key: "ticker", label: "티커", render: (r) => r.ticker },
   { key: "name", label: "회사", render: (r) => <span className="text-muted-foreground">{r.name}</span> },
-  { key: "mcap_bucket", label: "시총" },
+  { key: "mcap_bucket", label: "시총", render: (r) => mcapBadge(r.mcap_bucket, r.mcap_asof) ?? "" },
   { key: "state", label: "상태" },
   { key: "score", label: "점수", align: "right", render: (r) => r.score.toFixed(3) },
   { key: "news_window", label: "뉴스 예정" },
@@ -121,9 +124,11 @@ function CompactList({ rows, emptyLabel }: { rows: RumorRow[]; emptyLabel: strin
             {r.ticker}
           </span>
           <span className="text-muted-foreground">{r.name}</span>
-          <span className="rounded bg-slate-50 px-1 py-0.5 text-[10px] font-mono text-slate-600 dark:bg-slate-900 dark:text-slate-300">
-            {r.mcap_bucket}
-          </span>
+          {mcapBadge(r.mcap_bucket, r.mcap_asof) && (
+            <span className="rounded bg-slate-50 px-1 py-0.5 text-[10px] font-mono text-slate-600 dark:bg-slate-900 dark:text-slate-300">
+              {mcapBadge(r.mcap_bucket, r.mcap_asof)}
+            </span>
+          )}
           <span className="rounded bg-amber-100 px-1.5 py-0.5 font-mono text-[10px] text-amber-800 dark:bg-amber-900/40 dark:text-amber-200">
             {r.days_hint}
           </span>
@@ -145,9 +150,11 @@ function Form4Card({ row }: { row: RumorRow }) {
         <span className="rounded bg-emerald-600 px-2 py-0.5 font-mono text-xs font-bold text-white">
           {row.ticker}
         </span>
-        <span className="rounded bg-slate-100 px-1.5 py-0.5 text-[10px] font-mono text-slate-700 dark:bg-slate-800 dark:text-slate-200">
-          {row.mcap_bucket}
-        </span>
+        {mcapBadge(row.mcap_bucket, row.mcap_asof) && (
+          <span className="rounded bg-slate-100 px-1.5 py-0.5 text-[10px] font-mono text-slate-700 dark:bg-slate-800 dark:text-slate-200">
+            {mcapBadge(row.mcap_bucket, row.mcap_asof)}
+          </span>
+        )}
         <span className="rounded bg-emerald-100 px-1.5 py-0.5 font-mono text-[10px] font-bold text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-200">
           {row.days_hint}
         </span>
@@ -221,7 +228,8 @@ export default function BiotechPage() {
           </span>
         </h1>
         <p className="mt-1 text-sm text-muted-foreground">
-          급등 이전 바이오 종목 사전 감지 · 9 가설 검증 · admin 전용 · 화면 데이터 2026-09-14 자 (서버 파이프 배포 후 매일 갱신)
+          급등 이전 바이오 종목 사전 감지 · admin 전용
+          {radar && radar.rows.length > 0 && <> · {refreshLabel(radar.generated)}</>}
         </p>
       </header>
 
@@ -267,7 +275,7 @@ export default function BiotechPage() {
                   key={i}
                   ticker={r.ticker}
                   name={r.name}
-                  mcap_bucket={r.mcap_bucket}
+                  mcap_bucket={mcapBadge(r.mcap_bucket, r.mcap_asof) ?? ""}
                   days_hint={r.days_hint}
                   detail={r.detail}
                 />
