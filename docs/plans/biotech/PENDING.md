@@ -9,7 +9,37 @@
 
 ---
 
+## 영구 규칙
+
+- **보고 문체 (2026-09-28~)**: 완전한 문장으로 쓴다. 명사를 나열하는 전보식 문장은 쓰지 않는다. 비유를 쓰지 않는다. 쉬운 어휘를 쓴다. 한 문장에는 한 내용만 담는다. 영어 용어는 처음 나올 때 한국어 뜻을 함께 적는다. 표와 수치는 유지하되, 표 밖 설명은 말로 풀어 쓴다.
+- **세션 첫 작업 = 관측 (2026-09-28~)**: 매 세션 시작 시 서버 `/root/toss-tradebot-mvp/var/biotech/logs/daily.log` 최신 실행과 /biotech 두 탭 (레이더·소문) 날짜를 확인하고, 정상이면 한 줄로 보고한다.
+- **보고 시 전체 경로 (2026-09-28~)**: 문서·파일·산출물 언급은 전체 경로로 적는다. 저장소 파일 = 저장소 루트 기준 (예: `docs/plans/biotech/data/sponsor_aliases.csv`) · 서버 파일 = 절대 경로 (예: `/root/toss-tradebot-mvp/var/biotech/h6/aact_theme_studies_2026-09-28.csv`). 파일 이름만 적지 않는다.
+
+---
+
 ## PENDING
+
+### [Biotech Catalyst Radar · H6 관문 3 통과 (조건 3건) · 10월 가격 수집 · 본 실행 조건부] · 2026-09-28 발행
+
+**확정 규칙**: `docs/plans/biotech/data/h6_params_v2.json` (구 draft 이름 변경 · `gate3_conditions` a·b·c 기재 · backend/data 사본 없음)
+
+**다음 할 일 (순서 고정)**:
+1. **2026-10-01 부터 Tiingo 가격 수집 (승인됨)**: 소속 76종목 중 가격 없는 59종목 · 임상 수 많은 순 (목록 = `docs/plans/biotech/verification/H6/c3-20260928/h6_membership_v2_summary_2026-09-28.json` price_plan) · 월 450회 이내 · 1티커 1호출 · 403/429 즉시 중단.
+2. **커버율 보고**: 커버 n/76 · 창 커버 판정식 v2.1 (`first_bar ≤ 창시작+7d AND last_bar ≥ event-30d` · `docs/plans/biotech/B83-collection-plan.md`) 적용.
+3. **본 백테스트 (조건부 승인)**: 커버율 보고 후에만 `h6_params_v2.json` 그대로 실행 · 봉인 JSON + 리포트 (쉬운 말 5줄 · 필수 서술 3건 · 가능성 지도 3줄) → 관문 2 제출. **그 전에는 실행 금지.**
+
+---
+
+### [Biotech Catalyst Radar · Phase C 3 재추출 · 관문 3 요청] · 2026-09-28 발행 → 관문 3 통과 2026-09-28 (조건 3건 · 위 항목으로 이관)
+
+- PR #26 병합·배포 (`c2885b1`) · 스모크 13/13 200
+- 서버 재추출 완료 · `/root/toss-tradebot-mvp/var/biotech/h6/aact_theme_studies_2026-09-28.csv` · 매치 임상 15,631 · 스폰서 3,820
+- 소속 v2 확정 · 유니크 티커 76 · 자동 GO 충족 (기존 3분위 33/42 · 규칙 (a) 42/42)
+- 규칙 (a)(b) 사전 선택 · `docs/plans/biotech/data/h6_params_v2_draft.json`
+- 검수 요청서: `docs/plans/biotech/verification/H6/H6-gate3-request-20260928.md` · **본 실행 금지**
+- 다음: Fable 판정 → 통과 시 Tiingo 59 티커 가격 수집 (승인 후) → 본 백테스트 (승인 후)
+
+---
 
 ### [Biotech Catalyst Radar · 관측 마감 (무사고 7일 판정) → Phase C 3 (H6 소속 확장)] · 2026-09-28 발행
 

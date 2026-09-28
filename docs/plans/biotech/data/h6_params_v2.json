@@ -1,0 +1,218 @@
+{
+  "spec": "H6 백테스트 파라미터 v2 (관문 3 통과 · Fable 조건 3건 반영 · 사후 조정 금지)",
+  "version": "v2",
+  "generated": "2026-09-28",
+  "themes": {
+    "main": [
+      "obesity_glp1",
+      "hair_loss",
+      "longevity_rejuvenation",
+      "meal_replacement_metabolic",
+      "hibernation_hypothermia",
+      "cognitive_memory"
+    ],
+    "controls": [
+      "control_nash",
+      "control_amyloid"
+    ],
+    "note": "대조군은 순위 산정에 포함 (WP27 · 8세트 통합) · 판정은 별도 · 주 6 만 상위 vs 하위 3분위 비교"
+  },
+  "signal": {
+    "source_pubmed": "EDAT 재실행 · 8세트 × 46 분기 (h6_theme_edat)",
+    "source_ctgov": "CT.gov 스폰서 raw count (h6_membership)",
+    "aggregation": "직전 4분기 rolling sum · YoY 증가율 (분모 max(값, 1)) · WP22-2 · 잡음 억제 확정"
+  },
+  "rank": {
+    "formula": "z-score(growth_pm) * 0.6 + z-score(growth_ct) * 0.4",
+    "quantile": "n=8 → top 33% · mid 34% · bot 33%",
+    "point_in_time": "분기 t 종료 시점 · 촉매/이벤트일 이후 시점만 사용"
+  },
+  "membership": {
+    "source": "AACT daily 스냅샷 전량 (서버 · biotech_h6_aact_theme_extract) · 테마 사전 v1 키워드 매치 (brief_title · official_title · conditions · interventions · 단어 경계 · GLP-1 combination 서로소 가림)",
+    "matcher": "biotech_name_match v2 · 정규화 후 완전 일치만 채택 · Jaccard ≥ 0.8 은 후보 CSV 분리 (미채택) · SEC company_tickers → Tiingo 우주 (미 거래소) 교집합",
+    "point_in_time": "(티커, 테마) 편입 분기 = 최초 study_first_posted 분기 · 이탈 없음 · 분기 q 소속 = 편입 ≤ q AND q 에 거래 중 (Tiingo 첫/마지막 거래일)",
+    "unmatched_reasons": "비상장 / 대학·병원 / 이름 / 해외 (사전 고정 추정 규칙 · 리포트 필수)",
+    "known_bias": [
+      "SEC 현재 상장 목록 → 상폐 스폰서 누락 (생존편향)",
+      "현재 스폰서명 기준 (인수 후 이름 변경 반영 안 됨)",
+      "매칭기 v2 는 'A S'·'and Company' 등 표기 차이 미흡수 (대형사 일부 해외/이름 분류)"
+    ],
+    "multi_theme": "H6-design §3 · 다중 테마 소속 시 최고 순위 테마로 배정 (백테스트 단계)",
+    "aliases": "docs/plans/biotech/data/sponsor_aliases.csv · 39사 99 별칭 · 자체명 변형 + 2015Q1 이전 완전자회사만 · 근거 = SEC company_tickers 명칭 · 매칭기 앞단"
+  },
+  "backtest": {
+    "rebalance_freq": "quarterly",
+    "hold_horizons_quarters": [
+      1,
+      4
+    ],
+    "position_sizing": "equal weight (테마 상위 3분위 소속 종목 동일 비중)",
+    "benchmark": "XBI (WP27 사전 커밋 · 참고 IWM 병기)",
+    "cost_bps_round_trip": 100,
+    "cost_note": "왕복 1.0% · 분기 회전당 100bps 진입+청산 (분기 2회 왕복 시 200bps 근사)",
+    "entry_price": "리밸런싱 분기 첫 영업일 종가 (adj_close)"
+  },
+  "bootstrap": {
+    "primary": "블록 부트스트랩 · 재추출 단위 = 분기 · seed 42 · 10,000회",
+    "secondary": "iid (종목-분기 이벤트 단위) 병기"
+  },
+  "decision_rule": {
+    "alpha_pass": "상위 3분위 vs 하위 3분위 로그 초과수익 차이 · CI(cluster) 하한 > 0 (1분기·4분기 두 창 모두)",
+    "partial_support": "한 창만 통과 시 부분 지지 표기 (알파 미확인)",
+    "abandonment": "두 창 모두 CI 하한 ≤ 0 OR 매핑 사후 조정 발견"
+  },
+  "controls_reporting": {
+    "note": "NASH·아밀로이드는 상위 3분위 진입 시점·기간 관측만 · 대조군 알파 판정 규칙 없음 (실측 정합성 검증 참조)"
+  },
+  "gate_status": "관문 3 통과 · 가격 수집 (10월) → 커버율 보고 → 본 실행 (조건부 승인) → 관문 2 제출",
+  "changelog": [
+    "v2-draft (2026-09-28) · membership 절만 교체 (CT.gov API 300건 상한 → AACT 스냅샷 전량) · signal·rank·backtest·bootstrap·decision_rule 무변경",
+    "v2-draft (2026-09-28 · 재추출 확정) · 질환명·약물명 매치 포함 최종 수치 · 실행 전 규칙 (a)(b) 사전 선택",
+    "v2 확정 (2026-09-28) · Fable 관문 3 통과 (조건 3건) · draft 에서 이름 변경 · 아래 gate3_conditions 가 decision_rule 보다 우선"
+  ],
+  "gate3_request": {
+    "auto_go_rule": "분기별 상위 3분위 주 테마 소속 종목 합 ≥ 3 인 분기 ≥ 20 (h42 정의 승계) · 보조 = 상위·하위 모두 ≥ 3",
+    "result": {
+      "basis": "확정 · AACT 2026-09-28 · 제목+질환명+약물명 매치 · 별칭 사전 적용",
+      "matched_studies": 15631,
+      "sponsors_unique": 3820,
+      "alias_effect": {
+        "before": {
+          "sponsors_listed": 65,
+          "sponsor_listed_rate": 0.017,
+          "studies_listed": 391,
+          "study_listed_rate": 0.025
+        },
+        "after": {
+          "sponsors_listed": 87,
+          "sponsor_listed_rate": 0.0228,
+          "studies_listed": 1224,
+          "study_listed_rate": 0.0783
+        },
+        "alias_hits": 37
+      },
+      "unmatched_breakdown": {
+        "비상장": 511,
+        "대학·병원": 3068,
+        "이름": 0,
+        "해외": 154
+      },
+      "member_tickers": 76,
+      "quarterly_stats": {
+        "obesity_glp1": {
+          "min": 20,
+          "median": 27,
+          "max": 52
+        },
+        "hair_loss": {
+          "min": 6,
+          "median": 7,
+          "max": 10
+        },
+        "longevity_rejuvenation": {
+          "min": 3,
+          "median": 3,
+          "max": 6
+        },
+        "meal_replacement_metabolic": {
+          "min": 2,
+          "median": 2,
+          "max": 3
+        },
+        "hibernation_hypothermia": {
+          "min": 0,
+          "median": 0,
+          "max": 0
+        },
+        "cognitive_memory": {
+          "min": 0,
+          "median": 0,
+          "max": 0
+        },
+        "control_nash": {
+          "min": 7,
+          "median": 25,
+          "max": 33
+        },
+        "control_amyloid": {
+          "min": 3,
+          "median": 3,
+          "max": 4
+        },
+        "main_union": {
+          "min": 21,
+          "median": 29,
+          "max": 59
+        }
+      },
+      "gate_v1_terciles": {
+        "ranked_quarters": 42,
+        "good_quarters_top_ge3": 33,
+        "good_quarters_top_and_bot_ge3": 23,
+        "auto_go": true,
+        "auto_go_strict_both": true
+      },
+      "gate_rule_a": {
+        "rule": "a-1안 (소속<3 테마 순위 제외 · 다음 순위로 채움)",
+        "quarters_used": 42,
+        "quarters_skipped_lt3_themes": 0,
+        "good_quarters_top_ge3": 42,
+        "good_quarters_top_and_bot_ge3": 42,
+        "auto_go": true,
+        "auto_go_strict_both": true
+      },
+      "price_plan": {
+        "unique_member_tickers": 76,
+        "have_prices": 17,
+        "need_tiingo": 59,
+        "months_needed": 1
+      }
+    },
+    "fable_flags": [
+      "규칙 (a) 1안 적용 시 비교 테마가 3개 (비만·탈모·장수) 로 축소 · 동면·신경 상시 0 · 식사대용 2~3",
+      "비만 테마 소속 52 중 대형 제약 22 → 테마 순수도 희석 · 규칙 (b) 대형 제외 열로 관측",
+      "비상장 분류에 폐지 상장사 혼입 가능 · 과거 소속 과소 방향 (생존편향)"
+    ],
+    "status": "관문 3 통과 (Fable · 2026-09-28 · 조건 3건)"
+  },
+  "pre_run_rules": {
+    "a_small_theme_quarter": {
+      "selected": "1안",
+      "1안": "분기 q 에 소속 < 3 인 주 테마는 그 분기 순위 산정에서 제외 · 남은 k 테마를 봉인 순위 (h6_rank_growth rank) 순서로 재정렬 · 상위 = 앞 max(1, round(k/3)) · 하위 = 뒤 같은 수 · k < 3 이면 그 분기 제외 (다음 순위로 채움)",
+      "대안 2": "순위 그대로 · 빈 바구니 테마는 기여 0 (같은 3분위의 다른 테마 종목만 보유) · 바구니 < 3 이면 그 분기 제외",
+      "대안 3": "소속 < 3 테마가 상위·하위 3분위에 1개라도 들면 그 분기 전체 제외",
+      "selection_reason": "1안 = 빈 바구니 없이 모든 분기 사용 (42/42) · 순위 자체 (봉인) 는 무변경 · 대안 2 는 상·하 바구니 크기 불균형 · 대안 3 은 분기 손실 (동면·신경 상시 0)",
+      "effect_observed": "적용 시 주 테마 3개 분기 37 · 4개 분기 5 → 사실상 비만·탈모·장수 (+ 식사대용 일부) 순위 비교로 축소 (Fable 쟁점)",
+      "status": "확정 (1안 · Fable 관문 3 조건 a)"
+    },
+    "b_obesity_mcap_split": {
+      "selected": "산출물에 비만 테마 2열 병기 = 전체 / 대형 5B+ 제외",
+      "mcap_definition": "리밸런싱 분기 첫 영업일 (point-in-time) 시총 = adj_close × 발행주식수 (SEC companyfacts dei:EntityCommonStockSharesOutstanding · 그 시점 이전 최신 공시)",
+      "unknown_handling": "발행주식수 미확보 = unknown · '대형 제외' 열에서도 유지 (확인된 5B+ 만 제외)",
+      "timing": "가격 수집 (Tiingo) 후 산정 · 현재 소속표는 '전체' 만 · 비만 소속 52 중 별칭 사전 (대형 제약) 22",
+      "judgement": "알파 판정은 전체 열 기준 (사전 커밋 무변경) · 대형 제외 열은 희석 영향 관측용"
+    }
+  },
+  "gate3_conditions": {
+    "a_primary_decision": {
+      "rule": "1차 판정 = 규칙 (a) 1안으로 재구성한 상위 묶음과 하위 묶음의 로그 초과수익 차이 (XBI 대비)",
+      "windows_quarters": [
+        1,
+        4
+      ],
+      "bootstrap": "분기 클러스터 bootstrap · seed 42 · 10,000회",
+      "pass": "두 창 모두 차이 CI 하한 > 0 = 알파 통과 · 한 창만 = 부분 지지 · 두 창 모두 ≤ 0 = 폐기",
+      "reference": "기존 3분위 방식 (h6_rank_growth tercile 그대로) 결과는 참고로 병기 · 판정 미사용"
+    },
+    "b_report_required": [
+      "결론은 '상장사가 있는 3개 테마 (비만·탈모·장수) 안에서의 비교' 로 한정해 서술한다",
+      "분기별 상위·하위 테마 명단 표를 첨부한다 (근거 = docs/plans/biotech/verification/H6/c3-20260928/h6_gate_per_quarter_v2_2026-09-28.json)",
+      "상위 묶음 수익의 테마별 기여를 분해해 비만 테마가 지배하는지 관측한다 (판정 미사용)"
+    ],
+    "c_obesity_mcap_split": "pre_run_rules.b_obesity_mcap_split 유지 · '전체' 와 '대형 5B+ 제외' 두 열 병기 · 판정은 '전체' 열"
+  },
+  "price_collection": {
+    "approved": "2026-10-01 부터 · Tiingo 59종목 · 임상 수 많은 순 · 월 450회 이내 · 1티커 1호출",
+    "coverage_report": "완료 후 커버 n/76 · 창 커버 판정식 v2.1 원문 = 'first_bar ≤ 창시작+7d AND last_bar ≥ event-30d' (docs/plans/biotech/B83-collection-plan.md) · H6 적용 시 창시작 = 리밸런싱 분기 첫 영업일 · event = 보유 창 종료일"
+  }
+}

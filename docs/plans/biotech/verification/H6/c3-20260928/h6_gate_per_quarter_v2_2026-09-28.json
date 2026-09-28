@@ -1,0 +1,548 @@
+[
+ {
+  "quarter": "2016Q1",
+  "top_themes": [
+   "longevity_rejuvenation",
+   "obesity_glp1"
+  ],
+  "bot_themes": [
+   "cognitive_memory",
+   "hibernation_hypothermia"
+  ],
+  "n_top": 23,
+  "n_bot": 0
+ },
+ {
+  "quarter": "2016Q2",
+  "top_themes": [
+   "hair_loss",
+   "hibernation_hypothermia"
+  ],
+  "bot_themes": [
+   "cognitive_memory",
+   "obesity_glp1"
+  ],
+  "n_top": 6,
+  "n_bot": 23
+ },
+ {
+  "quarter": "2016Q3",
+  "top_themes": [
+   "longevity_rejuvenation",
+   "meal_replacement_metabolic"
+  ],
+  "bot_themes": [
+   "cognitive_memory",
+   "hibernation_hypothermia"
+  ],
+  "n_top": 5,
+  "n_bot": 0
+ },
+ {
+  "quarter": "2016Q4",
+  "top_themes": [
+   "cognitive_memory",
+   "meal_replacement_metabolic"
+  ],
+  "bot_themes": [
+   "hibernation_hypothermia",
+   "longevity_rejuvenation"
+  ],
+  "n_top": 2,
+  "n_bot": 3
+ },
+ {
+  "quarter": "2017Q1",
+  "top_themes": [
+   "hibernation_hypothermia",
+   "longevity_rejuvenation"
+  ],
+  "bot_themes": [
+   "cognitive_memory",
+   "obesity_glp1"
+  ],
+  "n_top": 3,
+  "n_bot": 23
+ },
+ {
+  "quarter": "2017Q2",
+  "top_themes": [
+   "cognitive_memory",
+   "meal_replacement_metabolic"
+  ],
+  "bot_themes": [
+   "hibernation_hypothermia",
+   "obesity_glp1"
+  ],
+  "n_top": 2,
+  "n_bot": 23
+ },
+ {
+  "quarter": "2017Q3",
+  "top_themes": [
+   "longevity_rejuvenation",
+   "meal_replacement_metabolic"
+  ],
+  "bot_themes": [
+   "hair_loss",
+   "hibernation_hypothermia"
+  ],
+  "n_top": 5,
+  "n_bot": 6
+ },
+ {
+  "quarter": "2017Q4",
+  "top_themes": [
+   "hair_loss",
+   "longevity_rejuvenation"
+  ],
+  "bot_themes": [
+   "meal_replacement_metabolic",
+   "obesity_glp1"
+  ],
+  "n_top": 8,
+  "n_bot": 24
+ },
+ {
+  "quarter": "2018Q1",
+  "top_themes": [
+   "hair_loss",
+   "meal_replacement_metabolic"
+  ],
+  "bot_themes": [
+   "cognitive_memory",
+   "hibernation_hypothermia"
+  ],
+  "n_top": 7,
+  "n_bot": 0
+ },
+ {
+  "quarter": "2018Q2",
+  "top_themes": [
+   "longevity_rejuvenation",
+   "meal_replacement_metabolic"
+  ],
+  "bot_themes": [
+   "cognitive_memory",
+   "hibernation_hypothermia"
+  ],
+  "n_top": 5,
+  "n_bot": 0
+ },
+ {
+  "quarter": "2018Q3",
+  "top_themes": [
+   "hair_loss",
+   "hibernation_hypothermia"
+  ],
+  "bot_themes": [
+   "longevity_rejuvenation",
+   "obesity_glp1"
+  ],
+  "n_top": 7,
+  "n_bot": 24
+ },
+ {
+  "quarter": "2018Q4",
+  "top_themes": [
+   "longevity_rejuvenation",
+   "meal_replacement_metabolic"
+  ],
+  "bot_themes": [
+   "hair_loss",
+   "hibernation_hypothermia"
+  ],
+  "n_top": 5,
+  "n_bot": 7
+ },
+ {
+  "quarter": "2019Q1",
+  "top_themes": [
+   "hibernation_hypothermia",
+   "meal_replacement_metabolic"
+  ],
+  "bot_themes": [
+   "cognitive_memory",
+   "obesity_glp1"
+  ],
+  "n_top": 2,
+  "n_bot": 25
+ },
+ {
+  "quarter": "2019Q2",
+  "top_themes": [
+   "longevity_rejuvenation",
+   "meal_replacement_metabolic"
+  ],
+  "bot_themes": [
+   "cognitive_memory",
+   "hair_loss"
+  ],
+  "n_top": 5,
+  "n_bot": 7
+ },
+ {
+  "quarter": "2019Q3",
+  "top_themes": [
+   "longevity_rejuvenation",
+   "obesity_glp1"
+  ],
+  "bot_themes": [
+   "hair_loss",
+   "hibernation_hypothermia"
+  ],
+  "n_top": 26,
+  "n_bot": 7
+ },
+ {
+  "quarter": "2019Q4",
+  "top_themes": [
+   "hair_loss",
+   "longevity_rejuvenation"
+  ],
+  "bot_themes": [
+   "hibernation_hypothermia",
+   "meal_replacement_metabolic"
+  ],
+  "n_top": 9,
+  "n_bot": 2
+ },
+ {
+  "quarter": "2020Q1",
+  "top_themes": [
+   "hibernation_hypothermia",
+   "longevity_rejuvenation"
+  ],
+  "bot_themes": [
+   "cognitive_memory",
+   "meal_replacement_metabolic"
+  ],
+  "n_top": 3,
+  "n_bot": 2
+ },
+ {
+  "quarter": "2020Q2",
+  "top_themes": [
+   "hair_loss",
+   "longevity_rejuvenation"
+  ],
+  "bot_themes": [
+   "cognitive_memory",
+   "hibernation_hypothermia"
+  ],
+  "n_top": 9,
+  "n_bot": 0
+ },
+ {
+  "quarter": "2020Q3",
+  "top_themes": [
+   "hair_loss",
+   "meal_replacement_metabolic"
+  ],
+  "bot_themes": [
+   "cognitive_memory",
+   "longevity_rejuvenation"
+  ],
+  "n_top": 8,
+  "n_bot": 3
+ },
+ {
+  "quarter": "2020Q4",
+  "top_themes": [
+   "meal_replacement_metabolic",
+   "obesity_glp1"
+  ],
+  "bot_themes": [
+   "cognitive_memory",
+   "longevity_rejuvenation"
+  ],
+  "n_top": 27,
+  "n_bot": 3
+ },
+ {
+  "quarter": "2021Q1",
+  "top_themes": [
+   "cognitive_memory",
+   "hibernation_hypothermia"
+  ],
+  "bot_themes": [
+   "hair_loss",
+   "obesity_glp1"
+  ],
+  "n_top": 0,
+  "n_bot": 30
+ },
+ {
+  "quarter": "2021Q2",
+  "top_themes": [
+   "hibernation_hypothermia",
+   "obesity_glp1"
+  ],
+  "bot_themes": [
+   "cognitive_memory",
+   "hair_loss"
+  ],
+  "n_top": 29,
+  "n_bot": 8
+ },
+ {
+  "quarter": "2021Q3",
+  "top_themes": [
+   "cognitive_memory",
+   "hibernation_hypothermia"
+  ],
+  "bot_themes": [
+   "hair_loss",
+   "meal_replacement_metabolic"
+  ],
+  "n_top": 0,
+  "n_bot": 9
+ },
+ {
+  "quarter": "2021Q4",
+  "top_themes": [
+   "cognitive_memory",
+   "meal_replacement_metabolic"
+  ],
+  "bot_themes": [
+   "hair_loss",
+   "obesity_glp1"
+  ],
+  "n_top": 2,
+  "n_bot": 32
+ },
+ {
+  "quarter": "2022Q1",
+  "top_themes": [
+   "hair_loss",
+   "longevity_rejuvenation"
+  ],
+  "bot_themes": [
+   "cognitive_memory",
+   "hibernation_hypothermia"
+  ],
+  "n_top": 11,
+  "n_bot": 0
+ },
+ {
+  "quarter": "2022Q2",
+  "top_themes": [
+   "hair_loss",
+   "longevity_rejuvenation"
+  ],
+  "bot_themes": [
+   "hibernation_hypothermia",
+   "obesity_glp1"
+  ],
+  "n_top": 11,
+  "n_bot": 29
+ },
+ {
+  "quarter": "2022Q3",
+  "top_themes": [
+   "hair_loss",
+   "longevity_rejuvenation"
+  ],
+  "bot_themes": [
+   "cognitive_memory",
+   "hibernation_hypothermia"
+  ],
+  "n_top": 11,
+  "n_bot": 0
+ },
+ {
+  "quarter": "2022Q4",
+  "top_themes": [
+   "hair_loss",
+   "longevity_rejuvenation"
+  ],
+  "bot_themes": [
+   "cognitive_memory",
+   "hibernation_hypothermia"
+  ],
+  "n_top": 11,
+  "n_bot": 0
+ },
+ {
+  "quarter": "2023Q1",
+  "top_themes": [
+   "hibernation_hypothermia",
+   "meal_replacement_metabolic"
+  ],
+  "bot_themes": [
+   "hair_loss",
+   "obesity_glp1"
+  ],
+  "n_top": 2,
+  "n_bot": 34
+ },
+ {
+  "quarter": "2023Q2",
+  "top_themes": [
+   "hibernation_hypothermia",
+   "longevity_rejuvenation"
+  ],
+  "bot_themes": [
+   "meal_replacement_metabolic",
+   "obesity_glp1"
+  ],
+  "n_top": 5,
+  "n_bot": 31
+ },
+ {
+  "quarter": "2023Q3",
+  "top_themes": [
+   "cognitive_memory",
+   "hair_loss"
+  ],
+  "bot_themes": [
+   "meal_replacement_metabolic",
+   "obesity_glp1"
+  ],
+  "n_top": 8,
+  "n_bot": 31
+ },
+ {
+  "quarter": "2023Q4",
+  "top_themes": [
+   "hair_loss",
+   "meal_replacement_metabolic"
+  ],
+  "bot_themes": [
+   "hibernation_hypothermia",
+   "obesity_glp1"
+  ],
+  "n_top": 9,
+  "n_bot": 31
+ },
+ {
+  "quarter": "2024Q1",
+  "top_themes": [
+   "hair_loss",
+   "longevity_rejuvenation"
+  ],
+  "bot_themes": [
+   "cognitive_memory",
+   "obesity_glp1"
+  ],
+  "n_top": 11,
+  "n_bot": 33
+ },
+ {
+  "quarter": "2024Q2",
+  "top_themes": [
+   "cognitive_memory",
+   "meal_replacement_metabolic"
+  ],
+  "bot_themes": [
+   "hibernation_hypothermia",
+   "obesity_glp1"
+  ],
+  "n_top": 2,
+  "n_bot": 33
+ },
+ {
+  "quarter": "2024Q3",
+  "top_themes": [
+   "longevity_rejuvenation",
+   "meal_replacement_metabolic"
+  ],
+  "bot_themes": [
+   "cognitive_memory",
+   "obesity_glp1"
+  ],
+  "n_top": 7,
+  "n_bot": 37
+ },
+ {
+  "quarter": "2024Q4",
+  "top_themes": [
+   "longevity_rejuvenation",
+   "meal_replacement_metabolic"
+  ],
+  "bot_themes": [
+   "cognitive_memory",
+   "obesity_glp1"
+  ],
+  "n_top": 8,
+  "n_bot": 39
+ },
+ {
+  "quarter": "2025Q1",
+  "top_themes": [
+   "cognitive_memory",
+   "meal_replacement_metabolic"
+  ],
+  "bot_themes": [
+   "hibernation_hypothermia",
+   "obesity_glp1"
+  ],
+  "n_top": 2,
+  "n_bot": 42
+ },
+ {
+  "quarter": "2025Q2",
+  "top_themes": [
+   "hair_loss",
+   "meal_replacement_metabolic"
+  ],
+  "bot_themes": [
+   "hibernation_hypothermia",
+   "obesity_glp1"
+  ],
+  "n_top": 11,
+  "n_bot": 43
+ },
+ {
+  "quarter": "2025Q3",
+  "top_themes": [
+   "cognitive_memory",
+   "meal_replacement_metabolic"
+  ],
+  "bot_themes": [
+   "hibernation_hypothermia",
+   "obesity_glp1"
+  ],
+  "n_top": 3,
+  "n_bot": 44
+ },
+ {
+  "quarter": "2025Q4",
+  "top_themes": [
+   "cognitive_memory",
+   "meal_replacement_metabolic"
+  ],
+  "bot_themes": [
+   "hibernation_hypothermia",
+   "obesity_glp1"
+  ],
+  "n_top": 3,
+  "n_bot": 48
+ },
+ {
+  "quarter": "2026Q1",
+  "top_themes": [
+   "longevity_rejuvenation",
+   "meal_replacement_metabolic"
+  ],
+  "bot_themes": [
+   "cognitive_memory",
+   "obesity_glp1"
+  ],
+  "n_top": 9,
+  "n_bot": 51
+ },
+ {
+  "quarter": "2026Q2",
+  "top_themes": [
+   "longevity_rejuvenation",
+   "meal_replacement_metabolic"
+  ],
+  "bot_themes": [
+   "hair_loss",
+   "obesity_glp1"
+  ],
+  "n_top": 9,
+  "n_bot": 55
+ }
+]

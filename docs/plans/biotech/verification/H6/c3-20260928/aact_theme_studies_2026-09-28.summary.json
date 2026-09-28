@@ -1,0 +1,21 @@
+{
+  "aact_snapshot_date": "2026-09-28",
+  "output": "/root/toss-tradebot-mvp/var/biotech/h6/aact_theme_studies_2026-09-28.csv",
+  "condition_rows": 1087198,
+  "intervention_rows": 1022635,
+  "study_rows": 604560,
+  "sponsor_rows": 963602,
+  "matched_studies": 15631,
+  "matched_rows": 15903,
+  "sponsors_unique": 3820,
+  "by_theme": {
+    "obesity_glp1": 13611,
+    "hair_loss": 518,
+    "longevity_rejuvenation": 335,
+    "meal_replacement_metabolic": 498,
+    "hibernation_hypothermia": 121,
+    "cognitive_memory": 45,
+    "control_nash": 700,
+    "control_amyloid": 75
+  }
+}
