@@ -187,7 +187,79 @@ def _norm(s: str) -> str:
     return re.sub(r"[^a-z0-9]", "", s.lower())
 
 
-def _parse_studies_and_sponsors(zip_path: Path, candidate_norm_map: dict[str, str]) -> list[dict]:
+class SponsorMatcher:
+    """WP78 · 역방향 매칭 · 후보 회사명 → AACT 스폰서·공동연구자 이름 (완전 일치만 채택).
+
+    방법 (우선순위): legacy (기존 _norm) → v2 (biotech_name_match.normalize_name · 법인 접미어 제거) → alias
+    (docs/plans/biotech/data/sponsor_aliases.csv · 후보 티커만). Jaccard ≥ 0.8 은 검수 표로만 (자동 채택 금지).
+    """
+
+    def __init__(self, candidates: dict[str, str], aliases: list[dict] | None = None) -> None:
+        from backend.scripts.biotech_name_match import normalize_name
+        self._nn = normalize_name
+        self.names = candidates                              # ticker → 후보 회사명
+        self.legacy = {_norm(n): t for t, n in candidates.items() if n}
+        self.v2 = {normalize_name(n): t for t, n in candidates.items() if normalize_name(n)}
+        self.alias: dict[str, tuple[str, str]] = {}
+        for a in aliases or []:
+            tk = (a.get("ticker") or "").upper()
+            if tk in candidates and a.get("alias"):
+                self.alias[normalize_name(a["alias"])] = (tk, a.get("basis", ""))
+        self.hits: dict[str, set[tuple[str, str]]] = {t: set() for t in candidates}
+
+    def match(self, name: str) -> tuple[str | None, str]:
+        tk = self.legacy.get(_norm(name))
+        if tk:
+            return tk, "legacy"
+        key = self._nn(name)
+        if key in self.v2:
+            return self.v2[key], "v2"
+        if key in self.alias:
+            return self.alias[key][0], "alias_sub" if ("인수" in self.alias[key][1] or "자회사" in self.alias[key][1]) else "alias"
+        return None, ""
+
+
+def _jaccard_review(matcher: SponsorMatcher, sponsor_names: set[str], tickers: list[str]) -> dict[str, list[tuple[float, str]]]:
+    from backend.scripts.biotech_name_match import jaccard, tokens
+    idx: dict[str, set[str]] = {}
+    for n in sponsor_names:
+        for t in tokens(n):
+            idx.setdefault(t, set()).add(n)
+    out: dict[str, list[tuple[float, str]]] = {}
+    for tk in tickers:
+        q = tokens(matcher.names.get(tk, ""))
+        pool = set().union(*(idx.get(t, set()) for t in q)) if q else set()
+        cands = sorted(((jaccard(q, tokens(n)), n) for n in pool), reverse=True)
+        out[tk] = [(round(j, 2), n) for j, n in cands if j >= 0.8][:5]
+    return out
+
+
+def match_reasons(matcher: SponsorMatcher, jaccard: dict[str, list]) -> dict[str, dict]:
+    """후보별 매칭 결과·미매칭 사유 (기존 legacy 기준 미매칭이었던 종목의 사유 분해용)."""
+    out = {}
+    for tk in matcher.names:
+        h = matcher.hits.get(tk, set())
+        lead = {m for r, m in h if r == "lead"}
+        collab = {m for r, m in h if r == "collaborator"}
+        if "legacy" in lead:
+            reason = "기존 매칭"
+        elif lead & {"alias_sub"}:
+            reason = "자회사명"
+        elif lead & {"v2", "alias"}:
+            reason = "표기 차이"
+        elif collab:
+            reason = "스폰서 아님 (공동연구자만)"
+        elif jaccard.get(tk):
+            reason = "기타 (유사 이름 · 검수 대기)"
+        else:
+            reason = "임상 없음 (AACT 에 스폰서·공동연구 등재 없음)"
+        out[tk] = {"name": matcher.names[tk], "reason": reason, "lead_methods": sorted(lead),
+                   "collab_methods": sorted(collab), "jaccard_review": jaccard.get(tk, [])}
+    return out
+
+
+def _parse_studies_and_sponsors(zip_path: Path, candidate_norm_map: dict[str, str],
+                                matcher: SponsorMatcher | None = None, diag: dict | None = None) -> list[dict]:
     """studies.txt · sponsors.txt 스트리밍 파싱 · 후보 매칭.
 
     candidate_norm_map: {normalized_sponsor_name: ticker}
@@ -208,6 +280,9 @@ def _parse_studies_and_sponsors(zip_path: Path, candidate_norm_map: dict[str, st
         # 1) sponsors.txt · nct_id → ticker 매핑 (lead_or_collaborator=lead · 매칭된 것만)
         LOG.info("sponsors.txt 파싱 · 매칭 시작")
         nct_to_ticker: dict[str, str] = {}
+        nct_role: dict[str, tuple[str, str]] = {}      # nct → (role, method) · WP78
+        collab: dict[str, tuple[str, str]] = {}
+        lead_names: set[str] = set()
         with zf.open(sponsors_name, "r") as f:
             text = io.TextIOWrapper(f, encoding="utf-8", errors="replace")
             reader = csv.DictReader(text, delimiter="|")
@@ -215,15 +290,39 @@ def _parse_studies_and_sponsors(zip_path: Path, candidate_norm_map: dict[str, st
             processed = 0
             for row in reader:
                 processed += 1
-                if row.get("lead_or_collaborator", "").lower() != "lead":
-                    continue
-                name_norm = _norm(row.get("name", ""))
-                ticker = candidate_norm_map.get(name_norm)
-                if ticker:
-                    nct_to_ticker[row.get("nct_id", "")] = ticker
+                role = (row.get("lead_or_collaborator", "") or "").lower()
+                nct = row.get("nct_id", "")
+                if matcher is None:  # 기존 동작 (lead · legacy 만)
+                    if role != "lead":
+                        continue
+                    ticker = candidate_norm_map.get(_norm(row.get("name", "")))
+                    if ticker:
+                        nct_to_ticker[nct] = ticker
+                        nct_role[nct] = ("lead", "legacy")
+                else:
+                    name = row.get("name", "")
+                    if role == "lead":
+                        lead_names.add(name)
+                    ticker, method = matcher.match(name)
+                    if ticker:
+                        matcher.hits[ticker].add((role, method))
+                        if role == "lead":
+                            nct_to_ticker[nct] = ticker
+                            nct_role[nct] = ("lead", method)
+                        elif role == "collaborator":
+                            collab.setdefault(nct, (ticker, method))
                 if processed % 500_000 == 0:
                     LOG.info("  sponsors 진행 · %d 행 · 매칭 %d", processed, len(nct_to_ticker))
-        LOG.info("sponsors 파싱 완료 · 총 %d 행 · 후보 스폰서 매칭 %d nct", processed, len(nct_to_ticker))
+        n_lead = len(nct_to_ticker)
+        for nct, (tk, method) in collab.items():   # 공동연구 · lead 매칭 없는 시험만 · 별도 표시
+            if nct not in nct_to_ticker:
+                nct_to_ticker[nct] = tk
+                nct_role[nct] = ("collaborator", method)
+        LOG.info("sponsors 파싱 완료 · 총 %d 행 · 후보 스폰서 매칭 %d nct · 공동연구 추가 %d nct",
+                 processed, n_lead, len(nct_to_ticker) - n_lead)
+        if matcher is not None and diag is not None:
+            unmatched = [t for t in matcher.names if not any(r == "lead" for r, _ in matcher.hits.get(t, set()))]
+            diag["reasons"] = match_reasons(matcher, _jaccard_review(matcher, lead_names, unmatched))
 
         if not nct_to_ticker:
             LOG.warning("후보 스폰서 매칭 0 · 매칭기 v2 개선 필요")
@@ -256,6 +355,8 @@ def _parse_studies_and_sponsors(zip_path: Path, candidate_norm_map: dict[str, st
                 matches.append({
                     "ticker": nct_to_ticker[nct],
                     "nct_id": nct,
+                    "role": nct_role.get(nct, ("lead", ""))[0],          # WP78 · lead | collaborator (공동연구)
+                    "match_method": nct_role.get(nct, ("", ""))[1],     # legacy | v2 | alias | alias_sub
                     "phase": row.get("phase", ""),
                     "overall_status": row.get("overall_status", ""),
                     "primary_completion_date": pcd_raw,
@@ -340,6 +441,48 @@ def _load_candidate_norm_map() -> tuple[dict[str, str], int]:
     return norm_map, n
 
 
+def _load_candidate_names() -> dict[str, str]:
+    """후보 ticker → 회사명 (candidates_v3 · SEC 명칭)."""
+    p = _latest_candidates_csv()
+    if not p:
+        return {}
+    with p.open() as f:
+        return {(r.get("ticker") or "").strip(): (r.get("name") or "").strip() for r in csv.DictReader(f) if r.get("ticker")}
+
+
+def _load_aliases() -> list[dict]:
+    p = FALLBACK_DIR / "sponsor_aliases.csv"
+    if not p.exists():
+        return []
+    with p.open() as f:
+        return list(csv.DictReader(f))
+
+
+def _write_match_report(date_str: str, matches: list[dict], diag: dict) -> None:
+    """WP78 · 매칭 진단 · aact_match_report_<날짜>.json + Jaccard 검수 표 CSV (자동 채택 없음)."""
+    reasons = diag.get("reasons", {})
+    lead_tk = {m["ticker"] for m in matches if m.get("role") == "lead"}
+    collab_tk = {m["ticker"] for m in matches if m.get("role") == "collaborator"} - lead_tk
+    legacy_tk = {m["ticker"] for m in matches if m.get("match_method") == "legacy"}
+    summary = {
+        "aact_snapshot_date": date_str, "candidates": len(reasons),
+        "tickers_legacy_lead": len(legacy_tk), "tickers_lead_all": len(lead_tk),
+        "tickers_collaborator_only": len(collab_tk), "tickers_with_any_trial": len(lead_tk | collab_tk),
+        "reason_counts": {},
+    }
+    for v in reasons.values():
+        summary["reason_counts"][v["reason"]] = summary["reason_counts"].get(v["reason"], 0) + 1
+    (OUT_DIR / f"aact_match_report_{date_str}.json").write_text(
+        json.dumps({"summary": summary, "by_ticker": reasons}, ensure_ascii=False, indent=2))
+    with (OUT_DIR / f"aact_jaccard_review_{date_str}.csv").open("w", newline="") as f:
+        w = csv.writer(f)
+        w.writerow(["ticker", "candidate_name", "jaccard", "aact_sponsor_name", "adopted"])
+        for tk, v in reasons.items():
+            for j, n in v.get("jaccard_review", []):
+                w.writerow([tk, v["name"], j, n, "no (검수 전 · 자동 채택 금지)"])
+    LOG.info("매칭 진단 · %s", json.dumps(summary, ensure_ascii=False))
+
+
 def _notify_failure_sync(step: str, detail: str) -> None:
     """텔레그램 알림 · sync wrapper."""
     try:
@@ -394,8 +537,11 @@ def main():
         zip_path.unlink(missing_ok=True)
         raise SystemExit(24)
 
-    # 5) 파싱 · 매칭
-    matches = _parse_studies_and_sponsors(zip_path, candidate_norm_map)
+    # 5) 파싱 · 매칭 (WP78 역방향 매칭 · 별칭 · 공동연구 · 사유 진단)
+    matcher = SponsorMatcher(_load_candidate_names(), _load_aliases())
+    diag: dict = {}
+    matches = _parse_studies_and_sponsors(zip_path, candidate_norm_map, matcher=matcher, diag=diag)
+    _write_match_report(date_str, matches, diag)
 
     # 6) JSON 저장
     OUT_DIR.mkdir(parents=True, exist_ok=True)

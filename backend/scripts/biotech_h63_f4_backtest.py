@@ -49,7 +49,8 @@ def git_sha() -> str:
 def load_cik_ticker(sha: str) -> dict:
     """CIK → ticker (h3_targets_v2 target_ticker + SEC fallback)."""
     m = {}
-    p = DATA_DIR / f"h3_targets_v2_{sha}.csv"
+    from backend.scripts import _biotech_paths as _P  # WP78 · 서버는 docs 이식본
+    p = _P.find(f"h3_targets_v2_{sha}.csv") or (DATA_DIR / f"h3_targets_v2_{sha}.csv")
     if p.exists():
         with p.open() as f:
             for r in csv.DictReader(f):
@@ -57,7 +58,7 @@ def load_cik_ticker(sha: str) -> dict:
                 tk = (r.get("ticker") or "").strip().upper()
                 if cik and tk:
                     m[cik] = tk
-    sp = DATA_DIR / "sec_company_tickers.json"
+    sp = _P.find("sec_company_tickers.json") or (DATA_DIR / "sec_company_tickers.json")
     if sp.exists():
         for _, e in json.loads(sp.read_text()).items():
             cik = str(e.get("cik_str", "")).zfill(10)

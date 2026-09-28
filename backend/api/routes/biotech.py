@@ -31,6 +31,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel
 
 from backend.api.auth import require_sniper_token
+from backend.scripts.biotech_alert_rule import judge as _alert_judge
 
 logger = logging.getLogger("biotech_router")
 router = APIRouter()
@@ -646,6 +647,7 @@ class BiotechKpi(BaseModel):
     insider_buy_20d: int        # 임원·대주주 매수 최근 20 거래일
     alerts: int                 # 급등 경보 (rose 섹션 · 향후 신호 채널) · 현재 0
     alert_tickers: list[str] = []  # WP74 4단계 · 경보 종목 (표시용 · 판정 무변경)
+    alerts_collecting: int = 0  # WP78 · 기준선 7일 미만이라 경보 판정에서 뺀 종목 수
     alert_briefs: list[dict[str, Any]] = []  # WP77 · 급등 브리핑 패널 + 자동 요약 (수집 자료 · 판정 무변경)
 
 
@@ -689,6 +691,7 @@ async def get_kpi(_admin: str = Depends(require_sniper_token)) -> BiotechKpi:
     # 급등 경보 (WP69-3d 재정의 · h_radar_params v1.5 alerts_definition):
     #   apewisdom baseline_mult ≥ 5 OR reddit_rss_matches ≥ 3 인 티커 수
     alerts = 0
+    alerts_collecting = 0
     alert_tickers: list[str] = []
     confirm_pick: Path | None = None
     for base in _search_dirs("community_daily"):
@@ -700,17 +703,11 @@ async def get_kpi(_admin: str = Depends(require_sniper_token)) -> BiotechKpi:
     if confirm_pick:
         with confirm_pick.open() as f:
             for r in csv.DictReader(f):
-                mult_raw = r.get("st_baseline_mult", "")
-                rss_raw = r.get("reddit_rss_matches", "0")
-                try:
-                    rss = int(rss_raw)
-                except (ValueError, TypeError):
-                    rss = 0
-                try:
-                    mult = float(mult_raw) if mult_raw and mult_raw != "collecting" else 0.0
-                except (ValueError, TypeError):
-                    mult = 0.0
-                if mult >= 5.0 or rss >= 3:
+                # WP78 · 공용 규칙 (backend/scripts/biotech_alert_rule.py) · 기준선 7일 미만 = 수집 중 (판정 제외)
+                ok, why = _alert_judge(r)
+                if why == "collecting":
+                    alerts_collecting += 1
+                if ok:
                     alerts += 1
                     alert_tickers.append(r.get("ticker", ""))
 
@@ -721,6 +718,7 @@ async def get_kpi(_admin: str = Depends(require_sniper_token)) -> BiotechKpi:
         insider_buy_20d=insider_buy_20d,
         alerts=alerts,
         alert_tickers=alert_tickers,
+        alerts_collecting=alerts_collecting,
         alert_briefs=_latest_alert_briefs(),
     )
 

@@ -1,0 +1,3628 @@
+{
+  "0000038777": {
+    "name": "FRANKLIN TEMPLETON INC",
+    "sic": "6282",
+    "entityType": "operating",
+    "bucket": "fund",
+    "reason": "SIC 6282 (financial)"
+  },
+  "0000042872": {
+    "name": "FRESENIUS MEDICAL CARE HOLDINGS INC /NY/",
+    "sic": "3841",
+    "entityType": "operating",
+    "bucket": "fund",
+    "reason": "entityType=operating · name=FRESENIUS MEDICAL CARE HOLDINGS INC /NY/"
+  },
+  "0000059478": {
+    "name": "ELI LILLY & Co",
+    "sic": "2834",
+    "entityType": "operating",
+    "bucket": "strategic_corporate",
+    "reason": "SIC 2834"
+  },
+  "0000064978": {
+    "name": "MERCK SHARP & DOHME LLC",
+    "sic": "2834",
+    "entityType": "operating",
+    "bucket": "fund",
+    "reason": "entityType=operating · name=MERCK SHARP & DOHME LLC"
+  },
+  "0000078003": {
+    "name": "PFIZER INC",
+    "sic": "2834",
+    "entityType": "operating",
+    "bucket": "strategic_corporate",
+    "reason": "SIC 2834"
+  },
+  "0000318154": {
+    "name": "AMGEN INC",
+    "sic": "2836",
+    "entityType": "operating",
+    "bucket": "strategic_corporate",
+    "reason": "SIC 2836"
+  },
+  "0000351083": {
+    "name": "TRUSTEES OF THE UNIVERSITY OF PENNSYLVANIA",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "other",
+    "reason": "SIC  · entity=other · name=TRUSTEES OF THE UNIVERSITY OF PENNSYLVAN"
+  },
+  "0000807249": {
+    "name": "GAMCO INVESTORS, INC. ET AL",
+    "sic": "0000",
+    "entityType": "other",
+    "bucket": "individual",
+    "reason": "entityType=other · name pattern"
+  },
+  "0000820027": {
+    "name": "AMERIPRISE FINANCIAL INC",
+    "sic": "6282",
+    "entityType": "operating",
+    "bucket": "fund",
+    "reason": "SIC 6282 (financial)"
+  },
+  "0000850261": {
+    "name": "Sorrento Therapeutics, Inc.",
+    "sic": "2836",
+    "entityType": "operating",
+    "bucket": "strategic_corporate",
+    "reason": "SIC 2836"
+  },
+  "0000872589": {
+    "name": "REGENERON PHARMACEUTICALS, INC.",
+    "sic": "2834",
+    "entityType": "operating",
+    "bucket": "individual",
+    "reason": "entityType=operating · name pattern"
+  },
+  "0000875045": {
+    "name": "BIOGEN INC.",
+    "sic": "2836",
+    "entityType": "operating",
+    "bucket": "strategic_corporate",
+    "reason": "SIC 2836"
+  },
+  "0000882095": {
+    "name": "GILEAD SCIENCES, INC.",
+    "sic": "2836",
+    "entityType": "operating",
+    "bucket": "individual",
+    "reason": "entityType=operating · name pattern"
+  },
+  "0000897069": {
+    "name": "FOLEY & LARDNER/ FA",
+    "sic": "0000",
+    "entityType": "other",
+    "bucket": "other",
+    "reason": "SIC 0000 · entity=other · name=FOLEY & LARDNER/ FA"
+  },
+  "0000897744": {
+    "name": "MARLETT CHRISTOPHER A",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "other",
+    "reason": "SIC  · entity=other · name=MARLETT CHRISTOPHER A"
+  },
+  "0000901832": {
+    "name": "ASTRAZENECA PLC",
+    "sic": "2834",
+    "entityType": "other",
+    "bucket": "strategic_corporate",
+    "reason": "SIC 2834"
+  },
+  "0000902453": {
+    "name": "ROSEN CHRISTER",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "other",
+    "reason": "SIC  · entity=other · name=ROSEN CHRISTER"
+  },
+  "0000905448": {
+    "name": "WYGOD MARTIN J",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "other",
+    "reason": "SIC  · entity=other · name=WYGOD MARTIN J"
+  },
+  "0000918923": {
+    "name": "BIOTECHNOLOGY VALUE FUND L P",
+    "sic": "6282",
+    "entityType": "other",
+    "bucket": "fund",
+    "reason": "entityType=other · name=BIOTECHNOLOGY VALUE FUND L P"
+  },
+  "0000920148": {
+    "name": "LABCORP HOLDINGS INC.",
+    "sic": "8071",
+    "entityType": "operating",
+    "bucket": "fund",
+    "reason": "entityType=operating · name=LABCORP HOLDINGS INC."
+  },
+  "0000929607": {
+    "name": "CONTINENTAL GRAIN CO",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "other",
+    "reason": "SIC  · entity=other · name=CONTINENTAL GRAIN CO"
+  },
+  "0000935679": {
+    "name": "ARMEN GARO H",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "other",
+    "reason": "SIC  · entity=other · name=ARMEN GARO H"
+  },
+  "0000941560": {
+    "name": "GARDNER LEWIS ASSET MANAGEMENT L P",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "fund",
+    "reason": "entityType=other · name=GARDNER LEWIS ASSET MANAGEMENT L P"
+  },
+  "0001011443": {
+    "name": "HBK INVESTMENTS L P",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "other",
+    "reason": "SIC  · entity=other · name=HBK INVESTMENTS L P"
+  },
+  "0001016504": {
+    "name": "INTEGRATED BIOPHARMA INC",
+    "sic": "2834",
+    "entityType": "operating",
+    "bucket": "strategic_corporate",
+    "reason": "SIC 2834"
+  },
+  "0001017645": {
+    "name": "GENERAL ATLANTIC, L.P.",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "individual",
+    "reason": "entityType=other · name pattern"
+  },
+  "0001033431": {
+    "name": "UMPHREY WILLARD L",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "other",
+    "reason": "SIC  · entity=other · name=UMPHREY WILLARD L"
+  },
+  "0001033438": {
+    "name": "SCOTT DAVID",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "other",
+    "reason": "SIC  · entity=other · name=SCOTT DAVID"
+  },
+  "0001035443": {
+    "name": "ALEXANDRIA REAL ESTATE EQUITIES, INC.",
+    "sic": "6798",
+    "entityType": "operating",
+    "bucket": "individual",
+    "reason": "entityType=operating · name pattern"
+  },
+  "0001040273": {
+    "name": "Third Point LLC",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "fund",
+    "reason": "entityType=other · name=Third Point LLC"
+  },
+  "0001041885": {
+    "name": "INGALLS & SNYDER LLC",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "fund",
+    "reason": "entityType=other · name=INGALLS & SNYDER LLC"
+  },
+  "0001055624": {
+    "name": "SPRINGER TIMOTHY A",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "other",
+    "reason": "SIC  · entity=other · name=SPRINGER TIMOTHY A"
+  },
+  "0001055951": {
+    "name": "ORBIMED ADVISORS LLC",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "fund",
+    "reason": "entityType=other · name=ORBIMED ADVISORS LLC"
+  },
+  "0001056288": {
+    "name": "FEDERATED HERMES, INC.",
+    "sic": "6282",
+    "entityType": "operating",
+    "bucket": "individual",
+    "reason": "entityType=operating · name pattern"
+  },
+  "0001082554": {
+    "name": "UNITED THERAPEUTICS Corp",
+    "sic": "2834",
+    "entityType": "operating",
+    "bucket": "strategic_corporate",
+    "reason": "SIC 2834"
+  },
+  "0001098972": {
+    "name": "AGENUS INC",
+    "sic": "2836",
+    "entityType": "operating",
+    "bucket": "strategic_corporate",
+    "reason": "SIC 2836"
+  },
+  "0001103804": {
+    "name": "VIKING GLOBAL INVESTORS LP",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "fund",
+    "reason": "entityType=other · name=VIKING GLOBAL INVESTORS LP"
+  },
+  "0001114448": {
+    "name": "NOVARTIS AG",
+    "sic": "2834",
+    "entityType": "other",
+    "bucket": "strategic_corporate",
+    "reason": "SIC 2834"
+  },
+  "0001117003": {
+    "name": "MCGUIRE TERRANCE",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "other",
+    "reason": "SIC  · entity=other · name=MCGUIRE TERRANCE"
+  },
+  "0001131399": {
+    "name": "GSK plc",
+    "sic": "2834",
+    "entityType": "other",
+    "bucket": "strategic_corporate",
+    "reason": "SIC 2834"
+  },
+  "0001132679": {
+    "name": "STEINMAN LAWRENCE",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "other",
+    "reason": "SIC  · entity=other · name=STEINMAN LAWRENCE"
+  },
+  "0001139306": {
+    "name": "CERRONE GABRIELE M",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "other",
+    "reason": "SIC  · entity=other · name=CERRONE GABRIELE M"
+  },
+  "0001165408": {
+    "name": "ADAGE CAPITAL PARTNERS GP, L.L.C.",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "individual",
+    "reason": "entityType=other · name pattern"
+  },
+  "0001175707": {
+    "name": "Farallon Capital Partners, L.P.",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "fund",
+    "reason": "entityType=other · name=Farallon Capital Partners, L.P."
+  },
+  "0001187011": {
+    "name": "FEINSOD MICHAEL",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "other",
+    "reason": "SIC  · entity=other · name=FEINSOD MICHAEL"
+  },
+  "0001189193": {
+    "name": "RUETTGERS MICHAEL C",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "other",
+    "reason": "SIC  · entity=other · name=RUETTGERS MICHAEL C"
+  },
+  "0001190273": {
+    "name": "BISCHOFBERGER NORBERT W",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "other",
+    "reason": "SIC  · entity=other · name=BISCHOFBERGER NORBERT W"
+  },
+  "0001191935": {
+    "name": "TANG CAPITAL PARTNERS LP",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "fund",
+    "reason": "entityType=other · name=TANG CAPITAL PARTNERS LP"
+  },
+  "0001197014": {
+    "name": "ALAM JOHN J",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "other",
+    "reason": "SIC  · entity=other · name=ALAM JOHN J"
+  },
+  "0001197023": {
+    "name": "BOGER JOSHUA S",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "other",
+    "reason": "SIC  · entity=other · name=BOGER JOSHUA S"
+  },
+  "0001198554": {
+    "name": "Bianco James A.",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "other",
+    "reason": "SIC  · entity=other · name=Bianco James A."
+  },
+  "0001208152": {
+    "name": "MCALEER JEROME F",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "other",
+    "reason": "SIC  · entity=other · name=MCALEER JEROME F"
+  },
+  "0001216114": {
+    "name": "HAMILTON CHRISTINE E",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "other",
+    "reason": "SIC  · entity=other · name=HAMILTON CHRISTINE E"
+  },
+  "0001224962": {
+    "name": "PERCEPTIVE ADVISORS LLC",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "fund",
+    "reason": "entityType=other · name=PERCEPTIVE ADVISORS LLC"
+  },
+  "0001232621": {
+    "name": "TANG CAPITAL MANAGEMENT LLC",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "fund",
+    "reason": "entityType=other · name=TANG CAPITAL MANAGEMENT LLC"
+  },
+  "0001242110": {
+    "name": "BLATT LAWRENCE",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "other",
+    "reason": "SIC  · entity=other · name=BLATT LAWRENCE"
+  },
+  "0001247015": {
+    "name": "BARER SOL J",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "other",
+    "reason": "SIC  · entity=other · name=BARER SOL J"
+  },
+  "0001251213": {
+    "name": "BENTSUR RON",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "other",
+    "reason": "SIC  · entity=other · name=BENTSUR RON"
+  },
+  "0001263508": {
+    "name": "BAKER BROS. ADVISORS LP",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "fund",
+    "reason": "entityType=other · name=BAKER BROS. ADVISORS LP"
+  },
+  "0001266567": {
+    "name": "ATWOOD BRIAN G",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "other",
+    "reason": "SIC  · entity=other · name=ATWOOD BRIAN G"
+  },
+  "0001272799": {
+    "name": "KODIAK VENTURE PARTNERS III LP",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "fund",
+    "reason": "entityType=other · name=KODIAK VENTURE PARTNERS III LP"
+  },
+  "0001273693": {
+    "name": "Control Empresarial de Capitales S.A. de C.V.",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "other",
+    "reason": "SIC  · entity=other · name=Control Empresarial de Capitales S.A. de"
+  },
+  "0001287235": {
+    "name": "TIDMARSH GEORGE F",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "other",
+    "reason": "SIC  · entity=other · name=TIDMARSH GEORGE F"
+  },
+  "0001291432": {
+    "name": "Marchiando Keith",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "other",
+    "reason": "SIC  · entity=other · name=Marchiando Keith"
+  },
+  "0001301120": {
+    "name": "Moreadith Randall",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "other",
+    "reason": "SIC  · entity=other · name=Moreadith Randall"
+  },
+  "0001303782": {
+    "name": "Javitt Jonathan C",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "other",
+    "reason": "SIC  · entity=other · name=Javitt Jonathan C"
+  },
+  "0001304406": {
+    "name": "Glover Stephen C.",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "other",
+    "reason": "SIC  · entity=other · name=Glover Stephen C."
+  },
+  "0001306717": {
+    "name": "Sanderling Venture Partners VI LP",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "fund",
+    "reason": "entityType=other · name=Sanderling Venture Partners VI LP"
+  },
+  "0001315797": {
+    "name": "Satter Muneer A",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "other",
+    "reason": "SIC  · entity=other · name=Satter Muneer A"
+  },
+  "0001315828": {
+    "name": "Board of Trustees of The Leland Stanford Junior University",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "other",
+    "reason": "SIC  · entity=other · name=Board of Trustees of The Leland Stanford"
+  },
+  "0001321178": {
+    "name": "Arkin Moshe",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "other",
+    "reason": "SIC  · entity=other · name=Arkin Moshe"
+  },
+  "0001331693": {
+    "name": "Roumell Asset Management, LLC",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "fund",
+    "reason": "entityType=other · name=Roumell Asset Management, LLC"
+  },
+  "0001332596": {
+    "name": "Daly Joseph Patrick",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "other",
+    "reason": "SIC  · entity=other · name=Daly Joseph Patrick"
+  },
+  "0001332784": {
+    "name": "Silver Point Capital L.P.",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "fund",
+    "reason": "entityType=other · name=Silver Point Capital L.P."
+  },
+  "0001335196": {
+    "name": "Thomas, McNerney & Partners, LLC",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "fund",
+    "reason": "entityType=other · name=Thomas, McNerney & Partners, LLC"
+  },
+  "0001339978": {
+    "name": "Graves Michael",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "other",
+    "reason": "SIC  · entity=other · name=Graves Michael"
+  },
+  "0001346824": {
+    "name": "RA CAPITAL MANAGEMENT, L.P.",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "individual",
+    "reason": "entityType=other · name pattern"
+  },
+  "0001351779": {
+    "name": "KIDRON NADAV",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "other",
+    "reason": "SIC  · entity=other · name=KIDRON NADAV"
+  },
+  "0001352546": {
+    "name": "Flynn James E",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "other",
+    "reason": "SIC  · entity=other · name=Flynn James E"
+  },
+  "0001352851": {
+    "name": "Magnetar Financial LLC",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "fund",
+    "reason": "entityType=other · name=Magnetar Financial LLC"
+  },
+  "0001357550": {
+    "name": "Weiss Asset Management LP",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "fund",
+    "reason": "entityType=other · name=Weiss Asset Management LP"
+  },
+  "0001358403": {
+    "name": "BELLICUM PHARMACEUTICALS, INC",
+    "sic": "2834",
+    "entityType": "operating",
+    "bucket": "individual",
+    "reason": "entityType=operating · name pattern"
+  },
+  "0001366074": {
+    "name": "Lappe Mark",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "other",
+    "reason": "SIC  · entity=other · name=Lappe Mark"
+  },
+  "0001366268": {
+    "name": "Kayyem Jon Faiz",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "other",
+    "reason": "SIC  · entity=other · name=Kayyem Jon Faiz"
+  },
+  "0001370483": {
+    "name": "Ipsen, S.A.",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "other",
+    "reason": "SIC  · entity=other · name=Ipsen, S.A."
+  },
+  "0001373604": {
+    "name": "BML Investment Partners, L.P.",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "fund",
+    "reason": "entityType=other · name=BML Investment Partners, L.P."
+  },
+  "0001376847": {
+    "name": "O'Connor Daniel J.",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "other",
+    "reason": "SIC  · entity=other · name=O'Connor Daniel J."
+  },
+  "0001378550": {
+    "name": "Lowenthal Richard E",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "other",
+    "reason": "SIC  · entity=other · name=Lowenthal Richard E"
+  },
+  "0001380393": {
+    "name": "Fortress Investment Group LLC",
+    "sic": "6282",
+    "entityType": "operating",
+    "bucket": "fund",
+    "reason": "entityType=operating · name=Fortress Investment Group LLC"
+  },
+  "0001380585": {
+    "name": "Radoff Bradley Louis",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "other",
+    "reason": "SIC  · entity=other · name=Radoff Bradley Louis"
+  },
+  "0001383838": {
+    "name": "SHAH CAPITAL MANAGEMENT",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "fund",
+    "reason": "entityType=other · name=SHAH CAPITAL MANAGEMENT"
+  },
+  "0001386560": {
+    "name": "Eureka Therapeutics, Inc.",
+    "sic": "2836",
+    "entityType": "other",
+    "bucket": "strategic_corporate",
+    "reason": "SIC 2836"
+  },
+  "0001388325": {
+    "name": "Novo Holdings A/S",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "fund",
+    "reason": "entityType=other · name=Novo Holdings A/S"
+  },
+  "0001393818": {
+    "name": "Blackstone Inc.",
+    "sic": "6282",
+    "entityType": "operating",
+    "bucket": "fund",
+    "reason": "SIC 6282 (financial)"
+  },
+  "0001395064": {
+    "name": "TAKEDA PHARMACEUTICAL CO LTD",
+    "sic": "2834",
+    "entityType": "other",
+    "bucket": "strategic_corporate",
+    "reason": "SIC 2834"
+  },
+  "0001397144": {
+    "name": "Abingworth LLP",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "other",
+    "reason": "SIC  · entity=other · name=Abingworth LLP"
+  },
+  "0001399290": {
+    "name": "Brewster David B",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "other",
+    "reason": "SIC  · entity=other · name=Brewster David B"
+  },
+  "0001401267": {
+    "name": "Huh Hoyoung",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "other",
+    "reason": "SIC  · entity=other · name=Huh Hoyoung"
+  },
+  "0001402539": {
+    "name": "YANAY YAKY",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "other",
+    "reason": "SIC  · entity=other · name=YANAY YAKY"
+  },
+  "0001403528": {
+    "name": "Brookfield Oaktree Holdings, LLC",
+    "sic": "6282",
+    "entityType": "operating",
+    "bucket": "fund",
+    "reason": "entityType=operating · name=Brookfield Oaktree Holdings, LLC"
+  },
+  "0001410830": {
+    "name": "Matrix Capital Management Company, LP",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "fund",
+    "reason": "entityType=other · name=Matrix Capital Management Company, LP"
+  },
+  "0001419248": {
+    "name": "Wolf James G.",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "other",
+    "reason": "SIC  · entity=other · name=Wolf James G."
+  },
+  "0001425738": {
+    "name": "Redmile Group, LLC",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "fund",
+    "reason": "entityType=other · name=Redmile Group, LLC"
+  },
+  "0001426486": {
+    "name": "Bracebridge Capital, LLC",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "fund",
+    "reason": "entityType=other · name=Bracebridge Capital, LLC"
+  },
+  "0001436075": {
+    "name": "Maggiore Christopher D.",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "other",
+    "reason": "SIC  · entity=other · name=Maggiore Christopher D."
+  },
+  "0001440514": {
+    "name": "US VENTURE PARTNERS X LP",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "fund",
+    "reason": "entityType=other · name=US VENTURE PARTNERS X LP"
+  },
+  "0001446531": {
+    "name": "Asahi Kasei Corp",
+    "sic": "8880",
+    "entityType": "other",
+    "bucket": "other",
+    "reason": "SIC 8880 · entity=other · name=Asahi Kasei Corp"
+  },
+  "0001446847": {
+    "name": "IRONWOOD PHARMACEUTICALS INC",
+    "sic": "2834",
+    "entityType": "operating",
+    "bucket": "strategic_corporate",
+    "reason": "SIC 2834"
+  },
+  "0001448698": {
+    "name": "Cherington Charles",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "other",
+    "reason": "SIC  · entity=other · name=Cherington Charles"
+  },
+  "0001464695": {
+    "name": "Blackstone Holdings I/II GP L.L.C.",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "fund",
+    "reason": "entityType=other · name=Blackstone Holdings I/II GP L.L.C."
+  },
+  "0001465109": {
+    "name": "Neuberger Berman Group LLC",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "fund",
+    "reason": "entityType=other · name=Neuberger Berman Group LLC"
+  },
+  "0001465837": {
+    "name": "Boxer Capital, LLC",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "fund",
+    "reason": "entityType=other · name=Boxer Capital, LLC"
+  },
+  "0001468950": {
+    "name": "Clal Biotechnology Industries Ltd.",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "other",
+    "reason": "SIC  · entity=other · name=Clal Biotechnology Industries Ltd."
+  },
+  "0001472322": {
+    "name": "Nantahala Capital Management, LLC",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "fund",
+    "reason": "entityType=other · name=Nantahala Capital Management, LLC"
+  },
+  "0001477326": {
+    "name": "JEC II Associates, LLC",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "fund",
+    "reason": "entityType=other · name=JEC II Associates, LLC"
+  },
+  "0001478398": {
+    "name": "Zerhouni Elias A.",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "other",
+    "reason": "SIC  · entity=other · name=Zerhouni Elias A."
+  },
+  "0001481867": {
+    "name": "Iroquois Capital Management, LLC",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "fund",
+    "reason": "entityType=other · name=Iroquois Capital Management, LLC"
+  },
+  "0001491072": {
+    "name": "Anson Funds Management LP",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "fund",
+    "reason": "entityType=other · name=Anson Funds Management LP"
+  },
+  "0001493215": {
+    "name": "RTW INVESTMENTS, LP",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "individual",
+    "reason": "entityType=other · name pattern"
+  },
+  "0001494695": {
+    "name": "Manning Paul B",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "other",
+    "reason": "SIC  · entity=other · name=Manning Paul B"
+  },
+  "0001506251": {
+    "name": "Citius Pharmaceuticals, Inc.",
+    "sic": "2834",
+    "entityType": "operating",
+    "bucket": "strategic_corporate",
+    "reason": "SIC 2834"
+  },
+  "0001506916": {
+    "name": "Meckler Jeffrey A",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "other",
+    "reason": "SIC  · entity=other · name=Meckler Jeffrey A"
+  },
+  "0001516478": {
+    "name": "Camac Fund, LP",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "fund",
+    "reason": "entityType=other · name=Camac Fund, LP"
+  },
+  "0001517309": {
+    "name": "BERSANI PIETRO",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "other",
+    "reason": "SIC  · entity=other · name=BERSANI PIETRO"
+  },
+  "0001521036": {
+    "name": "Lantheus Holdings, Inc.",
+    "sic": "2835",
+    "entityType": "operating",
+    "bucket": "fund",
+    "reason": "entityType=operating · name=Lantheus Holdings, Inc."
+  },
+  "0001531612": {
+    "name": "Cove Street Capital, LLC",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "fund",
+    "reason": "entityType=other · name=Cove Street Capital, LLC"
+  },
+  "0001534261": {
+    "name": "Casdin Capital, LLC",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "fund",
+    "reason": "entityType=other · name=Casdin Capital, LLC"
+  },
+  "0001534264": {
+    "name": "Casdin Eli",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "other",
+    "reason": "SIC  · entity=other · name=Casdin Eli"
+  },
+  "0001535978": {
+    "name": "Adage Capital Management, L.P.",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "fund",
+    "reason": "entityType=other · name=Adage Capital Management, L.P."
+  },
+  "0001537917": {
+    "name": "TYME TECHNOLOGIES, INC.",
+    "sic": "2834",
+    "entityType": "operating",
+    "bucket": "individual",
+    "reason": "entityType=operating · name pattern"
+  },
+  "0001543112": {
+    "name": "Morningside Venture Investments Ltd",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "fund",
+    "reason": "entityType=other · name=Morningside Venture Investments Ltd"
+  },
+  "0001545672": {
+    "name": "Adimab, LLC",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "fund",
+    "reason": "entityType=other · name=Adimab, LLC"
+  },
+  "0001549395": {
+    "name": "Cornell Alison A",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "other",
+    "reason": "SIC  · entity=other · name=Cornell Alison A"
+  },
+  "0001554334": {
+    "name": "Sudbury Capital Fund, LP",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "fund",
+    "reason": "entityType=other · name=Sudbury Capital Fund, LP"
+  },
+  "0001556263": {
+    "name": "Syros Pharmaceuticals, Inc.",
+    "sic": "2834",
+    "entityType": "operating",
+    "bucket": "strategic_corporate",
+    "reason": "SIC 2834"
+  },
+  "0001557024": {
+    "name": "Strathspey Crown Holdings Group, LLC",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "fund",
+    "reason": "entityType=other · name=Strathspey Crown Holdings Group, LLC"
+  },
+  "0001559706": {
+    "name": "Slate Path Capital LP",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "fund",
+    "reason": "entityType=other · name=Slate Path Capital LP"
+  },
+  "0001569064": {
+    "name": "MONTANOVA CAPITAL, LLC",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "individual",
+    "reason": "entityType=other · name pattern"
+  },
+  "0001569241": {
+    "name": "Newtyn Management, LLC",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "fund",
+    "reason": "entityType=other · name=Newtyn Management, LLC"
+  },
+  "0001571071": {
+    "name": "DEUTSCHE BALATON AKTIENGESELLSCHAFT",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "other",
+    "reason": "SIC  · entity=other · name=DEUTSCHE BALATON AKTIENGESELLSCHAFT"
+  },
+  "0001571267": {
+    "name": "Jackson Investment Group, LLC",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "fund",
+    "reason": "entityType=other · name=Jackson Investment Group, LLC"
+  },
+  "0001577524": {
+    "name": "Sarissa Capital Management LP",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "fund",
+    "reason": "entityType=other · name=Sarissa Capital Management LP"
+  },
+  "0001581835": {
+    "name": "Bpifrance Participations SA",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "other",
+    "reason": "SIC  · entity=other · name=Bpifrance Participations SA"
+  },
+  "0001582384": {
+    "name": "Wildcat Capital Management, LLC",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "fund",
+    "reason": "entityType=other · name=Wildcat Capital Management, LLC"
+  },
+  "0001582392": {
+    "name": "PAYNE JOHN BERNARD",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "other",
+    "reason": "SIC  · entity=other · name=PAYNE JOHN BERNARD"
+  },
+  "0001582844": {
+    "name": "ACUTA CAPITAL PARTNERS, LLC",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "individual",
+    "reason": "entityType=other · name pattern"
+  },
+  "0001587114": {
+    "name": "EcoR1 Capital, LLC",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "fund",
+    "reason": "entityType=other · name=EcoR1 Capital, LLC"
+  },
+  "0001589097": {
+    "name": "Versant Venture Capital V, L.P.",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "fund",
+    "reason": "entityType=other · name=Versant Venture Capital V, L.P."
+  },
+  "0001591046": {
+    "name": "Lundbeckfond Invest A/S",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "other",
+    "reason": "SIC  · entity=other · name=Lundbeckfond Invest A/S"
+  },
+  "0001595082": {
+    "name": "DAVIDSON KEMPNER CAPITAL MANAGEMENT LP",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "fund",
+    "reason": "entityType=other · name=DAVIDSON KEMPNER CAPITAL MANAGEMENT LP"
+  },
+  "0001598046": {
+    "name": "HIGHCAPE PARTNERS, L.P.",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "individual",
+    "reason": "entityType=other · name pattern"
+  },
+  "0001600004": {
+    "name": "First Light Asset Management, LLC",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "fund",
+    "reason": "entityType=other · name=First Light Asset Management, LLC"
+  },
+  "0001600420": {
+    "name": "COLUMN GROUP II, LP",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "individual",
+    "reason": "entityType=other · name pattern"
+  },
+  "0001601485": {
+    "name": "Elicio Therapeutics, Inc.",
+    "sic": "2834",
+    "entityType": "operating",
+    "bucket": "strategic_corporate",
+    "reason": "SIC 2834"
+  },
+  "0001605598": {
+    "name": "ARCH Venture Fund VIII, L.P.",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "fund",
+    "reason": "entityType=other · name=ARCH Venture Fund VIII, L.P."
+  },
+  "0001606302": {
+    "name": "McMinn Rachel",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "other",
+    "reason": "SIC  · entity=other · name=McMinn Rachel"
+  },
+  "0001609492": {
+    "name": "MPM BioVentures 2014, L.P.",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "fund",
+    "reason": "entityType=other · name=MPM BioVentures 2014, L.P."
+  },
+  "0001613259": {
+    "name": "Lopatin Uri A",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "other",
+    "reason": "SIC  · entity=other · name=Lopatin Uri A"
+  },
+  "0001613689": {
+    "name": "Elghandour Rami",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "other",
+    "reason": "SIC  · entity=other · name=Elghandour Rami"
+  },
+  "0001614869": {
+    "name": "Blumenkranz Mark S.",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "other",
+    "reason": "SIC  · entity=other · name=Blumenkranz Mark S."
+  },
+  "0001618442": {
+    "name": "Cormorant Global Healthcare Master Fund, LP",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "fund",
+    "reason": "entityType=other · name=Cormorant Global Healthcare Master Fund,"
+  },
+  "0001624476": {
+    "name": "MLS Capital Fund II LP",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "fund",
+    "reason": "entityType=other · name=MLS Capital Fund II LP"
+  },
+  "0001626644": {
+    "name": "Odyssey Health, Inc.",
+    "sic": "3841",
+    "entityType": "operating",
+    "bucket": "other",
+    "reason": "SIC 3841 · entity=operating · name=Odyssey Health, Inc."
+  },
+  "0001628098": {
+    "name": "Atlas Venture Fund X, L.P.",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "fund",
+    "reason": "entityType=other · name=Atlas Venture Fund X, L.P."
+  },
+  "0001628738": {
+    "name": "Audentes Therapeutics, Inc.",
+    "sic": "2836",
+    "entityType": "operating",
+    "bucket": "strategic_corporate",
+    "reason": "SIC 2836"
+  },
+  "0001629794": {
+    "name": "New Enterprise Associates 15, L.P.",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "fund",
+    "reason": "entityType=other · name=New Enterprise Associates 15, L.P."
+  },
+  "0001633120": {
+    "name": "VAN HERK INVESTMENTS B.V.",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "other",
+    "reason": "SIC  · entity=other · name=VAN HERK INVESTMENTS B.V."
+  },
+  "0001633313": {
+    "name": "Avoro Capital Advisors LLC",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "fund",
+    "reason": "entityType=other · name=Avoro Capital Advisors LLC"
+  },
+  "0001635467": {
+    "name": "CORERX INC",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "other",
+    "reason": "SIC  · entity=other · name=CORERX INC"
+  },
+  "0001640809": {
+    "name": "22NW Fund, LP",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "fund",
+    "reason": "entityType=other · name=22NW Fund, LP"
+  },
+  "0001641044": {
+    "name": "SSD2, LLC",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "fund",
+    "reason": "entityType=other · name=SSD2, LLC"
+  },
+  "0001641604": {
+    "name": "Alta Fundamental Advisers LLC",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "fund",
+    "reason": "entityType=other · name=Alta Fundamental Advisers LLC"
+  },
+  "0001642575": {
+    "name": "Squarepoint Ops LLC",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "fund",
+    "reason": "entityType=other · name=Squarepoint Ops LLC"
+  },
+  "0001643749": {
+    "name": "BIOS Memory SPV I, LP",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "fund",
+    "reason": "entityType=other · name=BIOS Memory SPV I, LP"
+  },
+  "0001645161": {
+    "name": "HealthCap VII, L.P.",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "fund",
+    "reason": "entityType=other · name=HealthCap VII, L.P."
+  },
+  "0001647596": {
+    "name": "Chong Alexander C.",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "other",
+    "reason": "SIC  · entity=other · name=Chong Alexander C."
+  },
+  "0001648358": {
+    "name": "Lewis & Clark Ventures I, LP",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "fund",
+    "reason": "entityType=other · name=Lewis & Clark Ventures I, LP"
+  },
+  "0001651990": {
+    "name": "BioXcel LLC",
+    "sic": "7372",
+    "entityType": "other",
+    "bucket": "fund",
+    "reason": "entityType=other · name=BioXcel LLC"
+  },
+  "0001652169": {
+    "name": "ZAVRL FRANK",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "other",
+    "reason": "SIC  · entity=other · name=ZAVRL FRANK"
+  },
+  "0001652458": {
+    "name": "Israel Biotech Fund I, L.P.",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "fund",
+    "reason": "entityType=other · name=Israel Biotech Fund I, L.P."
+  },
+  "0001656629": {
+    "name": "AH Bio Fund I, L.P.",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "fund",
+    "reason": "entityType=other · name=AH Bio Fund I, L.P."
+  },
+  "0001661357": {
+    "name": "Agro Albert",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "other",
+    "reason": "SIC  · entity=other · name=Agro Albert"
+  },
+  "0001663801": {
+    "name": "Gates Foundation",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "other",
+    "reason": "SIC  · entity=other · name=Gates Foundation"
+  },
+  "0001666306": {
+    "name": "ARCH Venture Fund IX, L.P.",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "fund",
+    "reason": "entityType=other · name=ARCH Venture Fund IX, L.P."
+  },
+  "0001668159": {
+    "name": "COLUMN GROUP III, LP",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "individual",
+    "reason": "entityType=other · name pattern"
+  },
+  "0001668941": {
+    "name": "CINCYTECH FUND IV, LLC",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "individual",
+    "reason": "entityType=other · name pattern"
+  },
+  "0001670579": {
+    "name": "Haurwitz Rachel E.",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "other",
+    "reason": "SIC  · entity=other · name=Haurwitz Rachel E."
+  },
+  "0001674324": {
+    "name": "5AM Ventures V, L.P.",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "fund",
+    "reason": "entityType=other · name=5AM Ventures V, L.P."
+  },
+  "0001675217": {
+    "name": "Vifor (International) Ltd",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "other",
+    "reason": "SIC  · entity=other · name=Vifor (International) Ltd"
+  },
+  "0001675758": {
+    "name": "Nant Capital, LLC",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "fund",
+    "reason": "entityType=other · name=Nant Capital, LLC"
+  },
+  "0001678203": {
+    "name": "Polaris Management Co. VII, L.L.C.",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "fund",
+    "reason": "entityType=other · name=Polaris Management Co. VII, L.L.C."
+  },
+  "0001679440": {
+    "name": "Friedberg Ezra M",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "other",
+    "reason": "SIC  · entity=other · name=Friedberg Ezra M"
+  },
+  "0001680200": {
+    "name": "Sofinnova Venture Partners X, L.P.",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "fund",
+    "reason": "entityType=other · name=Sofinnova Venture Partners X, L.P."
+  },
+  "0001687509": {
+    "name": "Rubric Capital Management LP",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "fund",
+    "reason": "entityType=other · name=Rubric Capital Management LP"
+  },
+  "0001687880": {
+    "name": "Versant Venture Capital VI, L.P.",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "fund",
+    "reason": "entityType=other · name=Versant Venture Capital VI, L.P."
+  },
+  "0001689394": {
+    "name": "Catelani Michael",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "other",
+    "reason": "SIC  · entity=other · name=Catelani Michael"
+  },
+  "0001689739": {
+    "name": "Pershing Edward",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "other",
+    "reason": "SIC  · entity=other · name=Pershing Edward"
+  },
+  "0001690310": {
+    "name": "Medicxi Growth I LP",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "fund",
+    "reason": "entityType=other · name=Medicxi Growth I LP"
+  },
+  "0001694560": {
+    "name": "New Enterprise Associates 16, L.P.",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "fund",
+    "reason": "entityType=other · name=New Enterprise Associates 16, L.P."
+  },
+  "0001695076": {
+    "name": "Pivotal bioVenture Partners Fund I, L.P.",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "fund",
+    "reason": "entityType=other · name=Pivotal bioVenture Partners Fund I, L.P."
+  },
+  "0001697316": {
+    "name": "BIOS Fund I, LP",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "fund",
+    "reason": "entityType=other · name=BIOS Fund I, LP"
+  },
+  "0001699737": {
+    "name": "Samsara BioCapital, L.P.",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "fund",
+    "reason": "entityType=other · name=Samsara BioCapital, L.P."
+  },
+  "0001702447": {
+    "name": "Patel Samir Rashmikant",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "other",
+    "reason": "SIC  · entity=other · name=Patel Samir Rashmikant"
+  },
+  "0001702636": {
+    "name": "Lumira Capital Investment Management Inc.",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "fund",
+    "reason": "entityType=other · name=Lumira Capital Investment Management Inc"
+  },
+  "0001704268": {
+    "name": "Mubadala Investment Co PJSC",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "other",
+    "reason": "SIC  · entity=other · name=Mubadala Investment Co PJSC"
+  },
+  "0001708269": {
+    "name": "Atlas Venture Fund XI, L.P.",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "fund",
+    "reason": "entityType=other · name=Atlas Venture Fund XI, L.P."
+  },
+  "0001709836": {
+    "name": "Deutsch Todd",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "other",
+    "reason": "SIC  · entity=other · name=Deutsch Todd"
+  },
+  "0001713863": {
+    "name": "Rafael Holdings, Inc.",
+    "sic": "2834",
+    "entityType": "operating",
+    "bucket": "fund",
+    "reason": "entityType=operating · name=Rafael Holdings, Inc."
+  },
+  "0001715450": {
+    "name": "Palihapitiya Chamath",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "other",
+    "reason": "SIC  · entity=other · name=Palihapitiya Chamath"
+  },
+  "0001724489": {
+    "name": "Vida Ventures, LLC",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "fund",
+    "reason": "entityType=other · name=Vida Ventures, LLC"
+  },
+  "0001725042": {
+    "name": "Syncona Portfolio Ltd",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "other",
+    "reason": "SIC  · entity=other · name=Syncona Portfolio Ltd"
+  },
+  "0001725443": {
+    "name": "RiverVest Venture Fund IV, L.P.",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "fund",
+    "reason": "entityType=other · name=RiverVest Venture Fund IV, L.P."
+  },
+  "0001725721": {
+    "name": "AH Bio Fund II, L.P.",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "fund",
+    "reason": "entityType=other · name=AH Bio Fund II, L.P."
+  },
+  "0001727395": {
+    "name": "PureTech Health LLC",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "fund",
+    "reason": "entityType=other · name=PureTech Health LLC"
+  },
+  "0001727492": {
+    "name": "Caligan Partners LP",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "fund",
+    "reason": "entityType=other · name=Caligan Partners LP"
+  },
+  "0001730052": {
+    "name": "Bartoszek Raymond J.",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "other",
+    "reason": "SIC  · entity=other · name=Bartoszek Raymond J."
+  },
+  "0001730574": {
+    "name": "Athanor Capital, LP",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "fund",
+    "reason": "entityType=other · name=Athanor Capital, LP"
+  },
+  "0001731442": {
+    "name": "Scottish Enterprise",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "other",
+    "reason": "SIC  · entity=other · name=Scottish Enterprise"
+  },
+  "0001731550": {
+    "name": "Loumaye Ernest",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "other",
+    "reason": "SIC  · entity=other · name=Loumaye Ernest"
+  },
+  "0001734819": {
+    "name": "U.S. Venture Partners XII, L.P.",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "fund",
+    "reason": "entityType=other · name=U.S. Venture Partners XII, L.P."
+  },
+  "0001736814": {
+    "name": "Decheng Capital China Life Sciences USD Fund III, L.P.",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "fund",
+    "reason": "entityType=other · name=Decheng Capital China Life Sciences USD "
+  },
+  "0001738048": {
+    "name": "Venrock Healthcare Capital Partners III, L.P.",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "fund",
+    "reason": "entityType=other · name=Venrock Healthcare Capital Partners III,"
+  },
+  "0001739920": {
+    "name": "venBio Global Strategic Fund III, L.P.",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "fund",
+    "reason": "entityType=other · name=venBio Global Strategic Fund III, L.P."
+  },
+  "0001747753": {
+    "name": "Zauderer Maurice",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "other",
+    "reason": "SIC  · entity=other · name=Zauderer Maurice"
+  },
+  "0001748115": {
+    "name": "Zahir Fares",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "other",
+    "reason": "SIC  · entity=other · name=Zahir Fares"
+  },
+  "0001749628": {
+    "name": "L.I.A. Pure Capital Ltd",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "fund",
+    "reason": "entityType=other · name=L.I.A. Pure Capital Ltd"
+  },
+  "0001752618": {
+    "name": "Funicular Fund, LP",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "fund",
+    "reason": "entityType=other · name=Funicular Fund, LP"
+  },
+  "0001752759": {
+    "name": "DNCA FINANCE",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "other",
+    "reason": "SIC  · entity=other · name=DNCA FINANCE"
+  },
+  "0001753037": {
+    "name": "5AM Ventures VI, L.P.",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "fund",
+    "reason": "entityType=other · name=5AM Ventures VI, L.P."
+  },
+  "0001753085": {
+    "name": "William Anderson Wittekind",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "other",
+    "reason": "SIC  · entity=other · name=William Anderson Wittekind"
+  },
+  "0001757197": {
+    "name": "Builders VC Fund I (Canada), L.P.",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "fund",
+    "reason": "entityType=other · name=Builders VC Fund I (Canada), L.P."
+  },
+  "0001758646": {
+    "name": "Investissement Quebec",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "other",
+    "reason": "SIC  · entity=other · name=Investissement Quebec"
+  },
+  "0001758892": {
+    "name": "Tetragon Financial Management LP",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "fund",
+    "reason": "entityType=other · name=Tetragon Financial Management LP"
+  },
+  "0001761506": {
+    "name": "Viridian, LLC",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "fund",
+    "reason": "entityType=other · name=Viridian, LLC"
+  },
+  "0001761971": {
+    "name": "Series Greenlight, a separate series of BlueIO Growth LLC",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "fund",
+    "reason": "entityType=other · name=Series Greenlight, a separate series of "
+  },
+  "0001766806": {
+    "name": "Shaolin Capital Management LLC",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "fund",
+    "reason": "entityType=other · name=Shaolin Capital Management LLC"
+  },
+  "0001766853": {
+    "name": "ACORN BIOVENTURES, L.P.",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "individual",
+    "reason": "entityType=other · name pattern"
+  },
+  "0001768161": {
+    "name": "Globeways Holdings II Ltd",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "fund",
+    "reason": "entityType=other · name=Globeways Holdings II Ltd"
+  },
+  "0001768564": {
+    "name": "New Enterprise Associates 17, L.P.",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "fund",
+    "reason": "entityType=other · name=New Enterprise Associates 17, L.P."
+  },
+  "0001769457": {
+    "name": "Sullivan Lara",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "other",
+    "reason": "SIC  · entity=other · name=Sullivan Lara"
+  },
+  "0001770790": {
+    "name": "Lamond David",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "other",
+    "reason": "SIC  · entity=other · name=Lamond David"
+  },
+  "0001776353": {
+    "name": "Farb Daniel Stuart",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "other",
+    "reason": "SIC  · entity=other · name=Farb Daniel Stuart"
+  },
+  "0001776851": {
+    "name": "Vida Ventures II, LLC",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "fund",
+    "reason": "entityType=other · name=Vida Ventures II, LLC"
+  },
+  "0001776985": {
+    "name": "BioNTech SE",
+    "sic": "2836",
+    "entityType": "other",
+    "bucket": "strategic_corporate",
+    "reason": "SIC 2836"
+  },
+  "0001780602": {
+    "name": "SV7 Impact Medicine Fund LP",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "fund",
+    "reason": "entityType=other · name=SV7 Impact Medicine Fund LP"
+  },
+  "0001780627": {
+    "name": "Cincinnati Cornerstone Investors BWV I, LLC",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "fund",
+    "reason": "entityType=other · name=Cincinnati Cornerstone Investors BWV I, "
+  },
+  "0001785504": {
+    "name": "Builders Vision, LLC",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "fund",
+    "reason": "entityType=other · name=Builders Vision, LLC"
+  },
+  "0001788482": {
+    "name": "H.I.G.-GPII, Inc.",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "other",
+    "reason": "SIC  · entity=other · name=H.I.G.-GPII, Inc."
+  },
+  "0001790787": {
+    "name": "Oaktree Capital Holdings, LLC",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "fund",
+    "reason": "entityType=other · name=Oaktree Capital Holdings, LLC"
+  },
+  "0001791827": {
+    "name": "Avidity Partners Management LP",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "fund",
+    "reason": "entityType=other · name=Avidity Partners Management LP"
+  },
+  "0001792126": {
+    "name": "Logos Global Management LP",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "fund",
+    "reason": "entityType=other · name=Logos Global Management LP"
+  },
+  "0001792204": {
+    "name": "Foresite Capital Fund V, L.P.",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "fund",
+    "reason": "entityType=other · name=Foresite Capital Fund V, L.P."
+  },
+  "0001800690": {
+    "name": "TardiMed Sciences LLC",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "fund",
+    "reason": "entityType=other · name=TardiMed Sciences LLC"
+  },
+  "0001802169": {
+    "name": "Railroad Ranch Capital Management, LP",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "fund",
+    "reason": "entityType=other · name=Railroad Ranch Capital Management, LP"
+  },
+  "0001802528": {
+    "name": "Fairmount Funds Management LLC",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "fund",
+    "reason": "entityType=other · name=Fairmount Funds Management LLC"
+  },
+  "0001802665": {
+    "name": "Harmony Biosciences Holdings, Inc.",
+    "sic": "2834",
+    "entityType": "operating",
+    "bucket": "fund",
+    "reason": "entityType=operating · name=Harmony Biosciences Holdings, Inc."
+  },
+  "0001802967": {
+    "name": "Tao Capital Management LP",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "fund",
+    "reason": "entityType=other · name=Tao Capital Management LP"
+  },
+  "0001804598": {
+    "name": "GMS Ventures & Investments",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "fund",
+    "reason": "entityType=other · name=GMS Ventures & Investments"
+  },
+  "0001807489": {
+    "name": "M28 Capital Management LP",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "fund",
+    "reason": "entityType=other · name=M28 Capital Management LP"
+  },
+  "0001808343": {
+    "name": "Barchas Isaac",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "other",
+    "reason": "SIC  · entity=other · name=Barchas Isaac"
+  },
+  "0001811947": {
+    "name": "Westlake BioPartners Fund II, L.P.",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "fund",
+    "reason": "entityType=other · name=Westlake BioPartners Fund II, L.P."
+  },
+  "0001812049": {
+    "name": "Atlas Venture Fund XII, L.P.",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "fund",
+    "reason": "entityType=other · name=Atlas Venture Fund XII, L.P."
+  },
+  "0001812275": {
+    "name": "Soleus Capital Master Fund, L.P.",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "fund",
+    "reason": "entityType=other · name=Soleus Capital Master Fund, L.P."
+  },
+  "0001813314": {
+    "name": "Bios Equity Partners, LP",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "fund",
+    "reason": "entityType=other · name=Bios Equity Partners, LP"
+  },
+  "0001817604": {
+    "name": "Activist Investing LLC",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "fund",
+    "reason": "entityType=other · name=Activist Investing LLC"
+  },
+  "0001818296": {
+    "name": "SB Management Ltd",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "fund",
+    "reason": "entityType=other · name=SB Management Ltd"
+  },
+  "0001818893": {
+    "name": "BCLS II Investco, LP",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "fund",
+    "reason": "entityType=other · name=BCLS II Investco, LP"
+  },
+  "0001820190": {
+    "name": "Scilex Holding Co",
+    "sic": "2836",
+    "entityType": "operating",
+    "bucket": "fund",
+    "reason": "entityType=operating · name=Scilex Holding Co"
+  },
+  "0001821940": {
+    "name": "HCFP/Capital Partners 18B-1 LLC",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "fund",
+    "reason": "entityType=other · name=HCFP/Capital Partners 18B-1 LLC"
+  },
+  "0001822712": {
+    "name": "FS Development Holdings II, LLC",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "fund",
+    "reason": "entityType=other · name=FS Development Holdings II, LLC"
+  },
+  "0001823138": {
+    "name": "Two Seas Capital LP",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "fund",
+    "reason": "entityType=other · name=Two Seas Capital LP"
+  },
+  "0001823747": {
+    "name": "Forbion Capital Fund IV Cooperatief U.A.",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "fund",
+    "reason": "entityType=other · name=Forbion Capital Fund IV Cooperatief U.A."
+  },
+  "0001826937": {
+    "name": "Hein Park Capital Management LP",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "fund",
+    "reason": "entityType=other · name=Hein Park Capital Management LP"
+  },
+  "0001828224": {
+    "name": "Singer Nicholas Jason",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "other",
+    "reason": "SIC  · entity=other · name=Singer Nicholas Jason"
+  },
+  "0001828906": {
+    "name": "Frazier Lifesciences Sponsor LLC",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "fund",
+    "reason": "entityType=other · name=Frazier Lifesciences Sponsor LLC"
+  },
+  "0001829169": {
+    "name": "Longitude Capital Partners IV, LLC",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "fund",
+    "reason": "entityType=other · name=Longitude Capital Partners IV, LLC"
+  },
+  "0001833242": {
+    "name": "Big Cypress Holdings LLC",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "fund",
+    "reason": "entityType=other · name=Big Cypress Holdings LLC"
+  },
+  "0001835544": {
+    "name": "Ugwumba Chidozie",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "other",
+    "reason": "SIC  · entity=other · name=Ugwumba Chidozie"
+  },
+  "0001836902": {
+    "name": "Kingsley Kyle Eugene",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "other",
+    "reason": "SIC  · entity=other · name=Kingsley Kyle Eugene"
+  },
+  "0001839209": {
+    "name": "Darwin Global Management, Ltd.",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "fund",
+    "reason": "entityType=other · name=Darwin Global Management, Ltd."
+  },
+  "0001839947": {
+    "name": "TCG Crossover GP I, LLC",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "fund",
+    "reason": "entityType=other · name=TCG Crossover GP I, LLC"
+  },
+  "0001840641": {
+    "name": "CG Investments Inc. VI",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "other",
+    "reason": "SIC  · entity=other · name=CG Investments Inc. VI"
+  },
+  "0001843863": {
+    "name": "Ahanzhai Development Ltd",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "other",
+    "reason": "SIC  · entity=other · name=Ahanzhai Development Ltd"
+  },
+  "0001845105": {
+    "name": "Sofinnova Crossover I",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "other",
+    "reason": "SIC  · entity=other · name=Sofinnova Crossover I"
+  },
+  "0001845677": {
+    "name": "Kelly Jason R",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "other",
+    "reason": "SIC  · entity=other · name=Kelly Jason R"
+  },
+  "0001845711": {
+    "name": "Apeiron Investment Group Ltd.",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "fund",
+    "reason": "entityType=other · name=Apeiron Investment Group Ltd."
+  },
+  "0001845871": {
+    "name": "Atlas Venture Associates XII, LLC",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "fund",
+    "reason": "entityType=other · name=Atlas Venture Associates XII, LLC"
+  },
+  "0001846370": {
+    "name": "Griffiths Richard Ian",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "other",
+    "reason": "SIC  · entity=other · name=Griffiths Richard Ian"
+  },
+  "0001846823": {
+    "name": "FiveT Investment Management Ltd",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "fund",
+    "reason": "entityType=other · name=FiveT Investment Management Ltd"
+  },
+  "0001848129": {
+    "name": "Refer Rasmus",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "other",
+    "reason": "SIC  · entity=other · name=Refer Rasmus"
+  },
+  "0001848809": {
+    "name": "Velan Capital Investment Management LP",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "fund",
+    "reason": "entityType=other · name=Velan Capital Investment Management LP"
+  },
+  "0001849192": {
+    "name": "Moringa Sponsor, LP",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "fund",
+    "reason": "entityType=other · name=Moringa Sponsor, LP"
+  },
+  "0001849915": {
+    "name": "Sofinnova Capital IX",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "fund",
+    "reason": "entityType=other · name=Sofinnova Capital IX"
+  },
+  "0001851069": {
+    "name": "Mor George Adi",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "other",
+    "reason": "SIC  · entity=other · name=Mor George Adi"
+  },
+  "0001853723": {
+    "name": "SR ONE CAPITAL MANAGEMENT, LLC",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "individual",
+    "reason": "entityType=other · name pattern"
+  },
+  "0001854161": {
+    "name": "Dudley Robert Michael",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "other",
+    "reason": "SIC  · entity=other · name=Dudley Robert Michael"
+  },
+  "0001854168": {
+    "name": "Fitzgerald Thomas A",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "other",
+    "reason": "SIC  · entity=other · name=Fitzgerald Thomas A"
+  },
+  "0001854578": {
+    "name": "Quiroga Cortes Isidoro Alfonso",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "other",
+    "reason": "SIC  · entity=other · name=Quiroga Cortes Isidoro Alfonso"
+  },
+  "0001855502": {
+    "name": "Vida Ventures GP III, L.L.C.",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "fund",
+    "reason": "entityType=other · name=Vida Ventures GP III, L.L.C."
+  },
+  "0001856083": {
+    "name": "Deep Track Capital, LP",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "fund",
+    "reason": "entityType=other · name=Deep Track Capital, LP"
+  },
+  "0001857651": {
+    "name": "Braun Samuel J",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "other",
+    "reason": "SIC  · entity=other · name=Braun Samuel J"
+  },
+  "0001861425": {
+    "name": "10X Capital SPAC Sponsor III LLC",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "fund",
+    "reason": "entityType=other · name=10X Capital SPAC Sponsor III LLC"
+  },
+  "0001862016": {
+    "name": "Chicago Atlantic Credit Opportunities, LLC",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "fund",
+    "reason": "entityType=other · name=Chicago Atlantic Credit Opportunities, L"
+  },
+  "0001863769": {
+    "name": "Frazier Life Sciences Public Fund, L.P.",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "fund",
+    "reason": "entityType=other · name=Frazier Life Sciences Public Fund, L.P."
+  },
+  "0001864534": {
+    "name": "Javitt Daniel C.",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "other",
+    "reason": "SIC  · entity=other · name=Javitt Daniel C."
+  },
+  "0001867450": {
+    "name": "Nabel Gary J.",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "other",
+    "reason": "SIC  · entity=other · name=Nabel Gary J."
+  },
+  "0001867472": {
+    "name": "Northpond Ventures, LP",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "fund",
+    "reason": "entityType=other · name=Northpond Ventures, LP"
+  },
+  "0001868862": {
+    "name": "Qiming U.S. Healthcare GP II, LLC",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "fund",
+    "reason": "entityType=other · name=Qiming U.S. Healthcare GP II, LLC"
+  },
+  "0001869101": {
+    "name": "Helix Holdings II LLC",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "fund",
+    "reason": "entityType=other · name=Helix Holdings II LLC"
+  },
+  "0001869759": {
+    "name": "L5 Capital Inc.",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "fund",
+    "reason": "entityType=other · name=L5 Capital Inc."
+  },
+  "0001870407": {
+    "name": "PHOENIX BIOTECH SPONSOR, LLC",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "individual",
+    "reason": "entityType=other · name pattern"
+  },
+  "0001873523": {
+    "name": "Shetty Reshma P.",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "other",
+    "reason": "SIC  · entity=other · name=Shetty Reshma P."
+  },
+  "0001873545": {
+    "name": "5AM Partners VII, LLC",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "fund",
+    "reason": "entityType=other · name=5AM Partners VII, LLC"
+  },
+  "0001874219": {
+    "name": "Poseidon Bio, LLC",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "fund",
+    "reason": "entityType=other · name=Poseidon Bio, LLC"
+  },
+  "0001875620": {
+    "name": "Sands Capital Life Sciences Pulse Fund II, L.P.",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "fund",
+    "reason": "entityType=other · name=Sands Capital Life Sciences Pulse Fund I"
+  },
+  "0001876200": {
+    "name": "Norwest Venture Partners XVI, LP",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "fund",
+    "reason": "entityType=other · name=Norwest Venture Partners XVI, LP"
+  },
+  "0001878692": {
+    "name": "Desai Neil",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "other",
+    "reason": "SIC  · entity=other · name=Desai Neil"
+  },
+  "0001881002": {
+    "name": "Alta Partners NextGen Fund II Management, LLC",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "fund",
+    "reason": "entityType=other · name=Alta Partners NextGen Fund II Management"
+  },
+  "0001881937": {
+    "name": "Broadview Ventures I LLC",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "fund",
+    "reason": "entityType=other · name=Broadview Ventures I LLC"
+  },
+  "0001882303": {
+    "name": "Sofinnova Venture Partners XI, L.P.",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "fund",
+    "reason": "entityType=other · name=Sofinnova Venture Partners XI, L.P."
+  },
+  "0001883254": {
+    "name": "Schaffer Shane J.",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "other",
+    "reason": "SIC  · entity=other · name=Schaffer Shane J."
+  },
+  "0001883257": {
+    "name": "Werth Peter J.",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "other",
+    "reason": "SIC  · entity=other · name=Werth Peter J."
+  },
+  "0001883535": {
+    "name": "SOGNATORE TRUST",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "other",
+    "reason": "SIC  · entity=other · name=SOGNATORE TRUST"
+  },
+  "0001883884": {
+    "name": "SB Global Advisers Ltd",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "other",
+    "reason": "SIC  · entity=other · name=SB Global Advisers Ltd"
+  },
+  "0001884003": {
+    "name": "Aesther Healthcare Sponsor, LLC",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "fund",
+    "reason": "entityType=other · name=Aesther Healthcare Sponsor, LLC"
+  },
+  "0001884588": {
+    "name": "Hoche Partners Pharma Holding S.A.",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "fund",
+    "reason": "entityType=other · name=Hoche Partners Pharma Holding S.A."
+  },
+  "0001884931": {
+    "name": "Whitefort Capital Management, LP",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "fund",
+    "reason": "entityType=other · name=Whitefort Capital Management, LP"
+  },
+  "0001888848": {
+    "name": "Athyrium Opportunities IV Acquisition 2 LP",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "fund",
+    "reason": "entityType=other · name=Athyrium Opportunities IV Acquisition 2 "
+  },
+  "0001889184": {
+    "name": "NSV Investments I, L.P.",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "fund",
+    "reason": "entityType=other · name=NSV Investments I, L.P."
+  },
+  "0001889712": {
+    "name": "Sullivan Eddie Joe",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "other",
+    "reason": "SIC  · entity=other · name=Sullivan Eddie Joe"
+  },
+  "0001890993": {
+    "name": "AI DMI LLC",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "fund",
+    "reason": "entityType=other · name=AI DMI LLC"
+  },
+  "0001891872": {
+    "name": "Hayward Marshall A.",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "other",
+    "reason": "SIC  · entity=other · name=Hayward Marshall A."
+  },
+  "0001892458": {
+    "name": "Rosen Alexander Gustaf Erik",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "other",
+    "reason": "SIC  · entity=other · name=Rosen Alexander Gustaf Erik"
+  },
+  "0001893205": {
+    "name": "Atlantic Coastal Acquisition Management II LLC",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "fund",
+    "reason": "entityType=other · name=Atlantic Coastal Acquisition Management "
+  },
+  "0001893459": {
+    "name": "MVM Partners LLP",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "fund",
+    "reason": "entityType=other · name=MVM Partners LLP"
+  },
+  "0001895515": {
+    "name": "Lagunita, LLC",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "fund",
+    "reason": "entityType=other · name=Lagunita, LLC"
+  },
+  "0001895516": {
+    "name": "Lagunita Biosciences, LLC",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "fund",
+    "reason": "entityType=other · name=Lagunita Biosciences, LLC"
+  },
+  "0001896189": {
+    "name": "Garth Tyler Hunter",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "other",
+    "reason": "SIC  · entity=other · name=Garth Tyler Hunter"
+  },
+  "0001897943": {
+    "name": "Forbion Growth Sponsor FEAC I B.V.",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "other",
+    "reason": "SIC  · entity=other · name=Forbion Growth Sponsor FEAC I B.V."
+  },
+  "0001902646": {
+    "name": "HPSO SPV Ltd",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "other",
+    "reason": "SIC  · entity=other · name=HPSO SPV Ltd"
+  },
+  "0001903793": {
+    "name": "TPG GP A, LLC",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "individual",
+    "reason": "entityType=other · name pattern"
+  },
+  "0001904921": {
+    "name": "Hanmi Pharmaceutical Co., Ltd.",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "other",
+    "reason": "SIC  · entity=other · name=Hanmi Pharmaceutical Co., Ltd."
+  },
+  "0001906837": {
+    "name": "ARCH Venture Fund XII, L.P.",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "fund",
+    "reason": "entityType=other · name=ARCH Venture Fund XII, L.P."
+  },
+  "0001907614": {
+    "name": "Luo Peter",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "other",
+    "reason": "SIC  · entity=other · name=Luo Peter"
+  },
+  "0001908352": {
+    "name": "Ortega-Valle Marta",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "other",
+    "reason": "SIC  · entity=other · name=Ortega-Valle Marta"
+  },
+  "0001910050": {
+    "name": "Murphy Canyon Acquisition Sponsor, LLC",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "fund",
+    "reason": "entityType=other · name=Murphy Canyon Acquisition Sponsor, LLC"
+  },
+  "0001911732": {
+    "name": "MorphImmune Inc.",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "other",
+    "reason": "SIC  · entity=other · name=MorphImmune Inc."
+  },
+  "0001912999": {
+    "name": "Zwanziger Ventures LLC",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "fund",
+    "reason": "entityType=other · name=Zwanziger Ventures LLC"
+  },
+  "0001913199": {
+    "name": "Smith Stan",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "other",
+    "reason": "SIC  · entity=other · name=Smith Stan"
+  },
+  "0001913257": {
+    "name": "Vitoc Vlad",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "other",
+    "reason": "SIC  · entity=other · name=Vitoc Vlad"
+  },
+  "0001913264": {
+    "name": "Louie Ngar Yee",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "other",
+    "reason": "SIC  · entity=other · name=Louie Ngar Yee"
+  },
+  "0001913543": {
+    "name": "Fall Line Endurance GP, LLC",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "fund",
+    "reason": "entityType=other · name=Fall Line Endurance GP, LLC"
+  },
+  "0001914295": {
+    "name": "Esjay LLC",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "fund",
+    "reason": "entityType=other · name=Esjay LLC"
+  },
+  "0001917895": {
+    "name": "Growth Equity Opportunities 18 VGE, LLC",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "fund",
+    "reason": "entityType=other · name=Growth Equity Opportunities 18 VGE, LLC"
+  },
+  "0001918385": {
+    "name": "Hothum Mathias",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "other",
+    "reason": "SIC  · entity=other · name=Hothum Mathias"
+  },
+  "0001918389": {
+    "name": "von Bohlen und Halback Friedrich",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "other",
+    "reason": "SIC  · entity=other · name=von Bohlen und Halback Friedrich"
+  },
+  "0001918399": {
+    "name": "Hettich Christof",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "other",
+    "reason": "SIC  · entity=other · name=Hettich Christof"
+  },
+  "0001920179": {
+    "name": "Renaissance Capital Partners Ltd",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "fund",
+    "reason": "entityType=other · name=Renaissance Capital Partners Ltd"
+  },
+  "0001921616": {
+    "name": "Population Health Equity Partners III, L.P.",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "fund",
+    "reason": "entityType=other · name=Population Health Equity Partners III, L"
+  },
+  "0001925178": {
+    "name": "All Blue Falcons FZE",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "other",
+    "reason": "SIC  · entity=other · name=All Blue Falcons FZE"
+  },
+  "0001930070": {
+    "name": "Yeung Danny Sheng Wu",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "other",
+    "reason": "SIC  · entity=other · name=Yeung Danny Sheng Wu"
+  },
+  "0001930189": {
+    "name": "CBI USA, Inc.",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "other",
+    "reason": "SIC  · entity=other · name=CBI USA, Inc."
+  },
+  "0001930214": {
+    "name": "Vivo Opportunity Fund Holdings, L.P.",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "fund",
+    "reason": "entityType=other · name=Vivo Opportunity Fund Holdings, L.P."
+  },
+  "0001931382": {
+    "name": "GC Corp.",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "other",
+    "reason": "SIC  · entity=other · name=GC Corp."
+  },
+  "0001931913": {
+    "name": "G42 Investments AI Holdings RSC Ltd.",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "fund",
+    "reason": "entityType=other · name=G42 Investments AI Holdings RSC Ltd."
+  },
+  "0001932516": {
+    "name": "Foresite Capital Fund VI LP",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "fund",
+    "reason": "entityType=other · name=Foresite Capital Fund VI LP"
+  },
+  "0001934554": {
+    "name": "Jiang Shuling",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "other",
+    "reason": "SIC  · entity=other · name=Jiang Shuling"
+  },
+  "0001935390": {
+    "name": "Celtic Holdings SCA",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "fund",
+    "reason": "entityType=other · name=Celtic Holdings SCA"
+  },
+  "0001936288": {
+    "name": "Aztiq Pharma Partners S.a r.l.",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "fund",
+    "reason": "entityType=other · name=Aztiq Pharma Partners S.a r.l."
+  },
+  "0001936623": {
+    "name": "Forbion Growth Opportunities Fund II Cooperatief U.A.",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "fund",
+    "reason": "entityType=other · name=Forbion Growth Opportunities Fund II Coo"
+  },
+  "0001937011": {
+    "name": "Tolerantia, LLC",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "fund",
+    "reason": "entityType=other · name=Tolerantia, LLC"
+  },
+  "0001937147": {
+    "name": "Funicular Funds, LP",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "fund",
+    "reason": "entityType=other · name=Funicular Funds, LP"
+  },
+  "0001938373": {
+    "name": "i9 PLUS, LLC",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "fund",
+    "reason": "entityType=other · name=i9 PLUS, LLC"
+  },
+  "0001940093": {
+    "name": "ATG Fund II LLC",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "fund",
+    "reason": "entityType=other · name=ATG Fund II LLC"
+  },
+  "0001942670": {
+    "name": "AI Biotechnology LLC",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "fund",
+    "reason": "entityType=other · name=AI Biotechnology LLC"
+  },
+  "0001944801": {
+    "name": "Glycodots, LLC",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "fund",
+    "reason": "entityType=other · name=Glycodots, LLC"
+  },
+  "0001944813": {
+    "name": "Valencia Catalina",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "other",
+    "reason": "SIC  · entity=other · name=Valencia Catalina"
+  },
+  "0001945023": {
+    "name": "Modi Bhupendra Kumar",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "other",
+    "reason": "SIC  · entity=other · name=Modi Bhupendra Kumar"
+  },
+  "0001945994": {
+    "name": "Salomonsky Henry Louis",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "other",
+    "reason": "SIC  · entity=other · name=Salomonsky Henry Louis"
+  },
+  "0001946240": {
+    "name": "Chopra Atul",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "other",
+    "reason": "SIC  · entity=other · name=Chopra Atul"
+  },
+  "0001946700": {
+    "name": "Greyt Ventures, LLC",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "fund",
+    "reason": "entityType=other · name=Greyt Ventures, LLC"
+  },
+  "0001947843": {
+    "name": "Juniper & Ivy Corp",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "other",
+    "reason": "SIC  · entity=other · name=Juniper & Ivy Corp"
+  },
+  "0001948079": {
+    "name": "Soane David",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "other",
+    "reason": "SIC  · entity=other · name=Soane David"
+  },
+  "0001948302": {
+    "name": "MACKAY JAMIE MYLES",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "other",
+    "reason": "SIC  · entity=other · name=MACKAY JAMIE MYLES"
+  },
+  "0001948744": {
+    "name": "STONE DANIEL E.",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "other",
+    "reason": "SIC  · entity=other · name=STONE DANIEL E."
+  },
+  "0001949248": {
+    "name": "NovaQuest Co-Investment Fund XV, L.P.",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "fund",
+    "reason": "entityType=other · name=NovaQuest Co-Investment Fund XV, L.P."
+  },
+  "0001950963": {
+    "name": "10XYZ Holdings LP",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "fund",
+    "reason": "entityType=other · name=10XYZ Holdings LP"
+  },
+  "0001951291": {
+    "name": "Tanimoto Sarina",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "other",
+    "reason": "SIC  · entity=other · name=Tanimoto Sarina"
+  },
+  "0001951493": {
+    "name": "CLS Therapeutics, LLC",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "fund",
+    "reason": "entityType=other · name=CLS Therapeutics, LLC"
+  },
+  "0001952164": {
+    "name": "Skycrest Holdings, LLC",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "fund",
+    "reason": "entityType=other · name=Skycrest Holdings, LLC"
+  },
+  "0001953093": {
+    "name": "Commander Aggregator, LP",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "fund",
+    "reason": "entityType=other · name=Commander Aggregator, LP"
+  },
+  "0001953107": {
+    "name": "Enavate Sciences GP, LLC",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "fund",
+    "reason": "entityType=other · name=Enavate Sciences GP, LLC"
+  },
+  "0001953388": {
+    "name": "Pratik Shah Living Trust dated June 15, 2011",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "other",
+    "reason": "SIC  · entity=other · name=Pratik Shah Living Trust dated June 15, "
+  },
+  "0001953885": {
+    "name": "Furman Christopher",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "other",
+    "reason": "SIC  · entity=other · name=Furman Christopher"
+  },
+  "0001955394": {
+    "name": "Bell Robert G.",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "other",
+    "reason": "SIC  · entity=other · name=Bell Robert G."
+  },
+  "0001957368": {
+    "name": "NexPoint Real Estate Opportunities, LLC",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "fund",
+    "reason": "entityType=other · name=NexPoint Real Estate Opportunities, LLC"
+  },
+  "0001958184": {
+    "name": "Iadonato Shawn",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "other",
+    "reason": "SIC  · entity=other · name=Iadonato Shawn"
+  },
+  "0001958461": {
+    "name": "GNI Group Ltd.",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "fund",
+    "reason": "entityType=other · name=GNI Group Ltd."
+  },
+  "0001959160": {
+    "name": "Luo Ying",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "other",
+    "reason": "SIC  · entity=other · name=Luo Ying"
+  },
+  "0001959250": {
+    "name": "Kaufman Jonathan H",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "other",
+    "reason": "SIC  · entity=other · name=Kaufman Jonathan H"
+  },
+  "0001959360": {
+    "name": "Chancellor Michael B",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "other",
+    "reason": "SIC  · entity=other · name=Chancellor Michael B"
+  },
+  "0001959583": {
+    "name": "Sumar Shohaib Kassam",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "other",
+    "reason": "SIC  · entity=other · name=Sumar Shohaib Kassam"
+  },
+  "0001959908": {
+    "name": "Elk Capital Markets UK LTD",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "fund",
+    "reason": "entityType=other · name=Elk Capital Markets UK LTD"
+  },
+  "0001962946": {
+    "name": "Community US Fund Management, Inc.",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "fund",
+    "reason": "entityType=other · name=Community US Fund Management, Inc."
+  },
+  "0001964166": {
+    "name": "Biosynex SA",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "other",
+    "reason": "SIC  · entity=other · name=Biosynex SA"
+  },
+  "0001965608": {
+    "name": "Matthew Joseph Nachtrab Revocable Trust 2014",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "other",
+    "reason": "SIC  · entity=other · name=Matthew Joseph Nachtrab Revocable Trust "
+  },
+  "0001968953": {
+    "name": "Milner Jonathan",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "other",
+    "reason": "SIC  · entity=other · name=Milner Jonathan"
+  },
+  "0001969173": {
+    "name": "Tzang Chi Hung Lawrence",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "other",
+    "reason": "SIC  · entity=other · name=Tzang Chi Hung Lawrence"
+  },
+  "0001969764": {
+    "name": "Propel Bio Management, LLC",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "fund",
+    "reason": "entityType=other · name=Propel Bio Management, LLC"
+  },
+  "0001970632": {
+    "name": "Choo Chee Kong",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "other",
+    "reason": "SIC  · entity=other · name=Choo Chee Kong"
+  },
+  "0001970819": {
+    "name": "Zeng Jieming",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "other",
+    "reason": "SIC  · entity=other · name=Zeng Jieming"
+  },
+  "0001971132": {
+    "name": "Hertz Walter Marc",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "other",
+    "reason": "SIC  · entity=other · name=Hertz Walter Marc"
+  },
+  "0001971423": {
+    "name": "Chaturvedi Vipin",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "other",
+    "reason": "SIC  · entity=other · name=Chaturvedi Vipin"
+  },
+  "0001971458": {
+    "name": "Bengal Impact Partners, LLC",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "fund",
+    "reason": "entityType=other · name=Bengal Impact Partners, LLC"
+  },
+  "0001971787": {
+    "name": "Valence Investments SPV VI, LLC",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "fund",
+    "reason": "entityType=other · name=Valence Investments SPV VI, LLC"
+  },
+  "0001972066": {
+    "name": "Yu Guo-Liang",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "other",
+    "reason": "SIC  · entity=other · name=Yu Guo-Liang"
+  },
+  "0001973753": {
+    "name": "Burke Robert David",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "other",
+    "reason": "SIC  · entity=other · name=Burke Robert David"
+  },
+  "0001975849": {
+    "name": "AI ACEL LLC",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "fund",
+    "reason": "entityType=other · name=AI ACEL LLC"
+  },
+  "0001975990": {
+    "name": "AyurMaya Capital Management Company, LP",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "fund",
+    "reason": "entityType=other · name=AyurMaya Capital Management Company, LP"
+  },
+  "0001977553": {
+    "name": "Black Robe Capital LLC",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "fund",
+    "reason": "entityType=other · name=Black Robe Capital LLC"
+  },
+  "0001977769": {
+    "name": "GKCC, LLC",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "individual",
+    "reason": "entityType=other · name pattern"
+  },
+  "0001979074": {
+    "name": "Versi Group LLC",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "fund",
+    "reason": "entityType=other · name=Versi Group LLC"
+  },
+  "0001980001": {
+    "name": "New Stuff, LLC",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "fund",
+    "reason": "entityType=other · name=New Stuff, LLC"
+  },
+  "0001980020": {
+    "name": "Sagar Rosemary",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "other",
+    "reason": "SIC  · entity=other · name=Sagar Rosemary"
+  },
+  "0001980073": {
+    "name": "Skizim Nicholas John",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "other",
+    "reason": "SIC  · entity=other · name=Skizim Nicholas John"
+  },
+  "0001980214": {
+    "name": "Gonzalez May Carlos Alfredo",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "other",
+    "reason": "SIC  · entity=other · name=Gonzalez May Carlos Alfredo"
+  },
+  "0001980215": {
+    "name": "Sagrera Ricardo A.",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "other",
+    "reason": "SIC  · entity=other · name=Sagrera Ricardo A."
+  },
+  "0001980224": {
+    "name": "Richard Roger David",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "other",
+    "reason": "SIC  · entity=other · name=Richard Roger David"
+  },
+  "0001980228": {
+    "name": "DHAMANKAR HIMANSHU HEMANT",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "other",
+    "reason": "SIC  · entity=other · name=DHAMANKAR HIMANSHU HEMANT"
+  },
+  "0001980229": {
+    "name": "Prelude Ventures LLC",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "fund",
+    "reason": "entityType=other · name=Prelude Ventures LLC"
+  },
+  "0001980325": {
+    "name": "Gillian Jason Michael",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "other",
+    "reason": "SIC  · entity=other · name=Gillian Jason Michael"
+  },
+  "0001980394": {
+    "name": "Serum Life Sciences Ltd",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "other",
+    "reason": "SIC  · entity=other · name=Serum Life Sciences Ltd"
+  },
+  "0001980410": {
+    "name": "Jeremy & Hannelore Grantham Environmental Trust",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "other",
+    "reason": "SIC  · entity=other · name=Jeremy & Hannelore Grantham Environmenta"
+  },
+  "0001980452": {
+    "name": "RAMACHANDRIYA DHARMAN KARTHIKEYAN",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "other",
+    "reason": "SIC  · entity=other · name=RAMACHANDRIYA DHARMAN KARTHIKEYAN"
+  },
+  "0001980454": {
+    "name": "Iwuchukwu Ifeyinwa Jane",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "other",
+    "reason": "SIC  · entity=other · name=Iwuchukwu Ifeyinwa Jane"
+  },
+  "0001980539": {
+    "name": "Macadino Caitlin",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "other",
+    "reason": "SIC  · entity=other · name=Macadino Caitlin"
+  },
+  "0001980543": {
+    "name": "Aulisa Lorenzo",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "other",
+    "reason": "SIC  · entity=other · name=Aulisa Lorenzo"
+  },
+  "0001980565": {
+    "name": "RiverRoad Capital Partners, LLC",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "fund",
+    "reason": "entityType=other · name=RiverRoad Capital Partners, LLC"
+  },
+  "0001980578": {
+    "name": "Steinberg Michael",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "other",
+    "reason": "SIC  · entity=other · name=Steinberg Michael"
+  },
+  "0001980597": {
+    "name": "Gupta Sweta Kumari",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "other",
+    "reason": "SIC  · entity=other · name=Gupta Sweta Kumari"
+  },
+  "0001980616": {
+    "name": "Insud Pharma S.L.",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "other",
+    "reason": "SIC  · entity=other · name=Insud Pharma S.L."
+  },
+  "0001980644": {
+    "name": "SSVK Associates, LLC",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "fund",
+    "reason": "entityType=other · name=SSVK Associates, LLC"
+  },
+  "0001980756": {
+    "name": "Senczuk Anna Maria",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "other",
+    "reason": "SIC  · entity=other · name=Senczuk Anna Maria"
+  },
+  "0001980769": {
+    "name": "Boscolo Intervest Ltd",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "other",
+    "reason": "SIC  · entity=other · name=Boscolo Intervest Ltd"
+  },
+  "0001980818": {
+    "name": "Anderson Eric Senior",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "other",
+    "reason": "SIC  · entity=other · name=Anderson Eric Senior"
+  },
+  "0001981009": {
+    "name": "Cummings Foundation, Inc.",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "other",
+    "reason": "SIC  · entity=other · name=Cummings Foundation, Inc."
+  },
+  "0001981011": {
+    "name": "Clarke Dennis A.",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "other",
+    "reason": "SIC  · entity=other · name=Clarke Dennis A."
+  },
+  "0001981286": {
+    "name": "Furneaux Carol",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "other",
+    "reason": "SIC  · entity=other · name=Furneaux Carol"
+  },
+  "0001981573": {
+    "name": "Lurantos Maria Helena",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "other",
+    "reason": "SIC  · entity=other · name=Lurantos Maria Helena"
+  },
+  "0001982476": {
+    "name": "Braeden Lichti",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "other",
+    "reason": "SIC  · entity=other · name=Braeden Lichti"
+  },
+  "0001984047": {
+    "name": "Boehringer AG",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "other",
+    "reason": "SIC  · entity=other · name=Boehringer AG"
+  },
+  "0001985493": {
+    "name": "Daewoong Co., Ltd",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "other",
+    "reason": "SIC  · entity=other · name=Daewoong Co., Ltd"
+  },
+  "0001985495": {
+    "name": "RPB VENTURES LLC",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "fund",
+    "reason": "entityType=other · name=RPB VENTURES LLC"
+  },
+  "0001985547": {
+    "name": "Ma Songjiang",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "other",
+    "reason": "SIC  · entity=other · name=Ma Songjiang"
+  },
+  "0001986021": {
+    "name": "Choong Choon Hau",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "other",
+    "reason": "SIC  · entity=other · name=Choong Choon Hau"
+  },
+  "0001986593": {
+    "name": "Bay Shore Trust",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "other",
+    "reason": "SIC  · entity=other · name=Bay Shore Trust"
+  },
+  "0001987877": {
+    "name": "Boos Wayne W",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "other",
+    "reason": "SIC  · entity=other · name=Boos Wayne W"
+  },
+  "0001988760": {
+    "name": "Monograph Capital Holdings Advisors, LLC",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "fund",
+    "reason": "entityType=other · name=Monograph Capital Holdings Advisors, LLC"
+  },
+  "0001988954": {
+    "name": "Lo Dennis Yuk Ming",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "other",
+    "reason": "SIC  · entity=other · name=Lo Dennis Yuk Ming"
+  },
+  "0001989820": {
+    "name": "Astellas US LLC",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "fund",
+    "reason": "entityType=other · name=Astellas US LLC"
+  },
+  "0001990674": {
+    "name": "Camaisa Allan",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "other",
+    "reason": "SIC  · entity=other · name=Camaisa Allan"
+  },
+  "0001990829": {
+    "name": "Corvus Capital Ltd.",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "fund",
+    "reason": "entityType=other · name=Corvus Capital Ltd."
+  },
+  "0001991247": {
+    "name": "SRIRAMA Associates, LLC",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "fund",
+    "reason": "entityType=other · name=SRIRAMA Associates, LLC"
+  },
+  "0001991668": {
+    "name": "Leftwich Scott",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "other",
+    "reason": "SIC  · entity=other · name=Leftwich Scott"
+  },
+  "0001991925": {
+    "name": "Symetryx Corp",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "other",
+    "reason": "SIC  · entity=other · name=Symetryx Corp"
+  },
+  "0001992112": {
+    "name": "Teoxane SA",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "other",
+    "reason": "SIC  · entity=other · name=Teoxane SA"
+  },
+  "0001994894": {
+    "name": "SCLX Stock Acquisition JV LLC",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "fund",
+    "reason": "entityType=other · name=SCLX Stock Acquisition JV LLC"
+  },
+  "0001995392": {
+    "name": "Sire Group Ltd.",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "fund",
+    "reason": "entityType=other · name=Sire Group Ltd."
+  },
+  "0001996260": {
+    "name": "Lee Elvin Sanghwan",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "other",
+    "reason": "SIC  · entity=other · name=Lee Elvin Sanghwan"
+  },
+  "0001996276": {
+    "name": "Immunome Aggregator, LP",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "fund",
+    "reason": "entityType=other · name=Immunome Aggregator, LP"
+  },
+  "0001996297": {
+    "name": "Patel Vijay",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "other",
+    "reason": "SIC  · entity=other · name=Patel Vijay"
+  },
+  "0001996481": {
+    "name": "NKMAX Co., Ltd.",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "other",
+    "reason": "SIC  · entity=other · name=NKMAX Co., Ltd."
+  },
+  "0001997608": {
+    "name": "Neptune Securities Settlement Fund",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "fund",
+    "reason": "entityType=other · name=Neptune Securities Settlement Fund"
+  },
+  "0001998420": {
+    "name": "Hong Seng Technology Ltd",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "other",
+    "reason": "SIC  · entity=other · name=Hong Seng Technology Ltd"
+  },
+  "0001999256": {
+    "name": "Schornstein Alexander",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "other",
+    "reason": "SIC  · entity=other · name=Schornstein Alexander"
+  },
+  "0002000002": {
+    "name": "Kalayoglu Murat",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "other",
+    "reason": "SIC  · entity=other · name=Kalayoglu Murat"
+  },
+  "0002000122": {
+    "name": "Singer Michael",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "other",
+    "reason": "SIC  · entity=other · name=Singer Michael"
+  },
+  "0002000779": {
+    "name": "Black Hawk Management LLC",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "fund",
+    "reason": "entityType=other · name=Black Hawk Management LLC"
+  },
+  "0002002681": {
+    "name": "T Investment Ltd",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "other",
+    "reason": "SIC  · entity=other · name=T Investment Ltd"
+  },
+  "0002003243": {
+    "name": "Theofilos Charles Steve",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "other",
+    "reason": "SIC  · entity=other · name=Theofilos Charles Steve"
+  },
+  "0002003514": {
+    "name": "Exploration Capital, LLC",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "fund",
+    "reason": "entityType=other · name=Exploration Capital, LLC"
+  },
+  "0002005665": {
+    "name": "McDonald Ian",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "other",
+    "reason": "SIC  · entity=other · name=McDonald Ian"
+  },
+  "0002006044": {
+    "name": "McCabe John S",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "other",
+    "reason": "SIC  · entity=other · name=McCabe John S"
+  },
+  "0002006197": {
+    "name": "Bruhlmann Christian",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "other",
+    "reason": "SIC  · entity=other · name=Bruhlmann Christian"
+  },
+  "0002006201": {
+    "name": "Schiess Ralph",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "other",
+    "reason": "SIC  · entity=other · name=Schiess Ralph"
+  },
+  "0002006260": {
+    "name": "Altos Venture AG",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "fund",
+    "reason": "entityType=other · name=Altos Venture AG"
+  },
+  "0002007346": {
+    "name": "CWR 1, LLC",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "fund",
+    "reason": "entityType=other · name=CWR 1, LLC"
+  },
+  "0002009573": {
+    "name": "Psyence Group Inc.",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "fund",
+    "reason": "entityType=other · name=Psyence Group Inc."
+  },
+  "0002010692": {
+    "name": "Panacea Innovation Ltd",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "other",
+    "reason": "SIC  · entity=other · name=Panacea Innovation Ltd"
+  },
+  "0002011156": {
+    "name": "Wong Fung Ching",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "other",
+    "reason": "SIC  · entity=other · name=Wong Fung Ching"
+  },
+  "0002011728": {
+    "name": "Saadi Ryan H.",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "other",
+    "reason": "SIC  · entity=other · name=Saadi Ryan H."
+  },
+  "0002011765": {
+    "name": "Desai Kirti",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "other",
+    "reason": "SIC  · entity=other · name=Desai Kirti"
+  },
+  "0002017797": {
+    "name": "Viriom, Inc.",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "other",
+    "reason": "SIC  · entity=other · name=Viriom, Inc."
+  },
+  "0002017798": {
+    "name": "TPAV, LLC",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "individual",
+    "reason": "entityType=other · name pattern"
+  },
+  "0002022777": {
+    "name": "Bradbury Strategic Investment Fund A (Cayman Islands Registration No. CR-359857)",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "fund",
+    "reason": "entityType=other · name=Bradbury Strategic Investment Fund A (Ca"
+  },
+  "0002023604": {
+    "name": "BCM Investimentos Fundo de Investimento Multimercado Credito Privado Investimento no Exterior",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "other",
+    "reason": "SIC  · entity=other · name=BCM Investimentos Fundo de Investimento "
+  },
+  "0002023708": {
+    "name": "Ralston Shannon",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "other",
+    "reason": "SIC  · entity=other · name=Ralston Shannon"
+  },
+  "0002023734": {
+    "name": "Adiumentum Capital Fund I LP",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "fund",
+    "reason": "entityType=other · name=Adiumentum Capital Fund I LP"
+  },
+  "0002026479": {
+    "name": "Sumner David",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "other",
+    "reason": "SIC  · entity=other · name=Sumner David"
+  },
+  "0002028876": {
+    "name": "HAVENS JOHN PRENTISS",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "other",
+    "reason": "SIC  · entity=other · name=HAVENS JOHN PRENTISS"
+  },
+  "0002030843": {
+    "name": "Bowie James Ulrich",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "other",
+    "reason": "SIC  · entity=other · name=Bowie James Ulrich"
+  },
+  "0002032216": {
+    "name": "Cortice Biosciences, Inc.",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "other",
+    "reason": "SIC  · entity=other · name=Cortice Biosciences, Inc."
+  },
+  "0002032745": {
+    "name": "Korman Tyler Paz",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "other",
+    "reason": "SIC  · entity=other · name=Korman Tyler Paz"
+  },
+  "0002033517": {
+    "name": "Opgenorth Paul Hideo",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "other",
+    "reason": "SIC  · entity=other · name=Opgenorth Paul Hideo"
+  },
+  "0002039018": {
+    "name": "Guangzhou Sino-Israel Bio-Industry Investment Fund LLP",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "fund",
+    "reason": "entityType=other · name=Guangzhou Sino-Israel Bio-Industry Inves"
+  },
+  "0002039907": {
+    "name": "AI Upstream LLC",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "fund",
+    "reason": "entityType=other · name=AI Upstream LLC"
+  },
+  "0002040446": {
+    "name": "Sealbond Ltd",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "other",
+    "reason": "SIC  · entity=other · name=Sealbond Ltd"
+  },
+  "0002041934": {
+    "name": "Keener James",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "other",
+    "reason": "SIC  · entity=other · name=Keener James"
+  },
+  "0002041953": {
+    "name": "Azuna Health LLC",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "fund",
+    "reason": "entityType=other · name=Azuna Health LLC"
+  },
+  "0002042266": {
+    "name": "Foundation Fighting Blindness Retinal Degeneration Fund",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "fund",
+    "reason": "entityType=other · name=Foundation Fighting Blindness Retinal De"
+  },
+  "0002042386": {
+    "name": "Eilean Therapeutics, LLC",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "fund",
+    "reason": "entityType=other · name=Eilean Therapeutics, LLC"
+  },
+  "0002043590": {
+    "name": "Freedman Joseph S.",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "other",
+    "reason": "SIC  · entity=other · name=Freedman Joseph S."
+  },
+  "0002043950": {
+    "name": "Excalibur LuxCo SARL",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "other",
+    "reason": "SIC  · entity=other · name=Excalibur LuxCo SARL"
+  },
+  "0002044753": {
+    "name": "Brothers Shaun Paul",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "other",
+    "reason": "SIC  · entity=other · name=Brothers Shaun Paul"
+  },
+  "0002044772": {
+    "name": "Wahlestedt Claes Robert",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "other",
+    "reason": "SIC  · entity=other · name=Wahlestedt Claes Robert"
+  },
+  "0002044866": {
+    "name": "Avista Healthcare Partners III, L.P.",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "fund",
+    "reason": "entityType=other · name=Avista Healthcare Partners III, L.P."
+  },
+  "0002046272": {
+    "name": "LX Management Co Ltd",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "fund",
+    "reason": "entityType=other · name=LX Management Co Ltd"
+  },
+  "0002046701": {
+    "name": "Exicure HiTron Inc.",
+    "sic": "",
+    "entityType": "other",
+    "bucket": "other",
+    "reason": "SIC  · entity=other · name=Exicure HiTron Inc."
+  }
+}

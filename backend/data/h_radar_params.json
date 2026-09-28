@@ -8,8 +8,8 @@
     "near": 0.25,
     "crowd": 0.25,
     "unnoticed": 0.25,
-    "risk_penalty": 0.10,
-    "tag_bonus": 0.10
+    "risk_penalty": 0.1,
+    "tag_bonus": 0.1
   },
   "expert_definition_v1_5": "채널 5/5 (Phase C 1 완비 · v1.4 동일 유지): (a) 13D 신규 · (b) h6_membership 소속 · (c) PubMed h57 · (d) Preprint h58 · (e) Form 4 P (h3_events event_type). **8-K 사후 뉴스 사용 금지**.",
   "near_definition_v1_5": "A 상태 (뉴스 예정) 판정: **AACT 주간 스냅샷 (WP69-3d)** primary_completion_date 미래 OR 자문위 회의일 미래. 잔여일 함수: (0~90d = 0.7, 90~180d = 1.0, 180~365d = 0.5, 없음 = 0.1). B 상태 = 0. **CT.gov API 호출 없음 (서버 IP 차단 우회 없음)**. AACT 스냅샷 7일 초과 시 'stale' 표기.",
@@ -29,7 +29,8 @@
   "alerts_definition_v1_5": {
     "spec": "급등 경보 (KPI 4칸 4번째 · rose 섹션) 재정의 · WP69-3d",
     "rule": "표3 (언급 있는 종목) 중 apewisdom baseline_mult ≥ 5 (5배 이상) OR reddit_rss_matches ≥ 3 (RSS 급증) 인 티커 수",
-    "note": "이전 정의 (StockTwits 100+) 폐기 · StockTwits 서버 IP 차단 (WP69-3b) 로 사용 불가"
+    "note": "이전 정의 (StockTwits 100+) 폐기 · StockTwits 서버 IP 차단 (WP69-3b) 로 사용 불가",
+    "superseded_by": "alerts_definition_wp78 (2026-09-28)"
   },
   "changelog": {
     "v1.0": "초기 4요소 평균",
@@ -37,6 +38,14 @@
     "v1.2": "unnoticed 90d XBI 대비로 재정의",
     "v1.3": "WP46-4 expert 에서 8-K readout 제거 + WP46-5 예정일 월 단위 표기 개선",
     "v1.4": "Phase C 1 · expert 채널 5/5 완비 (PubMed h57 + Preprint h58 추가) · 가중치 동일 유지 · 채널 추가는 정의 확장",
-    "v1.5": "WP69-3d · crowd 채널 재정의 (StockTwits 서버 차단으로 삭제 · apewisdom + Reddit RSS 만 · 로컬 st_24h 는 α 보조) · near 소스 AACT 주간 스냅샷 이식 (CT.gov API 호출 완전 제거) · 급등 경보 apewisdom 5배 or RSS 급증 재정의 · 단계 규칙 사전 고정 명문화 · 가중치 동일 · 60일 전 조정 금지 계속"
+    "v1.5": "WP69-3d · crowd 채널 재정의 (StockTwits 서버 차단으로 삭제 · apewisdom + Reddit RSS 만 · 로컬 st_24h 는 α 보조) · near 소스 AACT 주간 스냅샷 이식 (CT.gov API 호출 완전 제거) · 급등 경보 apewisdom 5배 or RSS 급증 재정의 · 단계 규칙 사전 고정 명문화 · 가중치 동일 · 60일 전 조정 금지 계속",
+    "v1.5-wp78": "WP78 · 급등 경보 조건 정합 (기준선 7일 미만 제외 · 배수 조건에 오늘 5건 이상 추가 · 레딧 3건 유지) · 표시 계층 · 가중치·점수·단계 무변경"
+  },
+  "alerts_definition_wp78": {
+    "spec": "급등 경보 조건 정합 · WP78 · 2026-09-28 · 표시 계층 규칙 (점수·단계·후보 선정 무관)",
+    "rule": "기준선 7일 이상 종목만 판정 · (apewisdom 평소 대비 ≥ 5배 AND 오늘 apewisdom 언급 ≥ 5건) OR 레딧 RSS 제목 매치 ≥ 3건",
+    "excluded": "기준선 7일 미만 = 판정 제외 · '수집 중' 표시 (표 3 과 같은 7일 규칙)",
+    "reason": "2026-09-28 IOVA 어제 1 · 오늘 1 · 6.0배로 경보 → 절대량 1건의 배수는 잡음 · ENTX 기준선 6일 경보",
+    "code": "backend/scripts/biotech_alert_rule.py judge() · kpi.json 과 biotech_h77_alert_brief 공용"
   }
 }

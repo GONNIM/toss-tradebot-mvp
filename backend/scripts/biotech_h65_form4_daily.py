@@ -54,6 +54,10 @@ def main():
 
     fund_ciks = load_fund_ciks()
     LOG.info("filers (WP28-2 55 CIK): %d", len(fund_ciks))
+    if not fund_ciks:
+        # WP78 · 2026-09-21~28 서버에서 입력 파일 부재로 0 filer "성공" 처리되던 결함 · 이제 실패로 드러냄 (파이프는 skip 허용)
+        LOG.error("filer 목록 0 · 입력 파일 부재 · Form 4 단계 실패")
+        raise SystemExit(2)
 
     cache_read = _P.find(f"h28v2_form4_issuer_buys_{sha}.json") or _P.find_glob("h28v2_form4_issuer_buys_*.json")
     cache = json.loads(cache_read.read_text()) if cache_read is not None and cache_read.exists() else {}
