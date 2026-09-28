@@ -338,6 +338,7 @@ class RumorRow(BaseModel):
     phase: str = ""       # PHASE3 · PHASE1/PHASE2 등 원문 표기
     event_date: str = ""  # 임상 완료 예정일 (primary completion · 결과 발표일 아님)
     days_to: Optional[int] = None
+    stage: str = ""       # WP74 4단계 · 언급 단계 (quiet · collecting · 기타) · 표시용
 
 
 _NOTE_RE = re.compile(r"(NCT\d{8}).*?D-(\d+)\s*\((\d{4}-\d{2}-\d{2})\s*·\s*([A-Z0-9_/]*)")
@@ -435,6 +436,29 @@ async def get_rumor_json(
         d = int(m.group(1)) if m else 999
         a_quiet.append((d, c))
     a_quiet.sort(key=lambda x: x[0])
+    # WP74 4단계 · "A" = 뉴스 예정 (A 상태) 전체 · 예정일 가까운 순 · KPI 클릭 펼침용 (표1 규칙 무변경)
+    a_all: list[tuple[int, dict[str, Any]]] = []
+    for c in cands:
+        if (c.get("time_state_v50") or c.get("time_state", "C")) != "A":
+            continue
+        note = c.get("state_note_v50") or c.get("state_note", "")
+        m = re.search(r"D-(\d+)", note)
+        a_all.append((int(m.group(1)) if m else 999, c))
+    a_all.sort(key=lambda x: x[0])
+    for _, c in a_all:
+        note = c.get("state_note_v50") or c.get("state_note", "")
+        conf = confirm_map.get(c.get("ticker", ""), {})
+        rows.append(RumorRow(
+            table="A",
+            ticker=c.get("ticker", ""),
+            name=(c.get("name") or "")[:40],
+            mcap_bucket=c.get("mcap_bucket", ""),
+            days_hint=_days(note),
+            detail=note[:80],
+            stage=conf.get("stage", ""),
+            baseline_n=_to_int(conf.get("st_baseline_n") or 0),
+            **_note_fields(note),
+        ))
     for _, c in a_quiet[:15]:
         note = c.get("state_note_v50") or c.get("state_note", "")
         rows.append(RumorRow(
@@ -444,6 +468,8 @@ async def get_rumor_json(
             mcap_bucket=c.get("mcap_bucket", ""),
             days_hint=_days(note),
             detail=note[:80],
+            stage=confirm_map.get(c.get("ticker", ""), {}).get("stage", ""),
+            baseline_n=_to_int(confirm_map.get(c.get("ticker", ""), {}).get("st_baseline_n") or 0),
             **_note_fields(note),
         ))
 
@@ -504,7 +530,7 @@ async def get_rumor_json(
                 ))
 
     for row in rows:
-        if row.table in ("표1", "표2", "표3"):
+        if row.table in ("A", "표1", "표2", "표3"):
             row.mcap_bucket, row.mcap_asof = _mcap_display(row.ticker, row.mcap_bucket)
         elif row.mcap_bucket in ("unknown", "—"):
             row.mcap_bucket = ""
@@ -523,6 +549,7 @@ class BiotechKpi(BaseModel):
     news_a_ready: int           # A 상태 (뉴스 예정)
     insider_buy_20d: int        # 임원·대주주 매수 최근 20 거래일
     alerts: int                 # 급등 경보 (rose 섹션 · 향후 신호 채널) · 현재 0
+    alert_tickers: list[str] = []  # WP74 4단계 · 경보 종목 (표시용 · 판정 무변경)
 
 
 @router.get("/kpi.json", response_model=BiotechKpi)
@@ -565,6 +592,7 @@ async def get_kpi(_admin: str = Depends(require_sniper_token)) -> BiotechKpi:
     # 급등 경보 (WP69-3d 재정의 · h_radar_params v1.5 alerts_definition):
     #   apewisdom baseline_mult ≥ 5 OR reddit_rss_matches ≥ 3 인 티커 수
     alerts = 0
+    alert_tickers: list[str] = []
     confirm_pick: Path | None = None
     for base in _search_dirs("community_daily"):
         if base.exists():
@@ -587,6 +615,7 @@ async def get_kpi(_admin: str = Depends(require_sniper_token)) -> BiotechKpi:
                     mult = 0.0
                 if mult >= 5.0 or rss >= 3:
                     alerts += 1
+                    alert_tickers.append(r.get("ticker", ""))
 
     return BiotechKpi(
         generated=datetime.now(timezone.utc).isoformat(),
@@ -594,4 +623,5 @@ async def get_kpi(_admin: str = Depends(require_sniper_token)) -> BiotechKpi:
         news_a_ready=news_a_ready,
         insider_buy_20d=insider_buy_20d,
         alerts=alerts,
+        alert_tickers=alert_tickers,
     )

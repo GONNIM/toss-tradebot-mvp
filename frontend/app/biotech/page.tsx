@@ -17,7 +17,8 @@ import { SectionCard } from "@/components/ui/section-card";
 import { BiotechTable, BiotechTableColumn } from "@/components/biotech/BiotechTable";
 import { RumorCard } from "@/components/biotech/RumorCard";
 import type { SessionInfo } from "@/lib/auth";
-import { checkedAtLabel, ctgovUrl, mcapBadge, refreshLabel, trialSentence } from "@/lib/biotech-display";
+import { checkedAtLabel, ctgovUrl, mcapBadge, refreshLabel, sortFilterCards, trialSentence } from "@/lib/biotech-display";
+import type { CardSort } from "@/lib/biotech-display";
 
 // 백엔드 스키마
 type RadarRow = {
@@ -48,6 +49,7 @@ type RumorRow = {
   phase?: string;
   event_date?: string;
   days_to?: number | null;
+  stage?: string;
 };
 type RumorJson = { date: string; generated: string; rows: RumorRow[] };
 
@@ -57,6 +59,7 @@ type BiotechKpi = {
   news_a_ready: number;
   insider_buy_20d: number;
   alerts: number;
+  alert_tickers?: string[];
 };
 
 async function apiFetch<T>(path: string): Promise<T> {
@@ -79,6 +82,34 @@ const RADAR_COLUMNS: BiotechTableColumn<RadarRow>[] = [
   { key: "score", label: "점수", align: "right", render: (r) => r.score.toFixed(3) },
   { key: "news_window", label: "뉴스 예정" },
 ];
+
+// ── WP74 4단계 · 점수 5요소 이름 (쉬운 말) ─────────────────
+const FACTOR_KO: { key: keyof RadarRow["factors"]; label: string }[] = [
+  { key: "expert", label: "전문가 신호" },
+  { key: "crowd", label: "대중 관심" },
+  { key: "near", label: "예정일 임박" },
+  { key: "unnoticed", label: "덜 알려짐" },
+  { key: "risk", label: "위험 감점" },
+];
+const BASELINE_TARGET_DAYS = 30; // 언급량 기준선 목표 수집 일수 (confirm · 30일 기준선)
+
+function scrollToId(id: string) {
+  document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
+// KPI 버튼 · StatBox 공용 부품을 그대로 감싼다
+function KpiButton({ onClick, children, label }: { onClick: () => void; children: React.ReactNode; label: string }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-label={label}
+      className="block w-full rounded-lg text-left transition hover:ring-2 hover:ring-sky-400 focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-500"
+    >
+      {children}
+    </button>
+  );
+}
 
 // ── 압축 목록 (섹션 4·6) 컴포넌트 ────────────────────────
 function CompactList({ rows, emptyLabel }: { rows: RumorRow[]; emptyLabel: string }) {
@@ -141,6 +172,15 @@ export default function BiotechPage() {
   const [rumor, setRumor] = useState<RumorJson | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // WP74 4단계 · 상호작용 상태 (표시만)
+  const [aMode, setAMode] = useState(false);        // 뉴스 예정 KPI 클릭 → A 전체 목록 모드
+  const [quietOnly, setQuietOnly] = useState(true); // A 모드 안 "조용한 것만" (= 기존 표1 · 상위 15)
+  const [sortBy, setSortBy] = useState<CardSort>("date");
+  const [phase3Only, setPhase3Only] = useState(false);
+  const [within7, setWithin7] = useState(false);
+  const [expanded, setExpanded] = useState<string | null>(null);
+  const [highlight, setHighlight] = useState<string | null>(null);
+  const [openRadar, setOpenRadar] = useState(false);
 
   const isAdmin = session?.role === "admin";
 
@@ -173,6 +213,21 @@ export default function BiotechPage() {
   const t2 = rumor?.rows.filter((r) => r.table === "표2") ?? [];  // 뉴스 통과
   const t3 = rumor?.rows.filter((r) => r.table === "표3") ?? [];  // 언급 있는 종목
   const t4 = rumor?.rows.filter((r) => r.table === "표4") ?? [];  // 임원 매수
+  const aAll = rumor?.rows.filter((r) => r.table === "A") ?? [];  // 뉴스 예정 전체 (WP74)
+
+  const radarByTicker = new Map((radar?.rows ?? []).map((r) => [r.ticker, r]));
+  const baseCards = aMode && !quietOnly ? aAll : t1;
+  const cards = sortFilterCards(baseCards, { sort: sortBy, phase3Only, within7 }, (tk) => radarByTicker.get(tk)?.score);
+  const checkedAt = radar ? checkedAtLabel(radar.generated) : "";
+
+  function flash(id: string) {
+    scrollToId(id);
+    setHighlight(id);
+    window.setTimeout(() => setHighlight((h) => (h === id ? null : h)), 2000);
+  }
+  const ring = (id: string) => (highlight === id ? "rounded-lg ring-2 ring-offset-2 ring-sky-500 transition" : "transition");
+  const chip = (on: boolean) =>
+    `rounded-full border px-2.5 py-0.5 text-xs ${on ? "border-sky-600 bg-sky-50 font-semibold text-sky-700 dark:bg-sky-950/40 dark:text-sky-300" : "border-border text-muted-foreground hover:bg-muted"}`;
 
   return (
     <div className="space-y-4">
@@ -210,65 +265,163 @@ export default function BiotechPage() {
       {/* KPI 4칸 · activist-radar StatBox 공용 부품 · grid grid-cols-1 gap-2 sm:grid-cols-4 */}
       {isAdmin && kpi && (
         <div className="grid grid-cols-1 gap-2 sm:grid-cols-4">
-          <StatBox label="후보 (총)" value={`${kpi.candidates_total}`} hint={`관찰 중인 종목 ${kpi.candidates_total}개`} />
-          <StatBox label="뉴스 예정 (A)" value={`${kpi.news_a_ready}`} hint="발표 임박 종목" />
-          <StatBox
-            label="임원·대주주 매수 (20d)"
-            value={`${kpi.insider_buy_20d}`}
-            hint={`최근 20거래일 임원·대주주 매수 신고 ${kpi.insider_buy_20d}건${radar ? ` (${checkedAtLabel(radar.generated)} 확인)` : ""}`}
-          />
-          <StatBox label="급등 경보" value={`${kpi.alerts}`} hint="오늘 언급이 급증한 종목" />
+          <KpiButton label="순위표 전체로 이동" onClick={() => { setOpenRadar(true); flash("sec-radar"); }}>
+            <StatBox label="후보 (총)" value={`${kpi.candidates_total}`} hint={`관찰 중인 종목 ${kpi.candidates_total}개`} />
+          </KpiButton>
+          <KpiButton label="뉴스 예정 종목 전체 펼치기" onClick={() => { setAMode(true); setQuietOnly(true); flash("sec-rumor"); }}>
+            <StatBox label="뉴스 예정 (A)" value={`${kpi.news_a_ready}`} hint="발표 임박 종목" />
+          </KpiButton>
+          <KpiButton label="임원·대주주 매수 섹션으로 이동" onClick={() => flash("sec-insider")}>
+            <StatBox
+              label="임원·대주주 매수 (20d)"
+              value={`${kpi.insider_buy_20d}`}
+              hint={`최근 20거래일 임원·대주주 매수 신고 ${kpi.insider_buy_20d}건${checkedAt ? ` (${checkedAt} 확인)` : ""}`}
+            />
+          </KpiButton>
+          <KpiButton label="급등 경보 섹션으로 이동" onClick={() => flash("sec-alerts")}>
+            <StatBox label="급등 경보" value={`${kpi.alerts}`} hint="오늘 언급이 급증한 종목" />
+          </KpiButton>
         </div>
       )}
 
-      {/* 섹션 1: 소문에 살 자리 · sky · 표1 카드 피드 */}
+      {/* 섹션 1: 소문에 살 자리 · sky · 표1 카드 (뉴스 예정 KPI 클릭 시 A 전체 모드) */}
       {isAdmin && rumor && (
-        <SectionCard tone="sky" icon="💡" label="소문에 살 자리" count={t1.length} hint={`발표가 다가오는데 아직 조용한 종목 ${t1.length}개 (임박한 순)`}>
-          {t1.length === 0 ? (
-            <div className="text-xs text-muted-foreground">해당 종목 없음</div>
-          ) : (
-            <div className="space-y-2">
-              <div className="text-xs text-muted-foreground">임상 완료 예정일이 가까운 순서 ↓ (위가 가장 임박)</div>
-              {t1.map((r, i) => (
-                <RumorCard
-                  key={i}
-                  order={i + 1}
-                  ticker={r.ticker}
-                  name={r.name}
-                  mcap_bucket={mcapBadge(r.mcap_bucket, r.mcap_asof) ?? ""}
-                  days_hint={r.days_hint}
-                  detail={r.detail}
-                  sentence={trialSentence(r.phase, r.event_date, r.days_to)}
-                  sourceUrl={ctgovUrl(r.nct_id)}
-                />
-              ))}
+        <div id="sec-rumor" className={ring("sec-rumor")}>
+          <SectionCard
+            tone="sky"
+            icon="💡"
+            label={aMode && !quietOnly ? "뉴스 예정 전체" : "소문에 살 자리"}
+            count={cards.length}
+            hint={aMode && !quietOnly ? `발표가 다가오는 종목 ${aAll.length}개 전체` : `발표가 다가오는데 아직 조용한 종목 ${t1.length}개 (임박한 순)`}
+          >
+            <div className="flex flex-wrap items-center gap-2">
+              {aMode && (
+                <button type="button" aria-pressed={quietOnly} onClick={() => setQuietOnly((v) => !v)} className={chip(quietOnly)}>
+                  조용한 것만 ({t1.length})
+                </button>
+              )}
+              <button type="button" aria-pressed={phase3Only} onClick={() => setPhase3Only((v) => !v)} className={chip(phase3Only)}>
+                3상만
+              </button>
+              <button type="button" aria-pressed={within7} onClick={() => setWithin7((v) => !v)} className={chip(within7)}>
+                D-7 이내
+              </button>
+              <label className="ml-auto flex items-center gap-1 text-xs text-muted-foreground">
+                정렬
+                <select value={sortBy} onChange={(e) => setSortBy(e.target.value as CardSort)} className="border rounded px-2 py-1 text-sm bg-background">
+                  <option value="date">예정일 가까운 순</option>
+                  <option value="score">점수 높은 순</option>
+                </select>
+              </label>
             </div>
-          )}
-        </SectionCard>
+            {cards.length === 0 ? (
+              <div className="text-xs text-muted-foreground">조건에 맞는 종목이 없습니다.</div>
+            ) : (
+              <div className="space-y-2">
+                <div className="text-xs text-muted-foreground">
+                  {sortBy === "date" ? "임상 완료 예정일이 가까운 순서 ↓ (위가 가장 임박)" : "레이더 점수가 높은 순서 ↓ (순위표 밖 종목은 맨 아래)"} · 카드를 누르면 자세히 보입니다.
+                </div>
+                {cards.map((r, i) => {
+                  const rr = radarByTicker.get(r.ticker);
+                  const open = expanded === r.ticker;
+                  return (
+                    <div
+                      key={`${r.table}-${r.ticker}-${i}`}
+                      id={`card-${r.ticker}`}
+                      role="button"
+                      tabIndex={0}
+                      aria-expanded={open}
+                      onClick={() => setExpanded(open ? null : r.ticker)}
+                      onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setExpanded(open ? null : r.ticker); } }}
+                      className={`cursor-pointer rounded-lg ${ring(`card-${r.ticker}`)}`}
+                    >
+                      <RumorCard
+                        order={i + 1}
+                        ticker={r.ticker}
+                        name={r.name}
+                        mcap_bucket={mcapBadge(r.mcap_bucket, r.mcap_asof) ?? ""}
+                        days_hint={r.days_hint}
+                        detail={r.detail}
+                        sentence={trialSentence(r.phase, r.event_date, r.days_to)}
+                        sourceUrl={ctgovUrl(r.nct_id)}
+                      />
+                      {open && (
+                        <div className="mt-1 rounded-lg border border-slate-200 bg-slate-50 p-3 text-xs dark:border-slate-700 dark:bg-slate-900/60">
+                          {rr ? (
+                            <>
+                              <div className="mb-1 font-semibold">점수 {rr.score.toFixed(3)} · 5가지 요소</div>
+                              <table className="w-full text-xs">
+                                <tbody>
+                                  {FACTOR_KO.map((f) => (
+                                    <tr key={f.key} className="border-b border-border last:border-0">
+                                      <td className="p-1">{f.label}</td>
+                                      <td className="p-1 text-right font-mono">{rr.factors[f.key].toFixed(2)}</td>
+                                    </tr>
+                                  ))}
+                                </tbody>
+                              </table>
+                            </>
+                          ) : (
+                            <div className="text-muted-foreground">이 종목은 순위표 상위 30 밖이라 점수 요소가 없습니다.</div>
+                          )}
+                          <div className="mt-2">
+                            근거 원문:{" "}
+                            {ctgovUrl(r.nct_id) ? (
+                              <a href={ctgovUrl(r.nct_id)!} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} className="text-sky-700 hover:underline dark:text-sky-300">
+                                ClinicalTrials.gov {r.nct_id} ↗
+                              </a>
+                            ) : (
+                              <span className="text-muted-foreground">{r.detail}</span>
+                            )}
+                          </div>
+                          <div className="mt-1">
+                            언급량 수집 진행: {typeof r.baseline_n === "number" ? `${r.baseline_n}/${BASELINE_TARGET_DAYS}일` : "기록 없음"}
+                            {r.stage === "collecting" && <span className="text-muted-foreground"> (7일 전까지는 조용함·급증 판단을 보류합니다)</span>}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </SectionCard>
+        </div>
       )}
 
       {/* 섹션 2: 임원·대주주 매수 · emerald · 표4 카드 */}
       {isAdmin && rumor && (
-        <SectionCard tone="emerald" icon="👤" label="임원·대주주 매수 (최근 20일)" count={t4.length} hint="Form 4 · 매수 금액·유형">
-          {t4.length === 0 ? (
-            <div className="text-xs text-muted-foreground">최근 20 거래일 신규 매수 없음</div>
-          ) : (
-            <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-              {t4.map((r, i) => <Form4Card key={i} row={r} />)}
-            </div>
-          )}
-        </SectionCard>
+        <div id="sec-insider" className={ring("sec-insider")}>
+          <SectionCard tone="emerald" icon="👤" label="임원·대주주 매수 (최근 20일)" count={t4.length} hint="Form 4 · 매수 금액·유형">
+            {t4.length === 0 ? (
+              <div className="rounded border border-dashed border-emerald-300 p-3 text-sm text-muted-foreground dark:border-emerald-800">
+                최근 20거래일 동안 새 매수 신고가 없습니다.{checkedAt && ` (${checkedAt} 확인)`}
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                {t4.map((r, i) => <Form4Card key={i} row={r} />)}
+              </div>
+            )}
+          </SectionCard>
+        </div>
       )}
 
       {/* 섹션 3: 급등 경보 · rose · 없으면 접힘 */}
       {isAdmin && kpi && (
-        <SectionCard tone="rose" icon="🚨" label="급등 경보" count={kpi.alerts} hint="D+0 이내 · 신호 채널 대기" collapsible defaultOpen={kpi.alerts > 0}>
-          <div className="text-xs text-muted-foreground">
-            {kpi.alerts === 0
-              ? "현재 경보 없음 · 신호 채널 배포 (WP69-3) 후 실시간 반영"
-              : `${kpi.alerts} 건`}
-          </div>
-        </SectionCard>
+        <div id="sec-alerts" className={ring("sec-alerts")}>
+          <SectionCard tone="rose" icon="🚨" label="급등 경보" count={kpi.alerts} hint="오늘 언급이 급증한 종목" collapsible defaultOpen={kpi.alerts > 0}>
+            {kpi.alerts === 0 ? (
+              <div className="text-xs text-muted-foreground">오늘 언급이 급증한 종목이 없습니다.</div>
+            ) : (
+              <div className="flex flex-wrap gap-2 text-xs">
+                {(kpi.alert_tickers ?? []).map((tk) => (
+                  <span key={tk} className="rounded bg-rose-100 px-2 py-0.5 font-mono font-bold text-rose-800 dark:bg-rose-900/40 dark:text-rose-200">{tk}</span>
+                ))}
+                <span className="text-muted-foreground">기준: 언급량이 평소의 5배 이상이거나 레딧 매치 3건 이상</span>
+              </div>
+            )}
+          </SectionCard>
+        </div>
       )}
 
       {/* 섹션 4: 뉴스 통과 (팔 자리) · amber · 표2 압축 목록 */}
@@ -280,20 +433,23 @@ export default function BiotechPage() {
 
       {/* 섹션 5: 순위표 전체 · slate · 접기 · BiotechTable ≤7열 */}
       {isAdmin && radar && (
+        <div id="sec-radar" className={ring("sec-radar")}>
         <SectionCard
+          key={openRadar ? "radar-open" : "radar-closed"}
           tone="slate"
           icon="📊"
           label="순위표 전체"
           count={radar.rows.length}
           hint="상위 30 (뉴스 예정일 임박순)"
           collapsible
-          defaultOpen={false}
+          defaultOpen={openRadar}
         >
           <div className="text-xs text-muted-foreground font-mono mb-2">
             📁 {radar.source_csv} · 생성 {radar.generated}
           </div>
           <BiotechTable columns={RADAR_COLUMNS} rows={radar.rows} caption="레이더 상위 30" />
         </SectionCard>
+        </div>
       )}
 
       {/* 섹션 6: 언급 있는 종목 · slate · 표3 압축 목록 */}

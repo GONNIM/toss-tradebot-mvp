@@ -50,6 +50,7 @@ export function RumorCard({ ticker, name, mcap_bucket, days_hint, detail, score,
               href={sourceUrl}
               target="_blank"
               rel="noopener noreferrer"
+              onClick={(e) => e.stopPropagation()}
               className="text-xs text-sky-700 hover:underline dark:text-sky-300"
             >
               임상 원문 보기 ↗
