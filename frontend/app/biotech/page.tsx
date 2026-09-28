@@ -63,6 +63,7 @@ type AlertBrief = {
   brief_date?: string;
   mentions: { yesterday: number | null; today: number | null; mult: string; reddit_today: number; history: { date: string; apewisdom_24h: number; reddit_matches: number }[] };
   reddit: { title: string; link: string; updated: string }[];
+  reddit_time_checked?: boolean;
   sec_8k: { filing_date: string; items: string; description: string; url: string; ex99_1_title: string }[];
   sec_status: string;
   form4: { available: boolean; n?: number };
@@ -163,6 +164,9 @@ function AlertBriefCard({ b }: { b: AlertBrief }) {
           </div>
           <div>
             <div className="font-semibold">(b) 커뮤니티 · 최근 24시간 매치 레딧 글 (제목만)</div>
+            {b.reddit_time_checked === false && (
+              <div className="text-muted-foreground">이 날짜 자료에는 게시 시각이 없어 24시간 안의 글인지 확인하지 못했습니다.</div>
+            )}
             {b.reddit.length === 0 ? (
               <div className="text-muted-foreground">최근 24시간 매치 글이 없습니다.</div>
             ) : (
