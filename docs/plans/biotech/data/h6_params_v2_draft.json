@@ -37,7 +37,8 @@
       "현재 스폰서명 기준 (인수 후 이름 변경 반영 안 됨)",
       "매칭기 v2 는 'A S'·'and Company' 등 표기 차이 미흡수 (대형사 일부 해외/이름 분류)"
     ],
-    "multi_theme": "H6-design §3 · 다중 테마 소속 시 최고 순위 테마로 배정 (백테스트 단계)"
+    "multi_theme": "H6-design §3 · 다중 테마 소속 시 최고 순위 테마로 배정 (백테스트 단계)",
+    "aliases": "docs/plans/biotech/data/sponsor_aliases.csv · 39사 99 별칭 · 자체명 변형 + 2015Q1 이전 완전자회사만 · 근거 = SEC company_tickers 명칭 · 매칭기 앞단"
   },
   "backtest": {
     "rebalance_freq": "quarterly",
@@ -69,7 +70,47 @@
   ],
   "gate3_request": {
     "auto_go_rule": "분기별 상위 3분위 주 테마 소속 종목 합 ≥ 3 인 분기 ≥ 20 (h42 정의 승계) · 보조 표기 = 상위·하위 모두 ≥ 3",
-    "result": "PENDING · 서버 추출 후 biotech_h6_membership_v2 산출 수치로 채움",
-    "status": "Fable 검수 대기 · 본 실행 금지"
+    "result": {
+      "basis": "잠정 · AACT 2026-09-28 · 제목 매치만 (질환명·약물명 누락 버그 · 수정 후 재추출 대기) · 재추출은 매치 상위집합 → 소속 수 감소 없음 → 판정 뒤집힘 없음",
+      "ranked_quarters": 42,
+      "good_quarters_top_ge3": 31,
+      "good_quarters_top_and_bot_ge3": 21,
+      "auto_go": true,
+      "auto_go_strict_both": true,
+      "member_tickers": 61,
+      "alias_effect": {
+        "before": {
+          "sponsors_listed": 51,
+          "sponsor_listed_rate": 0.0212,
+          "studies_listed": 265,
+          "study_listed_rate": 0.0363
+        },
+        "after": {
+          "sponsors_listed": 72,
+          "sponsor_listed_rate": 0.0299,
+          "studies_listed": 960,
+          "study_listed_rate": 0.1316
+        },
+        "alias_hits": 34
+      },
+      "unmatched_breakdown": {
+        "비상장": 325,
+        "대학·병원": 1902,
+        "이름": 0,
+        "해외": 107
+      },
+      "price_plan": {
+        "unique_member_tickers": 61,
+        "have_prices": 16,
+        "need_tiingo": 45,
+        "months_needed": 1
+      },
+      "fable_flags": [
+        "hibernation_hypothermia·cognitive_memory 소속 0 · meal_replacement 1 → 해당 테마 3분위 분기는 빈 바구니",
+        "obesity_glp1 = 대형 제약 (NVO·LLY 등) 비중 큼 → 테마 순수도 희석",
+        "비상장 분류에 폐지 상장사 혼입 가능 · 과거 소속 과소 방향"
+      ]
+    },
+    "status": "자동 GO 충족 (잠정) · Fable 검수 대기 · 본 실행 금지"
   }
 }

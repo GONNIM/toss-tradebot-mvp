@@ -19,6 +19,7 @@
 - 관측: 7일 × 7/7 실행 · 실패 알림 0 · 상태 탭 표시 결함 3건 → `biotech_h57b_status_gen.py` 수정 + 봉인 JSON 9개 `docs/plans/biotech/data/seals/` 이식 (로컬 검증 완료)
 - C3: `biotech_h6_aact_theme_extract.py` (서버 추출) · `biotech_h6_membership_v2.py` (매칭·소속·가격 계획·관문 판정) · pytest 8건 신규 · `data/h6_params_v2_draft.json` (수치 PENDING)
 - **대기 (사용자 승인)**: ① PR 병합 = 자동 배포 ② 서버 1회 추출 실행 (AACT 2.4GB 다운 → CSV → zip 삭제) ③ 산출 CSV 로컬 회수 → membership_v2 실행 → 관문 3 수치 채움 → Fable 검수
+- **2026-09-28 승인 실행**: ① PR #25 병합·배포 성공 (13 경로 200) ② 서버 추출 완료 (7,294 임상) · 단 zip 안 파일 오선택 버그 (browse_conditions) → 제목 매치만 ③ 별칭 사전 39사 99행 · 잠정 관문 = 자동 GO 충족 (31/42 · 보조 21) · **대기: 버그 수정 PR 병합 + 서버 재추출 1회 (승인 필요)**
 
 ---
 

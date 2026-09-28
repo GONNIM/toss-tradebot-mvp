@@ -122,9 +122,12 @@ def qlabel(yq: tuple[int, int]) -> str:
 class SponsorMatcher:
     """매칭기 v2 · 완전 일치 채택 · Jaccard 후보 분리 · 사유 분해."""
 
-    def __init__(self, sec_entries: list[dict], universe: dict[str, dict]) -> None:
+    def __init__(self, sec_entries: list[dict], universe: dict[str, dict],
+                 aliases: dict[str, str] | None = None) -> None:
         self.idx = build_index(sec_entries)
         self.universe = universe
+        # 별칭 사전 (대형 제약 공식명 변형 → 티커) · 정규화 키로 보관 · 매칭기 앞단 적용
+        self.aliases = {normalize_name(k): v for k, v in (aliases or {}).items() if normalize_name(k)}
         # Jaccard 가속 · 토큰 → 정규화 키 (공유 토큰 있는 키만 비교 · 결과는 전수 비교와 동일)
         self.tok_idx: dict[str, set[str]] = defaultdict(set)
         for key in self.idx:
@@ -147,15 +150,19 @@ class SponsorMatcher:
 
     def match(self, sponsor: str, agency_class: str) -> dict:
         res = {"sponsor": sponsor, "agency_class": agency_class, "ticker": "", "status": "", "reason": "",
-               "sec_ticker": "", "jaccard_candidates": ""}
+               "sec_ticker": "", "jaccard_candidates": "", "method": ""}
         if not sponsor:
             res.update(status="unmatched", reason="이름")
+            return res
+        alias_tk = self.aliases.get(normalize_name(sponsor))
+        if alias_tk and alias_tk in self.universe:
+            res.update(ticker=alias_tk, status="listed", method="alias")
             return res
         hits = self.idx.get(normalize_name(sponsor))
         if hits:
             in_uni = [h for h in hits if h["ticker"] in self.universe]
             if in_uni:
-                res.update(ticker=in_uni[0]["ticker"], status="listed")
+                res.update(ticker=in_uni[0]["ticker"], status="listed", method="exact")
                 return res
             res.update(status="unmatched", reason="해외", sec_ticker=hits[0]["ticker"])
             return res
@@ -184,6 +191,16 @@ def load_sec_entries() -> list[dict]:
     data = json.loads(p.read_text())
     return [{"ticker": str(e.get("ticker", "")).upper(), "name": e.get("title", ""), "exchange": "",
              "cik": str(e.get("cik_str", ""))} for e in data.values()]
+
+
+def load_aliases() -> dict[str, str]:
+    """docs/plans/biotech/data/sponsor_aliases.csv · alias → ticker (근거 = sec_title 열)."""
+    p = _P.find("sponsor_aliases.csv")
+    if p is None:
+        LOG.warning("sponsor_aliases.csv 없음 · 별칭 미적용")
+        return {}
+    with p.open() as f:
+        return {r["alias"]: r["ticker"].upper() for r in csv.DictReader(f) if r.get("alias")}
 
 
 def load_universe() -> dict[str, dict]:
@@ -310,7 +327,9 @@ def main():
     ap.add_argument("--studies", help="aact_theme_studies CSV (미지정 시 해석기로 최신)")
     args = ap.parse_args()
 
-    sp = Path(args.studies) if args.studies else _P.find_glob("aact_theme_studies_*.csv", subdir="h6")
+    # 서버 = RUNTIME/h6 · 로컬 = out_dir 규칙과 같은 backend/data/biotech/h6
+    sp = Path(args.studies) if args.studies else (_P.find_glob("aact_theme_studies_*.csv", subdir="h6")
+                                                  or _P.find_glob("aact_theme_studies_*.csv", subdir="biotech/h6"))
     if sp is None or not sp.exists():
         raise SystemExit("aact_theme_studies CSV 없음 · 서버 추출 (biotech_h6_aact_theme_extract) 선행 필요")
     m = re.search(r"(\d{4}-\d{2}-\d{2})", sp.name)
@@ -319,11 +338,23 @@ def main():
     LOG.info("studies %s · %d 행", sp.name, len(studies))
 
     universe = load_universe()
-    matcher = SponsorMatcher(load_sec_entries(), universe)
+    sec_entries = load_sec_entries()
+    aliases = load_aliases()
     sponsors: dict[str, str] = {}
     for s in studies:
         sponsors.setdefault(s["lead_sponsor"], s.get("agency_class", ""))
+    # 별칭 적용 전 (매칭기 v2 단독) · 비교용
+    base = SponsorMatcher(sec_entries, universe)
+    before = {name: base.match(name, ac) for name, ac in sponsors.items()}
+    matcher = SponsorMatcher(sec_entries, universe, aliases)
     match_by_sponsor = {name: matcher.match(name, ac) for name, ac in sponsors.items()}
+
+    def _rates(mb: dict) -> dict:
+        sp_listed = sum(1 for v in mb.values() if v["status"] == "listed")
+        st_l = len({s["nct_id"] for s in studies if mb.get(s["lead_sponsor"], {}).get("status") == "listed"})
+        st_t = len({s["nct_id"] for s in studies})
+        return {"sponsors_listed": sp_listed, "sponsor_listed_rate": round(sp_listed / max(len(mb), 1), 4),
+                "studies_listed": st_l, "study_listed_rate": round(st_l / max(st_t, 1), 4)}
     LOG.info("스폰서 %d · 상장 매칭 %d", len(sponsors),
              sum(1 for v in match_by_sponsor.values() if v["status"] == "listed"))
 
@@ -355,7 +386,7 @@ def main():
     _write_csv(out / f"h6_membership_v2_quarterly_{snap}.csv", qrows, ["quarter"] + all_themes + ["main_union"])
     _write_csv(out / f"h6_sponsor_match_v2_{snap}.csv",
                sorted(match_by_sponsor.values(), key=lambda r: (r["status"], r["reason"], r["sponsor"])),
-               ["sponsor", "agency_class", "status", "reason", "ticker", "sec_ticker", "jaccard_candidates"])
+               ["sponsor", "agency_class", "status", "method", "reason", "ticker", "sec_ticker", "jaccard_candidates"])
     _write_csv(out / f"h6_jaccard_candidates_v2_{snap}.csv",
                [v for v in match_by_sponsor.values() if v["jaccard_candidates"]],
                ["sponsor", "agency_class", "jaccard_candidates"])
@@ -363,6 +394,9 @@ def main():
     summary = {
         "aact_snapshot_date": snap, "studies_csv": sp.name,
         "matched_studies": st_total, "matched_rows": len(studies),
+        "aliases_loaded": len(aliases),
+        "alias_effect": {"before": _rates(before), "after": _rates(match_by_sponsor),
+                         "alias_hits": sum(1 for v in match_by_sponsor.values() if v["method"] == "alias")},
         "sponsors_unique": len(sponsors),
         "sponsors_listed": reasons["상장"],
         "sponsor_listed_rate": round(reasons["상장"] / max(len(sponsors), 1), 4),
@@ -373,7 +407,8 @@ def main():
         "price_plan": plan,
         "gate": {k: v for k, v in gate.items() if k != "per_quarter"},
         "caveats": [
-            "SEC company_tickers = 현재 상장사만 · 상폐 스폰서는 '비상장' 으로 섞임 (생존편향 · 소속 과소)",
+            "비상장 분류에 폐지 상장사 혼입 가능 · 과거 소속 과소 방향 (SEC company_tickers = 현재 상장사만 · 생존편향)",
+            "별칭 사전 = 자체명 변형 + 2015Q1 이전 완전자회사만 · 2015 이후 인수 (Allergan·Shire·Celgene 등) 제외 (point-in-time)",
             "AACT 스냅샷 = 현재 시점 lead_sponsor·제목 · 사후 스폰서 변경 (인수 등) 은 현재 이름 기준",
             "study_first_posted = 최초 공개일 · point-in-time 편입 기준 (이탈 없음)",
         ],
