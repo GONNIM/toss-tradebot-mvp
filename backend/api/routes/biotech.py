@@ -22,7 +22,7 @@ import glob
 import logging
 import re
 import time
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any, Optional
 
@@ -162,6 +162,7 @@ class RadarRow(BaseModel):
     ticker: str
     name: str
     mcap_bucket: str
+    mcap_asof: str = ""   # WP74 · 시총 배지 기준 종가일 (빈 값 = 배지 미표시)
     score: float
     state: str            # A/B/C
     news_window: str      # why_easy 요약 (예정일 표기)
@@ -211,6 +212,60 @@ def _latest(*patterns: tuple[Path, str]) -> Path | None:
     return max(hits, key=lambda p: p.stat().st_mtime) if hits else None
 
 
+# ── WP74 · 시총 배지 (표시 계층 전용) ─────────────────────────────
+# 후보 선정·점수는 candidates CSV 의 mcap_bucket 을 그대로 쓴다 (5B 초과 제외 필터 무변경).
+# 화면 배지만 기존 소스 (h3_mcap 발행주식수 × h3_prices_merged 최신 종가) 로 계산해 덧붙인다.
+MCAP_SHARES_MAX_AGE_DAYS = 365   # 발행주식수 공시가 12개월 넘으면 배지 없음 (증자로 크게 달라질 수 있음)
+MCAP_PRICE_MAX_AGE_DAYS = 60     # 종가가 60일 넘으면 배지 없음 (예: 2021년 종가만 남은 종목)
+_MCAP_CACHE: dict[str, Any] = {"mtime": None, "rows": {}}
+
+
+def _mcap_bucket_label(mcap: float) -> str:
+    if mcap < 50e6:
+        return "50M 미만"
+    if mcap < 300e6:
+        return "50M-300M"
+    if mcap < 1e9:
+        return "300M-1B"
+    if mcap < 5e9:
+        return "1B-5B"
+    return "5B+"
+
+
+def _mcap_display(ticker: str, csv_bucket: str = "") -> tuple[str, str]:
+    """(배지 문구, 기준 종가일) · 계산 불가면 ("", "") → 화면에서 배지 미표시.
+
+    candidates CSV 에 실제 구간이 있으면 (로컬 등) 그 값을 우선 사용한다.
+    """
+    if csv_bucket and csv_bucket not in ("unknown", "—"):
+        return csv_bucket, ""
+    hits: list[Path] = []
+    for base in [DATA_DIR_DOCS, DATA_DIR / "biotech"]:
+        if base.exists():
+            hits.extend(base.glob("mcap_display_inputs_*.csv"))
+    if not hits:
+        return "", ""
+    src = max(hits, key=lambda p: p.stat().st_mtime)
+    key = (str(src), src.stat().st_mtime)
+    if _MCAP_CACHE["mtime"] != key:
+        with src.open() as f:
+            _MCAP_CACHE["rows"] = {r["ticker"]: r for r in csv.DictReader(f)}
+        _MCAP_CACHE["mtime"] = key
+    r = _MCAP_CACHE["rows"].get(ticker)
+    if not r:
+        return "", ""
+    today = datetime.now(timezone(timedelta(hours=9))).date()
+    try:
+        sh_age = (today - datetime.strptime(r["shares_asof"], "%Y-%m-%d").date()).days
+        px_date = datetime.strptime(r["close_date"], "%Y-%m-%d").date()
+        mcap = float(r["shares"]) * float(r["close"])
+    except (ValueError, KeyError):
+        return "", ""
+    if sh_age > MCAP_SHARES_MAX_AGE_DAYS or (today - px_date).days > MCAP_PRICE_MAX_AGE_DAYS or mcap <= 0:
+        return "", ""
+    return _mcap_bucket_label(mcap), px_date.isoformat()
+
+
 def _latest_radar_csv() -> Path | None:
     """radar CSV 최신 · WP69-3b · RUNTIME > docs > backend/data."""
     patterns: list[tuple[Path, str]] = []
@@ -241,11 +296,13 @@ async def get_radar_json(_admin: str = Depends(require_sniper_token)) -> RadarJs
                     return float(r.get(k) or d)
                 except Exception:
                     return d
+            mb, masof = _mcap_display(r.get("ticker", ""), r.get("mcap", ""))
             rows.append(RadarRow(
                 rank=idx,
                 ticker=r.get("ticker", ""),
                 name=(r.get("name") or "")[:60],
-                mcap_bucket=r.get("mcap", ""),
+                mcap_bucket=mb,
+                mcap_asof=masof,
                 score=_f("score"),
                 state=r.get("time_state", "C"),
                 news_window=(r.get("why_easy") or "")[:100],
@@ -275,6 +332,7 @@ class RumorRow(BaseModel):
     detail: str           # 짧은 근거 문장
     st_24h: Optional[int] = None
     baseline_n: Optional[int] = None
+    mcap_asof: str = ""   # WP74 · 시총 배지 기준 종가일 (빈 값 = 배지 미표시)
 
 
 class RumorJson(BaseModel):
@@ -427,6 +485,12 @@ async def get_rumor_json(
                     days_hint=f"D+{r.get('elapsed_days', '?')}",
                     detail=f"{r.get('filer_type', '?')} · {r.get('shares', '0')}주",
                 ))
+
+    for row in rows:
+        if row.table in ("표1", "표2", "표3"):
+            row.mcap_bucket, row.mcap_asof = _mcap_display(row.ticker, row.mcap_bucket)
+        elif row.mcap_bucket in ("unknown", "—"):
+            row.mcap_bucket = ""
 
     return RumorJson(
         date=date_dash,
