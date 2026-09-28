@@ -41,3 +41,10 @@ def test_reverse_matching_roles_and_reasons(tmp_path):
 def test_legacy_path_unchanged_without_matcher(tmp_path):
     res = w._parse_studies_and_sponsors(_zip(tmp_path), {w._norm("Acme Bio, Inc."): "ACME"})
     assert [(x["nct_id"], x["role"]) for x in res] == [("NCT1", "lead")]
+
+
+def test_state_suffix_and_radar_aliases_loaded():
+    m = w.SponsorMatcher({"DNTH": "Dianthus Therapeutics, Inc. /DE/"})
+    assert m.match("Dianthus Therapeutics") == ("DNTH", "v2")
+    names = {a["alias"] for a in w._load_aliases()}
+    assert "Immunovant Sciences GmbH" in names and "Pfizer" in names   # 레이더 전용 + 공유 사전 둘 다

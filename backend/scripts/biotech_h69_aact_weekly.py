@@ -197,6 +197,8 @@ class SponsorMatcher:
     def __init__(self, candidates: dict[str, str], aliases: list[dict] | None = None) -> None:
         from backend.scripts.biotech_name_match import normalize_name
         self._nn = normalize_name
+        # SEC 명칭 끝의 설립 주 표기 (예: "Dianthus Therapeutics, Inc. /DE/") 제거 · 이 잡 안에서만 (공용 정규화기 무변경)
+        candidates = {t: re.sub(r"\s*/[A-Z]{2}/\s*$", "", n or "") for t, n in candidates.items()}
         self.names = candidates                              # ticker → 후보 회사명
         self.legacy = {_norm(n): t for t, n in candidates.items() if n}
         self.v2 = {normalize_name(n): t for t, n in candidates.items() if normalize_name(n)}
@@ -451,11 +453,14 @@ def _load_candidate_names() -> dict[str, str]:
 
 
 def _load_aliases() -> list[dict]:
-    p = FALLBACK_DIR / "sponsor_aliases.csv"
-    if not p.exists():
-        return []
-    with p.open() as f:
-        return list(csv.DictReader(f))
+    """sponsor_aliases.csv (H6 과 공유 · 대형 제약) + sponsor_aliases_radar.csv (레이더 전용 · 소형 자회사명 · WP78)."""
+    out: list[dict] = []
+    for name in ("sponsor_aliases.csv", "sponsor_aliases_radar.csv"):
+        p = FALLBACK_DIR / name
+        if p.exists():
+            with p.open() as f:
+                out.extend(csv.DictReader(f))
+    return out
 
 
 def _write_match_report(date_str: str, matches: list[dict], diag: dict) -> None:
