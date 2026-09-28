@@ -1,0 +1,75 @@
+{
+  "spec": "H6 백테스트 파라미터 v2 초안 (Phase C 3 · 소속 v2 반영 · 백테스트 규칙은 v1 사전 커밋 그대로 · 사후 조정 금지)",
+  "version": "v2-draft",
+  "generated": "2026-09-28",
+  "themes": {
+    "main": [
+      "obesity_glp1",
+      "hair_loss",
+      "longevity_rejuvenation",
+      "meal_replacement_metabolic",
+      "hibernation_hypothermia",
+      "cognitive_memory"
+    ],
+    "controls": [
+      "control_nash",
+      "control_amyloid"
+    ],
+    "note": "대조군은 순위 산정에 포함 (WP27 · 8세트 통합) · 판정은 별도 · 주 6 만 상위 vs 하위 3분위 비교"
+  },
+  "signal": {
+    "source_pubmed": "EDAT 재실행 · 8세트 × 46 분기 (h6_theme_edat)",
+    "source_ctgov": "CT.gov 스폰서 raw count (h6_membership)",
+    "aggregation": "직전 4분기 rolling sum · YoY 증가율 (분모 max(값, 1)) · WP22-2 · 잡음 억제 확정"
+  },
+  "rank": {
+    "formula": "z-score(growth_pm) * 0.6 + z-score(growth_ct) * 0.4",
+    "quantile": "n=8 → top 33% · mid 34% · bot 33%",
+    "point_in_time": "분기 t 종료 시점 · 촉매/이벤트일 이후 시점만 사용"
+  },
+  "membership": {
+    "source": "AACT daily 스냅샷 전량 (서버 · biotech_h6_aact_theme_extract) · 테마 사전 v1 키워드 매치 (brief_title · official_title · conditions · interventions · 단어 경계 · GLP-1 combination 서로소 가림)",
+    "matcher": "biotech_name_match v2 · 정규화 후 완전 일치만 채택 · Jaccard ≥ 0.8 은 후보 CSV 분리 (미채택) · SEC company_tickers → Tiingo 우주 (미 거래소) 교집합",
+    "point_in_time": "(티커, 테마) 편입 분기 = 최초 study_first_posted 분기 · 이탈 없음 · 분기 q 소속 = 편입 ≤ q AND q 에 거래 중 (Tiingo 첫/마지막 거래일)",
+    "unmatched_reasons": "비상장 / 대학·병원 / 이름 / 해외 (사전 고정 추정 규칙 · 리포트 필수)",
+    "known_bias": [
+      "SEC 현재 상장 목록 → 상폐 스폰서 누락 (생존편향)",
+      "현재 스폰서명 기준 (인수 후 이름 변경 반영 안 됨)",
+      "매칭기 v2 는 'A S'·'and Company' 등 표기 차이 미흡수 (대형사 일부 해외/이름 분류)"
+    ],
+    "multi_theme": "H6-design §3 · 다중 테마 소속 시 최고 순위 테마로 배정 (백테스트 단계)"
+  },
+  "backtest": {
+    "rebalance_freq": "quarterly",
+    "hold_horizons_quarters": [
+      1,
+      4
+    ],
+    "position_sizing": "equal weight (테마 상위 3분위 소속 종목 동일 비중)",
+    "benchmark": "XBI (WP27 사전 커밋 · 참고 IWM 병기)",
+    "cost_bps_round_trip": 100,
+    "cost_note": "왕복 1.0% · 분기 회전당 100bps 진입+청산 (분기 2회 왕복 시 200bps 근사)",
+    "entry_price": "리밸런싱 분기 첫 영업일 종가 (adj_close)"
+  },
+  "bootstrap": {
+    "primary": "블록 부트스트랩 · 재추출 단위 = 분기 · seed 42 · 10,000회",
+    "secondary": "iid (종목-분기 이벤트 단위) 병기"
+  },
+  "decision_rule": {
+    "alpha_pass": "상위 3분위 vs 하위 3분위 로그 초과수익 차이 · CI(cluster) 하한 > 0 (1분기·4분기 두 창 모두)",
+    "partial_support": "한 창만 통과 시 부분 지지 표기 (알파 미확인)",
+    "abandonment": "두 창 모두 CI 하한 ≤ 0 OR 매핑 사후 조정 발견"
+  },
+  "controls_reporting": {
+    "note": "NASH·아밀로이드는 상위 3분위 진입 시점·기간 관측만 · 대조군 알파 판정 규칙 없음 (실측 정합성 검증 참조)"
+  },
+  "gate_status": "관문 3 재요청 초안 · Fable 검수 대기 · 백테스트 본 실행 금지",
+  "changelog": [
+    "v2-draft (2026-09-28) · membership 절만 교체 (CT.gov API 300건 상한 → AACT 스냅샷 전량) · signal·rank·backtest·bootstrap·decision_rule 무변경"
+  ],
+  "gate3_request": {
+    "auto_go_rule": "분기별 상위 3분위 주 테마 소속 종목 합 ≥ 3 인 분기 ≥ 20 (h42 정의 승계) · 보조 표기 = 상위·하위 모두 ≥ 3",
+    "result": "PENDING · 서버 추출 후 biotech_h6_membership_v2 산출 수치로 채움",
+    "status": "Fable 검수 대기 · 본 실행 금지"
+  }
+}

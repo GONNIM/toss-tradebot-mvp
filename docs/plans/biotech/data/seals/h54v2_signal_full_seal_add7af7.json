@@ -1,0 +1,47 @@
+{
+  "git_sha": "add7af7",
+  "version": "WP54-2 · 채널 3.5/5 (Form 4 미수집 · h6_membership 이 CT.gov 상태 변경 대체)",
+  "channel_completeness_note": "Form 4 hits=0 (event_type 태깅 부재) → WP28-2 로 실채움 · CT.gov 상태 변경 (AACT) 은 h6_membership 이 대체 근사 · 확정 검정은 채널 완비 후 WP54-3",
+  "rule_precommit": "발표 전 D-180~D-31 소문 채널 신호 유무 · D-30~D-1 순초과수익 차이 · 임계 +1.0%p AND CI 하한 > 0",
+  "channels_used": [
+    "ch1_13D_new (h3_events)",
+    "ch2_F4_P (h3_events event_type · **미수집 · WP28-2 대상**)",
+    "ch3_h6_membership_flag (CT.gov 상태 변경 대체 근사)",
+    "ch4_PubMed_publication_yoY (h57)",
+    "ch5_Preprint_yoY (h58)"
+  ],
+  "channel_stats": {
+    "ch1_13D_hits": 306,
+    "ch2_F4P_hits": 0,
+    "ch3_memb_hits": 950,
+    "ch4_pub_hits": 1297,
+    "ch5_preprint_hits": 125,
+    "pub_idx_coverage": 200,
+    "pre_idx_coverage": 200
+  },
+  "threshold_diff": 0.01,
+  "with_signal": {
+    "n": 1866,
+    "unique_dates": 791,
+    "mean_pre": 0.025,
+    "ci95": [
+      0.0102,
+      0.0416
+    ]
+  },
+  "without_signal": {
+    "n": 2745,
+    "unique_dates": 1073,
+    "mean_pre": 0.0102,
+    "ci95": [
+      -0.0005,
+      0.0217
+    ]
+  },
+  "diff_with_minus_without": 0.0148,
+  "diff_ci95_bootstrap": [
+    -0.0039,
+    0.0345
+  ],
+  "supported": false
+}

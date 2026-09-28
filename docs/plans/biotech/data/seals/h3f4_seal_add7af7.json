@@ -1,0 +1,44 @@
+{
+  "git_sha": "add7af7",
+  "version": "WP63 · H3-F4 · Form 4 매수 추종 별도 검정 (B51 원칙 승계)",
+  "principle": "H3 리포트 불변 · Form 4 는 별도 · H3 와 합산 금지",
+  "input_f4_events": 984,
+  "merged_20d_first": 191,
+  "engine": "biotech_h3_backtest (동결) · 창 30d/180d · XBI · 비용 1% · 시총 50M-5B · 날짜 클러스터 CI",
+  "thresholds_precommit_H3_same": {
+    "h_30d_pct": 5,
+    "h_180d_pct": 15,
+    "hit_min_pct": 35,
+    "ci_lo": 0
+  },
+  "horizons": {
+    "h_30d": {
+      "n": 79,
+      "mean": 5.7838,
+      "hit_pct": 55.7,
+      "ci_block_lo": 0.5461,
+      "ci_block_hi": 11.7615,
+      "threshold": 0.05,
+      "alpha_pass": true
+    },
+    "h_180d": {
+      "n": 73,
+      "mean": 3.2904,
+      "hit_pct": 38.36,
+      "ci_block_lo": -10.3772,
+      "ci_block_hi": 16.8516,
+      "threshold": 0.15,
+      "alpha_pass": false
+    }
+  },
+  "deprecation_triggered": false,
+  "per_event_count": 98,
+  "excluded": {
+    "no_prices": 77,
+    "not_eligible": 12,
+    "no_entry": 0,
+    "entry_lag": 4,
+    "no_exit_data_30d": 19,
+    "no_exit_data_180d": 19
+  }
+}

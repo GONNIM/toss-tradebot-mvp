@@ -33,13 +33,14 @@ DOCS = _P.PROJECT_ROOT / "docs" / "plans" / "biotech"
 
 def git_sha() -> str:
     try:
-        return subprocess.check_output(["git", "rev-parse", "--short", "HEAD"], cwd=str(PROJECT_ROOT)).decode().strip()
+        return subprocess.check_output(["git", "rev-parse", "--short", "HEAD"], cwd=str(_P.PROJECT_ROOT)).decode().strip()
     except Exception:
         return "unknown"
 
 
 def load_seal(name: str, sha: str) -> dict:
-    p = _P.find(f"{name}_{sha}.json", subdir="seals")
+    # 봉인 JSON 조회 · RUNTIME/seals > docs/data/seals (git 추적 · 서버 이식) > backend/data/seals · 로컬 backend/data/biotech/seals 보조
+    p = _P.find(f"{name}_{sha}.json", subdir="seals") or _P.find(f"{name}_{sha}.json", subdir="biotech/seals")
     if p is not None and p.exists():
         try:
             return json.loads(p.read_text())
@@ -49,8 +50,15 @@ def load_seal(name: str, sha: str) -> dict:
 
 
 def latest_file(pattern: str) -> str:
-    matches = sorted(glob.glob(str(DOCS / pattern)))
-    return Path(matches[-1]).name if matches else "(없음)"
+    """최신 산출 파일명 · 서버 RUNTIME (매일 산출) 우선 · 없으면 docs (9/14 동결본).
+
+    파일명에 날짜가 들어 있으므로 이름 정렬 = 날짜 정렬.
+    """
+    for base in ([_P.RUNTIME_DIR] if _P.RUNTIME_DIR else []) + [DOCS]:
+        matches = sorted(glob.glob(str(base / pattern)))
+        if matches:
+            return Path(matches[-1]).name
+    return "(없음)"
 
 
 def read_manual_map() -> str:
@@ -79,6 +87,11 @@ def main():
             sha = fb
 
     h8 = load_seal("h8_h1b_full_seal", sha)
+    if not h8.get("H1b"):
+        # 봉인 (확정 검정 결과 JSON) 없음 → 0% 로 채워 "우연 아님" 문구가 붙는 오표기 방지 · 기존 STATUS.md 유지
+        LOG.warning("h8_h1b_full_seal_%s 미확보 · STATUS.md 갱신 생략 (오표기 방지)", sha)
+        print(json.dumps({"git_sha": sha, "skipped": "seal_missing"}, ensure_ascii=False))
+        return
     # WP54-3 최종 봉인 우선 로드 · fallback WP54-2
     h54v2 = load_seal("h54v3_signal_final_seal", sha) or load_seal("h54v2_signal_full_seal", sha)
     # WP64 · H3-F4 (WP63/WP63-2/WP63-3) held/무효/유효 상태 판정 · v3 → v2 → v1 우선순위
@@ -156,7 +169,7 @@ def main():
 
     manual_map = read_manual_map()
 
-    now_dash = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    now_dash = _P.today_kst_str("%Y-%m-%d")  # 서버 cron 07:00 KST · UTC 쓰면 하루 전 날짜 (관측 9/26~9/28 확인)
 
     lines = []
     lines += [

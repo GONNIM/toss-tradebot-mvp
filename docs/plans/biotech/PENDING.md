@@ -11,6 +11,17 @@
 
 ## PENDING
 
+### [Biotech Catalyst Radar · 관측 마감 (무사고 7일 판정) → Phase C 3 (H6 소속 확장)] · 2026-09-28 발행
+
+**원문 요지**: (1) 관측 마감 (읽기만) · daily.log 9/26·9/27·9/28 각 7/7 · 산출 파일명 KST · /biotech 두 탭 오늘 날짜 · KPI · 기준선 n/30 · 텔레그램 이력 → 무사고 7일 (9/22~9/28) 판정 · 실패일 원인·수정만. (2) Phase C 3 · H6 소속 확장 = AACT 스냅샷에서 테마 키워드 매치 임상 전량 추출 (서버 · 로컬 다운 금지) → 매칭기 v2 → Tiingo 우주 · 미매칭 사유 분해 · h6_membership_v2 (point-in-time · 이탈 없음) · 분기별 소속 수 표 2015Q1~2026Q3 · 가격 커버 계획 (10월 Tiingo 500) · 관문 3 재요청 (자동 GO = 소속 ≥3 분기 ≥20) · 본 실행 금지.
+
+**진전 (2026-09-28 · 로컬만 · 커밋·배포 없음)**:
+- 관측: 7일 × 7/7 실행 · 실패 알림 0 · 상태 탭 표시 결함 3건 → `biotech_h57b_status_gen.py` 수정 + 봉인 JSON 9개 `docs/plans/biotech/data/seals/` 이식 (로컬 검증 완료)
+- C3: `biotech_h6_aact_theme_extract.py` (서버 추출) · `biotech_h6_membership_v2.py` (매칭·소속·가격 계획·관문 판정) · pytest 8건 신규 · `data/h6_params_v2_draft.json` (수치 PENDING)
+- **대기 (사용자 승인)**: ① PR 병합 = 자동 배포 ② 서버 1회 추출 실행 (AACT 2.4GB 다운 → CSV → zip 삭제) ③ 산출 CSV 로컬 회수 → membership_v2 실행 → 관문 3 수치 채움 → Fable 검수
+
+---
+
 ### [Biotech Catalyst Radar · WP69-3g · report/radar/status/form4 개조] · 2026-09-21 발행 · dry-run 2/6 → 3/6 실패 후속
 
 **진전 (2026-09-21 KST 13:32 · main = `6ac3ee3` · PR #13 병합)**:

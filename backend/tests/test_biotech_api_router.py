@@ -183,6 +183,8 @@ def test_o_no_hardcoded_data_paths():
         "biotech_h57b_status_gen.py",
         "biotech_h69_aact_weekly.py",
         "biotech_h50_ct_upcoming.py",
+        "biotech_h6_aact_theme_extract.py",
+        "biotech_h6_membership_v2.py",
     ]
     pats = [
         re.compile(r'\bPath\(\s*[frbu]?["\']backend/data'),

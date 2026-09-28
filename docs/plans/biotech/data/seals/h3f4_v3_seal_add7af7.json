@@ -1,0 +1,137 @@
+{
+  "git_sha": "add7af7",
+  "version": "WP63-3 · 견고성 5건 (a) companyfacts + (b) 클러스터 + (c) 비용민감도 + (d) 13D 중복 + (e) 극단값 표",
+  "input_flow": {
+    "f4_events": 984,
+    "merged_20d": 191
+  },
+  "a_enriched_mcap_coverage": {
+    "existing": 203,
+    "enriched": 203,
+    "added_via_companyfacts": 0,
+    "filter_stats": {
+      "total_merged": 191,
+      "no_mcap": 98,
+      "mcap_out_of_range": 13,
+      "entry_price_lt_1": 1,
+      "no_entry_price": 7
+    },
+    "filtered_n": 72
+  },
+  "a_h30d": {
+    "n": 68,
+    "mean": 5.8497,
+    "hit": 57.35,
+    "ci_block_lo": 0.9097,
+    "ci_block_hi": 11.2719,
+    "alpha_pass_machine": true
+  },
+  "a_h180d": {
+    "n": 63,
+    "mean": 2.1046,
+    "hit": 39.68,
+    "ci_block_lo": -11.1673,
+    "ci_block_hi": 14.2803
+  },
+  "b_clusters": {
+    "unique_dates": 69,
+    "unique_ciks": 44
+  },
+  "c_cost_sensitivity_h30d": {
+    "cost_50bps": {
+      "mean_net_excess": 6.3497,
+      "ci_iid_95_lo": 1.4402
+    },
+    "cost_100bps": {
+      "mean_net_excess": 5.8497,
+      "ci_iid_95_lo": 0.9402
+    },
+    "cost_200bps": {
+      "mean_net_excess": 4.8497,
+      "ci_iid_95_lo": -0.0598
+    },
+    "cost_500bps": {
+      "mean_net_excess": 1.8497,
+      "ci_iid_95_lo": -3.0598
+    }
+  },
+  "c_cost_sensitivity_h180d": {
+    "cost_50bps": {
+      "mean_net_excess": 2.6046,
+      "ci_iid_95_lo": -9.7835
+    },
+    "cost_100bps": {
+      "mean_net_excess": 2.1046,
+      "ci_iid_95_lo": -10.2835
+    },
+    "cost_200bps": {
+      "mean_net_excess": 1.1046,
+      "ci_iid_95_lo": -11.2835
+    },
+    "cost_500bps": {
+      "mean_net_excess": -1.8954,
+      "ci_iid_95_lo": -14.2835
+    }
+  },
+  "d_13d_dupes": {
+    "excluded": 3,
+    "n_after": 69,
+    "h_30d_ci_block_lo": -0.0332,
+    "h_30d_mean": 4.8201,
+    "h_30d_hit": 55.38
+  },
+  "e_extreme_top5": [
+    {
+      "ticker": "KYMR",
+      "event_date": "2023-11-02",
+      "horizon": 180,
+      "entry_price": 12.08,
+      "exit_price": 33.62,
+      "raw_return_pct": 178.31,
+      "cause_hint": "normal"
+    },
+    {
+      "ticker": "TNYA",
+      "event_date": "2022-11-17",
+      "horizon": 180,
+      "entry_price": 2.5,
+      "exit_price": 6.73,
+      "raw_return_pct": 169.2,
+      "cause_hint": "normal"
+    },
+    {
+      "ticker": "ELDN",
+      "event_date": "2024-05-09",
+      "horizon": 180,
+      "entry_price": 2.4,
+      "exit_price": 4.99,
+      "raw_return_pct": 107.92,
+      "cause_hint": "normal"
+    },
+    {
+      "ticker": "KYMR",
+      "event_date": "2022-05-20",
+      "horizon": 180,
+      "entry_price": 14.79,
+      "exit_price": 29.19,
+      "raw_return_pct": 97.36,
+      "cause_hint": "normal"
+    },
+    {
+      "ticker": "TNGX",
+      "event_date": "2022-10-04",
+      "horizon": 30,
+      "entry_price": 3.82,
+      "exit_price": 7.49,
+      "raw_return_pct": 96.07,
+      "cause_hint": "normal"
+    }
+  ],
+  "verdict": {
+    "pass_criteria": "(a) CI 하한 > 0 AND (d) CI 하한 > 0",
+    "a_ci_lo": 0.9097,
+    "d_ci_lo": -0.0332,
+    "passed": false,
+    "status": "유보 강등"
+  }
+}

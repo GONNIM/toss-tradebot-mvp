@@ -1,0 +1,58 @@
+{
+  "git_sha": "add7af7",
+  "pool_note": "WP39 완주 풀 (340/340 CIK · 7,351 events · WP43-4)",
+  "coverage": 0.632,
+  "H8_test1_leading_note": "이벤트 수 상/하 · lo n<10 시 규칙 위반 결과 · WP53 재계산 (rumor_index) 이 정식 판정",
+  "H8_test1_leading": {
+    "hi_bucket": {
+      "n": 4600,
+      "unique_dates": 1349,
+      "mean": 0.0165,
+      "ci95": [
+        0.0074,
+        0.0264
+      ]
+    },
+    "lo_bucket": {
+      "n": 11,
+      "unique_dates": 11,
+      "mean": -0.1212,
+      "ci95": [
+        -0.2284,
+        -0.0159
+      ]
+    },
+    "diff_hi_minus_lo": 0.1377
+  },
+  "H8_test3_sell_news": {
+    "pre_D-30_D-1": {
+      "n": 4611,
+      "mean": 0.0162,
+      "ci95": [
+        0.0073,
+        0.0261
+      ]
+    },
+    "post_D+1_D+30": {
+      "n": 4590,
+      "mean": -0.0074,
+      "ci95": [
+        -0.0138,
+        -0.0007
+      ]
+    },
+    "sell_supported": true
+  },
+  "H1b": {
+    "n": 4611,
+    "unique_dates": 1350,
+    "mean_net_excess_pre": 0.0162,
+    "ci95": [
+      0.0073,
+      0.0261
+    ],
+    "threshold": 0.02,
+    "alpha_pass": false,
+    "decision_note": "폐기 조건 (CI 하한 ≤ 0) 도 · 알파 조건 (mean ≥ +2% AND CI 하한 > 0) 도 아님 = 작지만 실재"
+  }
+}

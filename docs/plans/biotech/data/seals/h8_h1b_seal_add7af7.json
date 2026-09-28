@@ -1,0 +1,55 @@
+{
+  "git_sha": "add7af7",
+  "pool_note": "WP39 부분 풀 (checkpoint · 210/340 CIK · 5423 events)",
+  "H8_test1_leading": {
+    "hi_bucket": {
+      "n": 3534,
+      "unique_dates": 1231,
+      "mean": 0.0142,
+      "ci95": [
+        0.0056,
+        0.0232
+      ]
+    },
+    "lo_bucket": {
+      "n": 4,
+      "unique_dates": 4,
+      "mean": -0.1984,
+      "ci95": [
+        -0.3768,
+        -0.0905
+      ]
+    },
+    "diff_hi_minus_lo": 0.2126
+  },
+  "H8_test3_sell_news": {
+    "pre_D-30_D-1": {
+      "n": 3538,
+      "mean": 0.0139,
+      "ci95": [
+        0.0053,
+        0.023
+      ]
+    },
+    "post_D+1_D+30": {
+      "n": 3534,
+      "mean": -0.0101,
+      "ci95": [
+        -0.0172,
+        -0.0028
+      ]
+    },
+    "sell_supported": true
+  },
+  "H1b": {
+    "n": 3538,
+    "unique_dates": 1231,
+    "mean_net_excess_pre": 0.0139,
+    "ci95": [
+      0.0053,
+      0.023
+    ],
+    "threshold": 0.02,
+    "alpha_pass": false
+  }
+}
