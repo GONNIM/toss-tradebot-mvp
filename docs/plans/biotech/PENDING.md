@@ -20,7 +20,16 @@
 
 ## PENDING
 
-### [Biotech Catalyst Radar · WP80 미등재 용어 검수 반영 + 사전 분류 자동화 설계] · 2026-09-29 발행 → PR #47 배포 승인 대기
+### [Biotech Catalyst Radar · WP80-2 배포 전 확인 · 결정 반영 · MeSH 예외 재계산] · 2026-09-29 발행 → 완료
+
+- PR #47 배포 (`6ba6bc1`) · 13 경로 200 · KYMR 카드 "건강인·약동학" 스크린샷 `docs/plans/biotech/screenshots/20260929_sha_6ba6bc1/wp80_card_KYMR.webp`
+- `docs/plans/biotech/data/h6_params_v2.json` Tiingo 문구 정정 = "월 고유 종목 450개 이내(Tiingo 월 한도 500개 중 배분)"
+- **대기 (검수)**: 한국어 29개 번들 `docs/plans/biotech/fable-bundles/20260929_ko-terms-new-categories-v2.zip` · 자동 분류 설계 `docs/plans/biotech/verification/dictionaries/auto_category_design.md` (트리 우선순위 · C16 표지어 · 어간 확정)
+- 조사 결과: WP80-2 규칙 일치율 80.1% (기존 85.0% · 참고안 84.0%) · 어간 82.4% · 동의어 커버율 14.8% → 34.1%
+
+---
+
+### [Biotech Catalyst Radar · WP80 미등재 용어 검수 반영 + 사전 분류 자동화 설계] · 2026-09-29 발행 → PR #47 배포 완료 (WP80-2 · `6ba6bc1`)
 
 - 사전 v2: `docs/plans/biotech/data/condition_categories.csv` 486행 (303 + 183) · 신설 3 (건강인·약동학 · 통증 · 청각·이비인후) · 이동 5 · 규칙 5·6
 - 한국어 신규 29개 제안만: `docs/plans/biotech/verification/dictionaries/ko_terms_new_categories_proposed_v2.csv` (검수 후 추가)
