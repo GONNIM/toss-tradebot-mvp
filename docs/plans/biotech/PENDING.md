@@ -20,6 +20,16 @@
 
 ## PENDING
 
+### [Biotech Catalyst Radar · WP80 미등재 용어 검수 반영 + 사전 분류 자동화 설계] · 2026-09-29 발행 → PR #47 배포 승인 대기
+
+- 사전 v2: `docs/plans/biotech/data/condition_categories.csv` 486행 (303 + 183) · 신설 3 (건강인·약동학 · 통증 · 청각·이비인후) · 이동 5 · 규칙 5·6
+- 한국어 신규 29개 제안만: `docs/plans/biotech/verification/dictionaries/ko_terms_new_categories_proposed_v2.csv` (검수 후 추가)
+- MeSH 트리 자동 분류 설계 = 보고만 (AACT 파일 export 에 tree_number 없음 · NLM MeSH API 로 조사) · 구현은 검수 후 별도 승인
+- 확인: `docs/plans/biotech/data/h6_params_v2.json` 215행 Tiingo 문구 "월 450회 이내 · 1티커 1호출" 미정정 (사용자 결정 대기)
+- 배포 후: 신설 분류 카드가 있으면 스크린샷 WebP
+
+---
+
 ### [Biotech Catalyst Radar · WP79 사전 검수 반영 · 배포 미시작 알림 · 관측] · 2026-09-29 발행 → 배포 완료 (PR #45)
 
 - 관측 9/29 07:00: 8/8 · 72초 (이전 약 22초 · Form 4 약 49초 추가) · 경보 1 (ENTX · 레딧 매치) · z.ai 1회 실패 (glm-5.3 는 추론 끄기 거부 · HTTP 400/1210) → 추론 낮음 1회 재시도로 수정 · A 상태 36 → 63 (AACT 매칭 확대 반영)

@@ -212,7 +212,8 @@
     "c_obesity_mcap_split": "pre_run_rules.b_obesity_mcap_split 유지 · '전체' 와 '대형 5B+ 제외' 두 열 병기 · 판정은 '전체' 열"
   },
   "price_collection": {
-    "approved": "2026-10-01 부터 · Tiingo 59종목 · 임상 수 많은 순 · 월 450회 이내 · 1티커 1호출",
-    "coverage_report": "완료 후 커버 n/76 · 창 커버 판정식 v2.1 원문 = 'first_bar ≤ 창시작+7d AND last_bar ≥ event-30d' (docs/plans/biotech/B83-collection-plan.md) · H6 적용 시 창시작 = 리밸런싱 분기 첫 영업일 · event = 보유 창 종료일"
+    "approved": "2026-10-01 부터 · Tiingo 59종목 · 임상 수 많은 순 · 월 고유 종목 450개 이내(Tiingo 월 한도 500개 중 배분) · 1티커 1호출",
+    "coverage_report": "완료 후 커버 n/76 · 창 커버 판정식 v2.1 원문 = 'first_bar ≤ 창시작+7d AND last_bar ≥ event-30d' (docs/plans/biotech/B83-collection-plan.md) · H6 적용 시 창시작 = 리밸런싱 분기 첫 영업일 · event = 보유 창 종료일",
+    "limit_basis": "docs/plans/biotech/SOURCES.md 21행 · Tiingo 개인 무료 = 무료 1,000 req/day · 500 unique symbols/월 (WP80-2 · 2026-09-29 정정)"
   }
 }

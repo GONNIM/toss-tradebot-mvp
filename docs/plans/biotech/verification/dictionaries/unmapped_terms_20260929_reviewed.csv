@@ -1,0 +1,184 @@
+term,source,n_trials,example_ticker,example_nct,proposed_category,reviewer_decision
+Healthy Volunteer Study,condition,19,AVIR,NCT04784000,,건강인·약동학
+"Angioedemas, Hereditary",mesh,17,BCRX,NCT03202784,,희귀 유전
+Healthy Volunteers,condition,14,CLYM,NCT07090655,,건강인·약동학
+Healthy Volunteer,condition,10,ARDX,NCT02176252,,건강인·약동학
+Healthy,condition,10,ARDX,NCT02346890,,건강인·약동학
+Hyperphosphatemia,mesh,6,ARDX,NCT02081534,,신장
+"Kidney Failure, Chronic",mesh,6,ARDX,NCT02081534,,신장
+"Hemoglobinuria, Paroxysmal",mesh,6,BCRX,NCT04330534,,혈액
+Multiple Sclerosis,mesh,6,CTNM,NCT04941781,,신경·정신
+Constipation Predominant Irritable Bowel Syndrome,condition,5,ARDX,NCT01923428,,소화기
+Healthy Subjects,condition,4,BEAM,NCT07304791,,건강인·약동학
+Squamous Intraepithelial Lesions,mesh,4,INO,NCT03499795,,암
+Neuroendocrine Tumors,mesh,4,EXEL,NCT06926634,,암
+Gout,mesh,3,BCRX,NCT01265264,,근골격
+Hyperuricemia,mesh,3,BCRX,NCT01265264,,비만·대사
+Irritable Bowel Syndrome With Constipation (IBS-C),condition,3,ARDX,NCT05643534,,소화기
+HIV Infections,mesh,3,INO,NCT05781542,,감염
+"Hemorrhagic Fever, Ebola",mesh,3,BCRX,NCT02319772,,감염
+Metastatic Castration-resistant Prostate Cancer,condition,3,EXEL,NCT06568562,,암
+Pharmacokinetics,condition,3,ENSC,NCT06500793,,건강인·약동학
+Select Advanced Solid Tumors,condition,3,IMCR,NCT04262466,,암
+Central Nervous System Neoplasms,mesh,2,AGEN,NCT00905060,,암
+"Mesothelioma, Malignant",mesh,2,ATRA,NCT04577326,,암
+"Neoplasms, Germ Cell and Embryonal",mesh,2,EXEL,NCT04876456,,암
+Pancreatic Adenocarcinoma Metastatic,condition,2,EXEL,NCT03213626,,암
+Hyperkalemia,mesh,2,ARDX,NCT04780841,,신장
+"Multiple Sclerosis, Relapsing-Remitting",mesh,2,IMUX,NCT03846219,,신경·정신
+Safety and Tolerability in Healthy Volunteers,condition,2,ANNX,NCT04535752,,건강인·약동학
+Uterine Cervical Dysplasia,mesh,2,INO,NCT03185013,,암
+Zika Virus Infection,mesh,2,INO,NCT02809443,,감염
+Lassa Fever,mesh,2,INO,NCT04093076,,감염
+Dermatomyositis,mesh,2,CRBP,NCT03813160,,면역·염증
+Myotonic Dystrophy,mesh,2,DYN,NCT05481879,,희귀 유전
+Healthy Participants,condition,2,KYMR,NCT07412288,,건강인·약동학
+Recreational Drug Use,mesh,2,ENSC,NCT05567354,,건강인·약동학
+Healthy Adults,condition,1,EWTX,NCT07177066,,건강인·약동학
+"Leukemia, T-Cell",mesh,1,BCRX,NCT00095381,,암
+EBV-induced Lymphomas,condition,1,ATRA,NCT01498484,,암
+EBV-associated Malignancies,condition,1,ATRA,NCT01498484,,암
+Transplant Patients With EBV Viremia at High Risk for Developing a Recurrent EBV Lymphoma,condition,1,ATRA,NCT01498484,,암
+P1b: Advanced Solid Tumors,condition,1,CMPX,NCT04492033,,암
+P2: Biliary Tract Cancer,condition,1,CMPX,NCT04492033,,암
+Acute Pain,mesh,1,ENSC,NCT06629402,,통증
+"Leukemia, Myelomonocytic, Juvenile",mesh,1,GERN,NCT06247787,,암
+Advanced Adult Hepatocellular Carcinoma,condition,1,EXEL,NCT04497038,,암
+Ulcerative Colitis Chronic Mild,condition,1,ASMB,NCT03923478,,소화기
+Ulcerative Colitis Chronic Moderate,condition,1,ASMB,NCT03923478,,소화기
+mCRPC (Metastatic Castration-resistant Prostate Cancer),condition,1,EXEL,NCT07623460,,암
+Arthritis,mesh,1,BCRX,NCT01265264,,근골격
+Joint Diseases,mesh,1,BCRX,NCT01265264,,근골격
+Healthy Participant Study,condition,1,BEAM,NCT07304791,,건강인·약동학
+FSHD,condition,1,DYN,NCT04635891,,희귀 유전
+Anus Neoplasms,mesh,1,INO,NCT03499795,,암
+Vulvar High Grade Squamous Intraepithelial Lesion (HSIL),condition,1,INO,NCT03180684,,암
+Vulvar Dysplasia,condition,1,INO,NCT03180684,,암
+Vulvar Intraepithelial Neoplasia (VIN),condition,1,INO,NCT03180684,,암
+VIN2,condition,1,INO,NCT03180684,,암
+VIN3,condition,1,INO,NCT03180684,,암
+Pre-cancerous Lesions of the Vulva,condition,1,INO,NCT03180684,,암
+Human Papillomavirus (HPV),condition,1,INO,NCT03180684,,감염
+Bipolar Disorder I or II With a Major Depressive Episode,condition,1,ANRO,NCT06656416,,신경·정신
+Metastatic Renal Cell Carcinoma Treated With Cabozantinib,condition,1,EXEL,NCT03867045,,암
+"Diabetes Mellitus, Type 1",mesh,1,ELDN,NCT06305286,,비만·대사
+Metastatic Pancreatic Adenocarcinoma,condition,1,FTH,NCT05078775,,암
+Locally Advanced Unresectable Pancreatic Adenocarcinoma,condition,1,FTH,NCT05078775,,암
+Solid Tumor,condition,1,CRBP,NCT06603844,,암
+Drug Safety,condition,1,ENTX,NCT02202603,,건강인·약동학
+Marburg Virus Disease,mesh,1,BCRX,NCT03800173,,감염
+Advanced Hepatocellular Carcinoma,condition,1,EXEL,NCT04442581,,암
+BCLC Stage B Hepatocellular Carcinoma,condition,1,EXEL,NCT04442581,,암
+BCLC Stage C Hepatocellular Carcinoma,condition,1,EXEL,NCT04442581,,암
+Resectable MMR-deficient Solid Tumors,condition,1,AGEN,NCT06279130,,암
+Resectable MMR-proficient Solid Tumors,condition,1,AGEN,NCT06279130,,암
+Irritable Bowel Syndrome,mesh,1,ARDX,NCT05995899,,소화기
+Seminoma,mesh,1,EXEL,NCT04876456,,암
+Nonseminomatous germ cell tumor,mesh,1,EXEL,NCT04876456,,암
+Filoviridae Infections,mesh,1,BCRX,NCT02319772,,감염
+"Hearing Loss, Sensorineural",mesh,1,CTNM,NCT04462198,,청각·이비인후
+Hearing Loss,mesh,1,CTNM,NCT04462198,,청각·이비인후
+"Hearing Loss, Hidden",mesh,1,CTNM,NCT04462198,,청각·이비인후
+Deafness,mesh,1,CTNM,NCT04462198,,청각·이비인후
+"Disruptive, Impulse Control, and Conduct Disorders",mesh,1,ACAD,NCT05895513,,신경·정신
+Aggression,mesh,1,ACAD,NCT05895513,,신경·정신
+Healthy Adult Participants,condition,1,EWTX,NCT07456059,,건강인·약동학
+Pheochromocytoma,mesh,1,EXEL,NCT07714551,,암
+Paraganglioma,mesh,1,EXEL,NCT07714551,,암
+Sleep Initiation and Maintenance Disorders,mesh,1,ACAD,NCT04809116,,신경·정신
+"Stress Disorders, Post-Traumatic",mesh,1,ACAD,NCT04809116,,신경·정신
+Gastric Adenocarcinoma,condition,1,EXEL,NCT04164979,,암
+GastroEsophageal Cancer,condition,1,EXEL,NCT04164979,,암
+Autism Spectrum Disorder,mesh,1,ACAD,NCT05999240,,신경·정신
+Autistic Disorder,mesh,1,ACAD,NCT05999240,,신경·정신
+Aggressive Variant Prostate Carcinoma,condition,1,EXEL,NCT07218666,,암
+Advanced Urothelial Carcinoma,condition,1,EXEL,NCT07185945,,암
+Post-transplant Lymphoproliferative Disorder,condition,1,ADCT,NCT07573436,,암
+Double-Expressor Lymphoma,condition,1,ADCT,NCT05600686,,암
+High Grade B-Cell Lymphoma With MYC and BCL2 and/or BCL6 Rearrangements,condition,1,ADCT,NCT05600686,,암
+High Grade B-Cell Lymphoma With MYC and BCL2 or BCL6 Rearrangements,condition,1,ADCT,NCT05600686,,암
+"High Grade B-Cell Lymphoma With MYC, BCL2, and BCL6 Rearrangements",condition,1,ADCT,NCT05600686,,암
+Sarcoma of the Extremity,condition,1,EXEL,NCT04220229,,암
+Stage I Soft Tissue Sarcoma of the Trunk and Extremities,condition,1,EXEL,NCT04220229,,암
+Stage IA Soft Tissue Sarcoma of the Trunk and Extremities,condition,1,EXEL,NCT04220229,,암
+Stage IB Soft Tissue Sarcoma of the Trunk and Extremities,condition,1,EXEL,NCT04220229,,암
+Stage II Soft Tissue Sarcoma of the Trunk and Extremities,condition,1,EXEL,NCT04220229,,암
+Metastatic Castration Resistant Prostate Cancer,condition,1,IMUX,NCT05124795,,암
+Locally Advanced Renal Cell Carcinoma,condition,1,EXEL,NCT06794229,,암
+Hepatitis D,mesh,1,ASMB,NCT06740474,,감염
+Pancreatic Ductal Adenocarcinoma,condition,1,AGEN,NCT04827953,,암
+"Carcinoma, Medullary",mesh,1,EXEL,NCT01683110,,암
+Advanced Renal Cell Carcinoma,condition,1,AGEN,NCT05928806,,암
+Chronic Hepatitis C Virus Infection,condition,1,INO,NCT00563173,,감염
+Neuroblastoma,mesh,1,GERN,NCT01916187,,암
+Higher Risk Myelodysplastic Syndromes,condition,1,ALXO,NCT04417517,,암
+Central Nervous System Lymphoma,condition,1,ADCT,NCT06607549,,암
+Bronchiolitis Obliterans Syndrome,mesh,1,IOVA,NCT01937468,,호흡기
+Hidradenitis,mesh,1,KYMR,NCT07629336,,피부
+Netherton Syndrome,mesh,1,BCRX,NCT06539507,,희귀 유전
+Solid Tumors,condition,1,EXEL,NCT07123103,,암
+Advanced Clear Cell Renal Cell Carcinoma or Other Advanced Solid Tumors,condition,1,EXEL,NCT06191796,,암
+"Pleural Effusion, Malignant",mesh,1,IOVA,NCT07192900,,암
+Chronic Hepatitis D Infection,condition,1,ASMB,NCT07762027,,감염
+Advanced Metastatic Melanoma,condition,1,EXEL,NCT03957551,,암
+Head and Neck Squamous Cell Cancer,condition,1,INO,NCT02163057,,암
+Carcinoid Tumor,mesh,1,EXEL,NCT04197310,,암
+Healthy Volunteers Study,condition,1,AVIR,NCT05137626,,건강인·약동학
+HIV-1-infection,condition,1,INO,NCT03606213,,감염
+Healthy Volunteers Food Interaction Study,condition,1,ARDX,NCT02226783,,건강인·약동학
+Cytomegalovirus Infections,mesh,1,ATRA,NCT03010332,,감염
+Acquired Immunodeficiency Syndrome,mesh,1,ATRA,NCT03010332,,감염
+Healthy Adult Subjects,condition,1,FULC,NCT05002231,,건강인·약동학
+X-Linked Retinitis Pigmentosa,condition,1,FDMT,NCT04517149,,희귀 유전
+Idiopathic Pulmonary Fibrosis,mesh,1,CTNM,NCT07284459,,호흡기
+Pulmonary Fibrosis,mesh,1,CTNM,NCT07284459,,호흡기
+"Lung Diseases, Interstitial",mesh,1,CTNM,NCT07284459,,호흡기
+Myotonia,mesh,1,DYN,NCT07486934,,희귀 유전
+Myotonic Disorders,mesh,1,DYN,NCT07486934,,희귀 유전
+CML,condition,1,IKT,NCT05623774,,암
+Bone Neoplasms,mesh,1,EXEL,NCT07193550,,암
+Sickle Cell Trait,mesh,1,BEAM,NCT06071377,,희귀 유전
+Choroideremia,mesh,1,FDMT,NCT04483440,,희귀 유전
+Metastatic Bladder Urothelial Carcinoma,condition,1,IOVA,NCT03935347,,암
+Metastatic Renal Pelvis Urothelial Carcinoma,condition,1,IOVA,NCT03935347,,암
+Metastatic Ureter Urothelial Carcinoma,condition,1,IOVA,NCT03935347,,암
+Metastatic Urethral Urothelial Carcinoma,condition,1,IOVA,NCT03935347,,암
+Unresectable Renal Pelvis Urothelial Carcinoma,condition,1,IOVA,NCT03935347,,암
+Unresectable Ureter Urothelial Carcinoma,condition,1,IOVA,NCT03935347,,암
+Microsatellite Stable Rectal Carcinoma,condition,1,AGEN,NCT06843434,,암
+Locally Advanced Rectal Adenocarcinoma,condition,1,AGEN,NCT06843434,,암
+"Acute, Uncomplicated Human Influenza",condition,1,BCRX,NCT00705406,,감염
+Refractory Acute Leukemia,condition,1,KURA,NCT06397027,,암
+Pediatric Relapsed,condition,1,KURA,NCT06397027,,암
+Metastatic Hormone Refractory Prostate Cancer,condition,1,EXEL,NCT04477512,,암
+Recurrent respiratory papillomatosis,mesh,1,INO,NCT04398433,,감염
+HIV Seropositivity,mesh,1,INO,NCT03603808,,감염
+Ischemic Stroke,mesh,1,CRVO,NCT06987643,,신경·정신
+Pancreatic Cancer Metastatic,condition,1,AGEN,NCT06076837,,암
+Drug-drug Interaction,condition,1,AUPH,NCT05306379,,건강인·약동학
+Breast Feeding,mesh,1,ARDX,NCT06203444,,건강인·약동학
+BRCA1/2 Mutation,condition,1,INO,NCT04367675,,암
+Healthy Participants Study,condition,1,KYMR,NCT06673667,,건강인·약동학
+Drug Safety and Bioavailability,condition,1,ENTX,NCT02571140,,건강인·약동학
+Cytomegalovirus,condition,1,ATRA,NCT01646645,,감염
+"Mycobacterium Infections, Nontuberculous",mesh,1,ANTX,NCT07301320,,감염
+HER2-expressing Cancers,condition,1,ALXO,NCT05027139,,암
+Chronic Pain,mesh,1,CTNM,NCT06810245,,통증
+Pain,mesh,1,CTNM,NCT06810245,,통증
+Low Back Pain,mesh,1,CTNM,NCT06810245,,통증
+Osteoarthritis,mesh,1,CTNM,NCT06810245,,근골격
+Agnosia,mesh,1,CTNM,NCT06810245,,신경·정신
+Neuralgia,mesh,1,CTNM,NCT06810245,,통증
+Chronic Hepatitis B Infections,condition,1,ALGS,NCT07342868,,감염
+"Carcinoma, Neuroendocrine",mesh,1,CMPX,NCT07684170,,암
+Meningioma,mesh,1,EXEL,NCT05425004,,암
+Volunteers,condition,1,AUPH,NCT02949999,,건강인·약동학
+"Amyloid Neuropathies, Familial",mesh,1,BBIO,NCT07062848,,희귀 유전
+Non-Clear Cell Renal Cell Carcinoma,condition,1,EXEL,NCT05678673,,암
+"Multiple Sclerosis, Chronic Progressive",mesh,1,IMUX,NCT05054140,,신경·정신
+Chronic Idiopathic Constipation (CIC),condition,1,ARDX,NCT07382167,,소화기
+Metabolic Diseases,mesh,1,FATE,NCT02354443,,비만·대사
+High Grade Neuroendocrine Neoplasms,condition,1,EXEL,NCT04412629,,암
+"Pyloric Stenosis, Hypertrophic",mesh,1,EXEL,NCT00884546,,소화기
+"Carcinoma, Basal Cell",mesh,1,EXEL,NCT00670189,,암
+Small Cell Lung Carcinoma,mesh,1,EXEL,NCT00927875,,암

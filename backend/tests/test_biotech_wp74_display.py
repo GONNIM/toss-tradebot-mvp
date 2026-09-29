@@ -49,7 +49,7 @@ def test_rumor_rows_have_display_fields():
 
 
 def test_wp79_dictionary_categories(tmp_path, monkeypatch):
-    """검수 v1 · 참가 조건 3건 = '기타' · 미용 신설 · 미등재 = '기타 (원문)'."""
+    """검수 v1 · 미용 신설 · 미등재 = '기타 (원문)' · 참가 조건 3건은 v2 (WP80) 에서 '건강인·약동학' 으로 이동."""
     import json as _json
     snap = {"matches": [
         {"nct_id": f"NCT0000000{i}", "conditions": [c], "mesh_terms": []}
@@ -59,7 +59,7 @@ def test_wp79_dictionary_categories(tmp_path, monkeypatch):
     monkeypatch.setattr(b, "DATA_DIR_RUNTIME", tmp_path)
     b._FILE_CACHE.clear()
     cats = [b._trial_display(f"NCT0000000{i}")["category"] for i in range(6)]
-    assert cats[:3] == ["기타", "기타", "기타"]
+    assert cats[:3] == ["건강인·약동학", "건강인·약동학", "건강인·약동학"]   # v1 '기타' → v2 이동
     assert cats[3:5] == ["미용", "미용"]
     assert cats[5] == "기타 (Some Unlisted Thing)"
 
@@ -75,3 +75,16 @@ def test_wp79_card_text_renders_new_categories():
         pytest.skip("npx/node_modules 없음")
     r = subprocess.run(["npx", "--yes", "tsx", "lib/biotech-display.check.ts"], cwd=fe, capture_output=True, text=True, timeout=120)
     assert r.returncode == 0, r.stderr[-500:]
+
+
+
+def test_wp80_dictionary_v2_categories(tmp_path, monkeypatch):
+    """사전 v2 · 신설 분류 3개 · 전암 병변 = 암 · 참가 조건 = 건강인·약동학."""
+    import json as _json
+    terms = ["Healthy Volunteers", "Chronic Pain", "Hearing Loss", "Uterine Cervical Dysplasia", "Hepatic Impairment"]
+    snap = {"matches": [{"nct_id": f"NCT1000000{i}", "conditions": [t], "mesh_terms": []} for i, t in enumerate(terms)]}
+    (tmp_path / "ctgov_snapshot.json").write_text(_json.dumps(snap))
+    monkeypatch.setattr(b, "DATA_DIR_RUNTIME", tmp_path)
+    b._FILE_CACHE.clear()
+    cats = [b._trial_display(f"NCT1000000{i}")["category"] for i in range(len(terms))]
+    assert cats == ["건강인·약동학", "통증", "청각·이비인후", "암", "건강인·약동학"]
