@@ -38,6 +38,8 @@ LOG = logging.getLogger("biotech_llm")
 ZAI_BASE_URL = "https://api.z.ai/api/paas/v4"   # z.ai OpenAI 호환 (backend/services/llm.py 와 같은 주소)
 ZAI_MODEL_FALLBACK = "glm-4.6"                  # ③ 마지막 수단 · 2026-09-28 목록에 존재 확인
 TIMEOUT_SEC = 20.0
+THINKING_OFF = {"type": "disabled"}
+THINKING_LOW = {"type": "enabled", "level": "low"}  # 2026-09-29 서버 실측 · glm-5.3 허용 형식
 MAX_LINES = 3
 # 정식 판별 · 변형 표시 (미리보기·실험·경량·비전 등) 가 이름에 있으면 정식 아님
 _VARIANT_RE = re.compile(r"preview|beta|exp|alpha|test|dev|flash|air|vision|turbo|mini|lite|\dv\b", re.IGNORECASE)
@@ -185,23 +187,45 @@ def summarize(ticker: str, sources: list[str], post: Callable[[str, dict], dict]
         "temperature": 0.1,
         "max_tokens": 800,
         # glm-5.x 는 추론 모드 기본 · 추론이 토큰을 소진해 본문이 잘리는 사례 (2026-09-28 ENTX "레" 한 글자) → 끔
-        "thinking": {"type": "disabled"},
+        "thinking": dict(THINKING_OFF),
     }
     try:
-        data = (post or _post)(f"{ZAI_BASE_URL}/chat/completions", payload)
+        try:
+            data = (post or _post)(f"{ZAI_BASE_URL}/chat/completions", payload)
+        except ZaiError as e:
+            # WP79 · glm-5.3 은 추론 끄기 거부 (HTTP 400 · code 1210 "use low, high, or max") → 추론 '낮음' 으로 1회만 재시도
+            if e.code != "1210":
+                raise
+            LOG.info("z.ai 추론 끄기 거부 (1210) · 추론 낮음으로 1회 재시도 · model=%s", model)
+            payload["thinking"] = THINKING_LOW
+            data = (post or _post)(f"{ZAI_BASE_URL}/chat/completions", payload)
         text = data["choices"][0]["message"]["content"]
     except Exception as e:
-        LOG.warning("z.ai 요약 실패 · ticker=%s · %s", ticker, e.__class__.__name__)
-        return {"ok": False, "model": model, "model_source": how, "error": e.__class__.__name__}
+        detail = f"{e.__class__.__name__}" + (f" {e.status}/{e.code}" if isinstance(e, ZaiError) else "")
+        LOG.warning("z.ai 요약 실패 · ticker=%s · %s", ticker, detail)
+        return {"ok": False, "model": model, "model_source": how, "error": detail}
     kept, dropped = validate_lines(text, len(sources))
     return {"ok": bool(kept), "model": model, "model_source": how, "lines": kept, "dropped": dropped}
+
+
+class ZaiError(RuntimeError):
+    """z.ai 오류 응답 · status·code 만 보관 (본문·키 미보관)."""
+
+    def __init__(self, status: int, code: str) -> None:
+        super().__init__(f"z.ai HTTP {status} code {code}")
+        self.status, self.code = status, code
 
 
 def _post(url: str, payload: dict) -> dict:
     r = httpx.post(url, headers=_headers(), json=payload, timeout=TIMEOUT_SEC)
     if r.status_code in (403, 429):
-        raise RuntimeError(f"z.ai HTTP {r.status_code}")
-    r.raise_for_status()
+        raise ZaiError(r.status_code, "blocked")
+    if r.status_code >= 400:
+        try:
+            code = str((r.json().get("error") or {}).get("code", ""))
+        except Exception:
+            code = ""
+        raise ZaiError(r.status_code, code)
     return r.json()
 
 

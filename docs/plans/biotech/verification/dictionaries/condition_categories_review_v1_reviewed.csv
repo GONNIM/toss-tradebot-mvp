@@ -1,0 +1,304 @@
+term,category,source,suspect,why,reviewer_decision
+Anthrax,감염,mesh,,,유지
+COVID-19,감염,mesh,,,유지
+Chagas Disease,감염,mesh,,,유지
+Coronavirus Infections,감염,mesh,,,유지
+Dengue,감염,mesh,,,유지
+Flaviviridae Infections,감염,mesh,,,유지
+HEPATITIS C VIRUS CHRONIC INFECTION,감염,condition,,,유지
+"Hemorrhagic Fevers, Viral",감염,mesh,,,유지
+Hepatitis B,감염,mesh,,,유지
+"Hepatitis B, Chronic",감염,mesh,,,유지
+Hepatitis C,감염,mesh,,,유지
+"Hepatitis C, Chronic",감염,mesh,,,유지
+Hepatitis E,감염,mesh,,,유지
+"Hepatitis, Viral, Human",감염,mesh,,,유지
+Herpes Genitalis,감염,mesh,,,유지
+Infections,감염,mesh,,,유지
+Influenza in Birds,감염,mesh,,,유지
+"Influenza, Human",감염,mesh,,,유지
+Melioidosis,감염,mesh,,,유지
+Mycobacterium Infections,감염,mesh,,,유지
+Mycobacterium avium-intracellulare Infection,감염,mesh,,,유지
+Pneumonia,감염,mesh,,,유지
+Respiratory Tract Infections,감염,mesh,,,유지
+Vector Borne Diseases,감염,mesh,,,유지
+Virus Diseases,감염,mesh,,,유지
+"Fractures, Bone",근골격,mesh,,,유지
+Muscular Diseases,근골격,mesh,,,유지
+"Muscular Disorders, Atrophic",근골격,mesh,,,유지
+Musculoskeletal Diseases,근골격,mesh,,,유지
+Osteoarthritis Pain,근골격,condition,,,유지
+Osteoporosis,근골격,mesh,,,유지
+Vasomotor Symptoms Associated With Menopause,기타,condition,의심,여성 건강 분류 없음 → 기타,유지(기타) · 여성 건강 용어 3개 이상 쌓이면 분류 신설
+"Arthritis, Rheumatoid",면역·염증,mesh,,,유지
+Autoimmune Diseases,면역·염증,mesh,,,유지
+Hypersensitivity,면역·염증,mesh,,,유지
+Immune Complex Diseases,면역·염증,mesh,,,유지
+Immune System Diseases,면역·염증,mesh,,,유지
+"Lupus Erythematosus, Systemic",면역·염증,mesh,,,유지
+Lupus Nephritis,면역·염증,mesh,의심,신장으로 볼 수도 있음,유지
+Myositis,면역·염증,mesh,,,유지
+Pulmonary Eosinophilia,면역·염증,mesh,의심,호흡기로 볼 수도 있음,호흡기
+"Scleroderma, Diffuse",면역·염증,mesh,,,유지
+"Scleroderma, Systemic",면역·염증,mesh,,,유지
+Sjogren's Syndrome,면역·염증,mesh,,,유지
+Sjögrens Disease,면역·염증,condition,,,유지
+Systemic Inflammatory Response Syndrome,면역·염증,mesh,,,유지
+Systemic Lupus Erthematosus,면역·염증,condition,,,유지
+Diabetes Mellitus,비만·대사,mesh,,,유지
+"Diabetes Mellitus, Type 2",비만·대사,mesh,,,유지
+Hypoglycemia,비만·대사,mesh,의심,대사 이상 · 비만과 직접 관련은 약함,유지 · 위와 같음
+Hypoparathyroidism,비만·대사,mesh,의심,내분비 질환 · 분류 목록에 내분비 없음 → 비만·대사에 넣음,유지 · 내분비 질환은 비만·대사에 둠(분류 설명에 '내분비 포함' 명시)
+Metabolic Dysfunction-Associated Steatohepatitis (MASH),비만·대사,condition,,,유지
+Non-alcoholic Fatty Liver Disease,비만·대사,mesh,,,유지
+Obesity,비만·대사,mesh,,,유지
+Overweight,비만·대사,mesh,,,유지
+Alcohol-associated Liver Disease,소화기,condition,,,유지
+Celiac Disease,소화기,mesh,,,유지
+"Colitis, Ulcerative",소화기,mesh,,,유지
+Crohn Disease,소화기,mesh,,,유지
+Hepatic Impairment,소화기,condition,의심,질환이 아니라 참가 조건 (간기능 저하자 대상 약동학 시험),기타
+Hepatic Impairment (HI),소화기,condition,의심,질환이 아니라 참가 조건,기타
+Inflammatory Bowel Diseases,소화기,mesh,,,유지
+Liver Cirrhosis,소화기,mesh,,,유지
+Liver Diseases,소화기,mesh,,,유지
+Pancreatitis,소화기,mesh,,,유지
+Adjunctive Treatment of Major Depressive Disorder,신경·정신,condition,,,유지
+Alcoholism,신경·정신,mesh,의심,중독 · 신경·정신에 넣음,유지
+Alzheimer Disease,신경·정신,mesh,,,유지
+Alzheimer's Disease Psychosis,신경·정신,condition,,,유지
+Amyotrophic Lateral Sclerosis,신경·정신,mesh,,,유지
+Central Nervous System Diseases,신경·정신,mesh,,,유지
+Corticobasal Degeneration,신경·정신,mesh,,,유지
+Delusions,신경·정신,mesh,,,유지
+Dementia,신경·정신,mesh,,,유지
+"Dementia, Vascular",신경·정신,mesh,,,유지
+"Depressive Disorder, Major",신경·정신,mesh,,,유지
+"Depressive Disorder, Treatment-Resistant",신경·정신,mesh,,,유지
+Guillain-Barre Syndrome,신경·정신,mesh,의심,자가면역 신경병 · 면역·염증으로 볼 수도 있음,유지
+Hallucinations,신경·정신,mesh,,,유지
+Irritability Associated With Autism Spectrum Disorder,신경·정신,condition,,,유지
+Lewy Body Dementia Psychosis,신경·정신,condition,,,유지
+Lewy Body Disease,신경·정신,mesh,,,유지
+Motor Neuron Disease,신경·정신,mesh,,,유지
+Myasthenia Gravis,신경·정신,mesh,의심,자가면역 · 면역·염증으로 볼 수도 있음,유지
+Nervous System Diseases,신경·정신,mesh,,,유지
+Neurodegenerative Diseases,신경·정신,mesh,,,유지
+Neuromuscular Diseases,신경·정신,mesh,,,유지
+Neuropsychiatric Symptoms Related to Neurodegenerative Disease,신경·정신,condition,,,유지
+"Pain, Postoperative",신경·정신,mesh,의심,통증 · 신경·정신 분류가 맞는지 확인,유지 · 통증 용어 3개 이상 쌓이면 '통증' 분류 신설 검토
+Parkinson Disease,신경·정신,mesh,,,유지
+"Parkinson Disease 4, Autosomal Dominant Lewy Body",신경·정신,mesh,,,유지
+Parkinson Disease Psychosis,신경·정신,condition,,,유지
+Parkinson's Disease Psychosis,신경·정신,condition,,,유지
+Psychomotor Agitation,신경·정신,mesh,,,유지
+Psychotic Disorders,신경·정신,mesh,,,유지
+Schizophrenia,신경·정신,mesh,,,유지
+Spinal Cord Diseases,신경·정신,mesh,,,유지
+"Supranuclear Palsy, Progressive",신경·정신,mesh,,,유지
+TDP-43 Proteinopathies,신경·정신,mesh,,,유지
+Treatment of Depression in Adults With Parkinson's Disease (PD),신경·정신,condition,,,유지
+Acute Kidney Injury,신장,mesh,,,유지
+"Glomerulonephritis, IGA",신장,mesh,의심,면역·염증으로 볼 수도 있음,유지
+"Glomerulosclerosis, Focal Segmental",신장,mesh,,,유지
+Kidney Diseases,신장,mesh,,,유지
+Primary Membranous Nephropathy,신장,condition,,,유지
+Renal Impairments,신장,condition,의심,질환이 아니라 참가 조건,기타
+Renal Insufficiency,신장,mesh,,,유지
+"Renal Insufficiency, Chronic",신장,mesh,,,유지
+Renal Transplantation,신장,condition,의심,시술 · 질환 분류 아님,유지(신장) · 이식 거부 억제제 시장
+"Cardiomyopathy, Hypertrophic",심혈관,mesh,,,유지
+Heart Diseases,심혈관,mesh,,,유지
+Heart Failure,심혈관,mesh,,,유지
+Pericarditis,심혈관,mesh,,,유지
+Pulmonary Arterial Hypertension,심혈관,mesh,의심,호흡기로 볼 수도 있음,유지
+Blindness,안과,mesh,,,유지
+Corneal Injuries,안과,mesh,,,유지
+Diabetic Macular Edema (DME),안과,condition,,,유지
+Diabetic Retinopathy,안과,mesh,,,유지
+Dry Eye Syndromes,안과,mesh,,,유지
+Eye Abnormalities,안과,mesh,,,유지
+Eye Diseases,안과,mesh,,,유지
+Geographic Atrophy,안과,mesh,,,유지
+"Glaucoma, Open-Angle",안과,mesh,,,유지
+Keratoconjunctivitis Sicca,안과,mesh,,,유지
+Macular Degeneration,안과,mesh,,,유지
+Macular Edema,안과,mesh,,,유지
+Neurotrophic Keratitis,안과,condition,,,유지
+Retinal Degeneration,안과,mesh,,,유지
+Retinal Diseases,안과,mesh,,,유지
+Retinal Vein Occlusion,안과,mesh,,,유지
+Vision Disorders,안과,mesh,,,유지
+"Vision, Low",안과,mesh,,,유지
+Wet Age-related Macular Degeneration,안과,condition,,,유지
+Wet Macular Degeneration,안과,mesh,,,유지
+Adenocarcinoma Of Esophagus,암,mesh,,,유지
+Advanced Cancer,암,condition,,,유지
+Advanced Malignant Neoplasm,암,condition,,,유지
+Advanced Melanoma,암,condition,,,유지
+Advanced Solid Cancers,암,condition,,,유지
+Advanced Solid Cancers Refractory to PD-1 and PD-L1 Therapies,암,condition,,,유지
+Advanced Solid Tumor,암,condition,,,유지
+Advanced Solid Tumors,암,condition,,,유지
+Biliary Tract Neoplasms,암,mesh,,,유지
+Brain Neoplasms,암,mesh,,,유지
+Breast Neoplasms,암,mesh,,,유지
+Bronchial Neoplasms,암,mesh,,,유지
+Burkitt Lymphoma,암,mesh,,,유지
+Carcinoma,암,mesh,의심,일반어에 가까움,유지
+"Carcinoma, Adenoid Cystic",암,mesh,,,유지
+"Carcinoma, Hepatocellular",암,mesh,,,유지
+"Carcinoma, Non-Small-Cell Lung",암,mesh,,,유지
+"Carcinoma, Renal Cell",암,mesh,,,유지
+"Carcinoma, Squamous Cell",암,mesh,,,유지
+"Carcinoma, Transitional Cell",암,mesh,,,유지
+Cholangiocarcinoma,암,mesh,,,유지
+"Chondrosarcoma, Extraskeletal Myxoid",암,mesh,,,유지
+Chordoma,암,mesh,,,유지
+Colonic Neoplasms,암,mesh,,,유지
+Colorectal Neoplasms,암,mesh,,,유지
+Conventional Chondrosarcoma,암,condition,,,유지
+Desmoid Tumors,암,mesh,,,유지
+Diffuse Large B-Cell Lymphoma Refractory,암,condition,,,유지
+Diffuse Large B-cell Lymphoma Recurrent,암,condition,,,유지
+Endometrial Neoplasms,암,mesh,,,유지
+Esophageal Neoplasms,암,mesh,,,유지
+Fallopian Tube Neoplasms,암,mesh,,,유지
+Fibrolamellar hepatocellular carcinoma,암,mesh,,,유지
+Gastrointestinal Neoplasms,암,mesh,,,유지
+Gastrointestinal Stromal Tumors,암,mesh,,,유지
+Glioblastoma,암,mesh,,,유지
+Glioma,암,mesh,,,유지
+Head and Neck Neoplasms,암,mesh,,,유지
+Hemangiosarcoma,암,mesh,,,유지
+Hematologic Neoplasms,암,mesh,,,유지
+"Histiocytoma, Malignant Fibrous",암,mesh,,,유지
+Hodgkin Disease,암,mesh,,,유지
+Hypopharyngeal Neoplasms,암,mesh,,,유지
+Immunoblastic Lymphadenopathy,암,mesh,,,유지
+Kidney Neoplasms,암,mesh,,,유지
+Laryngeal Neoplasms,암,mesh,,,유지
+Leukemia,암,mesh,,,유지
+"Leukemia, Biphenotypic, Acute",암,mesh,,,유지
+"Leukemia, Large Granular Lymphocytic",암,mesh,,,유지
+"Leukemia, Lymphocytic, Chronic, B-Cell",암,mesh,,,유지
+"Leukemia, Mast-Cell",암,mesh,,,유지
+"Leukemia, Myelogenous, Chronic, BCR-ABL Positive",암,mesh,,,유지
+"Leukemia, Myeloid",암,mesh,,,유지
+"Leukemia, Myeloid, Acute",암,mesh,,,유지
+"Leukemia, Myelomonocytic, Chronic",암,mesh,,,유지
+"Leukemia, Prolymphocytic, T-Cell",암,mesh,,,유지
+Liposarcoma,암,mesh,,,유지
+Lung Neoplasms,암,mesh,,,유지
+Lymphoma,암,mesh,,,유지
+"Lymphoma, B-Cell",암,mesh,,,유지
+"Lymphoma, B-Cell, Marginal Zone",암,mesh,,,유지
+"Lymphoma, Extranodal NK-T-Cell",암,mesh,,,유지
+"Lymphoma, Follicular",암,mesh,,,유지
+"Lymphoma, Large B-Cell, Diffuse",암,mesh,,,유지
+"Lymphoma, Large-Cell, Anaplastic",암,mesh,,,유지
+"Lymphoma, Mantle-Cell",암,mesh,,,유지
+"Lymphoma, Non-Hodgkin",암,mesh,,,유지
+"Lymphoma, T-Cell",암,mesh,,,유지
+"Lymphoma, T-Cell, Cutaneous",암,mesh,,,유지
+"Lymphoma, T-Cell, Peripheral",암,mesh,,,유지
+Mastocytosis,암,mesh,의심,비만세포 증식 · 혈액 또는 피부로 볼 수도 있음,유지
+"Mastocytosis, Systemic",암,mesh,의심,혈액으로 볼 수도 있음,유지
+Melanoma,암,mesh,,,유지
+"Melanoma, Cutaneous Malignant",암,mesh,,,유지
+Metastatic Pancreatic Ductal Adenocarcinoma,암,condition,,,유지
+Mouth Neoplasms,암,mesh,,,유지
+Multiple Myeloma,암,mesh,,,유지
+Myelodysplastic Syndromes,암,mesh,의심,혈액으로 볼 수도 있음,유지
+Myeloproliferative Disorders,암,mesh,의심,혈액으로 볼 수도 있음,유지
+NSCLC,암,condition,,,유지
+Nasopharyngeal Carcinoma,암,mesh,,,유지
+Neoplasm Metastasis,암,mesh,의심,일반어에 가까움,유지
+Neoplasms,암,mesh,의심,일반어에 가까움,유지
+"Neoplasms, Connective Tissue",암,mesh,,,유지
+"Neoplasms, Glandular and Epithelial",암,mesh,,,유지
+"Neoplasms, Squamous Cell",암,mesh,,,유지
+Oropharyngeal Neoplasms,암,mesh,,,유지
+Ovarian Neoplasms,암,mesh,,,유지
+Pancreatic Neoplasms,암,mesh,,,유지
+Polycythemia Vera,암,mesh,의심,혈액으로 볼 수도 있음,유지
+Precursor Cell Lymphoblastic Leukemia-Lymphoma,암,mesh,,,유지
+Primary Myelofibrosis,암,mesh,의심,혈액으로 볼 수도 있음,유지
+Prostatic Neoplasms,암,mesh,,,유지
+Rectal Neoplasms,암,mesh,,,유지
+Respiratory Tract Neoplasms,암,mesh,,,유지
+Rhabdomyosarcoma,암,mesh,,,유지
+Sarcoma,암,mesh,,,유지
+"Sarcoma, Ewing",암,mesh,,,유지
+"Sarcoma, Myeloid",암,mesh,,,유지
+"Sarcoma, Synovial",암,mesh,,,유지
+Skin Neoplasms,암,mesh,,,유지
+Soft Tissue Neoplasms,암,mesh,,,유지
+Solid Malignancies,암,condition,,,유지
+"Solid Tumor, Adult",암,condition,,,유지
+Squamous Cell Carcinoma of Head and Neck,암,mesh,,,유지
+Stomach Neoplasms,암,mesh,,,유지
+Thyroid Neoplasms,암,mesh,,,유지
+Triple Negative Breast Neoplasms,암,mesh,,,유지
+Urinary Bladder Neoplasms,암,mesh,,,유지
+Urticaria Pigmentosa,암,mesh,의심,피부로 볼 수도 있음,피부
+Uterine Cervical Neoplasms,암,mesh,,,유지
+Uveal Melanoma,암,mesh,,,유지
+Waldenstrom Macroglobulinemia,암,mesh,,,유지
+Alopecia Areata,피부,mesh,,,유지
+Dermatitis,피부,mesh,,,유지
+"Dermatitis, Atopic",피부,mesh,,,유지
+Décolleté Wrinkles,피부,condition,의심,미용 목적,미용
+Eczema,피부,mesh,,,유지
+Fine Lines,피부,condition,의심,미용 목적,미용
+Hidradenitis Suppurativa,피부,mesh,,,유지
+Pigmentation,피부,condition,의심,미용 목적,미용
+Psoriasis,피부,mesh,,,유지
+Skin Diseases,피부,mesh,,,유지
+"Skin Diseases, Eczematous",피부,mesh,,,유지
+Skin Roughness,피부,condition,의심,미용 목적 · 피부 질환인지 확인,미용
+Skin Thickness,피부,condition,의심,미용 목적,미용
+Vitiligo,피부,mesh,,,유지
+Wrinkle,피부,condition,의심,미용 목적,미용
+Wrinkles in Decolletage,피부,condition,의심,미용 목적,미용
+Anemia,혈액,mesh,,,유지
+"Anemia, Hemolytic",혈액,mesh,,,유지
+"Anemia, Iron-Deficiency",혈액,mesh,,,유지
+Hematologic Diseases,혈액,mesh,,,유지
+"Purpura, Thrombocytopenic, Idiopathic",혈액,mesh,,,유지
+Warm Autoimmune Hemolytic Anemia (wAIHA),혈액,condition,,,유지
+Acute Cough,호흡기,condition,,,유지
+Asthma,호흡기,mesh,,,유지
+Chronic Refractory Cough,호흡기,condition,,,유지
+Lung Diseases,호흡기,mesh,,,유지
+Non-Eosinophilic Asthma,호흡기,condition,,,유지
+Respiratory Insufficiency,호흡기,mesh,,,유지
+"Anemia, Hemolytic, Congenital",희귀 유전,mesh,의심,혈액으로 볼 수도 있음 (유전 우선 규칙 적용),유지
+"Anemia, Sickle Cell",희귀 유전,mesh,,,유지
+Autosomal Recessive Ichthyosis,희귀 유전,condition,,,유지
+"Cirrhosis, Familial, with Pulmonary Hypertension",희귀 유전,mesh,의심,희귀 유전 분류 근거 확인 필요,유지
+Cystic Fibrosis,희귀 유전,mesh,,,유지
+"Diabetes Mellitus, Insulin-Dependent, 12",희귀 유전,mesh,의심,비만·대사로 볼 수도 있음 (유전 우선 규칙 적용),비만·대사
+Epidermolysis Bullosa Dystrophica,희귀 유전,mesh,,,유지
+"Eye Diseases, Hereditary",희귀 유전,mesh,의심,안과로 볼 수도 있음 (유전 우선 규칙 적용),유지
+Friedreich Ataxia,희귀 유전,mesh,,,유지
+Hemoglobinopathies,희귀 유전,mesh,의심,혈액으로 볼 수도 있음 (유전 우선 규칙 적용),유지
+Hepatorenal form of glycogen storage disease,희귀 유전,mesh,,,유지
+Hereditary Sensory and Autonomic Neuropathies,희귀 유전,mesh,,,유지
+Huntington Disease,희귀 유전,mesh,,,유지
+Hyperphagia in Prader-Willi Syndrome,희귀 유전,condition,의심,비만·대사로 볼 수도 있음 (유전 우선 규칙 적용),유지
+Leber Congenital Amaurosis,희귀 유전,mesh,의심,안과로 볼 수도 있음 (유전 우선 규칙 적용),유지
+Leber Congenital Amaurosis 10,희귀 유전,mesh,의심,안과로 볼 수도 있음 (유전 우선 규칙 적용),유지
+"Meckel Syndrome, Type 4",희귀 유전,mesh,,,유지
+Muscular Dystrophies,희귀 유전,mesh,,,유지
+"Muscular Dystrophy, Duchenne",희귀 유전,mesh,,,유지
+"Pemphigus, Benign Familial",희귀 유전,mesh,의심,피부로 볼 수도 있음 (유전 우선 규칙 적용),유지
+Porphyrias,희귀 유전,mesh,,,유지
+"Protoporphyria, Erythropoietic",희귀 유전,mesh,,,유지
+"Protoporphyria, Erythropoietic, X-Linked Dominant",희귀 유전,mesh,,,유지
+Rett Syndrome,희귀 유전,mesh,,,유지
+TGM-1 Related Autosomal Recessive Congenital Ichthyosis,희귀 유전,condition,,,유지
+Wolfram Syndrome,희귀 유전,mesh,,,유지
+alpha 1-Antitrypsin Deficiency,희귀 유전,mesh,,,유지
+beta-Thalassemia,희귀 유전,mesh,,,유지

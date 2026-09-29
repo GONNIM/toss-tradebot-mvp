@@ -165,3 +165,31 @@ def test_payload_disables_thinking(monkeypatch):
     llm.summarize("X", ["s"], post=fake_post)
     assert seen["thinking"] == {"type": "disabled"} and seen["max_tokens"] >= 800
     assert "출처 이름" in llm.SYSTEM_PROMPT
+
+
+def test_retry_with_low_thinking_on_1210(monkeypatch):
+    monkeypatch.setenv("ZAI_API_KEY", FAKE_KEY)
+    monkeypatch.setattr(llm, "resolve_zai_model", lambda: ("glm-5.3", "list"))
+    calls = []
+
+    def post(url, payload):
+        calls.append(dict(payload["thinking"]))
+        if payload["thinking"] == llm.THINKING_OFF:
+            raise llm.ZaiError(400, "1210")
+        return {"choices": [{"message": {"content": "사실 [1]"}}]}
+
+    res = llm.summarize("X", ["s"], post=post)
+    assert res["ok"] and calls == [llm.THINKING_OFF, llm.THINKING_LOW]
+
+
+def test_other_errors_not_retried(monkeypatch):
+    monkeypatch.setenv("ZAI_API_KEY", FAKE_KEY)
+    monkeypatch.setattr(llm, "resolve_zai_model", lambda: ("glm-5.3", "list"))
+    calls = []
+
+    def post(url, payload):
+        calls.append(1)
+        raise llm.ZaiError(400, "1211")
+
+    res = llm.summarize("X", ["s"], post=post)
+    assert res["ok"] is False and len(calls) == 1 and res["error"].endswith("400/1211")
