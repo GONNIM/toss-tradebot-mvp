@@ -46,3 +46,32 @@ def test_rumor_rows_have_display_fields():
     assert r.stage == "" and r.baseline_n is None and r.days_to is None
     k = b.BiotechKpi(generated="t", candidates_total=0, news_a_ready=0, insider_buy_20d=0, alerts=0)
     assert k.alert_tickers == []
+
+
+def test_wp79_dictionary_categories(tmp_path, monkeypatch):
+    """검수 v1 · 참가 조건 3건 = '기타' · 미용 신설 · 미등재 = '기타 (원문)'."""
+    import json as _json
+    snap = {"matches": [
+        {"nct_id": f"NCT0000000{i}", "conditions": [c], "mesh_terms": []}
+        for i, c in enumerate(["Hepatic Impairment", "Hepatic Impairment (HI)", "Renal Impairments", "Wrinkle", "Pigmentation", "Some Unlisted Thing"])
+    ]}
+    (tmp_path / "ctgov_snapshot.json").write_text(_json.dumps(snap))
+    monkeypatch.setattr(b, "DATA_DIR_RUNTIME", tmp_path)
+    b._FILE_CACHE.clear()
+    cats = [b._trial_display(f"NCT0000000{i}")["category"] for i in range(6)]
+    assert cats[:3] == ["기타", "기타", "기타"]
+    assert cats[3:5] == ["미용", "미용"]
+    assert cats[5] == "기타 (Some Unlisted Thing)"
+
+
+def test_wp79_card_text_renders_new_categories():
+    """프론트 cardText() 가 '미용' · '기타' 분류를 문장 앞에 렌더 (tsx 로 실행 · 없으면 건너뜀)."""
+    import shutil
+    import subprocess
+    from pathlib import Path
+    import pytest
+    fe = Path(__file__).resolve().parents[2] / "frontend"
+    if not shutil.which("npx") or not (fe / "node_modules").exists():
+        pytest.skip("npx/node_modules 없음")
+    r = subprocess.run(["npx", "--yes", "tsx", "lib/biotech-display.check.ts"], cwd=fe, capture_output=True, text=True, timeout=120)
+    assert r.returncode == 0, r.stderr[-500:]

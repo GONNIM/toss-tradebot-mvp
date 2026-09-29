@@ -1,0 +1,87 @@
+# WP79 · 배포 미시작 알림 (2026-09-29 사용자 승인)
+#
+# 배경: PR #37 병합 커밋에 GitHub 이 push 이벤트를 보내지 않아 deploy.yml 이 시작되지 않은 사고 (2026-09-28).
+# 동작: PR 병합 → 10분 대기 → 그 병합 커밋의 deploy.yml 실행이 하나도 없으면 텔레그램 warning 1회.
+#       자동 재실행은 하지 않는다 (수동 실행 필요 안내만).
+# 제외: 바뀐 파일이 모두 deploy.yml paths-ignore 대상 (*.md · docs/** · .claude/** · LICENSE · .gitignore) 이면 알림 없음.
+# 자격증명: 텔레그램 값은 기존 SOPS_AGE_KEY 로 backend/.env.sops.yaml 에서 복호화 · 로그 마스킹 · 파일에 남기지 않음.
+# 한계: pull_request 이벤트 자체도 GitHub 이 누락하면 이 감시도 돌지 않는다.
+name: Deploy watch (배포 미시작 알림)
+
+on:
+  pull_request:
+    types: [closed]
+    branches: [main]
+
+permissions:
+  contents: read
+  actions: read
+  pull-requests: read
+
+jobs:
+  watch:
+    if: github.event.pull_request.merged == true
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      GH_TOKEN: ${{ github.token }}
+      REPO: ${{ github.repository }}
+      PR: ${{ github.event.pull_request.number }}
+      SHA: ${{ github.event.pull_request.merge_commit_sha }}
+    steps:
+      - name: 배포 대상 파일이 있는지 (paths-ignore 와 같은 규칙)
+        id: scope
+        run: |
+          set -e
+          files=$(gh api "repos/$REPO/pulls/$PR/files" --paginate -q '.[].filename')
+          deployable=0
+          while IFS= read -r f; do
+            [ -z "$f" ] && continue
+            case "$f" in
+              *.md|docs/*|.claude/*|LICENSE|.gitignore) ;;
+              *) deployable=1 ;;
+            esac
+          done <<< "$files"
+          echo "deployable=$deployable" >> "$GITHUB_OUTPUT"
+          echo "PR #$PR · 배포 대상 파일 있음=$deployable"
+
+      - name: 10분 대기
+        if: steps.scope.outputs.deployable == '1'
+        run: sleep 600
+
+      - name: 배포 실행 존재 확인
+        id: check
+        if: steps.scope.outputs.deployable == '1'
+        run: |
+          set -e
+          n=$(gh api "repos/$REPO/actions/workflows/deploy.yml/runs?head_sha=$SHA" -q '.total_count')
+          echo "runs=$n" >> "$GITHUB_OUTPUT"
+          echo "PR #$PR · merge $SHA · deploy.yml 실행 수=$n"
+
+      - uses: actions/checkout@v4
+        if: steps.check.outputs.runs == '0'
+        with:
+          ref: main
+          sparse-checkout: |
+            backend/.env.sops.yaml
+            .sops.yaml
+          sparse-checkout-cone-mode: false
+
+      - name: 텔레그램 warning 1회 (배포 미시작)
+        if: steps.check.outputs.runs == '0'
+        run: |
+          set -e
+          sudo curl -sSfL "https://github.com/getsops/sops/releases/download/v3.13.2/sops-v3.13.2.linux.amd64" -o /usr/local/bin/sops
+          sudo chmod +x /usr/local/bin/sops
+          mkdir -p ~/.config/sops/age
+          printf '%s\n' "${{ secrets.SOPS_AGE_KEY }}" > ~/.config/sops/age/keys.txt
+          chmod 600 ~/.config/sops/age/keys.txt
+          TG_TOKEN=$(sops -d --extract '["TELEGRAM_BOT_TOKEN"]' backend/.env.sops.yaml)
+          TG_CHAT=$(sops -d --extract '["TELEGRAM_CHAT_ID"]' backend/.env.sops.yaml)
+          echo "::add-mask::$TG_TOKEN"
+          echo "::add-mask::$TG_CHAT"
+          rm -f ~/.config/sops/age/keys.txt
+          text="⚠️ PR #$PR 배포 미시작 · 수동 실행 필요 (gh workflow run deploy.yml --ref main) · 병합 ${SHA:0:7} · 10분 내 deploy.yml 실행 없음"
+          code=$(curl -s -o /dev/null -w '%{http_code}' -X POST "https://api.telegram.org/bot${TG_TOKEN}/sendMessage" \
+            --data-urlencode "chat_id=${TG_CHAT}" --data-urlencode "text=${text}")
+          echo "텔레그램 응답 HTTP $code"

@@ -1,7 +1,7 @@
 en,ko,kind,basis
 RANDOMIZED,무작위 배정,allocation,관례 의학용어 표기 · Claude 작성 · 사람 검수 필요
 NON_RANDOMIZED,비무작위 배정,allocation,관례 의학용어 표기 · Claude 작성 · 사람 검수 필요
-NONE,눈가림 없음 (공개),masking,관례 의학용어 표기 · Claude 작성 · 사람 검수 필요
+NONE,공개 시험(눈가림 없음),masking,검수 v1 (Fable 2026-09-29)
 SINGLE,단일 눈가림,masking,관례 의학용어 표기 · Claude 작성 · 사람 검수 필요
 DOUBLE,이중 눈가림,masking,관례 의학용어 표기 · Claude 작성 · 사람 검수 필요
 TRIPLE,삼중 눈가림,masking,관례 의학용어 표기 · Claude 작성 · 사람 검수 필요
@@ -9,8 +9,8 @@ QUADRUPLE,사중 눈가림,masking,관례 의학용어 표기 · Claude 작성 �
 DRUG,약물,intervention_type,관례 의학용어 표기 · Claude 작성 · 사람 검수 필요
 BIOLOGICAL,생물의약품,intervention_type,관례 의학용어 표기 · Claude 작성 · 사람 검수 필요
 DEVICE,의료기기,intervention_type,관례 의학용어 표기 · Claude 작성 · 사람 검수 필요
-GENETIC,유전자 치료,intervention_type,관례 의학용어 표기 · Claude 작성 · 사람 검수 필요
-DIETARY_SUPPLEMENT,건강기능식품,intervention_type,관례 의학용어 표기 · Claude 작성 · 사람 검수 필요
+GENETIC,유전자·세포 치료,intervention_type,검수 v1 (Fable 2026-09-29)
+DIETARY_SUPPLEMENT,식이 보충제,intervention_type,검수 v1 (Fable 2026-09-29)
 DIAGNOSTIC_TEST,진단 검사,intervention_type,관례 의학용어 표기 · Claude 작성 · 사람 검수 필요
 PROCEDURE,시술,intervention_type,관례 의학용어 표기 · Claude 작성 · 사람 검수 필요
 RADIATION,방사선,intervention_type,관례 의학용어 표기 · Claude 작성 · 사람 검수 필요
@@ -46,10 +46,10 @@ Uterine Cervical Neoplasms,자궁경부암,condition,관례 의학용어 표기 
 Sarcoma,육종,condition,관례 의학용어 표기 · Claude 작성 · 사람 검수 필요
 Kidney Neoplasms,신장암,condition,관례 의학용어 표기 · Claude 작성 · 사람 검수 필요
 Breast Neoplasms,유방암,condition,관례 의학용어 표기 · Claude 작성 · 사람 검수 필요
-Epidermolysis Bullosa Dystrophica,이영양물집표피박리증,condition,관례 의학용어 표기 · Claude 작성 · 사람 검수 필요
+Epidermolysis Bullosa Dystrophica,이영양성 수포성 표피박리증,condition,검수 v1 (Fable 2026-09-29)
 "Lymphoma, B-Cell",B세포림프종,condition,관례 의학용어 표기 · Claude 작성 · 사람 검수 필요
 Anemia,빈혈,condition,관례 의학용어 표기 · Claude 작성 · 사람 검수 필요
-Precursor Cell Lymphoblastic Leukemia-Lymphoma,전구세포 림프모구백혈병-림프종,condition,관례 의학용어 표기 · Claude 작성 · 사람 검수 필요
+Precursor Cell Lymphoblastic Leukemia-Lymphoma,급성 림프모구 백혈병(ALL),condition,검수 v1 (Fable 2026-09-29)
 Endometrial Neoplasms,자궁내막암,condition,관례 의학용어 표기 · Claude 작성 · 사람 검수 필요
 Coronavirus Infections,코로나바이러스감염,condition,관례 의학용어 표기 · Claude 작성 · 사람 검수 필요
 Head and Neck Neoplasms,두경부암,condition,관례 의학용어 표기 · Claude 작성 · 사람 검수 필요
@@ -67,7 +67,7 @@ Leukemia,백혈병,condition,관례 의학용어 표기 · Claude 작성 · 사�
 "Hepatitis C, Chronic",만성 C형간염,condition,관례 의학용어 표기 · Claude 작성 · 사람 검수 필요
 Hepatitis C,C형간염,condition,관례 의학용어 표기 · Claude 작성 · 사람 검수 필요
 Psychotic Disorders,정신병적장애,condition,관례 의학용어 표기 · Claude 작성 · 사람 검수 필요
-"Protoporphyria, Erythropoietic",적혈구조혈프로토포르피린증,condition,관례 의학용어 표기 · Claude 작성 · 사람 검수 필요
+"Protoporphyria, Erythropoietic",적혈구조혈 프로토포르피린증(EPP),condition,검수 v1 (Fable 2026-09-29)
 Porphyrias,포르피린증,condition,관례 의학용어 표기 · Claude 작성 · 사람 검수 필요
 Urinary Bladder Neoplasms,방광암,condition,관례 의학용어 표기 · Claude 작성 · 사람 검수 필요
 Delusions,망상,condition,관례 의학용어 표기 · Claude 작성 · 사람 검수 필요
@@ -75,7 +75,7 @@ Delusions,망상,condition,관례 의학용어 표기 · Claude 작성 · 사람
 "Leukemia, Lymphocytic, Chronic, B-Cell",만성림프구백혈병,condition,관례 의학용어 표기 · Claude 작성 · 사람 검수 필요
 "Lymphoma, Follicular",여포림프종,condition,관례 의학용어 표기 · Claude 작성 · 사람 검수 필요
 Gastrointestinal Stromal Tumors,위장관기질종양,condition,관례 의학용어 표기 · Claude 작성 · 사람 검수 필요
-Hidradenitis Suppurativa,화농한선염,condition,관례 의학용어 표기 · Claude 작성 · 사람 검수 필요
+Hidradenitis Suppurativa,화농성 한선염,condition,검수 v1 (Fable 2026-09-29)
 Skin Diseases,피부질환,condition,관례 의학용어 표기 · Claude 작성 · 사람 검수 필요
 Immune System Diseases,면역계질환,condition,관례 의학용어 표기 · Claude 작성 · 사람 검수 필요
 Skin Neoplasms,피부암,condition,관례 의학용어 표기 · Claude 작성 · 사람 검수 필요
@@ -96,43 +96,43 @@ Pancreatitis,췌장염,condition,관례 의학용어 표기 · Claude 작성 · 
 "Mastocytosis, Systemic",전신비만세포증,condition,관례 의학용어 표기 · Claude 작성 · 사람 검수 필요
 Renal Insufficiency,신부전,condition,관례 의학용어 표기 · Claude 작성 · 사람 검수 필요
 Eczema,습진,condition,관례 의학용어 표기 · Claude 작성 · 사람 검수 필요
-Neurodegenerative Diseases,신경퇴행질환,condition,관례 의학용어 표기 · Claude 작성 · 사람 검수 필요
+Neurodegenerative Diseases,신경퇴행성 질환,condition,검수 v1 (Fable 2026-09-29)
 Oropharyngeal Neoplasms,구인두암,condition,관례 의학용어 표기 · Claude 작성 · 사람 검수 필요
 Parkinson Disease,파킨슨병,condition,관례 의학용어 표기 · Claude 작성 · 사람 검수 필요
 Pericarditis,심낭염,condition,관례 의학용어 표기 · Claude 작성 · 사람 검수 필요
 Bronchial Neoplasms,기관지암,condition,관례 의학용어 표기 · Claude 작성 · 사람 검수 필요
-Carcinoma,암종,condition,관례 의학용어 표기 · Claude 작성 · 사람 검수 필요
+Carcinoma,암,condition,검수 v1 (Fable 2026-09-29)
 Dengue,뎅기열,condition,관례 의학용어 표기 · Claude 작성 · 사람 검수 필요
 alpha 1-Antitrypsin Deficiency,알파1-항트립신결핍증,condition,관례 의학용어 표기 · Claude 작성 · 사람 검수 필요
 Hypoparathyroidism,부갑상선기능저하증,condition,관례 의학용어 표기 · Claude 작성 · 사람 검수 필요
-Motor Neuron Disease,운동신경세포병,condition,관례 의학용어 표기 · Claude 작성 · 사람 검수 필요
+Motor Neuron Disease,운동신경원 질환,condition,검수 v1 (Fable 2026-09-29)
 Neuromuscular Diseases,신경근육질환,condition,관례 의학용어 표기 · Claude 작성 · 사람 검수 필요
 Nervous System Diseases,신경계질환,condition,관례 의학용어 표기 · Claude 작성 · 사람 검수 필요
-Geographic Atrophy,지도모양위축,condition,관례 의학용어 표기 · Claude 작성 · 사람 검수 필요
+Geographic Atrophy,지도형 위축(황반변성 후기),condition,검수 v1 (Fable 2026-09-29)
 Myelodysplastic Syndromes,골수형성이상증후군,condition,관례 의학용어 표기 · Claude 작성 · 사람 검수 필요
 Muscular Dystrophies,근디스트로피,condition,관례 의학용어 표기 · Claude 작성 · 사람 검수 필요
 Esophageal Neoplasms,식도암,condition,관례 의학용어 표기 · Claude 작성 · 사람 검수 필요
 Colonic Neoplasms,결장암,condition,관례 의학용어 표기 · Claude 작성 · 사람 검수 필요
 Retinal Vein Occlusion,망막정맥폐쇄,condition,관례 의학용어 표기 · Claude 작성 · 사람 검수 필요
-Leber Congenital Amaurosis,레베르선천흑암시,condition,관례 의학용어 표기 · Claude 작성 · 사람 검수 필요
+Leber Congenital Amaurosis,레버 선천 흑암시,condition,검수 v1 (Fable 2026-09-29)
 Congenital Abnormalities,선천기형,condition,관례 의학용어 표기 · Claude 작성 · 사람 검수 필요
 Infections,감염,condition,관례 의학용어 표기 · Claude 작성 · 사람 검수 필요
 Hypoglycemia,저혈당,condition,관례 의학용어 표기 · Claude 작성 · 사람 검수 필요
 Cystic Fibrosis,낭성섬유증,condition,관례 의학용어 표기 · Claude 작성 · 사람 검수 필요
 Diabetes Mellitus,당뇨병,condition,관례 의학용어 표기 · Claude 작성 · 사람 검수 필요
 Hodgkin Disease,호지킨림프종,condition,관례 의학용어 표기 · Claude 작성 · 사람 검수 필요
-Psychomotor Agitation,정신운동초조,condition,관례 의학용어 표기 · Claude 작성 · 사람 검수 필요
-Waldenstrom Macroglobulinemia,발덴스트룀마크로글로불린혈증,condition,관례 의학용어 표기 · Claude 작성 · 사람 검수 필요
+Psychomotor Agitation,초조(정신운동성),condition,검수 v1 (Fable 2026-09-29)
+Waldenstrom Macroglobulinemia,발덴스트롬 마크로글로불린혈증,condition,검수 v1 (Fable 2026-09-29)
 Dermatitis,피부염,condition,관례 의학용어 표기 · Claude 작성 · 사람 검수 필요
 Corneal Injuries,각막손상,condition,관례 의학용어 표기 · Claude 작성 · 사람 검수 필요
-"Supranuclear Palsy, Progressive",진행핵상마비,condition,관례 의학용어 표기 · Claude 작성 · 사람 검수 필요
+"Supranuclear Palsy, Progressive",진행성 핵상마비,condition,검수 v1 (Fable 2026-09-29)
 Asthma,천식,condition,관례 의학용어 표기 · Claude 작성 · 사람 검수 필요
 Lung Diseases,폐질환,condition,관례 의학용어 표기 · Claude 작성 · 사람 검수 필요
 Alzheimer Disease,알츠하이머병,condition,관례 의학용어 표기 · Claude 작성 · 사람 검수 필요
 Mastocytosis,비만세포증,condition,관례 의학용어 표기 · Claude 작성 · 사람 검수 필요
 Hypersensitivity,과민증,condition,관례 의학용어 표기 · Claude 작성 · 사람 검수 필요
 Osteoporosis,골다공증,condition,관례 의학용어 표기 · Claude 작성 · 사람 검수 필요
-Primary Myelofibrosis,일차골수섬유증,condition,관례 의학용어 표기 · Claude 작성 · 사람 검수 필요
+Primary Myelofibrosis,원발성 골수섬유증,condition,검수 v1 (Fable 2026-09-29)
 "Sarcoma, Ewing",유잉육종,condition,관례 의학용어 표기 · Claude 작성 · 사람 검수 필요
 Herpes Genitalis,생식기포진,condition,관례 의학용어 표기 · Claude 작성 · 사람 검수 필요
 Macular Degeneration,황반변성,condition,관례 의학용어 표기 · Claude 작성 · 사람 검수 필요
@@ -169,12 +169,12 @@ Cholangiocarcinoma,담관암,condition,관례 의학용어 표기 · Claude 작�
 "Anemia, Iron-Deficiency",철결핍빈혈,condition,관례 의학용어 표기 · Claude 작성 · 사람 검수 필요
 Celiac Disease,셀리악병,condition,관례 의학용어 표기 · Claude 작성 · 사람 검수 필요
 Heart Failure,심부전,condition,관례 의학용어 표기 · Claude 작성 · 사람 검수 필요
-Acute Kidney Injury,급성콩팥손상,condition,관례 의학용어 표기 · Claude 작성 · 사람 검수 필요
+Acute Kidney Injury,급성 신장 손상,condition,검수 v1 (Fable 2026-09-29)
 Inflammatory Bowel Diseases,염증성장질환,condition,관례 의학용어 표기 · Claude 작성 · 사람 검수 필요
 Autoimmune Diseases,자가면역질환,condition,관례 의학용어 표기 · Claude 작성 · 사람 검수 필요
 Uveal Melanoma,포도막흑색종,condition,관례 의학용어 표기 · Claude 작성 · 사람 검수 필요
 "Depressive Disorder, Treatment-Resistant",치료저항우울장애,condition,관례 의학용어 표기 · Claude 작성 · 사람 검수 필요
-"Purpura, Thrombocytopenic, Idiopathic",특발혈소판감소자색반병,condition,관례 의학용어 표기 · Claude 작성 · 사람 검수 필요
+"Purpura, Thrombocytopenic, Idiopathic",면역 혈소판감소증(ITP),condition,검수 v1 (Fable 2026-09-29)
 Pulmonary Arterial Hypertension,폐동맥고혈압,condition,관례 의학용어 표기 · Claude 작성 · 사람 검수 필요
 "Diabetes Mellitus, Type 2",제2형 당뇨병,condition,관례 의학용어 표기 · Claude 작성 · 사람 검수 필요
 "Pain, Postoperative",수술후통증,condition,관례 의학용어 표기 · Claude 작성 · 사람 검수 필요
@@ -182,16 +182,16 @@ Wet Macular Degeneration,습성황반변성,condition,관례 의학용어 표기
 Thyroid Neoplasms,갑상선암,condition,관례 의학용어 표기 · Claude 작성 · 사람 검수 필요
 "Glomerulonephritis, IGA",IgA신병증,condition,관례 의학용어 표기 · Claude 작성 · 사람 검수 필요
 Liver Diseases,간질환,condition,관례 의학용어 표기 · Claude 작성 · 사람 검수 필요
-Liver Cirrhosis,간경화,condition,관례 의학용어 표기 · Claude 작성 · 사람 검수 필요
+Liver Cirrhosis,간경변증,condition,검수 v1 (Fable 2026-09-29)
 "Glomerulosclerosis, Focal Segmental",국소분절사구체경화증,condition,관례 의학용어 표기 · Claude 작성 · 사람 검수 필요
 Glioblastoma,교모세포종,condition,관례 의학용어 표기 · Claude 작성 · 사람 검수 필요
-Glioma,신경아교종,condition,관례 의학용어 표기 · Claude 작성 · 사람 검수 필요
+Glioma,신경교종,condition,검수 v1 (Fable 2026-09-29)
 Hepatitis B,B형간염,condition,관례 의학용어 표기 · Claude 작성 · 사람 검수 필요
 beta-Thalassemia,베타지중해빈혈,condition,관례 의학용어 표기 · Claude 작성 · 사람 검수 필요
 "Renal Insufficiency, Chronic",만성신부전,condition,관례 의학용어 표기 · Claude 작성 · 사람 검수 필요
 Healthy Volunteers,건강한 자원자,condition,관례 의학용어 표기 · Claude 작성 · 사람 검수 필요
 Healthy Volunteer,건강한 자원자,condition,관례 의학용어 표기 · Claude 작성 · 사람 검수 필요
-Healthy,건강인,condition,관례 의학용어 표기 · Claude 작성 · 사람 검수 필요
+Healthy,건강한 사람,condition,검수 v1 (Fable 2026-09-29)
 Advanced Solid Tumors,진행성 고형암,condition,관례 의학용어 표기 · Claude 작성 · 사람 검수 필요
 Advanced Cancer,진행성 암,condition,관례 의학용어 표기 · Claude 작성 · 사람 검수 필요
 Hepatic Impairment,간기능장애,condition,관례 의학용어 표기 · Claude 작성 · 사람 검수 필요
