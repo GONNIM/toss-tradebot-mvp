@@ -20,6 +20,16 @@
 
 ## PENDING
 
+### [Biotech Catalyst Radar · WP79 사전 검수 반영 · 배포 미시작 알림 · 관측] · 2026-09-29 발행 → 배포 완료 (PR #45)
+
+- 관측 9/29 07:00: 8/8 · 72초 (이전 약 22초 · Form 4 약 49초 추가) · 경보 1 (ENTX · 레딧 매치) · z.ai 1회 실패 (glm-5.3 는 추론 끄기 거부 · HTTP 400/1210) → 추론 낮음 1회 재시도로 수정 · A 상태 36 → 63 (AACT 매칭 확대 반영)
+- 사전 검수 v1 반영: 분류 13 · 한국어 21 · '미용' 신설 · 규칙 4 (`docs/plans/biotech/data/dictionaries_changelog.md`)
+- 배포 미시작 알림: `.github/workflows/deploy-watch.yml` (병합 10분 뒤 deploy.yml 실행 없으면 텔레그램 warning 1회)
+- **대기 (Fable 검수)**: 매칭 확대 후 미등재 용어 183개 · `docs/plans/biotech/verification/dictionaries/unmapped_terms_20260929.csv` · 번들 `docs/plans/biotech/fable-bundles/20260929_dictionaries-unmapped-v2.zip`
+- **2026-10-01 이후**: H6 가격 수집 · WP75 시총 매일 산정 (이전 지시 그대로)
+
+---
+
 ### [Biotech Catalyst Radar · WP78 모델 최신 우선 · 경보 정합 · 매칭률 · 결함 조회] · 2026-09-28 발행 → 배포 완료 (PR #42 · #43)
 
 - 모델: 목록 정식 최신 = glm-5.3 (2026-09-28 첫 선택 · 이전 glm-5.2 는 env 경로라 비교 기록 없어 변경 알림 미발송)
