@@ -119,6 +119,18 @@ const PHASE_DESC: Record<string, string> = {
   "4상": "승인 후 관찰",
 };
 
+// 분류 설명 고정 문구 (사전 v2 신설 분류 · WP80 사용자 지시) · 카드에 "분류(설명)" 로 표시
+const CATEGORY_DESC: Record<string, string> = {
+  "건강인·약동학": "건강한 사람 대상 안전성·약동학 시험",
+  "통증": "통증 치료 시험",
+  "청각·이비인후": "청각·귀 질환 시험",
+};
+
+export function categoryLabel(category: string): string {
+  const desc = CATEGORY_DESC[category];
+  return desc ? `${category}(${desc})` : category;
+}
+
 export type TrialDisplay = {
   category?: string;
   interventions?: { name: string; type: string; type_ko?: string; name_ko?: string }[];
@@ -144,7 +156,7 @@ export function cardText(
 ): { main: string | null; theme: string | null } {
   const parts: string[] = [];
   const t = trial ?? {};
-  if (t.category) parts.push(t.category);
+  if (t.category) parts.push(categoryLabel(t.category));
   const drugs = (t.interventions ?? []).filter((i) => !/placebo/i.test(i.name));
   if (drugs.length > 0) {
     const d = drugs[0];

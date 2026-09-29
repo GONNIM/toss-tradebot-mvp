@@ -10,4 +10,11 @@ assert.ok(other.main?.startsWith("기타 · 1상(안전성 확인) · 참가자 
 
 const raw = cardText({ category: "기타 (Healthy Volunteers)" }, "PHASE1", "2026-10-31", 32);
 assert.ok(raw.main?.startsWith("기타 (Healthy Volunteers) · 1상"), raw.main ?? "null");
+// WP80 · 신설 분류 3개 · 설명 문구 포함
+const hv = cardText({ category: "건강인·약동학" }, "PHASE1", "2026-10-31", 32);
+assert.ok(hv.main?.startsWith("건강인·약동학(건강한 사람 대상 안전성·약동학 시험) · 1상"), hv.main ?? "null");
+const pain = cardText({ category: "통증" }, "PHASE2", "2026-10-31", 32);
+assert.ok(pain.main?.startsWith("통증(통증 치료 시험) · 2상"), pain.main ?? "null");
+const ent = cardText({ category: "청각·이비인후" }, "PHASE3", "2026-10-31", 32);
+assert.ok(ent.main?.startsWith("청각·이비인후(청각·귀 질환 시험) · 3상"), ent.main ?? "null");
 console.log("ok");
