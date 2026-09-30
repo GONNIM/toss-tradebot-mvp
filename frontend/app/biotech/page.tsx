@@ -18,7 +18,7 @@ import { SectionCard } from "@/components/ui/section-card";
 import { BiotechTable, BiotechTableColumn } from "@/components/biotech/BiotechTable";
 import { RumorCard } from "@/components/biotech/RumorCard";
 import type { SessionInfo } from "@/lib/auth";
-import { cardText, checkedAtLabel, ctgovUrl, mcapBadge, refreshLabel, sortFilterCards, trialSentence } from "@/lib/biotech-display";
+import { cardText, checkedAtLabel, ctgovUrl, insiderLine, mcapBadge, mentionSentence, refreshLabel, rumorReason, shortName, sortFilterCards, sortLabel, summaryStatus, tickerOrUnknown, trialSentence } from "@/lib/biotech-display";
 import type { CardSort, ThemeRank, TrialDisplay } from "@/lib/biotech-display";
 
 // 백엔드 스키마
@@ -31,6 +31,11 @@ type RadarRow = {
   score: number;
   state: string;
   news_window: string;
+  nct_id?: string;
+  phase?: string;
+  event_date?: string;
+  days_to?: number | null;
+  trial?: TrialDisplay;
   factors: { expert: number; crowd: number; near: number; unnoticed: number; risk: number };
   tag_bonus: number;
 };
@@ -53,6 +58,8 @@ type RumorRow = {
   stage?: string;
   trial?: TrialDisplay;
   theme_rank?: ThemeRank;
+  mult?: string;
+  cik?: string;
 };
 
 // WP77 · 급등 브리핑 (수집 사실 + 자동 요약)
@@ -68,7 +75,7 @@ type AlertBrief = {
   sec_status: string;
   form4: { available: boolean; n?: number };
   schedule: string;
-  summary?: { ok: boolean; model?: string; lines?: string[] };
+  summary?: { ok: boolean; model?: string; lines?: string[]; error?: string };
 };
 type RumorJson = { date: string; generated: string; rows: RumorRow[] };
 
@@ -101,7 +108,11 @@ const RADAR_COLUMNS: BiotechTableColumn<RadarRow>[] = [
   { key: "mcap_bucket", label: "시총", render: (r) => mcapBadge(r.mcap_bucket, r.mcap_asof) ?? "" },
   { key: "state", label: "상태" },
   { key: "score", label: "점수", align: "right", render: (r) => r.score.toFixed(3) },
-  { key: "news_window", label: "뉴스 예정" },
+  {
+    key: "news_window",
+    label: "시험 요약 (결과 발표일 아님)",
+    render: (r) => cardText(r.trial, r.phase, r.event_date, r.days_to, undefined, { short: true }).main ?? "대표 시험 정보 없음",
+  },
 ];
 
 // ── WP74 4단계 · 점수 5요소 이름 (쉬운 말) ─────────────────
@@ -133,19 +144,24 @@ function KpiButton({ onClick, children, label }: { onClick: () => void; children
 }
 
 // ── WP77 · 급등 브리핑 카드 (펼침) ─────────────────────────
-function AlertBriefCard({ b }: { b: AlertBrief }) {
-  const [open, setOpen] = useState(false);
+function AlertBriefCard({ b, defaultOpen = false }: { b: AlertBrief; defaultOpen?: boolean }) {
+  const [open, setOpen] = useState(defaultOpen); // WP85 · 첫 경보는 펼친 채로 (접혀 있어 요약이 안 보이던 문제)
   const m = b.mentions;
   return (
     <div className="rounded-lg border border-rose-200 bg-white dark:border-rose-900 dark:bg-slate-900">
       <button type="button" aria-expanded={open} onClick={() => setOpen((v) => !v)} className="flex w-full items-baseline gap-2 p-3 text-left">
         <span className="rounded bg-rose-600 px-2 py-0.5 font-mono text-xs font-bold text-white">{b.ticker}</span>
-        <span className="text-muted-foreground">{b.name}</span>
+        <span className="text-muted-foreground">{shortName(b.name)}</span>
         <span className="ml-auto text-muted-foreground">{open ? "접기 ▲" : "브리핑 보기 ▼"}</span>
       </button>
       {open && (
         <div className="space-y-2 border-t border-rose-100 p-3 dark:border-rose-900">
           <div className="rounded border-l-4 border-amber-500 bg-amber-50 p-2 dark:border-amber-600 dark:bg-amber-950/40">⚠️ {b.note}</div>
+          {summaryStatus(b.summary) && (
+            <div className="rounded border border-slate-300 bg-slate-50 p-2 text-muted-foreground dark:border-slate-700 dark:bg-slate-900">
+              {summaryStatus(b.summary)} · 아래 수집 자료는 그대로 보여 드립니다.
+            </div>
+          )}
           {b.summary?.ok && (b.summary.lines ?? []).length > 0 && (
             <div className="rounded border border-sky-300 bg-sky-50 p-2 dark:border-sky-800 dark:bg-sky-950/40">
               <div className="mb-1 text-[10px] font-bold uppercase tracking-wider text-sky-800 dark:text-sky-300">
@@ -181,7 +197,7 @@ function AlertBriefCard({ b }: { b: AlertBrief }) {
           <div>
             <div className="font-semibold">(c) 회사 공시 · 최근 5거래일 8-K</div>
             {b.sec_status !== "ok" ? (
-              <div className="text-muted-foreground">SEC 조회 안 됨 ({b.sec_status === "no_cik" ? "CIK 없음" : "차단으로 중단"})</div>
+              <div className="text-muted-foreground">SEC 조회 안 됨 ({b.sec_status === "no_cik" ? "SEC 발행사 번호 없음" : "차단으로 중단"})</div>
             ) : b.sec_8k.length === 0 ? (
               <div className="text-muted-foreground">최근 5거래일 8-K 없음</div>
             ) : (
@@ -211,7 +227,7 @@ function AlertBriefCard({ b }: { b: AlertBrief }) {
 }
 
 // ── 압축 목록 (섹션 4·6) 컴포넌트 ────────────────────────
-function CompactList({ rows, emptyLabel }: { rows: RumorRow[]; emptyLabel: string }) {
+function CompactList({ rows, emptyLabel, kind }: { rows: RumorRow[]; emptyLabel: string; kind: "mentions" | "news" }) {
   if (rows.length === 0) {
     return <div className="text-xs text-muted-foreground">{emptyLabel}</div>;
   }
@@ -222,19 +238,17 @@ function CompactList({ rows, emptyLabel }: { rows: RumorRow[]; emptyLabel: strin
           <span className="rounded bg-slate-100 px-1.5 py-0.5 font-mono font-bold text-slate-700 dark:bg-slate-800 dark:text-slate-200">
             {r.ticker}
           </span>
-          <span className="text-muted-foreground">{r.name}</span>
+          <span className="text-muted-foreground">{shortName(r.name)}</span>
           {mcapBadge(r.mcap_bucket, r.mcap_asof) && (
             <span className="rounded bg-slate-50 px-1 py-0.5 text-[10px] font-mono text-slate-600 dark:bg-slate-900 dark:text-slate-300">
               {mcapBadge(r.mcap_bucket, r.mcap_asof)}
             </span>
           )}
-          <span className="rounded bg-amber-100 px-1.5 py-0.5 font-mono text-[10px] text-amber-800 dark:bg-amber-900/40 dark:text-amber-200">
-            {r.days_hint}
+          <span className="text-slate-700 dark:text-slate-200">
+            {kind === "mentions"
+              ? mentionSentence(r.stage || r.days_hint, r.baseline_n, r.st_24h, r.mult)
+              : trialSentence(r.phase, r.event_date, r.days_to) ?? r.detail}
           </span>
-          <span className="text-slate-700 dark:text-slate-200">{r.detail}</span>
-          {typeof r.st_24h === "number" && (
-            <span className="ml-auto font-mono text-slate-500 dark:text-slate-400">ST24 {r.st_24h}</span>
-          )}
         </li>
       ))}
     </ul>
@@ -247,8 +261,9 @@ function Form4Card({ row }: { row: RumorRow }) {
     <div className="rounded-lg border border-slate-200 bg-white p-3 text-sm dark:border-slate-700 dark:bg-slate-900">
       <div className="flex items-baseline gap-2 flex-wrap">
         <span className="rounded bg-emerald-600 px-2 py-0.5 font-mono text-xs font-bold text-white">
-          {row.ticker}
+          {tickerOrUnknown(row.ticker)}
         </span>
+        <span className="text-xs text-muted-foreground">{shortName(row.name)}</span>
         {mcapBadge(row.mcap_bucket, row.mcap_asof) && (
           <span className="rounded bg-slate-100 px-1.5 py-0.5 text-[10px] font-mono text-slate-700 dark:bg-slate-800 dark:text-slate-200">
             {mcapBadge(row.mcap_bucket, row.mcap_asof)}
@@ -258,8 +273,13 @@ function Form4Card({ row }: { row: RumorRow }) {
           {row.days_hint}
         </span>
       </div>
-      <div className="mt-1.5 text-xs text-muted-foreground">{row.name}</div>
-      <div className="mt-1.5 text-xs text-slate-700 dark:text-slate-200">{row.detail}</div>
+      <div className="mt-1.5 text-xs text-slate-700 dark:text-slate-200">{insiderLine(row.detail)}</div>
+      {row.cik && (
+        <details className="mt-1 text-[11px] text-muted-foreground">
+          <summary className="cursor-pointer">자세히</summary>
+          SEC 발행사 번호 {row.cik}
+        </details>
+      )}
     </div>
   );
 }
@@ -424,7 +444,7 @@ export default function BiotechPage() {
             ) : (
               <div className="space-y-2">
                 <div className="text-xs text-muted-foreground">
-                  {sortBy === "date" ? "임상 완료 예정일이 가까운 순서 ↓ (위가 가장 임박)" : "레이더 점수가 높은 순서 ↓ (순위표 밖 종목은 맨 아래)"} · 카드를 누르면 자세히 보입니다.
+                  <strong className="font-semibold text-slate-700 dark:text-slate-200">{sortLabel(sortBy)}</strong> ↓ · 카드를 누르면 자세히 보입니다.
                 </div>
                 {cards.map((r, i) => {
                   const rr = radarByTicker.get(r.ticker);
@@ -468,7 +488,7 @@ export default function BiotechPage() {
                               </table>
                             </>
                           ) : (
-                            <div className="text-muted-foreground">이 종목은 순위표 상위 30 밖이라 점수 요소가 없습니다.</div>
+                            <div className="text-muted-foreground">{rumorReason(r.days_to, r.stage, r.baseline_n)}</div>
                           )}
                           {r.trial?.official_title && (
                             <div className="mt-2">
@@ -540,8 +560,8 @@ export default function BiotechPage() {
                   ))}
                   <span className="text-muted-foreground">기준: 기준선 7일 이상 종목 중 오늘 언급 5건 이상이면서 평소의 5배 이상, 또는 레딧 매치 3건 이상 · 카드를 누르면 브리핑이 펼쳐집니다.</span>
                 </div>
-                {(kpi.alert_briefs ?? []).map((b) => (
-                  <AlertBriefCard key={b.ticker} b={b} />
+                {(kpi.alert_briefs ?? []).map((b, i) => (
+                  <AlertBriefCard key={b.ticker} b={b} defaultOpen={i === 0} />
                 ))}
               </div>
             )}
@@ -552,7 +572,7 @@ export default function BiotechPage() {
       {/* 섹션 4: 뉴스 통과 (팔 자리) · amber · 표2 압축 목록 */}
       {isAdmin && rumor && (
         <SectionCard tone="amber" icon="📰" label="뉴스 통과 (팔 자리)" count={t2.length} hint="B 상태 · 이미 발표 · 관망">
-          <CompactList rows={t2} emptyLabel="B 상태 종목 없음" />
+          <CompactList rows={t2} emptyLabel="B 상태 종목 없음" kind="news" />
         </SectionCard>
       )}
 
@@ -579,9 +599,11 @@ export default function BiotechPage() {
 
       {/* 섹션 6: 언급 있는 종목 · slate · 표3 압축 목록 */}
       {isAdmin && rumor && (
-        <SectionCard tone="slate" icon="🔔" label="언급 있는 종목" count={t3.length} hint="ST24 원값 표기 · baseline 미확보 포함">
-          <CompactList rows={t3} emptyLabel="언급 감지 없음" />
+        <div id="sec-mentions">
+        <SectionCard tone="slate" icon="🔔" label="언급 있는 종목" count={t3.length} hint="24시간 언급 수 · 기준선 수집 일수 · 평소 대비 배수">
+          <CompactList rows={t3} emptyLabel="언급 감지 없음" kind="mentions" />
         </SectionCard>
+        </div>
       )}
 
       {/* WP74 3단계 · 문서는 /biotech/docs 로 분리 · 첫 화면에는 링크 3개만 */}

@@ -154,9 +154,20 @@ export function cardText(
   eventDate: string | undefined,
   daysTo: number | null | undefined,
   theme?: ThemeRank,
+  opts: { short?: boolean } = {},
 ): { main: string | null; theme: string | null } {
   const parts: string[] = [];
   const t = trial ?? {};
+  if (opts.short) {
+    // WP85 · 짧은 판 (순위표 행) · "분류 · 단계 · 약물 · 종료 예정(결과 발표일 아님)"
+    if (t.category) parts.push(t.category_auto ? `${t.category}(자동)` : t.category);
+    const ph0 = phase ? phaseLabel(phase) : "";
+    if (ph0 && ph0 !== "임상") parts.push(ph0);
+    const d0 = (t.interventions ?? []).find((i) => !/placebo/i.test(i.name));
+    if (d0) parts.push(d0.name_ko || d0.name);
+    if (eventDate && typeof daysTo === "number") parts.push(`${ymdLabel(eventDate)}(D-${daysTo}) 종료 예정(결과 발표일 아님)`);
+    return { main: parts.length ? parts.join(" · ") : null, theme: null };
+  }
   if (t.category) parts.push(t.category_auto ? `${t.category}(자동)` : categoryLabel(t.category));
   const drugs = (t.interventions ?? []).filter((i) => !/placebo/i.test(i.name));
   if (drugs.length > 0) {
@@ -188,4 +199,77 @@ export function cardText(
       ? `이 분야(${theme.theme_ko})의 최근 테마 순위 ${theme.rank}위${theme.of ? ` (${theme.of}개 중` : " ("}${theme.quarter ? ` · ${theme.quarter}` : ""} · 논문·임상 증가율 기준)`
       : null;
   return { main, theme: themeLine };
+}
+
+
+// ── WP85 · 화면 설명 문장 (내부 필드 이름을 화면에 쓰지 않음) ─────────────
+const CORP_SUFFIX = /[,.]?\s+(inc|incorporated|corp|corporation|co|company|ltd|limited|plc|holdings|n\.?v|s\.?a|ag|llc)\.?$/i;
+
+// 대문자 법인명 → 짧은 이름 (예: "IOVANCE BIOTHERAPEUTICS, INC." → "Iovance Biotherapeutics")
+export function shortName(name?: string): string {
+  let n = (name ?? "").trim();
+  for (let i = 0; i < 3 && CORP_SUFFIX.test(n); i++) n = n.replace(CORP_SUFFIX, "").trim();
+  n = n.replace(/[,.]$/, "").trim();
+  if (n && n === n.toUpperCase() && /[A-Z]{3}/.test(n)) {
+    n = n.toLowerCase().replace(/\b([a-z])/g, (c) => c.toUpperCase());
+  }
+  return n;
+}
+
+export function sortLabel(sort: CardSort): string {
+  return sort === "score" ? "정렬: 레이더 점수 높은 순" : "정렬: 임상 종료 예정일 가까운 순";
+}
+
+const STAGE_KO: Record<string, string> = {
+  quiet: "조용",
+  collecting: "수집 중",
+  early: "언급 증가 초기",
+  frenzy: "언급 급증",
+};
+
+export function stageLabel(stage?: string): string {
+  return (stage && STAGE_KO[stage]) || "단계 미확인";
+}
+
+const BASELINE_MIN = 7; // 기준선 판정에 필요한 최소 수집 일수 (confirm · biotech_alert_rule 과 같은 값)
+
+// 예: "언급 급증 · 기준선 8일(7일 이상 충족) · 24시간 언급 32건 · 평소 대비 128배"
+export function mentionSentence(stage?: string, baselineDays?: number | null, mentions24h?: number | null, mult?: string): string {
+  const parts = [stageLabel(stage)];
+  if (typeof baselineDays === "number") {
+    parts.push(`기준선 ${baselineDays}일(${baselineDays >= BASELINE_MIN ? "7일 이상 충족" : "7일 미만 · 수집 중"})`);
+  }
+  if (typeof mentions24h === "number") parts.push(`24시간 언급 ${mentions24h}건`);
+  const m = Number(mult);
+  if (mult && Number.isFinite(m) && m > 0) parts.push(`평소 대비 ${m >= 10 ? Math.round(m) : m.toFixed(1)}배`);
+  return parts.join(" · ");
+}
+
+// 소문에 살 자리 카드에 오른 이유 (API 표1 규칙: 뉴스 예정 A 상태 · 언급 단계 조용/수집 중 · 예정일 가까운 15)
+export function rumorReason(daysTo?: number | null, stage?: string, baselineDays?: number | null): string {
+  const parts: string[] = [];
+  if (typeof daysTo === "number") parts.push(`임상 종료 예정 D-${daysTo}`);
+  const st = stageLabel(stage);
+  parts.push(
+    stage === "collecting" && typeof baselineDays === "number"
+      ? `커뮤니티 언급 '${st}'(기준선 ${baselineDays}일 · 7일 미만)`
+      : `커뮤니티 언급 '${st}'`,
+  );
+  return `이 카드에 오른 이유: ${parts.join(" · ")} · 순위표 상위 30 밖이라 점수 요소는 없습니다.`;
+}
+
+// 임원·대주주 매수 한 줄 · 예: "전문 펀드 · 333,333주"
+export function insiderLine(detail?: string): string {
+  return (detail ?? "").replace(/(\d{4,})주/, (_, n: string) => `${Number(n).toLocaleString("ko-KR")}주`);
+}
+
+export function tickerOrUnknown(ticker?: string): string {
+  return ticker && ticker.trim() ? ticker : "티커 미확인";
+}
+
+// 자동 요약 상태 · 실패면 "자동 요약 실패(사유)" · 성공이면 null
+export function summaryStatus(summary?: { ok: boolean; error?: string } | null): string | null {
+  if (!summary) return "자동 요약 없음(이 종목은 요약 대상이 아님)";
+  if (summary.ok) return null;
+  return `자동 요약 실패(${summary.error || "사유 미기록"})`;
 }

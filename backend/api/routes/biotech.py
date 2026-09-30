@@ -170,6 +170,12 @@ class RadarRow(BaseModel):
     news_window: str      # why_easy 요약 (예정일 표기)
     factors: dict[str, float]   # expert · crowd · near · unnoticed · risk
     tag_bonus: float
+    # WP85 · 순위표 행 시험 요약 (cardText 짧은 판) · 후보 state_note 의 대표 시험 · 표시 전용
+    nct_id: str = ""
+    phase: str = ""
+    event_date: str = ""
+    days_to: Optional[int] = None
+    trial: dict[str, Any] = {}
 
 
 class RadarJson(BaseModel):
@@ -326,6 +332,13 @@ async def get_radar_json(_admin: str = Depends(require_sniper_token)) -> RadarJs
                 },
                 tag_bonus=_f("tag_bonus"),
             ))
+    # WP85 · 대표 시험 (candidates v3 state_note · AACT 1차 완료 예정일) · 표시 전용
+    notes = _latest_candidate_notes()
+    for row in rows[:30]:
+        f = _note_fields(notes.get(row.ticker, ""))
+        if f:
+            row.nct_id, row.phase, row.event_date, row.days_to = f["nct_id"], f["phase"], f["event_date"], f["days_to"]
+            row.trial = _trial_display(row.nct_id)
     return RadarJson(
         generated=datetime.fromtimestamp(path.stat().st_mtime, tz=timezone.utc).isoformat(),
         source_csv=str(path.relative_to(PROJECT_ROOT)),
@@ -350,6 +363,8 @@ class RumorRow(BaseModel):
     event_date: str = ""  # 임상 완료 예정일 (primary completion · 결과 발표일 아님)
     days_to: Optional[int] = None
     stage: str = ""       # WP74 4단계 · 언급 단계 (quiet · collecting · 기타) · 표시용
+    mult: str = ""        # WP85 · 평소 대비 배수 원값 (confirm st_baseline_mult · 'collecting' 또는 숫자) · 표시용
+    cik: str = ""         # WP85 · 표4 발행사 CIK (펼침 영역 전용)
     trial: dict[str, Any] = {}      # WP76 · AACT 시험 상세 (원문 필드 + 사전 대응) · 없으면 빈 dict
     theme_rank: dict[str, Any] = {}  # WP76 · H6 봉인 순위 (읽기만) · 소속 없으면 빈 dict
 
@@ -452,6 +467,30 @@ def _auto_categories() -> dict[str, dict[str, Any]]:
     base = DATA_DIR_RUNTIME if DATA_DIR_RUNTIME else (DATA_DIR / "biotech")
     data = _cached(base / "auto_categories.json", lambda p: json.loads(p.read_text())) or {}
     return data.get("terms", {})
+
+
+def _latest_candidate_notes() -> dict[str, str]:
+    """ticker → state_note (최신 candidates v3 · RUNTIME > docs > backend/data)."""
+    files: list[Path] = []
+    for d in _search_dirs("candidates"):
+        if d.exists():
+            files.extend(d.glob("biotech_candidates_v3_*.csv"))
+    if not files:
+        return {}
+    rows = _cached(max(files, key=lambda p: p.stat().st_mtime), _csv_rows) or []
+    return {r.get("ticker", ""): (r.get("state_note_v50") or r.get("state_note") or "") for r in rows}
+
+
+def _cik_ticker_map() -> dict[str, str]:
+    """SEC company_tickers (docs/plans/biotech/data 이식본) · CIK 10자리 → 티커."""
+    p = DATA_DIR_DOCS / "sec_company_tickers.json"
+    if not p.exists():
+        p = DATA_DIR / "sec_company_tickers.json"
+    data = _cached(p, lambda q: json.loads(q.read_text())) or {}
+    out: dict[str, str] = {}
+    for e in data.values():
+        out.setdefault(str(e.get("cik_str", "")).zfill(10), str(e.get("ticker", "")).upper())
+    return out
 
 
 def _theme_rank(ticker: str) -> dict[str, Any]:
@@ -628,9 +667,11 @@ async def get_rumor_json(
             name=(c.get("name") or "")[:40],
             mcap_bucket=c.get("mcap_bucket", ""),
             days_hint=conf.get("stage", "?"),
-            detail=f"baseline {conf.get('st_baseline_n', '0')}/7일",
+            detail=f"baseline {conf.get('st_baseline_n', '0')}/7일",   # 하위 호환 원문 · 화면은 lib mentionSentence 사용
             st_24h=st,
             baseline_n=_to_int(conf.get("st_baseline_n") or 0),
+            stage=conf.get("stage", ""),
+            mult=str(conf.get("st_baseline_mult") or ""),
         ))
 
     # 표4: F4 최근 20 거래일 (h65 CSV · WP69-3b · RUNTIME > docs > backend/data)
@@ -645,11 +686,15 @@ async def get_rumor_json(
                 f4_pick = files[-1]
                 break
     if f4_pick:
+        cik2tk = _cik_ticker_map()
         with f4_pick.open() as f:
             for r in csv.DictReader(f):
+                cik10 = (r.get("issuer_cik") or "").zfill(10)
                 rows.append(RumorRow(
                     table="표4",
-                    ticker=r.get("issuer_cik", "")[-6:],
+                    # WP85 · 이전: 발행사 CIK 끝 6자리 (예 "088082") 를 티커 자리에 넣던 결함 · 이제 h65 issuer_ticker > SEC 명부 · 없으면 빈 값 (화면 "티커 미확인")
+                    ticker=(r.get("issuer_ticker") or cik2tk.get(cik10, "")),
+                    cik=cik10,
                     name=(r.get("issuer_name") or "")[:40],
                     mcap_bucket="—",
                     days_hint=f"D+{r.get('elapsed_days', '?')}",
