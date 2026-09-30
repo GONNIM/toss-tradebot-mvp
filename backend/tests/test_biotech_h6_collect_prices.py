@@ -16,9 +16,15 @@ class _R:
         return self._b
 
 
-def _bars(n=5):
-    return [{"date": f"2026-09-{i + 21:02d}T00:00:00.000Z", "open": 1, "high": 1, "low": 1, "close": 1, "adjClose": 1, "volume": 1}
-            for i in range(n)]
+def _bars(n=5, drop=None):
+    out = []
+    for i in range(n):
+        b = {f: 1 for f in h6.TIINGO_FIELDS}
+        b["date"] = f"2026-09-{i + 21:02d}T00:00:00.000Z"
+        if drop:
+            b.pop(drop)
+        out.append(b)
+    return out
 
 
 def test_stops_on_429_and_key_only_in_header(tmp_path, monkeypatch):
@@ -42,10 +48,20 @@ def test_monthly_allocation_cap(tmp_path, monkeypatch):
     assert res["success"] == 2 and res["failed"] == {"C": "monthly_allocation_reached"} and res["monthly_remaining"] == 0
 
 
-def test_not_found_and_coverage():
-    bars = {"A": [{"date": "2026-09-28"}, {"date": "2026-09-29"}], "B": []}
-    cov = h6.coverage(bars, ["A", "B"])
-    assert cov["ticker_coverage"] == "1/2" and cov["trading_day_coverage_by_ticker"]["A"] == 1.0
+def test_coverage_denominator_is_union_of_dates():
+    bars = {"A": [{"date": "2026-09-28"}, {"date": "2026-09-29"}], "B": [{"date": "2026-09-29"}, {"date": "2026-09-30"}], "C": []}
+    cov = h6.coverage(bars, ["A", "B", "C"])
+    assert cov["ticker_coverage"] == "2/3" and cov["distinct_trading_dates"] == 3
+    assert cov["trading_day_coverage_by_ticker"]["A"] == round(2 / 3, 4)
+    assert cov["trading_day_coverage_pct"] == round(4 / 9 * 100, 1)
+
+
+def test_all_tiingo_fields_saved_and_missing_field_fails(tmp_path, monkeypatch):
+    monkeypatch.setattr(h6._P, "RUNTIME_DIR", tmp_path)
+    ok = h6.run(["A"], KEY, lambda *a, **k: _R(200, _bars()), date(2026, 10, 1), sleep=lambda s: None)
+    assert set(h6.TIINGO_FIELDS) <= set(ok["bars"]["A"][0]) and ok["bars"]["A"][0]["date"] == "2026-09-21"
+    bad = h6.run(["B"], KEY, lambda *a, **k: _R(200, _bars(drop="adjVolume")), date(2026, 10, 1), sleep=lambda s: None)
+    assert bad["success"] == 0 and bad["failed"] == {"B": "missing_fields:adjVolume"}
 
 
 def test_targets_file_has_59():

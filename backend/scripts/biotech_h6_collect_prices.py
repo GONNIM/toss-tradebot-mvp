@@ -7,12 +7,12 @@
 - 월 고유 종목 사용량은 <산출폴더>/tiingo_usage_<YYYYMM>.json 에 누적 (H6 · WP75 공용 장부)
 
 산출 (경로 해석기 out_dir · 로컬 = backend/data/biotech/h6/):
-- h6_prices_tiingo_<YYYYMMDD>.csv  (ticker,date,open,high,low,close,adj_close,volume,source)
-- h6_prices_tiingo_<YYYYMMDD>.summary.json (요청 수 · 성공 · 실패와 사유 · 커버율 · 남은 월 한도)
+- h6_prices_tiingo_<YYYYMMDD>.csv  (ticker + Tiingo 일봉 열 13개 그대로 + source)
+- h6_prices_tiingo_<YYYYMMDD>.summary.json (요청 수 · 성공 · 실패와 사유 · 커버율 · 남은 월 한도) · 사본 docs/plans/biotech/verification/H6/c3-20260928/
 
 커버율:
 - 종목 기준 = 일봉을 1개 이상 받은 종목 / 대상 59
-- 거래일 기준 = 종목별 (받은 일봉 수 / 그 종목 거래 기간의 평일 수) 평균 · 거래 기간 = max(2015-01-01, 첫 일봉) ~ 마지막 일봉
+- 거래일 기준 = (종목별 받은 날짜 수 합) / (서로 다른 날짜 수 × 대상 수) · 서로 다른 날짜 = 대상 전 종목 일봉 날짜 합집합 (2015-01-01 이후)
   (창 단위 v2.1 판정식 `first_bar ≤ 창시작+7d AND last_bar ≥ event-30d` 은 백테스트 창이 정해지는 본 실행에서 적용)
 
 실행:
@@ -46,6 +46,10 @@ COVER_FROM = date(2015, 1, 1)
 MONTHLY_ALLOCATION = 450           # 월 고유 종목 배분 (한도 500 중)
 REQ_INTERVAL = 1.0                 # 초당 1회 이하 (하루 1,000회 한도와 무관하게 보수적)
 TARGETS_REL = ("verification", "H6", "c3-20260928", "h6_price_targets_59.csv")
+# Tiingo 일봉 응답 열 전부 (그대로 저장 · 하나라도 빠지면 그 종목 실패)
+TIINGO_FIELDS = ["date", "open", "high", "low", "close", "volume",
+                 "adjOpen", "adjHigh", "adjLow", "adjClose", "adjVolume", "divCash", "splitFactor"]
+CSV_FIELDS = ["ticker"] + TIINGO_FIELDS + ["source"]
 
 
 class TiingoBlocked(RuntimeError):
@@ -84,18 +88,17 @@ def _weekdays(a: date, b: date) -> int:
 
 
 def coverage(bars_by_ticker: dict[str, list[dict]], targets: list[str]) -> dict:
+    """종목 기준 = 받은 종목 / 대상 · 거래일 기준 분모 = 대상 전체에서 나온 서로 다른 날짜 수 (2015-01-01 이후)."""
     got = [t for t in targets if bars_by_ticker.get(t)]
-    ratios = {}
-    for t in got:
-        ds = sorted(date.fromisoformat(b["date"]) for b in bars_by_ticker[t])
-        start, end = max(COVER_FROM, ds[0]), ds[-1]
-        if end < start:
-            continue
-        n_bars = sum(1 for d in ds if start <= d <= end)
-        ratios[t] = round(n_bars / max(_weekdays(start, end), 1), 4)
+    dates_by = {t: {b["date"] for b in bars_by_ticker.get(t, []) if b["date"] >= COVER_FROM.isoformat()} for t in targets}
+    all_dates = set().union(*dates_by.values()) if dates_by else set()
+    denom = len(all_dates)                                                   # 분모 = 서로 다른 날짜 수 (전 종목 합집합)
+    ratios = {t: round(len(dates_by[t]) / denom, 4) if denom else 0.0 for t in targets}
+    overall = sum(len(v) for v in dates_by.values()) / (denom * len(targets)) if denom and targets else 0.0
     return {"ticker_coverage": f"{len(got)}/{len(targets)}",
             "ticker_coverage_pct": round(len(got) / max(len(targets), 1) * 100, 1),
-            "trading_day_coverage_mean_pct": round(sum(ratios.values()) / max(len(ratios), 1) * 100, 1),
+            "distinct_trading_dates": denom,
+            "trading_day_coverage_pct": round(overall * 100, 1),                # (종목별 날짜 수 합) / (분모 × 대상 수)
             "trading_day_coverage_by_ticker": ratios}
 
 
@@ -111,9 +114,10 @@ def fetch_one(get: Callable[..., Any], ticker: str, key: str, end: str) -> list[
     data = r.json()
     if not isinstance(data, list) or not data:
         raise LookupError("empty")
-    return [{"ticker": ticker, "date": str(b.get("date", ""))[:10], "open": b.get("open"), "high": b.get("high"),
-             "low": b.get("low"), "close": b.get("close"), "adj_close": b.get("adjClose"),
-             "volume": b.get("volume"), "source": "tiingo"} for b in data]
+    missing = sorted({f for b in data for f in TIINGO_FIELDS if f not in b})
+    if missing:
+        raise LookupError("missing_fields:" + ",".join(missing))
+    return [{"ticker": ticker, **{f: b[f] for f in TIINGO_FIELDS}, "date": str(b["date"])[:10], "source": "tiingo"} for b in data]
 
 
 def run(targets: list[str], key: str, get: Callable[..., Any], today: date, sleep: Callable[[float], None] = time.sleep) -> dict:
@@ -169,12 +173,15 @@ def main():
     del key
     out = _P.out_dir("h6") / f"h6_prices_tiingo_{today:%Y%m%d}.csv"
     with out.open("w", newline="") as f:
-        w = csv.DictWriter(f, fieldnames=["ticker", "date", "open", "high", "low", "close", "adj_close", "volume", "source"])
+        w = csv.DictWriter(f, fieldnames=CSV_FIELDS)
         w.writeheader()
         for rows in res.pop("bars").values():
             w.writerows(rows)
     summary = {**res, "output": str(out)}
-    out.with_suffix(".summary.json").write_text(json.dumps(summary, ensure_ascii=False, indent=2))
+    body = json.dumps(summary, ensure_ascii=False, indent=2)
+    out.with_suffix(".summary.json").write_text(body)
+    # 요약만 git 추적 폴더에 사본 (가격 CSV 는 git 에 넣지 않음)
+    (targets_path().parent / f"h6_prices_tiingo_{today:%Y%m%d}.summary.json").write_text(body)
     print(json.dumps({k: v for k, v in summary.items() if k != "trading_day_coverage_by_ticker"}, ensure_ascii=False, indent=2))
 
 
