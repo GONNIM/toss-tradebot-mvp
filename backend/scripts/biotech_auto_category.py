@@ -106,18 +106,26 @@ def mesh_category(name: str, trees: list[str]) -> str | None:
 
 
 # ── 키워드 어간 ─────────────────────────────────────────────────────
-FIRST_STEM_ORDER = ("암", "건강인·약동학")   # 코드가 강제하는 앞 순서 (사용자 지시)
+FIRST_STEM_ORDER = ("암", "건강인·약동학")   # 코드가 강제하는 앞 순서 (사용자 지시) · 그 뒤 약어 → 나머지 어간
+
+
+def _abbr_rx(abbr: str) -> re.Pattern:
+    """약어 · 단어 경계 (앞뒤 영숫자 없음 · 괄호 안·하이픈 앞 포함) · 대소문자 구분."""
+    return re.compile(rf"(?<![A-Za-z0-9]){re.escape(abbr)}(?![A-Za-z0-9])")
 
 
 def load_stems(path: Path | None = None) -> list[tuple[str, re.Pattern]]:
+    """(분류, 정규식) 목록 · 순서 = 암 어간 → 건강인·약동학 어간 → 약어 (WP82-3) → 나머지 어간."""
     p = path or _P.find("auto_category_stems.json")
     if p is None or not p.exists():
         return []
     d = json.loads(p.read_text())
     stems = d.get("stems", {})
     rest = [c for c in d.get("rest_order", list(stems)) if c not in FIRST_STEM_ORDER]
-    order = [c for c in FIRST_STEM_ORDER if c in stems] + [c for c in rest if c in stems]
-    return [(c, re.compile(stems[c], re.I)) for c in order]
+    out = [(c, re.compile(stems[c], re.I)) for c in FIRST_STEM_ORDER if c in stems]
+    out += [(cat, _abbr_rx(ab)) for ab, cat in sorted(d.get("abbreviations", {}).items())]
+    out += [(c, re.compile(stems[c], re.I)) for c in rest if c in stems]
+    return out
 
 
 def stem_category(name: str, stems: list[tuple[str, re.Pattern]]) -> tuple[str, str] | None:
