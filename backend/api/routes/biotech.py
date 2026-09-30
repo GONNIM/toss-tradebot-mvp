@@ -402,6 +402,15 @@ def _trial_display(nct: str) -> dict[str, Any]:
             category, cat_src = hit.get("category", ""), t
             break
     conds = m.get("conditions", [])
+    category_auto = False
+    if not category:
+        # WP81 · 수동 사전에 없을 때만 자동 분류 (auto_categories.json · 주간 잡 산출 · NLM 호출 없음)
+        auto = _auto_categories()
+        for t in m.get("mesh_terms", []) + conds:
+            hit = auto.get(t)
+            if hit:
+                category, cat_src, category_auto = hit.get("category", ""), t, True
+                break
     if not category and conds:
         category, cat_src = f"기타 ({conds[0]})", conds[0]
     ivs = [{"name": i.get("name", ""), "type": i.get("type", ""), "type_ko": _ko(i.get("type", "")), "name_ko": _ko(i.get("name", ""))}
@@ -410,7 +419,7 @@ def _trial_display(nct: str) -> dict[str, Any]:
     outs = [{**o, "measure_ko": _ko(o.get("measure", ""))} for o in m.get("primary_outcomes", [])]
     return {
         "nct_id": nct, "brief_title": m.get("brief_title", ""), "official_title": m.get("official_title", ""),
-        "category": category, "category_source": cat_src,
+        "category": category, "category_source": cat_src, "category_auto": category_auto,
         "conditions": [{"en": c, "ko": _ko(c)} for c in conds],
         "interventions": ivs, "placebo": placebo,
         "enrollment": m.get("enrollment", ""), "enrollment_type": m.get("enrollment_type", ""),
@@ -419,6 +428,13 @@ def _trial_display(nct: str) -> dict[str, Any]:
         "masking": m.get("masking", ""), "masking_ko": _ko(m.get("masking", "")),
         "primary_outcomes": outs, "overall_status": m.get("overall_status", ""),
     }
+
+
+def _auto_categories() -> dict[str, dict[str, Any]]:
+    """RUNTIME/auto_categories.json (WP81 자동 분류) · 없으면 빈 dict."""
+    base = DATA_DIR_RUNTIME if DATA_DIR_RUNTIME else (DATA_DIR / "biotech")
+    data = _cached(base / "auto_categories.json", lambda p: json.loads(p.read_text())) or {}
+    return data.get("terms", {})
 
 
 def _theme_rank(ticker: str) -> dict[str, Any]:

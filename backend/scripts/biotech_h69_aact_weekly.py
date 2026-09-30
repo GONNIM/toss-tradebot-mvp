@@ -488,6 +488,32 @@ def _write_match_report(date_str: str, matches: list[dict], diag: dict) -> None:
     LOG.info("매칭 진단 · %s", json.dumps(summary, ensure_ascii=False))
 
 
+def run_auto_category_step(snapshot_path: Path, notify=None) -> dict | None:
+    """WP81-2 · 자동 분류 단계 · 실패 시 텔레그램 warning 1회 · 예외를 밖으로 던지지 않음 (주간 잡 계속)."""
+    t0 = time.time()
+    try:
+        from backend.scripts.biotech_auto_category import run_weekly as _auto_run
+        stats = _auto_run(snapshot_path, fetch=True)
+        stats["elapsed_sec"] = round(time.time() - t0, 1)
+        LOG.info("자동 분류 단계 완료 · %s", json.dumps(stats, ensure_ascii=False))
+        return stats
+    except Exception as e:  # noqa: BLE001
+        LOG.warning("자동 분류 단계 실패 · %s · 스냅샷·기존 자동 분류는 유지 · %.1fs", e.__class__.__name__, time.time() - t0)
+        (notify or _notify_warning_sync)("auto_category", f"{e.__class__.__name__} · 주간 잡은 계속 진행")
+        return None
+
+
+def _notify_warning_sync(step: str, detail: str) -> None:
+    """텔레그램 warning (자동 분류 등 보조 단계 실패 · 주간 잡 중단 아님)."""
+    try:
+        from backend.services.notifier import TelegramNotifier
+        asyncio.run(TelegramNotifier().send_warning(
+            title=f"biotech AACT weekly 보조 단계 실패 · {step}",
+            body=f"단계: {step}\n상세: {detail}\n서버: optimus8\n스크립트: biotech_h69_aact_weekly"))
+    except Exception as e:
+        LOG.warning("notifier 실패 · %s", e.__class__.__name__)
+
+
 def _notify_failure_sync(step: str, detail: str) -> None:
     """텔레그램 알림 · sync wrapper."""
     try:
@@ -507,6 +533,7 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--tmp-dir", default="/tmp/aact_zip", help="임시 zip 저장 폴더 (실행 후 삭제)")
     args = parser.parse_args()
+    t_start = time.time()   # WP81-2 · 주간 잡 전체 소요 시간 기록
 
     tmp_dir = Path(args.tmp_dir)
     tmp_dir.mkdir(parents=True, exist_ok=True)
@@ -563,10 +590,15 @@ def main():
     LOG.info("ctgov_snapshot.json · %d study · %d unique ticker · %s",
              len(matches), len({m["ticker"] for m in matches}), OUT_JSON)
 
+    # 6-b) WP81 · 질환 분류 자동화 (수동 사전 밖 용어만 · NLM 조회는 이 주간 잡에서만 · 실패해도 주간 잡 계속)
+    run_auto_category_step(OUT_JSON)
+
     # 7) zip 삭제 (사용자 지시)
     size_mb = zip_path.stat().st_size // (1024 * 1024)
     zip_path.unlink(missing_ok=True)
     LOG.info("zip 삭제 · %d MB 회수", size_mb)
+
+    LOG.info("주간 잡 전체 소요 · %.1f분", (time.time() - t_start) / 60)
 
     # 요약 print
     print(json.dumps({
