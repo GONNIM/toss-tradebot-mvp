@@ -20,6 +20,16 @@
 
 ## PENDING
 
+### [Biotech Catalyst Radar · WP84 재확인 · 10월 1일 실행 (새 작업 없음)] · 2026-09-30 발행
+
+- 10월 1일 오전 실행 · 서버 조회 전용 · 새 작업 시작 금지
+- 1. 07:00 확인: `/root/toss-tradebot-mvp/var/biotech/logs/daily.log` 에서 "경보 N건 · z.ai 호출 N/5" · 경보 종목 배수와 기준선 평균 · `[8/9] mcap_daily` 건너뜀 · 9/9 완료 인용 · 9/29·9/30 대비 경보 종목 수 변화 한 줄
+- 2. H6 Tiingo 59종목 수집 (로컬): 이 파일 H6 항목대로 · 종목별 거래일 커버율 최솟값 · 90% 미만 목록 · summary.json 사본 경로 · 장부 인용 · 실패 종목 대안 티커 · 장부 기준 H6 + WP75 10월 하루 요청 수와 월 고유 종목 수를 9/30 예측 (138회 · 79회 · 137개) 과 나란히
+- 3. H6 보고 뒤 (승인됨): PR #58 병합·배포 → 13경로 → 수정 후 스크린샷 `wp87_after_*.webp` (임원 매수 카드 제목·내용 일치 여부) → WP88 PR 생성 → 번호 · pytest · tsx · next build 결과로 승인 요청
+- 준비 확인 (2026-09-30 20:23 KST · 실행 안 함): 대상 `docs/plans/biotech/verification/H6/c3-20260928/h6_price_targets_59.csv` 59행 (+머리글) · 로컬 TIINGO_API_KEY 설정됨 (값 미출력) · 10월 장부 `backend/data/biotech/tiingo_usage_202610.json` 은 첫 실행 때 생성
+
+---
+
 ### [Biotech Catalyst Radar · WP88-3 결정 반영 · 10월 1일 실행] · 2026-09-30 발행
 
 **원문 요지** (보고 첫 줄 "지금 하는 일" · 전체 경로 · 서버 조회 전용 · 배포는 승인 후에만):
