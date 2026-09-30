@@ -139,3 +139,22 @@ def test_nlm_stops_on_429_and_uses_cache_without_requests():
 
 def test_nlm_interval_is_at_most_3_per_second():
     assert ac.NLM_MIN_INTERVAL >= 1 / 3
+
+
+
+def test_weekly_step_failure_sends_one_warning_and_does_not_raise(tmp_path, monkeypatch):
+    from backend.scripts import biotech_h69_aact_weekly as w
+
+    def boom(*a, **k):
+        raise RuntimeError("nlm down")
+
+    monkeypatch.setattr(ac, "run_weekly", boom)
+    sent = []
+    assert w.run_auto_category_step(tmp_path / "snap.json", notify=lambda s, d: sent.append((s, d))) is None
+    assert sent == [("auto_category", "RuntimeError · 주간 잡은 계속 진행")]
+
+
+def test_stems_file_found_via_resolver_in_docs_data():
+    from backend.scripts import _biotech_paths as _P
+    p = _P.find("auto_category_stems.json")
+    assert p is not None and p.parent.name == "data" and p.parent.parent.name == "biotech"   # docs/plans/biotech/data

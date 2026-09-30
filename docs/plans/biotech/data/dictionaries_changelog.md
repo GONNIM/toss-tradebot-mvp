@@ -104,3 +104,10 @@
 - 검수 원본: `docs/plans/biotech/verification/dictionaries/ko_terms_new_categories_proposed_v2_reviewed.csv` (29행 · 유지 17 = proposed_ko · 변경 12 = reviewer_decision)
 - `docs/plans/biotech/data/ko_terms.csv` 197 → 226행
 - 표기 맞춤 2건: Hepatic Impairment 간기능장애 → 간 기능 저하 참가자 · Renal Impairments 신기능장애 → 신장 기능 저하 참가자 (Hepatic Impairment (HI) 검수 결과 "간 기능 저하 참가자" 와 맞춤)
+
+## 어간 사전 v1 · 2026-09-30 (WP81-2) · 신설
+
+- 파일: `docs/plans/biotech/data/auto_category_stems.json` (자동 분류 3순위 · 수동 사전 > MeSH 트리 > 어간 > 기타)
+- 항목 수: 분류 17개 · 어간 207개 (정규식 대안 수) · 출처 = `docs/plans/biotech/verification/dictionaries/auto_category_design.md` 6절 초안
+- 적용 순서 "암 → 건강인·약동학 → 나머지" 는 코드가 강제 (`backend/scripts/biotech_auto_category.py` load_stems)
+- 규칙: 어간 추가·수정·삭제는 이 파일에 날짜 · 사유 · 건수를 기록한다 (사전과 같은 규칙) · 검수 후 확정

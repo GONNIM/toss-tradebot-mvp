@@ -9,7 +9,7 @@
 
 MeSH 규칙 = WP81 두 단계 규칙 (2026-09-30 · 수동 사전 326개 기준 일치율 92.9%):
   1단계 예외 (위에서부터 첫 일치 하나) → 2단계 트리 순서 (앞에 있는 트리가 이김).
-어간 = backend/data/auto_category_stems.json · 순서 "암 → 건강인·약동학 → 나머지" 는 코드가 강제.
+어간 = docs/plans/biotech/data/auto_category_stems.json (경로 해석기 조회 · 변경은 dictionaries_changelog.md 기록) · 순서 "암 → 건강인·약동학 → 나머지" 는 코드가 강제.
 
 로컬 시험 실행 (NLM 요청 없이 캐시만 쓰려면 --no-fetch):
     PYTHONPATH=. backend/venv/bin/python -m backend.scripts.biotech_auto_category --snapshot <ctgov_snapshot.json> [--no-fetch]
@@ -264,6 +264,8 @@ def run_weekly(snapshot_path: Path, fetch: bool = True) -> dict:
         w.writeheader()
         w.writerows(rows)
     stats["proposals"] = str(prop)
+    stats["proposal_rows"] = len(rows)
+    stats["cache_items"] = len(cache)
     LOG.info("자동 분류 · %s", json.dumps(stats, ensure_ascii=False))
     return stats
 
