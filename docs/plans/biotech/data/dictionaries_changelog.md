@@ -111,3 +111,13 @@
 - 항목 수: 분류 17개 · 어간 207개 (정규식 대안 수) · 출처 = `docs/plans/biotech/verification/dictionaries/auto_category_design.md` 6절 초안
 - 적용 순서 "암 → 건강인·약동학 → 나머지" 는 코드가 강제 (`backend/scripts/biotech_auto_category.py` load_stems)
 - 규칙: 어간 추가·수정·삭제는 이 파일에 날짜 · 사유 · 건수를 기록한다 (사전과 같은 규칙) · 검수 후 확정
+
+## v3 · 2026-09-30 (WP82 · 자동 분류 검수 + 미분류 검수 반영)
+
+- 검수 원본: `docs/plans/biotech/verification/dictionaries/auto_category_review_20260930_reviewed.csv` (12행 · 희귀 유전 10 · 유지 2) · `docs/plans/biotech/verification/dictionaries/unmapped_after_auto_20260930_reviewed.csv` (150행)
+- 추가 162건 · 행 수 486 → 648
+- "유지" 2건은 자동 분류가 맞았으므로 그 값으로 수동 등재: Eczema, Atopic → 피부 · Wilms Tumor → 암
+- 새 분류 값 "무시" 37건 (일반어 · 시술 · 약물명 · 증상 · 시험 단계 · 비특이 표지자) · 시험 분류를 정할 때 건너뜀 · 화면에 표시하지 않음
+- 분포 (추가분): 암 66 · 무시 37 · 희귀 유전 33 · 신경·정신 7 · 면역·염증 6 · 감염 6 · 혈액 2 · 피부 1 · 근골격 1 · 통증 1 · 신장 1 · 건강인·약동학 1
+- 규칙 추가 2개: (7) 무시 등재 · 건너뛰기 · (8) 암 시험 전용 종양 표지자·변이 = 암
+- 새 용어의 한국어는 이번에 만들지 않음 (카드는 분류만 바뀌고 원문 유지 · 다음 검수 때 목록 제안)

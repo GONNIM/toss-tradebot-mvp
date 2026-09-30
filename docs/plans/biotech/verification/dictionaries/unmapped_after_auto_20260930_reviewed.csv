@@ -1,0 +1,151 @@
+term,source,n_trials,example_ticker,example_nct,reviewer_decision
+Recurrence,mesh,28,ADCT,NCT04705454,무시
+HAE,condition,6,BCRX,NCT04933721,희귀 유전
+Chronic Disease,mesh,3,AUPH,NCT00244842,무시
+Disease,mesh,3,GERN,NCT07549451,무시
+HER-2 Protein Overexpression,condition,3,COGT,NCT02840110,암
+Microsatellite Instability,mesh,3,FATE,NCT04106167,암
+Cervical High Grade Squamous Intraepithelial Lesion,condition,2,INO,NCT03185013,암
+DLBCL,condition,2,ADCT,NCT04082936,암
+DM1,condition,2,DYN,NCT07700225,희귀 유전
+EGFR Exon 20 Mutations,condition,2,AVBP,NCT05607550,암
+HER2 Amplification,condition,2,ELVN,NCT06328738,암
+HLA-A*02:01-positive,condition,2,IMCR,NCT06840119,무시
+HSIL,condition,2,INO,NCT03185013,암
+Joint Disease,condition,2,BCRX,NCT01265264,근골격
+KMT2Ar,condition,2,KURA,NCT06001788,암
+Muscular Dystrophy in Children,condition,2,DYN,NCT07608432,희귀 유전
+Myotonic Dystrophy Type 1 (DM1),condition,2,DYN,NCT05481879,희귀 유전
+NPM1 Mutation,condition,2,KURA,NCT06001788,암
+Nasal Congestion,condition,2,BCRX,NCT00958776,무시
+Prophylaxis,condition,2,BCRX,NCT03472040,무시
+SLE,condition,2,ARTV,NCT06265220,면역·염증
+X-Linked Protoporphyria (XLP),condition,2,IRON,NCT06910358,희귀 유전
+AATD,condition,1,INBX,NCT03815396,희귀 유전
+ATC,condition,1,CCCC,NCT05668585,암
+Acute Graft-versus-host Disease,condition,1,FATE,NCT02743351,면역·염증
+Adjuvant Treatment,condition,1,AVBP,NCT07010419,무시
+Advanced Systemic Mastocytosis (AdvSM),condition,1,COGT,NCT04996875,암
+Allogeneic Stem Cell Transplantation,condition,1,FATE,NCT00890500,무시
+Alpha-1 Antitrypsin Deficiency,condition,1,INBX,NCT03815396,희귀 유전
+Anti-CD19,condition,1,CLYM,NCT07043946,무시
+Anti-Synthetase Syndrome,condition,1,CABA,NCT06154252,면역·염증
+BMM,condition,1,COGT,NCT05186753,암
+Basal Cell Nevoid Syndrome (BCNS),condition,1,EXEL,NCT00670189,희귀 유전
+Behavior,mesh,1,ACAD,NCT03947216,무시
+Biologics,condition,1,CLYM,NCT07043946,무시
+Bites and Stings,mesh,1,CCCC,NCT07280013,무시
+Bunionectomy,condition,1,ACAD,NCT04855240,통증
+CD22 Positive,condition,1,ADCT,NCT03698552,암
+CRC,condition,1,CCCC,NCT05668585,암
+Chronic GVHD,condition,1,IOVA,NCT01937468,면역·염증
+Chronic Graft Versus Host Disease,condition,1,IOVA,NCT01937468,면역·염증
+Chronic Lymphoproliferative Diseases,condition,1,GERN,NCT00124189,암
+Chronic Phase CML,condition,1,ELVN,NCT06787144,암
+Cognitive Impairment,condition,1,ANRO,NCT06502964,신경·정신
+Complications of Organ Transplant Stem Cells,condition,1,IOVA,NCT01937468,무시
+DMD,condition,1,DYN,NCT07608432,희귀 유전
+Delusion,condition,1,ACAD,NCT05240339,신경·정신
+Desmoid,condition,1,IMNM,NCT04871282,암
+Disease Progression,mesh,1,FATE,NCT07560865,무시
+Duchenne Muscular Dystrophy With Mutations Amenable to PBGENE-DMD,condition,1,DTIL,NCT07429240,희귀 유전
+EBV+ Associated Post-transplant Lymphoproliferative Disease (EBV+ PTLD),condition,1,ATRA,NCT02822495,암
+EGFR Amplification,condition,1,BCAX,NCT04429542,암
+EGFR P-Loop and Alpha C-Helix Compressing,condition,1,AVBP,NCT07185997,암
+EGFR PACC,condition,1,AVBP,NCT07185997,암
+EGFR Uncommon Mutations,condition,1,AVBP,NCT07185997,암
+"EGFR Uncommon Mutations, Including G719X and S768I",condition,1,AVBP,NCT05364073,암
+EGFR-TKI Resistant Mutation,condition,1,BDTX,NCT05256290,암
+ERBB2 Gene Amplification,condition,1,COGT,NCT07361562,암
+ESCC,condition,1,ALXO,NCT07085091,암
+Ebola Vaccine,condition,1,INO,NCT02464670,감염
+Epidermal Growth Factor Receptor C797S,condition,1,BDTX,NCT05256290,암
+Epidermal Growth Factor Receptor G719X,condition,1,BDTX,NCT05256290,암
+Epstein-Barr Viraemia,condition,1,ATRA,NCT03769467,감염
+Epstein-Barr Viremia,condition,1,ATRA,NCT02822495,감염
+FGFR2 Gene Amplification,condition,1,COGT,NCT06777316,암
+FGFR2 Gene Fusion/Rearrangement,condition,1,COGT,NCT06777316,암
+FGFR2 Gene Short Variants,condition,1,COGT,NCT06777316,암
+FGFR2 Genetic Alterations,condition,1,COGT,NCT06777316,암
+FGFR3 Gene Amplification,condition,1,COGT,NCT06777316,암
+FGFR3 Gene Fusion/Rearrangement,condition,1,COGT,NCT06777316,암
+FGFR3 Gene Short Variants,condition,1,COGT,NCT06777316,암
+FGFR3 Genetic Alterations,condition,1,COGT,NCT06777316,암
+Facioscapulohumeral Muscular Dystrophy 1,condition,1,FULC,NCT04004000,희귀 유전
+Fatigue,mesh,1,BCRX,NCT00957996,무시
+Fever,mesh,1,BCRX,NCT00958776,무시
+GBM,condition,1,BDTX,NCT07326566,암
+GIST,condition,1,COGT,NCT06208748,암
+Generalized Myasthenia Gravis (gMG),condition,1,CABA,NCT06359041,신경·정신
+"Genetic Disease, Inborn",condition,1,DYN,NCT07608432,희귀 유전
+"Genetic Disease, X-Linked",condition,1,DYN,NCT07608432,희귀 유전
+Glycogen Storage Disease Type Ia,condition,1,BEAM,NCT06735755,희귀 유전
+HCV,condition,1,AVIR,NCT05904470,감염
+HER2,condition,1,COGT,NCT07361562,암
+HER2 Exon 20 Mutations,condition,1,AVBP,NCT05364073,암
+HER2 Gene Mutation,condition,1,ELVN,NCT05650879,암
+HER2 Overexpression,condition,1,COGT,NCT07361562,암
+HPV,condition,1,AGEN,NCT05363709,감염
+HR Positive,condition,1,ALXO,NCT05868226,암
+HRAS Gene Mutation,condition,1,KURA,NCT03719690,암
+Hailey Hailey Disease,condition,1,KRYS,NCT07717346,희귀 유전
+Hedgehog Pathway,condition,1,EXEL,NCT00670189,무시
+Hodgkin's Disease,condition,1,FATE,NCT01527838,암
+IIM,condition,1,ARTV,NCT06991114,면역·염증
+ISM,condition,1,COGT,NCT05186753,암
+ITP,condition,1,CLYM,NCT07043946,혈액
+IgAN,condition,1,ELDN,NCT05125068,신장
+Imetelstat,condition,1,GERN,NCT07549451,무시
+Immunosuppresion,condition,1,ELDN,NCT06972069,무시
+KMT2A-rearranged,condition,1,KURA,NCT07355335,암
+Lactation,condition,1,ARDX,NCT06203444,건강인·약동학
+Limb-Girdle Muscular Dystrophy Type 2,condition,1,EWTX,NCT04349566,희귀 유전
+Limb-girdle muscular dystrophy type 2A,mesh,1,EWTX,NCT04349566,희귀 유전
+Lymphatic Malformation,condition,1,AVTX,NCT04994002,희귀 유전
+MLL Rearrangement,condition,1,KURA,NCT06001788,암
+MSI-H,condition,1,AGEN,NCT06346197,암
+MYD88 Gene Mutation,condition,1,KYMR,NCT05233033,암
+"Mastocytosis, Indolent",condition,1,COGT,NCT05186753,암
+Mismatch Repair Protein Proficient,condition,1,AGEN,NCT05205330,암
+Monoclonal,condition,1,CLYM,NCT07043946,무시
+Myotonic Dystrophy Type 1,condition,1,DYN,NCT07700225,희귀 유전
+Myotonic Dystrophy Type-1,condition,1,DYN,NCT07700225,희귀 유전
+"Myotonic Dystrophy, Type 1 (DM1)",condition,1,DYN,NCT07700225,희귀 유전
+Myotonic Muscular Dystrophy,condition,1,DYN,NCT07700225,희귀 유전
+NFE2L2 Gene Mutation,condition,1,FTH,NCT05275673,암
+Neoadjuvant Treatment,condition,1,EXEL,NCT06959511,무시
+Nonfluent Variant Primary Progressive Aphasia (nfvPPA),condition,1,CRVO,NCT07033481,신경·정신
+Other Disease,condition,1,ENTX,NCT05965167,무시
+PIK3CA Mutation,condition,1,FTH,NCT05300048,암
+PIK3CA Mutations,condition,1,COGT,NCT07383506,암
+PNH,condition,1,BCRX,NCT04702568,혈액
+PRAME Positive,condition,1,IMCR,NCT07156136,암
+PSP,condition,1,AMLX,NCT06122662,신경·정신
+PTEN Loss of Function Mutation,condition,1,FTH,NCT05300048,암
+Pathologic Processes,mesh,1,CTNM,NCT06683612,무시
+Pediatric,condition,1,BCRX,NCT05453968,무시
+Pembrolizumab,condition,1,EXEL,NCT07283731,무시
+Phase 2,condition,1,EXEL,NCT07283731,무시
+Phase II,condition,1,GERN,NCT07549451,무시
+Philadelphia Chromosome Positive,condition,1,ADCT,NCT03698552,암
+Posttraumatic Stress Disorder,condition,1,ACAD,NCT04809116,신경·정신
+Progressive Disease,condition,1,FATE,NCT07560865,무시
+RCC,condition,1,EXEL,NCT05931393,암
+Relapse,condition,1,ADCT,NCT06919939,무시
+SCCHN,condition,1,EXEL,NCT04925284,암
+SSM,condition,1,COGT,NCT05186753,암
+Sclerosis,mesh,1,CTNM,NCT06683612,무시
+Smoldering Systemic Mastocytosis,condition,1,COGT,NCT05186753,암
+Smoothened,condition,1,EXEL,NCT00670189,무시
+Solid Organ Transplant Complications,condition,1,ATRA,NCT02822495,무시
+Speech,mesh,1,CRVO,NCT07033481,무시
+Steinert,condition,1,DYN,NCT07486934,희귀 유전
+Stem Cell Transplant Complications,condition,1,ATRA,NCT02822495,무시
+Stomatognathic Diseases,mesh,1,ATRA,NCT03769467,무시
+Synucleinopathy,condition,1,ARDX,NCT06460038,신경·정신
+"Systemic Mastocytoses, Aggressive",condition,1,COGT,NCT06915766,암
+"Systemic Mastocytoses, Indolent",condition,1,COGT,NCT06915766,암
+Transplant Tolerance,condition,1,ELDN,NCT06972069,무시
+Zanzalintinib,condition,1,EXEL,NCT07283731,무시
+Zika,condition,1,INO,NCT02887482,감염
+ctDNA Monitoring,condition,1,ALXO,NCT05868226,암
