@@ -20,6 +20,26 @@
 
 ## PENDING
 
+### [Biotech Catalyst Radar · WP88-3 결정 반영 · 10월 1일 실행] · 2026-09-30 발행
+
+**원문 요지** (보고 첫 줄 "지금 하는 일" · 전체 경로 · 서버 조회 전용 · 배포는 승인 후에만):
+
+1. WP88 브랜치 보완 2건 (`feature/biotech-wp88`)
+   - `backend/scripts/biotech_mcap_daily.py` `run("weekly")`: `weekly_shares()` 호출을 try/finally 로 감싸 예외로 끝나도 그때까지 보낸 요청 수를 장부에 기록 · 요청 수는 counter 또는 weekly_shares 내부 집계에서 · 테스트 1건 (3번째 요청에서 예외 → 장부 mcap_shares 2 이상)
+   - `backend/scripts/biotech_h65_form4_daily.py`: 새로 받은 Form 4 XML 원문을 `/root/toss-tradebot-mvp/var/biotech/form4_xml/<accession>.xml` 로 보관 (경로는 해석기로만) · 30일 지난 파일은 실행 시작 때 삭제 · SEC 요청 수 증가 없음 · 테스트 2건 (파일이 남는지 · 31일 된 파일이 지워지는지)
+   - 픽스처는 다음 단계 · 이번에는 코드만
+   - pytest · tsx · next build 재실행
+2. 10월 1일 (예정대로)
+   - 07:00 실행 뒤 daily.log 인용: "경보 N건 · z.ai 호출 N/5" · 경보 종목 배수·평균 · `[8/9] mcap_daily` 건너뜀 줄 · **장부 줄은 10월 2일에 인용**
+   - H6 수집 (WP84) 실행 · 이 파일 H6 항목대로 보고 · 장부 기준 한도 재계산
+3. 순서
+   - H6 보고 → PR #58 병합·배포 → 수정 후 스크린샷 → WP88 PR 생성·승인 요청
+   - WP88 배포 다음 날 (XML 첫 보관 뒤) `form4_xml/` 에서 1건을 복사해 `backend/tests/fixtures/biotech_form4_real_<accession>.xml` 픽스처 생성 · 신고자 이름 필드는 "REPORTING PERSON" 으로 교체 · 같은 회귀 테스트를 이 파일로도 실행
+
+(WP88-2 의 "확인된 제약" 2건은 이 지시로 결정됨: 장부 줄 = 10월 2일 인용 · 실제 XML = h65 보관 방식)
+
+---
+
 ### [Biotech Catalyst Radar · WP88-2 장부 범위 확장 · build_client 통일 · 10월 1일 실행] · 2026-09-30 발행
 
 **원문 요지** (보고 첫 줄 "지금 하는 일" · 전체 경로 · 서버 조회 전용 · 배포는 승인 후에만):
