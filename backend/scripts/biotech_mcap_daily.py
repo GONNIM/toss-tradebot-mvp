@@ -197,10 +197,19 @@ def run(mode: str, get_tiingo: Callable[..., Any] | None = None, get_sec: Callab
             counter = _ByteCountingClient(build_client())  # biotech_sec_common 단일 헤더 상수 · 받은 용량 집계
             get_sec = lambda url: sec_get(counter, url)    # noqa: E731
         t0 = time.time()
-        res = weekly_shares(cands, get_sec, today)
+        sent = {"n": 0}      # WP88-3 · 보내기 직전에 셈 · 예외로 끝나도 그때까지 보낸 수를 장부에 남김
+        inner = get_sec
+
+        def counted(url: str) -> dict:
+            sent["n"] += 1
+            return inner(url)
+
+        try:
+            res = weekly_shares(cands, counted, today)
+        finally:
+            _record_sec(sent["n"], today, ledger)
         res["elapsed_sec"] = round(time.time() - t0, 1)
         res["bytes_received"] = counter.bytes if counter else None
-        _record_sec(res["requests"], today, ledger)
         (mdir / f"shares_{today:%Y%m%d}.json").write_text(json.dumps(res, ensure_ascii=False, indent=1))
         LOG.info("SEC 주식수 조회 · 요청 %d · 소요 %.1f초 · 받은 용량 %s 바이트 · 종목 %d · 합산 종목 %d · 중단 %s",
                  res["requests"], res["elapsed_sec"], res["bytes_received"], len(res["shares"]),
