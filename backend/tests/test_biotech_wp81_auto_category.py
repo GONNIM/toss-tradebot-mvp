@@ -158,3 +158,19 @@ def test_stems_file_found_via_resolver_in_docs_data():
     from backend.scripts import _biotech_paths as _P
     p = _P.find("auto_category_stems.json")
     assert p is not None and p.parent.name == "data" and p.parent.parent.name == "biotech"   # docs/plans/biotech/data
+
+
+
+# ── WP82 · "먼저 적용" 가지 추가 (C16.320.565 · C16.320.322 · C16.320.144 · C18.452.811) · 2026-09-29 NLM 실측 트리 ──
+WP82_CASES = [
+    ("Fabry Disease", ["C10.228.140.163.100.435.825.200", "C10.228.140.300.275.374", "C14.907.253.329.374",
+                       "C16.320.322.124", "C16.320.565.189.435.825.200", "C18.452.132.100.435.825.200"]),
+    ("Camurati-Engelmann Syndrome", ["C05.116.099.708.180", "C16.320.144"]),
+    ("Erythropoietic Protoporphyria", ["C06.552.830.812", "C16.320.850.742.812", "C17.800.827.742.812", "C18.452.811.400.812"]),
+    ("McArdle Disease", ["C16.320.565.202.449.560", "C18.452.648.202.449.560"]),
+]
+
+
+@pytest.mark.parametrize("name,trees", WP82_CASES, ids=[c[0] for c in WP82_CASES])
+def test_wp82_first_applied_branches(name, trees):
+    assert ac.mesh_category(name, trees) == "희귀 유전"

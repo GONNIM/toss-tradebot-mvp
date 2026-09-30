@@ -88,3 +88,23 @@ def test_wp80_dictionary_v2_categories(tmp_path, monkeypatch):
     b._FILE_CACHE.clear()
     cats = [b._trial_display(f"NCT1000000{i}")["category"] for i in range(len(terms))]
     assert cats == ["건강인·약동학", "통증", "청각·이비인후", "암", "건강인·약동학"]
+
+
+
+def test_wp82_ignore_category_skipped_and_never_shown(tmp_path, monkeypatch):
+    """'무시' 용어는 건너뛰고 다음 용어 · 모두 '무시' 면 '기타 (첫 원문)' · 화면 값에 '무시' 없음."""
+    import csv as _csv
+    import json as _json
+    ign = [r["term"] for r in _csv.DictReader(open(b.DATA_DIR_DOCS / "condition_categories.csv")) if r["category"] == "무시"]
+    assert len(ign) >= 2
+    snap = {"matches": [
+        {"nct_id": "NCT20000001", "mesh_terms": [ign[0]], "conditions": ["Obesity"]},   # 무시 → 다음 용어 = 비만·대사
+        {"nct_id": "NCT20000002", "mesh_terms": [], "conditions": [ign[0], ign[1]]},     # 모두 무시 → 기타 (첫 원문)
+    ]}
+    (tmp_path / "ctgov_snapshot.json").write_text(_json.dumps(snap))
+    monkeypatch.setattr(b, "DATA_DIR_RUNTIME", tmp_path)
+    b._FILE_CACHE.clear()
+    t1, t2 = b._trial_display("NCT20000001"), b._trial_display("NCT20000002")
+    assert t1["category"] == "비만·대사" and t1["category_source"] == "Obesity"
+    assert t2["category"] == f"기타 ({ign[0]})"
+    assert "무시" not in _json.dumps([t1["category"], t2["category"]], ensure_ascii=False)

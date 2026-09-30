@@ -55,7 +55,9 @@ def _has(trees: list[str], pre: str) -> bool:
 EXCEPTIONS: list[tuple[Callable[[str, list[str]], Any], str]] = [  # 1단계 · 위에서부터 첫 일치 하나만
     (lambda n, t: MARKER.search(n) and _has(t, "C16"), RARE),                                  # 유전 표지어 + C16
     (lambda n, t: any(_has(t, p) for p in ("C16.320.070", "C16.320.190", "C16.320.290",
-                                            "C16.320.365", "C16.320.400", "C16.320.577")), RARE),
+                                            "C16.320.365", "C16.320.400", "C16.320.577",
+                                            "C16.320.565", "C16.320.322", "C16.320.144")), RARE),  # WP82 가지 추가
+    (lambda n, t: _has(t, "C18.452.811"), RARE),                                                  # WP82 · 포르피린증
     (lambda n, t: _has(t, "C11.270"), RARE),
     (lambda n, t: _has(t, "C17.300"), "면역·염증"),
     (lambda n, t: _has(t, "C15.378.190.625") or _has(t, "C15.378.190.636"), "암"),

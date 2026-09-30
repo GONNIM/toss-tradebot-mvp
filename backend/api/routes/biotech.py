@@ -390,15 +390,21 @@ def _ko(term: str) -> str:
     return (_dict_map("ko_terms.csv", "en").get((term or "").strip().lower()) or {}).get("ko", "")
 
 
+IGNORE_CATEGORY = "무시"  # WP82 · 사전 내부 값 · 시험 분류에서 건너뜀 · 화면 표시 금지
+
+
 def _trial_display(nct: str) -> dict[str, Any]:
     m = _snapshot_by_nct().get(nct)
     if not m:
         return {}
     cats = _dict_map("condition_categories.csv", "term")
     category, cat_src = "", ""
-    for t in m.get("mesh_terms", []) + m.get("conditions", []):
+    terms = m.get("mesh_terms", []) + m.get("conditions", [])   # 선택 순서: MeSH 용어 → 질환명 원문 · 첫 사전 일치
+    for t in terms:
         hit = cats.get((t or "").strip().lower())
         if hit:
+            if hit.get("category") == IGNORE_CATEGORY:   # WP82 · '무시' 용어는 건너뛰고 다음 용어를 본다
+                continue
             category, cat_src = hit.get("category", ""), t
             break
     conds = m.get("conditions", [])
@@ -411,8 +417,10 @@ def _trial_display(nct: str) -> dict[str, Any]:
             if hit:
                 category, cat_src, category_auto = hit.get("category", ""), t, True
                 break
-    if not category and conds:
-        category, cat_src = f"기타 ({conds[0]})", conds[0]
+    if not category and terms:
+        # 원문 = 첫 질환명 (없으면 첫 MeSH 용어) · '무시' 용어뿐이어도 원문 글자만 쓰고 '무시' 는 표시하지 않음
+        first = conds[0] if conds else terms[0]
+        category, cat_src = f"기타 ({first})", first
     ivs = [{"name": i.get("name", ""), "type": i.get("type", ""), "type_ko": _ko(i.get("type", "")), "name_ko": _ko(i.get("name", ""))}
            for i in m.get("interventions", [])]
     placebo = any("placebo" in (i.get("name") or "").lower() for i in m.get("interventions", []))
