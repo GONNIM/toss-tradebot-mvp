@@ -35,7 +35,7 @@ from backend.scripts import _biotech_paths as _P
 from backend.scripts.biotech_h6_collect_prices import (
     MONTHLY_ALLOCATION, REQ_INTERVAL, TiingoBlocked, fetch_one, load_usage, save_usage,
 )
-from backend.scripts.biotech_sec_common import SecBlockedError, build_client, nearest_shares_outstanding, sec_get
+from backend.scripts.biotech_sec_common import SecBlockedError, SecDailyLedger, build_client, nearest_shares_outstanding, sec_get
 
 LOG = logging.getLogger("biotech_mcap_daily")
 
@@ -174,11 +174,20 @@ def _latest_json(prefix: str) -> dict:
     return json.loads(hits[-1].read_text()) if hits else {}
 
 
+def _record_sec(n: int, today: date, ledger: SecDailyLedger | None) -> None:
+    """WP88-2 · 주식수 조회 SEC 요청을 하루 공용 장부에 "mcap_shares" 로 기록 (꺼져 있으면 0회)."""
+    led = ledger or SecDailyLedger.load(f"{today:%Y%m%d}")
+    led.add("mcap_shares", n)
+    led.save()
+
+
 def run(mode: str, get_tiingo: Callable[..., Any] | None = None, get_sec: Callable[[str], dict] | None = None,
-        today: date | None = None) -> dict:
+        today: date | None = None, ledger: SecDailyLedger | None = None) -> dict:
     today = today or _kst_today()
     if not enabled():
         LOG.info("시총 %s 단계 건너뜀 (%s 꺼짐 · Tiingo · SEC 호출 0회)", mode, FLAG)
+        if mode == "weekly":
+            _record_sec(0, today, ledger)
         return {"mode": mode, "skipped": True, "reason": f"{FLAG} off"}
     cands = load_candidates()
     mdir = _P.out_dir("mcap")
@@ -191,6 +200,7 @@ def run(mode: str, get_tiingo: Callable[..., Any] | None = None, get_sec: Callab
         res = weekly_shares(cands, get_sec, today)
         res["elapsed_sec"] = round(time.time() - t0, 1)
         res["bytes_received"] = counter.bytes if counter else None
+        _record_sec(res["requests"], today, ledger)
         (mdir / f"shares_{today:%Y%m%d}.json").write_text(json.dumps(res, ensure_ascii=False, indent=1))
         LOG.info("SEC 주식수 조회 · 요청 %d · 소요 %.1f초 · 받은 용량 %s 바이트 · 종목 %d · 합산 종목 %d · 중단 %s",
                  res["requests"], res["elapsed_sec"], res["bytes_received"], len(res["shares"]),

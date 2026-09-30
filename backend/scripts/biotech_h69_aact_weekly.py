@@ -506,8 +506,21 @@ def run_auto_category_step(snapshot_path: Path, notify=None) -> dict | None:
 SEC_TICKERS_URL = "https://www.sec.gov/files/company_tickers.json"
 
 
-def refresh_sec_company_tickers(get=None) -> dict:
-    """WP86 · SEC 명부 → <RUNTIME>/sec_company_tickers.json · biotech_sec_common 헤더 · 403·429 즉시 중단 · 실패면 기존 파일 유지."""
+def refresh_sec_company_tickers(get=None, ledger=None) -> dict:
+    """WP88-2 · 명부 갱신 + 하루 SEC 공용 장부 저장 (성공·실패 모두)."""
+    from backend.scripts.biotech_sec_common import SecDailyLedger
+    ledger = ledger or SecDailyLedger.load()
+    try:
+        return _refresh_sec_company_tickers(get, ledger)
+    finally:
+        ledger.save()
+
+
+def _refresh_sec_company_tickers(get, ledger) -> dict:
+    """WP86 · SEC 명부 → <RUNTIME>/sec_company_tickers.json · biotech_sec_common 헤더 · 403·429 즉시 중단 · 실패면 기존 파일 유지.
+
+    WP88-2 · 요청 1회를 하루 SEC 공용 장부에 "company_tickers" 로 기록 (응답·실패와 관계없이 보낸 요청 수).
+    """
     from backend.scripts import _biotech_paths as _P
     from backend.scripts.biotech_sec_common import SecBlockedError, build_client, sec_get
     out = _P.out_flat("sec_company_tickers.json")
@@ -515,6 +528,7 @@ def refresh_sec_company_tickers(get=None) -> dict:
         if get is None:
             client = build_client()
             get = lambda url: sec_get(client, url)  # noqa: E731
+        ledger.add("company_tickers")
         r = get(SEC_TICKERS_URL)
     except SecBlockedError as e:
         LOG.warning("SEC 명부 갱신 중단 · %s · 기존 파일 유지", e)

@@ -67,6 +67,11 @@
 
 ## 9. 확정 (WP87-2 · 2026-09-30)
 
-1. 하루 SEC 요청 상한 **150회** (`backend/scripts/biotech_sec_common.py` `SEC_DAILY_CAP`) · 브리핑 · Form 4 · 가격 보충 · 8-K 첨부를 공용 장부 `<RUNTIME>/sec_usage/sec_usage_<YYYYMMDD>.json` 로 합산 · 닿으면 그날 보도자료 읽기만 건너뛰고 나머지 단계는 계속 · daily.log 에 "보도자료 읽기 건너뜀" 경고
+1. 하루 SEC 요청 상한 **300회** (WP88-2 · 150 → 300 · `backend/scripts/biotech_sec_common.py` `SEC_DAILY_CAP`) · 브리핑 · Form 4 · 가격 보충 · 8-K 첨부 (매일) 와 SEC 명부 갱신 (`company_tickers`) · 주식수 조회 (`mcap_shares`, 월요일 주간 잡) 를 공용 장부 `<RUNTIME>/sec_usage/sec_usage_<YYYYMMDD>.json` 로 합산 · 닿으면 그날 보도자료 읽기만 건너뛰고 나머지 단계는 계속 · daily.log 에 "보도자료 읽기 건너뜀" 경고
 2. 첫 문단 **400자** (`LEAD_MAX`)
 3. 대상 항목 = 9.01 과 함께 **8.01 또는 7.01**
+
+**상한을 300 으로 올린 이유 (WP88-2)**:
+- SEC 가 정한 실제 한도는 초당 10회입니다. 150 과 300 은 모두 이 프로젝트가 스스로 정한 상한이고, 요청 간격 0.5초 (`REQ_INTERVAL`) 는 그대로라서 초당 요청 수는 바뀌지 않습니다.
+- 장부에 주간 잡 요청이 더해졌습니다. 월요일 06:00 주간 잡의 SEC 명부 갱신 (1회) 과 주식수 조회 (플래그를 켜면 CIK 있는 후보 종목 수만큼 · 2026-09-30 서버 `/root/toss-tradebot-mvp/var/biotech/candidates/biotech_candidates_20260930.csv` 기준 80회) 가 같은 날 07:00 매일 단계보다 먼저 장부에 들어갑니다.
+- 매일 단계는 Form 4 약 55회 + 신규 신고서 + 가격 보충 최대 10회 + 브리핑 최대 약 35회입니다. 월요일 합계는 명부 1 + 주식수 80 + Form 4 약 55 + 신규 신고서 + 가격 보충 최대 10 + 브리핑 최대 약 35 로 약 180회 이상입니다. 150 이면 월요일마다 보도자료 읽기가 건너뛰어집니다. 300 이면 월요일에도 매일 단계 전체가 들어갈 여유가 남습니다.

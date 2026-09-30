@@ -18,7 +18,7 @@ from backend.scripts._biotech_bootstrap import require_secure_logging, data_sha
 from backend.scripts.biotech_h28v2_form4_channel import (
     load_fund_ciks, sec_get, fetch_form4_accessions, fetch_form4_xml, parse_form4,
 )
-from backend.scripts.biotech_sec_common import SEC_UA, SEC_FROM, SEC_ACCEPT_ENCODING, SecDailyLedger
+from backend.scripts.biotech_sec_common import SecDailyLedger, build_client
 
 import csv
 import json
@@ -27,7 +27,6 @@ import subprocess
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
-import httpx
 
 from backend.scripts import _biotech_paths as _P
 
@@ -40,6 +39,11 @@ def git_sha() -> str:
         return subprocess.check_output(["git", "rev-parse", "--short", "HEAD"], cwd=str(PROJECT_ROOT)).decode().strip()
     except Exception:
         return "unknown"
+
+
+def sec_client(on_request):
+    """WP88-2 · 공용 build_client (단일 헤더 상수) + 요청마다 장부에 세는 hook · 시간 제한은 예전과 같은 30초."""
+    return build_client(event_hooks={"request": [on_request]}, timeout=30.0)
 
 
 PRICE_BACKFILL_MAX = 10   # 하루 가격 보충 신고서 수 상한 (SEC 요청 증가 제한)
@@ -101,9 +105,7 @@ def main():
         ledger.add(stage["cat"])
 
     try:
-        with httpx.Client(headers={"User-Agent": SEC_UA, "From": SEC_FROM,
-                                    "Accept-Encoding": SEC_ACCEPT_ENCODING}, timeout=30.0,
-                            event_hooks={"request": [_count]}) as client:
+        with sec_client(_count) as client:
             for i, filer_cik in enumerate(fund_ciks, 1):
                 try:
                     accs = fetch_form4_accessions(client, filer_cik)

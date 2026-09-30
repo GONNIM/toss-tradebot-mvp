@@ -32,7 +32,10 @@ SEC_UA = "TossTradebot BiotechRadar suauncle@gmail.com"
 SEC_FROM = "suauncle@gmail.com"
 SEC_ACCEPT_ENCODING = "gzip, deflate"
 REQ_INTERVAL = 0.5  # SEC 10 req/s 이내 · 보수적
-SEC_DAILY_CAP = 150  # WP88 · 하루 SEC 요청 상한 (브리핑 · Form 4 · 가격 보충 · 8-K 첨부 합산 · 닿으면 보도자료 읽기만 건너뜀)
+# WP88-2 · SEC 실제 한도는 초당 10회 · 이 값은 자체 상한 · 주간 잡 포함
+#   합산 대상: 브리핑 · Form 4 · 가격 보충 · 8-K 첨부 (매일) + SEC 명부 갱신 · 주식수 조회 (월요일 주간 잡)
+#   닿으면 그날 보도자료 읽기만 건너뜀 · 나머지 단계는 계속
+SEC_DAILY_CAP = 300
 
 
 class SecBlockedError(RuntimeError):
@@ -109,15 +112,16 @@ def sec_get(client: httpx.Client, url: str, params: dict | None = None) -> dict:
     return {"status": r.status_code, "json": None, "text_sig": r.text[:80].replace("\n", " ")}
 
 
-def build_client() -> httpx.Client:
-    """공용 SEC httpx.Client · UA·From·Accept-Encoding (WP23 지정 형식)."""
+def build_client(event_hooks: dict | None = None, timeout: float = 25.0) -> httpx.Client:
+    """공용 SEC httpx.Client · UA·From·Accept-Encoding (WP23 지정 형식) · WP88-2 · 요청 집계용 event_hooks 선택."""
     return httpx.Client(
         headers={
             "User-Agent": SEC_UA,
             "From": SEC_FROM,
             "Accept-Encoding": SEC_ACCEPT_ENCODING,
         },
-        timeout=25.0,
+        timeout=timeout,
+        event_hooks=event_hooks or {},
     )
 
 
