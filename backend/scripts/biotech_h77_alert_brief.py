@@ -163,10 +163,15 @@ def form4_summary(cik: str) -> dict:
     return {"available": True, "n": len(rows), "rows": rows[:5]}
 
 
-def schedule_note(cand: dict | None) -> str:
+def schedule_note(cand: dict | None, today: date | None = None) -> str:
+    """WP87 · D-n 은 실행일 (KST) 기준으로 다시 계산 (노트의 D-n 은 주간 AACT 잡 날짜 기준)."""
     note = (cand or {}).get("state_note_v50") or (cand or {}).get("state_note") or ""
     m = re.search(r"D-(\d+)\s*\((\d{4}-\d{2}-\d{2})", note)
-    return f"임상 종료 예정일 {m.group(2)} (D-{m.group(1)})" if m else "예정 일정 없음"
+    if not m:
+        return "예정 일정 없음"
+    today = today or datetime.now(timezone(timedelta(hours=9))).date()
+    days = (date.fromisoformat(m.group(2)) - today).days
+    return f"임상 종료 예정일 {m.group(2)} ({'D-' + str(days) if days >= 0 else 'D+' + str(-days)})"
 
 
 def sources_for(b: dict) -> list[str]:

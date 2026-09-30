@@ -42,6 +42,30 @@ def git_sha() -> str:
         return "unknown"
 
 
+PRICE_BACKFILL_MAX = 10   # 하루 가격 보충 신고서 수 상한 (SEC 요청 증가 제한)
+
+
+def backfill_prices(cache: dict, cutoff: str, fetch_xml) -> int:
+    """가격 키가 없는 최근 매수 → 신고서 XML 을 다시 읽어 (tx_date, shares) 로 맞춰 가격 채움 · 못 찾으면 None 기록 (재요청 없음)."""
+    todo: dict[tuple[str, str], list[dict]] = {}
+    for filer, info in cache.items():
+        for b in info.get("buys", []):
+            if "price" not in b and b.get("tx_date", "") >= cutoff and b.get("accession"):
+                todo.setdefault((filer, b["accession"]), []).append(b)
+    done = 0
+    for (filer, acc), buys in list(todo.items())[:PRICE_BACKFILL_MAX]:
+        try:
+            xml = fetch_xml(filer, acc)
+        except Exception:
+            continue
+        parsed = parse_form4(xml) if xml else []
+        for b in buys:
+            hit = next((p for p in parsed if p["tx_date"] == b.get("tx_date") and abs(p["shares"] - float(b.get("shares", 0))) < 0.5), None)
+            b["price"] = hit["price"] if hit else None
+        done += 1
+    return done
+
+
 def main():
     require_secure_logging()
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
@@ -104,9 +128,11 @@ def main():
                     cache[filer_cik]["buys"].append(b)
                     cache[filer_cik]["n_buys"] = len(cache[filer_cik]["buys"])
                     new_buys += 1
+        # WP87 · 가격 보충 · 예전 캐시 (가격 필드 없음) 의 최근 30일 매수 · 신고서 1건당 1회 · 한 번에 최대 10건
+        price_fills = backfill_prices(cache, cutoff, lambda f, acc: fetch_form4_xml(client, f, acc))
 
     cache_path.write_text(json.dumps(cache, ensure_ascii=False, indent=2))
-    LOG.info("증분 · 신규 buys: +%d · 전체 filers cached: %d", new_buys, len(cache))
+    LOG.info("증분 · 신규 buys: +%d · 전체 filers cached: %d · 가격 보충 신고서 %d건", new_buys, len(cache), price_fills)
 
     # 표 4 · 최근 20 거래일 F4 매수 (rumor daily 확장용)
     # 정정 (2026-09-14): 제출자 유형 (전문 펀드/임원·이사/기타) + 매수 금액 근사 열 추가
@@ -159,7 +185,11 @@ def main():
                 tk = cik2tk.get(issuer_cik, "")
                 price = _price_on(tk, tx_date) if tk else None
                 amount_usd = shares * price if (price and shares) else None
+                px = b.get("price")   # WP87 · 신고서 기재 주당 가격 (없으면 None → 화면 "금액 미기재")
                 table4.append({
+                    "price_per_share": px,
+                    "amount_usd_reported": round(shares * px) if (px and shares) else None,
+                    "filer_name": filer_class.get(filer_cik, {}).get("name", ""),
                     "filing_date": b.get("filing_date", ""),
                     "tx_date": tx_date,
                     "elapsed_days": elapsed_days,
@@ -180,12 +210,15 @@ def main():
     with out_csv.open("w", newline="") as f:
         w = csv.writer(f)
         w.writerow(["filing_date", "tx_date", "elapsed_days", "issuer_cik", "issuer_name",
-                    "filer_cik", "filer_type", "shares", "price_on_tx", "amount_usd_approx", "accession", "issuer_ticker"])
+                    "filer_cik", "filer_type", "shares", "price_on_tx", "amount_usd_approx", "accession", "issuer_ticker",
+                    "filer_name", "price_per_share", "amount_usd_reported"])
         for row in table4:
             w.writerow([row["filing_date"], row["tx_date"], row["elapsed_days"],
                         row["issuer_cik"], row["issuer_name"], row["filer_cik"],
                         row.get("filer_type", ""), row["shares"], row.get("price_on_tx", ""),
-                        row.get("amount_usd_approx", ""), row["accession"], row.get("issuer_ticker", "")])
+                        row.get("amount_usd_approx", ""), row["accession"], row.get("issuer_ticker", ""),
+                        row.get("filer_name", ""), row.get("price_per_share") if row.get("price_per_share") is not None else "",
+                        row.get("amount_usd_reported") if row.get("amount_usd_reported") is not None else ""])
 
     # 순위표 꼬리표용 issuer_cik 세트
     tagged_ciks = {row["issuer_cik"] for row in table4}

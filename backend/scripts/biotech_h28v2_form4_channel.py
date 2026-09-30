@@ -116,13 +116,16 @@ def parse_form4(xml: str) -> list[dict]:
         adc_m = re.search(r"<transactionAcquiredDisposedCode>.*?<value>\s*([A-Z])\s*</value>", block, re.DOTALL)
         date_m = re.search(r"<transactionDate>.*?<value>\s*([\d-]+)\s*</value>", block, re.DOTALL)
         shares_m = re.search(r"<transactionShares>.*?<value>\s*([\d.]+)\s*</value>", block, re.DOTALL)
+        # WP87 · 신고서의 주당 가격 (transactionPricePerShare) · 각주만 있고 값이 없으면 None
+        price_m = re.search(r"<transactionPricePerShare>\s*<value>\s*([\d.]+)\s*</value>", block, re.DOTALL)
         code = code_m.group(1) if code_m else ""
         adc = adc_m.group(1) if adc_m else ""
         date = date_m.group(1) if date_m else ""
         shares = float(shares_m.group(1)) if shares_m else 0.0
         if code == "P" and adc == "A":
             out.append({"issuer_cik": issuer_cik, "issuer_name": issuer_name,
-                        "tx_date": date, "shares": shares})
+                        "tx_date": date, "shares": shares,
+                        "price": float(price_m.group(1)) if price_m else None})
     return out
 
 

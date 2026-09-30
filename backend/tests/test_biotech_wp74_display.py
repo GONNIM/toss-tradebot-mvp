@@ -34,7 +34,8 @@ def test_mcap_display_freshness(tmp_path, monkeypatch):
     assert b._mcap_display("AAA", "1B-5B") == ("1B-5B", "")      # CSV 실제 값 우선
 
 
-def test_note_fields_parse_and_fallback():
+def test_note_fields_parse_and_fallback(monkeypatch):
+    monkeypatch.setattr(b, "_today_kst", lambda: date(2026, 9, 27))
     f = b._note_fields("CT.gov (AACT 2026-09-27) NCT06868264 완료 예정 D-3 (2026-09-30 · PHASE3)")
     assert f == {"nct_id": "NCT06868264", "days_to": 3, "event_date": "2026-09-30", "phase": "PHASE3"}
     assert b._note_fields("FDA AdCom 2026-10-01")  == {}       # 형식 불일치 → 화면은 원문 표시
@@ -137,7 +138,18 @@ def test_wp85_radar_rows_have_trial_fields(tmp_path, monkeypatch):
     (tmp_path / "ctgov_snapshot.json").write_text(_json.dumps({"matches": [{"nct_id": "NCT07118891", "conditions": ["Obesity"], "mesh_terms": []}]}))
     monkeypatch.setattr(b, "DATA_DIR_RUNTIME", tmp_path)
     monkeypatch.setattr(b, "PROJECT_ROOT", tmp_path)
+    monkeypatch.setattr(b, "_today_kst", lambda: date(2026, 9, 28))   # 노트 작성일 기준이면 D-153 · WP87 부터 화면 날짜 기준
     b._FILE_CACHE.clear()
     r = asyncio.run(b.get_radar_json(_admin="x")).rows[0]
     assert (r.nct_id, r.phase, r.event_date, r.days_to) == ("NCT07118891", "PHASE1/PHASE2", "2027-02-28", 153)
     assert r.trial["category"] == "비만·대사"
+
+
+
+def test_wp87_days_to_from_view_date(monkeypatch):
+    """D-n = 화면 보는 날 (KST) 기준 · 노트의 D-2 (주간 잡 날짜 기준) 무시 · 오늘 = D-0 · 어제 = D+1 (음수)."""
+    note = "CT.gov (AACT 2026-09-28) NCT06868264 완료 예정 D-2 (2026-09-30 · PHASE3)"
+    monkeypatch.setattr(b, "_today_kst", lambda: date(2026, 9, 30))
+    assert b._note_fields(note)["days_to"] == 0
+    monkeypatch.setattr(b, "_today_kst", lambda: date(2026, 10, 1))
+    assert b._note_fields(note)["days_to"] == -1
