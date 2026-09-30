@@ -20,6 +20,14 @@
 
 ## PENDING
 
+### [Biotech Catalyst Radar · WP86 경보 기준선 하한 · 주석 정정 · SEC 명부 주간 갱신] · 2026-09-30 발행
+
+- PR #56 배포 (`b999cd3`) · 수정 후 스크린샷 `docs/plans/biotech/screenshots/20260930_sha_b999cd3/wp85_after_*.webp`
+- WP86 PR (승인 대기 · **배포는 10/1 H6 보고 뒤**): confirm 배수 = 오늘 / max(1.0, 평균) · 경보 조건 무변경 · 27행 주석 정정 · SEC 명부 주간 갱신 (`/root/toss-tradebot-mvp/var/biotech/sec_company_tickers.json`) · daily.log "경보 N건 · z.ai 호출 N/5" 줄 추가
+- **관측 (WP86 배포 뒤 2주)**: daily.log 에서 "경보 N건 · z.ai 호출 N/5" 줄 매일 인용
+
+---
+
 ### [Biotech Catalyst Radar · WP83-2 PR #54 병합 · 플래그 켜기 준비] · 2026-09-30 발행
 
 - PR #54 배포 (`f1af6b4`) · 13 경로 200 · 서버 `.env` 에 BIOTECH_MCAP_ENABLED · TIINGO_API_KEY 없음 (이름 개수 0) → 플래그 꺼짐

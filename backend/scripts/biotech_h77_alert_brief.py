@@ -223,6 +223,7 @@ def main():
                 "yesterday": hist[-2]["apewisdom_24h"] if len(hist) >= 2 else None,
                 "today": hist[-1]["apewisdom_24h"] if hist else None,
                 "mult": r.get("st_baseline_mult", ""),
+                "mean": _f(r.get("st_baseline_mean")) if r.get("st_baseline_mean") not in (None, "") else None,  # WP86
                 "reddit_today": int(_f(r.get("reddit_rss_matches"))),
                 "history": hist,
             },
@@ -258,6 +259,8 @@ def main():
            "counts": {**counter, "tickers": len(briefs), "elapsed_sec": round(time.time() - t0, 1)}}
     path = out_dir / f"alert_brief_{today}.json"
     path.write_text(json.dumps(out, ensure_ascii=False, indent=2))
+    # WP86 관측 · 매일 한 줄 (2주 확인용)
+    LOG.info("경보 %d건 · z.ai 호출 %d/%d", len(briefs), counter["zai_calls"], MAX_TICKERS)
     print(json.dumps({"path": str(path), **out["counts"]}, ensure_ascii=False))
 
 

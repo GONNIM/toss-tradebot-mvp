@@ -233,15 +233,34 @@ export function stageLabel(stage?: string): string {
 
 const BASELINE_MIN = 7; // 기준선 판정에 필요한 최소 수집 일수 (confirm · biotech_alert_rule 과 같은 값)
 
-// 예: "언급 급증 · 기준선 8일(7일 이상 충족) · 24시간 언급 32건 · 평소 대비 128배"
-export function mentionSentence(stage?: string, baselineDays?: number | null, mentions24h?: number | null, mult?: string): string {
+const MULT_FLOOR = 1; // WP86 · 배수 기준선 하한 (confirm baseline_multiple 과 같은 값)
+
+function fmtNum(n: number): string {
+  return Number.isInteger(n) ? String(n) : n.toFixed(2).replace(/0+$/, "").replace(/\.$/, "");
+}
+
+// WP86 · "평소 하루 0.25건 → 오늘 32건(32배), 평소 거의 없음" · 배수 = 오늘 / max(1, 평균)
+export function multSentence(mean?: number | null, today?: number | null): string | null {
+  if (typeof mean !== "number" || typeof today !== "number") return null;
+  const mult = today / Math.max(MULT_FLOOR, mean);
+  const m = mult >= 10 ? Math.round(mult) : Math.round(mult * 10) / 10;
+  return `평소 하루 ${fmtNum(mean)}건 → 오늘 ${today}건(${m}배)${mean < 1 ? ", 평소 거의 없음" : ""}`;
+}
+
+// 예: "언급 급증 · 기준선 8일(7일 이상 충족) · 평소 하루 0.25건 → 오늘 32건(32배), 평소 거의 없음"
+export function mentionSentence(stage?: string, baselineDays?: number | null, mentions24h?: number | null, mult?: string, mean?: number | null): string {
   const parts = [stageLabel(stage)];
   if (typeof baselineDays === "number") {
     parts.push(`기준선 ${baselineDays}일(${baselineDays >= BASELINE_MIN ? "7일 이상 충족" : "7일 미만 · 수집 중"})`);
   }
-  if (typeof mentions24h === "number") parts.push(`24시간 언급 ${mentions24h}건`);
-  const m = Number(mult);
-  if (mult && Number.isFinite(m) && m > 0) parts.push(`평소 대비 ${m >= 10 ? Math.round(m) : m.toFixed(1)}배`);
+  const ms = multSentence(mean, mentions24h);
+  if (ms) {
+    parts.push(ms);
+  } else {
+    if (typeof mentions24h === "number") parts.push(`24시간 언급 ${mentions24h}건`);
+    const m = Number(mult);
+    if (mult && Number.isFinite(m) && m > 0) parts.push(`평소 대비 ${m >= 10 ? Math.round(m) : m.toFixed(1)}배`);
+  }
   return parts.join(" · ");
 }
 

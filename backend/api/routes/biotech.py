@@ -364,6 +364,7 @@ class RumorRow(BaseModel):
     days_to: Optional[int] = None
     stage: str = ""       # WP74 4단계 · 언급 단계 (quiet · collecting · 기타) · 표시용
     mult: str = ""        # WP85 · 평소 대비 배수 원값 (confirm st_baseline_mult · 'collecting' 또는 숫자) · 표시용
+    baseline_mean: Optional[float] = None   # WP86 · 기준선 하루 평균 (평소 하루 N건 표시용)
     cik: str = ""         # WP85 · 표4 발행사 CIK (펼침 영역 전용)
     trial: dict[str, Any] = {}      # WP76 · AACT 시험 상세 (원문 필드 + 사전 대응) · 없으면 빈 dict
     theme_rank: dict[str, Any] = {}  # WP76 · H6 봉인 순위 (읽기만) · 소속 없으면 빈 dict
@@ -482,10 +483,10 @@ def _latest_candidate_notes() -> dict[str, str]:
 
 
 def _cik_ticker_map() -> dict[str, str]:
-    """SEC company_tickers (docs/plans/biotech/data 이식본) · CIK 10자리 → 티커."""
-    p = DATA_DIR_DOCS / "sec_company_tickers.json"
-    if not p.exists():
-        p = DATA_DIR / "sec_company_tickers.json"
+    """SEC company_tickers · 런타임 (주간 갱신 · WP86) 우선 · 없으면 docs/plans/biotech/data 이식본 · CIK 10자리 → 티커."""
+    cands = ([DATA_DIR_RUNTIME / "sec_company_tickers.json"] if DATA_DIR_RUNTIME else []) + \
+        [DATA_DIR_DOCS / "sec_company_tickers.json", DATA_DIR / "sec_company_tickers.json"]
+    p = next((c for c in cands if c.exists()), cands[-1])
     data = _cached(p, lambda q: json.loads(q.read_text())) or {}
     out: dict[str, str] = {}
     for e in data.values():
@@ -580,6 +581,12 @@ async def get_rumor_json(
         m = re.search(r"발표 후 (\d+)일", state_note or "")
         return f"D+{m.group(1)}" if m else "—"
 
+    def _to_float(v: Any) -> Optional[float]:
+        try:
+            return float(v)
+        except (TypeError, ValueError):
+            return None
+
     def _to_int(v: Any) -> Optional[int]:
         try:
             return int(v)
@@ -672,6 +679,7 @@ async def get_rumor_json(
             baseline_n=_to_int(conf.get("st_baseline_n") or 0),
             stage=conf.get("stage", ""),
             mult=str(conf.get("st_baseline_mult") or ""),
+            baseline_mean=_to_float(conf.get("st_baseline_mean")),
         ))
 
     # 표4: F4 최근 20 거래일 (h65 CSV · WP69-3b · RUNTIME > docs > backend/data)
