@@ -85,3 +85,15 @@ def test_dei_only_shares():
                        "us-gaap": {"CommonStockSharesOutstanding": {"units": {"shares": [{"end": "2026-09-01", "val": 9, "accn": "b"}]}}}}}
     hit = mc.dei_shares(facts, "2026-10-05")
     assert hit["shares"] == 5 and hit["concept"] == "dei:EntityCommonStockSharesOutstanding"
+
+
+
+def test_dei_multiple_classes_summed_but_not_across_filings():
+    facts = {"facts": {"dei": {"EntityCommonStockSharesOutstanding": {"units": {"shares": [
+        {"end": "2026-08-01", "val": 100, "accn": "Q2", "filed": "2026-08-05"},   # A 주
+        {"end": "2026-08-01", "val": 40, "accn": "Q2", "filed": "2026-08-05"},    # B 주 (같은 공시)
+        {"end": "2026-08-01", "val": 100, "accn": "Q2A", "filed": "2026-08-01"},  # 옛 공시 (합산 안 함)
+        {"end": "2026-05-01", "val": 90, "accn": "Q1", "filed": "2026-05-05"},
+    ]}}}}}
+    hit = mc.dei_shares(facts, "2026-10-05")
+    assert hit["shares"] == 140 and hit["n_values"] == 2 and hit["accn"] == "Q2" and hit["asof"] == "2026-08-01"

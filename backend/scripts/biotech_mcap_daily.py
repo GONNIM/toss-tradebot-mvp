@@ -68,11 +68,37 @@ def load_candidates() -> dict[str, str]:
 # ── 주식수 (주간) ────────────────────────────────────────────────────
 
 def dei_shares(facts: dict, asof: str) -> dict | None:
-    """dei:EntityCommonStockSharesOutstanding 만 (us-gaap 제외) · 공용 헬퍼 재사용."""
+    """dei:EntityCommonStockSharesOutstanding 만 (us-gaap 제외).
+
+    - asof 이하 가장 가까운 end 를 고른다 (없으면 공용 헬퍼 규칙대로 가장 가까운 미래)
+    - 같은 end 에 값이 여러 개면 (주식 종류가 둘 이상) 같은 공시 (accn) 안의 값을 합산한다
+    - 같은 end 를 여러 공시가 보고하면 가장 최근 제출 (filed) 공시 하나만 쓴다 (정정 공시 중복 합산 방지)
+    """
     node = (facts.get("facts", {}) or {}).get("dei", {}).get("EntityCommonStockSharesOutstanding")
     if not node:
         return None
-    return nearest_shares_outstanding({"facts": {"dei": {"EntityCommonStockSharesOutstanding": node}}}, asof)
+    base = nearest_shares_outstanding({"facts": {"dei": {"EntityCommonStockSharesOutstanding": node}}}, asof)
+    if not base:
+        return None
+    same_end = [it for it in (node.get("units", {}) or {}).get("shares", []) if it.get("end") == base["asof"] and it.get("val") is not None]
+    by_accn: dict[str, list[dict]] = {}
+    for it in same_end:
+        by_accn.setdefault(it.get("accn", ""), []).append(it)
+    accn, items = max(by_accn.items(), key=lambda kv: (max(i.get("filed", "") for i in kv[1]), kv[0]))
+    return {"asof": base["asof"], "shares": sum(int(i["val"]) for i in items), "accn": accn,
+            "concept": "dei:EntityCommonStockSharesOutstanding", "n_values": len(items)}
+
+
+class _ByteCountingClient:
+    """공용 SEC 클라이언트를 감싸 받은 바이트만 센다 (헤더·재시도·403 처리는 sec_get 그대로)."""
+
+    def __init__(self, client) -> None:
+        self._c, self.bytes = client, 0
+
+    def get(self, *a, **k):
+        r = self._c.get(*a, **k)
+        self.bytes += len(r.content or b"")
+        return r
 
 
 def weekly_shares(cands: dict[str, str], get: Callable[[str], dict], today: date) -> dict:
@@ -94,7 +120,10 @@ def weekly_shares(cands: dict[str, str], get: Callable[[str], dict], today: date
             continue
         hit = dei_shares(r["json"], today.isoformat())
         if hit:
-            out[tk] = {"cik": cik, "shares": hit["shares"], "shares_asof": hit["asof"], "accn": hit["accn"]}
+            if hit["n_values"] > 1:
+                LOG.info("주식수 합산 · %s · 값 %d개 (주식 종류 둘 이상) · 합 %d · %s", tk, hit["n_values"], hit["shares"], hit["asof"])
+            out[tk] = {"cik": cik, "shares": hit["shares"], "shares_asof": hit["asof"], "accn": hit["accn"],
+                       "n_values": hit["n_values"]}
     if blocked:
         LOG.error("%s · SEC 주식수 조회 즉시 중단", blocked)
     return {"date": today.isoformat(), "requests": requests, "blocked": blocked, "shares": out}
@@ -154,12 +183,20 @@ def run(mode: str, get_tiingo: Callable[..., Any] | None = None, get_sec: Callab
     cands = load_candidates()
     mdir = _P.out_dir("mcap")
     if mode == "weekly":
+        counter = None
         if get_sec is None:
-            client = build_client()                        # biotech_sec_common 단일 헤더 상수
-            get_sec = lambda url: sec_get(client, url)     # noqa: E731
+            counter = _ByteCountingClient(build_client())  # biotech_sec_common 단일 헤더 상수 · 받은 용량 집계
+            get_sec = lambda url: sec_get(counter, url)    # noqa: E731
+        t0 = time.time()
         res = weekly_shares(cands, get_sec, today)
+        res["elapsed_sec"] = round(time.time() - t0, 1)
+        res["bytes_received"] = counter.bytes if counter else None
         (mdir / f"shares_{today:%Y%m%d}.json").write_text(json.dumps(res, ensure_ascii=False, indent=1))
-        return {"mode": mode, "requests": res["requests"], "blocked": res["blocked"], "tickers": len(res["shares"])}
+        LOG.info("SEC 주식수 조회 · 요청 %d · 소요 %.1f초 · 받은 용량 %s 바이트 · 종목 %d · 합산 종목 %d · 중단 %s",
+                 res["requests"], res["elapsed_sec"], res["bytes_received"], len(res["shares"]),
+                 sum(1 for v in res["shares"].values() if v.get("n_values", 1) > 1), res["blocked"])
+        return {"mode": mode, "requests": res["requests"], "blocked": res["blocked"], "tickers": len(res["shares"]),
+                "elapsed_sec": res["elapsed_sec"], "bytes_received": res["bytes_received"]}
     key = (os.environ.get("TIINGO_API_KEY") or "").strip()
     if not key:
         LOG.warning("TIINGO_API_KEY 없음 · 가격 단계 건너뜀")
