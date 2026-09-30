@@ -36,6 +36,9 @@
    - 실행 뒤 런타임 캐시의 실제 Form 4 XML 1건을 `backend/tests/fixtures/biotech_form4_real_<accession>.xml` 로 복사 (SEC 요청 0회) · 같은 회귀 테스트를 이 파일로도 실행 · 신고자 이름 등 개인정보가 있으면 파일 대신 필드 값만 테스트에 넣음
 3. 순서: H6 보고 → PR #58 병합·배포 → 수정 후 스크린샷 → WP88 PR 생성·승인 요청
 
+**진행 (2026-09-30)**:
+- 1항 완료 · `feature/biotech-wp88` 커밋 `e90e784` · pytest biotech 388 통과 / 4 건너뜀 · tsx 통과 · next build 성공 · 번들 `/Users/gonnim/Project-MVP/Source/toss-tradebot-mvp/docs/plans/biotech/fable-bundles/20260930_WP88-2.zip` (SHA-256 `0bd57ec04430fc7ac4065fb042b2dab4e28969da80a3f2f20ca0974212ed4442`)
+
 **확인된 제약 (2026-09-30 20:1x KST)**:
 - 서버 조회 결과 `/root/toss-tradebot-mvp/var/biotech` · `/root/toss-tradebot-mvp/backend/data` 아래 XML 파일 0개 · h65 는 XML 을 파싱 결과 (`h28v2_form4_issuer_buys_*.json`) 로만 저장 → 2항 셋째 작업은 SEC 요청 0회로 불가 · 사용자 결정 필요
 - 10/1 07:00 실행 시점에는 PR #58 (장부) 미배포 → "SEC 요청 · … 오늘 합계" 줄과 `sec_usage_20261001.json` 은 생기지 않음 · 사용자 결정 필요
