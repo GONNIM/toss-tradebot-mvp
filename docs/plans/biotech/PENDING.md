@@ -11,7 +11,7 @@
 
 ## 영구 규칙
 
-- **Fable 확인 문서 = 번들 zip (2026-09-28~)**: Fable 에게 확인받아야 할 문서는 번들 zip 파일로 제공한다. 생성 = `python3 scripts/fable_bundle.py <주제> <파일·폴더...> --question "<검수 질문>"` · 출력 = `docs/plans/biotech/fable-bundles/<YYYYMMDD>_<주제>.zip` (git 제외) · zip 안 첫 파일 `MANIFEST.md` (커밋 해시 · 파일별 SHA-256 · 검수 질문) · 자격증명 의심 패턴이 있으면 생성 중단. 보고에는 zip 전체 경로를 적는다.
+- **Fable 확인 문서 = 번들 zip (2026-09-28~)**: Fable 에게 확인받아야 할 문서는 번들 zip 파일로 제공한다. 생성 = `python3 scripts/fable_bundle.py <주제> <파일·폴더...> --question "<검수 질문>"` · 출력 = `docs/plans/biotech/fable-bundles/<YYYYMMDD>_<주제>.zip` (git 제외) · zip 안 첫 파일 `MANIFEST.md` (커밋 해시 · 파일별 SHA-256 · 검수 질문) · 자격증명 의심 패턴이 있으면 생성 중단. 보고에는 zip 전체 경로를 적는다. **(2026-09-30 재확인)** Fable 에게 줄 문서는 매번 번들 zip 으로 묶고, 보고에 절대 경로 (`/Users/gonnim/Project-MVP/Source/toss-tradebot-mvp/docs/plans/biotech/fable-bundles/<YYYYMMDD>_<주제>.zip`) 와 zip SHA-256 을 적는다.
 - **보고 문체 (2026-09-28~)**: 완전한 문장으로 쓴다. 명사를 나열하는 전보식 문장은 쓰지 않는다. 비유를 쓰지 않는다. 쉬운 어휘를 쓴다. 한 문장에는 한 내용만 담는다. 영어 용어는 처음 나올 때 한국어 뜻을 함께 적는다. 표와 수치는 유지하되, 표 밖 설명은 말로 풀어 쓴다.
 - **세션 첫 작업 = 관측 (2026-09-28~)**: 매 세션 시작 시 서버 `/root/toss-tradebot-mvp/var/biotech/logs/daily.log` 최신 실행 (2026-09-29 부터 8단계 · WP75 배포 후 9단계 · alert_brief · mcap_daily 는 skip 허용) 과 /biotech 두 탭 (레이더·소문) 날짜를 확인하고, 정상이면 한 줄로 보고한다.
 - **보고 시 전체 경로 (2026-09-28~)**: 문서·파일·산출물 언급은 전체 경로로 적는다. 저장소 파일 = 저장소 루트 기준 (예: `docs/plans/biotech/data/sponsor_aliases.csv`) · 서버 파일 = 절대 경로 (예: `/root/toss-tradebot-mvp/var/biotech/h6/aact_theme_studies_2026-09-28.csv`). 파일 이름만 적지 않는다.
@@ -19,6 +19,53 @@
 ---
 
 ## PENDING
+
+### [Biotech Catalyst Radar · WP87-2 PR #58 병합 전 확인 · WP88 구현 · 10월 1일 실행] · 2026-09-30 발행
+
+**원문 요지** (보고 첫 줄 "지금 하는 일" · 전체 경로 · 서버 조회 전용 · 배포는 승인 후에만):
+
+1. PR #58 병합 전 확인 (같은 PR 에 커밋)
+   - `backend/scripts/biotech_h28v2_form4_channel.py` `parse_form4()` 회귀 테스트 1건: 신고서 XML 표본 (테스트 픽스처) 으로 거래 코드 · 주식 수 · 날짜가 고치기 전과 같은지 확인 · 가격 열만 새로 추가
+   - 임원 매수 검정 산출 파일 (`docs/plans/biotech/verification/` 아래) 이 바뀌지 않았음을 git status 로 인용 · 검정 재실행 금지
+   - 가격 보충 요청 (하루 최대 10건) 이 SEC 요청 수 집계에 포함되는지 코드 줄로 인용 · 없으면 포함
+   - `shortName()`: 원문이 전부 대문자일 때만 표기 변경 · 대소문자 섞인 원문 (OrbiMed · McArdle · BioNTech) 은 그대로 · 테스트 2건
+   - 10월 1일 H6 보고가 끝나면 병합·배포 · 수정 후 스크린샷 `docs/plans/biotech/screenshots/<YYYYMMDD>_sha_<해시>/wp87_after_*.webp` · 임원 매수 카드 제목과 내용 일치 여부 기록
+2. WP88 구현 (설계서 승인 · PR 은 H6 보고 뒤)
+   - 결정: 하루 SEC 요청 상한 150회 · 첫 문단 400자 · 항목 7.01+9.01 도 포함
+   - 상한 150회 = 브리핑 · Form 4 · 가격 보충 · 8-K 첨부 합산 · 닿으면 그날 보도자료 읽기만 건너뛰고 나머지 단계 계속 · 건너뛴 사실을 daily.log 에 기록
+   - 첫 문단은 "진위 미검증" 표시와 함께 브리핑 (c) 회사 공시 줄에 붙임 · z.ai 입력 전 `FORBIDDEN_RE` 로 문장마다 검사
+   - 테스트: 상한 도달 시 건너뜀 · 400자 자르기 · 7.01 포함 · 금지어 문장 제외
+   - pytest · tsx · next build 결과와 PR 번호를 적어 승인 요청
+3. 10월 1일 (예정대로)
+   - 07:00 실행 뒤 daily.log 의 "경보 N건 · z.ai 호출 N/5" 줄 · 경보 종목의 배수 · 평균 값 · `[8/9] mcap_daily` 건너뜀 줄 인용
+   - H6 수집 (WP84) 실행 · 이 파일의 H6 항목대로 보고
+   - 장부 기준 한도 재계산 함께 보고
+4. (추가 지시) Fable 에게 줄 문서는 번들 zip 으로 묶고 정확한 경로를 제시
+
+**진행 (2026-09-30)**:
+- 1항 완료 · PR #58 커밋 `1c7439d` · 표본 `backend/tests/fixtures/biotech_form4_sample.xml` (Form 4 형식 기반 합성 · 실제 원문 아님) · 테스트 `backend/tests/test_biotech_wp87_2_regression.py` · 하루 SEC 공용 장부 `SecDailyLedger` (`<RUNTIME>/sec_usage/sec_usage_<YYYYMMDD>.json`) · verification 폴더 변경 없음 · shortName 은 기존 코드가 이미 규칙대로 (테스트만 추가)
+- 2항 구현 완료 · 브랜치 `feature/biotech-wp88` 커밋 `c300920` · pytest biotech 384 통과 / 4 건너뜀 · tsx · tsc 통과 · next build 성공 · **PR 은 아직 없음 (H6 보고 뒤 생성)**
+- 4항 완료 · 번들 `/Users/gonnim/Project-MVP/Source/toss-tradebot-mvp/docs/plans/biotech/fable-bundles/20260930_WP87-2_WP88.zip` (SHA-256 `a0f5fe798cb5fc5c425f4f4fdb5f51c7b15f40f571b920d3f5e218b9a976891f` · 파일 13개 · 검수 질문 5개) · Fable 회신 대기
+
+**남은 일 (순서)**:
+1. 10/1 07:00 뒤 daily.log 인용 (3항)
+2. H6 수집 · 보고 · 장부 기준 한도 재계산
+3. PR #58 병합·배포 · 13경로 확인 · 수정 후 스크린샷 · 임원 매수 카드 제목·내용 확인 (ETRA 금액은 배포 다음 날 가격 보충 뒤 표시)
+4. WP88 PR 생성 (PR #58 위에 쌓인 브랜치) · 번호 보고 · 승인 대기
+5. Fable 번들 회신 반영
+
+---
+
+### [Biotech Catalyst Radar · WP87 D-n 기준일 · 순위표 회사명 · 임원 매수 카드 · 언급 카드 · WP88 설계] · 2026-09-30 발행
+
+- PR #57 배포 (`7bcf0c9` · 13경로 200) · 10/1 07:00 "경보 N건 · z.ai 호출 N/5" 줄과 경보 종목 배수·평균 인용 (WP87-2 3항으로 이관)
+- D-n 은 화면 날짜 (KST) 기준 · 지난 날짜는 D+n · 정렬 무변경 · 테스트 (오늘 → D-0 · 어제 → D+1)
+- 순위표 회사명에 `shortName()` 적용
+- 임원 매수 카드: 신고서 주당 가격 필드 인용 · 있으면 금액 · 없으면 "금액 미기재" · 같은 회사·같은 신고자·같은 신고일은 한 카드 (개별 거래는 "자세히") · "D+8" → "8일 전 신고"
+- 언급 카드: 경보 조건 충족 종목만 "급등 경보" · 과열 단계지만 경보 아님 → "언급 늘어남" · 테스트 (4건·6.4배 → 언급 늘어남 · 32건·32배 → 급등 경보)
+- 전후 스크린샷 (순위표 · 임원 매수 · 언급 · 소문 카드) · 수정 전 = `docs/plans/biotech/screenshots/20260930_sha_7bcf0c9/wp87_before_*.webp`
+- PR #58 (https://github.com/GONNIM/toss-tradebot-mvp/pull/58) · **배포는 10/1 H6 보고 뒤**
+- WP88 설계서 `docs/plans/biotech/verification/briefing/wp88_8k_exhibit_design.md` 작성 → WP87-2 에서 승인·구현
 
 ### [Biotech Catalyst Radar · WP86 경보 기준선 하한 · 주석 정정 · SEC 명부 주간 갱신] · 2026-09-30 발행
 
