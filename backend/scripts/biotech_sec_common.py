@@ -32,6 +32,7 @@ SEC_UA = "TossTradebot BiotechRadar suauncle@gmail.com"
 SEC_FROM = "suauncle@gmail.com"
 SEC_ACCEPT_ENCODING = "gzip, deflate"
 REQ_INTERVAL = 0.5  # SEC 10 req/s 이내 · 보수적
+SEC_DAILY_CAP = 150  # WP88 · 하루 SEC 요청 상한 (브리핑 · Form 4 · 가격 보충 · 8-K 첨부 합산 · 닿으면 보도자료 읽기만 건너뜀)
 
 
 class SecBlockedError(RuntimeError):
