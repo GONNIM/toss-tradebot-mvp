@@ -24,7 +24,7 @@ RSS 매치는 보조 표시 · 유형 태그는 apewisdom_24h ≥ 5 OR reddit_ma
 **호환**:
 - 산출 CSV 컬럼 (`st_24h`, `st_baseline_n`, `st_baseline_mean`, `st_baseline_mult`) 유지
   → API/frontend 무회귀 (표3 렌더 그대로 · 값 소스만 apewisdom baseline 으로 교체)
-- st_24h 의미 재해석: **서버 채널 총 언급수 (apewisdom + reddit)** · 기존 컬럼명 유지 (호환성)
+- st_24h = apewisdom 24시간 언급 수 (아래 "st_24h": ape_24h 와 같음 · 레딧 매치는 reddit_rss_matches 열 · 2026-09-30 WP86 주석 정정)
 """
 from __future__ import annotations
 
@@ -160,6 +160,14 @@ def fetch_reddit_rss(client: httpx.Client, sub: str) -> tuple[list[dict], bool]:
         return [{"_status": f"err_{str(e)[:30]}"}], True
 
 
+BASELINE_FLOOR = 1.0   # WP86 · 기준선 하한 (하루 1건) · 평균 0.25 → 128배 같은 부풀림 방지 · 평균 0 종목도 배수 계산
+
+
+def baseline_multiple(ape_24h: int, baseline_mean: float) -> float:
+    """평소 대비 배수 = 오늘 apewisdom 언급 / max(1.0, 기준선 평균) (WP86 · 2026-09-30 규칙 변경)."""
+    return round(ape_24h / max(BASELINE_FLOOR, baseline_mean), 2)
+
+
 def load_baseline(ticker: str) -> tuple[int, float]:
     """지난 최대 30일 baseline · (n_days, mean_24h). apewisdom_24h 값 축적."""
     files = sorted(BASELINE_DIR.glob(f"{ticker}_*.json"))[-30:]
@@ -264,7 +272,7 @@ def main():
             baseline_n, baseline_mean = load_baseline(tk)
             save_baseline(tk, today_str, ape_24h, len(reddit_hits))
 
-            baseline_mult = round(ape_24h / max(1e-6, baseline_mean), 2) if baseline_mean > 0 else None
+            baseline_mult = baseline_multiple(ape_24h, baseline_mean)   # WP86 · 기준선 하한 1건 (평균 0 이어도 계산)
             stage_val = stage(ape_24h, ape_rank, len(reddit_hits), baseline_n, baseline_mean)
 
             # 유형 태그 (apewisdom 5+ 또는 reddit 매치 1+)

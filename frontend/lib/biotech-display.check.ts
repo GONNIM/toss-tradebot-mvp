@@ -2,7 +2,7 @@
 import assert from "node:assert/strict";
 import * as fs from "node:fs";
 import * as path from "node:path";
-import { cardText, mentionSentence, rumorReason, shortName, summaryStatus, tickerOrUnknown } from "./biotech-display";
+import { cardText, mentionSentence, multSentence, rumorReason, shortName, summaryStatus, tickerOrUnknown } from "./biotech-display";
 
 const beauty = cardText({ category: "미용", interventions: [{ name: "X-1", type: "DRUG", type_ko: "약물" }] }, "PHASE2", "2026-11-30", 62);
 assert.ok(beauty.main?.startsWith("미용 · X-1 (약물) · 2상(효과 탐색)"), beauty.main ?? "null");
@@ -26,6 +26,10 @@ const autoNew = cardText({ category: "통증", category_auto: true }, "PHASE2", 
 assert.ok(autoNew.main?.startsWith("통증(자동) · 2상"), autoNew.main ?? "null");
 // WP85 · 설명 문장 함수
 assert.equal(mentionSentence("frenzy", 8, 32, "128.0"), "언급 급증 · 기준선 8일(7일 이상 충족) · 24시간 언급 32건 · 평소 대비 128배");
+// WP86 · 기준선 하한 문장
+assert.equal(mentionSentence("frenzy", 8, 32, "32.0", 0.25), "언급 급증 · 기준선 8일(7일 이상 충족) · 평소 하루 0.25건 → 오늘 32건(32배), 평소 거의 없음");
+assert.equal(multSentence(0, 14), "평소 하루 0건 → 오늘 14건(14배), 평소 거의 없음");
+assert.equal(multSentence(3, 12), "평소 하루 3건 → 오늘 12건(4배)");
 assert.equal(shortName("IOVANCE BIOTHERAPEUTICS, INC."), "Iovance Biotherapeutics");
 assert.equal(tickerOrUnknown(""), "티커 미확인");
 assert.equal(summaryStatus({ ok: false, error: "ZaiError 400/1210" }), "자동 요약 실패(ZaiError 400/1210)");

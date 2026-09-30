@@ -18,7 +18,7 @@ import { SectionCard } from "@/components/ui/section-card";
 import { BiotechTable, BiotechTableColumn } from "@/components/biotech/BiotechTable";
 import { RumorCard } from "@/components/biotech/RumorCard";
 import type { SessionInfo } from "@/lib/auth";
-import { cardText, checkedAtLabel, ctgovUrl, insiderLine, mcapBadge, mentionSentence, refreshLabel, rumorReason, shortName, sortFilterCards, sortLabel, summaryStatus, tickerOrUnknown, trialSentence } from "@/lib/biotech-display";
+import { cardText, checkedAtLabel, ctgovUrl, insiderLine, mcapBadge, mentionSentence, multSentence, refreshLabel, rumorReason, shortName, sortFilterCards, sortLabel, summaryStatus, tickerOrUnknown, trialSentence } from "@/lib/biotech-display";
 import type { CardSort, ThemeRank, TrialDisplay } from "@/lib/biotech-display";
 
 // 백엔드 스키마
@@ -60,6 +60,7 @@ type RumorRow = {
   theme_rank?: ThemeRank;
   mult?: string;
   cik?: string;
+  baseline_mean?: number | null;
 };
 
 // WP77 · 급등 브리핑 (수집 사실 + 자동 요약)
@@ -68,7 +69,7 @@ type AlertBrief = {
   name: string;
   note: string;
   brief_date?: string;
-  mentions: { yesterday: number | null; today: number | null; mult: string; reddit_today: number; history: { date: string; apewisdom_24h: number; reddit_matches: number }[] };
+  mentions: { yesterday: number | null; today: number | null; mult: string; mean?: number | null; reddit_today: number; history: { date: string; apewisdom_24h: number; reddit_matches: number }[] };
   reddit: { title: string; link: string; updated: string }[];
   reddit_time_checked?: boolean;
   sec_8k: { filing_date: string; items: string; description: string; url: string; ex99_1_title: string }[];
@@ -173,7 +174,7 @@ function AlertBriefCard({ b, defaultOpen = false }: { b: AlertBrief; defaultOpen
           <div>
             <div className="font-semibold">(a) 언급량 · apewisdom 24시간</div>
             <div>
-              어제 {m.yesterday ?? "기록 없음"} → 오늘 {m.today ?? "기록 없음"} · 평소 대비 배수 {m.mult === "collecting" ? "수집 중 (7일 미만)" : m.mult} · 레딧 매치 오늘 {m.reddit_today}건
+              어제 {m.yesterday ?? "기록 없음"} → 오늘 {m.today ?? "기록 없음"} · {multSentence(m.mean, m.today) ?? (m.mult === "collecting" ? "평소 대비 배수: 수집 중 (7일 미만)" : `평소 대비 배수 ${m.mult}`)} · 레딧 매치 오늘 {m.reddit_today}건
             </div>
             <div className="font-mono text-muted-foreground">
               최근 {m.history.length}일 (날짜 언급 수): {m.history.map((h) => `${Number(h.date.slice(4, 6))}/${Number(h.date.slice(6, 8))} ${h.apewisdom_24h}`).join(" · ")}
@@ -246,7 +247,7 @@ function CompactList({ rows, emptyLabel, kind }: { rows: RumorRow[]; emptyLabel:
           )}
           <span className="text-slate-700 dark:text-slate-200">
             {kind === "mentions"
-              ? mentionSentence(r.stage || r.days_hint, r.baseline_n, r.st_24h, r.mult)
+              ? mentionSentence(r.stage || r.days_hint, r.baseline_n, r.st_24h, r.mult, r.baseline_mean)
               : trialSentence(r.phase, r.event_date, r.days_to) ?? r.detail}
           </span>
         </li>

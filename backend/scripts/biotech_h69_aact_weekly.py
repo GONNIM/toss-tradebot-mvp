@@ -503,6 +503,36 @@ def run_auto_category_step(snapshot_path: Path, notify=None) -> dict | None:
         return None
 
 
+SEC_TICKERS_URL = "https://www.sec.gov/files/company_tickers.json"
+
+
+def refresh_sec_company_tickers(get=None) -> dict:
+    """WP86 · SEC 명부 → <RUNTIME>/sec_company_tickers.json · biotech_sec_common 헤더 · 403·429 즉시 중단 · 실패면 기존 파일 유지."""
+    from backend.scripts import _biotech_paths as _P
+    from backend.scripts.biotech_sec_common import SecBlockedError, build_client, sec_get
+    out = _P.out_flat("sec_company_tickers.json")
+    try:
+        if get is None:
+            client = build_client()
+            get = lambda url: sec_get(client, url)  # noqa: E731
+        r = get(SEC_TICKERS_URL)
+    except SecBlockedError as e:
+        LOG.warning("SEC 명부 갱신 중단 · %s · 기존 파일 유지", e)
+        return {"updated": False, "reason": "blocked"}
+    except Exception as e:  # noqa: BLE001
+        LOG.warning("SEC 명부 갱신 실패 · %s · 기존 파일 유지", e.__class__.__name__)
+        return {"updated": False, "reason": e.__class__.__name__}
+    data = r.get("json") if r.get("status") == 200 else None
+    if not isinstance(data, dict) or len(data) < 1000:   # 비정상 응답이면 덮어쓰지 않음
+        LOG.warning("SEC 명부 갱신 건너뜀 · HTTP %s · 기존 파일 유지", r.get("status"))
+        return {"updated": False, "reason": f"http_{r.get('status')}"}
+    tmp = out.with_suffix(".json.tmp")
+    tmp.write_text(json.dumps(data))
+    tmp.replace(out)
+    LOG.info("SEC 명부 갱신 · %d 회사 · %s", len(data), out)
+    return {"updated": True, "companies": len(data)}
+
+
 def _notify_warning_sync(step: str, detail: str) -> None:
     """텔레그램 warning (자동 분류 등 보조 단계 실패 · 주간 잡 중단 아님)."""
     try:
@@ -592,6 +622,9 @@ def main():
 
     # 6-b) WP81 · 질환 분류 자동화 (수동 사전 밖 용어만 · NLM 조회는 이 주간 잡에서만 · 실패해도 주간 잡 계속)
     run_auto_category_step(OUT_JSON)
+
+    # 6-d) WP86 · SEC company_tickers 명부 주간 갱신 (실패 시 기존 파일 유지 · 주간 잡 계속)
+    refresh_sec_company_tickers()
 
     # 6-c) WP75 · 시총용 주식수 (SEC companyfacts · BIOTECH_MCAP_ENABLED 꺼지면 건너뜀 · 실패해도 주간 잡 계속)
     try:
