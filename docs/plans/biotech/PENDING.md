@@ -36,6 +36,9 @@
    - H6 보고 → PR #58 병합·배포 → 수정 후 스크린샷 → WP88 PR 생성·승인 요청
    - WP88 배포 다음 날 (XML 첫 보관 뒤) `form4_xml/` 에서 1건을 복사해 `backend/tests/fixtures/biotech_form4_real_<accession>.xml` 픽스처 생성 · 신고자 이름 필드는 "REPORTING PERSON" 으로 교체 · 같은 회귀 테스트를 이 파일로도 실행
 
+**진행 (2026-09-30)**:
+- 1항 완료 · `feature/biotech-wp88` 커밋 `96268f1` · pytest biotech 391 통과 / 4 건너뜀 · tsx 통과 · next build 성공 · 번들 `/Users/gonnim/Project-MVP/Source/toss-tradebot-mvp/docs/plans/biotech/fable-bundles/20260930_WP88-3.zip` (SHA-256 `aae70c12131cdd080d94eab4cce488d44390f2b824f9d034d99e54dc97318755`)
+
 (WP88-2 의 "확인된 제약" 2건은 이 지시로 결정됨: 장부 줄 = 10월 2일 인용 · 실제 XML = h65 보관 방식)
 
 ---
