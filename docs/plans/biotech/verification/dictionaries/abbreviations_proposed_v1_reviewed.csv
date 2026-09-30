@@ -1,0 +1,46 @@
+abbreviation,category,full_term,n_trials,example_term,note,reviewer_decision
+DLBCL,암,Diffuse Large B-Cell Lymphoma,4,Relapsed or Refractory Diffuse Large B-Cell Lymphoma (R/R DLBCL),,등재
+GBM,암,Glioblastoma,1,Glioblastoma (GBM),,등재
+RCC,암,Renal Cell Carcinoma,4,Renal Cell Carcinoma (RCC),,등재
+CRC,암,Colorectal Cancer,5,Colorectal Cancer (CRC),Clinical Research Center 등과 겹칠 수 있음 (질환명 용어에서는 낮음),등재 · 암(질환명 자리에 다른 뜻이 올 가능성 낮음)
+ESCC,암,Esophageal Squamous Cell Carcinoma,1,ESCC,,등재
+SCCHN,암,Squamous Cell Carcinoma of Head and Neck,2,Squamous Cell Carcinoma of Head and Neck (SCCHN),,등재
+GIST,암,Gastrointestinal Stromal Tumor,2,GIST,,등재
+CML,암,Chronic Myeloid Leukemia,2,CML (Chronic Myelogenous Leukemia),,등재
+AML,암,Acute Myeloid Leukemia,8,Acute Myeloid Leukemia (AML),,등재
+CLL,암,Chronic Lymphocytic Leukemia,3,Chronic Lymphocytic Leukemia (CLL),,등재
+NSCLC,암,Non-Small Cell Lung Cancer,18,Non-small Cell Lung Cancer (NSCLC),,등재
+SCLC,암,Small Cell Lung Cancer,0,,,등재
+HCC,암,Hepatocellular Carcinoma,5,Hepatocellular Carcinoma (HCC),,등재
+MDS,암,Myelodysplastic Syndromes,2,Myelodysplastic Syndrome (MDS),,등재
+MM,암,Multiple Myeloma,1,Multiple Myeloma (MM),두 글자 · 단위 mm 는 소문자라 대문자 일치로 구분되나 오탐 위험 남음 · 검수 요망,제외(두 글자 약어)
+PTLD,암,Post-Transplant Lymphoproliferative Disorder,1,EBV+ Associated Post-transplant Lymphoproliferative Disease (EBV+ PTLD),,등재
+DMD,희귀 유전,Duchenne Muscular Dystrophy,3,Duchenne Muscular Dystrophy (DMD),,등재
+DM1,희귀 유전,Myotonic Dystrophy Type 1,3,DM1,,등재
+FSHD,희귀 유전,Facioscapulohumeral Muscular Dystrophy,4,Facioscapulohumeral Muscular Dystrophy (FSHD),,등재
+LGMD,희귀 유전,Limb-Girdle Muscular Dystrophy,0,,,등재
+HAE,희귀 유전,Hereditary Angioedema,9,HAE,,등재
+AATD,희귀 유전,Alpha-1 Antitrypsin Deficiency,1,AATD,,등재
+XLP,희귀 유전,X-Linked Lymphoproliferative Disease / X-Linked Protoporphyria,2,X-Linked Protoporphyria (XLP),X-Linked Lymphoproliferative (혈액·면역) 와 X-Linked Protoporphyria (희귀 유전) 두 뜻 · 검수 요망,등재 · 희귀 유전(두 뜻 모두 희귀 유전 질환)
+EPP,희귀 유전,Erythropoietic Protoporphyria,2,Erythropoietic Protoporphyria (EPP),,등재
+SLE,면역·염증,Systemic Lupus Erythematosus,5,SLE,,등재
+RA,면역·염증,Rheumatoid Arthritis,2,Refractory Rheumatoid Arthritis (RA),두 글자 · Right Atrium·Refractory Anemia 와 겹칠 수 있음 · 검수 요망,제외(두 글자 약어)
+GVHD,면역·염증,Graft-versus-Host Disease,1,Chronic GVHD,,등재
+IIM,면역·염증,Idiopathic Inflammatory Myopathy,3,IIM,,등재
+ITP,혈액,Immune Thrombocytopenia,1,Immune Thrombocytopenia (ITP),,등재
+PNH,혈액,Paroxysmal Nocturnal Hemoglobinuria,3,Paroxysmal Nocturnal Hemoglobinuria (PNH),,등재
+HCV,감염,Hepatitis C Virus,4,HCV Infection,감염 · C형간염 바이러스,등재
+HBV,감염,Hepatitis B Virus,1,Chronic HBV Infection,감염 · B형간염 바이러스,등재
+HIV,감염,Human Immunodeficiency Virus,5,HIV Infections,,등재
+HPV,감염,Human Papillomavirus,6,Human Papillomavirus (HPV),,등재 · 감염(암 어간 먼저 적용)
+CMV,감염,Cytomegalovirus,1,CMV Viremia,,등재
+EBV,감염,Epstein-Barr Virus,4,EBV-induced Lymphomas,,등재 · 감염(암 어간을 먼저 적용하므로 EBV-induced Lymphomas 는 암으로 감)
+RSV,감염,Respiratory Syncytial Virus,0,,,등재
+PSP,신경·정신,Progressive Supranuclear Palsy,1,PSP,,등재
+ALS,신경·정신,Amyotrophic Lateral Sclerosis,3,ALS,,등재
+PTSD,신경·정신,Post-Traumatic Stress Disorder,0,,,등재
+MDD,신경·정신,Major Depressive Disorder,1,Major Depressive Disorder (MDD),,등재
+MS,신경·정신,Multiple Sclerosis,2,"Multiple Sclerosis, MS",두 글자 · Mass Spectrometry·Morphine Sulfate 와 겹칠 수 있음 · 질환명 용어에서만 적용,제외(두 글자 약어)
+IgAN,신장,IgA Nephropathy,1,IgAN,대소문자 혼합 약어 · 원문 표기 그대로 완전 일치,등재 · 신장(대소문자 그대로 완전 일치)
+FSGS,신장,Focal Segmental Glomerulosclerosis,0,,,등재
+CKD,신장,Chronic Kidney Disease,0,,,등재

@@ -174,3 +174,32 @@ WP82_CASES = [
 @pytest.mark.parametrize("name,trees", WP82_CASES, ids=[c[0] for c in WP82_CASES])
 def test_wp82_first_applied_branches(name, trees):
     assert ac.mesh_category(name, trees) == "희귀 유전"
+
+
+
+# ── WP82-3 · 약어 구역 (어간 사전 v2) ─────────────────────────────────
+
+def test_abbreviation_in_parentheses():
+    assert ac.stem_category("Acute Myelogenous Leukaemia Variant (AML)", ac.load_stems())[0] == "암"
+    assert ac.stem_category("Relapsed (AML)", ac.load_stems()) == ("암", "AML")        # 괄호 안 약어 자체로 잡힘
+
+
+def test_cancer_stem_wins_over_abbreviation():
+    hit = ac.stem_category("EBV-induced Lymphomas", ac.load_stems())
+    assert hit[0] == "암" and hit[1].lower().startswith("lymphom")                      # EBV (감염) 가 아니라 암 어간
+
+
+def test_abbreviation_case_sensitive():
+    stems = ac.load_stems()
+    assert ac.stem_category("IgAN", stems) == ("신장", "IgAN")
+    assert ac.stem_category("IGAN", stems) is None
+
+
+def test_order_cancer_healthy_abbreviation_rest(tmp_path):
+    p = tmp_path / "s.json"
+    p.write_text(json.dumps({"stems": {"통증": "pain", "암": "cancer", "건강인·약동학": "healthy"},
+                             "rest_order": ["통증", "암", "건강인·약동학"], "abbreviations": {"HCV": "감염"}}))
+    kinds = [(c, r.pattern) for c, r in ac.load_stems(p)]
+    assert [c for c, _ in kinds] == ["암", "건강인·약동학", "감염", "통증"]
+    assert ac.stem_category("HCV pain", ac.load_stems(p))[0] == "감염"                   # 약어가 나머지 어간보다 먼저
+    assert ac.stem_category("healthy HCV", ac.load_stems(p))[0] == "건강인·약동학"        # 건강인 어간이 약어보다 먼저
