@@ -20,6 +20,28 @@
 
 ## PENDING
 
+### [Biotech Catalyst Radar · WP88-2 장부 범위 확장 · build_client 통일 · 10월 1일 실행] · 2026-09-30 발행
+
+**원문 요지** (보고 첫 줄 "지금 하는 일" · 전체 경로 · 서버 조회 전용 · 배포는 승인 후에만):
+
+1. WP88 브랜치 보완 (`feature/biotech-wp88` · PR 은 #58 병합 뒤)
+   - `backend/scripts/biotech_sec_common.py` `SEC_DAILY_CAP` = 300 · 주석 "SEC 실제 한도는 초당 10회 · 이 값은 자체 상한 · 주간 잡 포함" · `REQ_INTERVAL` 0.5초 그대로
+   - 주간 잡 SEC 요청도 같은 장부에: a) WP86 SEC 명부 갱신 (`refresh_sec_company_tickers`) → "company_tickers" · b) WP75 주식수 조회 (`backend/scripts/biotech_mcap_daily.py` SEC 부분) → "mcap_shares" · 플래그 꺼짐이면 0회 · 테스트 각 1건
+   - `build_client()` 가 `event_hooks` 인자를 받게 · h65 는 `httpx.Client` 직접 생성 대신 `build_client(event_hooks=...)` · 테스트 1건 (h65 클라이언트 User-Agent · From · Accept-Encoding = `build_client()` 와 같음)
+   - 설계서 9절 상한 값 300 으로 · 이유 기록
+   - pytest · tsx · next build 재실행
+2. 10월 1일 (예정대로)
+   - 07:00 실행 뒤 daily.log 인용: "경보 N건 · z.ai 호출 N/5" · 경보 종목 배수·평균 · `[8/9] mcap_daily` 건너뜀 줄 · "SEC 요청 · … 오늘 합계 N" 줄 · `sec_usage_20261001.json` 내용
+   - H6 수집 (WP84) 실행 · 이 파일 H6 항목대로 보고 · 장부 기준 한도 재계산
+   - 실행 뒤 런타임 캐시의 실제 Form 4 XML 1건을 `backend/tests/fixtures/biotech_form4_real_<accession>.xml` 로 복사 (SEC 요청 0회) · 같은 회귀 테스트를 이 파일로도 실행 · 신고자 이름 등 개인정보가 있으면 파일 대신 필드 값만 테스트에 넣음
+3. 순서: H6 보고 → PR #58 병합·배포 → 수정 후 스크린샷 → WP88 PR 생성·승인 요청
+
+**확인된 제약 (2026-09-30 20:1x KST)**:
+- 서버 조회 결과 `/root/toss-tradebot-mvp/var/biotech` · `/root/toss-tradebot-mvp/backend/data` 아래 XML 파일 0개 · h65 는 XML 을 파싱 결과 (`h28v2_form4_issuer_buys_*.json`) 로만 저장 → 2항 셋째 작업은 SEC 요청 0회로 불가 · 사용자 결정 필요
+- 10/1 07:00 실행 시점에는 PR #58 (장부) 미배포 → "SEC 요청 · … 오늘 합계" 줄과 `sec_usage_20261001.json` 은 생기지 않음 · 사용자 결정 필요
+
+---
+
 ### [Biotech Catalyst Radar · WP87-2 PR #58 병합 전 확인 · WP88 구현 · 10월 1일 실행] · 2026-09-30 발행
 
 **원문 요지** (보고 첫 줄 "지금 하는 일" · 전체 경로 · 서버 조회 전용 · 배포는 승인 후에만):
