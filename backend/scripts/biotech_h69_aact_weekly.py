@@ -593,6 +593,13 @@ def main():
     # 6-b) WP81 · 질환 분류 자동화 (수동 사전 밖 용어만 · NLM 조회는 이 주간 잡에서만 · 실패해도 주간 잡 계속)
     run_auto_category_step(OUT_JSON)
 
+    # 6-c) WP75 · 시총용 주식수 (SEC companyfacts · BIOTECH_MCAP_ENABLED 꺼지면 건너뜀 · 실패해도 주간 잡 계속)
+    try:
+        from backend.scripts.biotech_mcap_daily import run as _mcap_run
+        LOG.info("시총 주식수 단계 · %s", json.dumps(_mcap_run("weekly"), ensure_ascii=False))
+    except Exception as e:  # noqa: BLE001
+        LOG.warning("시총 주식수 단계 실패 · %s", e.__class__.__name__)
+
     # 7) zip 삭제 (사용자 지시)
     size_mb = zip_path.stat().st_size // (1024 * 1024)
     zip_path.unlink(missing_ok=True)
