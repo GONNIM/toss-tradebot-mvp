@@ -20,6 +20,19 @@
 
 ## PENDING
 
+### [Biotech Catalyst Radar · WP83-2 PR #54 병합 · 플래그 켜기 준비] · 2026-09-30 발행
+
+- PR #54 배포 (`f1af6b4`) · 13 경로 200 · 서버 `.env` 에 BIOTECH_MCAP_ENABLED · TIINGO_API_KEY 없음 (이름 개수 0) → 플래그 꺼짐
+- **2026-10-01 07:00 확인**: `/root/toss-tradebot-mvp/var/biotech/logs/daily.log` 에서 `[8/9] mcap_daily` 다음 줄에 "시총 daily 단계 건너뜀 (BIOTECH_MCAP_ENABLED 꺼짐 · Tiingo · SEC 호출 0회)" 와 `{"skipped": true ...}` 인용 · 9/9 완료
+- **플래그 켜기 절차 (사용자 · H6 보고와 승인 뒤)**:
+  1. 로컬에서 `sops edit backend/.env.sops.yaml` (저장 시 자동 재암호화)
+  2. 두 줄 추가: `TIINGO_API_KEY: <로컬 backend/.env 와 같은 값>` · `BIOTECH_MCAP_ENABLED: "1"` (값을 화면·셸 기록·커밋 메시지에 남기지 않기)
+  3. `git diff backend/.env.sops.yaml` 로 두 이름이 ENC[...] 로만 보이는지 확인 → 커밋 · PR · 병합 (배포 워크플로가 서버 `.env` 를 SOPS 복호화로 갱신)
+  4. 확인 (값 출력 없이): 서버 `grep -c "^TIINGO_API_KEY=\|^BIOTECH_MCAP_ENABLED=" backend/.env` = 2
+- 켜진 뒤 첫 월요일 주간 잡: `aact-weekly.log` 에 "SEC 주식수 조회 · 요청 · 소요 · 받은 용량 · 합산 종목" 한 줄 인용
+
+---
+
 ### [Biotech Catalyst Radar · WP83 PR #53 배포 · H6 수집 · WP75 로컬 구현] · 2026-09-30 발행
 
 - PR #53 배포 (`19fe7a6`) · 13 경로 200 · main pytest biotech 356 passed / 4 skipped (PR #52 + #53 합친 뒤)
