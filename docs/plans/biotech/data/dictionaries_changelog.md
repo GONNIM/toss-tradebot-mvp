@@ -98,3 +98,9 @@
 | Renal Impairments | 기타 | 건강인·약동학 | v1 시점에 해당 분류가 없어 기타로 두었음 |
 
 - 규칙 추가 2개: (5) 전암 병변 (이형성증 · 상피내 병변 · neoplasms 표기) = '암' · (6) 참가 조건 용어 (건강인 · 간·신장 장애 참가자 · 약동학 · 약물상호작용) = '건강인·약동학'
+
+## 한국어 v2 · 2026-09-30 (WP81) · 29건 추가 · 2건 표기 맞춤
+
+- 검수 원본: `docs/plans/biotech/verification/dictionaries/ko_terms_new_categories_proposed_v2_reviewed.csv` (29행 · 유지 17 = proposed_ko · 변경 12 = reviewer_decision)
+- `docs/plans/biotech/data/ko_terms.csv` 197 → 226행
+- 표기 맞춤 2건: Hepatic Impairment 간기능장애 → 간 기능 저하 참가자 · Renal Impairments 신기능장애 → 신장 기능 저하 참가자 (Hepatic Impairment (HI) 검수 결과 "간 기능 저하 참가자" 와 맞춤)

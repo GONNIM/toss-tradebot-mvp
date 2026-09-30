@@ -17,4 +17,9 @@ const pain = cardText({ category: "통증" }, "PHASE2", "2026-10-31", 32);
 assert.ok(pain.main?.startsWith("통증(통증 치료 시험) · 2상"), pain.main ?? "null");
 const ent = cardText({ category: "청각·이비인후" }, "PHASE3", "2026-10-31", 32);
 assert.ok(ent.main?.startsWith("청각·이비인후(청각·귀 질환 시험) · 3상"), ent.main ?? "null");
+// WP81 · 자동 분류는 "분류(자동) · …" 로 시작 (설명 문구 대신 자동 표시)
+const auto = cardText({ category: "신경·정신", category_auto: true }, "PHASE2", "2026-10-31", 32);
+assert.ok(auto.main?.startsWith("신경·정신(자동) · 2상"), auto.main ?? "null");
+const autoNew = cardText({ category: "통증", category_auto: true }, "PHASE2", "2026-10-31", 32);
+assert.ok(autoNew.main?.startsWith("통증(자동) · 2상"), autoNew.main ?? "null");
 console.log("ok");

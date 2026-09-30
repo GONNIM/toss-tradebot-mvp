@@ -1,0 +1,42 @@
+{
+  "spec": "질환명 키워드 어간 (자동 분류 3순위 · 수동 사전 > MeSH 트리 > 어간 > 기타)",
+  "version": "v0 · 2026-09-30 · WP80-2 설계서 6절 초안 그대로 (검수 후 확정)",
+  "source": "docs/plans/biotech/verification/dictionaries/auto_category_design.md 6절",
+  "order_rule": "암 → 건강인·약동학 → 나머지 (rest_order 순) · 코드가 강제 (backend/scripts/biotech_auto_category.py)",
+  "stems": {
+    "암": "cancer|carcinom|tumou?r|neoplas|malignan|lymphom|leukemi|leukaemi|myelom|sarcom|melanom|gliom|glioblastom|blastoma|metasta|oncolog|dysplasi|myelodysplas|myelofibros|nsclc|sclc|\\bhcc\\b|\\baml\\b|\\bcll\\b|\\bmds\\b",
+    "건강인·약동학": "healthy|volunteer|pharmacokinetic|bioavailab|bioequival|drug[- ]drug|drug interaction|food effect|hepatic impairment|renal impairment|\\bpk\\b|\\bddi\\b",
+    "감염": "infect|viral|virus|\\bhiv\\b|hepatitis|covid|sars-cov|influenza|bacteri|fungal|tubercul|sepsis|pneumoni|\\brsv\\b|\\bcmv\\b|herpes",
+    "비만·대사": "obes|overweight|diabet|metabolic|dyslipid|cholesterol|hyperlipid|\\bnash\\b|\\bmash\\b|fatty liver|steatohepat|weight|hypoglyc|thyroid|parathyroid|hyperuric",
+    "신경·정신": "alzheimer|parkinson|dementia|depress|schizo|epilep|seizure|multiple sclerosis|migraine|psych|autism|\\bals\\b|amyotrophic|neuropath|huntington|bipolar|anxiety|insomnia|narcolep|ataxia|agitation",
+    "안과": "retin|macula|ocular|\\beye\\b|glaucom|uveit|cornea|vision|keratit|conjunctiv|blind",
+    "청각·이비인후": "hearing|deaf|tinnitus|otitis|\\bear\\b|cochlea|sinusit|rhinit",
+    "미용": "wrinkle|fine line|glabellar|cellulite|skin rough|pigmentation",
+    "피부": "dermat|psoria|eczem|\\bacne\\b|\\bskin\\b|alopeci|vitiligo|urticari|hidradenit|pruritus|ichthyos|epidermolys",
+    "심혈관": "heart|cardi|hypertens|atrial|coronary|myocard|arrhythm|angina|thromb|stroke|vascular|aneurysm",
+    "호흡기": "asthma|\\bcopd\\b|pulmonar|\\blung\\b|cough|respirat|bronch|pulmonary fibrosis|\\bipf\\b|emphysem",
+    "신장": "kidney|renal|nephr|dialys|glomerul|urinary|bladder|hyperphosphat",
+    "혈액": "anemi|anaemi|hemophil|haemophil|thalass|sickle|thrombocytop|neutropen|hemoglobin|bleeding|coagul",
+    "근골격": "arthrit|osteo|\\bbone\\b|muscle|myopath|sarcopen|fracture|tendon|\\bgout\\b|spinal muscular",
+    "면역·염증": "lupus|autoimmun|inflammat|sjogren|sjögren|vasculit|myositis|scleroderma|rheumat|immunodefic|angioedema|allerg",
+    "소화기": "crohn|colitis|bowel|gastr|liver|hepat|pancrea|constipat|\\bibs\\b|esophag|celiac|cirrhos|biliary|cholang",
+    "통증": "\\bpain\\b|neuralgi|analges"
+  },
+  "rest_order": [
+    "감염",
+    "비만·대사",
+    "신경·정신",
+    "안과",
+    "청각·이비인후",
+    "미용",
+    "피부",
+    "심혈관",
+    "호흡기",
+    "신장",
+    "혈액",
+    "근골격",
+    "면역·염증",
+    "소화기",
+    "통증"
+  ]
+}

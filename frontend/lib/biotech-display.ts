@@ -133,6 +133,7 @@ export function categoryLabel(category: string): string {
 
 export type TrialDisplay = {
   category?: string;
+  category_auto?: boolean; // WP81 · 자동 분류 (MeSH 트리·어간) → "분류(자동)"
   interventions?: { name: string; type: string; type_ko?: string; name_ko?: string }[];
   placebo?: boolean;
   enrollment?: string;
@@ -156,7 +157,7 @@ export function cardText(
 ): { main: string | null; theme: string | null } {
   const parts: string[] = [];
   const t = trial ?? {};
-  if (t.category) parts.push(categoryLabel(t.category));
+  if (t.category) parts.push(t.category_auto ? `${t.category}(자동)` : categoryLabel(t.category));
   const drugs = (t.interventions ?? []).filter((i) => !/placebo/i.test(i.name));
   if (drugs.length > 0) {
     const d = drugs[0];

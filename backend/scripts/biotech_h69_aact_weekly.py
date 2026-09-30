@@ -563,6 +563,13 @@ def main():
     LOG.info("ctgov_snapshot.json · %d study · %d unique ticker · %s",
              len(matches), len({m["ticker"] for m in matches}), OUT_JSON)
 
+    # 6-b) WP81 · 질환 분류 자동화 (수동 사전 밖 용어만 · NLM 조회는 이 주간 잡에서만 · 실패해도 주간 잡 계속)
+    try:
+        from backend.scripts.biotech_auto_category import run_weekly as _auto_run
+        _auto_run(OUT_JSON, fetch=True)
+    except Exception as e:  # noqa: BLE001
+        LOG.warning("자동 분류 단계 실패 · %s · 스냅샷·기존 자동 분류는 유지", e.__class__.__name__)
+
     # 7) zip 삭제 (사용자 지시)
     size_mb = zip_path.stat().st_size // (1024 * 1024)
     zip_path.unlink(missing_ok=True)
