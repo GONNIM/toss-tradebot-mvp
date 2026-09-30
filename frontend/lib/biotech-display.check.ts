@@ -31,6 +31,12 @@ assert.equal(mentionSentence("frenzy", 8, 32, "32.0", 0.25, true), "급등 경�
 assert.equal(multSentence(0, 14), "평소 하루 0건 → 오늘 14건(14배), 평소 거의 없음");
 assert.equal(multSentence(3, 12), "평소 하루 3건 → 오늘 12건(4배)");
 assert.equal(shortName("IOVANCE BIOTHERAPEUTICS, INC."), "Iovance Biotherapeutics");
+// WP87-2 · 전부 대문자 원문만 표기 변경 · 대소문자 섞인 원문은 그대로 (접미사만 제거)
+assert.equal(shortName("ORBIMED ADVISORS LLC"), "Orbimed Advisors");
+assert.equal(shortName("ELECTRA THERAPEUTICS, INC."), "Electra Therapeutics");
+assert.equal(shortName("OrbiMed Advisors LLC"), "OrbiMed Advisors");
+assert.equal(shortName("McArdle Capital LLC"), "McArdle Capital");
+assert.equal(shortName("BioNTech SE"), "BioNTech SE");  // SE 는 제거 대상 접미사가 아님 · 표기는 원문 그대로
 assert.equal(tickerOrUnknown(""), "티커 미확인");
 assert.equal(summaryStatus({ ok: false, error: "ZaiError 400/1210" }), "자동 요약 실패(ZaiError 400/1210)");
 assert.ok(rumorReason(2, "collecting", 6).startsWith("이 카드에 오른 이유: 임상 종료 예정 D-2"));

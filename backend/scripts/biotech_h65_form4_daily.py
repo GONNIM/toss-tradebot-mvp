@@ -18,7 +18,7 @@ from backend.scripts._biotech_bootstrap import require_secure_logging, data_sha
 from backend.scripts.biotech_h28v2_form4_channel import (
     load_fund_ciks, sec_get, fetch_form4_accessions, fetch_form4_xml, parse_form4,
 )
-from backend.scripts.biotech_sec_common import SEC_UA, SEC_FROM, SEC_ACCEPT_ENCODING
+from backend.scripts.biotech_sec_common import SEC_UA, SEC_FROM, SEC_ACCEPT_ENCODING, SecDailyLedger
 
 import csv
 import json
@@ -92,44 +92,59 @@ def main():
     cutoff = (datetime.now(timezone.utc) - timedelta(days=30)).strftime("%Y-%m-%d")
 
     new_buys = 0
-    with httpx.Client(headers={"User-Agent": SEC_UA, "From": SEC_FROM,
-                                "Accept-Encoding": SEC_ACCEPT_ENCODING}, timeout=30.0) as client:
-        for i, filer_cik in enumerate(fund_ciks, 1):
-            try:
-                accs = fetch_form4_accessions(client, filer_cik)
-            except Exception:
-                continue
-            # 30일 이내 accession 만
-            recent = [a for a in accs if a.get("date", "") >= cutoff]
-            if not recent:
-                continue
-            # 기존 accession 세트
-            existing = set()
-            for b in cache.get(filer_cik, {}).get("buys", []):
-                if b.get("accession"):
-                    existing.add(b["accession"])
-            fresh_recent = [a for a in recent if a["accession"] not in existing]
-            if not fresh_recent:
-                continue
-            LOG.info("[%d/%d] filer %s: +%d fresh accessions (30d)", i, len(fund_ciks), filer_cik, len(fresh_recent))
-            for a in fresh_recent[:20]:  # 하루당 filer 최대 20건
+    price_fills = 0
+    # WP87-2 · 하루 SEC 요청 공용 장부 · 이 단계의 모든 요청을 보내기 직전에 센다 (form4 · price_backfill 구분)
+    ledger = SecDailyLedger.load()
+    stage = {"cat": "form4"}
+
+    def _count(_request):
+        ledger.add(stage["cat"])
+
+    try:
+        with httpx.Client(headers={"User-Agent": SEC_UA, "From": SEC_FROM,
+                                    "Accept-Encoding": SEC_ACCEPT_ENCODING}, timeout=30.0,
+                            event_hooks={"request": [_count]}) as client:
+            for i, filer_cik in enumerate(fund_ciks, 1):
                 try:
-                    xml = fetch_form4_xml(client, filer_cik, a["accession"])
+                    accs = fetch_form4_accessions(client, filer_cik)
                 except Exception:
                     continue
-                if xml is None:
+                # 30일 이내 accession 만
+                recent = [a for a in accs if a.get("date", "") >= cutoff]
+                if not recent:
                     continue
-                for b in parse_form4(xml):
-                    b["filing_date"] = a["date"]
-                    b["filer_cik"] = filer_cik
-                    b["accession"] = a["accession"]
-                    if filer_cik not in cache:
-                        cache[filer_cik] = {"n_accs": 0, "n_buys": 0, "buys": []}
-                    cache[filer_cik]["buys"].append(b)
-                    cache[filer_cik]["n_buys"] = len(cache[filer_cik]["buys"])
-                    new_buys += 1
-        # WP87 · 가격 보충 · 예전 캐시 (가격 필드 없음) 의 최근 30일 매수 · 신고서 1건당 1회 · 한 번에 최대 10건
-        price_fills = backfill_prices(cache, cutoff, lambda f, acc: fetch_form4_xml(client, f, acc))
+                # 기존 accession 세트
+                existing = set()
+                for b in cache.get(filer_cik, {}).get("buys", []):
+                    if b.get("accession"):
+                        existing.add(b["accession"])
+                fresh_recent = [a for a in recent if a["accession"] not in existing]
+                if not fresh_recent:
+                    continue
+                LOG.info("[%d/%d] filer %s: +%d fresh accessions (30d)", i, len(fund_ciks), filer_cik, len(fresh_recent))
+                for a in fresh_recent[:20]:  # 하루당 filer 최대 20건
+                    try:
+                        xml = fetch_form4_xml(client, filer_cik, a["accession"])
+                    except Exception:
+                        continue
+                    if xml is None:
+                        continue
+                    for b in parse_form4(xml):
+                        b["filing_date"] = a["date"]
+                        b["filer_cik"] = filer_cik
+                        b["accession"] = a["accession"]
+                        if filer_cik not in cache:
+                            cache[filer_cik] = {"n_accs": 0, "n_buys": 0, "buys": []}
+                        cache[filer_cik]["buys"].append(b)
+                        cache[filer_cik]["n_buys"] = len(cache[filer_cik]["buys"])
+                        new_buys += 1
+            # WP87 · 가격 보충 · 예전 캐시 (가격 필드 없음) 의 최근 30일 매수 · 신고서 1건당 1회 · 한 번에 최대 10건
+            stage["cat"] = "price_backfill"
+            price_fills = backfill_prices(cache, cutoff, lambda f, acc: fetch_form4_xml(client, f, acc))
+    finally:
+        ledger.save()
+        LOG.info("SEC 요청 · form4 %d · 가격 보충 %d · 오늘 합계 %d", ledger.counts.get("form4", 0),
+                 ledger.counts.get("price_backfill", 0), ledger.total())
 
     cache_path.write_text(json.dumps(cache, ensure_ascii=False, indent=2))
     LOG.info("증분 · 신규 buys: +%d · 전체 filers cached: %d · 가격 보충 신고서 %d건", new_buys, len(cache), price_fills)

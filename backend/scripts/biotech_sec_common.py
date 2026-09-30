@@ -270,3 +270,38 @@ def zip_recent(recent: dict, wanted_forms: set[str] | None = None) -> list[dict]
             "item_codes": item_codes,
         })
     return out
+
+
+# ─ WP87-2 · 하루 SEC 요청 공용 장부 (브리핑 · Form 4 · 가격 보충 · 8-K 첨부 합산) ─────────
+
+class SecDailyLedger:
+    """KST 날짜별 SEC 요청 수 · <RUNTIME>/sec_usage/sec_usage_<YYYYMMDD>.json · 단계마다 add() 후 save().
+
+    여러 단계 (form4 · alert_brief) 가 같은 날 같은 파일에 더한다 · 파일은 요청 수만 담는다 (URL·헤더 없음).
+    """
+
+    def __init__(self, path: Path, day: str, counts: dict[str, int] | None = None):
+        self.path, self.day, self.counts = path, day, dict(counts or {})
+
+    @classmethod
+    def load(cls, day: str | None = None, base: Path | None = None) -> "SecDailyLedger":
+        from backend.scripts import _biotech_paths as _P
+        day = day or _P.today_kst_str()
+        path = (base or _P.out_dir("sec_usage")) / f"sec_usage_{day}.json"
+        counts = {}
+        if path.exists():
+            try:
+                counts = {k: int(v) for k, v in json.loads(path.read_text()).get("counts", {}).items()}
+            except Exception:
+                counts = {}
+        return cls(path, day, counts)
+
+    def add(self, category: str, n: int = 1) -> None:
+        self.counts[category] = self.counts.get(category, 0) + n
+
+    def total(self) -> int:
+        return sum(self.counts.values())
+
+    def save(self) -> None:
+        self.path.write_text(json.dumps({"date": self.day, "counts": self.counts, "total": self.total()},
+                                        ensure_ascii=False, indent=2))
