@@ -13,12 +13,22 @@
 
 - **Fable 확인 문서 = 번들 zip (2026-09-28~)**: Fable 에게 확인받아야 할 문서는 번들 zip 파일로 제공한다. 생성 = `python3 scripts/fable_bundle.py <주제> <파일·폴더...> --question "<검수 질문>"` · 출력 = `docs/plans/biotech/fable-bundles/<YYYYMMDD>_<주제>.zip` (git 제외) · zip 안 첫 파일 `MANIFEST.md` (커밋 해시 · 파일별 SHA-256 · 검수 질문) · 자격증명 의심 패턴이 있으면 생성 중단. 보고에는 zip 전체 경로를 적는다.
 - **보고 문체 (2026-09-28~)**: 완전한 문장으로 쓴다. 명사를 나열하는 전보식 문장은 쓰지 않는다. 비유를 쓰지 않는다. 쉬운 어휘를 쓴다. 한 문장에는 한 내용만 담는다. 영어 용어는 처음 나올 때 한국어 뜻을 함께 적는다. 표와 수치는 유지하되, 표 밖 설명은 말로 풀어 쓴다.
-- **세션 첫 작업 = 관측 (2026-09-28~)**: 매 세션 시작 시 서버 `/root/toss-tradebot-mvp/var/biotech/logs/daily.log` 최신 실행 (2026-09-29 부터 8단계 · [7/8] alert_brief 는 skip 허용) 과 /biotech 두 탭 (레이더·소문) 날짜를 확인하고, 정상이면 한 줄로 보고한다.
+- **세션 첫 작업 = 관측 (2026-09-28~)**: 매 세션 시작 시 서버 `/root/toss-tradebot-mvp/var/biotech/logs/daily.log` 최신 실행 (2026-09-29 부터 8단계 · WP75 배포 후 9단계 · alert_brief · mcap_daily 는 skip 허용) 과 /biotech 두 탭 (레이더·소문) 날짜를 확인하고, 정상이면 한 줄로 보고한다.
 - **보고 시 전체 경로 (2026-09-28~)**: 문서·파일·산출물 언급은 전체 경로로 적는다. 저장소 파일 = 저장소 루트 기준 (예: `docs/plans/biotech/data/sponsor_aliases.csv`) · 서버 파일 = 절대 경로 (예: `/root/toss-tradebot-mvp/var/biotech/h6/aact_theme_studies_2026-09-28.csv`). 파일 이름만 적지 않는다.
 
 ---
 
 ## PENDING
+
+### [Biotech Catalyst Radar · WP83 PR #53 배포 · H6 수집 · WP75 로컬 구현] · 2026-09-30 발행
+
+- PR #53 배포 (`19fe7a6`) · 13 경로 200 · main pytest biotech 356 passed / 4 skipped (PR #52 + #53 합친 뒤)
+- WP75 시총 매일 산정 PR (승인 대기) · 플래그 `BIOTECH_MCAP_ENABLED` 기본 꺼짐 → Tiingo · SEC 호출 0회 · 일일 파이프 [8/9] mcap_daily · 주간 잡 주식수 단계
+  - 플래그를 켜려면: 서버 SOPS 에 `BIOTECH_MCAP_ENABLED=1` 과 `TIINGO_API_KEY` 추가 (현재 서버에는 Tiingo 키 없음) · H6 커버율 보고 뒤 승인으로
+- **2026-10-01 H6 수집**: 보고 항목 + 종목별 거래일 커버율 최솟값 · 90% 미만 목록 · summary 사본 경로 · 실패 종목 대안 티커 (SEC company_tickers)
+- **H6 보고 뒤**: 장부 (`backend/data/biotech/tiingo_usage_202610.json`) 기준 하루 요청 수 · 월 고유 종목 재계산 → WP75 플래그 켜기 승인 요청
+
+---
 
 ### [Biotech Catalyst Radar · WP82-2 PR #51 배포 · 약어 반영 · 10월 1일 준비] · 2026-09-30 발행
 

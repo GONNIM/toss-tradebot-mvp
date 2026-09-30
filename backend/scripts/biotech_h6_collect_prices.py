@@ -102,8 +102,9 @@ def coverage(bars_by_ticker: dict[str, list[dict]], targets: list[str]) -> dict:
             "trading_day_coverage_by_ticker": ratios}
 
 
-def fetch_one(get: Callable[..., Any], ticker: str, key: str, end: str) -> list[dict]:
-    r = get(TIINGO_URL.format(t=ticker), params={"startDate": START_DATE, "endDate": end},
+def fetch_one(get: Callable[..., Any], ticker: str, key: str, end: str, start: str = START_DATE) -> list[dict]:
+    """Tiingo 일봉 1호출 · H6 (전 기간) 와 WP75 시총 (최근 며칠) 가 함께 쓰는 단일 클라이언트."""
+    r = get(TIINGO_URL.format(t=ticker), params={"startDate": start, "endDate": end},
             headers={"Authorization": f"Token {key}", "Content-Type": "application/json"})
     if r.status_code in (403, 429):
         raise TiingoBlocked(f"Tiingo HTTP {r.status_code}")

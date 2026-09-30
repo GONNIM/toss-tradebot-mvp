@@ -241,17 +241,26 @@ def _mcap_display(ticker: str, csv_bucket: str = "") -> tuple[str, str]:
     """
     if csv_bucket and csv_bucket not in ("unknown", "—"):
         return csv_bucket, ""
-    hits: list[Path] = []
-    for base in [DATA_DIR_DOCS, DATA_DIR / "biotech"]:
-        if base.exists():
-            hits.extend(base.glob("mcap_display_inputs_*.csv"))
-    if not hits:
-        return "", ""
-    src = max(hits, key=lambda p: p.stat().st_mtime)
+    # WP75 · 매일 산정 파일 (RUNTIME/mcap_display.json) 우선 · 없으면 WP74 기존 입력 (h3 소스 요약 CSV)
+    runtime_json = (DATA_DIR_RUNTIME if DATA_DIR_RUNTIME else DATA_DIR / "biotech") / "mcap_display.json"
+    if runtime_json.exists():
+        src = runtime_json
+    else:
+        hits: list[Path] = []
+        for base in [DATA_DIR_DOCS, DATA_DIR / "biotech"]:
+            if base.exists():
+                hits.extend(base.glob("mcap_display_inputs_*.csv"))
+        if not hits:
+            return "", ""
+        src = max(hits, key=lambda p: p.stat().st_mtime)
     key = (str(src), src.stat().st_mtime)
     if _MCAP_CACHE["mtime"] != key:
-        with src.open() as f:
-            _MCAP_CACHE["rows"] = {r["ticker"]: r for r in csv.DictReader(f)}
+        if src.suffix == ".json":
+            _MCAP_CACHE["rows"] = {tk: {k: str(v) for k, v in row.items()}
+                                   for tk, row in (json.loads(src.read_text()).get("rows") or {}).items()}
+        else:
+            with src.open() as f:
+                _MCAP_CACHE["rows"] = {r["ticker"]: r for r in csv.DictReader(f)}
         _MCAP_CACHE["mtime"] = key
     r = _MCAP_CACHE["rows"].get(ticker)
     if not r:
