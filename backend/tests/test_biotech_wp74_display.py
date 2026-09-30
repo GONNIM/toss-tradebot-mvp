@@ -108,3 +108,36 @@ def test_wp82_ignore_category_skipped_and_never_shown(tmp_path, monkeypatch):
     assert t1["category"] == "비만·대사" and t1["category_source"] == "Obesity"
     assert t2["category"] == f"기타 ({ign[0]})"
     assert "무시" not in _json.dumps([t1["category"], t2["category"]], ensure_ascii=False)
+
+
+def test_wp85_form4_ticker_not_cik_digits(tmp_path, monkeypatch):
+    """표4 티커 = h65 issuer_ticker 또는 SEC 명부 · CIK 끝자리 (예 088082) 를 쓰지 않음 · CIK 는 별도 필드."""
+    import asyncio
+    (tmp_path / "candidates").mkdir()
+    (tmp_path / "candidates" / "biotech_candidates_v3_20260930.csv").write_text("ticker,name,state_note_v50\n")
+    (tmp_path / "h65_form4_daily_table_test.csv").write_text(
+        "filing_date,tx_date,elapsed_days,issuer_cik,issuer_name,filer_cik,filer_type,shares,price_on_tx,amount_usd_approx,accession\n"
+        "2026-09-23,2026-09-21,8,0002088082,\"Electra Therapeutics, Inc.\",0001055951,전문 펀드,333333,,,a\n"
+        "2026-09-23,2026-09-21,8,0009999999,Unknown Bio,0001055951,전문 펀드,1,,,b\n")
+    monkeypatch.setattr(b, "DATA_DIR_RUNTIME", tmp_path)
+    b._FILE_CACHE.clear()
+    rows = [r for r in asyncio.run(b.get_rumor_json(date="2026-09-30", _admin="x")).rows if r.table == "표4"]
+    assert [(r.ticker, r.cik) for r in rows] == [("ETRA", "0002088082"), ("", "0009999999")]
+
+
+def test_wp85_radar_rows_have_trial_fields(tmp_path, monkeypatch):
+    import asyncio
+    import json as _json
+    c = tmp_path / "candidates"
+    c.mkdir()
+    (c / "radar_v1_3_20260930.csv").write_text("ticker,name,mcap,time_state,score,expert,crowd,near,unnoticed,risk,tag_bonus,why_easy\n"
+                                               "ABCL,AbCellera,unknown,A,0.5,0.5,0,1,0.5,0,0,뉴스 예정 · 2027년 2월 28일 예정 · D-153\n")
+    (c / "biotech_candidates_v3_20260930.csv").write_text(
+        "ticker,name,state_note_v50\nABCL,AbCellera,CT.gov (AACT 2026-09-28) NCT07118891 완료 예정 D-153 (2027-02-28 · PHASE1/PHASE2)\n")
+    (tmp_path / "ctgov_snapshot.json").write_text(_json.dumps({"matches": [{"nct_id": "NCT07118891", "conditions": ["Obesity"], "mesh_terms": []}]}))
+    monkeypatch.setattr(b, "DATA_DIR_RUNTIME", tmp_path)
+    monkeypatch.setattr(b, "PROJECT_ROOT", tmp_path)
+    b._FILE_CACHE.clear()
+    r = asyncio.run(b.get_radar_json(_admin="x")).rows[0]
+    assert (r.nct_id, r.phase, r.event_date, r.days_to) == ("NCT07118891", "PHASE1/PHASE2", "2027-02-28", 153)
+    assert r.trial["category"] == "비만·대사"

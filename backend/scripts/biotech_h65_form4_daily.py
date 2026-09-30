@@ -165,6 +165,7 @@ def main():
                     "elapsed_days": elapsed_days,
                     "issuer_cik": issuer_cik,
                     "issuer_name": b.get("issuer_name", ""),
+                    "issuer_ticker": tk,   # WP85 · 화면 티커 표시 (없으면 빈 값)
                     "filer_cik": filer_cik,
                     "filer_type": _filer_type(filer_cik),
                     "shares": int(shares) if shares else 0,
@@ -179,12 +180,12 @@ def main():
     with out_csv.open("w", newline="") as f:
         w = csv.writer(f)
         w.writerow(["filing_date", "tx_date", "elapsed_days", "issuer_cik", "issuer_name",
-                    "filer_cik", "filer_type", "shares", "price_on_tx", "amount_usd_approx", "accession"])
+                    "filer_cik", "filer_type", "shares", "price_on_tx", "amount_usd_approx", "accession", "issuer_ticker"])
         for row in table4:
             w.writerow([row["filing_date"], row["tx_date"], row["elapsed_days"],
                         row["issuer_cik"], row["issuer_name"], row["filer_cik"],
                         row.get("filer_type", ""), row["shares"], row.get("price_on_tx", ""),
-                        row.get("amount_usd_approx", ""), row["accession"]])
+                        row.get("amount_usd_approx", ""), row["accession"], row.get("issuer_ticker", "")])
 
     # 순위표 꼬리표용 issuer_cik 세트
     tagged_ciks = {row["issuer_cik"] for row in table4}
