@@ -20,6 +20,19 @@
 
 ## PENDING
 
+### [Biotech Catalyst Radar · WP82-2 PR #51 배포 · 약어 반영 · 10월 1일 준비] · 2026-09-30 발행
+
+- PR #51 배포 완료 (`f6fbd15`) · 13 경로 200 · 배포 뒤 A 카드 분류 변경 0장 (스크린샷 생략)
+- **대기 (첨부 없음)**: `20260930_abbreviations-reviewed-v1.zip` 이 `/Users/gonnim/Downloads/` 에 없어 어간 사전 v2 (약어 42 · 어간 3 이동) 미반영 · 파일 받으면 진행
+- **2026-10-01 H6 수집 (로컬 실행 · 키는 로컬 `backend/.env` 만 보유)**:
+  - 명령: `PYTHONPATH=. backend/venv/bin/python -m backend.scripts.biotech_h6_collect_prices`
+  - 대상: `docs/plans/biotech/verification/H6/c3-20260928/h6_price_targets_59.csv` (임상 수 많은 순)
+  - 결과: `backend/data/biotech/h6/h6_prices_tiingo_<YYYYMMDD>.csv` + `.summary.json` · 월 사용 장부 `backend/data/biotech/tiingo_usage_<YYYYMM>.json`
+  - 보고: 요청 수 · 성공 · 실패와 사유 · 커버율 (종목 · 거래일) · 남은 월 한도
+- **2026-10-05 주간 실행 뒤**: 서버 `/root/toss-tradebot-mvp/var/biotech/auto_category_proposals_20261005.csv` 를 받아 "검수 요망" 행과 함께 `python3 scripts/fable_bundle.py auto-category-weekly-20261005 ...` 로 zip (실행 전 첨부 금지)
+
+---
+
 ### [Biotech Catalyst Radar · WP81 한국어 v2 · 질환 분류 자동화] · 2026-09-30 발행 → PR #49 배포 완료 (`564b44f`)
 
 - 한국어 사전 226행 · 자동 분류 (MeSH 두 단계 92.9% · 어간 v1 `docs/plans/biotech/data/auto_category_stems.json`) · 수동 사전 우선 · 실패 시 텔레그램 warning
