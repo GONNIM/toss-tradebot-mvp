@@ -20,6 +20,17 @@
 
 ## PENDING
 
+### [Biotech Catalyst Radar · WP81 한국어 v2 · 질환 분류 자동화] · 2026-09-30 발행 → PR #49 배포 완료 (`564b44f`)
+
+- 한국어 사전 226행 · 자동 분류 (MeSH 두 단계 92.9% · 어간 v1 `docs/plans/biotech/data/auto_category_stems.json`) · 수동 사전 우선 · 실패 시 텔레그램 warning
+- 검수 대기: `docs/plans/biotech/fable-bundles/20260930_auto-category-review-v1.zip` (검수 요망 12 · 미분류 150)
+- **2026-10-05 (월) 06:00 첫 주간 실행 뒤 보고**: 주간 잡 전체 소요 ("주간 잡 전체 소요" 로그) · 자동 분류 단계 소요 (elapsed_sec) · NLM 요청 수 · 403/429 (nlm_blocked) · 캐시 항목 수 (cache_items) · 제안 파일 행 수 (proposal_rows) · 검수 요망 건수 (review_needed) · 로그 = `/root/toss-tradebot-mvp/var/biotech/logs/aact-weekly.log`
+  - 전체 소요 50분 초과 시 주간 잡 05:00 이동 안 보고 (이동은 승인 후)
+- **2026-10-01 순서**: ① H6 Tiingo 59종목 수집 → 커버율 보고 ② WP75 구현은 로컬 가능 · WP75 Tiingo 호출은 H6 커버율 보고 뒤 승인 후 켬
+  - 동시 운영 계산 (2026-09-30): 10/1 요청 138 (H6 59 + WP75 79) · 이후 하루 약 79 · 월 고유 종목 137 (겹침 ALT 1) · 한도 1,000/일 · 500 고유/월 (배분 450)
+
+---
+
 ### [Biotech Catalyst Radar · WP80-2 배포 전 확인 · 결정 반영 · MeSH 예외 재계산] · 2026-09-29 발행 → 완료
 
 - PR #47 배포 (`6ba6bc1`) · 13 경로 200 · KYMR 카드 "건강인·약동학" 스크린샷 `docs/plans/biotech/screenshots/20260929_sha_6ba6bc1/wp80_card_KYMR.webp`
