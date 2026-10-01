@@ -2,7 +2,7 @@
 import assert from "node:assert/strict";
 import * as fs from "node:fs";
 import * as path from "node:path";
-import { cardText, dday, exhibitLine, LEAD_LABEL, groupForm4, insiderSummary, insiderTxLine, mentionSentence, multSentence, trialSentence, rumorReason, shortName, summaryStatus, tickerOrUnknown } from "./biotech-display";
+import { cardText, dday, THEME_RANK_NOTE, endLabel, stageLabel, exhibitLine, LEAD_LABEL, groupForm4, insiderSummary, insiderTxLine, mentionSentence, multSentence, trialSentence, rumorReason, shortName, summaryStatus, tickerOrUnknown } from "./biotech-display";
 
 const beauty = cardText({ category: "미용", interventions: [{ name: "X-1", type: "DRUG", type_ko: "약물" }] }, "PHASE2", "2026-11-30", 62);
 assert.ok(beauty.main?.startsWith("미용 · X-1 (약물) · 2상(효과 탐색)"), beauty.main ?? "null");
@@ -37,7 +37,7 @@ assert.equal(shortName("ELECTRA THERAPEUTICS, INC."), "Electra Therapeutics");
 assert.equal(shortName("OrbiMed Advisors LLC"), "OrbiMed Advisors");
 assert.equal(shortName("McArdle Capital LLC"), "McArdle Capital");
 assert.equal(shortName("BioNTech SE"), "BioNTech SE");  // SE 는 제거 대상 접미사가 아님 · 표기는 원문 그대로
-assert.equal(tickerOrUnknown(""), "티커 미확인");
+assert.equal(tickerOrUnknown(""), "비상장 추정");
 assert.equal(summaryStatus({ ok: false, error: "ZaiError 400/1210" }), "자동 요약 실패(ZaiError 400/1210)");
 assert.ok(rumorReason(2, "collecting", 6).startsWith("이 카드에 오른 이유: 임상 종료 예정 D-2"));
 const short = cardText({ category: "암", interventions: [{ name: "Drug-1", type: "DRUG" }] }, "PHASE3", "2027-02-28", 153, undefined, { short: true });
@@ -63,7 +63,12 @@ assert.deepEqual(hits, [], "화면 문자열에 내부 필드 이름: " + hits.j
 // WP87 · D-day
 assert.equal(dday(0), "D-0");
 assert.equal(dday(-1), "D+1");
-assert.equal(trialSentence("PHASE3", "2026-09-29", -1), "3상 시험이 9월 29일(1일 전)에 끝날 예정입니다. 결과 발표일은 아닙니다.");
+assert.equal(trialSentence("PHASE3", "2026-09-29", -1), "3상 시험의 종료 예정일(9월 29일)이 지났습니다. 결과 발표를 기다리는 중입니다.");
+// WP89 · 지난 시험 · 짧은 판 · 카드 이유
+assert.equal(endLabel("2026-09-30", -1, "short"), "9월 30일 종료 예정일 지남(결과 발표 대기)");
+assert.equal(endLabel("2026-10-03", 2, "short"), "10월 3일(D-2) 종료 예정(결과 발표일 아님)");
+assert.ok(rumorReason(-1, "quiet", 9).startsWith("이 카드에 오른 이유: 임상 종료 예정일 지남(결과 발표 대기)"));
+assert.equal(stageLabel("spread"), "언급 있음(평소 수준)");
 // WP87 · 언급 카드 표현 (경보 아님 frenzy = 언급 늘어남)
 assert.ok(mentionSentence("frenzy", 8, 4, "4.0", 0.625, false).startsWith("언급 늘어남 · "));   // 24시간 4건 · 6.4배 (경보 아님)
 assert.ok(mentionSentence("frenzy", 8, 32, "32.0", 0.25, true).startsWith("급등 경보 · "));
@@ -84,4 +89,6 @@ assert.equal(exhibitLine({ ex99_1_title: "", ex99_1_status: "ok" }), "보도자�
 assert.equal(exhibitLine({ ex99_1_status: "daily_cap" }), "보도자료: 읽지 않음 (오늘 SEC 요청 상한 도달)");
 assert.equal(exhibitLine({ ex99_1_status: "none" }), "");
 assert.ok(LEAD_LABEL.includes("진위 미검증"));
+// WP91 · H6 폐기 확정 · 테마 순위 줄에 참고 표시
+assert.ok((cardText({ category: "암" }, "PHASE2", undefined, null, { theme_ko: "비만", rank: 2, of: 6, quarter: "2026Q2" }).theme ?? "").endsWith(` · ${THEME_RANK_NOTE}`));
 console.log("ok");

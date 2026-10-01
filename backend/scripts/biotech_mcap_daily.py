@@ -2,7 +2,10 @@
 
 - 주식수: SEC companyfacts 의 dei:EntityCommonStockSharesOutstanding · 주 1회 (월요일 주간 AACT 잡 끝) · 후보 종목만
   · 헤더 = biotech_sec_common.build_client() 단일 상수 · 403 · 429 즉시 중단
-- 가격: Tiingo 일 1회 · 후보 종목만 · PR #52 클라이언트 (biotech_h6_collect_prices.fetch_one) 와 월 사용 장부 재사용
+- 가격 (WP75-2 · 2026-10-01): Tiingo IEX 일괄 **1회** (`/iex/?tickers=…` · 후보 전 종목) · PR #52 클라이언트 모듈
+  (biotech_h6_collect_prices.fetch_iex · 같은 헤더 규칙) 과 월 사용 장부 재사용 · 요청 1회를 장부 시간 단위에도 기록
+  · tngoLast 의 timestamp 날짜 = 마지막 미국 거래일 (응답 최빈 날짜) 인 종목만 사용 · 아니면 배지 숨김 + "가격 오래됨" 로그
+  · 응답 원문 <RUNTIME>/mcap/iex_<YYYYMMDD>.json (30일 지난 파일 삭제) · 새 후보 종목만 월 고유에 추가 등록
   · 403 · 429 즉시 중단 · 키 = config 로더의 환경변수 TIINGO_API_KEY · 요청 헤더로만
 - 표시: <RUNTIME>/mcap_display.json (ticker → shares · shares_asof · close · close_date) · API 가 읽어 배지 계산
   · 배지 조건 (API): 주식수 12개월 이내 AND 종가 60일 이내 · 기준일 병기
@@ -33,14 +36,15 @@ from typing import Any, Callable
 
 from backend.scripts import _biotech_paths as _P
 from backend.scripts.biotech_h6_collect_prices import (
-    MONTHLY_ALLOCATION, REQ_INTERVAL, TiingoBlocked, fetch_one, load_usage, save_usage,
+    MONTHLY_ALLOCATION, TiingoBlocked, fetch_iex, hourly_check, load_usage, record_request, save_usage,
 )
+from collections import Counter
 from backend.scripts.biotech_sec_common import SecBlockedError, SecDailyLedger, build_client, nearest_shares_outstanding, sec_get
 
 LOG = logging.getLogger("biotech_mcap_daily")
 
 FLAG = "BIOTECH_MCAP_ENABLED"
-PRICE_LOOKBACK_DAYS = 10            # 최근 종가 1개를 얻기 위한 조회 창 (주말·휴장 여유)
+IEX_KEEP_DAYS = 30                  # WP75-2 · IEX 응답 원문 보관 기간
 SEC_FACTS_URL = "https://data.sec.gov/api/xbrl/companyfacts/CIK{cik}.json"
 
 
@@ -131,35 +135,86 @@ def weekly_shares(cands: dict[str, str], get: Callable[[str], dict], today: date
 
 # ── 가격 (일일) ──────────────────────────────────────────────────────
 
+def prune_iex(folder: Path, today: date, keep_days: int = IEX_KEEP_DAYS) -> int:
+    """iex_<YYYYMMDD>.json 중 keep_days 일 지난 파일 삭제 (파일 이름 날짜 기준)."""
+    n = 0
+    for f in folder.glob("iex_*.json"):
+        try:
+            d = datetime.strptime(f.stem[4:], "%Y%m%d").date()
+        except ValueError:
+            continue
+        if (today - d).days > keep_days:
+            f.unlink()
+            n += 1
+    return n
+
+
+def pick_prices(rows: list[dict]) -> tuple[dict, dict, str | None]:
+    """마지막 미국 거래일 = tngoLast 가 있는 행의 timestamp 날짜 최빈값 · 그 날짜인 종목만 사용 · 나머지는 숨김."""
+    dated = [(str(r.get("ticker", "")).upper(), r.get("tngoLast"), str(r.get("timestamp") or "")[:10]) for r in rows]
+    days = Counter(d for _, px, d in dated if px is not None and d)
+    last_day = days.most_common(1)[0][0] if days else None
+    prices, hidden = {}, {}
+    for tk, px, d in dated:
+        if px is not None and d and d == last_day:
+            prices[tk] = {"close": px, "close_date": d}
+        else:
+            hidden[tk] = d or "가격 없음"
+            LOG.info("가격 오래됨 · %s · %s", tk, d or "가격 없음")
+    return prices, hidden, last_day
+
+
 def daily_prices(tickers: list[str], key: str, get: Callable[..., Any], today: date,
-                 sleep: Callable[[float], None] = time.sleep) -> dict:
+                 now: Callable[[], datetime] | None = None) -> dict:
+    """WP75-2 · IEX 일괄 1회 · 새 후보만 월 고유에 등록 · 요청 1회 장부 시간 단위 기록 · 응답 원문 보관."""
+    now = now or (lambda: datetime.now(timezone(timedelta(hours=9))))
     month = today.strftime("%Y%m")
     usage = load_usage(month)
-    out: dict[str, dict] = {}
     failed: dict[str, str] = {}
-    requests, blocked = 0, None
-    start = (today - timedelta(days=PRICE_LOOKBACK_DAYS)).isoformat()
+    room = MONTHLY_ALLOCATION - len(usage["symbols"])
+    ask = []
     for tk in tickers:
-        if tk not in usage["symbols"] and len(usage["symbols"]) >= MONTHLY_ALLOCATION:
+        if tk in usage["symbols"]:
+            ask.append(tk)
+        elif room > 0:
+            ask.append(tk)
+            room -= 1
+        else:
             failed[tk] = "monthly_allocation_reached"
-            continue
-        if requests:
-            sleep(REQ_INTERVAL)
-        requests += 1
-        usage["symbols"].setdefault(tk, {"first_use": today.isoformat(), "by": "WP75"})
-        try:
-            bars = fetch_one(get, tk, key, today.isoformat(), start=start)
-            last = max(bars, key=lambda b: b["date"])
-            out[tk] = {"close": last["adjClose"], "close_date": last["date"]}
-        except TiingoBlocked as e:
-            blocked, failed[tk] = str(e), "blocked"
-            LOG.error("%s · Tiingo 즉시 중단", e)
-            break
-        except LookupError as e:
-            failed[tk] = str(e)
+    base = {"date": today.isoformat(), "requests": 0, "blocked": None, "failed": failed, "prices": {}, "hidden": {},
+            "last_us_trading_day": None, "monthly_unique_used": len(usage["symbols"]), "new_symbols": 0}
+    if not ask:
+        return base
+    ok, next_at = hourly_check(usage, now())
+    if not ok:
+        LOG.warning("Tiingo 시간당 한도 · 다음 가능 시각 %s · 가격 단계 건너뜀", f"{next_at:%Y-%m-%d %H:%M}")
+        save_usage(usage)
+        return {**base, "blocked": f"hourly_limit · next {next_at:%Y-%m-%d %H:%M}"}
+    new = [tk for tk in ask if tk not in usage["symbols"]]
+    for tk in new:
+        usage["symbols"][tk] = {"first_use": today.isoformat(), "by": "WP75"}
+    record_request(usage, now(), by="WP75")
     save_usage(usage)
-    return {"date": today.isoformat(), "requests": requests, "blocked": blocked, "failed": failed, "prices": out,
-            "monthly_unique_used": len(usage["symbols"])}
+    mdir = _P.out_dir("mcap")
+    pruned = prune_iex(mdir, today)
+    if pruned:
+        LOG.info("IEX 원문 %d일 지난 파일 %d개 삭제", IEX_KEEP_DAYS, pruned)
+    try:
+        rows = fetch_iex(get, ask, key)
+    except TiingoBlocked as e:
+        LOG.error("%s · Tiingo 즉시 중단", e)
+        return {**base, "requests": 1, "blocked": str(e), "monthly_unique_used": len(usage["symbols"]), "new_symbols": len(new)}
+    except LookupError as e:
+        LOG.error("IEX 응답 이상 · %s", e)
+        return {**base, "requests": 1, "failed": {**failed, "_iex": str(e)}, "monthly_unique_used": len(usage["symbols"]),
+                "new_symbols": len(new)}
+    (mdir / f"iex_{today:%Y%m%d}.json").write_text(json.dumps(rows, ensure_ascii=False))
+    prices, hidden, last_day = pick_prices(rows)
+    for tk in ask:
+        if tk not in prices and tk not in hidden:
+            hidden[tk] = "응답 없음"
+    return {**base, "requests": 1, "prices": prices, "hidden": hidden, "last_us_trading_day": last_day,
+            "monthly_unique_used": len(usage["symbols"]), "new_symbols": len(new)}
 
 
 def build_display(shares: dict, prices: dict) -> dict:
@@ -229,8 +284,11 @@ def run(mode: str, get_tiingo: Callable[..., Any] | None = None, get_sec: Callab
     display = build_display(_latest_json("shares").get("shares", {}), res["prices"])
     (_root() / "mcap_display.json").write_text(json.dumps(
         {"generated": today.isoformat(), "rows": display}, ensure_ascii=False, indent=1))
+    LOG.info("시총 가격 · IEX 요청 %d · 마지막 미국 거래일 %s · 가격 사용 %d · 숨김 %d · 배지 표시 %d · 월 고유 %d (새 등록 %d)",
+             res["requests"], res["last_us_trading_day"], len(res["prices"]), len(res["hidden"]), len(display),
+             res["monthly_unique_used"], res["new_symbols"])
     return {"mode": mode, "requests": res["requests"], "blocked": res["blocked"], "failed": len(res["failed"]),
-            "display_rows": len(display), "monthly_unique_used": res["monthly_unique_used"]}
+            "hidden": len(res["hidden"]), "display_rows": len(display), "monthly_unique_used": res["monthly_unique_used"]}
 
 
 def main():

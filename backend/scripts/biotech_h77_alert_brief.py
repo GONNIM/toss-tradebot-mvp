@@ -43,7 +43,8 @@ FORM4_DAYS = 20
 PANEL_NOTE = "아래는 수집된 사실의 나열입니다. 진위는 확인되지 않았습니다."
 _GENERIC_TITLE_RE = re.compile(r"^(ex[-\s]?99\.?1?|exhibit 99\.?1?|press release|document|untitled)?$", re.IGNORECASE)
 LEAD_MAX = 400          # WP88 · 보도자료 첫 문단 최대 글자 수 (전문 저장 금지)
-TITLE_MAX = 80          # WP88 · 본문에서 제목으로 볼 굵은 글씨·대문자 줄 최대 길이
+TITLE_MAX = 80          # WP88 · 본문에서 제목으로 볼 대문자 줄 최대 길이
+BOLD_TITLE_MAX = 200    # WP92 · 굵은 글씨 제목 최대 길이 (IOVA 2026-09-29 제목 86자)
 # 날짜·지명 머리말 · 예: "BOSTON, Sept. 29, 2026 /PRNewswire/ --" · "SAN DIEGO, Calif., Sept. 29, 2026 (GLOBE NEWSWIRE) --"
 _DATELINE_RE = re.compile(
     r"^[A-Z][A-Za-z .,'&-]{1,60},\s*(?:[A-Z][a-z]{2,9}\.?\s+\d{1,2},\s*\d{4})\s*"
@@ -143,12 +144,15 @@ def exhibit_target(items: str) -> bool:
 
 
 def _text_blocks(doc: str) -> list[str]:
-    """HTML → 문단 목록 (태그 제거 · 공백 정리 · 빈 문단 제외)."""
+    """HTML → 문단 목록 (태그 제거 · 공백 정리 · 빈 문단 제외).
+
+    WP92 · 원문 줄바꿈은 문단 경계가 아님 (EDGAR 보도자료는 한 <P> 안을 여러 줄로 씀 · IOVA 2026-09-29 에서 첫 문단이 잘림)
+    """
     doc = re.sub(r"<(script|style)[^>]*>.*?</\1>", " ", doc, flags=re.S | re.I)
-    doc = re.sub(r"</?(p|div|br|tr|h[1-6]|li|table)\b[^>]*>", "\n", doc, flags=re.I)
+    doc = re.sub(r"</?(p|div|br|tr|h[1-6]|li|table)\b[^>]*>", "\x00", doc, flags=re.I)
     doc = re.sub(r"<[^>]+>", " ", doc)
     out = []
-    for blk in html.unescape(doc).replace("\xa0", " ").split("\n"):
+    for blk in html.unescape(doc).replace("\xa0", " ").split("\x00"):
         blk = re.sub(r"\s+", " ", blk).strip()
         if blk:
             out.append(blk)
@@ -161,10 +165,12 @@ def exhibit_title(doc: str) -> str:
     title = html.unescape(re.sub(r"\s+", " ", t.group(1))).strip() if t else ""
     if title and not _GENERIC_TITLE_RE.match(title):
         return title[:200]
-    b = re.search(r"<(b|strong)\b[^>]*>(.*?)</\1>", doc or "", re.S | re.I)
-    if b:
-        bt = re.sub(r"\s+", " ", html.unescape(re.sub(r"<[^>]+>", " ", b.group(2)))).strip()
-        if bt and len(bt) <= TITLE_MAX and not _GENERIC_TITLE_RE.match(bt):
+    # WP92 · 굵은 글씨를 차례로 보고 일반 이름 ("Exhibit 99.1") · 날짜·지명 머리말은 건너뜀 · 길이 200자까지
+    for bm in re.finditer(r"<(b|strong)\b[^>]*>(.*?)</\1>", doc or "", re.S | re.I):
+        bt = re.sub(r"\s+", " ", html.unescape(re.sub(r"<[^>]+>", " ", bm.group(2))).replace("\xa0", " ")).strip()
+        if not bt or _GENERIC_TITLE_RE.match(bt) or _DATELINE_RE.match(bt + " "):
+            continue
+        if len(bt) <= BOLD_TITLE_MAX and len(bt.split()) >= 3:
             return bt
     for blk in _text_blocks(doc or "")[:5]:
         if len(blk) <= TITLE_MAX and blk == blk.upper() and re.search(r"[A-Z]{3}", blk) and not _GENERIC_TITLE_RE.match(blk):
@@ -183,8 +189,19 @@ def cut_lead(text: str, limit: int = LEAD_MAX) -> str:
 
 
 def exhibit_lead(doc: str, title: str = "") -> str:
-    """첫 문단 · 전망성 진술 구간 이후 버림 · 날짜·지명 머리말 제거 · 40자 미만·제목 줄은 건너뜀 · 최대 400자."""
-    for blk in _text_blocks(doc or ""):
+    """첫 문단 · 전망성 진술 구간 이후 버림 · 날짜·지명 머리말 제거 · 40자 미만·제목 줄은 건너뜀 · 최대 400자.
+
+    WP92 · 날짜·지명 머리말로 시작하는 문단이 있으면 그 문단을 먼저 씀 (부제목을 첫 문단으로 잡던 결함)
+    """
+    blocks = _text_blocks(doc or "")
+    for blk in blocks:
+        if _FLS_RE.search(blk) and len(blk) < 120:
+            break
+        if _DATELINE_RE.match(blk):
+            lead = _DATELINE_RE.sub("", blk).strip()
+            if len(lead) >= 40:
+                return cut_lead(lead)
+    for blk in blocks:
         if _FLS_RE.search(blk) and len(blk) < 120:      # "Forward-Looking Statements" 제목 줄 → 이후 전부 버림
             break
         if blk == title or len(blk) < 40 or blk == blk.upper():

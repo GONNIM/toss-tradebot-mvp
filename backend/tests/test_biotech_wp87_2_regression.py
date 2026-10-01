@@ -48,3 +48,18 @@ def test_brief_requests_go_to_ledger(tmp_path, monkeypatch):
     br._sec_text(Client(), "u1", counter)
     br._sec_text(Client(), "u2", counter, "exhibit")
     assert counter["sec_requests"] == 2 and led.counts == {"brief": 1, "exhibit": 1}
+
+
+# WP92 · 실제 신고서 원문 (서버 form4_xml 보관분 · 신고자 이름·서명자 → "REPORTING PERSON" · 주소·신고자 CIK·각주 본문 제거)
+REAL = Path(__file__).parent / "fixtures" / "biotech_form4_real_0000947871-26-000880.xml"
+
+
+def test_parse_form4_real_filing():
+    rows = parse_form4(REAL.read_text())
+    assert [{k: v for k, v in r.items() if k != "price"} for r in rows] == [
+        {"issuer_cik": "0002088082", "issuer_name": "Electra Therapeutics, Inc.", "tx_date": "2026-09-21", "shares": 333333.0},
+        {"issuer_cik": "0002088082", "issuer_name": "Electra Therapeutics, Inc.", "tx_date": "2026-09-21", "shares": 1000000.0},
+    ]
+    assert [r["price"] for r in rows] == [15.0, 15.0]
+    text = REAL.read_text()
+    assert "REPORTING PERSON" in text and "<rptOwnerCik>0000000000</rptOwnerCik>" in text

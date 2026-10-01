@@ -68,6 +68,7 @@ def test_sec_429_stops(monkeypatch):
 
 
 def test_tiingo_429_stops_and_ledger_shared(tmp_path, monkeypatch):
+    """WP75-2 · IEX 일괄 1회 · 429 면 그 1회로 중단 · 새 종목은 H6 과 같은 월 장부에 WP75 로 등록."""
     monkeypatch.setattr(mc._P, "RUNTIME_DIR", tmp_path)
     calls = []
 
@@ -75,11 +76,10 @@ def test_tiingo_429_stops_and_ledger_shared(tmp_path, monkeypatch):
         calls.append(url)
         return _R(429)
 
-    res = mc.daily_prices(["AAA", "BBB"], "k" * 20, get, date(2026, 10, 2), sleep=lambda s: None)
+    res = mc.daily_prices(["AAA", "BBB"], "k" * 20, get, date(2026, 10, 2))
     assert res["blocked"] and len(calls) == 1
     ledger = json.loads((tmp_path / "tiingo_usage_202610.json").read_text())
     assert ledger["symbols"]["AAA"]["by"] == "WP75"            # H6 과 같은 월 장부
-
 
 def test_dei_only_shares():
     facts = {"facts": {"dei": {"EntityCommonStockSharesOutstanding": {"units": {"shares": [{"end": "2026-08-01", "val": 5, "accn": "a"}]}}},
