@@ -1,0 +1,2 @@
+0 6 * * 2 /bin/bash /root/toss-tradebot-mvp/backend/scripts/biotech_h48v3_daily_server.sh --radar-13d-weekly-only >> /root/toss-tradebot-mvp/var/biotech/logs/radar-weekly.log 2>&1
+0 6 * * 3 /bin/bash /root/toss-tradebot-mvp/backend/scripts/biotech_h48v3_daily_server.sh --radar-nlm-weekly-only >> /root/toss-tradebot-mvp/var/biotech/logs/radar-weekly.log 2>&1
