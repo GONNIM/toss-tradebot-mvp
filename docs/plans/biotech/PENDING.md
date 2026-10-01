@@ -32,6 +32,12 @@
 5. 10/2 07:00 뒤: SEC 합계 줄 · sec_usage_20261002.json · form4_xml/ 수 · ETRA 금액 · KOD 82행 스크린샷 · 픽스처 + 회귀 테스트 · SOPS 들어갔으면 [8/9] 줄
 6. 순서: 1 → 2 → 3 → 4 · 5 는 10/2
 
+**진행 (2026-10-01)**:
+- 1: Tiingo 19/19 성공 · 월 고유 154/450 · 시간당 (장부 hourly) 09시 H6 51 · 10시 IEX 시험 1 + H6 10 · 11시 H6 19 · 재봉인 `a40dbf70c0f2affbc2b9ffc09583a9ac1d7b9234c672d195a8dea05a20580bb7` (이전 `75eba177…` 보존) · 벤치마크 `af4317a3afb5f013b74099f46a58c1463f0a6baa8e2eaa308fdf2e895de69e33` · changelog 1줄
+- 2: SEC 52/52 · 차단 없음 · 로컬 장부 h6_shares 52 · unknown 182/1,267 행 (14.4%) · dei 없음 5곳 (AZN BODI NVO RANI VTVT)
+- 3: "2020년 전 미확인" 100 → 0 · 소속 1,935 · 1Q 실패 0 · 4Q 실패 0 · 미완료 219
+- 4: **1차 판정 폐기** (1Q CI −4.3%~+5.7% · 4Q CI −19.3%~+15.8%) · 하위 묶음 빈 분기 4개 제외 (검수 요청) · 보고서 · 관문 2 요청서 · 브랜치 `feature/biotech-wp90` 커밋 `318186a` (PR 없음 · main 반영은 승인 필요) · 번들 `/Users/gonnim/Project-MVP/Source/toss-tradebot-mvp/docs/plans/biotech/fable-bundles/20261001_H6-gate2.zip` (SHA-256 `e9aede74b2ce88eda1dc36ad661b08a13b219f84db72541381955a2e9d009c0c`)
+
 ---
 
 ### [Biotech Catalyst Radar · WP89 화면 잔여 3건 · WP75-2 IEX 가격 단계 · WP90 H6 본 백테스트] · 2026-10-01 발행
