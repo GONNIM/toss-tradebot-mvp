@@ -21,6 +21,18 @@
 
 ## PENDING
 
+### [Biotech Catalyst Radar · WP89 화면 잔여 3건 · WP75-2 IEX 가격 단계 · WP90 H6 본 백테스트] · 2026-10-01 발행
+
+**원문 요지** (보고 첫 줄 "지금 하는 일" · 전체 경로 · 서버 조회 전용 · 병합은 "병합 승인됨" 만):
+
+1. WP89 (PR · 검사 통과 시 병합 승인됨): 임원 매수 `table4[:30]` → 신고자·회사·신고일로 묶은 뒤 묶음 단위 최근 30건 (테스트: KOD 82행 · 1,941,755주) · 언급 카드 단계 `spread` 한국어 + confirm `stage()` 전 값 대응 검사 테스트 · 종료 예정일 지난 시험 = "종료 예정일 지남(결과 발표 대기)" (biotech-display.ts 함수) · SEC 명부에 없는 발행사 = "비상장 추정" · 배포 후 임원 매수·언급 카드 스크린샷 2장
+2. WP75-2 IEX 가격 단계 (구현 승인됨 · PR · 검사 통과 시 병합 승인됨): `backend/scripts/biotech_mcap_daily.py` 가격 단계 = IEX 일괄 1회 · Tiingo 클라이언트·장부 재사용 · 요청 1회 장부 시간 단위 기록 · tngoLast timestamp 날짜 = 마지막 미국 거래일 (응답 최빈 날짜) 일 때만 사용 · 아니면 배지 숨김 + "가격 오래됨 · 종목 · 날짜" 로그 · 응답 원문 `/root/toss-tradebot-mvp/var/biotech/mcap/iex_<YYYYMMDD>.json` (해석기) · 30일 지난 파일 삭제 · 새 후보만 월 고유 추가 · 테스트 (1회 요청 · 오래된 timestamp 숨김 · 장부 등록 · 플래그 꺼짐 0회) · 배포 후 플래그 켜기 절차 (a~d) 안내 · SOPS 는 사용자 · 켜진 다음 날 07:00 [8/9] 결과 (요청 1회 · 배지 표시 수 · 숨김 수) 인용
+3. WP90 H6 본 백테스트 (승인됨 · 로컬): 입력 `backend/data/biotech/h6/h6_prices_tiingo_20261001.csv` SHA-256 을 summary.json 과 보고에 · `docs/plans/biotech/data/h6_params_v2.json` 그대로 (바꿔야 하면 멈추고 보고) · 창 커버 v2.1 을 종목·분기 창마다 · 분기별 창 커버 통과 수 표 · 12종목 (APMD … ACIU) 제외 창 수 · 보고서 `docs/plans/biotech/verification/H6/c3-20260928/h6_backtest_v2_20261001.md` (필수 서술 3건: 3테마 한정 결과 · 분기별 상위·하위 명단 · 테마별 기여 분해 · 규칙 (b) 전체 / 대형 5B+ 제외 두 열 · 판정은 전체 열 · 1차 판정 규칙 (a) 1안) · 관문 2 요청서 `docs/plans/biotech/verification/H6/H6-gate2-request-20261001.md` (조건별 충족 여부) · 소문·임원 매수 검정 금지 · 번들 (보고서 · 요청서 · summary · 분기별 표 CSV)
+4. 10/2 07:00 뒤: "SEC 요청 · … 오늘 합계 N/300" 줄 · sec_usage_20261002.json · form4_xml/ 파일 수 · 가격 보충 결과 (ETRA 금액) 인용 · form4_xml/ 1건으로 픽스처 + 회귀 테스트 (신고자 이름 "REPORTING PERSON")
+5. 순서: 1 → 2 → 3 · 3 은 1·2 배포 뒤
+
+---
+
 ### [Biotech Catalyst Radar · WP84-2 병합 권한 규칙 · PR #58 배포 · H6 재요청 · WP75 시험 · 원인 확인] · 2026-10-01 발행
 
 **원문 요지** (보고 첫 줄 "지금 하는 일" · 전체 경로 · 서버 조회 전용 · 병합은 "병합 승인됨" PR 만):
