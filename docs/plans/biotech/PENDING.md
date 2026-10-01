@@ -15,6 +15,7 @@
 - **확인은 즉시 · 로컬 (2026-10-01~ · WP92)**: 서버 07:00 실행을 기다리지 않는다. 배포 직후 영향받은 단계를 로컬에서 서버 스냅샷 복사본으로 돌려 바로 확인한다. 서버 실행은 다음 날 대조만 한다.
 - **승인 없이 진행 (WP92)**: 로컬 실행·검증 전부 · 장부 한도 안의 SEC·Tiingo·NLM 요청 · 화면 문구·표시·문서·테스트·로그만 바꾸는 PR 의 병합·배포 (검사 통과 시).
 - **승인 필요 (WP92)**: 점수·후보·판정·경보 규칙 변경 · 설계 파일·사전 변경 · 서버 설정과 서버 수동 실행 · 한도 초과 요청.
+- **제안 파일 category 열 (WP97-2)**: 용어 제안 파일의 category 열에는 카드 분류가 아니라 그 용어의 사전 분류 (condition_categories.csv · 없으면 빈칸) 를 적는다. (예: v3 의 "Central Nervous System Diseases · 암" 은 카드 분류였음)
 - **날짜 항목 (WP92)**: 날짜가 정해진 항목은 이 파일에만 두고, 보고에 "그날 한다" 를 반복하지 않는다.
 - **보고는 한 번에 (WP92)**: 한 지시의 결과는 단계별로 나누지 않고 한 번에 보고한다.
 - **서버 레이더 입력 0 (WP94)**: 서버 레이더 점수는 2026-09-22 시작 (daily.log 첫 실행 `=== 2026-09-21T22:00:01Z biotech daily start (server · KST 07:00) ===`) 부터 전문가 채널 입력 0 상태였음 (v2-부분 · 10회 모두 "prices tickers: 0" · "pub_idx: 0 · pre_idx: 0"). 11/15 채점표는 서버 실제 판정 기준으로 하되 이 사실을 머리에 적는다.
@@ -29,6 +30,14 @@
 ---
 
 ## PENDING
+
+### [Biotech Catalyst Radar · WP97-2 한국어 v4 반영 · 일반어 2건 무시 등재 (사전 변경 · 승인됨 · 병합 승인됨)] · 2026-10-01 발행
+
+- 1: `/Users/gonnim/Downloads/20261001_ko-terms-visible-reviewed-v3.zip` 의 reviewed CSV · 채택 → proposed_ko · 제외 → 안 넣음 · 그 밖 → 그 값 · ko_terms.csv 134건 추가 (기대 360행) · "Lesion Skin" · "Neoplasms by Histologic Type" condition_categories.csv "무시" (기대 650행) · changelog "한국어 v4 · 134건 · 무시 2건 추가" · 검수 원본 `docs/plans/biotech/verification/dictionaries/` 보관 · 영구 규칙 (category 열 = 사전 분류)
+- 2: 테스트 2건 ("ALS" → "루게릭병(ALS)" · "Lesion Skin" 카드 분류 미사용) · pytest · tsx · build 통과 시 병합·배포 · 배포 후 서버 복사본 A 카드 63장 중 영어 질환명 남은 카드 수 · 한국어로 바뀐 카드 스크린샷 1장
+- 3: 날짜별 확인은 WP97 일정대로 · 새 작업 금지
+
+---
 
 ### [Biotech Catalyst Radar · WP97 한국어 미등재 용어 제안 · 날짜별 확인 (새 기능 없음)] · 2026-10-01 발행
 
