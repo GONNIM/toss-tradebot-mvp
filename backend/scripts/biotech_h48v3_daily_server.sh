@@ -42,6 +42,20 @@ detail: $msg
 }
 
 # 옵션: --aact-weekly-only (월요일 06:00 cron 용 · 주간 스냅샷만 실행 후 종료)
+# WP95 · 레이더 전문가 채널 입력 주간 복구 (화 13D · 수 PubMed/Preprint) · 실패해도 종료 코드 0 (텔레그램 warning 은 파이썬 안에서 1회)
+if [ "${1:-}" = "--radar-13d-weekly-only" ]; then
+    echo "=== $(date -u +%Y-%m-%dT%H:%M:%SZ) radar 13D weekly only ==="
+    $VENV -m backend.scripts.biotech_radar_inputs_weekly 13d || echo "  13D 주간 단계 실패 (warning 알림 · 다음 주 재시도)"
+    echo "=== $(date -u +%Y-%m-%dT%H:%M:%SZ) radar 13D weekly done ==="
+    exit 0
+fi
+if [ "${1:-}" = "--radar-nlm-weekly-only" ]; then
+    echo "=== $(date -u +%Y-%m-%dT%H:%M:%SZ) radar PubMed/Preprint weekly only ==="
+    $VENV -m backend.scripts.biotech_radar_inputs_weekly nlm || echo "  PubMed/Preprint 주간 단계 실패 (warning 알림 · 다음 주 재시도)"
+    echo "=== $(date -u +%Y-%m-%dT%H:%M:%SZ) radar PubMed/Preprint weekly done ==="
+    exit 0
+fi
+
 if [ "${1:-}" = "--aact-weekly-only" ]; then
     echo "=== $(date -u +%Y-%m-%dT%H:%M:%SZ) AACT weekly only ==="
     $VENV -m backend.scripts.biotech_h69_aact_weekly || { _notify_failure "aact_weekly" "exit $?"; exit 20; }

@@ -23,6 +23,7 @@ ROWS = [
     {"ticker": "AAA", "tngoLast": 10.0, "prevClose": 9.5, "timestamp": "2026-10-01T20:00:00+00:00"},
     {"ticker": "BBB", "tngoLast": 20.0, "prevClose": 19.0, "timestamp": "2026-10-01T20:00:00+00:00"},
     {"ticker": "CCC", "tngoLast": 3.0, "prevClose": 3.1, "timestamp": "2026-08-27T20:00:00+00:00"},   # 오래됨
+    {"ticker": "XBI", "tngoLast": 90.0, "prevClose": 89.0, "timestamp": "2026-10-01T20:00:00+00:00"},  # WP95 · 항상 포함
 ]
 
 
@@ -44,7 +45,7 @@ def test_one_request_for_all_tickers_key_in_header(tmp_path, monkeypatch):
                           now=lambda: datetime(2026, 10, 2, 7, 1, tzinfo=KST))
     assert len(seen) == 1 and res["requests"] == 1
     url, params, headers = seen[0]
-    assert url.endswith("/iex/") and params == {"tickers": "AAA,BBB,CCC"}
+    assert url.endswith("/iex/") and params == {"tickers": "AAA,BBB,CCC,XBI"}   # WP95 · XBI 포함
     assert KEY not in url and KEY not in str(params) and headers["Authorization"] == f"Token {KEY}"
     saved = json.loads((tmp_path / "mcap" / "iex_20261002.json").read_text())
     assert saved == ROWS                                   # 응답 원문 보관
@@ -58,7 +59,7 @@ def test_stale_timestamp_hidden_last_day_is_mode(tmp_path, monkeypatch, caplog):
     caplog.set_level(logging.INFO)
     res = mc.daily_prices(["AAA", "BBB", "CCC"], KEY, lambda *a, **k: _R(200, ROWS), date(2026, 10, 2))
     assert res["last_us_trading_day"] == "2026-10-01"
-    assert set(res["prices"]) == {"AAA", "BBB"} and res["hidden"] == {"CCC": "2026-08-27"}
+    assert set(res["prices"]) == {"AAA", "BBB", "XBI"} and res["hidden"] == {"CCC": "2026-08-27"}
     assert res["prices"]["AAA"] == {"close": 10.0, "close_date": "2026-10-01"}
     assert "가격 오래됨 · CCC · 2026-08-27" in caplog.text
 
@@ -68,8 +69,8 @@ def test_only_new_candidates_registered(tmp_path, monkeypatch):
     res = mc.daily_prices(["AAA", "BBB", "CCC"], KEY, lambda *a, **k: _R(200, ROWS), date(2026, 10, 2))
     usage = h6.load_usage("202610")
     assert usage["symbols"]["AAA"]["by"] == "H6"            # 기존 등록 유지
-    assert {t for t, v in usage["symbols"].items() if v["by"] == "WP75"} == {"BBB", "CCC"}
-    assert res["new_symbols"] == 2 and res["monthly_unique_used"] == 3
+    assert {t for t, v in usage["symbols"].items() if v["by"] == "WP75"} == {"BBB", "CCC", "XBI"}
+    assert res["new_symbols"] == 3 and res["monthly_unique_used"] == 4
 
 
 def test_flag_off_zero_requests(tmp_path, monkeypatch):

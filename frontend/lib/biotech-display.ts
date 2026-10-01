@@ -413,6 +413,7 @@ const INPUT_KO: Record<string, string> = {
   h57_pubmed_index: "논문 색인 PubMed (전문가 채널)",
   h58_preprint_index: "프리프린트 색인 (전문가 채널)",
   h3_prices_merged: "최근 90일 가격 (미반영 채널)",
+  iex_daily_history: "최근 90일 가격 누적 · XBI 포함 (미반영 채널)",   // WP95
 };
 
 export function inputLabel(name: string): string {
