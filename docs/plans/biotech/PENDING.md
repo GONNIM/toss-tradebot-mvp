@@ -17,6 +17,7 @@
 - **승인 필요 (WP92)**: 점수·후보·판정·경보 규칙 변경 · 설계 파일·사전 변경 · 서버 설정과 서버 수동 실행 · 한도 초과 요청.
 - **날짜 항목 (WP92)**: 날짜가 정해진 항목은 이 파일에만 두고, 보고에 "그날 한다" 를 반복하지 않는다.
 - **보고는 한 번에 (WP92)**: 한 지시의 결과는 단계별로 나누지 않고 한 번에 보고한다.
+- **전향 평가 점수 버전 (WP93)**: 11/15 첫 채점표는 10/1 까지 v2 판정과 10/2 이후 v3 판정을 나누어 적는다. 일일 산출물로 두 버전을 재계산할 수 있어야 한다.
 - **Fable 확인 문서 = 번들 zip (2026-09-28~)**: Fable 에게 확인받아야 할 문서는 번들 zip 파일로 제공한다. 생성 = `python3 scripts/fable_bundle.py <주제> <파일·폴더...> --question "<검수 질문>"` · 출력 = `docs/plans/biotech/fable-bundles/<YYYYMMDD>_<주제>.zip` (git 제외) · zip 안 첫 파일 `MANIFEST.md` (커밋 해시 · 파일별 SHA-256 · 검수 질문) · 자격증명 의심 패턴이 있으면 생성 중단. 보고에는 zip 전체 경로를 적는다. **(2026-09-30 재확인)** Fable 에게 줄 문서는 매번 번들 zip 으로 묶고, 보고에 절대 경로 (`/Users/gonnim/Project-MVP/Source/toss-tradebot-mvp/docs/plans/biotech/fable-bundles/<YYYYMMDD>_<주제>.zip`) 와 zip SHA-256 을 적는다.
 - **보고 문체 (2026-09-28~)**: 완전한 문장으로 쓴다. 명사를 나열하는 전보식 문장은 쓰지 않는다. 비유를 쓰지 않는다. 쉬운 어휘를 쓴다. 한 문장에는 한 내용만 담는다. 영어 용어는 처음 나올 때 한국어 뜻을 함께 적는다. 표와 수치는 유지하되, 표 밖 설명은 말로 풀어 쓴다.
 - **세션 첫 작업 = 관측 (2026-09-28~)**: 매 세션 시작 시 서버 `/root/toss-tradebot-mvp/var/biotech/logs/daily.log` 최신 실행 (2026-09-29 부터 8단계 · WP75 배포 후 9단계 · alert_brief · mcap_daily 는 skip 허용) 과 /biotech 두 탭 (레이더·소문) 날짜를 확인하고, 정상이면 한 줄로 보고한다.
@@ -25,6 +26,15 @@
 ---
 
 ## PENDING
+
+### [Biotech Catalyst Radar · WP93 레이더 점수 v3 · 8-K 추출 테스트 · 로컬 화면 모드] · 2026-10-01 발행
+
+- 1 (점수 변경 · 병합 승인됨): `backend/scripts/biotech_h46v3_radar.py` 166행 H6 소속 +3 제거 (전문가 채널 다른 항목 유지) · `backend/data/h_radar_params.json` score_version "v3 (2026-10-02 · H6 소속 +3 제거 · 근거: 관문 2 폐기)" · 이전 정의 v2 보존 · `docs/plans/biotech/data/dictionaries_changelog.md` 규칙 기록 (전·후·근거·영향 78/80 · 52종목 · ARTV 진입 · AVBP 탈락) · 영구 규칙 (위) · 두 버전 재계산 가능 1회 확인 · 테스트 1건 · 배포 후 서버 복사본으로 상위 30 재계산
+- 2 (표시·테스트 · 자동 병합): IOVA 9/29 EX-99.1 줄인 픽스처 (제목·첫 문단·Forward-Looking · 2KB 이내 · 추가 SEC 요청 없음) · 제목·첫 문단 테스트 2건
+- 3 (표시·테스트 · 자동 병합): `backend/api/main.py` BIOTECH_API_ONLY=1 이면 스케줄러 미시작 (자동매매 코드 무변경 · 기본값 동일 · 서버 미사용) · 로컬 화면 스크린샷 2장 (임원 매수 KOD 82행·ETRA 금액 · 언급 카드) → `docs/plans/biotech/screenshots/<YYYYMMDD>_local/`
+- 4: 10/2 07:00 서버 결과는 아래 WP92 항목대로 로컬 값과 대조만
+
+---
 
 ### [Biotech Catalyst Radar · WP92 작업 규칙 수정 · 미룬 확인 즉시 실행 · WP91 병합] · 2026-10-01 발행
 
