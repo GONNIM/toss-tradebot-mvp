@@ -34,6 +34,11 @@
 - 2 (조사만): 누락 5개 입력별 표 (채널·가중치 코드 줄 · 로컬 생성 방법·스크립트 · 일일/주간 파이프 생성 가능성과 외부 요청 수 · 있을 때/없을 때 오늘 상위 30 차이) · h3_prices_merged 를 WP75 IEX 일일 가격 누적으로 대체 가능한지 · 90일 치 쌓이는 날짜 · 제안만
 - 3 (표시 · 자동 병합): shortName 접미사 LP · L.P. · SE · PLC 추가 (테스트 1) · 임원 매수 금액 = 거래별 센트까지 계산 → 합산 → 마지막 반올림 (KOD 두 화면 같은 값 테스트 1) · BIOTECH_API_ONLY 로컬 화면 스크린샷 1장
 
+**진행 (2026-10-01 13시대)**:
+- 1·3: PR #67 → 배포 `40d6de1` · 13경로 200 · 서버 복사본 (서버 조건) inputs_missing = h6_membership · h3_events · h57_pubmed_index · h58_preprint_index · h3_prices_merged · 서버 조건 v3 = 서버 실제 10/1 v2 (80행 같음) · 로컬 스크린샷 `docs/plans/biotech/screenshots/20261001_local/wp94_local_{1_insider,2_radar_inputs}.webp`
+- 2 조사 (구현 안 함 · 승인 대기) · 서버 조건 대비 그 입력만 있을 때 10/1 상위 30 변화: H6 소속 0 (v3 가점 0) · 13D 5 · PubMed 5 · Preprint 2 · 가격(+XBI) 3 · 전부 7
+- 제안 (승인 필요 · 점수 입력 변경): (a) h6_membership 은 v3 에서 쓰지 않으므로 설계 입력에서 뺌 (b) h3_events = 주간 잡 (화요일) SEC submissions 후보당 1회 ≈ 80회 · 13D 신규 건수 (c) h57 · h58 = 주간 잡 NLM esearch 후보당 2창 × 2 = 약 320회 (≤3/s · 약 2분) · y2025 캐시 뒤 약 160회/주 (d) 가격 = Tiingo 일봉 1회 백필 81회 (후보 80 + XBI · 시간당 50 → 2시간) 후 IEX 일일 (XBI 추가 · 누적 파일 100일 보관) · 백필 없이 IEX 누적만이면 90일 창이 차는 날 = 플래그 켠 날 + 90일 (10/2 켜면 2026-12-31) · (e) 벤치마크 XBI 도 서버에 없음 (6번째 · 미반영 채널)
+
 ---
 
 ### [Biotech Catalyst Radar · WP93 레이더 점수 v3 · 8-K 추출 테스트 · 로컬 화면 모드] · 2026-10-01 발행
