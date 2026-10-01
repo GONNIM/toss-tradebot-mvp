@@ -31,6 +31,11 @@
 4. 10/2 07:00 뒤: "SEC 요청 · … 오늘 합계 N/300" 줄 · sec_usage_20261002.json · form4_xml/ 파일 수 · 가격 보충 결과 (ETRA 금액) 인용 · form4_xml/ 1건으로 픽스처 + 회귀 테스트 (신고자 이름 "REPORTING PERSON")
 5. 순서: 1 → 2 → 3 · 3 은 1·2 배포 뒤
 
+**진행 (2026-10-01)**:
+- 1 WP89: PR #61 병합 → 배포 `4f1cb14` · 13경로 200 · 스크린샷 `docs/plans/biotech/screenshots/20261001_sha_4f1cb14/wp89_after_{1_insider,2_mentions}.webp` · KOD 카드는 서버 표 CSV 가 10/2 07:00 에 다시 만들어진 뒤 82행 반영 → 10/2 재촬영
+- 2 WP75-2: PR #62 병합 → 배포 `a1e82c1` · 13경로 200 · 플래그 켜기는 사용자 (SOPS) · 켜진 다음 날 [8/9] 인용
+- 3 WP90: **입력 부족으로 본 실행 중단** (설계 무변경) · 입력 봉인 SHA-256 `75eba17760f959b19f68ba142c0fc14c81d1d968141900079397b346cb7ffb8f` · 창 커버 v2.1 표 (브랜치 `feature/biotech-wp90` 커밋 `2f5627e`) · 승인 필요: (1) Tiingo 19회 (XBI · IWM · 기존 17종목 전 기간) (2) 규칙 (b) 주식수 SEC companyfacts 최대 52회 또는 unknown 처리 결정 · 번들 `/Users/gonnim/Project-MVP/Source/toss-tradebot-mvp/docs/plans/biotech/fable-bundles/20261001_WP90-stop.zip`
+
 ---
 
 ### [Biotech Catalyst Radar · WP84-2 병합 권한 규칙 · PR #58 배포 · H6 재요청 · WP75 시험 · 원인 확인] · 2026-10-01 발행
