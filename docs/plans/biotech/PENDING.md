@@ -31,6 +31,13 @@
 
 ## PENDING
 
+### [Biotech Catalyst Radar · WP97-3 대상 질환 줄 정리 (표시 전용 · 자동 병합) · 이후 날짜별 확인만] · 2026-10-01 발행
+
+- 1: 카드 "대상 질환" 줄에서 사전 분류 "무시" 용어 제외 · 남은 용어 없으면 첫 원문 + "(일반 용어)" · biotech-display.ts 함수 · 테스트 2건 · 병합·배포 · 배포 후 영어 질환명 남은 A 카드 수 (기대 0 또는 "(일반 용어)" 카드 수)
+- 2: 날짜별 확인은 WP97 일정대로 (10/2·3 백필·시총 배지 · 10/5 주간 잡·검수 제안 zip · 10/6 13D · 10/7 NLM·radar_v3_full_start.json) · 새 작업 금지
+
+---
+
 ### [Biotech Catalyst Radar · WP97-2 한국어 v4 반영 · 일반어 2건 무시 등재 (사전 변경 · 승인됨 · 병합 승인됨)] · 2026-10-01 발행
 
 - 1: `/Users/gonnim/Downloads/20261001_ko-terms-visible-reviewed-v3.zip` 의 reviewed CSV · 채택 → proposed_ko · 제외 → 안 넣음 · 그 밖 → 그 값 · ko_terms.csv 134건 추가 (기대 360행) · "Lesion Skin" · "Neoplasms by Histologic Type" condition_categories.csv "무시" (기대 650행) · changelog "한국어 v4 · 134건 · 무시 2건 추가" · 검수 원본 `docs/plans/biotech/verification/dictionaries/` 보관 · 영구 규칙 (category 열 = 사전 분류)
