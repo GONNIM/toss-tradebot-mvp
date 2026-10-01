@@ -15,6 +15,7 @@ from backend.scripts import _biotech_paths as _P
 
 import csv
 import json
+import os
 import logging
 import math
 import re
@@ -105,6 +106,44 @@ def expert_channel_1_2(n_13d_events: int, in_h6_membership: bool, version: str =
     return n_13d_events * 1.0 + (H6_MEMBERSHIP_BONUS[version] if in_h6_membership else 0.0)
 
 
+# WP94 · 설계된 점수 입력 파일 (없으면 그 채널은 0 또는 중립으로 계산됨) · 이름 → (정확한 이름, 글롭)
+DESIGNED_INPUTS = {
+    "h6_membership": ("h6_membership_{sha}.csv", "h6_membership_*.csv"),
+    "h3_events": ("h3_events_{sha}.csv", "h3_events_*.csv"),
+    "h57_pubmed_index": ("h57_pubmed_index_{sha}.json", "h57_pubmed_index_*.json"),
+    "h58_preprint_index": ("h58_preprint_index_{sha}.json", "h58_preprint_index_*.json"),
+    "h3_prices_merged": ("h3_prices_merged_{sha}.csv", "h3_prices_merged_*.csv"),
+}
+
+
+def _notify_warning(title: str, body: str) -> None:
+    try:
+        import asyncio
+        from backend.services.notifier import TelegramNotifier
+        asyncio.run(TelegramNotifier().send_warning(title=title, body=body))
+    except Exception as e:  # noqa: BLE001
+        LOG.warning("notifier 실패 · %s", e.__class__.__name__)
+
+
+def check_inputs(sha: str, notify=None) -> list[str]:
+    """설계 입력 중 찾지 못한 이름 목록 · 하나라도 없으면 WARNING 1줄씩 + 텔레그램 warning 1회 (목록 포함)."""
+    missing = [name for name, (exact, pattern) in DESIGNED_INPUTS.items()
+               if (_P.find(exact.format(sha=sha)) or _P.find_glob(pattern)) is None]
+    for name in missing:
+        LOG.warning("레이더 입력 없음 · %s · 해당 채널은 0 또는 중립으로 계산", name)
+    marker = _P.out_dir("logs") / f"radar_inputs_warned_{_P.today_kst_str()}"
+    off = (os.environ.get("BIOTECH_NOTIFY_OFF") or "").strip() == "1"   # 로컬 재계산 · 확인용 실행
+    if missing and notify is None and (off or marker.exists()):
+        LOG.info("레이더 입력 부족 알림 생략 (%s)", "BIOTECH_NOTIFY_OFF" if off else "오늘 이미 보냄")
+    elif missing:
+        if notify is None:
+            marker.write_text(",".join(missing))
+        (notify or _notify_warning)(
+            "biotech 레이더 점수 입력 부족",
+            f"없는 입력 {len(missing)}개: {', '.join(missing)}\n전문가 채널·미반영 채널이 0 또는 중립으로 계산됩니다 (표시만 · 점수 규칙 무변경)")
+    return missing
+
+
 def _args():
     import argparse
     ap = argparse.ArgumentParser()
@@ -130,6 +169,7 @@ def main():
             sha = fb
     today_str = args.date or _P.today_kst_str("%Y%m%d")
     LOG.info("레이더 점수 %s · 날짜 %s", version, today_str)
+    inputs_missing = check_inputs(sha)
 
     # WP69-3g hotfix · candidates v3 > v2 > v1 순 · _P 경로 해석기
     cp = None
@@ -307,6 +347,7 @@ def main():
             "risk": round(risk, 2), "tag_bonus": tag_bonus,
             "why_easy": why,
             "score_version": version,
+            "inputs_missing": "|".join(inputs_missing),   # WP94 · 산출 CSV 에 입력 부족 기록 (모든 행 같은 값)
         })
 
     state_order = {"A": 0, "B": 2, "C": 1}
@@ -319,6 +360,7 @@ def main():
     today_dash = f"{today_str[:4]}-{today_str[4:6]}-{today_str[6:]}"
     md_path = out_dir / f"radar-v1.3-{today_str}{out_suffix}.md"
     lines = [
+        *([f"> 점수 입력 부족: {', '.join(inputs_missing)} 없음 · 전문가 채널·미반영 채널이 0 또는 중립 (WP94)", ""] if inputs_missing else []),
         f"# 레이더 리스트 v1.4 · {today_dash} (Phase C 1 · expert 채널 5/5 완비 · 가중치 동일)",
         "",
         "> 📖 [`GLOSSARY.md`](GLOSSARY.md) · 코드 · 상태 · 가설 뜻",
@@ -374,7 +416,7 @@ def main():
                "state_dist_all": dict(state_dist),
                "state_dist_top30": dict(top_state),
                "expert_saturated_ge_099": saturated,
-               "xbi_90d_return": round(xbi_90, 4)}
+               "xbi_90d_return": round(xbi_90, 4), "inputs_missing": inputs_missing}
     LOG.info("summary=%s", json.dumps(summary, ensure_ascii=False, indent=2))
     print(json.dumps(summary, ensure_ascii=False, indent=2))
 

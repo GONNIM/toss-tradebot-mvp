@@ -223,14 +223,16 @@ export function cardText(
 
 
 // ── WP85 · 화면 설명 문장 (내부 필드 이름을 화면에 쓰지 않음) ─────────────
-const CORP_SUFFIX = /[,.]?\s+(inc|incorporated|corp|corporation|co|company|ltd|limited|plc|holdings|n\.?v|s\.?a|ag|llc)\.?$/i;
+const CORP_SUFFIX = /[,.]?\s+(inc|incorporated|corp|corporation|co|company|ltd|limited|plc|holdings|n\.?v|s\.?a|ag|llc|l\.?p|se)\.?$/i; // WP94 · LP · L.P. · SE 추가
 
 // 대문자 법인명 → 짧은 이름 (예: "IOVANCE BIOTHERAPEUTICS, INC." → "Iovance Biotherapeutics")
 export function shortName(name?: string): string {
-  let n = (name ?? "").trim();
+  const orig = (name ?? "").trim();
+  let n = orig;
   for (let i = 0; i < 3 && CORP_SUFFIX.test(n); i++) n = n.replace(CORP_SUFFIX, "").trim();
   n = n.replace(/[,.]$/, "").trim();
-  if (n && n === n.toUpperCase() && /[A-Z]{3}/.test(n)) {
+  // 원문 (접미사 포함) 이 전부 대문자일 때만 표기 변경 · "GSK plc" 처럼 섞인 원문은 그대로 (WP94)
+  if (n && orig === orig.toUpperCase() && /[A-Z]{3}/.test(n)) {
     n = n.toLowerCase().replace(/\b([a-z])/g, (c) => c.toUpperCase());
   }
   return n;
@@ -349,13 +351,24 @@ export function daysSinceFiling(filingDate?: string, now: Date = new Date()): nu
 
 const usd = (n: number) => `$${Math.round(n).toLocaleString("en-US")}`;
 
+// WP94 · 금액 규칙 하나: 거래별 금액을 센트 (정수) 로 계산 → 합산 → 마지막에 달러 반올림 (카드 요약 · 자세히 · 서버 표 모두 같음)
+export function txCents(shares?: number | null, price?: number | null): number | null {
+  return typeof price === "number" && typeof shares === "number" && shares > 0 ? Math.round(shares * price * 100) : null;
+}
+
+const usdCents = (c: number) => `$${(c / 100).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+
+export function insiderTotalUsd(txs: { shares?: number | null; price?: number | null }[]): number | null {
+  const cs = txs.map((t) => txCents(t.shares, t.price));
+  return cs.every((c) => c !== null) && cs.length ? Math.round((cs as number[]).reduce((a, c) => a + c, 0) / 100) : null;
+}
+
 // 예: "ETRA · Electra Therapeutics · Orbimed Advisors(전문 펀드) · 8일 전 신고 · 거래 2건 · 합계 1,333,333주 · 금액 미기재"
 export function insiderSummary<T extends Form4RowLike>(g: Form4Group<T>, now: Date = new Date()): string {
   const first = g.rows[0];
   const f = first.form4 ?? {};
   const total = g.rows.reduce((a, r) => a + (r.form4?.shares ?? 0), 0);
-  const priced = g.rows.every((r) => typeof r.form4?.price === "number" && (r.form4?.shares ?? 0) > 0);
-  const amount = priced ? g.rows.reduce((a, r) => a + (r.form4!.shares ?? 0) * (r.form4!.price as number), 0) : null;
+  const amount = insiderTotalUsd(g.rows.map((r) => ({ shares: r.form4?.shares, price: r.form4?.price })));
   const filer = f.filer_name ? `${shortName(f.filer_name)}${f.filer_type ? `(${f.filer_type})` : ""}` : f.filer_type || "신고자 미확인";
   return [
     tickerOrUnknown(first.ticker), shortName(first.name), filer, filedAgo(daysSinceFiling(f.filing_date, now) ?? f.elapsed_days),
@@ -369,7 +382,8 @@ export function insiderTxLine(f: Form4Tx): string {
   const [, m, d] = (f.tx_date ?? "").split("-").map(Number);
   const when = m && d ? `${m}/${d} 거래` : "거래일 미확인";
   const sh = `${Math.round(f.shares ?? 0).toLocaleString("ko-KR")}주`;
-  if (typeof f.price === "number") return `${when} · ${sh} · 주당 $${f.price.toFixed(2)} · ${usd((f.shares ?? 0) * f.price)}`;
+  const c = txCents(f.shares, f.price);
+  if (typeof f.price === "number" && c !== null) return `${when} · ${sh} · 주당 $${f.price.toFixed(2)} · ${usdCents(c)}`;
   return `${when} · ${sh} · 가격 미기재`;
 }
 
@@ -390,4 +404,22 @@ export function exhibitLine(f: Exhibit): string {
   if (f.ex99_1_title) return `보도자료: ${f.ex99_1_title}`;
   if (f.ex99_1_status === "ok") return "보도자료: 제목 없음";
   return "";
+}
+
+// WP94 · 레이더 점수 입력 부족 (서버에 설계 입력 파일이 없어 해당 채널이 0 또는 중립으로 계산됨) · 표시 전용
+const INPUT_KO: Record<string, string> = {
+  h6_membership: "H6 테마 소속 (전문가 채널)",
+  h3_events: "13D 신규 신고 (전문가 채널)",
+  h57_pubmed_index: "논문 색인 PubMed (전문가 채널)",
+  h58_preprint_index: "프리프린트 색인 (전문가 채널)",
+  h3_prices_merged: "최근 90일 가격 (미반영 채널)",
+};
+
+export function inputLabel(name: string): string {
+  return INPUT_KO[name] ? `${INPUT_KO[name]} · ${name}` : name;
+}
+
+export function inputsMissingLine(missing?: string[] | null): string | null {
+  const n = (missing ?? []).length;
+  return n ? `점수 입력 부족: 전문가 채널 미반영(파일 ${n}개 없음)` : null;
 }

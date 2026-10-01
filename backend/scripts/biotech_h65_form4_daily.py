@@ -266,7 +266,7 @@ def main():
                 px = b.get("price")   # WP87 · 신고서 기재 주당 가격 (없으면 None → 화면 "금액 미기재")
                 table4.append({
                     "price_per_share": px,
-                    "amount_usd_reported": round(shares * px) if (px and shares) else None,
+                    "amount_usd_reported": round(shares * px, 2) if (px and shares) else None,   # WP94 · 센트까지 (합산 뒤 화면에서 반올림)
                     "filer_name": filer_class.get(filer_cik, {}).get("name", ""),
                     "filing_date": b.get("filing_date", ""),
                     "tx_date": tx_date,
