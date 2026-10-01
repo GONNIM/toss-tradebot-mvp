@@ -40,6 +40,9 @@
   - 10/7 06:00 · 07:00: NLM 요청 수 · 양성 회사 수 · inputs_missing · radar_v3_full_start.json 생성 여부 → 생기면 params · PENDING 옮겨 적고 문서 PR 병합
 - 3: 그 밖의 새 작업 금지
 
+**진행 (2026-10-01 19시대)**:
+- 1: 서버 rumor.json · radar.json 조회 복사 (로그인 세션 · GET 만) · A 63 + 순위표 30 · 미등재 136개 · `docs/plans/biotech/verification/dictionaries/ko_terms_visible_proposed_v3.csv` (PR #71 병합) · 번들 `/Users/gonnim/Project-MVP/Source/toss-tradebot-mvp/docs/plans/biotech/fable-bundles/20261001_ko-terms-visible-v3.zip` · 검수 대기
+
 ---
 
 ### [Biotech Catalyst Radar · WP96 서버 예약 실행표 · 비밀 금고 설정 (서버 변경 · 사용자 승인됨 · 병합 승인됨)] · 2026-10-01 발행
