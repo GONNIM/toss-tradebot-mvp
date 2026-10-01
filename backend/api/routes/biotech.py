@@ -257,6 +257,13 @@ def _mcap_bucket_label(mcap: float) -> str:
     return "5B+"
 
 
+def _mcap_json_has_rows(path: Path) -> bool:
+    try:
+        return bool(json.loads(path.read_text()).get("rows"))
+    except Exception:
+        return False
+
+
 def _mcap_display(ticker: str, csv_bucket: str = "") -> tuple[str, str]:
     """(배지 문구, 기준 종가일) · 계산 불가면 ("", "") → 화면에서 배지 미표시.
 
@@ -266,7 +273,8 @@ def _mcap_display(ticker: str, csv_bucket: str = "") -> tuple[str, str]:
         return csv_bucket, ""
     # WP75 · 매일 산정 파일 (RUNTIME/mcap_display.json) 우선 · 없으면 WP74 기존 입력 (h3 소스 요약 CSV)
     runtime_json = (DATA_DIR_RUNTIME if DATA_DIR_RUNTIME else DATA_DIR / "biotech") / "mcap_display.json"
-    if runtime_json.exists():
+    # 2026-10-02 · 플래그 첫날에는 주식수 (월요일 주간 단계) 가 없어 행 0 개 파일이 생김 → 빈 파일이면 예전 입력으로 대신 표시
+    if runtime_json.exists() and _mcap_json_has_rows(runtime_json):
         src = runtime_json
     else:
         hits: list[Path] = []
