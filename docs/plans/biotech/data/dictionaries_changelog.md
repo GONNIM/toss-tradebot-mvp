@@ -187,3 +187,12 @@
 
 - H3 검정 (`docs/plans/biotech/verification/H3/H3-report-20260912.md` · `H3-F4-report-v3-20260914.md`) 의 13D/13G 입력은 SEC 양식 이름 변경 (2024-12 · "SC 13D/13G" → "SCHEDULE 13D/13G") 때문에 2024-12-06 이후 기록이 누락된 상태로 확정됨.
 - 11/15 까지 재실행 금지 · 재판정 시 이 누락을 고려 · 검정 산출물 무변경.
+
+## 한국어 v4 · 2026-10-01 (WP97-2 · 화면 노출 용어 검수 반영) · 134건 · 무시 2건 추가
+
+- 근거: 서버 화면 (A 카드 63장 + 순위표 30행) 에 한국어 없이 보이던 질환 용어 136개 제안 (`docs/plans/biotech/verification/dictionaries/ko_terms_visible_proposed_v3.csv`) · Fable 검수 원본 `docs/plans/biotech/verification/dictionaries/ko_terms_visible_proposed_v3_reviewed.csv`
+- 반영 규칙: "채택" → proposed_ko · "제외" → 넣지 않음 · 그 밖 → 검수 값 그대로 (채택 112 · 수정 22 · 제외 2)
+- `docs/plans/biotech/data/ko_terms.csv` 134건 추가 (226 → 360행) · 예: ALS → 루게릭병(ALS) · Multiple Sclerosis → 다발성 경화증
+- `docs/plans/biotech/data/condition_categories.csv` "무시" 2건 추가 (648 → 650행): Lesion Skin · Neoplasms by Histologic Type (일반어)
+- 화면 분류 보완: '무시' 용어는 자동 분류와 "기타 (원문)" 원문 자리에도 쓰지 않음 (`backend/api/routes/biotech.py` `_trial_display`)
+- 앞으로 제안 파일의 category 열은 카드 분류가 아니라 용어의 사전 분류를 적음 (v3 예: "Central Nervous System Diseases · 암" 은 카드 분류였음)
