@@ -34,6 +34,11 @@
 - 3 (표시·테스트 · 자동 병합): `backend/api/main.py` BIOTECH_API_ONLY=1 이면 스케줄러 미시작 (자동매매 코드 무변경 · 기본값 동일 · 서버 미사용) · 로컬 화면 스크린샷 2장 (임원 매수 KOD 82행·ETRA 금액 · 언급 카드) → `docs/plans/biotech/screenshots/<YYYYMMDD>_local/`
 - 4: 10/2 07:00 서버 결과는 아래 WP92 항목대로 로컬 값과 대조만
 
+**진행 (2026-10-01 12~13시)**:
+- 1: PR #65 → 배포 `a4478c2` · 13경로 200 · v3 / v2 재계산 1회 확인 (같은 입력 · ARTV 34→30 진입 · AVBP 20→40 탈락) · **정정: 서버에는 h6_membership · h3_events · h57 · h58 · h3_prices 파일이 없음 → 서버 점수 v3 영향 0** (서버 레이더 입력 부재는 별건 · 점수 입력 변경이라 승인 필요)
+- 2·3: PR #66 → 배포 `584875f` · 13경로 200 · IOVA 픽스처 1,190 B · BIOTECH_API_ONLY · "N일 전 신고" 신고일 기준 · 로컬 스크린샷 `docs/plans/biotech/screenshots/20261001_local/wp93_local_{1_insider,2_mentions}.webp`
+- 10/2 대조 추가: 서버 radar_v1_3_20261002.csv 의 score_version = v3 · 서버 순위가 10/1 v2 와 같은 입력이면 같아야 함 (H6 파일 부재)
+
 ---
 
 ### [Biotech Catalyst Radar · WP92 작업 규칙 수정 · 미룬 확인 즉시 실행 · WP91 병합] · 2026-10-01 발행
