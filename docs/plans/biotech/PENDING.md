@@ -30,6 +30,20 @@
 
 ## PENDING
 
+### [Biotech Catalyst Radar · WP96 서버 예약 실행표 · 비밀 금고 설정 (서버 변경 · 사용자 승인됨 · 병합 승인됨)] · 2026-10-01 발행
+
+- 1: `deploy/biotech_cron_lines.txt` (화 13D · 수 NLM 두 줄) · deploy.yml 에 "없으면 추가" 단계 (기존 세 줄 무변경) · 배포 후 crontab -l 5줄 인용 · 테스트 (두 번 실행해도 5줄)
+- 2: SOPS 두 항목 (TIINGO_API_KEY · BIOTECH_MCAP_ENABLED "1") · 값은 화면·로그·커밋·셸 기록에 남기지 않음 · git diff 에서 ENC[...] 만 확인 · 커밋·PR·병합 · 배포 후 서버 .env 두 이름 개수 (기대 2 · 값 안 봄) · 다음 07:00 [8/9] 줄과 백필 요청 수
+- 3 (문서 · 자동 병합): H3 검정 보고서와 dictionaries_changelog 에 "13D 입력은 SEC 양식 이름 변경 (2024-12) 때문에 2024-12-06 이후 기록이 누락된 상태로 확정 · 11/15 까지 재실행 금지 · 재판정 시 고려" · 검정 산출물 무변경
+- 4: 확인 일정 (PENDING 에만 · 날짜마다 로그 인용 · 한 번에 보고)
+  - 10/2 07:00 · 10/3 07:00: daily.log [8/9] "시총 가격 · IEX 요청 1 · …" · "가격 백필 · Tiingo 일봉 요청 N · 채운 종목 N · 남은 종목 N" (10/3 에 "백필 완료" 기대)
+  - 10/5 (월) 06:00: aact-weekly.log 주간 잡 (SEC 명부 · 주식수 조회 줄)
+  - 10/6 (화) 06:00: radar-weekly.log "13D 주간 · 활동가 55 · SEC 요청 N (헤더 N) · …"
+  - 10/7 (수) 06:00: radar-weekly.log "PubMed·Preprint 주간 · …"
+  - v3-전체 시작일: `/root/toss-tradebot-mvp/var/biotech/radar_v3_full_start.json` 생기면 params · 영구 규칙에 옮김
+
+---
+
 ### [Biotech Catalyst Radar · WP95 레이더 입력 복구 (점수 입력 변경 · 병합 승인됨)] · 2026-10-01 발행
 
 - 1: h6_membership 을 설계 입력·check_inputs 에서 제외 · params·changelog 기록
