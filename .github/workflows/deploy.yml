@@ -229,6 +229,18 @@ jobs:
           chmod 600 "$ENV_FILE"
           echo "  git_sha=$AFTER injected"
 
+          echo "[5.5/7] biotech crontab 줄 (WP96 · deploy/biotech_cron_lines.txt · 없으면 추가 · 있는 줄은 그대로)"
+          cd /root/toss-tradebot-mvp
+          crontab -l > /tmp/biotech_cron.cur 2>/dev/null || : > /tmp/biotech_cron.cur
+          bash deploy/merge_cron_lines.sh /tmp/biotech_cron.cur deploy/biotech_cron_lines.txt > /tmp/biotech_cron.new
+          if cmp -s /tmp/biotech_cron.cur /tmp/biotech_cron.new; then
+            echo "  crontab 변경 없음"
+          else
+            crontab /tmp/biotech_cron.new
+            echo "  crontab 줄 추가 · $(diff /tmp/biotech_cron.cur /tmp/biotech_cron.new | grep -c '^>') 줄"
+          fi
+          rm -f /tmp/biotech_cron.cur /tmp/biotech_cron.new
+
           echo "[6/7] systemd restart"
           systemctl restart tradebot-api tradebot-cron
 
