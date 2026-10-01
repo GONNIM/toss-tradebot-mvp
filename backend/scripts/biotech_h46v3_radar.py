@@ -96,8 +96,29 @@ def load_xbi_90d(sha: str) -> float:
     return xbi[recent[-1]] / xbi[recent[0]] - 1.0
 
 
+SCORE_VERSION = "v3"   # WP93 · 2026-10-02 실행부터 · H6 소속 +3 제거 (근거: H6 관문 2 폐기 · h_radar_params score_versions)
+H6_MEMBERSHIP_BONUS = {"v2": 3.0, "v3": 0.0}   # v2 = 2026-10-01 까지 · 전향 평가 재계산용으로 남김
+
+
+def expert_channel_1_2(n_13d_events: int, in_h6_membership: bool, version: str = SCORE_VERSION) -> float:
+    """전문가 채널 (a) 13D 신규 건수 + (b) H6 소속 가점 (v2 = +3 · v3 = 0)."""
+    return n_13d_events * 1.0 + (H6_MEMBERSHIP_BONUS[version] if in_h6_membership else 0.0)
+
+
+def _args():
+    import argparse
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--score-version", choices=sorted(H6_MEMBERSHIP_BONUS), default=SCORE_VERSION,
+                    help="전향 평가 재계산용 · 기본 v3 · 다른 버전이면 산출 파일 이름 끝에 _score<버전>")
+    ap.add_argument("--date", default="", help="YYYYMMDD · 그날 일일 산출물 (candidates · confirm) 로 재계산 · 기본 오늘")
+    return ap.parse_args()
+
+
 def main():
     require_secure_logging()
+    args = _args()
+    version = args.score_version
+    out_suffix = "" if version == SCORE_VERSION else f"_score{version}"   # (아래 candidates 반복문의 suffix 와 다른 이름)
     from backend.scripts._biotech_bootstrap import data_sha
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
     sha = git_sha()
@@ -107,7 +128,8 @@ def main():
         if fb:
             LOG.info("git_sha %s 데이터 부재 · data_sha fallback → %s", sha, fb)
             sha = fb
-    today_str = _P.today_kst_str("%Y%m%d")
+    today_str = args.date or _P.today_kst_str("%Y%m%d")
+    LOG.info("레이더 점수 %s · 날짜 %s", version, today_str)
 
     # WP69-3g hotfix · candidates v3 > v2 > v1 순 · _P 경로 해석기
     cp = None
@@ -169,7 +191,7 @@ def main():
         cik = (c.get("cik") or "").zfill(10)
         tk = c.get("ticker", "")
         # 채널 1+2 (기존 v1.3)
-        raw = ev_by_cik.get(cik, 0) * 1.0 + (3 if tk in memb_tk else 0)
+        raw = expert_channel_1_2(ev_by_cik.get(cik, 0), tk in memb_tk, version)   # WP93 · v3 은 H6 소속 가점 0
         # 채널 4 · PubMed 게재 yoY (2026 > 2025 이면 +2)
         pub_entry = pub_idx.get(cik)
         if pub_entry:
@@ -270,7 +292,7 @@ def main():
         elif state == "B":
             why = f"뉴스 통과 · {pretty_when}"
         elif exp >= 0.6:
-            why = "전문가 채널 신호 강함 (13D · membership · 8-K 미사용)"
+            why = "전문가 채널 신호 강함 (13D · 논문 · 프리프린트 · 8-K 미사용)" if version == "v3" else "전문가 채널 신호 강함 (13D · membership · 8-K 미사용)"
         elif un >= 0.7:
             why = "최근 90일 XBI 대비 저조 · 미반영"
         else:
@@ -284,6 +306,7 @@ def main():
             "near": round(near, 2), "unnoticed": round(un, 2),
             "risk": round(risk, 2), "tag_bonus": tag_bonus,
             "why_easy": why,
+            "score_version": version,
         })
 
     state_order = {"A": 0, "B": 2, "C": 1}
@@ -293,8 +316,8 @@ def main():
     # WP69-3g: 산출 = RUNTIME/watchlist (서버) 또는 docs/watchlist (로컬)
     out_dir = _P.out_dir("watchlist") if _P.RUNTIME_DIR else (_P.PROJECT_ROOT / "docs" / "plans" / "biotech" / "watchlist")
     out_dir.mkdir(parents=True, exist_ok=True)
-    today_dash = _P.today_kst_str("%Y-%m-%d")
-    md_path = out_dir / f"radar-v1.3-{today_str}.md"
+    today_dash = f"{today_str[:4]}-{today_str[4:6]}-{today_str[6:]}"
+    md_path = out_dir / f"radar-v1.3-{today_str}{out_suffix}.md"
     lines = [
         f"# 레이더 리스트 v1.4 · {today_dash} (Phase C 1 · expert 채널 5/5 완비 · 가중치 동일)",
         "",
@@ -336,7 +359,7 @@ def main():
     md_path.write_text("\n".join(lines))
 
     # WP69-3g: candidates 산출 폴더에 radar CSV 저장
-    csv_path = _P.out_dir("candidates") / f"radar_v1_3_{today_str}.csv"
+    csv_path = _P.out_dir("candidates") / f"radar_v1_3_{today_str}{out_suffix}.csv"
     with csv_path.open("w", newline="") as f:
         w = csv.DictWriter(f, fieldnames=list(scored[0].keys()))
         w.writeheader()
