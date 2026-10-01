@@ -17,6 +17,7 @@
 - **승인 필요 (WP92)**: 점수·후보·판정·경보 규칙 변경 · 설계 파일·사전 변경 · 서버 설정과 서버 수동 실행 · 한도 초과 요청.
 - **날짜 항목 (WP92)**: 날짜가 정해진 항목은 이 파일에만 두고, 보고에 "그날 한다" 를 반복하지 않는다.
 - **보고는 한 번에 (WP92)**: 한 지시의 결과는 단계별로 나누지 않고 한 번에 보고한다.
+- **서버 레이더 입력 0 (WP94)**: 서버 레이더 점수는 2026-09-22 시작 (daily.log 첫 실행 `=== 2026-09-21T22:00:01Z biotech daily start (server · KST 07:00) ===`) 부터 전문가 채널 입력 0 상태였음 (v2-부분 · 10회 모두 "prices tickers: 0" · "pub_idx: 0 · pre_idx: 0"). 11/15 채점표는 서버 실제 판정 기준으로 하되 이 사실을 머리에 적는다.
 - **전향 평가 점수 버전 (WP93)**: 11/15 첫 채점표는 10/1 까지 v2 판정과 10/2 이후 v3 판정을 나누어 적는다. 일일 산출물로 두 버전을 재계산할 수 있어야 한다.
 - **Fable 확인 문서 = 번들 zip (2026-09-28~)**: Fable 에게 확인받아야 할 문서는 번들 zip 파일로 제공한다. 생성 = `python3 scripts/fable_bundle.py <주제> <파일·폴더...> --question "<검수 질문>"` · 출력 = `docs/plans/biotech/fable-bundles/<YYYYMMDD>_<주제>.zip` (git 제외) · zip 안 첫 파일 `MANIFEST.md` (커밋 해시 · 파일별 SHA-256 · 검수 질문) · 자격증명 의심 패턴이 있으면 생성 중단. 보고에는 zip 전체 경로를 적는다. **(2026-09-30 재확인)** Fable 에게 줄 문서는 매번 번들 zip 으로 묶고, 보고에 절대 경로 (`/Users/gonnim/Project-MVP/Source/toss-tradebot-mvp/docs/plans/biotech/fable-bundles/<YYYYMMDD>_<주제>.zip`) 와 zip SHA-256 을 적는다.
 - **보고 문체 (2026-09-28~)**: 완전한 문장으로 쓴다. 명사를 나열하는 전보식 문장은 쓰지 않는다. 비유를 쓰지 않는다. 쉬운 어휘를 쓴다. 한 문장에는 한 내용만 담는다. 영어 용어는 처음 나올 때 한국어 뜻을 함께 적는다. 표와 수치는 유지하되, 표 밖 설명은 말로 풀어 쓴다.
@@ -26,6 +27,14 @@
 ---
 
 ## PENDING
+
+### [Biotech Catalyst Radar · WP94 레이더 입력 부재 가시화 · 누락 입력 조사 · 표시 결함 2건] · 2026-10-01 발행
+
+- 1 (표시·로그 · 자동 병합): radar 가 h6_membership · h3_events · h57_pubmed_index · h58_preprint_index · h3_prices_merged 를 못 찾으면 WARNING 1줄씩 · 텔레그램 warning 1회 (목록) · 산출 CSV 머리와 kpi.json 에 inputs_missing · 화면 순위표 머리 "점수 입력 부족: 전문가 채널 미반영(파일 N개 없음)" (biotech-display.ts · 목록은 펼침) · 테스트 2건 · 배포 후 서버 복사본 inputs_missing 인용 · 규칙 기록 (changelog · 영구 규칙)
+- 2 (조사만): 누락 5개 입력별 표 (채널·가중치 코드 줄 · 로컬 생성 방법·스크립트 · 일일/주간 파이프 생성 가능성과 외부 요청 수 · 있을 때/없을 때 오늘 상위 30 차이) · h3_prices_merged 를 WP75 IEX 일일 가격 누적으로 대체 가능한지 · 90일 치 쌓이는 날짜 · 제안만
+- 3 (표시 · 자동 병합): shortName 접미사 LP · L.P. · SE · PLC 추가 (테스트 1) · 임원 매수 금액 = 거래별 센트까지 계산 → 합산 → 마지막 반올림 (KOD 두 화면 같은 값 테스트 1) · BIOTECH_API_ONLY 로컬 화면 스크린샷 1장
+
+---
 
 ### [Biotech Catalyst Radar · WP93 레이더 점수 v3 · 8-K 추출 테스트 · 로컬 화면 모드] · 2026-10-01 발행
 
