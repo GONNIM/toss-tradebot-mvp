@@ -160,6 +160,7 @@
 - 변경 전 (v2 · 2026-10-01 실행까지): 전문가 채널 (a)+(b) 원점수 = 13D 신규 건수 × 1.0 + H6 소속이면 +3
 - 변경 후 (v3 · 2026-10-02 실행부터): 전문가 채널 (a)+(b) 원점수 = 13D 신규 건수 × 1.0 (H6 소속 가점 제거) · PubMed · Preprint · Form 4 채널 · z 정규화 · 4요소 가중치는 그대로
 - 근거: H6 (테마 관심도 → 주가) 관문 2 폐기 확정 (`docs/plans/biotech/verification/H6/H6-gate2-request-20261001.md` · 1차 판정 1분기 CI −4.3% ~ +5.7% · 4분기 CI −19.3% ~ +15.8%)
-- 영향 (2026-10-01 서버 런타임 복사본 · 같은 입력 v2 대 v3): 점수 80개 중 78개 변경 · 순위 52종목 이동 · 상위 30 ARTV 진입 · AVBP 탈락
+- 영향 (로컬 입력 기준 · 2026-10-01 서버 런타임 복사본 + 로컬 `backend/data` 의 13D · H6 소속 · PubMed · Preprint · 가격 파일 · 같은 입력 v2 대 v3): 점수 80개 중 78개 변경 · 순위 52종목 이동 · 상위 30 ARTV 진입 · AVBP 탈락
+- **정정 (2026-10-01 · 배포 후 확인)**: 서버에는 `h6_membership_*.csv` · `h3_events_*.csv` · `h57_pubmed_index_*.json` · `h58_preprint_index_*.json` · `h3_prices_merged_*.csv` 가 없음 (서버 daily.log 10/1 레이더 줄 "prices tickers: 0 · xbi 90d ret: 0.0000" · "pub_idx: 0 · pre_idx: 0"). 그래서 서버 점수에서는 H6 소속 +3 이 원래부터 0 이었고, v3 변경의 **서버 점수 영향은 0** 입니다. 위 78/80 · 52종목 · ARTV/AVBP 는 로컬 입력 기준 값입니다. 서버 전문가 채널 입력 부재는 별건 (점수 입력 변경이라 승인 필요).
 - 코드: `backend/scripts/biotech_h46v3_radar.py` expert_channel_1_2() · SCORE_VERSION · 정의: `backend/data/h_radar_params.json` score_version · score_versions (v2 보존)
 - 전향 평가: 11/15 첫 채점표는 10/1 까지 v2 · 10/2 이후 v3 판정을 나누어 적는다 · 재계산 = `python -m backend.scripts.biotech_h46v3_radar --score-version v2 --date YYYYMMDD` (산출 `radar_v1_3_<날짜>_scorev2.csv`)
