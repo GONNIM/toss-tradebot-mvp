@@ -6,20 +6,21 @@ from pathlib import Path
 from backend.scripts import biotech_h46v3_radar as radar
 
 
-def test_all_missing_lists_five_and_notifies_once(monkeypatch, caplog):
+def test_all_missing_lists_four_and_notifies_once(monkeypatch, caplog):
     import logging
     caplog.set_level(logging.WARNING)
     monkeypatch.setattr(radar._P, "find", lambda *a, **k: None)
     monkeypatch.setattr(radar._P, "find_glob", lambda *a, **k: None)
     sent = []
     missing = radar.check_inputs("abc1234", notify=lambda t, b: sent.append((t, b)))
-    assert missing == ["h6_membership", "h3_events", "h57_pubmed_index", "h58_preprint_index", "h3_prices_merged"]
+    assert missing == ["h3_events", "h57_pubmed_index", "h58_preprint_index", "iex_daily_history"]   # WP95 · h6 제외 · 가격 = 누적 파일
     assert len(sent) == 1 and all(n in sent[0][1] for n in missing)
-    assert caplog.text.count("레이더 입력 없음") == 5
+    assert caplog.text.count("레이더 입력 없음") == 4
 
 
 def test_all_present_empty_list_no_notify(monkeypatch):
     monkeypatch.setattr(radar._P, "find", lambda *a, **k: Path("/x"))
+    monkeypatch.setattr(radar, "price_history_ready", lambda *a, **k: True)
     sent = []
     assert radar.check_inputs("abc1234", notify=lambda t, b: sent.append(1)) == [] and sent == []
 
