@@ -30,6 +30,18 @@
 
 ## PENDING
 
+### [Biotech Catalyst Radar · WP97 한국어 미등재 용어 제안 · 날짜별 확인 (새 기능 없음)] · 2026-10-01 발행
+
+- 1: 서버 rumor.json 복사본 A 카드 63장 + 순위표 30행에 표시되는 질환 용어 중 ko_terms.csv 미등재 · 열 term · category · n_cards · example_ticker · proposed_ko · reviewer_decision(빈칸) · 카드 노출 횟수 순 · `docs/plans/biotech/verification/dictionaries/ko_terms_visible_proposed_v3.csv` + zip · 검수 전 ko_terms.csv 반영 금지
+- 2 날짜별 확인 (각 날짜 한 번에 보고):
+  - 10/2 · 10/3 07:00: [8/9] 시총 줄 · 백필 요청 수 · "백필 완료" 여부 · 화면 시총 배지 종목 수 스크린샷 1장
+  - 10/5 06:00: 주간 잡 7개 항목 · 별칭 효과 (71→76) · SEC 장부 합계 · 제안 파일과 검수 요망 행 zip
+  - 10/6 06:00: 13D 요청 수 · 새 신고 수 · 미룬 헤더 수 · 07:00 보도자료 건너뜀 여부
+  - 10/7 06:00 · 07:00: NLM 요청 수 · 양성 회사 수 · inputs_missing · radar_v3_full_start.json 생성 여부 → 생기면 params · PENDING 옮겨 적고 문서 PR 병합
+- 3: 그 밖의 새 작업 금지
+
+---
+
 ### [Biotech Catalyst Radar · WP96 서버 예약 실행표 · 비밀 금고 설정 (서버 변경 · 사용자 승인됨 · 병합 승인됨)] · 2026-10-01 발행
 
 - 1: `deploy/biotech_cron_lines.txt` (화 13D · 수 NLM 두 줄) · deploy.yml 에 "없으면 추가" 단계 (기존 세 줄 무변경) · 배포 후 crontab -l 5줄 인용 · 테스트 (두 번 실행해도 5줄)
