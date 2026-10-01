@@ -40,7 +40,8 @@
     "v1.4": "Phase C 1 · expert 채널 5/5 완비 (PubMed h57 + Preprint h58 추가) · 가중치 동일 유지 · 채널 추가는 정의 확장",
     "v1.5": "WP69-3d · crowd 채널 재정의 (StockTwits 서버 차단으로 삭제 · apewisdom + Reddit RSS 만 · 로컬 st_24h 는 α 보조) · near 소스 AACT 주간 스냅샷 이식 (CT.gov API 호출 완전 제거) · 급등 경보 apewisdom 5배 or RSS 급증 재정의 · 단계 규칙 사전 고정 명문화 · 가중치 동일 · 60일 전 조정 금지 계속",
     "v1.5-wp78": "WP78 · 급등 경보 조건 정합 (기준선 7일 미만 제외 · 배수 조건에 오늘 5건 이상 추가 · 레딧 3건 유지) · 표시 계층 · 가중치·점수·단계 무변경",
-    "v1.5-wp86": "WP86 · 배수 계산 기준선 하한 1건 (max(1.0, 평균)) · 경보 조건 무변경 · 가중치·점수·단계 무변경"
+    "v1.5-wp86": "WP86 · 배수 계산 기준선 하한 1건 (max(1.0, 평균)) · 경보 조건 무변경 · 가중치·점수·단계 무변경",
+    "v3-score (2026-10-02)": "WP93 · 전문가 채널 (b) H6 소속 +3 제거 · 다른 채널·정규화·가중치 무변경 · 영향 (2026-10-01 서버 복사본) 점수 78/80 · 순위 52종목 · 상위 30 ARTV 진입 · AVBP 탈락"
   },
   "alerts_definition_wp78": {
     "spec": "급등 경보 조건 정합 · WP78 · 2026-09-28 · 표시 계층 규칙 (점수·단계·후보 선정 무관)",
@@ -56,5 +57,20 @@
     "multiple": "평소 대비 배수 = 오늘 apewisdom 언급 / max(1.0, 기준선 평균) · 평균 0 이어도 계산 (이전: 평균 0 이면 None · 평균 0.25 면 그대로 나눔)",
     "code": "backend/scripts/biotech_h48v3_confirm.py baseline_multiple() · 판정 backend/scripts/biotech_alert_rule.py judge() (무변경)",
     "reason": "IOVA 9/30 기준선 평균 0.25 → 오늘 32건이 128배로 부풀려짐 · KOD 9/29 기준선 평균 0 → 오늘 14건인데 배수 없음으로 경보 누락"
+  },
+  "score_version": "v3 (2026-10-02 · H6 소속 +3 제거 · 근거: 관문 2 폐기)",
+  "score_versions": {
+    "v2": {
+      "period": "~ 2026-10-01 실행",
+      "expert_channel_a_b": "13D 신규 건수 × 1.0 + H6 소속 (h6_membership) 이면 +3",
+      "definition": "채널 5/5 (Phase C 1 완비 · v1.4 동일 유지): (a) 13D 신규 · (b) h6_membership 소속 · (c) PubMed h57 · (d) Preprint h58 · (e) Form 4 P (h3_events event_type). **8-K 사후 뉴스 사용 금지**."
+    },
+    "v3": {
+      "period": "2026-10-02 실행 ~",
+      "expert_channel_a_b": "13D 신규 건수 × 1.0 (H6 소속 가점 제거)",
+      "reason": "H6 관문 2 폐기 확정 (docs/plans/biotech/verification/H6/H6-gate2-request-20261001.md)",
+      "other_channels": "PubMed h57 · Preprint h58 · Form 4 P · 정규화 · 가중치 무변경",
+      "recompute": "python -m backend.scripts.biotech_h46v3_radar --score-version v2 --date YYYYMMDD → radar_v1_3_<날짜>_scorev2.csv"
+    }
   }
 }

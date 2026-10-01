@@ -287,7 +287,7 @@ def _latest_radar_csv() -> Path | None:
     """radar CSV 최신 · WP69-3b · RUNTIME > docs > backend/data."""
     patterns: list[tuple[Path, str]] = []
     for d in _search_dirs("candidates"):
-        patterns.append((d, "radar_v1_3_*.csv"))
+        patterns.append((d, "radar_v1_3_????????.csv"))   # WP93 · 재계산 파일 (_scorev2 등) 제외
     return _latest(*patterns)
 
 
