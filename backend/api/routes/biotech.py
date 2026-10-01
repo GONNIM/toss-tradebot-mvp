@@ -182,6 +182,23 @@ class RadarJson(BaseModel):
     generated: str
     source_csv: str
     rows: list[RadarRow]
+    inputs_missing: list[str] = []   # WP94 · 레이더 점수 설계 입력 중 서버에 없는 파일 (표시 전용)
+
+
+def _radar_inputs_missing(path: Path | None) -> list[str]:
+    """레이더 CSV 첫 행의 inputs_missing 열 (WP94) · 열이 없던 이전 파일은 빈 목록."""
+    if not path or not path.exists():
+        return []
+    with path.open() as f:
+        first = next(csv.DictReader(f), None) or {}
+    return [x for x in (first.get("inputs_missing") or "").split("|") if x]
+
+
+def _rel(path: Path) -> str:
+    try:
+        return str(path.relative_to(PROJECT_ROOT))
+    except ValueError:   # 로컬 화면 모드 · 런타임 폴더가 저장소 밖일 때
+        return str(path)
 
 
 import os
@@ -341,8 +358,9 @@ async def get_radar_json(_admin: str = Depends(require_sniper_token)) -> RadarJs
             row.trial = _trial_display(row.nct_id)
     return RadarJson(
         generated=datetime.fromtimestamp(path.stat().st_mtime, tz=timezone.utc).isoformat(),
-        source_csv=str(path.relative_to(PROJECT_ROOT)),
+        source_csv=_rel(path),
         rows=rows[:30],  # 상위 30
+        inputs_missing=_radar_inputs_missing(path),
     )
 
 
@@ -754,6 +772,7 @@ class BiotechKpi(BaseModel):
     alert_tickers: list[str] = []  # WP74 4단계 · 경보 종목 (표시용 · 판정 무변경)
     alerts_collecting: int = 0  # WP78 · 기준선 7일 미만이라 경보 판정에서 뺀 종목 수
     alert_briefs: list[dict[str, Any]] = []  # WP77 · 급등 브리핑 패널 + 자동 요약 (수집 자료 · 판정 무변경)
+    inputs_missing: list[str] = []  # WP94 · 레이더 점수 입력 부족 (radar CSV 기록 · 표시 전용)
 
 
 @router.get("/kpi.json", response_model=BiotechKpi)
@@ -827,6 +846,7 @@ async def get_kpi(_admin: str = Depends(require_sniper_token)) -> BiotechKpi:
         alert_tickers=alert_tickers,
         alerts_collecting=alerts_collecting,
         alert_briefs=_latest_alert_briefs(),
+        inputs_missing=_radar_inputs_missing(_latest_radar_csv()),
     )
 
 

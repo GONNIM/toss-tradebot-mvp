@@ -2,7 +2,7 @@
 import assert from "node:assert/strict";
 import * as fs from "node:fs";
 import * as path from "node:path";
-import { cardText, daysSinceFiling, dday, THEME_RANK_NOTE, endLabel, stageLabel, exhibitLine, LEAD_LABEL, groupForm4, insiderSummary, insiderTxLine, mentionSentence, multSentence, trialSentence, rumorReason, shortName, summaryStatus, tickerOrUnknown } from "./biotech-display";
+import { cardText, daysSinceFiling, insiderTotalUsd, txCents, dday, THEME_RANK_NOTE, endLabel, stageLabel, exhibitLine, LEAD_LABEL, groupForm4, insiderSummary, insiderTxLine, mentionSentence, multSentence, trialSentence, rumorReason, shortName, summaryStatus, tickerOrUnknown } from "./biotech-display";
 
 const beauty = cardText({ category: "미용", interventions: [{ name: "X-1", type: "DRUG", type_ko: "약물" }] }, "PHASE2", "2026-11-30", 62);
 assert.ok(beauty.main?.startsWith("미용 · X-1 (약물) · 2상(효과 탐색)"), beauty.main ?? "null");
@@ -36,7 +36,11 @@ assert.equal(shortName("ORBIMED ADVISORS LLC"), "Orbimed Advisors");
 assert.equal(shortName("ELECTRA THERAPEUTICS, INC."), "Electra Therapeutics");
 assert.equal(shortName("OrbiMed Advisors LLC"), "OrbiMed Advisors");
 assert.equal(shortName("McArdle Capital LLC"), "McArdle Capital");
-assert.equal(shortName("BioNTech SE"), "BioNTech SE");  // SE 는 제거 대상 접미사가 아님 · 표기는 원문 그대로
+assert.equal(shortName("BioNTech SE"), "BioNTech");  // WP94 · SE 도 접미사
+// WP94 · LP · L.P. · SE · PLC 접미사 (대소문자 섞인 원문 표기는 그대로)
+assert.equal(shortName("BAKER BROS. ADVISORS LP"), "Baker Bros. Advisors");
+assert.equal(shortName("McArdle Capital, L.P."), "McArdle Capital");
+assert.equal(shortName("GSK plc"), "GSK");
 assert.equal(tickerOrUnknown(""), "비상장 추정");
 assert.equal(summaryStatus({ ok: false, error: "ZaiError 400/1210" }), "자동 요약 실패(ZaiError 400/1210)");
 assert.ok(rumorReason(2, "collecting", 6).startsWith("이 카드에 오른 이유: 임상 종료 예정 D-2"));
@@ -82,7 +86,7 @@ assert.equal(gs.length, 1);
 assert.equal(insiderSummary(gs[0], new Date("2026-10-01T03:00:00Z")), "ETRA · Electra Therapeutics · Orbimed Advisors(전문 펀드) · 8일 전 신고 · 거래 2건 · 합계 1,333,333주 · 금액 미기재");
 const priced = groupForm4(f4.map((r) => ({ ...r, form4: { ...r.form4, price: 3 } })));
 assert.ok(insiderSummary(priced[0]).endsWith("금액 $3,999,999"));
-assert.equal(insiderTxLine({ tx_date: "2026-09-21", shares: 333333, price: 3 }), "9/21 거래 · 333,333주 · 주당 $3.00 · $999,999");
+assert.equal(insiderTxLine({ tx_date: "2026-09-21", shares: 333333, price: 3 }), "9/21 거래 · 333,333주 · 주당 $3.00 · $999,999.00");
 // WP88 · 보도자료 제목 줄 · 상한 도달 · 첫 문단 라벨
 assert.equal(exhibitLine({ ex99_1_title: "Acme Announces Results", ex99_1_status: "ok" }), "보도자료: Acme Announces Results");
 assert.equal(exhibitLine({ ex99_1_title: "", ex99_1_status: "ok" }), "보도자료: 제목 없음");
@@ -94,4 +98,19 @@ assert.ok((cardText({ category: "암" }, "PHASE2", undefined, null, { theme_ko: 
 // WP93 · "N일 전 신고" 는 신고일 기준 (거래일 기준 elapsed_days 10 이어도 신고 9/23 → 10/1 은 8일)
 assert.equal(daysSinceFiling("2026-09-23", new Date("2026-10-01T03:00:00Z")), 8);
 assert.equal(daysSinceFiling("2026-09-30", new Date("2026-09-30T16:00:00Z")), 1);   // UTC 9/30 16시 = KST 10/1 01시
+// WP94 · KOD 82행 (서버 복사본 실측) · 카드 요약 금액 = 자세히 줄 (센트) 합계를 마지막에 반올림한 값 · 두 화면이 같은 값
+{
+  const fs = require("node:fs") as typeof import("node:fs");
+  const path = require("node:path") as typeof import("node:path");
+  const kod = JSON.parse(fs.readFileSync(path.resolve(__dirname, "../../backend/tests/fixtures/biotech_form4_kod_rows_20260930.json"), "utf8")).rows as { tx_date: string; shares: number; price: number }[];
+  const lineCents = kod.reduce((a, t) => a + (txCents(t.shares, t.price) as number), 0);
+  assert.equal(kod.length, 82);
+  assert.equal(insiderTotalUsd(kod), 156_986_394);
+  assert.equal(Math.round(lineCents / 100), insiderTotalUsd(kod));
+  const kodRows = kod.map((t) => ({ ticker: "KOD", name: "Kodiak Sciences Inc.", cik: "0001468748",
+    form4: { filer_cik: "0001263508", filer_name: "BAKER BROS. ADVISORS LP", filer_type: "전문 펀드", shares: t.shares, price: t.price, filing_date: "2026-09-30", tx_date: t.tx_date, elapsed_days: 2 } }));
+  const g = groupForm4(kodRows);
+  assert.equal(g.length, 1);
+  assert.equal(insiderSummary(g[0], new Date("2026-10-01T03:00:00Z")), "KOD · Kodiak Sciences · Baker Bros. Advisors(전문 펀드) · 1일 전 신고 · 거래 82건 · 합계 1,941,755주 · 금액 $156,986,394");
+}
 console.log("ok");

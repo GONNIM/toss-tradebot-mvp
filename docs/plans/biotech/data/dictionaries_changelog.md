@@ -164,3 +164,12 @@
 - **정정 (2026-10-01 · 배포 후 확인)**: 서버에는 `h6_membership_*.csv` · `h3_events_*.csv` · `h57_pubmed_index_*.json` · `h58_preprint_index_*.json` · `h3_prices_merged_*.csv` 가 없음 (서버 daily.log 10/1 레이더 줄 "prices tickers: 0 · xbi 90d ret: 0.0000" · "pub_idx: 0 · pre_idx: 0"). 그래서 서버 점수에서는 H6 소속 +3 이 원래부터 0 이었고, v3 변경의 **서버 점수 영향은 0** 입니다. 위 78/80 · 52종목 · ARTV/AVBP 는 로컬 입력 기준 값입니다. 서버 전문가 채널 입력 부재는 별건 (점수 입력 변경이라 승인 필요).
 - 코드: `backend/scripts/biotech_h46v3_radar.py` expert_channel_1_2() · SCORE_VERSION · 정의: `backend/data/h_radar_params.json` score_version · score_versions (v2 보존)
 - 전향 평가: 11/15 첫 채점표는 10/1 까지 v2 · 10/2 이후 v3 판정을 나누어 적는다 · 재계산 = `python -m backend.scripts.biotech_h46v3_radar --score-version v2 --date YYYYMMDD` (산출 `radar_v1_3_<날짜>_scorev2.csv`)
+
+## 규칙 기록 · 2026-10-01 (WP94) · 서버 레이더 점수 입력 0 상태 (v2-부분)
+
+- 사실: 서버 레이더 점수는 2026-09-22 첫 실행 (`/root/toss-tradebot-mvp/var/biotech/logs/daily.log` 첫 줄 `=== 2026-09-21T22:00:01Z biotech daily start (server · KST 07:00) ===`) 부터 전문가 채널 입력 0 상태였습니다. 10회 실행 모두 "prices tickers: 0 · xbi 90d ret: 0.0000" · "pub_idx: 0 · pre_idx: 0".
+- 없는 설계 입력 5개: `h6_membership_*.csv` · `h3_events_*.csv` · `h57_pubmed_index_*.json` · `h58_preprint_index_*.json` · `h3_prices_merged_*.csv` (git 에도 없음 · 로컬 `backend/data` 에만 있음).
+- 그래서 서버 판정은 설계 v2 의 일부 (v2-부분) 입니다. 전문가 채널은 모든 종목 같은 값 · 미반영 채널은 중립이라 점수는 근접도 · 언급 · 위험 · 꼬리표로 정해졌습니다.
+- 11/15 채점표: 서버 실제 판정 기준으로 하되 이 사실을 머리에 적습니다.
+- 가시화 (WP94): 레이더가 입력을 못 찾으면 WARNING 1줄씩 · 텔레그램 warning 하루 1회 · 산출 CSV `inputs_missing` 열 · kpi.json · radar.json `inputs_missing` · 화면 순위표 머리 "점수 입력 부족: 전문가 채널 미반영(파일 N개 없음)".
+- 확인: 2026-10-01 서버 런타임 복사본을 서버와 같은 조건 (5개 입력 없음) 으로 v3 실행 → 서버 실제 10/1 v2 산출과 80행 순서·점수 모두 같음 (v3 의 서버 영향 0 재확인).

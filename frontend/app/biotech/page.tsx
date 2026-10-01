@@ -18,7 +18,7 @@ import { SectionCard } from "@/components/ui/section-card";
 import { BiotechTable, BiotechTableColumn } from "@/components/biotech/BiotechTable";
 import { RumorCard } from "@/components/biotech/RumorCard";
 import type { SessionInfo } from "@/lib/auth";
-import { cardText, checkedAtLabel, ctgovUrl, exhibitLine, groupForm4, insiderSummary, insiderTxLine, LEAD_LABEL, mcapBadge, mentionSentence, multSentence, refreshLabel, rumorReason, shortName, sortFilterCards, sortLabel, summaryStatus, tickerOrUnknown, trialSentence } from "@/lib/biotech-display";
+import { cardText, checkedAtLabel, ctgovUrl, exhibitLine, inputLabel, inputsMissingLine, groupForm4, insiderSummary, insiderTxLine, LEAD_LABEL, mcapBadge, mentionSentence, multSentence, refreshLabel, rumorReason, shortName, sortFilterCards, sortLabel, summaryStatus, tickerOrUnknown, trialSentence } from "@/lib/biotech-display";
 import type { CardSort, Form4Tx, ThemeRank, TrialDisplay } from "@/lib/biotech-display";
 
 // 백엔드 스키마
@@ -39,7 +39,7 @@ type RadarRow = {
   factors: { expert: number; crowd: number; near: number; unnoticed: number; risk: number };
   tag_bonus: number;
 };
-type RadarJson = { generated: string; source_csv: string; rows: RadarRow[] };
+type RadarJson = { generated: string; source_csv: string; rows: RadarRow[]; inputs_missing?: string[] };
 
 type RumorRow = {
   table: string;
@@ -596,6 +596,16 @@ export default function BiotechPage() {
           <div className="text-xs text-muted-foreground font-mono mb-2">
             📁 {radar.source_csv} · 생성 {radar.generated}
           </div>
+          {inputsMissingLine(radar.inputs_missing) && (
+            <details className="mb-2 rounded border border-amber-300 bg-amber-50 px-2 py-1 text-xs text-amber-900 dark:border-amber-700 dark:bg-amber-950 dark:text-amber-200">
+              <summary className="cursor-pointer font-semibold">{inputsMissingLine(radar.inputs_missing)}</summary>
+              <ul className="mt-1 list-disc pl-5">
+                {(radar.inputs_missing ?? []).map((n) => (
+                  <li key={n}>{inputLabel(n)}</li>
+                ))}
+              </ul>
+            </details>
+          )}
           <BiotechTable columns={RADAR_COLUMNS} rows={radar.rows} caption="레이더 상위 30" />
         </SectionCard>
         </div>
