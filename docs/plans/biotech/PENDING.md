@@ -11,6 +11,7 @@
 
 ## 영구 규칙
 
+- **PR 병합 (2026-10-01~)**: PR 병합은 Fable 프롬프트에 '병합 승인됨 · PR #번호'로 적힌 것만 한다. 적히지 않은 PR 은 승인 요청까지만 한다.
 - **Fable 확인 문서 = 번들 zip (2026-09-28~)**: Fable 에게 확인받아야 할 문서는 번들 zip 파일로 제공한다. 생성 = `python3 scripts/fable_bundle.py <주제> <파일·폴더...> --question "<검수 질문>"` · 출력 = `docs/plans/biotech/fable-bundles/<YYYYMMDD>_<주제>.zip` (git 제외) · zip 안 첫 파일 `MANIFEST.md` (커밋 해시 · 파일별 SHA-256 · 검수 질문) · 자격증명 의심 패턴이 있으면 생성 중단. 보고에는 zip 전체 경로를 적는다. **(2026-09-30 재확인)** Fable 에게 줄 문서는 매번 번들 zip 으로 묶고, 보고에 절대 경로 (`/Users/gonnim/Project-MVP/Source/toss-tradebot-mvp/docs/plans/biotech/fable-bundles/<YYYYMMDD>_<주제>.zip`) 와 zip SHA-256 을 적는다.
 - **보고 문체 (2026-09-28~)**: 완전한 문장으로 쓴다. 명사를 나열하는 전보식 문장은 쓰지 않는다. 비유를 쓰지 않는다. 쉬운 어휘를 쓴다. 한 문장에는 한 내용만 담는다. 영어 용어는 처음 나올 때 한국어 뜻을 함께 적는다. 표와 수치는 유지하되, 표 밖 설명은 말로 풀어 쓴다.
 - **세션 첫 작업 = 관측 (2026-09-28~)**: 매 세션 시작 시 서버 `/root/toss-tradebot-mvp/var/biotech/logs/daily.log` 최신 실행 (2026-09-29 부터 8단계 · WP75 배포 후 9단계 · alert_brief · mcap_daily 는 skip 허용) 과 /biotech 두 탭 (레이더·소문) 날짜를 확인하고, 정상이면 한 줄로 보고한다.
@@ -19,6 +20,21 @@
 ---
 
 ## PENDING
+
+### [Biotech Catalyst Radar · WP84-2 병합 권한 규칙 · PR #58 배포 · H6 재요청 · WP75 시험 · 원인 확인] · 2026-10-01 발행
+
+**원문 요지** (보고 첫 줄 "지금 하는 일" · 전체 경로 · 서버 조회 전용 · 병합은 "병합 승인됨" PR 만):
+
+0. 병합 권한: 저장소 `.claude/settings.json` permissions.allow 에 `"Bash(gh pr merge:*)"` 만 추가 · 바꾼 줄 인용 · 이 파일 영구 규칙에 PR 병합 규칙 한 줄
+1. PR #58 (병합 승인됨 · PR #58): 병합 → 배포 커밋 해시 · 13경로 · deploy-watch 알림 내용 · 수정 후 스크린샷 `docs/plans/biotech/screenshots/<YYYYMMDD>_sha_<해시>/wp87_after_*.webp` · D-n 오늘 기준 (9/30 종료 시험 D+1) · 임원 매수 카드 제목·내용 일치 · "언급 늘어남"/"급등 경보" 구분
+2. WP88 PR (생성 후 병합 승인됨): `feature/biotech-wp88` main 위로 rebase · pytest · tsx · next build → PR · 모두 통과면 병합·배포 · 실패면 병합하지 않고 보고 · 배포 후 13경로 · 10/2 07:00 "SEC 요청 · … 오늘 합계 N/300" 줄 · `sec_usage_20261002.json` · `form4_xml/` 파일 수 인용
+3. H6 남은 10건 재요청 (승인됨 · 10:54 이후): 수집기에 시간당 50회 규칙 (장부에 시간 단위 요청 수 · 50회 도달 시 중단 · "시간당 한도 · 다음 가능 시각" 로그 · 테스트 1건) · 대상 IONS ISRG MDT MIRM MNOV OMDA PRE PTN INGR EOCN · 재보고 (종목·거래일 커버율 · 90% 미만 · 월 고유) · summary.json 에 종목별 first_bar_date (요청 0회) · EOCN 첫 거래일과 티커 변경 전 기록 연속 여부 · `docs/plans/biotech/verification/H6/c3-20260928/h6_membership_v2_summary_2026-09-28.json` 에 "GLMD → EOCN · 티커 변경 · CIK 1595353" 별칭
+4. 한도 문서 정정: `docs/plans/biotech/SOURCES.md` Tiingo 줄 "시간당 50회" (근거 2026-10-01 09:53 51번째 요청 429 · summary.json blocked) · `docs/plans/biotech/data/h6_params_v2.json` limit_basis 동일 · 3단계 수집기 변경과 함께 PR (병합 승인됨)
+5. Form 4 +85건 원인 (조회만): 신규 85건의 신고자별 건수 · 신고일 분포 인용 · 새 신고자 30일 누적 일괄 유입인지 한 줄 · 코드 변경 금지
+6. WP75 가격 조회 재설계 시험 (요청 1회 승인됨): Tiingo IEX `/iex/?tickers=…` 로 후보 79종목 전일 종가 1회 시험 · 무료 등급 허용 · 한 요청 종목 수 상한 · 응답 필드 (prevClose · last · 날짜) · 월 고유 종목 집계 방식 (Tiingo 문서 인용) · 장부 기록 · 표로 보고 · 가능하면 WP75 가격 단계 설계를 이 파일에 · 불가능하면 50회 + 29회 두 cron 안 · 구현은 승인 후 · 플래그·SOPS 보류
+7. 순서: 0 → 1 → 2 · 10:54 이후 3 → 4 · 그 사이 5 · 6
+
+---
 
 ### [Biotech Catalyst Radar · WP84 재확인 · 10월 1일 실행 (새 작업 없음)] · 2026-09-30 발행
 
