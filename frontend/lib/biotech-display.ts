@@ -58,6 +58,17 @@ export function dday(daysTo: number): string {
   return daysTo >= 0 ? `D-${daysTo}` : `D+${-daysTo}`;
 }
 
+// WP89 · 종료 예정일 문구 · 지난 시험은 "종료 예정일 지남(결과 발표 대기)" (D+n 대신)
+export const PAST_DUE = "종료 예정일 지남(결과 발표 대기)";
+
+export function endLabel(eventDate: string, daysTo: number, style: "short" | "long" | "reason" = "long"): string {
+  if (daysTo < 0) return style === "reason" ? `임상 ${PAST_DUE}` : `${ymdLabel(eventDate)} ${PAST_DUE}`;
+  if (style === "reason") return `임상 종료 예정 ${dday(daysTo)}`;
+  return style === "short"
+    ? `${ymdLabel(eventDate)}(${dday(daysTo)}) 종료 예정(결과 발표일 아님)`
+    : `${ymdLabel(eventDate)}(${dday(daysTo)}) 종료 예정 · 결과 발표일은 아님`;
+}
+
 // "3상 시험이 9월 30일(3일 뒤)에 끝날 예정입니다. 결과 발표일은 아닙니다."
 // 올해 날짜는 "9월 30일" · 다른 해는 "2027년 1월 31일" (KST 기준 올해)
 export function ymdLabel(ymd: string, now: Date = new Date()): string {
@@ -68,7 +79,8 @@ export function ymdLabel(ymd: string, now: Date = new Date()): string {
 
 export function trialSentence(phase?: string, eventDate?: string, daysTo?: number | null): string | null {
   if (!eventDate || typeof daysTo !== "number") return null;
-  const when = daysTo === 0 ? "오늘" : daysTo > 0 ? `${daysTo}일 뒤` : `${-daysTo}일 전`;
+  if (daysTo < 0) return `${phaseLabel(phase)} 시험의 종료 예정일(${ymdLabel(eventDate)})이 지났습니다. 결과 발표를 기다리는 중입니다.`;
+  const when = daysTo === 0 ? "오늘" : `${daysTo}일 뒤`;
   return `${phaseLabel(phase)} 시험이 ${ymdLabel(eventDate)}(${when})에 끝날 예정입니다. 결과 발표일은 아닙니다.`;
 }
 
@@ -170,7 +182,7 @@ export function cardText(
     if (ph0 && ph0 !== "임상") parts.push(ph0);
     const d0 = (t.interventions ?? []).find((i) => !/placebo/i.test(i.name));
     if (d0) parts.push(d0.name_ko || d0.name);
-    if (eventDate && typeof daysTo === "number") parts.push(`${ymdLabel(eventDate)}(${dday(daysTo)}) 종료 예정(결과 발표일 아님)`);
+    if (eventDate && typeof daysTo === "number") parts.push(endLabel(eventDate, daysTo, "short"));
     return { main: parts.length ? parts.join(" · ") : null, theme: null };
   }
   if (t.category) parts.push(t.category_auto ? `${t.category}(자동)` : categoryLabel(t.category));
@@ -196,7 +208,7 @@ export function cardText(
   const po = (t.primary_outcomes ?? [])[0];
   if (po?.measure) parts.push(`1차 목표: ${clip(po.measure_ko || po.measure, 90)}`);
   if (eventDate && typeof daysTo === "number") {
-    parts.push(`${ymdLabel(eventDate)}(${dday(daysTo)}) 종료 예정 · 결과 발표일은 아님`);
+    parts.push(endLabel(eventDate, daysTo));
   }
   const main = parts.length >= 2 ? parts.join(" · ") : null; // 필드가 거의 없으면 기존 문장 (trialSentence) 사용
   const themeLine =
@@ -230,6 +242,7 @@ const STAGE_KO: Record<string, string> = {
   collecting: "수집 중",
   early: "언급 증가 초기",
   frenzy: "언급 급증",
+  spread: "언급 있음(평소 수준)", // WP89 · confirm stage() 마지막 분기 (조용·초기·급증 아님)
 };
 
 export function stageLabel(stage?: string): string {
@@ -272,7 +285,7 @@ export function mentionSentence(stage?: string, baselineDays?: number | null, me
 // 소문에 살 자리 카드에 오른 이유 (API 표1 규칙: 뉴스 예정 A 상태 · 언급 단계 조용/수집 중 · 예정일 가까운 15)
 export function rumorReason(daysTo?: number | null, stage?: string, baselineDays?: number | null): string {
   const parts: string[] = [];
-  if (typeof daysTo === "number") parts.push(`임상 종료 예정 ${dday(daysTo)}`);
+  if (typeof daysTo === "number") parts.push(endLabel("", daysTo, "reason"));
   const st = stageLabel(stage);
   parts.push(
     stage === "collecting" && typeof baselineDays === "number"
@@ -288,7 +301,7 @@ export function insiderLine(detail?: string): string {
 }
 
 export function tickerOrUnknown(ticker?: string): string {
-  return ticker && ticker.trim() ? ticker : "티커 미확인";
+  return ticker && ticker.trim() ? ticker : "비상장 추정"; // WP89 · SEC 명부 (company_tickers) 에 없는 발행사
 }
 
 // 자동 요약 상태 · 실패면 "자동 요약 실패(사유)" · 성공이면 null
