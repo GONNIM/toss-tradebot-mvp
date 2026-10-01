@@ -366,6 +366,7 @@ class RumorRow(BaseModel):
     mult: str = ""        # WP85 · 평소 대비 배수 원값 (confirm st_baseline_mult · 'collecting' 또는 숫자) · 표시용
     baseline_mean: Optional[float] = None   # WP86 · 기준선 하루 평균 (평소 하루 N건 표시용)
     cik: str = ""         # WP85 · 표4 발행사 CIK (펼침 영역 전용)
+    form4: dict[str, Any] = {}   # WP87 · 표4 거래 원자료 (신고자 · 주식 수 · 신고서 가격 · 신고일 · 거래일)
     trial: dict[str, Any] = {}      # WP76 · AACT 시험 상세 (원문 필드 + 사전 대응) · 없으면 빈 dict
     theme_rank: dict[str, Any] = {}  # WP76 · H6 봉인 순위 (읽기만) · 소속 없으면 빈 dict
 
@@ -511,12 +512,24 @@ def _theme_rank(ticker: str) -> dict[str, Any]:
     return {"theme": best, "theme_ko": THEME_KO[best], "rank": cur[best], "of": len(cur), "quarter": f"{latest[0]}Q{latest[1]}"}
 
 
+def _today_kst() -> "date":
+    return datetime.now(timezone(timedelta(hours=9))).date()
+
+
 def _note_fields(note: str) -> dict[str, Any]:
-    """state_note 원문 → 카드 문장용 필드 (형식 불일치 시 빈 dict · 화면은 원문 표시)."""
+    """state_note 원문 → 카드 문장용 필드 (형식 불일치 시 빈 dict · 화면은 원문 표시).
+
+    WP87 · days_to 는 API 응답 시각의 KST 날짜 기준으로 다시 계산한다 (노트의 D-n 은 주간 AACT 잡 날짜 기준이라
+    최대 7일 어긋남 · 예: 9/30 화면에 9/30 종료가 D-2 로 보이던 문제) · 음수 = 이미 지남 (화면 D+n)
+    """
     m = _NOTE_RE.search(note or "")
     if not m:
         return {}
-    return {"nct_id": m.group(1), "days_to": int(m.group(2)), "event_date": m.group(3), "phase": m.group(4)}
+    try:
+        days = (datetime.strptime(m.group(3), "%Y-%m-%d").date() - _today_kst()).days
+    except ValueError:
+        days = int(m.group(2))
+    return {"nct_id": m.group(1), "days_to": days, "event_date": m.group(3), "phase": m.group(4)}
 
 
 class RumorJson(BaseModel):
@@ -703,6 +716,12 @@ async def get_rumor_json(
                     # WP85 · 이전: 발행사 CIK 끝 6자리 (예 "088082") 를 티커 자리에 넣던 결함 · 이제 h65 issuer_ticker > SEC 명부 · 없으면 빈 값 (화면 "티커 미확인")
                     ticker=(r.get("issuer_ticker") or cik2tk.get(cik10, "")),
                     cik=cik10,
+                    form4={
+                        "filer_cik": r.get("filer_cik", ""), "filer_name": r.get("filer_name", ""),
+                        "filer_type": r.get("filer_type", ""), "shares": _to_float(r.get("shares")),
+                        "price": _to_float(r.get("price_per_share")), "filing_date": r.get("filing_date", ""),
+                        "tx_date": r.get("tx_date", ""), "elapsed_days": _to_int(r.get("elapsed_days")),
+                    },
                     name=(r.get("issuer_name") or "")[:40],
                     mcap_bucket="—",
                     days_hint=f"D+{r.get('elapsed_days', '?')}",

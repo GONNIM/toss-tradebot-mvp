@@ -53,6 +53,11 @@ export function phaseLabel(phase?: string): string {
   return (phase && PHASE_KO[phase]) || "임상";
 }
 
+// WP87 · D-day 표기 (API 가 화면 보는 날 KST 기준으로 계산) · 0 = D-0 · 지남 = D+n
+export function dday(daysTo: number): string {
+  return daysTo >= 0 ? `D-${daysTo}` : `D+${-daysTo}`;
+}
+
 // "3상 시험이 9월 30일(3일 뒤)에 끝날 예정입니다. 결과 발표일은 아닙니다."
 // 올해 날짜는 "9월 30일" · 다른 해는 "2027년 1월 31일" (KST 기준 올해)
 export function ymdLabel(ymd: string, now: Date = new Date()): string {
@@ -63,7 +68,7 @@ export function ymdLabel(ymd: string, now: Date = new Date()): string {
 
 export function trialSentence(phase?: string, eventDate?: string, daysTo?: number | null): string | null {
   if (!eventDate || typeof daysTo !== "number") return null;
-  const when = daysTo === 0 ? "오늘" : `${daysTo}일 뒤`;
+  const when = daysTo === 0 ? "오늘" : daysTo > 0 ? `${daysTo}일 뒤` : `${-daysTo}일 전`;
   return `${phaseLabel(phase)} 시험이 ${ymdLabel(eventDate)}(${when})에 끝날 예정입니다. 결과 발표일은 아닙니다.`;
 }
 
@@ -165,7 +170,7 @@ export function cardText(
     if (ph0 && ph0 !== "임상") parts.push(ph0);
     const d0 = (t.interventions ?? []).find((i) => !/placebo/i.test(i.name));
     if (d0) parts.push(d0.name_ko || d0.name);
-    if (eventDate && typeof daysTo === "number") parts.push(`${ymdLabel(eventDate)}(D-${daysTo}) 종료 예정(결과 발표일 아님)`);
+    if (eventDate && typeof daysTo === "number") parts.push(`${ymdLabel(eventDate)}(${dday(daysTo)}) 종료 예정(결과 발표일 아님)`);
     return { main: parts.length ? parts.join(" · ") : null, theme: null };
   }
   if (t.category) parts.push(t.category_auto ? `${t.category}(자동)` : categoryLabel(t.category));
@@ -191,7 +196,7 @@ export function cardText(
   const po = (t.primary_outcomes ?? [])[0];
   if (po?.measure) parts.push(`1차 목표: ${clip(po.measure_ko || po.measure, 90)}`);
   if (eventDate && typeof daysTo === "number") {
-    parts.push(`${ymdLabel(eventDate)}(D-${daysTo}) 종료 예정 · 결과 발표일은 아님`);
+    parts.push(`${ymdLabel(eventDate)}(${dday(daysTo)}) 종료 예정 · 결과 발표일은 아님`);
   }
   const main = parts.length >= 2 ? parts.join(" · ") : null; // 필드가 거의 없으면 기존 문장 (trialSentence) 사용
   const themeLine =
@@ -248,8 +253,8 @@ export function multSentence(mean?: number | null, today?: number | null): strin
 }
 
 // 예: "언급 급증 · 기준선 8일(7일 이상 충족) · 평소 하루 0.25건 → 오늘 32건(32배), 평소 거의 없음"
-export function mentionSentence(stage?: string, baselineDays?: number | null, mentions24h?: number | null, mult?: string, mean?: number | null): string {
-  const parts = [stageLabel(stage)];
+export function mentionSentence(stage?: string, baselineDays?: number | null, mentions24h?: number | null, mult?: string, mean?: number | null, isAlert = false): string {
+  const parts = [mentionHeadline(stage, isAlert)];
   if (typeof baselineDays === "number") {
     parts.push(`기준선 ${baselineDays}일(${baselineDays >= BASELINE_MIN ? "7일 이상 충족" : "7일 미만 · 수집 중"})`);
   }
@@ -267,7 +272,7 @@ export function mentionSentence(stage?: string, baselineDays?: number | null, me
 // 소문에 살 자리 카드에 오른 이유 (API 표1 규칙: 뉴스 예정 A 상태 · 언급 단계 조용/수집 중 · 예정일 가까운 15)
 export function rumorReason(daysTo?: number | null, stage?: string, baselineDays?: number | null): string {
   const parts: string[] = [];
-  if (typeof daysTo === "number") parts.push(`임상 종료 예정 D-${daysTo}`);
+  if (typeof daysTo === "number") parts.push(`임상 종료 예정 ${dday(daysTo)}`);
   const st = stageLabel(stage);
   parts.push(
     stage === "collecting" && typeof baselineDays === "number"
@@ -291,4 +296,61 @@ export function summaryStatus(summary?: { ok: boolean; error?: string } | null):
   if (!summary) return "자동 요약 없음(이 종목은 요약 대상이 아님)";
   if (summary.ok) return null;
   return `자동 요약 실패(${summary.error || "사유 미기록"})`;
+}
+
+
+// ── WP87 · 임원·대주주 매수 카드 (같은 회사 · 같은 신고자 · 같은 신고일 = 한 카드) ─────────
+export type Form4Tx = {
+  filer_cik?: string; filer_name?: string; filer_type?: string; shares?: number | null;
+  price?: number | null; filing_date?: string; tx_date?: string; elapsed_days?: number | null;
+};
+export type Form4RowLike = { ticker: string; name: string; cik?: string; form4?: Form4Tx };
+export type Form4Group<T extends Form4RowLike> = { key: string; rows: T[] };
+
+export function groupForm4<T extends Form4RowLike>(rows: T[]): Form4Group<T>[] {
+  const out = new Map<string, T[]>();
+  for (const r of rows) {
+    const f = r.form4 ?? {};
+    const key = `${r.cik || r.ticker}|${f.filer_cik ?? ""}|${f.filing_date ?? ""}`;
+    out.set(key, [...(out.get(key) ?? []), r]);
+  }
+  return [...out.entries()].map(([key, rs]) => ({ key, rows: rs }));
+}
+
+export function filedAgo(days?: number | null): string {
+  if (typeof days !== "number") return "신고일 미확인";
+  return days === 0 ? "오늘 신고" : `${days}일 전 신고`;
+}
+
+const usd = (n: number) => `$${Math.round(n).toLocaleString("en-US")}`;
+
+// 예: "ETRA · Electra Therapeutics · Orbimed Advisors(전문 펀드) · 8일 전 신고 · 거래 2건 · 합계 1,333,333주 · 금액 미기재"
+export function insiderSummary<T extends Form4RowLike>(g: Form4Group<T>): string {
+  const first = g.rows[0];
+  const f = first.form4 ?? {};
+  const total = g.rows.reduce((a, r) => a + (r.form4?.shares ?? 0), 0);
+  const priced = g.rows.every((r) => typeof r.form4?.price === "number" && (r.form4?.shares ?? 0) > 0);
+  const amount = priced ? g.rows.reduce((a, r) => a + (r.form4!.shares ?? 0) * (r.form4!.price as number), 0) : null;
+  const filer = f.filer_name ? `${shortName(f.filer_name)}${f.filer_type ? `(${f.filer_type})` : ""}` : f.filer_type || "신고자 미확인";
+  return [
+    tickerOrUnknown(first.ticker), shortName(first.name), filer, filedAgo(f.elapsed_days),
+    `거래 ${g.rows.length}건`, `합계 ${Math.round(total).toLocaleString("ko-KR")}주`,
+    amount !== null ? `금액 ${usd(amount)}` : "금액 미기재",
+  ].join(" · ");
+}
+
+// 개별 거래 한 줄 (자세히) · 예: "9/21 거래 · 333,333주 · 주당 $3.00 · $1,000,000" 또는 "… · 가격 미기재"
+export function insiderTxLine(f: Form4Tx): string {
+  const [, m, d] = (f.tx_date ?? "").split("-").map(Number);
+  const when = m && d ? `${m}/${d} 거래` : "거래일 미확인";
+  const sh = `${Math.round(f.shares ?? 0).toLocaleString("ko-KR")}주`;
+  if (typeof f.price === "number") return `${when} · ${sh} · 주당 $${f.price.toFixed(2)} · ${usd((f.shares ?? 0) * f.price)}`;
+  return `${when} · ${sh} · 가격 미기재`;
+}
+
+// WP87 · 언급 카드 표현 · 경보 조건 충족 = "급등 경보" · 과열 단계지만 경보 아님 = "언급 늘어남" (단계 판정은 그대로)
+export function mentionHeadline(stage: string | undefined, isAlert: boolean): string {
+  if (isAlert) return "급등 경보";
+  if (stage === "frenzy") return "언급 늘어남";
+  return stageLabel(stage);
 }

@@ -30,7 +30,7 @@ from typing import Any
 
 from backend.scripts import _biotech_paths as _P
 from backend.scripts.biotech_alert_rule import judge
-from backend.scripts.biotech_sec_common import REQ_INTERVAL, SecBlockedError, build_client
+from backend.scripts.biotech_sec_common import REQ_INTERVAL, SecBlockedError, SecDailyLedger, build_client
 
 LOG = logging.getLogger("biotech_h77_alert_brief")
 
@@ -114,9 +114,11 @@ def business_days_back(today: date, n: int) -> date:
     return d
 
 
-def _sec_text(client, url: str, counter: dict) -> str | None:
+def _sec_text(client, url: str, counter: dict, category: str = "brief") -> str | None:
     time.sleep(REQ_INTERVAL)
     counter["sec_requests"] += 1
+    if counter.get("ledger") is not None:   # WP87-2 · 하루 SEC 요청 공용 장부 (brief · exhibit)
+        counter["ledger"].add(category)
     r = client.get(url, timeout=25.0)
     if r.status_code in (403, 429):
         raise SecBlockedError(f"SEC HTTP {r.status_code} · 즉시 중단")
@@ -147,7 +149,7 @@ def sec_8k(client, cik: str, since: date, counter: dict) -> list[dict]:
         if m:
             href = re.search(r'href="([^"]+)"', m.group(0))
             if href:
-                doc = _sec_text(client, "https://www.sec.gov" + href.group(1).replace("/ix?doc=", ""), counter)
+                doc = _sec_text(client, "https://www.sec.gov" + href.group(1).replace("/ix?doc=", ""), counter, "exhibit")
                 t = re.search(r"<title>(.*?)</title>", doc or "", re.S | re.I)
                 title = html.unescape(re.sub(r"\s+", " ", t.group(1))).strip() if t else ""
                 item["ex99_1_title"] = "" if _GENERIC_TITLE_RE.match(title) else title[:200]
@@ -163,10 +165,15 @@ def form4_summary(cik: str) -> dict:
     return {"available": True, "n": len(rows), "rows": rows[:5]}
 
 
-def schedule_note(cand: dict | None) -> str:
+def schedule_note(cand: dict | None, today: date | None = None) -> str:
+    """WP87 · D-n 은 실행일 (KST) 기준으로 다시 계산 (노트의 D-n 은 주간 AACT 잡 날짜 기준)."""
     note = (cand or {}).get("state_note_v50") or (cand or {}).get("state_note") or ""
     m = re.search(r"D-(\d+)\s*\((\d{4}-\d{2}-\d{2})", note)
-    return f"임상 종료 예정일 {m.group(2)} (D-{m.group(1)})" if m else "예정 일정 없음"
+    if not m:
+        return "예정 일정 없음"
+    today = today or datetime.now(timezone(timedelta(hours=9))).date()
+    days = (date.fromisoformat(m.group(2)) - today).days
+    return f"임상 종료 예정일 {m.group(2)} ({'D-' + str(days) if days >= 0 else 'D+' + str(-days)})"
 
 
 def sources_for(b: dict) -> list[str]:
@@ -209,6 +216,8 @@ def main():
     ciks = {r["ticker"]: r.get("cik", "") for r in csv.DictReader(base_p.open())} if base_p else {}
     alerts = pick_alerts(confirm)
     counter = {"sec_requests": 0, "zai_calls": 0}
+    ledger = SecDailyLedger.load(today)
+    counter["ledger"] = ledger
     since = business_days_back(date.fromisoformat(f"{today[:4]}-{today[4:6]}-{today[6:]}"), BUSINESS_DAYS_8K)
     out_dir = _P.out_dir("briefs")
     briefs = []
@@ -255,6 +264,10 @@ def main():
             cache.write_text(json.dumps(b["summary"], ensure_ascii=False, indent=2))
         briefs.append(b)
     client.close()
+    counter.pop("ledger")
+    ledger.save()
+    LOG.info("SEC 요청 · 브리핑 %d · 보도자료 %d · 오늘 합계 %d", ledger.counts.get("brief", 0),
+             ledger.counts.get("exhibit", 0), ledger.total())
     out = {"date": today, "generated_utc": now.isoformat(), "since_8k": since.isoformat(), "briefs": briefs,
            "counts": {**counter, "tickers": len(briefs), "elapsed_sec": round(time.time() - t0, 1)}}
     path = out_dir / f"alert_brief_{today}.json"
