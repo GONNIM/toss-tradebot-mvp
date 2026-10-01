@@ -21,6 +21,19 @@
 
 ## PENDING
 
+### [Biotech Catalyst Radar · WP90-2 입력 보충 · H6 본 백테스트 본 실행 · 관문 2 요청서] · 2026-10-01 발행
+
+**원문 요지** (보고 첫 줄 "지금 하는 일" · 전체 경로 · 서버 조회 전용 · 병합은 "병합 승인됨" 만 · `h6_params_v2.json` 은 changelog 추가만):
+
+1. 가격 보충 (Tiingo 19회 승인 · 로컬): XBI · IWM · 기존 17종목 2014-10-01~오늘 · 1종목 1호출 · H6 수집기·장부 (시간당 50 · 월 고유) 그대로 · 벤치마크 → `backend/data/biotech/h6/h6_benchmarks_tiingo_20261001.csv` · 17종목 → `h6_prices_tiingo_20261001.csv` 에 합침 · 합친 뒤 SHA-256 재계산 · summary.json input_seal 갱신 (이전 값 보존) · changelog "v2 정정 (2026-10-01) · 기존 17종목 · 벤치마크 2020년 이전 구간 없음 → 전 기간 재수집 · 신호·순위·판정 무변경" · 장부의 월 고유·시간당 요청 수 인용
+2. 규칙 (b) 주식수 (SEC companyfacts 최대 52회 승인 · 로컬): 비만 소속 52종목 회사당 1회 · build_client() · 403·429 즉시 중단 · 장부 "h6_shares" · dei:EntityCommonStockSharesOutstanding 이력에서 리밸런싱 분기 첫 영업일 이전 최신 공시 · 주식 종류 둘 이상 = WP83-2 합산 (같은 공시 안 합산 · 가장 최근 제출) · dei 없음 = unknown (목록·비율) · unknown 은 "대형 제외" 열에서도 유지 · 시총 = adj_close × 주식수 · 5B 이상만 제외 · `docs/plans/biotech/verification/H6/c3-20260928/h6_obesity_mcap_pit_20261001.csv` (종목 · 분기 · 주식수 · 공시일 · adj_close · 시총 · 판정)
+3. 창 커버 재계산: "2020년 전 거래 여부 미확인" 100 → 0 확인 · CSV 2개 갱신
+4. 본 실행: 설계 그대로 · 1차 판정 = 규칙 (a) 1안 · 1·4분기 · XBI 대비 로그 초과수익 · 상위 vs 하위 · cluster CI 하한 · 산출 (분기별 순위표 · 상위·하위 명단 · 테마별 기여 · 비만 2열 · 부트스트랩 CI) · 보고서 `docs/plans/biotech/verification/H6/c3-20260928/h6_backtest_v2_20261001.md` (필수 3건 · 생존편향 · unknown 비율 · 입력 봉인 해시) · 관문 2 요청서 `docs/plans/biotech/verification/H6/H6-gate2-request-20261001.md` (조건별 · 판정은 전체 열) · 소문·임원 매수 검정 금지 · 번들 (보고서 · 요청서 · summary · 창 커버 CSV 2 · 시총 CSV · 분기별 결과 CSV)
+5. 10/2 07:00 뒤: SEC 합계 줄 · sec_usage_20261002.json · form4_xml/ 수 · ETRA 금액 · KOD 82행 스크린샷 · 픽스처 + 회귀 테스트 · SOPS 들어갔으면 [8/9] 줄
+6. 순서: 1 → 2 → 3 → 4 · 5 는 10/2
+
+---
+
 ### [Biotech Catalyst Radar · WP89 화면 잔여 3건 · WP75-2 IEX 가격 단계 · WP90 H6 본 백테스트] · 2026-10-01 발행
 
 **원문 요지** (보고 첫 줄 "지금 하는 일" · 전체 경로 · 서버 조회 전용 · 병합은 "병합 승인됨" 만):
