@@ -148,6 +148,23 @@ def _now_kst() -> datetime:
     return datetime.now(timezone(timedelta(hours=9)))
 
 
+TIINGO_IEX_URL = "https://api.tiingo.com/iex/"
+
+
+def fetch_iex(get: Callable[..., Any], tickers: list[str], key: str) -> list[dict]:
+    """WP75-2 · Tiingo IEX 일괄 1회 (여러 종목 · 쉼표) · 일봉 fetch_one 과 같은 헤더 규칙 · 403·429 즉시 중단."""
+    r = get(TIINGO_IEX_URL, params={"tickers": ",".join(tickers)},
+            headers={"Authorization": f"Token {key}", "Content-Type": "application/json"})
+    if r.status_code in (403, 429):
+        raise TiingoBlocked(f"Tiingo HTTP {r.status_code}")
+    if r.status_code != 200:
+        raise LookupError(f"http_{r.status_code}")
+    data = r.json()
+    if not isinstance(data, list):
+        raise LookupError("not_list")
+    return data
+
+
 def run(targets: list[str], key: str, get: Callable[..., Any], today: date, sleep: Callable[[float], None] = time.sleep,
         now: Callable[[], datetime] = _now_kst) -> dict:
     month = today.strftime("%Y%m")
