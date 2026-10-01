@@ -476,7 +476,9 @@ def _trial_display(nct: str) -> dict[str, Any]:
     return {
         "nct_id": nct, "brief_title": m.get("brief_title", ""), "official_title": m.get("official_title", ""),
         "category": category, "category_source": cat_src, "category_auto": category_auto,
-        "conditions": [{"en": c, "ko": _ko(c)} for c in conds],
+        # WP97-3 · ignored = 사전 분류 '무시' (일반어) · 화면 "대상 질환" 줄에서 뺌 (biotech-display conditionsLine)
+        "conditions": [{"en": c, "ko": _ko(c),
+                        "ignored": (cats.get((c or "").strip().lower()) or {}).get("category") == IGNORE_CATEGORY} for c in conds],
         "interventions": ivs, "placebo": placebo,
         "enrollment": m.get("enrollment", ""), "enrollment_type": m.get("enrollment_type", ""),
         "study_type": m.get("study_type", ""),

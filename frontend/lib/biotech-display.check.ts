@@ -2,7 +2,7 @@
 import assert from "node:assert/strict";
 import * as fs from "node:fs";
 import * as path from "node:path";
-import { cardText, daysSinceFiling, insiderTotalUsd, txCents, dday, THEME_RANK_NOTE, endLabel, stageLabel, exhibitLine, LEAD_LABEL, groupForm4, insiderSummary, insiderTxLine, mentionSentence, multSentence, trialSentence, rumorReason, shortName, summaryStatus, tickerOrUnknown } from "./biotech-display";
+import { cardText, conditionsLine, daysSinceFiling, insiderTotalUsd, txCents, dday, THEME_RANK_NOTE, endLabel, stageLabel, exhibitLine, LEAD_LABEL, groupForm4, insiderSummary, insiderTxLine, mentionSentence, multSentence, trialSentence, rumorReason, shortName, summaryStatus, tickerOrUnknown } from "./biotech-display";
 
 const beauty = cardText({ category: "미용", interventions: [{ name: "X-1", type: "DRUG", type_ko: "약물" }] }, "PHASE2", "2026-11-30", 62);
 assert.ok(beauty.main?.startsWith("미용 · X-1 (약물) · 2상(효과 탐색)"), beauty.main ?? "null");
@@ -113,4 +113,9 @@ assert.equal(daysSinceFiling("2026-09-30", new Date("2026-09-30T16:00:00Z")), 1)
   assert.equal(g.length, 1);
   assert.equal(insiderSummary(g[0], new Date("2026-10-01T03:00:00Z")), "KOD · Kodiak Sciences · Baker Bros. Advisors(전문 펀드) · 1일 전 신고 · 거래 82건 · 합계 1,941,755주 · 금액 $156,986,394");
 }
+// WP97-3 · 대상 질환 줄 · '무시' 용어 제외 · 전부 '무시' 면 첫 원문 + (일반 용어)
+assert.equal(conditionsLine([{ en: "Hailey Hailey Disease", ko: "헤일리-헤일리병(가족성 양성 천포창)" }, { en: "Lesion Skin", ignored: true }]),
+  "헤일리-헤일리병(가족성 양성 천포창) (Hailey Hailey Disease)");
+assert.equal(conditionsLine([{ en: "Neoplasms by Histologic Type", ignored: true }, { en: "Lesion Skin", ignored: true }]),
+  "Neoplasms by Histologic Type (일반 용어)");
 console.log("ok");

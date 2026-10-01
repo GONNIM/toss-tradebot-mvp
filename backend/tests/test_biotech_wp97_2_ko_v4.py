@@ -21,3 +21,9 @@ def test_lesion_skin_not_used_for_card_category(monkeypatch):
     assert d2["category"] == "기타 (Some Unlisted Condition)" and "Lesion Skin" not in d2["category"]
     d3 = _with_trial(monkeypatch, ["Neoplasms by Histologic Type", "Hailey Hailey Disease"])
     assert d3["category_source"] == "Hailey Hailey Disease"
+
+
+def test_conditions_carry_ignored_flag(monkeypatch):
+    """WP97-3 · 화면이 '무시' 용어를 뺄 수 있게 API 가 표시."""
+    d = _with_trial(monkeypatch, ["Lesion Skin", "Hailey Hailey Disease"])
+    assert [(c["en"], c["ignored"]) for c in d["conditions"]] == [("Lesion Skin", True), ("Hailey Hailey Disease", False)]

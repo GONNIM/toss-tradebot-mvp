@@ -18,7 +18,7 @@ import { SectionCard } from "@/components/ui/section-card";
 import { BiotechTable, BiotechTableColumn } from "@/components/biotech/BiotechTable";
 import { RumorCard } from "@/components/biotech/RumorCard";
 import type { SessionInfo } from "@/lib/auth";
-import { cardText, checkedAtLabel, ctgovUrl, exhibitLine, inputLabel, inputsMissingLine, groupForm4, insiderSummary, insiderTxLine, LEAD_LABEL, mcapBadge, mentionSentence, multSentence, refreshLabel, rumorReason, shortName, sortFilterCards, sortLabel, summaryStatus, tickerOrUnknown, trialSentence } from "@/lib/biotech-display";
+import { cardText, checkedAtLabel, conditionsLine, ctgovUrl, exhibitLine, inputLabel, inputsMissingLine, groupForm4, insiderSummary, insiderTxLine, LEAD_LABEL, mcapBadge, mentionSentence, multSentence, refreshLabel, rumorReason, shortName, sortFilterCards, sortLabel, summaryStatus, tickerOrUnknown, trialSentence } from "@/lib/biotech-display";
 import type { CardSort, Form4Tx, ThemeRank, TrialDisplay } from "@/lib/biotech-display";
 
 // 백엔드 스키마
@@ -502,7 +502,7 @@ export default function BiotechPage() {
                           )}
                           {(r.trial?.conditions ?? []).length > 0 && (
                             <div className="mt-1">
-                              대상 질환: {(r.trial?.conditions ?? []).map((c) => (c.ko ? `${c.ko} (${c.en})` : c.en)).join(" · ")}
+                              대상 질환: {conditionsLine(r.trial?.conditions)}
                             </div>
                           )}
                           <div className="mt-2">
