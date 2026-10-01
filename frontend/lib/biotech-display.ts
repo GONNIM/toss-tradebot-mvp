@@ -159,7 +159,7 @@ export type TrialDisplay = {
   allocation_ko?: string;
   primary_outcomes?: { measure: string; time_frame?: string; measure_ko?: string }[];
   official_title?: string;
-  conditions?: { en: string; ko?: string }[];
+  conditions?: { en: string; ko?: string; ignored?: boolean }[];
 };
 export type ThemeRank = { theme_ko?: string; rank?: number; of?: number; quarter?: string };
 
@@ -423,4 +423,14 @@ export function inputLabel(name: string): string {
 export function inputsMissingLine(missing?: string[] | null): string | null {
   const n = (missing ?? []).length;
   return n ? `점수 입력 부족: 전문가 채널 미반영(파일 ${n}개 없음)` : null;
+}
+
+// WP97-3 · 카드 "대상 질환" 줄 · 사전 분류 '무시' (일반어) 는 뺌 · 다 빠지면 첫 원문 + "(일반 용어)"
+export const GENERIC_TERM_NOTE = "(일반 용어)";
+
+export function conditionsLine(conds?: { en: string; ko?: string; ignored?: boolean }[] | null): string {
+  const all = conds ?? [];
+  const shown = all.filter((c) => !c.ignored);
+  if (!shown.length) return all.length ? `${all[0].en} ${GENERIC_TERM_NOTE}` : "";
+  return shown.map((c) => (c.ko ? `${c.ko} (${c.en})` : c.en)).join(" · ");
 }
