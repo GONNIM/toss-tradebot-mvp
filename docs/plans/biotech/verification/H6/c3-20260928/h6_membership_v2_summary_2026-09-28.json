@@ -165,5 +165,16 @@
     "별칭 사전 = 자체명 변형 + 2015Q1 이전 완전자회사만 · 2015 이후 인수 (Allergan·Shire·Celgene 등) 제외 (point-in-time)",
     "AACT 스냅샷 = 현재 시점 lead_sponsor·제목 · 사후 스폰서 변경 (인수 등) 은 현재 이름 기준",
     "study_first_posted = 최초 공개일 · point-in-time 편입 기준 (이탈 없음)"
+  ],
+  "ticker_aliases": [
+    {
+      "from": "GLMD",
+      "to": "EOCN",
+      "reason": "티커 변경",
+      "cik": "1595353",
+      "name": "Galmed Pharmaceuticals Ltd.",
+      "source": "docs/plans/biotech/data/sec_company_tickers.json (SEC 요청 0회)",
+      "added": "2026-10-01 WP84-2"
+    }
   ]
 }

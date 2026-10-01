@@ -32,6 +32,10 @@ SEC_UA = "TossTradebot BiotechRadar suauncle@gmail.com"
 SEC_FROM = "suauncle@gmail.com"
 SEC_ACCEPT_ENCODING = "gzip, deflate"
 REQ_INTERVAL = 0.5  # SEC 10 req/s 이내 · 보수적
+# WP88-2 · SEC 실제 한도는 초당 10회 · 이 값은 자체 상한 · 주간 잡 포함
+#   합산 대상: 브리핑 · Form 4 · 가격 보충 · 8-K 첨부 (매일) + SEC 명부 갱신 · 주식수 조회 (월요일 주간 잡)
+#   닿으면 그날 보도자료 읽기만 건너뜀 · 나머지 단계는 계속
+SEC_DAILY_CAP = 300
 
 
 class SecBlockedError(RuntimeError):
@@ -108,15 +112,16 @@ def sec_get(client: httpx.Client, url: str, params: dict | None = None) -> dict:
     return {"status": r.status_code, "json": None, "text_sig": r.text[:80].replace("\n", " ")}
 
 
-def build_client() -> httpx.Client:
-    """공용 SEC httpx.Client · UA·From·Accept-Encoding (WP23 지정 형식)."""
+def build_client(event_hooks: dict | None = None, timeout: float = 25.0) -> httpx.Client:
+    """공용 SEC httpx.Client · UA·From·Accept-Encoding (WP23 지정 형식) · WP88-2 · 요청 집계용 event_hooks 선택."""
     return httpx.Client(
         headers={
             "User-Agent": SEC_UA,
             "From": SEC_FROM,
             "Accept-Encoding": SEC_ACCEPT_ENCODING,
         },
-        timeout=25.0,
+        timeout=timeout,
+        event_hooks=event_hooks or {},
     )
 
 
@@ -270,3 +275,38 @@ def zip_recent(recent: dict, wanted_forms: set[str] | None = None) -> list[dict]
             "item_codes": item_codes,
         })
     return out
+
+
+# ─ WP87-2 · 하루 SEC 요청 공용 장부 (브리핑 · Form 4 · 가격 보충 · 8-K 첨부 합산) ─────────
+
+class SecDailyLedger:
+    """KST 날짜별 SEC 요청 수 · <RUNTIME>/sec_usage/sec_usage_<YYYYMMDD>.json · 단계마다 add() 후 save().
+
+    여러 단계 (form4 · alert_brief) 가 같은 날 같은 파일에 더한다 · 파일은 요청 수만 담는다 (URL·헤더 없음).
+    """
+
+    def __init__(self, path: Path, day: str, counts: dict[str, int] | None = None):
+        self.path, self.day, self.counts = path, day, dict(counts or {})
+
+    @classmethod
+    def load(cls, day: str | None = None, base: Path | None = None) -> "SecDailyLedger":
+        from backend.scripts import _biotech_paths as _P
+        day = day or _P.today_kst_str()
+        path = (base or _P.out_dir("sec_usage")) / f"sec_usage_{day}.json"
+        counts = {}
+        if path.exists():
+            try:
+                counts = {k: int(v) for k, v in json.loads(path.read_text()).get("counts", {}).items()}
+            except Exception:
+                counts = {}
+        return cls(path, day, counts)
+
+    def add(self, category: str, n: int = 1) -> None:
+        self.counts[category] = self.counts.get(category, 0) + n
+
+    def total(self) -> int:
+        return sum(self.counts.values())
+
+    def save(self) -> None:
+        self.path.write_text(json.dumps({"date": self.day, "counts": self.counts, "total": self.total()},
+                                        ensure_ascii=False, indent=2))

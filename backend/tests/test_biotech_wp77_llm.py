@@ -140,8 +140,10 @@ def test_recent_posts_24h_only():
 
 def test_business_days_and_schedule():
     assert br.business_days_back(date(2026, 9, 28), 5) == date(2026, 9, 21)   # 월요일 기준 5거래일 전
-    assert br.schedule_note({"state_note_v50": "CT.gov (AACT 2026-09-27) NCT1 완료 예정 D-3 (2026-09-30 · PHASE3)"}) \
-        == "임상 종료 예정일 2026-09-30 (D-3)"
+    note = {"state_note_v50": "CT.gov (AACT 2026-09-27) NCT1 완료 예정 D-3 (2026-09-30 · PHASE3)"}
+    assert br.schedule_note(note, today=date(2026, 9, 27)) == "임상 종료 예정일 2026-09-30 (D-3)"
+    assert br.schedule_note(note, today=date(2026, 9, 30)) == "임상 종료 예정일 2026-09-30 (D-0)"   # WP87 · 실행일 기준
+    assert br.schedule_note(note, today=date(2026, 10, 1)) == "임상 종료 예정일 2026-09-30 (D+1)"
     assert br.schedule_note(None) == "예정 일정 없음"
 
 

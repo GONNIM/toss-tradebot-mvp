@@ -18,8 +18,8 @@ import { SectionCard } from "@/components/ui/section-card";
 import { BiotechTable, BiotechTableColumn } from "@/components/biotech/BiotechTable";
 import { RumorCard } from "@/components/biotech/RumorCard";
 import type { SessionInfo } from "@/lib/auth";
-import { cardText, checkedAtLabel, ctgovUrl, insiderLine, mcapBadge, mentionSentence, multSentence, refreshLabel, rumorReason, shortName, sortFilterCards, sortLabel, summaryStatus, tickerOrUnknown, trialSentence } from "@/lib/biotech-display";
-import type { CardSort, ThemeRank, TrialDisplay } from "@/lib/biotech-display";
+import { cardText, checkedAtLabel, ctgovUrl, exhibitLine, groupForm4, insiderSummary, insiderTxLine, LEAD_LABEL, mcapBadge, mentionSentence, multSentence, refreshLabel, rumorReason, shortName, sortFilterCards, sortLabel, summaryStatus, tickerOrUnknown, trialSentence } from "@/lib/biotech-display";
+import type { CardSort, Form4Tx, ThemeRank, TrialDisplay } from "@/lib/biotech-display";
 
 // 백엔드 스키마
 type RadarRow = {
@@ -61,6 +61,7 @@ type RumorRow = {
   mult?: string;
   cik?: string;
   baseline_mean?: number | null;
+  form4?: Form4Tx;
 };
 
 // WP77 · 급등 브리핑 (수집 사실 + 자동 요약)
@@ -72,7 +73,7 @@ type AlertBrief = {
   mentions: { yesterday: number | null; today: number | null; mult: string; mean?: number | null; reddit_today: number; history: { date: string; apewisdom_24h: number; reddit_matches: number }[] };
   reddit: { title: string; link: string; updated: string }[];
   reddit_time_checked?: boolean;
-  sec_8k: { filing_date: string; items: string; description: string; url: string; ex99_1_title: string }[];
+  sec_8k: { filing_date: string; items: string; description: string; url: string; ex99_1_title: string; ex99_1_lead?: string; ex99_1_url?: string; ex99_1_status?: string }[];
   sec_status: string;
   form4: { available: boolean; n?: number };
   schedule: string;
@@ -105,7 +106,7 @@ async function apiFetch<T>(path: string): Promise<T> {
 const RADAR_COLUMNS: BiotechTableColumn<RadarRow>[] = [
   { key: "rank", label: "#", align: "right", render: (r) => r.rank },
   { key: "ticker", label: "티커", render: (r) => r.ticker },
-  { key: "name", label: "회사", render: (r) => <span className="text-muted-foreground">{r.name}</span> },
+  { key: "name", label: "회사", render: (r) => <span className="text-muted-foreground">{shortName(r.name)}</span> },
   { key: "mcap_bucket", label: "시총", render: (r) => mcapBadge(r.mcap_bucket, r.mcap_asof) ?? "" },
   { key: "state", label: "상태" },
   { key: "score", label: "점수", align: "right", render: (r) => r.score.toFixed(3) },
@@ -207,7 +208,13 @@ function AlertBriefCard({ b, defaultOpen = false }: { b: AlertBrief; defaultOpen
                   <li key={i}>
                     <a href={f.url} target="_blank" rel="noopener noreferrer" className="text-sky-700 hover:underline dark:text-sky-300">{f.filing_date} · 항목 {f.items || "-"}</a>
                     {f.description && ` · ${f.description}`}
-                    {f.ex99_1_title && ` · 보도자료: ${f.ex99_1_title}`}
+                    {exhibitLine(f) && ` · ${exhibitLine(f)}`}
+                    {f.ex99_1_lead && (
+                      <details className="mt-1">
+                        <summary className="cursor-pointer text-muted-foreground">{LEAD_LABEL}</summary>
+                        <p className="mt-1 whitespace-pre-line">{f.ex99_1_lead}</p>
+                      </details>
+                    )}
                   </li>
                 ))}
               </ul>
@@ -228,7 +235,7 @@ function AlertBriefCard({ b, defaultOpen = false }: { b: AlertBrief; defaultOpen
 }
 
 // ── 압축 목록 (섹션 4·6) 컴포넌트 ────────────────────────
-function CompactList({ rows, emptyLabel, kind }: { rows: RumorRow[]; emptyLabel: string; kind: "mentions" | "news" }) {
+function CompactList({ rows, emptyLabel, kind, alertTickers = [] }: { rows: RumorRow[]; emptyLabel: string; kind: "mentions" | "news"; alertTickers?: string[] }) {
   if (rows.length === 0) {
     return <div className="text-xs text-muted-foreground">{emptyLabel}</div>;
   }
@@ -247,7 +254,7 @@ function CompactList({ rows, emptyLabel, kind }: { rows: RumorRow[]; emptyLabel:
           )}
           <span className="text-slate-700 dark:text-slate-200">
             {kind === "mentions"
-              ? mentionSentence(r.stage || r.days_hint, r.baseline_n, r.st_24h, r.mult, r.baseline_mean)
+              ? mentionSentence(r.stage || r.days_hint, r.baseline_n, r.st_24h, r.mult, r.baseline_mean, alertTickers.includes(r.ticker))
               : trialSentence(r.phase, r.event_date, r.days_to) ?? r.detail}
           </span>
         </li>
@@ -257,30 +264,26 @@ function CompactList({ rows, emptyLabel, kind }: { rows: RumorRow[]; emptyLabel:
 }
 
 // ── Form4 카드 (섹션 2) ──────────────────────────────────
-function Form4Card({ row }: { row: RumorRow }) {
+function Form4Card({ rows }: { rows: RumorRow[] }) {
+  const g = { key: "", rows };
   return (
     <div className="rounded-lg border border-slate-200 bg-white p-3 text-sm dark:border-slate-700 dark:bg-slate-900">
       <div className="flex items-baseline gap-2 flex-wrap">
-        <span className="rounded bg-emerald-600 px-2 py-0.5 font-mono text-xs font-bold text-white">
-          {tickerOrUnknown(row.ticker)}
-        </span>
-        <span className="text-xs text-muted-foreground">{shortName(row.name)}</span>
-        {mcapBadge(row.mcap_bucket, row.mcap_asof) && (
+        <span className="rounded bg-emerald-600 px-2 py-0.5 font-mono text-xs font-bold text-white">{tickerOrUnknown(rows[0].ticker)}</span>
+        {mcapBadge(rows[0].mcap_bucket, rows[0].mcap_asof) && (
           <span className="rounded bg-slate-100 px-1.5 py-0.5 text-[10px] font-mono text-slate-700 dark:bg-slate-800 dark:text-slate-200">
-            {mcapBadge(row.mcap_bucket, row.mcap_asof)}
+            {mcapBadge(rows[0].mcap_bucket, rows[0].mcap_asof)}
           </span>
         )}
-        <span className="rounded bg-emerald-100 px-1.5 py-0.5 font-mono text-[10px] font-bold text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-200">
-          {row.days_hint}
-        </span>
       </div>
-      <div className="mt-1.5 text-xs text-slate-700 dark:text-slate-200">{insiderLine(row.detail)}</div>
-      {row.cik && (
-        <details className="mt-1 text-[11px] text-muted-foreground">
-          <summary className="cursor-pointer">자세히</summary>
-          SEC 발행사 번호 {row.cik}
-        </details>
-      )}
+      <div className="mt-1.5 text-xs text-slate-700 dark:text-slate-200">{insiderSummary(g)}</div>
+      <details className="mt-1 text-[11px] text-muted-foreground">
+        <summary className="cursor-pointer">자세히</summary>
+        <ul className="list-disc pl-5">
+          {rows.map((r, i) => <li key={i}>{insiderTxLine(r.form4 ?? {})}</li>)}
+        </ul>
+        {rows[0].cik && <div>SEC 발행사 번호 {rows[0].cik}</div>}
+      </details>
     </div>
   );
 }
@@ -530,14 +533,14 @@ export default function BiotechPage() {
       {/* 섹션 2: 임원·대주주 매수 · emerald · 표4 카드 */}
       {isAdmin && rumor && (
         <div id="sec-insider" className={ring("sec-insider")}>
-          <SectionCard tone="emerald" icon="👤" label="임원·대주주 매수 (최근 20일)" count={t4.length} hint="Form 4 · 매수 금액·유형">
+          <SectionCard tone="emerald" icon="👤" label="임원·대주주 매수 (최근 20일)" count={groupForm4(t4).length} hint="Form 4 · 신고 1건당 한 카드 · 금액은 신고서 기재 가격 기준">
             {t4.length === 0 ? (
               <div className="rounded border border-dashed border-emerald-300 p-3 text-sm text-muted-foreground dark:border-emerald-800">
                 최근 20거래일 동안 새 매수 신고가 없습니다.{checkedAt && ` (${checkedAt} 확인)`}
               </div>
             ) : (
               <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-                {t4.map((r, i) => <Form4Card key={i} row={r} />)}
+                {groupForm4(t4).map((g) => <Form4Card key={g.key} rows={g.rows} />)}
               </div>
             )}
           </SectionCard>
@@ -602,7 +605,7 @@ export default function BiotechPage() {
       {isAdmin && rumor && (
         <div id="sec-mentions">
         <SectionCard tone="slate" icon="🔔" label="언급 있는 종목" count={t3.length} hint="24시간 언급 수 · 기준선 수집 일수 · 평소 대비 배수">
-          <CompactList rows={t3} emptyLabel="언급 감지 없음" kind="mentions" />
+          <CompactList rows={t3} emptyLabel="언급 감지 없음" kind="mentions" alertTickers={kpi?.alert_tickers ?? []} />
         </SectionCard>
         </div>
       )}

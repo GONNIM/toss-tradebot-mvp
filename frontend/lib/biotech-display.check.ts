@@ -2,7 +2,7 @@
 import assert from "node:assert/strict";
 import * as fs from "node:fs";
 import * as path from "node:path";
-import { cardText, mentionSentence, multSentence, rumorReason, shortName, summaryStatus, tickerOrUnknown } from "./biotech-display";
+import { cardText, dday, exhibitLine, LEAD_LABEL, groupForm4, insiderSummary, insiderTxLine, mentionSentence, multSentence, trialSentence, rumorReason, shortName, summaryStatus, tickerOrUnknown } from "./biotech-display";
 
 const beauty = cardText({ category: "미용", interventions: [{ name: "X-1", type: "DRUG", type_ko: "약물" }] }, "PHASE2", "2026-11-30", 62);
 assert.ok(beauty.main?.startsWith("미용 · X-1 (약물) · 2상(효과 탐색)"), beauty.main ?? "null");
@@ -25,12 +25,18 @@ assert.ok(auto.main?.startsWith("신경·정신(자동) · 2상"), auto.main ?? 
 const autoNew = cardText({ category: "통증", category_auto: true }, "PHASE2", "2026-10-31", 32);
 assert.ok(autoNew.main?.startsWith("통증(자동) · 2상"), autoNew.main ?? "null");
 // WP85 · 설명 문장 함수
-assert.equal(mentionSentence("frenzy", 8, 32, "128.0"), "언급 급증 · 기준선 8일(7일 이상 충족) · 24시간 언급 32건 · 평소 대비 128배");
+assert.equal(mentionSentence("frenzy", 8, 32, "128.0", undefined, true), "급등 경보 · 기준선 8일(7일 이상 충족) · 24시간 언급 32건 · 평소 대비 128배");
 // WP86 · 기준선 하한 문장
-assert.equal(mentionSentence("frenzy", 8, 32, "32.0", 0.25), "언급 급증 · 기준선 8일(7일 이상 충족) · 평소 하루 0.25건 → 오늘 32건(32배), 평소 거의 없음");
+assert.equal(mentionSentence("frenzy", 8, 32, "32.0", 0.25, true), "급등 경보 · 기준선 8일(7일 이상 충족) · 평소 하루 0.25건 → 오늘 32건(32배), 평소 거의 없음");
 assert.equal(multSentence(0, 14), "평소 하루 0건 → 오늘 14건(14배), 평소 거의 없음");
 assert.equal(multSentence(3, 12), "평소 하루 3건 → 오늘 12건(4배)");
 assert.equal(shortName("IOVANCE BIOTHERAPEUTICS, INC."), "Iovance Biotherapeutics");
+// WP87-2 · 전부 대문자 원문만 표기 변경 · 대소문자 섞인 원문은 그대로 (접미사만 제거)
+assert.equal(shortName("ORBIMED ADVISORS LLC"), "Orbimed Advisors");
+assert.equal(shortName("ELECTRA THERAPEUTICS, INC."), "Electra Therapeutics");
+assert.equal(shortName("OrbiMed Advisors LLC"), "OrbiMed Advisors");
+assert.equal(shortName("McArdle Capital LLC"), "McArdle Capital");
+assert.equal(shortName("BioNTech SE"), "BioNTech SE");  // SE 는 제거 대상 접미사가 아님 · 표기는 원문 그대로
 assert.equal(tickerOrUnknown(""), "티커 미확인");
 assert.equal(summaryStatus({ ok: false, error: "ZaiError 400/1210" }), "자동 요약 실패(ZaiError 400/1210)");
 assert.ok(rumorReason(2, "collecting", 6).startsWith("이 카드에 오른 이유: 임상 종료 예정 D-2"));
@@ -54,4 +60,28 @@ for (const f of files) {
   }
 }
 assert.deepEqual(hits, [], "화면 문자열에 내부 필드 이름: " + hits.join(" | "));
+// WP87 · D-day
+assert.equal(dday(0), "D-0");
+assert.equal(dday(-1), "D+1");
+assert.equal(trialSentence("PHASE3", "2026-09-29", -1), "3상 시험이 9월 29일(1일 전)에 끝날 예정입니다. 결과 발표일은 아닙니다.");
+// WP87 · 언급 카드 표현 (경보 아님 frenzy = 언급 늘어남)
+assert.ok(mentionSentence("frenzy", 8, 4, "4.0", 0.625, false).startsWith("언급 늘어남 · "));   // 24시간 4건 · 6.4배 (경보 아님)
+assert.ok(mentionSentence("frenzy", 8, 32, "32.0", 0.25, true).startsWith("급등 경보 · "));
+// WP87 · 임원 매수 묶음
+const f4 = [
+  { ticker: "ETRA", name: "Electra Therapeutics, Inc.", cik: "0002088082", form4: { filer_cik: "1", filer_name: "ORBIMED ADVISORS LLC", filer_type: "전문 펀드", shares: 333333, price: null, filing_date: "2026-09-23", tx_date: "2026-09-21", elapsed_days: 8 } },
+  { ticker: "ETRA", name: "Electra Therapeutics, Inc.", cik: "0002088082", form4: { filer_cik: "1", filer_name: "ORBIMED ADVISORS LLC", filer_type: "전문 펀드", shares: 1000000, price: null, filing_date: "2026-09-23", tx_date: "2026-09-21", elapsed_days: 8 } },
+];
+const gs = groupForm4(f4);
+assert.equal(gs.length, 1);
+assert.equal(insiderSummary(gs[0]), "ETRA · Electra Therapeutics · Orbimed Advisors(전문 펀드) · 8일 전 신고 · 거래 2건 · 합계 1,333,333주 · 금액 미기재");
+const priced = groupForm4(f4.map((r) => ({ ...r, form4: { ...r.form4, price: 3 } })));
+assert.ok(insiderSummary(priced[0]).endsWith("금액 $3,999,999"));
+assert.equal(insiderTxLine({ tx_date: "2026-09-21", shares: 333333, price: 3 }), "9/21 거래 · 333,333주 · 주당 $3.00 · $999,999");
+// WP88 · 보도자료 제목 줄 · 상한 도달 · 첫 문단 라벨
+assert.equal(exhibitLine({ ex99_1_title: "Acme Announces Results", ex99_1_status: "ok" }), "보도자료: Acme Announces Results");
+assert.equal(exhibitLine({ ex99_1_title: "", ex99_1_status: "ok" }), "보도자료: 제목 없음");
+assert.equal(exhibitLine({ ex99_1_status: "daily_cap" }), "보도자료: 읽지 않음 (오늘 SEC 요청 상한 도달)");
+assert.equal(exhibitLine({ ex99_1_status: "none" }), "");
+assert.ok(LEAD_LABEL.includes("진위 미검증"));
 console.log("ok");

@@ -7,6 +7,8 @@
   (a) 언급량: 어제 n → 오늘 m · 평소 대비 배수 · 최근 30일 일별 숫자 (st_baseline JSON)
   (b) 커뮤니티: 최근 24시간 매치 레딧 글 제목·링크 최대 5 (confirm reddit_posts · 제목만 · 본문 인용 없음)
   (c) 회사 공시: SEC submissions 최근 5거래일 8-K · 항목 코드 · 문서 설명 · EX-99.1 보도자료 제목 (<title>)
+      WP88 · 항목 8.01 또는 7.01 + 9.01 인 8-K 는 보도자료 제목·첫 문단 (최대 400자 · 진위 미검증) 도 읽음
+      하루 SEC 요청 상한 SEC_DAILY_CAP (공용 장부 합산) 에 닿으면 보도자료 읽기만 건너뛰고 daily.log 에 남김
   (d) Form 4 최근 20거래일 (h65 표 · 기존 자료)
   (e) 일정: candidates v3 state_note 의 종료 예정일 D-n · 없으면 "예정 일정 없음"
 
@@ -30,7 +32,8 @@ from typing import Any
 
 from backend.scripts import _biotech_paths as _P
 from backend.scripts.biotech_alert_rule import judge
-from backend.scripts.biotech_sec_common import REQ_INTERVAL, SecBlockedError, build_client
+from backend.scripts.biotech_llm import FORBIDDEN_RE
+from backend.scripts.biotech_sec_common import REQ_INTERVAL, SEC_DAILY_CAP, SecBlockedError, SecDailyLedger, build_client
 
 LOG = logging.getLogger("biotech_h77_alert_brief")
 
@@ -39,6 +42,14 @@ BUSINESS_DAYS_8K = 5    # 최근 5거래일 (주말 제외 · 휴장일 미반�
 FORM4_DAYS = 20
 PANEL_NOTE = "아래는 수집된 사실의 나열입니다. 진위는 확인되지 않았습니다."
 _GENERIC_TITLE_RE = re.compile(r"^(ex[-\s]?99\.?1?|exhibit 99\.?1?|press release|document|untitled)?$", re.IGNORECASE)
+LEAD_MAX = 400          # WP88 · 보도자료 첫 문단 최대 글자 수 (전문 저장 금지)
+TITLE_MAX = 80          # WP88 · 본문에서 제목으로 볼 굵은 글씨·대문자 줄 최대 길이
+# 날짜·지명 머리말 · 예: "BOSTON, Sept. 29, 2026 /PRNewswire/ --" · "SAN DIEGO, Calif., Sept. 29, 2026 (GLOBE NEWSWIRE) --"
+_DATELINE_RE = re.compile(
+    r"^[A-Z][A-Za-z .,'&-]{1,60},\s*(?:[A-Z][a-z]{2,9}\.?\s+\d{1,2},\s*\d{4})\s*"
+    r"(?:/[^/]{1,40}/|\([^)]{1,40}\))?\s*(?:--|—|–|-)\s*")
+_FLS_RE = re.compile(r"forward[-\s]looking\s+statements?", re.IGNORECASE)
+_SENT_SPLIT_RE = re.compile(r"(?<=[.!?])\s+(?=[A-Z0-9\"“(])")
 
 
 def _latest(subdir: str, pattern: str) -> Path | None:
@@ -114,17 +125,84 @@ def business_days_back(today: date, n: int) -> date:
     return d
 
 
-def _sec_text(client, url: str, counter: dict) -> str | None:
+def _sec_text(client, url: str, counter: dict, category: str = "brief") -> str | None:
     time.sleep(REQ_INTERVAL)
     counter["sec_requests"] += 1
+    if counter.get("ledger") is not None:   # WP87-2 · 하루 SEC 요청 공용 장부 (brief · exhibit)
+        counter["ledger"].add(category)
     r = client.get(url, timeout=25.0)
     if r.status_code in (403, 429):
         raise SecBlockedError(f"SEC HTTP {r.status_code} · 즉시 중단")
     return r.text if r.status_code == 200 else None
 
 
+def exhibit_target(items: str) -> bool:
+    """WP88 · 보도자료 본문을 읽을 8-K · 항목 9.01 (첨부) 과 8.01 (기타 중요 사건) 또는 7.01 (공정 공시)."""
+    codes = set(re.findall(r"\d+\.\d+", items or ""))
+    return "9.01" in codes and bool(codes & {"8.01", "7.01"})
+
+
+def _text_blocks(doc: str) -> list[str]:
+    """HTML → 문단 목록 (태그 제거 · 공백 정리 · 빈 문단 제외)."""
+    doc = re.sub(r"<(script|style)[^>]*>.*?</\1>", " ", doc, flags=re.S | re.I)
+    doc = re.sub(r"</?(p|div|br|tr|h[1-6]|li|table)\b[^>]*>", "\n", doc, flags=re.I)
+    doc = re.sub(r"<[^>]+>", " ", doc)
+    out = []
+    for blk in html.unescape(doc).replace("\xa0", " ").split("\n"):
+        blk = re.sub(r"\s+", " ", blk).strip()
+        if blk:
+            out.append(blk)
+    return out
+
+
+def exhibit_title(doc: str) -> str:
+    """① <title> (일반 이름이면 버림) → ② 첫 굵은 글씨 또는 첫 문단이 전부 대문자·80자 이하 → ③ "" (화면에서 "제목 없음")."""
+    t = re.search(r"<title>(.*?)</title>", doc or "", re.S | re.I)
+    title = html.unescape(re.sub(r"\s+", " ", t.group(1))).strip() if t else ""
+    if title and not _GENERIC_TITLE_RE.match(title):
+        return title[:200]
+    b = re.search(r"<(b|strong)\b[^>]*>(.*?)</\1>", doc or "", re.S | re.I)
+    if b:
+        bt = re.sub(r"\s+", " ", html.unescape(re.sub(r"<[^>]+>", " ", b.group(2)))).strip()
+        if bt and len(bt) <= TITLE_MAX and not _GENERIC_TITLE_RE.match(bt):
+            return bt
+    for blk in _text_blocks(doc or "")[:5]:
+        if len(blk) <= TITLE_MAX and blk == blk.upper() and re.search(r"[A-Z]{3}", blk) and not _GENERIC_TITLE_RE.match(blk):
+            return blk
+    return ""
+
+
+def cut_lead(text: str, limit: int = LEAD_MAX) -> str:
+    """최대 limit 자 · 넘으면 limit 안의 마지막 문장 경계에서 자르고 "…" (경계가 없으면 글자 수로 자름)."""
+    text = text.strip()
+    if len(text) <= limit:
+        return text
+    head = text[: limit - 1]
+    ends = [m.end() for m in re.finditer(r"[.!?](?=\s)", head)]
+    return (head[: ends[-1]] if ends else head).rstrip() + "…"
+
+
+def exhibit_lead(doc: str, title: str = "") -> str:
+    """첫 문단 · 전망성 진술 구간 이후 버림 · 날짜·지명 머리말 제거 · 40자 미만·제목 줄은 건너뜀 · 최대 400자."""
+    for blk in _text_blocks(doc or ""):
+        if _FLS_RE.search(blk) and len(blk) < 120:      # "Forward-Looking Statements" 제목 줄 → 이후 전부 버림
+            break
+        if blk == title or len(blk) < 40 or blk == blk.upper():
+            continue
+        fls = _FLS_RE.search(blk)
+        lead = _DATELINE_RE.sub("", blk[: fls.start()] if fls and fls.start() > 0 else blk).strip()
+        if len(lead) >= 40:
+            return cut_lead(lead)
+    return ""
+
+
+def safe_lead_for_llm(lead: str) -> str:
+    """z.ai 입력 전 금지어 검사 · 문장마다 FORBIDDEN_RE · 걸린 문장은 뺌 · 다 걸리면 ""."""
+    return " ".join(s for s in _SENT_SPLIT_RE.split(lead or "") if s.strip() and not FORBIDDEN_RE.search(s)).strip()
+
+
 def sec_8k(client, cik: str, since: date, counter: dict) -> list[dict]:
-    """최근 8-K · 항목 코드 · 주 문서 설명 · EX-99.1 제목."""
+    """최근 8-K · 항목 코드 · 주 문서 설명 · EX-99.1 제목 · (WP88) 대상 항목이면 첫 문단."""
     cik10 = str(int(cik)).zfill(10)
     txt = _sec_text(client, f"https://data.sec.gov/submissions/CIK{cik10}.json", counter)
     if not txt:
@@ -141,18 +219,36 @@ def sec_8k(client, cik: str, since: date, counter: dict) -> list[dict]:
         item = {"filing_date": fdate, "items": rec.get("items", [""] * (i + 1))[i],
                 "description": rec.get("primaryDocDescription", [""] * (i + 1))[i],
                 "url": f"https://www.sec.gov/Archives/edgar/data/{int(cik)}/{acc.replace('-', '')}/{acc}-index.htm",
-                "ex99_1_title": ""}
+                "ex99_1_title": "", "ex99_1_lead": "", "ex99_1_url": "", "ex99_1_status": "none"}
         idx = _sec_text(client, item["url"], counter)
+        target = exhibit_target(item["items"])
         m = re.search(r"<tr[^>]*>(?:(?!</tr>).)*?EX-99\.1(?:(?!</tr>).)*?</tr>", idx or "", re.S | re.I)
-        if m:
-            href = re.search(r'href="([^"]+)"', m.group(0))
-            if href:
-                doc = _sec_text(client, "https://www.sec.gov" + href.group(1).replace("/ix?doc=", ""), counter)
-                t = re.search(r"<title>(.*?)</title>", doc or "", re.S | re.I)
-                title = html.unescape(re.sub(r"\s+", " ", t.group(1))).strip() if t else ""
-                item["ex99_1_title"] = "" if _GENERIC_TITLE_RE.match(title) else title[:200]
+        if not m and target:   # WP88 · EX-99.1 이 없으면 첫 EX-99 첨부 1회 시도
+            m = re.search(r"<tr[^>]*>(?:(?!</tr>).)*?EX-99(?:(?!</tr>).)*?</tr>", idx or "", re.S | re.I)
+        href = re.search(r'href="([^"]+)"', m.group(0)) if m else None
+        if href:
+            ledger = counter.get("ledger")
+            if ledger is not None and ledger.total() >= SEC_DAILY_CAP:
+                item["ex99_1_status"] = "daily_cap"
+                counter["exhibit_skipped"] = counter.get("exhibit_skipped", 0) + 1
+                LOG.warning("SEC 하루 상한 %d회 도달 (오늘 %d회) · 보도자료 읽기 건너뜀 · 8-K %s", SEC_DAILY_CAP, ledger.total(), acc)
+            else:
+                doc_url = "https://www.sec.gov" + href.group(1).replace("/ix?doc=", "")
+                doc = _sec_text(client, doc_url, counter, "exhibit")
+                item["ex99_1_url"] = doc_url
+                item["ex99_1_status"] = "ok" if doc else "none"
+                item["ex99_1_title"] = exhibit_title(doc or "") if target else _plain_title(doc or "")
+                if target:
+                    item["ex99_1_lead"] = exhibit_lead(doc or "", item["ex99_1_title"])
         out.append(item)
     return out
+
+
+def _plain_title(doc: str) -> str:
+    """대상 항목이 아닌 8-K · 예전과 같이 <title> 만 (일반 이름이면 버림)."""
+    t = re.search(r"<title>(.*?)</title>", doc, re.S | re.I)
+    title = html.unescape(re.sub(r"\s+", " ", t.group(1))).strip() if t else ""
+    return "" if _GENERIC_TITLE_RE.match(title) else title[:200]
 
 
 def form4_summary(cik: str) -> dict:
@@ -163,10 +259,15 @@ def form4_summary(cik: str) -> dict:
     return {"available": True, "n": len(rows), "rows": rows[:5]}
 
 
-def schedule_note(cand: dict | None) -> str:
+def schedule_note(cand: dict | None, today: date | None = None) -> str:
+    """WP87 · D-n 은 실행일 (KST) 기준으로 다시 계산 (노트의 D-n 은 주간 AACT 잡 날짜 기준)."""
     note = (cand or {}).get("state_note_v50") or (cand or {}).get("state_note") or ""
     m = re.search(r"D-(\d+)\s*\((\d{4}-\d{2}-\d{2})", note)
-    return f"임상 종료 예정일 {m.group(2)} (D-{m.group(1)})" if m else "예정 일정 없음"
+    if not m:
+        return "예정 일정 없음"
+    today = today or datetime.now(timezone(timedelta(hours=9))).date()
+    days = (date.fromisoformat(m.group(2)) - today).days
+    return f"임상 종료 예정일 {m.group(2)} ({'D-' + str(days) if days >= 0 else 'D+' + str(-days)})"
 
 
 def sources_for(b: dict) -> list[str]:
@@ -184,6 +285,9 @@ def sources_for(b: dict) -> list[str]:
     for f in b["sec_8k"]:
         src.append(f"SEC 8-K ({f['filing_date']}) 항목 {f['items'] or '-'} · {f['description'] or ''} · "
                    f"보도자료 제목: {f['ex99_1_title'] or '없음'}")
+        lead = safe_lead_for_llm(f.get("ex99_1_lead", ""))   # WP88 · 금지어 문장 제외 · 다 걸리면 출처에서 뺌
+        if lead:
+            src.append(f"SEC 8-K 보도자료 첫 문단 ({f['filing_date']} · 원문 · 진위 미검증): {lead}")
     f4 = b["form4"]
     src.append(f"Form 4 최근 {FORM4_DAYS}거래일 신고 {f4.get('n', 0)}건" if f4.get("available") else "Form 4 자료 없음")
     src.append(f"일정: {b['schedule']}")
@@ -209,6 +313,8 @@ def main():
     ciks = {r["ticker"]: r.get("cik", "") for r in csv.DictReader(base_p.open())} if base_p else {}
     alerts = pick_alerts(confirm)
     counter = {"sec_requests": 0, "zai_calls": 0}
+    ledger = SecDailyLedger.load(today)
+    counter["ledger"] = ledger
     since = business_days_back(date.fromisoformat(f"{today[:4]}-{today[4:6]}-{today[6:]}"), BUSINESS_DAYS_8K)
     out_dir = _P.out_dir("briefs")
     briefs = []
@@ -255,6 +361,10 @@ def main():
             cache.write_text(json.dumps(b["summary"], ensure_ascii=False, indent=2))
         briefs.append(b)
     client.close()
+    counter.pop("ledger")
+    ledger.save()
+    LOG.info("SEC 요청 · 브리핑 %d · 보도자료 %d · 오늘 합계 %d/%d · 상한으로 건너뛴 보도자료 %d건", ledger.counts.get("brief", 0),
+             ledger.counts.get("exhibit", 0), ledger.total(), SEC_DAILY_CAP, counter.get("exhibit_skipped", 0))
     out = {"date": today, "generated_utc": now.isoformat(), "since_8k": since.isoformat(), "briefs": briefs,
            "counts": {**counter, "tickers": len(briefs), "elapsed_sec": round(time.time() - t0, 1)}}
     path = out_dir / f"alert_brief_{today}.json"

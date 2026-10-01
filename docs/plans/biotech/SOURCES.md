@@ -18,7 +18,7 @@
 | **토스증권 WTS-cert API** (`wts-cert-api.tossinvest.com`) | 공개 · US 폐지 미보유 | v4 20 표본 실측 2026-09-02 = 0/20 (전건 200 OK · `{"result":null}` · 폐지 심볼 데이터 없음) · B21 판정선 FAIL |
 | **ClinicalTrials.gov API** | 무인증 · 무료 | Phase A H1a·H1b 예정 · 미착수 |
 | **FDA Drug Approvals Calendar** | 무인증 · 무료 | Phase A H1a 예정 · 미착수 |
-| **Tiingo** (개인 무료) | 발급 완료 2026-09-04 · **B85 재판정 v2.1: PASS** | 무료 1,000 req/day · 500 unique symbols/월 · **v2.1 창 커버 18/20 = 90% PASS** (v2 11/20 → v2.1 +7 · 달력/폐지 지연 조정 반영) · AVAILABLE 18 · NOT_FOUND 2 (AKUS/AVEO 등) · 유료 Power $30/mo |
+| **Tiingo** (개인 무료) | 발급 완료 2026-09-04 · **B85 재판정 v2.1: PASS** | 무료 1,000 req/day · **시간당 50회** (2026-10-01 09:53 51번째 요청 429 · `docs/plans/biotech/verification/H6/c3-20260928/h6_prices_tiingo_20261001.summary.json` blocked) · 500 unique symbols/월 · **v2.1 창 커버 18/20 = 90% PASS** (v2 11/20 → v2.1 +7 · 달력/폐지 지연 조정 반영) · AVAILABLE 18 · NOT_FOUND 2 (AKUS/AVEO 등) · 유료 Power $30/mo |
 | **Alpha Vantage** (개인 무료) | 발급 완료 2026-09-04 · **미측정 (B86 재분류)** | 무료 25 req/day · v4 20 표본 전건 `RATE_LIMIT_OR_INFO` Note 페이로드 · **응답 본문 미보관 → Note/Information 구분 불가 → FAIL 판정 불가** · 재측정 후순위 (합집합 100% 로 충분) · test3 스크립트에 비정상 응답 본문 200자 보관 컬럼 추가 예정 (재측정 대비) |
 | **SimFin v3** (개인 무료) | 발급 완료 2026-09-04 · Auth `Authorization: api-key <key>` header (B82 문서 확인) · **B85 재판정 v2.1: FAIL** | 무료 5,000 US 종목 · 5년 history · 500 credits/월 · endpoint `/api/v3/companies/prices/compact` · **v2.1 창 커버 14/20 = 70% FAIL** (v2 9/20 → v2.1 +5) · AVAILABLE 14 · EMPTY 6 · Tiingo 폴백 후보 (합집합에서 4건 SimFin only 기여) · 유료 Start $15/mo |
 

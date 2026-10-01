@@ -35,7 +35,7 @@ from backend.scripts import _biotech_paths as _P
 from backend.scripts.biotech_h6_collect_prices import (
     MONTHLY_ALLOCATION, REQ_INTERVAL, TiingoBlocked, fetch_one, load_usage, save_usage,
 )
-from backend.scripts.biotech_sec_common import SecBlockedError, build_client, nearest_shares_outstanding, sec_get
+from backend.scripts.biotech_sec_common import SecBlockedError, SecDailyLedger, build_client, nearest_shares_outstanding, sec_get
 
 LOG = logging.getLogger("biotech_mcap_daily")
 
@@ -174,11 +174,20 @@ def _latest_json(prefix: str) -> dict:
     return json.loads(hits[-1].read_text()) if hits else {}
 
 
+def _record_sec(n: int, today: date, ledger: SecDailyLedger | None) -> None:
+    """WP88-2 · 주식수 조회 SEC 요청을 하루 공용 장부에 "mcap_shares" 로 기록 (꺼져 있으면 0회)."""
+    led = ledger or SecDailyLedger.load(f"{today:%Y%m%d}")
+    led.add("mcap_shares", n)
+    led.save()
+
+
 def run(mode: str, get_tiingo: Callable[..., Any] | None = None, get_sec: Callable[[str], dict] | None = None,
-        today: date | None = None) -> dict:
+        today: date | None = None, ledger: SecDailyLedger | None = None) -> dict:
     today = today or _kst_today()
     if not enabled():
         LOG.info("시총 %s 단계 건너뜀 (%s 꺼짐 · Tiingo · SEC 호출 0회)", mode, FLAG)
+        if mode == "weekly":
+            _record_sec(0, today, ledger)
         return {"mode": mode, "skipped": True, "reason": f"{FLAG} off"}
     cands = load_candidates()
     mdir = _P.out_dir("mcap")
@@ -188,7 +197,17 @@ def run(mode: str, get_tiingo: Callable[..., Any] | None = None, get_sec: Callab
             counter = _ByteCountingClient(build_client())  # biotech_sec_common 단일 헤더 상수 · 받은 용량 집계
             get_sec = lambda url: sec_get(counter, url)    # noqa: E731
         t0 = time.time()
-        res = weekly_shares(cands, get_sec, today)
+        sent = {"n": 0}      # WP88-3 · 보내기 직전에 셈 · 예외로 끝나도 그때까지 보낸 수를 장부에 남김
+        inner = get_sec
+
+        def counted(url: str) -> dict:
+            sent["n"] += 1
+            return inner(url)
+
+        try:
+            res = weekly_shares(cands, counted, today)
+        finally:
+            _record_sec(sent["n"], today, ledger)
         res["elapsed_sec"] = round(time.time() - t0, 1)
         res["bytes_received"] = counter.bytes if counter else None
         (mdir / f"shares_{today:%Y%m%d}.json").write_text(json.dumps(res, ensure_ascii=False, indent=1))

@@ -18,16 +18,17 @@ from backend.scripts._biotech_bootstrap import require_secure_logging, data_sha
 from backend.scripts.biotech_h28v2_form4_channel import (
     load_fund_ciks, sec_get, fetch_form4_accessions, fetch_form4_xml, parse_form4,
 )
-from backend.scripts.biotech_sec_common import SEC_UA, SEC_FROM, SEC_ACCEPT_ENCODING
+from backend.scripts.biotech_sec_common import SecDailyLedger, build_client
 
 import csv
 import json
 import logging
+import re
 import subprocess
+import time
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
-import httpx
 
 from backend.scripts import _biotech_paths as _P
 
@@ -40,6 +41,64 @@ def git_sha() -> str:
         return subprocess.check_output(["git", "rev-parse", "--short", "HEAD"], cwd=str(PROJECT_ROOT)).decode().strip()
     except Exception:
         return "unknown"
+
+
+def sec_client(on_request):
+    """WP88-2 · 공용 build_client (단일 헤더 상수) + 요청마다 장부에 세는 hook · 시간 제한은 예전과 같은 30초."""
+    return build_client(event_hooks={"request": [on_request]}, timeout=30.0)
+
+
+XML_KEEP_DAYS = 30        # WP88-3 · Form 4 XML 원문 보관 기간 (실행 시작 때 지난 파일 삭제)
+
+
+def xml_dir() -> Path:
+    """WP88-3 · <RUNTIME>/form4_xml (해석기 경유 · 로컬은 backend/data/biotech/form4_xml)."""
+    return _P.out_dir("form4_xml")
+
+
+def prune_xml(folder: Path, now: float | None = None, keep_days: int = XML_KEEP_DAYS) -> int:
+    """수정 시각이 keep_days 일보다 오래된 *.xml 삭제 · 지운 개수."""
+    cutoff = (now if now is not None else time.time()) - keep_days * 86400
+    n = 0
+    for f in folder.glob("*.xml"):
+        if f.stat().st_mtime < cutoff:
+            f.unlink()
+            n += 1
+    return n
+
+
+def keep_xml(folder: Path, accession: str, xml: str) -> Path | None:
+    """새로 받은 XML 원문 보관 · 파일 이름 = <accession>.xml · 이미 있으면 덮어쓰지 않음 · 추가 SEC 요청 없음."""
+    if not xml or not re.fullmatch(r"[0-9-]{10,30}", accession or ""):
+        return None
+    p = folder / f"{accession}.xml"
+    if not p.exists():
+        p.write_text(xml)
+    return p
+
+
+PRICE_BACKFILL_MAX = 10   # 하루 가격 보충 신고서 수 상한 (SEC 요청 증가 제한)
+
+
+def backfill_prices(cache: dict, cutoff: str, fetch_xml) -> int:
+    """가격 키가 없는 최근 매수 → 신고서 XML 을 다시 읽어 (tx_date, shares) 로 맞춰 가격 채움 · 못 찾으면 None 기록 (재요청 없음)."""
+    todo: dict[tuple[str, str], list[dict]] = {}
+    for filer, info in cache.items():
+        for b in info.get("buys", []):
+            if "price" not in b and b.get("tx_date", "") >= cutoff and b.get("accession"):
+                todo.setdefault((filer, b["accession"]), []).append(b)
+    done = 0
+    for (filer, acc), buys in list(todo.items())[:PRICE_BACKFILL_MAX]:
+        try:
+            xml = fetch_xml(filer, acc)
+        except Exception:
+            continue
+        parsed = parse_form4(xml) if xml else []
+        for b in buys:
+            hit = next((p for p in parsed if p["tx_date"] == b.get("tx_date") and abs(p["shares"] - float(b.get("shares", 0))) < 0.5), None)
+            b["price"] = hit["price"] if hit else None
+        done += 1
+    return done
 
 
 def main():
@@ -59,6 +118,11 @@ def main():
         LOG.error("filer 목록 0 · 입력 파일 부재 · Form 4 단계 실패")
         raise SystemExit(2)
 
+    xdir = xml_dir()
+    pruned = prune_xml(xdir)
+    if pruned:
+        LOG.info("Form 4 XML 보관 · %d일 지난 파일 %d개 삭제", XML_KEEP_DAYS, pruned)
+
     cache_read = _P.find(f"h28v2_form4_issuer_buys_{sha}.json") or _P.find_glob("h28v2_form4_issuer_buys_*.json")
     cache = json.loads(cache_read.read_text()) if cache_read is not None and cache_read.exists() else {}
     # 산출 위치는 flat (RUNTIME 최상위 or backend/data)
@@ -68,45 +132,67 @@ def main():
     cutoff = (datetime.now(timezone.utc) - timedelta(days=30)).strftime("%Y-%m-%d")
 
     new_buys = 0
-    with httpx.Client(headers={"User-Agent": SEC_UA, "From": SEC_FROM,
-                                "Accept-Encoding": SEC_ACCEPT_ENCODING}, timeout=30.0) as client:
-        for i, filer_cik in enumerate(fund_ciks, 1):
-            try:
-                accs = fetch_form4_accessions(client, filer_cik)
-            except Exception:
-                continue
-            # 30일 이내 accession 만
-            recent = [a for a in accs if a.get("date", "") >= cutoff]
-            if not recent:
-                continue
-            # 기존 accession 세트
-            existing = set()
-            for b in cache.get(filer_cik, {}).get("buys", []):
-                if b.get("accession"):
-                    existing.add(b["accession"])
-            fresh_recent = [a for a in recent if a["accession"] not in existing]
-            if not fresh_recent:
-                continue
-            LOG.info("[%d/%d] filer %s: +%d fresh accessions (30d)", i, len(fund_ciks), filer_cik, len(fresh_recent))
-            for a in fresh_recent[:20]:  # 하루당 filer 최대 20건
+    price_fills = 0
+    # WP87-2 · 하루 SEC 요청 공용 장부 · 이 단계의 모든 요청을 보내기 직전에 센다 (form4 · price_backfill 구분)
+    ledger = SecDailyLedger.load()
+    stage = {"cat": "form4"}
+
+    def _count(_request):
+        ledger.add(stage["cat"])
+
+    try:
+        with sec_client(_count) as client:
+            for i, filer_cik in enumerate(fund_ciks, 1):
                 try:
-                    xml = fetch_form4_xml(client, filer_cik, a["accession"])
+                    accs = fetch_form4_accessions(client, filer_cik)
                 except Exception:
                     continue
-                if xml is None:
+                # 30일 이내 accession 만
+                recent = [a for a in accs if a.get("date", "") >= cutoff]
+                if not recent:
                     continue
-                for b in parse_form4(xml):
-                    b["filing_date"] = a["date"]
-                    b["filer_cik"] = filer_cik
-                    b["accession"] = a["accession"]
-                    if filer_cik not in cache:
-                        cache[filer_cik] = {"n_accs": 0, "n_buys": 0, "buys": []}
-                    cache[filer_cik]["buys"].append(b)
-                    cache[filer_cik]["n_buys"] = len(cache[filer_cik]["buys"])
-                    new_buys += 1
+                # 기존 accession 세트
+                existing = set()
+                for b in cache.get(filer_cik, {}).get("buys", []):
+                    if b.get("accession"):
+                        existing.add(b["accession"])
+                fresh_recent = [a for a in recent if a["accession"] not in existing]
+                if not fresh_recent:
+                    continue
+                LOG.info("[%d/%d] filer %s: +%d fresh accessions (30d)", i, len(fund_ciks), filer_cik, len(fresh_recent))
+                for a in fresh_recent[:20]:  # 하루당 filer 최대 20건
+                    try:
+                        xml = fetch_form4_xml(client, filer_cik, a["accession"])
+                    except Exception:
+                        continue
+                    if xml is None:
+                        continue
+                    keep_xml(xdir, a["accession"], xml)   # WP88-3 · 원문 보관 (요청 추가 없음)
+                    for b in parse_form4(xml):
+                        b["filing_date"] = a["date"]
+                        b["filer_cik"] = filer_cik
+                        b["accession"] = a["accession"]
+                        if filer_cik not in cache:
+                            cache[filer_cik] = {"n_accs": 0, "n_buys": 0, "buys": []}
+                        cache[filer_cik]["buys"].append(b)
+                        cache[filer_cik]["n_buys"] = len(cache[filer_cik]["buys"])
+                        new_buys += 1
+            # WP87 · 가격 보충 · 예전 캐시 (가격 필드 없음) 의 최근 30일 매수 · 신고서 1건당 1회 · 한 번에 최대 10건
+            stage["cat"] = "price_backfill"
+
+            def _fetch_keep(f, acc):
+                x = fetch_form4_xml(client, f, acc)
+                keep_xml(xdir, acc, x)      # WP88-3 · 가격 보충으로 받은 원문도 보관 (요청 추가 없음)
+                return x
+
+            price_fills = backfill_prices(cache, cutoff, _fetch_keep)
+    finally:
+        ledger.save()
+        LOG.info("SEC 요청 · form4 %d · 가격 보충 %d · 오늘 합계 %d", ledger.counts.get("form4", 0),
+                 ledger.counts.get("price_backfill", 0), ledger.total())
 
     cache_path.write_text(json.dumps(cache, ensure_ascii=False, indent=2))
-    LOG.info("증분 · 신규 buys: +%d · 전체 filers cached: %d", new_buys, len(cache))
+    LOG.info("증분 · 신규 buys: +%d · 전체 filers cached: %d · 가격 보충 신고서 %d건", new_buys, len(cache), price_fills)
 
     # 표 4 · 최근 20 거래일 F4 매수 (rumor daily 확장용)
     # 정정 (2026-09-14): 제출자 유형 (전문 펀드/임원·이사/기타) + 매수 금액 근사 열 추가
@@ -159,7 +245,11 @@ def main():
                 tk = cik2tk.get(issuer_cik, "")
                 price = _price_on(tk, tx_date) if tk else None
                 amount_usd = shares * price if (price and shares) else None
+                px = b.get("price")   # WP87 · 신고서 기재 주당 가격 (없으면 None → 화면 "금액 미기재")
                 table4.append({
+                    "price_per_share": px,
+                    "amount_usd_reported": round(shares * px) if (px and shares) else None,
+                    "filer_name": filer_class.get(filer_cik, {}).get("name", ""),
                     "filing_date": b.get("filing_date", ""),
                     "tx_date": tx_date,
                     "elapsed_days": elapsed_days,
@@ -180,12 +270,15 @@ def main():
     with out_csv.open("w", newline="") as f:
         w = csv.writer(f)
         w.writerow(["filing_date", "tx_date", "elapsed_days", "issuer_cik", "issuer_name",
-                    "filer_cik", "filer_type", "shares", "price_on_tx", "amount_usd_approx", "accession", "issuer_ticker"])
+                    "filer_cik", "filer_type", "shares", "price_on_tx", "amount_usd_approx", "accession", "issuer_ticker",
+                    "filer_name", "price_per_share", "amount_usd_reported"])
         for row in table4:
             w.writerow([row["filing_date"], row["tx_date"], row["elapsed_days"],
                         row["issuer_cik"], row["issuer_name"], row["filer_cik"],
                         row.get("filer_type", ""), row["shares"], row.get("price_on_tx", ""),
-                        row.get("amount_usd_approx", ""), row["accession"], row.get("issuer_ticker", "")])
+                        row.get("amount_usd_approx", ""), row["accession"], row.get("issuer_ticker", ""),
+                        row.get("filer_name", ""), row.get("price_per_share") if row.get("price_per_share") is not None else "",
+                        row.get("amount_usd_reported") if row.get("amount_usd_reported") is not None else ""])
 
     # 순위표 꼬리표용 issuer_cik 세트
     tagged_ciks = {row["issuer_cik"] for row in table4}
