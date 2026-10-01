@@ -26,6 +26,13 @@
 - 1. 07:00 확인: `/root/toss-tradebot-mvp/var/biotech/logs/daily.log` 에서 "경보 N건 · z.ai 호출 N/5" · 경보 종목 배수와 기준선 평균 · `[8/9] mcap_daily` 건너뜀 · 9/9 완료 인용 · 9/29·9/30 대비 경보 종목 수 변화 한 줄
 - 2. H6 Tiingo 59종목 수집 (로컬): 이 파일 H6 항목대로 · 종목별 거래일 커버율 최솟값 · 90% 미만 목록 · summary.json 사본 경로 · 장부 인용 · 실패 종목 대안 티커 · 장부 기준 H6 + WP75 10월 하루 요청 수와 월 고유 종목 수를 9/30 예측 (138회 · 79회 · 137개) 과 나란히
 - 3. H6 보고 뒤 (승인됨): PR #58 병합·배포 → 13경로 → 수정 후 스크린샷 `wp87_after_*.webp` (임원 매수 카드 제목·내용 일치 여부) → WP88 PR 생성 → 번호 · pytest · tsx · next build 결과로 승인 요청
+- **진행 (2026-10-01 09:5x KST)**:
+  - 07:00 실행 정상 (9/9 · 07:01:15 완료) · 경보 0건 · z.ai 0/5 · mcap_daily 건너뜀 · Form 4 신규 매수 +85 (filer 1 → 2)
+  - H6 수집: 요청 51 · 성공 49 · 51번째에서 Tiingo 429 → 즉시 중단 (실패 GLMD empty · INGR blocked · 미시도 8: IONS ISRG MDT MIRM MNOV OMDA PRE PTN) · 월 고유 51/450 · summary 사본 `docs/plans/biotech/verification/H6/c3-20260928/h6_prices_tiingo_20261001.summary.json`
+  - 관측: 약 2분 15초에 51번째 요청에서 429 · 9/30 계산은 하루 1,000 · 월 500 만 반영하고 시간당 한도를 빠뜨림 → WP75 하루 79회 일괄 요청도 같은 문제 (설계 재검토 필요)
+  - 대안 티커: GLMD → EOCN (같은 SEC CIK 1595353 · 로컬 `docs/plans/biotech/data/sec_company_tickers.json` · SEC 요청 0회) · INGR 은 티커 문제가 아니라 429 시점 요청 → 재요청만 필요
+  - 재요청 (10건 · 미시도 8 + INGR + EOCN) 은 승인 대기
+  - PR #58 병합 시도 → auto mode 분류기가 "Production Deploy" 로 차단 · 병합 안 됨 · 사용자 결정 대기 (스크린샷 · WP88 PR 도 대기)
 - 준비 확인 (2026-09-30 20:23 KST · 실행 안 함): 대상 `docs/plans/biotech/verification/H6/c3-20260928/h6_price_targets_59.csv` 59행 (+머리글) · 로컬 TIINGO_API_KEY 설정됨 (값 미출력) · 10월 장부 `backend/data/biotech/tiingo_usage_202610.json` 은 첫 실행 때 생성
 
 ---
