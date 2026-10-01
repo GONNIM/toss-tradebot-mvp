@@ -457,13 +457,17 @@ def _trial_display(nct: str) -> dict[str, Any]:
         # WP81 · 수동 사전에 없을 때만 자동 분류 (auto_categories.json · 주간 잡 산출 · NLM 호출 없음)
         auto = _auto_categories()
         for t in m.get("mesh_terms", []) + conds:
+            if (cats.get((t or "").strip().lower()) or {}).get("category") == IGNORE_CATEGORY:   # WP97-2 · '무시' 용어는 자동 분류에도 안 씀
+                continue
             hit = auto.get(t)
             if hit:
                 category, cat_src, category_auto = hit.get("category", ""), t, True
                 break
     if not category and terms:
         # 원문 = 첫 질환명 (없으면 첫 MeSH 용어) · '무시' 용어뿐이어도 원문 글자만 쓰고 '무시' 는 표시하지 않음
-        first = conds[0] if conds else terms[0]
+        # WP97-2 · 원문도 '무시' 가 아닌 첫 용어 (모두 '무시' 면 예전처럼 첫 용어)
+        usable = [t for t in (conds or terms) if (cats.get((t or "").strip().lower()) or {}).get("category") != IGNORE_CATEGORY]
+        first = usable[0] if usable else (conds[0] if conds else terms[0])
         category, cat_src = f"기타 ({first})", first
     ivs = [{"name": i.get("name", ""), "type": i.get("type", ""), "type_ko": _ko(i.get("type", "")), "name_ko": _ko(i.get("name", ""))}
            for i in m.get("interventions", [])]
