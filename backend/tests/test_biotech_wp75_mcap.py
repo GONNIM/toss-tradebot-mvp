@@ -18,7 +18,8 @@ class _R:
         return self._b
 
 
-def test_flag_off_zero_calls(monkeypatch):
+def test_flag_off_zero_calls(tmp_path, monkeypatch):
+    monkeypatch.setattr(mc._P, "RUNTIME_DIR", tmp_path)   # WP88-2 · 꺼짐이어도 SEC 장부에 0회를 남기므로 임시 폴더
     monkeypatch.delenv(mc.FLAG, raising=False)
     calls = []
     for mode in ("daily", "weekly"):

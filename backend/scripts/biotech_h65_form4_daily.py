@@ -18,16 +18,17 @@ from backend.scripts._biotech_bootstrap import require_secure_logging, data_sha
 from backend.scripts.biotech_h28v2_form4_channel import (
     load_fund_ciks, sec_get, fetch_form4_accessions, fetch_form4_xml, parse_form4,
 )
-from backend.scripts.biotech_sec_common import SEC_UA, SEC_FROM, SEC_ACCEPT_ENCODING, SecDailyLedger
+from backend.scripts.biotech_sec_common import SecDailyLedger, build_client
 
 import csv
 import json
 import logging
+import re
 import subprocess
+import time
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
-import httpx
 
 from backend.scripts import _biotech_paths as _P
 
@@ -40,6 +41,40 @@ def git_sha() -> str:
         return subprocess.check_output(["git", "rev-parse", "--short", "HEAD"], cwd=str(PROJECT_ROOT)).decode().strip()
     except Exception:
         return "unknown"
+
+
+def sec_client(on_request):
+    """WP88-2 · 공용 build_client (단일 헤더 상수) + 요청마다 장부에 세는 hook · 시간 제한은 예전과 같은 30초."""
+    return build_client(event_hooks={"request": [on_request]}, timeout=30.0)
+
+
+XML_KEEP_DAYS = 30        # WP88-3 · Form 4 XML 원문 보관 기간 (실행 시작 때 지난 파일 삭제)
+
+
+def xml_dir() -> Path:
+    """WP88-3 · <RUNTIME>/form4_xml (해석기 경유 · 로컬은 backend/data/biotech/form4_xml)."""
+    return _P.out_dir("form4_xml")
+
+
+def prune_xml(folder: Path, now: float | None = None, keep_days: int = XML_KEEP_DAYS) -> int:
+    """수정 시각이 keep_days 일보다 오래된 *.xml 삭제 · 지운 개수."""
+    cutoff = (now if now is not None else time.time()) - keep_days * 86400
+    n = 0
+    for f in folder.glob("*.xml"):
+        if f.stat().st_mtime < cutoff:
+            f.unlink()
+            n += 1
+    return n
+
+
+def keep_xml(folder: Path, accession: str, xml: str) -> Path | None:
+    """새로 받은 XML 원문 보관 · 파일 이름 = <accession>.xml · 이미 있으면 덮어쓰지 않음 · 추가 SEC 요청 없음."""
+    if not xml or not re.fullmatch(r"[0-9-]{10,30}", accession or ""):
+        return None
+    p = folder / f"{accession}.xml"
+    if not p.exists():
+        p.write_text(xml)
+    return p
 
 
 PRICE_BACKFILL_MAX = 10   # 하루 가격 보충 신고서 수 상한 (SEC 요청 증가 제한)
@@ -83,6 +118,11 @@ def main():
         LOG.error("filer 목록 0 · 입력 파일 부재 · Form 4 단계 실패")
         raise SystemExit(2)
 
+    xdir = xml_dir()
+    pruned = prune_xml(xdir)
+    if pruned:
+        LOG.info("Form 4 XML 보관 · %d일 지난 파일 %d개 삭제", XML_KEEP_DAYS, pruned)
+
     cache_read = _P.find(f"h28v2_form4_issuer_buys_{sha}.json") or _P.find_glob("h28v2_form4_issuer_buys_*.json")
     cache = json.loads(cache_read.read_text()) if cache_read is not None and cache_read.exists() else {}
     # 산출 위치는 flat (RUNTIME 최상위 or backend/data)
@@ -101,9 +141,7 @@ def main():
         ledger.add(stage["cat"])
 
     try:
-        with httpx.Client(headers={"User-Agent": SEC_UA, "From": SEC_FROM,
-                                    "Accept-Encoding": SEC_ACCEPT_ENCODING}, timeout=30.0,
-                            event_hooks={"request": [_count]}) as client:
+        with sec_client(_count) as client:
             for i, filer_cik in enumerate(fund_ciks, 1):
                 try:
                     accs = fetch_form4_accessions(client, filer_cik)
@@ -129,6 +167,7 @@ def main():
                         continue
                     if xml is None:
                         continue
+                    keep_xml(xdir, a["accession"], xml)   # WP88-3 · 원문 보관 (요청 추가 없음)
                     for b in parse_form4(xml):
                         b["filing_date"] = a["date"]
                         b["filer_cik"] = filer_cik
@@ -140,7 +179,13 @@ def main():
                         new_buys += 1
             # WP87 · 가격 보충 · 예전 캐시 (가격 필드 없음) 의 최근 30일 매수 · 신고서 1건당 1회 · 한 번에 최대 10건
             stage["cat"] = "price_backfill"
-            price_fills = backfill_prices(cache, cutoff, lambda f, acc: fetch_form4_xml(client, f, acc))
+
+            def _fetch_keep(f, acc):
+                x = fetch_form4_xml(client, f, acc)
+                keep_xml(xdir, acc, x)      # WP88-3 · 가격 보충으로 받은 원문도 보관 (요청 추가 없음)
+                return x
+
+            price_fills = backfill_prices(cache, cutoff, _fetch_keep)
     finally:
         ledger.save()
         LOG.info("SEC 요청 · form4 %d · 가격 보충 %d · 오늘 합계 %d", ledger.counts.get("form4", 0),

@@ -2,7 +2,7 @@
 import assert from "node:assert/strict";
 import * as fs from "node:fs";
 import * as path from "node:path";
-import { cardText, dday, groupForm4, insiderSummary, insiderTxLine, mentionSentence, multSentence, trialSentence, rumorReason, shortName, summaryStatus, tickerOrUnknown } from "./biotech-display";
+import { cardText, dday, exhibitLine, LEAD_LABEL, groupForm4, insiderSummary, insiderTxLine, mentionSentence, multSentence, trialSentence, rumorReason, shortName, summaryStatus, tickerOrUnknown } from "./biotech-display";
 
 const beauty = cardText({ category: "미용", interventions: [{ name: "X-1", type: "DRUG", type_ko: "약물" }] }, "PHASE2", "2026-11-30", 62);
 assert.ok(beauty.main?.startsWith("미용 · X-1 (약물) · 2상(효과 탐색)"), beauty.main ?? "null");
@@ -78,4 +78,10 @@ assert.equal(insiderSummary(gs[0]), "ETRA · Electra Therapeutics · Orbimed Adv
 const priced = groupForm4(f4.map((r) => ({ ...r, form4: { ...r.form4, price: 3 } })));
 assert.ok(insiderSummary(priced[0]).endsWith("금액 $3,999,999"));
 assert.equal(insiderTxLine({ tx_date: "2026-09-21", shares: 333333, price: 3 }), "9/21 거래 · 333,333주 · 주당 $3.00 · $999,999");
+// WP88 · 보도자료 제목 줄 · 상한 도달 · 첫 문단 라벨
+assert.equal(exhibitLine({ ex99_1_title: "Acme Announces Results", ex99_1_status: "ok" }), "보도자료: Acme Announces Results");
+assert.equal(exhibitLine({ ex99_1_title: "", ex99_1_status: "ok" }), "보도자료: 제목 없음");
+assert.equal(exhibitLine({ ex99_1_status: "daily_cap" }), "보도자료: 읽지 않음 (오늘 SEC 요청 상한 도달)");
+assert.equal(exhibitLine({ ex99_1_status: "none" }), "");
+assert.ok(LEAD_LABEL.includes("진위 미검증"));
 console.log("ok");

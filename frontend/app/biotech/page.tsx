@@ -18,7 +18,7 @@ import { SectionCard } from "@/components/ui/section-card";
 import { BiotechTable, BiotechTableColumn } from "@/components/biotech/BiotechTable";
 import { RumorCard } from "@/components/biotech/RumorCard";
 import type { SessionInfo } from "@/lib/auth";
-import { cardText, checkedAtLabel, ctgovUrl, groupForm4, insiderSummary, insiderTxLine, mcapBadge, mentionSentence, multSentence, refreshLabel, rumorReason, shortName, sortFilterCards, sortLabel, summaryStatus, tickerOrUnknown, trialSentence } from "@/lib/biotech-display";
+import { cardText, checkedAtLabel, ctgovUrl, exhibitLine, groupForm4, insiderSummary, insiderTxLine, LEAD_LABEL, mcapBadge, mentionSentence, multSentence, refreshLabel, rumorReason, shortName, sortFilterCards, sortLabel, summaryStatus, tickerOrUnknown, trialSentence } from "@/lib/biotech-display";
 import type { CardSort, Form4Tx, ThemeRank, TrialDisplay } from "@/lib/biotech-display";
 
 // 백엔드 스키마
@@ -73,7 +73,7 @@ type AlertBrief = {
   mentions: { yesterday: number | null; today: number | null; mult: string; mean?: number | null; reddit_today: number; history: { date: string; apewisdom_24h: number; reddit_matches: number }[] };
   reddit: { title: string; link: string; updated: string }[];
   reddit_time_checked?: boolean;
-  sec_8k: { filing_date: string; items: string; description: string; url: string; ex99_1_title: string }[];
+  sec_8k: { filing_date: string; items: string; description: string; url: string; ex99_1_title: string; ex99_1_lead?: string; ex99_1_url?: string; ex99_1_status?: string }[];
   sec_status: string;
   form4: { available: boolean; n?: number };
   schedule: string;
@@ -208,7 +208,13 @@ function AlertBriefCard({ b, defaultOpen = false }: { b: AlertBrief; defaultOpen
                   <li key={i}>
                     <a href={f.url} target="_blank" rel="noopener noreferrer" className="text-sky-700 hover:underline dark:text-sky-300">{f.filing_date} · 항목 {f.items || "-"}</a>
                     {f.description && ` · ${f.description}`}
-                    {f.ex99_1_title && ` · 보도자료: ${f.ex99_1_title}`}
+                    {exhibitLine(f) && ` · ${exhibitLine(f)}`}
+                    {f.ex99_1_lead && (
+                      <details className="mt-1">
+                        <summary className="cursor-pointer text-muted-foreground">{LEAD_LABEL}</summary>
+                        <p className="mt-1 whitespace-pre-line">{f.ex99_1_lead}</p>
+                      </details>
+                    )}
                   </li>
                 ))}
               </ul>

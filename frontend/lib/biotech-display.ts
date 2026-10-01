@@ -354,3 +354,15 @@ export function mentionHeadline(stage: string | undefined, isAlert: boolean): st
   if (stage === "frenzy") return "언급 늘어남";
   return stageLabel(stage);
 }
+
+// WP88 · 브리핑 (c) 회사 공시 · 보도자료 (EX-99.1) 제목 줄 · 첫 문단은 접힌 영역 (원문 · 진위 미검증)
+export type Exhibit = { ex99_1_title?: string; ex99_1_lead?: string; ex99_1_status?: string };
+
+export const LEAD_LABEL = "첫 문단 (원문 · 진위 미검증)";
+
+export function exhibitLine(f: Exhibit): string {
+  if (f.ex99_1_status === "daily_cap") return "보도자료: 읽지 않음 (오늘 SEC 요청 상한 도달)";
+  if (f.ex99_1_title) return `보도자료: ${f.ex99_1_title}`;
+  if (f.ex99_1_status === "ok") return "보도자료: 제목 없음";
+  return "";
+}
