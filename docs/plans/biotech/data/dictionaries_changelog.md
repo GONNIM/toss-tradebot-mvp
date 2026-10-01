@@ -154,3 +154,12 @@
 | 9/30 | IOVA | IOVA | 없음 (128배 → 32배 · 여전히 경보) |
 
 (9/21~9/28 은 모든 종목의 기준선이 7일 미만이라 판정 대상 없음 · 9/23 은 UTC 날짜 결함으로 파일 없음)
+
+## 규칙 기록 · 2026-10-02 실행부터 (WP93) · 레이더 점수 v3 · H6 소속 +3 제거
+
+- 변경 전 (v2 · 2026-10-01 실행까지): 전문가 채널 (a)+(b) 원점수 = 13D 신규 건수 × 1.0 + H6 소속이면 +3
+- 변경 후 (v3 · 2026-10-02 실행부터): 전문가 채널 (a)+(b) 원점수 = 13D 신규 건수 × 1.0 (H6 소속 가점 제거) · PubMed · Preprint · Form 4 채널 · z 정규화 · 4요소 가중치는 그대로
+- 근거: H6 (테마 관심도 → 주가) 관문 2 폐기 확정 (`docs/plans/biotech/verification/H6/H6-gate2-request-20261001.md` · 1차 판정 1분기 CI −4.3% ~ +5.7% · 4분기 CI −19.3% ~ +15.8%)
+- 영향 (2026-10-01 서버 런타임 복사본 · 같은 입력 v2 대 v3): 점수 80개 중 78개 변경 · 순위 52종목 이동 · 상위 30 ARTV 진입 · AVBP 탈락
+- 코드: `backend/scripts/biotech_h46v3_radar.py` expert_channel_1_2() · SCORE_VERSION · 정의: `backend/data/h_radar_params.json` score_version · score_versions (v2 보존)
+- 전향 평가: 11/15 첫 채점표는 10/1 까지 v2 · 10/2 이후 v3 판정을 나누어 적는다 · 재계산 = `python -m backend.scripts.biotech_h46v3_radar --score-version v2 --date YYYYMMDD` (산출 `radar_v1_3_<날짜>_scorev2.csv`)
