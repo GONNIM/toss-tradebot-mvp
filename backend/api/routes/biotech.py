@@ -713,7 +713,7 @@ async def get_rumor_json(
                 cik10 = (r.get("issuer_cik") or "").zfill(10)
                 rows.append(RumorRow(
                     table="표4",
-                    # WP85 · 이전: 발행사 CIK 끝 6자리 (예 "088082") 를 티커 자리에 넣던 결함 · 이제 h65 issuer_ticker > SEC 명부 · 없으면 빈 값 (화면 "티커 미확인")
+                    # WP85 · 이전: 발행사 CIK 끝 6자리 (예 "088082") 를 티커 자리에 넣던 결함 · 이제 h65 issuer_ticker > SEC 명부 · 없으면 빈 값 (화면 "비상장 추정" · WP89)
                     ticker=(r.get("issuer_ticker") or cik2tk.get(cik10, "")),
                     cik=cik10,
                     form4={
@@ -791,7 +791,9 @@ async def get_kpi(_admin: str = Depends(require_sniper_token)) -> BiotechKpi:
     insider_buy_20d = 0
     if f4_pick:
         with f4_pick.open() as f:
-            insider_buy_20d = sum(1 for _ in csv.DictReader(f))
+            # WP89 · 행 수가 아니라 신고 묶음 수 (신고자 · 발행사 · 신고일) · 화면 카드 수와 같은 기준
+            insider_buy_20d = len({(r.get("filer_cik", ""), (r.get("issuer_cik") or "").zfill(10), r.get("filing_date", ""))
+                                   for r in csv.DictReader(f)})
 
     # 급등 경보 (WP69-3d 재정의 · h_radar_params v1.5 alerts_definition):
     #   apewisdom baseline_mult ≥ 5 OR reddit_rss_matches ≥ 3 인 티커 수

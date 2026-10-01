@@ -77,6 +77,24 @@ def keep_xml(folder: Path, accession: str, xml: str) -> Path | None:
     return p
 
 
+TABLE4_GROUPS = 30   # WP89 · 표 4 = 신고자·회사·신고일 묶음 최근 30건 (묶음 안 거래는 전부)
+
+
+def select_recent_groups(rows: list[dict], n: int = TABLE4_GROUPS) -> list[dict]:
+    """(신고자 · 발행사 · 신고일) 로 묶고 최근 n 묶음의 행을 모두 남김 · 정렬 = 신고일 → 거래일 최신 순.
+
+    WP89 이전: 거래일 순 행 30개로 잘라 Baker Bros. KOD 신고 (82행) 가 27행만 남았다.
+    """
+    groups: dict[tuple[str, str, str], list[dict]] = {}
+    for r in rows:
+        groups.setdefault((r.get("filer_cik", ""), r.get("issuer_cik", ""), r.get("filing_date", "")), []).append(r)
+    order = sorted(groups.values(), key=lambda g: (g[0].get("filing_date", ""), max(x.get("tx_date", "") for x in g)), reverse=True)
+    out: list[dict] = []
+    for g in order[:n]:
+        out.extend(sorted(g, key=lambda x: x.get("tx_date", ""), reverse=True))
+    return out
+
+
 PRICE_BACKFILL_MAX = 10   # 하루 가격 보충 신고서 수 상한 (SEC 요청 증가 제한)
 
 
@@ -263,8 +281,7 @@ def main():
                     "amount_usd_approx": round(amount_usd) if amount_usd else None,
                     "accession": b.get("accession", ""),
                 })
-    table4.sort(key=lambda x: x["tx_date"], reverse=True)
-    table4 = table4[:30]  # 최근 30건
+    table4 = select_recent_groups(table4, TABLE4_GROUPS)  # WP89 · 신고 묶음 단위 최근 30건 (행 단위로 자르면 한 신고가 잘림)
 
     out_csv = _P.out_flat(f"h65_form4_daily_table_{sha}.csv")
     with out_csv.open("w", newline="") as f:
