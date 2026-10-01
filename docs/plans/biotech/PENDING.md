@@ -37,6 +37,9 @@
 - 2: 테스트 2건 ("ALS" → "루게릭병(ALS)" · "Lesion Skin" 카드 분류 미사용) · pytest · tsx · build 통과 시 병합·배포 · 배포 후 서버 복사본 A 카드 63장 중 영어 질환명 남은 카드 수 · 한국어로 바뀐 카드 스크린샷 1장
 - 3: 날짜별 확인은 WP97 일정대로 · 새 작업 금지
 
+**진행 (2026-10-01 20시대)**:
+- PR #72 → 배포 `72ae4d0` · 13경로 200 · ko_terms 360행 · condition_categories 650행 · 서버 A 카드 63장 중 영어 질환명 남은 카드 56 → 2 (남은 2장 = 무시 등재한 Lesion Skin · Neoplasms by Histologic Type 의 "대상 질환" 원문) · 스크린샷 `docs/plans/biotech/screenshots/20261001_sha_72ae4d0/wp97_2_after_card_AVIR.webp`
+
 ---
 
 ### [Biotech Catalyst Radar · WP97 한국어 미등재 용어 제안 · 날짜별 확인 (새 기능 없음)] · 2026-10-01 발행
