@@ -41,7 +41,8 @@
     "v1.5": "WP69-3d · crowd 채널 재정의 (StockTwits 서버 차단으로 삭제 · apewisdom + Reddit RSS 만 · 로컬 st_24h 는 α 보조) · near 소스 AACT 주간 스냅샷 이식 (CT.gov API 호출 완전 제거) · 급등 경보 apewisdom 5배 or RSS 급증 재정의 · 단계 규칙 사전 고정 명문화 · 가중치 동일 · 60일 전 조정 금지 계속",
     "v1.5-wp78": "WP78 · 급등 경보 조건 정합 (기준선 7일 미만 제외 · 배수 조건에 오늘 5건 이상 추가 · 레딧 3건 유지) · 표시 계층 · 가중치·점수·단계 무변경",
     "v1.5-wp86": "WP86 · 배수 계산 기준선 하한 1건 (max(1.0, 평균)) · 경보 조건 무변경 · 가중치·점수·단계 무변경",
-    "v3-score (2026-10-02)": "WP93 · 전문가 채널 (b) H6 소속 +3 제거 · 다른 채널·정규화·가중치 무변경 · 영향 (로컬 입력 기준) 점수 78/80 · 순위 52종목 · 상위 30 ARTV 진입 · AVBP 탈락 · 서버 영향 0 (서버에 h6_membership 파일 없음 · 2026-10-01 확인)"
+    "v3-score (2026-10-02)": "WP93 · 전문가 채널 (b) H6 소속 +3 제거 · 다른 채널·정규화·가중치 무변경 · 영향 (로컬 입력 기준) 점수 78/80 · 순위 52종목 · 상위 30 ARTV 진입 · AVBP 탈락 · 서버 영향 0 (서버에 h6_membership 파일 없음 · 2026-10-01 확인)",
+    "v3-inputs (2026-10-01 · WP95)": "전문가 채널 입력 복구 (13D 주간 · b98 범위 그대로 · SCHEDULE 13D/13G 추가 · PubMed/Preprint 주간) · 미반영 채널 가격 입력 = IEX 누적 파일 + XBI · h6_membership 설계 입력에서 제외 · 가중치·정규화·계산식 무변경"
   },
   "alerts_definition_wp78": {
     "spec": "급등 경보 조건 정합 · WP78 · 2026-09-28 · 표시 계층 규칙 (점수·단계·후보 선정 무관)",
@@ -72,5 +73,16 @@
       "other_channels": "PubMed h57 · Preprint h58 · Form 4 P · 정규화 · 가중치 무변경",
       "recompute": "python -m backend.scripts.biotech_h46v3_radar --score-version v2 --date YYYYMMDD → radar_v1_3_<날짜>_scorev2.csv"
     }
+  },
+  "designed_inputs_wp95": {
+    "expert_13d": "h3_events_*.csv (주간 화 06:00 · biotech_radar_inputs_weekly 13d · 활동가 등록부 55곳 submissions + 새 13D/13G 헤더 · b98 씨앗 + h65 Form 4 · SC/SCHEDULE 13D·13G · 5년 창)",
+    "expert_pubmed": "h57_pubmed_index_*.json (주간 수 06:00 · NLM esearch · 올해·작년)",
+    "expert_preprint": "h58_preprint_index_*.json (주간 수 06:00 · NLM esearch preprint[SB] · 올해·작년)",
+    "unnoticed_prices": "<RUNTIME>/prices/iex_daily_history.csv (mcap 일일 IEX + 백필 · XBI 포함 · 100일 보관 · XBI 90일 창 55거래일 이상이면 갖춰짐)",
+    "removed": "h6_membership (v3 에서 쓰지 않음) · h3_prices_merged · benchmarks_*.csv (가격 누적 파일로 대체 · 계산식 무변경)"
+  },
+  "v3_full_start": {
+    "value": null,
+    "auto_record": "<RUNTIME>/radar_v3_full_start.json (inputs_missing 이 빈 첫 실행일 · 한 번만) · 관측 세션이 이 값으로 갱신"
   }
 }

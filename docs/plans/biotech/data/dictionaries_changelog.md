@@ -173,3 +173,12 @@
 - 11/15 채점표: 서버 실제 판정 기준으로 하되 이 사실을 머리에 적습니다.
 - 가시화 (WP94): 레이더가 입력을 못 찾으면 WARNING 1줄씩 · 텔레그램 warning 하루 1회 · 산출 CSV `inputs_missing` 열 · kpi.json · radar.json `inputs_missing` · 화면 순위표 머리 "점수 입력 부족: 전문가 채널 미반영(파일 N개 없음)".
 - 확인: 2026-10-01 서버 런타임 복사본을 서버와 같은 조건 (5개 입력 없음) 으로 v3 실행 → 서버 실제 10/1 v2 산출과 80행 순서·점수 모두 같음 (v3 의 서버 영향 0 재확인).
+
+## 규칙 기록 · 2026-10-01 (WP95) · 레이더 입력 복구 (v3-전체 준비)
+
+- 설계 입력 목록: h6_membership 제외 (v3 은 쓰지 않음). 남은 입력 4개 = h3_events · h57_pubmed_index · h58_preprint_index · iex_daily_history.
+- 13D (전문가 a): 주간 (화 06:00) `backend/scripts/biotech_radar_inputs_weekly.py 13d` · b98 과 같은 범위 = 활동가 등록부 55곳 (`docs/plans/biotech/data/h3_activist_cik_registry_v2.csv`) 의 신규 13D/13G (5년 창) + 펀드 55곳 Form 4 매수 (h65 캐시) · 등록부마다 submissions 1회 (55회) + 새 신고만 신고서 헤더 1회 (대상 회사 확인) · b98 산출을 씨앗으로 (`docs/plans/biotech/data/h3_seed_events_b98.csv`) 다시 묻지 않음 · 하루 SEC 상한에 닿으면 남은 헤더는 다음 주. **고친 점**: b98 은 "SC 13D/13G" 만 찾아 2024-12 양식 변경 ("SCHEDULE 13D/13G") 이후 기록이 없었음 → 두 이름 모두 셈. **쓰지 않은 방식**: 후보 회사 기준 submissions (2026-10-01 시험 994건 중 915건이 수동 13G · 잡음).
+- PubMed · Preprint (전문가 c · d): 주간 (수 06:00) 같은 모듈 `nlm` · 올해·작년 2개 연도 · 검색식은 h57 · h58 그대로 · 캐시 (결과 0 포함 · 작년 값 다시 받지 않음).
+- 가격 (미반영): mcap 일일 IEX 응답을 `<RUNTIME>/prices/iex_daily_history.csv` 에 누적 (100일 보관 · XBI 포함) · 90일 창을 못 덮은 종목은 하루 최대 50개 Tiingo 일봉 120일 백필. 레이더 90일 수익률 계산식은 그대로이고 입력 경로만 바뀜. XBI 가 90일 창 안에 55거래일 이상일 때 "갖춰짐".
+- 지시 조정: "90거래일 미만이면 120일 일봉" 은 120 달력일 ≈ 83 거래일이라 끝나지 않으므로, 레이더 창 (90 달력일) 을 덮는지로 판정 (창 시작 이전 기록이 있고 창 안 55거래일 이상).
+- v3-전체 시작일: inputs_missing 이 빈 첫 실행일을 `<RUNTIME>/radar_v3_full_start.json` 에 한 번 기록 (텔레그램 info 1회).

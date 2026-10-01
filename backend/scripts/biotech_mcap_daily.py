@@ -36,7 +36,7 @@ from typing import Any, Callable
 
 from backend.scripts import _biotech_paths as _P
 from backend.scripts.biotech_h6_collect_prices import (
-    MONTHLY_ALLOCATION, TiingoBlocked, fetch_iex, hourly_check, load_usage, record_request, save_usage,
+    MONTHLY_ALLOCATION, TiingoBlocked, fetch_iex, fetch_one, hourly_check, load_usage, record_request, save_usage,
 )
 from collections import Counter
 from backend.scripts.biotech_sec_common import SecBlockedError, SecDailyLedger, build_client, nearest_shares_outstanding, sec_get
@@ -45,6 +45,122 @@ LOG = logging.getLogger("biotech_mcap_daily")
 
 FLAG = "BIOTECH_MCAP_ENABLED"
 IEX_KEEP_DAYS = 30                  # WP75-2 · IEX 응답 원문 보관 기간
+BENCH = "XBI"                       # WP95 · 레이더 미반영 채널 기준 (90일 수익률 비교) · IEX 요청에 항상 포함
+HISTORY_KEEP_DAYS = 100             # WP95 · 가격 누적 파일 보관 (레이더 90일 창 + 여유)
+WINDOW_DAYS = 90                    # 레이더 load_returns_90d 의 달력 90일 창
+BACKFILL_MAX = 50                   # 하루 백필 종목 상한 (시간당 50 장부 안에서)
+BACKFILL_DAYS = 120                 # 백필 일봉 기간 (달력) · 90일 창을 덮음
+MIN_DATES_IN_WINDOW = 55            # 90일 창 안 거래일 수 하한 (약 62 거래일 중) · 미만이면 백필 대상
+STALE_DAYS = 10                     # 백필로 받은 마지막 거래일이 이보다 오래되면 거래 정지 등으로 보고
+SKIP_DAYS = 30                      # 그런 종목은 30일 동안 백필 대상에서 뺌 (2026-10-01 · APGE 9/4 · FBRX 8/27 에서 멈춤)
+
+
+def _skip_path() -> Path:
+    return _P.out_dir("prices") / "backfill_skip.json"
+
+
+def _load_skip(today: date) -> dict[str, str]:
+    p = _skip_path()
+    if not p.exists():
+        return {}
+    lo = (today - timedelta(days=SKIP_DAYS)).isoformat()
+    return {k: v for k, v in json.loads(p.read_text()).items() if v >= lo}
+
+
+def history_path() -> Path:
+    return _P.out_dir("prices") / "iex_daily_history.csv"
+
+
+def load_history(path: Path | None = None) -> dict[tuple[str, str], float]:
+    path = path or history_path()
+    out: dict[tuple[str, str], float] = {}
+    if path.exists():
+        with path.open() as f:
+            for r in csv.DictReader(f):
+                try:
+                    out[(r["ticker"], r["date"])] = float(r["close"])
+                except (KeyError, ValueError):
+                    continue
+    return out
+
+
+def save_history(hist: dict[tuple[str, str], float], today: date, path: Path | None = None) -> int:
+    """100일 지난 행 삭제 후 저장 · 삭제 행 수."""
+    path = path or history_path()
+    cutoff = (today - timedelta(days=HISTORY_KEEP_DAYS)).isoformat()
+    keep = {k: v for k, v in hist.items() if k[1] >= cutoff}
+    tmp = path.with_suffix(".csv.tmp")
+    with tmp.open("w", newline="") as f:
+        w = csv.writer(f)
+        w.writerow(["ticker", "date", "close"])
+        for (tk, d), c in sorted(keep.items()):
+            w.writerow([tk, d, c])
+    tmp.replace(path)
+    return len(hist) - len(keep)
+
+
+def needs_backfill(hist: dict[tuple[str, str], float], tickers: list[str], today: date) -> list[str]:
+    """레이더 90일 창을 덮지 못한 종목 (창 시작 이전 기록 없음 또는 창 안 거래일 < 55)."""
+    lo = (today - timedelta(days=WINDOW_DAYS)).isoformat()
+    by: dict[str, list[str]] = {}
+    for tk, d in hist:
+        by.setdefault(tk, []).append(d)
+    out = []
+    for tk in tickers:
+        ds = by.get(tk, [])
+        if not ds or min(ds) > lo or sum(1 for d in ds if d >= lo) < MIN_DATES_IN_WINDOW:
+            out.append(tk)
+    return out
+
+
+def backfill_prices(tickers: list[str], key: str, get: Callable[..., Any], today: date,
+                    now: Callable[[], datetime] | None = None) -> dict:
+    """WP95 · 90일 창을 못 덮은 종목을 하루 최대 50개 Tiingo 일봉 (120일) 로 채움 · H6 수집기·장부 (시간당 50 · 월 고유) 재사용."""
+    now = now or (lambda: datetime.now(timezone(timedelta(hours=9))))
+    hist = load_history()
+    skip = _load_skip(today)
+    todo = [t for t in needs_backfill(hist, tickers, today) if t not in skip]
+    if not todo:
+        LOG.info("가격 누적 · 백필 완료 (90일 창을 못 덮은 종목 0)")
+        return {"requests": 0, "filled": 0, "remaining": 0, "blocked": None}
+    usage = load_usage(today.strftime("%Y%m"))
+    start = (today - timedelta(days=BACKFILL_DAYS)).isoformat()
+    requests = filled = 0
+    blocked = None
+    for tk in todo[:BACKFILL_MAX]:
+        ok, next_at = hourly_check(usage, now())
+        if not ok:
+            blocked = f"hourly_limit · next {next_at:%Y-%m-%d %H:%M}"
+            LOG.warning("가격 백필 · 시간당 한도 · 다음 가능 시각 %s", f"{next_at:%Y-%m-%d %H:%M}")
+            break
+        if tk not in usage["symbols"]:
+            if len(usage["symbols"]) >= MONTHLY_ALLOCATION:
+                continue
+            usage["symbols"][tk] = {"first_use": today.isoformat(), "by": "WP75-backfill"}
+        record_request(usage, now(), by="WP75-backfill")
+        requests += 1
+        try:
+            bars = fetch_one(get, tk, key, today.isoformat(), start=start)
+        except TiingoBlocked as e:
+            blocked = str(e)
+            LOG.error("%s · 가격 백필 즉시 중단", e)
+            break
+        except LookupError:
+            continue
+        for b in bars:
+            hist[(tk, b["date"])] = float(b["close"])
+        filled += 1
+        last_bar = max(b["date"] for b in bars)
+        if last_bar < (today - timedelta(days=STALE_DAYS)).isoformat():
+            skip[tk] = today.isoformat()
+            LOG.info("가격 백필 · %s 마지막 거래일 %s · %d일 동안 백필 제외", tk, last_bar, SKIP_DAYS)
+    save_usage(usage)
+    save_history(hist, today)
+    _skip_path().write_text(json.dumps(skip, ensure_ascii=False))
+    remaining = len([t for t in needs_backfill(hist, tickers, today) if t not in skip])
+    LOG.info("가격 백필 · Tiingo 일봉 요청 %d · 채운 종목 %d · 남은 종목 %d%s", requests, filled, remaining,
+             " · 백필 완료" if remaining == 0 else "")
+    return {"requests": requests, "filled": filled, "remaining": remaining, "blocked": blocked}
 SEC_FACTS_URL = "https://data.sec.gov/api/xbrl/companyfacts/CIK{cik}.json"
 
 
@@ -168,6 +284,7 @@ def daily_prices(tickers: list[str], key: str, get: Callable[..., Any], today: d
                  now: Callable[[], datetime] | None = None) -> dict:
     """WP75-2 · IEX 일괄 1회 · 새 후보만 월 고유에 등록 · 요청 1회 장부 시간 단위 기록 · 응답 원문 보관."""
     now = now or (lambda: datetime.now(timezone(timedelta(hours=9))))
+    tickers = list(dict.fromkeys([*tickers, BENCH]))   # WP95 · XBI 항상 포함
     month = today.strftime("%Y%m")
     usage = load_usage(month)
     failed: dict[str, str] = {}
@@ -213,8 +330,15 @@ def daily_prices(tickers: list[str], key: str, get: Callable[..., Any], today: d
     for tk in ask:
         if tk not in prices and tk not in hidden:
             hidden[tk] = "응답 없음"
+    # WP95 · 레이더 90일 수익률 입력 · 마지막 미국 거래일 값만 누적 (오래된 값은 넣지 않음)
+    hist = load_history()
+    added = sum(1 for tk, p in prices.items() if (tk, p["close_date"]) not in hist)
+    for tk, p in prices.items():
+        hist[(tk, p["close_date"])] = float(p["close"])
+    pruned_rows = save_history(hist, today)
+    LOG.info("가격 누적 · %s · 더한 행 %d · %d일 지나 지운 행 %d", last_day, added, HISTORY_KEEP_DAYS, pruned_rows)
     return {**base, "requests": 1, "prices": prices, "hidden": hidden, "last_us_trading_day": last_day,
-            "monthly_unique_used": len(usage["symbols"]), "new_symbols": len(new)}
+            "monthly_unique_used": len(usage["symbols"]), "new_symbols": len(new), "history_added": added}
 
 
 def build_display(shares: dict, prices: dict) -> dict:
@@ -279,6 +403,7 @@ def run(mode: str, get_tiingo: Callable[..., Any] | None = None, get_sec: Callab
         import httpx
         get_tiingo = httpx.Client(timeout=30).get
     res = daily_prices(sorted(cands), key, get_tiingo, today)
+    res["backfill"] = backfill_prices(list(dict.fromkeys([*sorted(cands), BENCH])), key, get_tiingo, today)   # WP95
     del key
     (mdir / f"prices_{today:%Y%m%d}.json").write_text(json.dumps(res, ensure_ascii=False, indent=1))
     display = build_display(_latest_json("shares").get("shares", {}), res["prices"])
@@ -288,7 +413,7 @@ def run(mode: str, get_tiingo: Callable[..., Any] | None = None, get_sec: Callab
              res["requests"], res["last_us_trading_day"], len(res["prices"]), len(res["hidden"]), len(display),
              res["monthly_unique_used"], res["new_symbols"])
     return {"mode": mode, "requests": res["requests"], "blocked": res["blocked"], "failed": len(res["failed"]),
-            "hidden": len(res["hidden"]), "display_rows": len(display), "monthly_unique_used": res["monthly_unique_used"]}
+            "backfill": res["backfill"], "hidden": len(res["hidden"]), "display_rows": len(display), "monthly_unique_used": res["monthly_unique_used"]}
 
 
 def main():

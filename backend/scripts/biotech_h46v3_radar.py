@@ -48,7 +48,8 @@ def load_returns_90d(sha: str) -> dict[str, float]:
 
     WP69-3g: h3_prices_merged (47MB) 커밋 제외 · 서버 부재 시 빈 dict 반환.
     """
-    p = _P.find(f"h3_prices_merged_{sha}.csv") or _P.find_glob("h3_prices_merged_*.csv")
+    # WP95 · 입력 = 가격 누적 파일 (mcap 단계 IEX 일일 + 백필 · ticker,date,close) · 계산식은 그대로
+    p = price_history_path() if price_history_ready() else None
     if p is None or not p.exists():
         return {}
     latest = {}
@@ -77,8 +78,28 @@ def load_returns_90d(sha: str) -> dict[str, float]:
     return out
 
 
+PRICE_HISTORY = "iex_daily_history.csv"   # WP95 · <RUNTIME>/prices/
+XBI_MIN_DATES = 55                         # 90일 창 안 XBI 거래일이 이만큼 있어야 가격 입력이 갖춰진 것으로 봄
+
+
+def price_history_path() -> Path | None:
+    return _P.find(PRICE_HISTORY, subdir="prices")
+
+
+def price_history_ready(path: Path | None = None) -> bool:
+    """누적 파일이 있고 XBI 가 최근 90일 창 안에 55거래일 이상 있으면 True (그 전에는 미반영 채널 중립 유지)."""
+    path = path or price_history_path()
+    if path is None or not path.exists():
+        return False
+    lo = (datetime.now(timezone.utc).date() - timedelta(days=90)).isoformat()
+    with path.open() as f:
+        n = sum(1 for r in csv.DictReader(f) if r.get("ticker") == "XBI" and r.get("date", "") >= lo)
+    return n >= XBI_MIN_DATES
+
+
 def load_xbi_90d(sha: str) -> float:
-    p = _P.find(f"benchmarks_{sha}.csv") or _P.find_glob("benchmarks_*.csv")
+    # WP95 · XBI 도 가격 누적 파일에서 (이전: benchmarks_*.csv · 서버에 없었음)
+    p = price_history_path() if price_history_ready() else None
     if p is None or not p.exists():
         return 0.0
     xbi = {}
@@ -107,12 +128,12 @@ def expert_channel_1_2(n_13d_events: int, in_h6_membership: bool, version: str =
 
 
 # WP94 · 설계된 점수 입력 파일 (없으면 그 채널은 0 또는 중립으로 계산됨) · 이름 → (정확한 이름, 글롭)
+# WP95 · h6_membership 제외 (v3 은 쓰지 않음) · 가격 = 누적 파일 (XBI 55거래일 이상이면 갖춰짐)
 DESIGNED_INPUTS = {
-    "h6_membership": ("h6_membership_{sha}.csv", "h6_membership_*.csv"),
     "h3_events": ("h3_events_{sha}.csv", "h3_events_*.csv"),
     "h57_pubmed_index": ("h57_pubmed_index_{sha}.json", "h57_pubmed_index_*.json"),
     "h58_preprint_index": ("h58_preprint_index_{sha}.json", "h58_preprint_index_*.json"),
-    "h3_prices_merged": ("h3_prices_merged_{sha}.csv", "h3_prices_merged_*.csv"),
+    "iex_daily_history": None,
 }
 
 
@@ -127,8 +148,8 @@ def _notify_warning(title: str, body: str) -> None:
 
 def check_inputs(sha: str, notify=None) -> list[str]:
     """설계 입력 중 찾지 못한 이름 목록 · 하나라도 없으면 WARNING 1줄씩 + 텔레그램 warning 1회 (목록 포함)."""
-    missing = [name for name, (exact, pattern) in DESIGNED_INPUTS.items()
-               if (_P.find(exact.format(sha=sha)) or _P.find_glob(pattern)) is None]
+    missing = [name for name, spec in DESIGNED_INPUTS.items()
+               if (not price_history_ready() if spec is None else (_P.find(spec[0].format(sha=sha)) or _P.find_glob(spec[1])) is None)]
     for name in missing:
         LOG.warning("레이더 입력 없음 · %s · 해당 채널은 0 또는 중립으로 계산", name)
     marker = _P.out_dir("logs") / f"radar_inputs_warned_{_P.today_kst_str()}"
@@ -142,6 +163,32 @@ def check_inputs(sha: str, notify=None) -> list[str]:
             "biotech 레이더 점수 입력 부족",
             f"없는 입력 {len(missing)}개: {', '.join(missing)}\n전문가 채널·미반영 채널이 0 또는 중립으로 계산됩니다 (표시만 · 점수 규칙 무변경)")
     return missing
+
+
+V3_FULL_START = "radar_v3_full_start.json"   # WP95 · <RUNTIME>/ · inputs_missing 이 빈 첫 실행일 (한 번만 기록)
+
+
+def record_v3_full_start(inputs_missing: list[str], day: str, notify=None) -> str | None:
+    """설계 입력이 모두 갖춰진 첫 실행일을 런타임 파일에 한 번만 기록 · 텔레그램 info 1회 · 이미 있으면 그대로."""
+    p = _P.out_flat(V3_FULL_START)
+    if p.exists():
+        return json.loads(p.read_text()).get("v3_full_start")
+    if inputs_missing:
+        return None
+    iso = f"{day[:4]}-{day[4:6]}-{day[6:]}"
+    p.write_text(json.dumps({"v3_full_start": iso, "note": "레이더 v3-전체 시작일 (inputs_missing 빈 첫 실행) · WP95"}, ensure_ascii=False))
+    LOG.info("레이더 v3-전체 시작일 기록 · %s", iso)
+    try:
+        if notify is None:
+            import asyncio
+            from backend.services.notifier import TelegramNotifier
+            if (os.environ.get("BIOTECH_NOTIFY_OFF") or "").strip() != "1":
+                asyncio.run(TelegramNotifier().send_info(title="biotech 레이더 v3-전체 시작", body=f"설계 입력이 모두 갖춰진 첫 실행일 {iso}"))
+        else:
+            notify(iso)
+    except Exception as e:  # noqa: BLE001
+        LOG.warning("notifier 실패 · %s", e.__class__.__name__)
+    return iso
 
 
 def _args():
@@ -170,6 +217,8 @@ def main():
     today_str = args.date or _P.today_kst_str("%Y%m%d")
     LOG.info("레이더 점수 %s · 날짜 %s", version, today_str)
     inputs_missing = check_inputs(sha)
+    if version == SCORE_VERSION and not args.date:
+        record_v3_full_start(inputs_missing, today_str)
 
     # WP69-3g hotfix · candidates v3 > v2 > v1 순 · _P 경로 해석기
     cp = None
