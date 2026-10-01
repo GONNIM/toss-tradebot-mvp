@@ -165,6 +165,9 @@ export type ThemeRank = { theme_ko?: string; rank?: number; of?: number; quarter
 
 const clip = (s: string, n: number) => (s.length > n ? `${s.slice(0, n - 1)}…` : s);
 
+// WP91 · H6 (테마 관심도 → 주가) 관문 2 폐기 확정 (2026-10-01) · 순위는 참고 표시만
+export const THEME_RANK_NOTE = "검증 폐기 · 참고용";
+
 export function cardText(
   trial: TrialDisplay | undefined,
   phase: string | undefined,
@@ -213,7 +216,7 @@ export function cardText(
   const main = parts.length >= 2 ? parts.join(" · ") : null; // 필드가 거의 없으면 기존 문장 (trialSentence) 사용
   const themeLine =
     theme && theme.rank && theme.theme_ko
-      ? `이 분야(${theme.theme_ko})의 최근 테마 순위 ${theme.rank}위${theme.of ? ` (${theme.of}개 중` : " ("}${theme.quarter ? ` · ${theme.quarter}` : ""} · 논문·임상 증가율 기준)`
+      ? `이 분야(${theme.theme_ko})의 최근 테마 순위 ${theme.rank}위${theme.of ? ` (${theme.of}개 중` : " ("}${theme.quarter ? ` · ${theme.quarter}` : ""} · 논문·임상 증가율 기준) · ${THEME_RANK_NOTE}`
       : null;
   return { main, theme: themeLine };
 }

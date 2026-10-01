@@ -2,7 +2,7 @@
 import assert from "node:assert/strict";
 import * as fs from "node:fs";
 import * as path from "node:path";
-import { cardText, dday, endLabel, stageLabel, exhibitLine, LEAD_LABEL, groupForm4, insiderSummary, insiderTxLine, mentionSentence, multSentence, trialSentence, rumorReason, shortName, summaryStatus, tickerOrUnknown } from "./biotech-display";
+import { cardText, dday, THEME_RANK_NOTE, endLabel, stageLabel, exhibitLine, LEAD_LABEL, groupForm4, insiderSummary, insiderTxLine, mentionSentence, multSentence, trialSentence, rumorReason, shortName, summaryStatus, tickerOrUnknown } from "./biotech-display";
 
 const beauty = cardText({ category: "미용", interventions: [{ name: "X-1", type: "DRUG", type_ko: "약물" }] }, "PHASE2", "2026-11-30", 62);
 assert.ok(beauty.main?.startsWith("미용 · X-1 (약물) · 2상(효과 탐색)"), beauty.main ?? "null");
@@ -89,4 +89,6 @@ assert.equal(exhibitLine({ ex99_1_title: "", ex99_1_status: "ok" }), "보도자�
 assert.equal(exhibitLine({ ex99_1_status: "daily_cap" }), "보도자료: 읽지 않음 (오늘 SEC 요청 상한 도달)");
 assert.equal(exhibitLine({ ex99_1_status: "none" }), "");
 assert.ok(LEAD_LABEL.includes("진위 미검증"));
+// WP91 · H6 폐기 확정 · 테마 순위 줄에 참고 표시
+assert.ok((cardText({ category: "암" }, "PHASE2", undefined, null, { theme_ko: "비만", rank: 2, of: 6, quarter: "2026Q2" }).theme ?? "").endsWith(` · ${THEME_RANK_NOTE}`));
 console.log("ok");

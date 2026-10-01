@@ -169,5 +169,70 @@
       "blocked": "Tiingo HTTP 429",
       "requested_this_run": null
     }
-  ]
+  ],
+  "input_seal": {
+    "file": "backend/data/biotech/h6/h6_prices_tiingo_20261001.csv",
+    "sha256": "a40dbf70c0f2affbc2b9ffc09583a9ac1d7b9234c672d195a8dea05a20580bb7",
+    "sealed": "2026-10-01 11:40 WP90-2 · 기존 17종목 전 기간 합친 뒤",
+    "benchmarks": {
+      "file": "backend/data/biotech/h6/h6_benchmarks_tiingo_20261001.csv",
+      "sha256": "af4317a3afb5f013b74099f46a58c1463f0a6baa8e2eaa308fdf2e895de69e33"
+    }
+  },
+  "input_seal_history": [
+    {
+      "file": "backend/data/biotech/h6/h6_prices_tiingo_20261001.csv",
+      "sha256": "75eba17760f959b19f68ba142c0fc14c81d1d968141900079397b346cb7ffb8f",
+      "sealed": "2026-10-01 WP90 · 백테스트 입력 봉인"
+    }
+  ],
+  "backfill_wp90_2": {
+    "requests": 19,
+    "success": 19,
+    "failed": {},
+    "not_attempted": [],
+    "blocked": null,
+    "monthly_unique_used": 154,
+    "monthly_remaining": 296,
+    "first_bar_date": {
+      "XBI": "2014-10-01",
+      "IWM": "2014-10-01",
+      "ACRS": "2015-10-07",
+      "ALGS": "2020-10-16",
+      "BIOA": "2024-09-26",
+      "BMEA": "2021-04-16",
+      "CGTX": "2021-10-08",
+      "CRBP": "2014-11-11",
+      "ENTA": "2014-10-01",
+      "LEXX": "2016-05-12",
+      "MBX": "2024-09-13",
+      "MDGL": "2014-10-01",
+      "OPK": "2014-10-01",
+      "RANI": "2021-07-30",
+      "RYTM": "2017-10-05",
+      "SGMT": "2023-07-14",
+      "SKYE": "2015-04-02",
+      "TLSA": "2018-11-20",
+      "VTVT": "2015-07-30"
+    },
+    "merged_tickers": [
+      "ACRS",
+      "ALGS",
+      "BIOA",
+      "BMEA",
+      "CGTX",
+      "CRBP",
+      "ENTA",
+      "LEXX",
+      "MBX",
+      "MDGL",
+      "OPK",
+      "RANI",
+      "RYTM",
+      "SGMT",
+      "SKYE",
+      "TLSA",
+      "VTVT"
+    ]
+  }
 }
