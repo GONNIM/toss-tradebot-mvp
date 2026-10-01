@@ -42,6 +42,10 @@
   - 10/7 (수) 06:00: radar-weekly.log "PubMed·Preprint 주간 · …"
   - v3-전체 시작일: `/root/toss-tradebot-mvp/var/biotech/radar_v3_full_start.json` 생기면 params · 영구 규칙에 옮김
 
+**진행 (2026-10-01 19시대)**:
+- 1·2: PR #69 → 배포 `06ec7ce` · 13경로 200 · 서버 crontab 항목 5줄 (07:00 매일 · 월 06:00 · 15일 08:00 · 화 06:00 13D · 수 06:00 NLM) · 서버 `.env` 두 이름 개수 2 (값 안 봄) · SOPS 는 `sops set --value-stdin` 으로만 · diff 는 ENC[...] 만
+- 3: PR #70 (문서) 병합 `ac1c7c7` · H3 보고서 2곳 · changelog
+
 ---
 
 ### [Biotech Catalyst Radar · WP95 레이더 입력 복구 (점수 입력 변경 · 병합 승인됨)] · 2026-10-01 발행
