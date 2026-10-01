@@ -14,6 +14,9 @@ H6 적용: 창시작 = 리밸런싱 분기 (순위 분기 t 의 다음 분기) �
 """
 from __future__ import annotations
 
+from backend.services import config  # noqa: F401
+from backend.scripts._biotech_bootstrap import require_secure_logging
+
 import csv
 import json
 import sys
@@ -67,6 +70,7 @@ def bar_ranges() -> dict[str, tuple[date, date]]:
 
 
 def main(low_list: list[str]) -> None:
+    require_secure_logging()
     gate = json.loads(GATE.read_text())
     quarters = [g["quarter"] for g in gate]
     members = list(csv.DictReader(MEMBERS.open()))

@@ -1,0 +1,155 @@
+{
+  "input_seal": {
+    "file": "backend/data/biotech/h6/h6_prices_tiingo_20261001.csv",
+    "sha256": "a40dbf70c0f2affbc2b9ffc09583a9ac1d7b9234c672d195a8dea05a20580bb7",
+    "sealed": "2026-10-01 11:40 WP90-2 · 기존 17종목 전 기간 합친 뒤",
+    "benchmarks": {
+      "file": "backend/data/biotech/h6/h6_benchmarks_tiingo_20261001.csv",
+      "sha256": "af4317a3afb5f013b74099f46a58c1463f0a6baa8e2eaa308fdf2e895de69e33"
+    }
+  },
+  "params": "docs/plans/biotech/data/h6_params_v2.json (무변경)",
+  "boot": 10000,
+  "seed": 42,
+  "cost_round_trip": 0.01,
+  "results": {
+    "rule_a1|full|1Q": {
+      "quarters": 38,
+      "mean_diff": 0.00678,
+      "cluster_ci95": [
+        -0.043027,
+        0.056839
+      ],
+      "top_mean": -0.017003,
+      "bot_mean": -0.023783,
+      "quarters_top_beats_bot": 22,
+      "iid_events": {
+        "n_top": 281,
+        "n_bot": 699,
+        "ci95": [
+          -0.006911,
+          0.061125
+        ]
+      }
+    },
+    "rule_a1|full|4Q": {
+      "quarters": 35,
+      "mean_diff": -0.006656,
+      "cluster_ci95": [
+        -0.192803,
+        0.157959
+      ],
+      "top_mean": 0.006656,
+      "bot_mean": 0.013311,
+      "quarters_top_beats_bot": 17,
+      "iid_events": {
+        "n_top": 269,
+        "n_bot": 616,
+        "ci95": [
+          0.06672,
+          0.218537
+        ]
+      }
+    },
+    "rule_a1|ex_large|1Q": {
+      "quarters": 38,
+      "mean_diff": -0.005564,
+      "cluster_ci95": [
+        -0.072007,
+        0.057598
+      ],
+      "top_mean": -0.018893,
+      "bot_mean": -0.013329,
+      "quarters_top_beats_bot": 21
+    },
+    "rule_a1|ex_large|4Q": {
+      "quarters": 35,
+      "mean_diff": -0.046387,
+      "cluster_ci95": [
+        -0.245,
+        0.132487
+      ],
+      "top_mean": 0.000347,
+      "bot_mean": 0.046734,
+      "quarters_top_beats_bot": 16
+    },
+    "tercile_ref|full|1Q": {
+      "quarters": 27,
+      "mean_diff": -0.020808,
+      "cluster_ci95": [
+        -0.08173,
+        0.043371
+      ],
+      "top_mean": -0.041874,
+      "bot_mean": -0.021067,
+      "quarters_top_beats_bot": 14,
+      "iid_events": {
+        "n_top": 331,
+        "n_bot": 622,
+        "ci95": [
+          0.003079,
+          0.068171
+        ]
+      }
+    },
+    "tercile_ref|full|4Q": {
+      "quarters": 24,
+      "mean_diff": -0.064426,
+      "cluster_ci95": [
+        -0.234477,
+        0.116831
+      ],
+      "top_mean": -0.062021,
+      "bot_mean": 0.002406,
+      "quarters_top_beats_bot": 10,
+      "iid_events": {
+        "n_top": 310,
+        "n_bot": 493,
+        "ci95": [
+          0.031801,
+          0.186392
+        ]
+      }
+    },
+    "tercile_ref|ex_large|1Q": {
+      "quarters": 27,
+      "mean_diff": -0.052255,
+      "cluster_ci95": [
+        -0.144435,
+        0.037826
+      ],
+      "top_mean": -0.045785,
+      "bot_mean": 0.00647,
+      "quarters_top_beats_bot": 12
+    },
+    "tercile_ref|ex_large|4Q": {
+      "quarters": 24,
+      "mean_diff": -0.12513,
+      "cluster_ci95": [
+        -0.343433,
+        0.092381
+      ],
+      "top_mean": -0.06788,
+      "bot_mean": 0.057251,
+      "quarters_top_beats_bot": 9
+    }
+  },
+  "verdict_primary_full": "폐기",
+  "verdict_ex_large_observe": "폐기",
+  "verdict_tercile_reference": "폐기",
+  "top_basket_theme_contribution_simple_excess_mean": {
+    "1Q": {
+      "hair_loss": -0.012669,
+      "longevity_rejuvenation": 0.010889,
+      "meal_replacement_metabolic": -0.007884,
+      "obesity_glp1": 0.000498
+    },
+    "4Q": {
+      "hair_loss": 0.049568,
+      "meal_replacement_metabolic": -0.034146,
+      "obesity_glp1": 0.012672,
+      "longevity_rejuvenation": -0.006639
+    }
+  },
+  "unknown_mcap_rows": 182
+}
