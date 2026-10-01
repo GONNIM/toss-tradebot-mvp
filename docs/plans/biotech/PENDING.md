@@ -40,6 +40,16 @@
 - 6: inputs_missing 빈 첫 실행일 = "레이더 v3-전체 시작일" 자동 기록 (params · 영구 규칙) · 11/15 3구간 규칙
 - 7: 서버 복사본 + 로컬 입력 전체 복구 상위 30 vs 현재 서버 (진입·탈락 7) · pytest · tsx · build 통과 시 병합·배포 · 13경로
 
+**진행 (2026-10-01 18시대)**:
+- PR #68 → 배포 `7bd1679` · 13경로 200
+- 13D 는 b98 범위 그대로 (활동가 55곳 + 펀드 Form 4) · 후보 기준 방식은 시험에서 994건 중 915건이 수동 13G 라 쓰지 않음 · SCHEDULE 13D/13G 추가 (b98 은 2024-12 이후 누락)
+- 백필 판정 조정: "90거래일" 대신 레이더 90일 (달력) 창을 덮는지 (120일 일봉은 약 83거래일이라 90거래일 미달) · 정지 종목 (APGE 9/4 · FBRX 8/27) 30일 제외
+- 미리보기 (서버 복사본 · 새 단계 실제 실행 · SEC 112 · NLM 316 · Tiingo IEX 1 + 백필 81): inputs_missing 없음 · 현재 서버 상위 30 대비 진입 ALGS ARTV COGT CRBP FDMT IKT · 탈락 ADCT ANNX EXEL FBRX KOD KRYS (6·6) · 예전 로컬 파일 기준은 7·7
+- **사용자 할 일 · 서버 crontab 두 줄 추가** (`crontab -e` · 서버 시간 KST):
+  - `0 6 * * 2 /bin/bash /root/toss-tradebot-mvp/backend/scripts/biotech_h48v3_daily_server.sh --radar-13d-weekly-only >> /root/toss-tradebot-mvp/var/biotech/logs/radar-weekly.log 2>&1`
+  - `0 6 * * 3 /bin/bash /root/toss-tradebot-mvp/backend/scripts/biotech_h48v3_daily_server.sh --radar-nlm-weekly-only >> /root/toss-tradebot-mvp/var/biotech/logs/radar-weekly.log 2>&1`
+- v3-전체 시작 조건: 화 13D · 수 NLM 실행 + 플래그 켬 (SOPS) 뒤 가격 누적·백필 (약 2일) → inputs_missing 빈 첫 daily 실행일이 `<RUNTIME>/radar_v3_full_start.json` 에 기록됨 → 관측 때 영구 규칙 줄과 params 에 옮겨 적음
+
 ---
 
 ### [Biotech Catalyst Radar · WP94 레이더 입력 부재 가시화 · 누락 입력 조사 · 표시 결함 2건] · 2026-10-01 발행
