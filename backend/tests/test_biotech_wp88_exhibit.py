@@ -97,3 +97,23 @@ def test_forbidden_sentences_removed_before_llm():
 def test_exhibit_target_rule():
     assert br.exhibit_target("8.01,9.01") and br.exhibit_target("7.01, 9.01")
     assert not br.exhibit_target("8.01") and not br.exhibit_target("5.02,9.01") and not br.exhibit_target("")
+
+
+# WP92 · EDGAR 보도자료 실제 모양 (IOVA 2026-09-29 EX-99.1 구조를 줄인 것) · 한 <P> 안 줄바꿈 · 첫 굵은 글씨가 "Exhibit 99.1"
+EDGAR_LIKE = """<html><head><title>EX-99.1</title></head><body>
+<P STYLE="text-align: right"><FONT><B>Exhibit 99.1</B></FONT></P>
+<P STYLE="text-align: center"><FONT><B>Acme Bio
+Raises Full Year 2026 Revenue Guidance to $410 to $420 Million</B></FONT></P>
+<P STYLE="text-align: center"><FONT><I>Represents an Increase of $55 Million at the Midpoint</I></FONT></P>
+<P><FONT><B>PHILADELPHIA, Pennsylvania, September&nbsp;29,
+2026 --&nbsp;</B>Acme Bio,&nbsp;Inc. (NASDAQ: ACME), a commercial biotechnology company, today raised its full year 2026
+total revenue guidance range to $410 to $420 million.</FONT></P>
+</body></html>"""
+
+
+def test_edgar_like_title_and_lead():
+    t = br.exhibit_title(EDGAR_LIKE)
+    assert t == "Acme Bio Raises Full Year 2026 Revenue Guidance to $410 to $420 Million"
+    lead = br.exhibit_lead(EDGAR_LIKE, t)
+    assert lead.startswith("Acme Bio, Inc. (NASDAQ: ACME), a commercial biotechnology company, today raised")
+    assert "Represents an Increase" not in lead and "PHILADELPHIA" not in lead
