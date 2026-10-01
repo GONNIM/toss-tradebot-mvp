@@ -2,7 +2,7 @@
 import assert from "node:assert/strict";
 import * as fs from "node:fs";
 import * as path from "node:path";
-import { cardText, dday, THEME_RANK_NOTE, endLabel, stageLabel, exhibitLine, LEAD_LABEL, groupForm4, insiderSummary, insiderTxLine, mentionSentence, multSentence, trialSentence, rumorReason, shortName, summaryStatus, tickerOrUnknown } from "./biotech-display";
+import { cardText, daysSinceFiling, dday, THEME_RANK_NOTE, endLabel, stageLabel, exhibitLine, LEAD_LABEL, groupForm4, insiderSummary, insiderTxLine, mentionSentence, multSentence, trialSentence, rumorReason, shortName, summaryStatus, tickerOrUnknown } from "./biotech-display";
 
 const beauty = cardText({ category: "미용", interventions: [{ name: "X-1", type: "DRUG", type_ko: "약물" }] }, "PHASE2", "2026-11-30", 62);
 assert.ok(beauty.main?.startsWith("미용 · X-1 (약물) · 2상(효과 탐색)"), beauty.main ?? "null");
@@ -79,7 +79,7 @@ const f4 = [
 ];
 const gs = groupForm4(f4);
 assert.equal(gs.length, 1);
-assert.equal(insiderSummary(gs[0]), "ETRA · Electra Therapeutics · Orbimed Advisors(전문 펀드) · 8일 전 신고 · 거래 2건 · 합계 1,333,333주 · 금액 미기재");
+assert.equal(insiderSummary(gs[0], new Date("2026-10-01T03:00:00Z")), "ETRA · Electra Therapeutics · Orbimed Advisors(전문 펀드) · 8일 전 신고 · 거래 2건 · 합계 1,333,333주 · 금액 미기재");
 const priced = groupForm4(f4.map((r) => ({ ...r, form4: { ...r.form4, price: 3 } })));
 assert.ok(insiderSummary(priced[0]).endsWith("금액 $3,999,999"));
 assert.equal(insiderTxLine({ tx_date: "2026-09-21", shares: 333333, price: 3 }), "9/21 거래 · 333,333주 · 주당 $3.00 · $999,999");
@@ -91,4 +91,7 @@ assert.equal(exhibitLine({ ex99_1_status: "none" }), "");
 assert.ok(LEAD_LABEL.includes("진위 미검증"));
 // WP91 · H6 폐기 확정 · 테마 순위 줄에 참고 표시
 assert.ok((cardText({ category: "암" }, "PHASE2", undefined, null, { theme_ko: "비만", rank: 2, of: 6, quarter: "2026Q2" }).theme ?? "").endsWith(` · ${THEME_RANK_NOTE}`));
+// WP93 · "N일 전 신고" 는 신고일 기준 (거래일 기준 elapsed_days 10 이어도 신고 9/23 → 10/1 은 8일)
+assert.equal(daysSinceFiling("2026-09-23", new Date("2026-10-01T03:00:00Z")), 8);
+assert.equal(daysSinceFiling("2026-09-30", new Date("2026-09-30T16:00:00Z")), 1);   // UTC 9/30 16시 = KST 10/1 01시
 console.log("ok");
