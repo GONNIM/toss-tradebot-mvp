@@ -84,6 +84,16 @@ async def lifespan(app: FastAPI):
     logger.info("[FastAPI] starting — init DB")
     await init_db()
 
+    # WP93 · 로컬 화면 확인 전용 모드 · BIOTECH_API_ONLY=1 이면 스케줄러 (자동매매 · 수집 잡 포함) 를 만들지 않고 API 만 연다
+    # 기본값 (변수 없음) 은 지금과 같다 · 서버에서는 쓰지 않는다
+    import os as _os_api_only
+    if _os_api_only.environ.get("BIOTECH_API_ONLY", "").lower() in {"1", "true", "yes", "on"}:
+        logger.warning("[FastAPI] BIOTECH_API_ONLY · 스케줄러 미시작 (API 만 · 로컬 화면 확인용)")
+        app.state.scheduler = None
+        yield
+        logger.info("[FastAPI] shutdown (API only)")
+        return
+
     # APScheduler (B-2l) — sector_leaders 매월 잡 + meme_watch 주간 잡
     from apscheduler.schedulers.asyncio import AsyncIOScheduler
 

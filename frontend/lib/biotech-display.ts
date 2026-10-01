@@ -338,10 +338,19 @@ export function filedAgo(days?: number | null): string {
   return days === 0 ? "오늘 신고" : `${days}일 전 신고`;
 }
 
+// WP93 · 신고일 (filing_date) 에서 오늘 (KST) 까지 일수 · elapsed_days 는 거래일 기준이라 "N일 전 신고" 에 쓰면 어긋남
+export function daysSinceFiling(filingDate?: string, now: Date = new Date()): number | null {
+  if (!filingDate || !/^\d{4}-\d{2}-\d{2}$/.test(filingDate)) return null;
+  const t = kstParts(now.toISOString());
+  const today = Date.UTC(t.y, t.m - 1, t.d);
+  const [y, m, d] = filingDate.split("-").map(Number);
+  return Math.round((today - Date.UTC(y, m - 1, d)) / 86_400_000);
+}
+
 const usd = (n: number) => `$${Math.round(n).toLocaleString("en-US")}`;
 
 // 예: "ETRA · Electra Therapeutics · Orbimed Advisors(전문 펀드) · 8일 전 신고 · 거래 2건 · 합계 1,333,333주 · 금액 미기재"
-export function insiderSummary<T extends Form4RowLike>(g: Form4Group<T>): string {
+export function insiderSummary<T extends Form4RowLike>(g: Form4Group<T>, now: Date = new Date()): string {
   const first = g.rows[0];
   const f = first.form4 ?? {};
   const total = g.rows.reduce((a, r) => a + (r.form4?.shares ?? 0), 0);
@@ -349,7 +358,7 @@ export function insiderSummary<T extends Form4RowLike>(g: Form4Group<T>): string
   const amount = priced ? g.rows.reduce((a, r) => a + (r.form4!.shares ?? 0) * (r.form4!.price as number), 0) : null;
   const filer = f.filer_name ? `${shortName(f.filer_name)}${f.filer_type ? `(${f.filer_type})` : ""}` : f.filer_type || "신고자 미확인";
   return [
-    tickerOrUnknown(first.ticker), shortName(first.name), filer, filedAgo(f.elapsed_days),
+    tickerOrUnknown(first.ticker), shortName(first.name), filer, filedAgo(daysSinceFiling(f.filing_date, now) ?? f.elapsed_days),
     `거래 ${g.rows.length}건`, `합계 ${Math.round(total).toLocaleString("ko-KR")}주`,
     amount !== null ? `금액 ${usd(amount)}` : "금액 미기재",
   ].join(" · ");
