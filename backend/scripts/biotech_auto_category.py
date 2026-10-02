@@ -219,18 +219,52 @@ def unmapped_terms(snapshot: dict, manual: set[str]) -> Counter:
     return c
 
 
-def build(snapshot: dict, manual: set[str], cache: dict, stems: list, client: NlmClient | None, today: str) -> tuple[dict, list[dict], dict]:
-    """(auto_categories, 제안 행, 통계) · client=None 이면 NLM 요청 없음 (캐시만)."""
+def example_tickers(snapshot: dict) -> dict[str, str]:
+    """용어 → 처음 나온 시험의 종목 (제안 파일 example_ticker)."""
+    out: dict[str, str] = {}
+    for m in snapshot.get("matches", []):
+        for t in m.get("mesh_terms", []) + m.get("conditions", []):
+            if t and t not in out and m.get("ticker"):
+                out[t] = m["ticker"]
+    return out
+
+
+CACHE_SAVE_EVERY = 50      # WP98-3 · 캐시 중간 저장 간격 (새로 받은 용어 수)
+
+
+class AutoCategoryFailed(RuntimeError):
+    """WP98-3 · 요청의 절반 이상이 실패하면 단계 실패 (캐시는 이미 저장됨)."""
+
+
+def build(snapshot: dict, manual: set[str], cache: dict, stems: list, client: NlmClient | None, today: str,
+          save: Callable[[], None] | None = None) -> tuple[dict, list[dict], dict]:
+    """(auto_categories, 제안 행, 통계) · client=None 이면 NLM 요청 없음 (캐시만).
+
+    WP98-3 · 용어마다 예외를 잡아 그 용어만 skipped (캐시에 넣지 않음 → 다음 실행에서 다시 시도) · 403·429 는 즉시 중단 ·
+    새로 받은 용어 50개마다와 끝날 때 (예외 포함) 캐시 저장.
+    """
     terms = unmapped_terms(snapshot, manual)
     blocked = False
-    for t in sorted(terms):
-        if t in cache or client is None or blocked:
-            continue
-        try:
-            cache[t] = {**client.trees(t), "date": today}
-        except NlmBlocked as e:
-            LOG.error("%s · NLM 조회 즉시 중단 (이번 주는 캐시·어간만)", e)
-            blocked = True
+    skipped: dict[str, str] = {}
+    fetched = 0
+    try:
+        for t in sorted(terms):
+            if t in cache or client is None or blocked:
+                continue
+            try:
+                cache[t] = {**client.trees(t), "date": today}
+                fetched += 1
+                if save and fetched % CACHE_SAVE_EVERY == 0:
+                    save()
+            except NlmBlocked as e:
+                LOG.error("%s · NLM 조회 즉시 중단 (이번 주는 캐시·어간만)", e)
+                blocked = True
+            except Exception as e:  # noqa: BLE001 · 접속 오류 등 · 그 용어만 건너뜀
+                skipped[t] = e.__class__.__name__
+    finally:
+        if save:
+            save()
+    examples = example_tickers(snapshot)
     auto: dict[str, dict] = {}
     rows: list[dict] = []
     for t, n in terms.most_common():
@@ -238,45 +272,64 @@ def build(snapshot: dict, manual: set[str], cache: dict, stems: list, client: Nl
         cat = mesh_category(t, trees)
         if cat:
             basis, evidence = "auto-mesh", " ".join(trees[:6])
+            reason = f"MeSH 트리 {' '.join(trees[:3])}"
         else:
             hit = stem_category(t, stems)
             if not hit:
                 continue
             cat, basis, evidence = hit[0], "auto-stem", hit[1]
-        review = "검수 요망" if (_has(trees, "C16") and cat != RARE) else ""
+            reason = f"어간 '{hit[1]}'"
+        review = (_has(trees, "C16") and cat != RARE)
+        if review:
+            reason += " · 검수 요망 (C16 유전 트리인데 희귀 유전 아님)"
         auto[t] = {"category": cat, "basis": basis, "evidence": evidence, "date": today}
-        rows.append({"term": t, "auto_category": cat, "basis": basis, "evidence": evidence, "n_trials": n,
-                     "검수 요망": review, "reviewer_decision": ""})
+        rows.append({"term": t, "n_trials": n, "example_ticker": examples.get(t, ""), "auto_category": cat, "basis": basis,
+                     "tree_numbers": " ".join(trees), "reason": reason, "검수 요망": "검수 요망" if review else "",
+                     "reviewer_decision": ""})
+    requests = client.requests if client else 0
     stats = {"unmapped_terms": len(terms), "auto": len(auto),
              "by_basis": dict(Counter(v["basis"] for v in auto.values())),
              "by_category": dict(Counter(v["category"] for v in auto.values()).most_common()),
              "review_needed": sum(1 for r in rows if r["검수 요망"]),
-             "nlm_requests": client.requests if client else 0, "nlm_blocked": blocked}
+             "nlm_requests": requests, "nlm_blocked": blocked, "skipped_terms": len(skipped),
+             "skipped_reasons": dict(Counter(skipped.values()))}
     return auto, rows, stats
 
 
-def run_weekly(snapshot_path: Path, fetch: bool = True) -> dict:
+PROPOSAL_FIELDS = ["term", "n_trials", "example_ticker", "auto_category", "basis", "tree_numbers", "reason", "검수 요망", "reviewer_decision"]
+
+
+def run_weekly(snapshot_path: Path, fetch: bool = True, client: NlmClient | None = None) -> dict:
     """주간 AACT 잡 끝에서 호출 · 실패해도 주간 잡은 계속 (호출부가 예외 처리)."""
+    t0 = time.time()
     today = _P.today_kst_str()
     root = _P.RUNTIME_DIR or (_P.DATA_DIR / "biotech")
     root.mkdir(parents=True, exist_ok=True)
     cache_p = root / "mesh_cache.json"
     cache = json.loads(cache_p.read_text()) if cache_p.exists() else {}
     snapshot = json.loads(snapshot_path.read_text())
-    client = NlmClient() if fetch else None
-    auto, rows, stats = build(snapshot, load_manual(), cache, load_stems(), client, today)
-    cache_p.write_text(json.dumps(cache, ensure_ascii=False))
+    client = client or (NlmClient() if fetch else None)
+
+    def save() -> None:
+        tmp = cache_p.with_suffix(".json.tmp")
+        tmp.write_text(json.dumps(cache, ensure_ascii=False))
+        tmp.replace(cache_p)
+
+    auto, rows, stats = build(snapshot, load_manual(), cache, load_stems(), client, today, save=save)
     (root / "auto_categories.json").write_text(json.dumps(
         {"generated": today, "rule": "WP81 MeSH 두 단계 + 어간 v0", "terms": auto}, ensure_ascii=False, indent=1))
     prop = root / f"auto_category_proposals_{today}.csv"
     with prop.open("w", newline="") as f:
-        w = csv.DictWriter(f, fieldnames=["term", "auto_category", "basis", "evidence", "n_trials", "검수 요망", "reviewer_decision"])
+        w = csv.DictWriter(f, fieldnames=PROPOSAL_FIELDS)
         w.writeheader()
         w.writerows(rows)
     stats["proposals"] = str(prop)
     stats["proposal_rows"] = len(rows)
     stats["cache_items"] = len(cache)
+    stats["elapsed_sec"] = round(time.time() - t0, 1)
     LOG.info("자동 분류 · %s", json.dumps(stats, ensure_ascii=False))
+    if stats["nlm_requests"] and stats["skipped_terms"] * 2 >= stats["nlm_requests"]:
+        raise AutoCategoryFailed(f"요청 {stats['nlm_requests']} 중 건너뜀 {stats['skipped_terms']} (절반 이상)")
     return stats
 
 

@@ -4,9 +4,9 @@ from __future__ import annotations
 from backend.scripts import biotech_h48v3_confirm as cf
 
 ATOM = """<?xml version="1.0" encoding="UTF-8"?><feed xmlns="http://www.w3.org/2005/Atom">
-<entry><category term="pennystocks" label="r/pennystocks"/><title>$ENTX phase 3</title><link href="https://r/1"/><updated>2026-10-02T00:00:00+00:00</updated></entry>
-<entry><category term="biotechplays" label="r/biotechplays"/><title>KOD readout</title><link href="https://r/2"/><updated>2026-10-02T00:01:00+00:00</updated></entry>
-<entry><category term="biotechplays" label="r/biotechplays"/><title>IOVA</title><link href="https://r/3"/><updated>2026-10-02T00:02:00+00:00</updated></entry>
+<entry><id>t3_a</id><category term="pennystocks" label="r/pennystocks"/><title>$ENTX phase 3</title><link href="https://r/1"/><updated>2026-10-02T00:00:00+00:00</updated></entry>
+<entry><id>t3_b</id><category term="biotechplays" label="r/biotechplays"/><title>KOD readout</title><link href="https://r/2"/><updated>2026-10-02T00:01:00+00:00</updated></entry>
+<entry><id>t3_c</id><category term="biotechplays" label="r/biotechplays"/><title>IOVA</title><link href="https://r/3"/><updated>2026-10-02T00:02:00+00:00</updated></entry>
 </feed>"""
 
 
@@ -15,20 +15,34 @@ class _R:
         self.status_code, self.text = code, text
 
 
-def test_combined_ok_counts_subs():
+SINGLE = """<?xml version="1.0" encoding="UTF-8"?><feed xmlns="http://www.w3.org/2005/Atom">
+<entry><id>t3_b</id><category term="biotechplays"/><title>KOD readout</title><link href="https://r/2"/></entry>
+<entry><id>t3_d</id><category term="biotechplays"/><title>ABCL news</title><link href="https://r/4"/></entry>
+</feed>"""
+
+
+def test_combined_plus_single_merged():
     urls = []
-    posts, st = cf.fetch_reddit(lambda u: urls.append(u) or _R(200, ATOM), sleep=lambda s: None)
-    assert len(urls) == 1 and "biotechplays+pennystocks+wallstreetbets+stocks" in urls[0]
-    assert st["subs_collected"] == 4 and st["mode"] == "combined" and st["per_sub"] == {"pennystocks": 1, "biotechplays": 2}
+    seq = [_R(200, ATOM), _R(200, SINGLE)]
+    posts, st = cf.fetch_reddit(lambda u: urls.append(u) or seq.pop(0), sleep=lambda s: None)
+    assert "biotechplays+pennystocks+wallstreetbets+stocks" in urls[0] and urls[1].startswith("https://www.reddit.com/r/biotechplays/")
+    assert st["subs_collected"] == 4 and st["mode"] == "combined+single"
     assert cf.REDDIT_HEADERS["User-Agent"] != cf.SEC_UA          # 레딧 전용 UA
 
 
-def test_429_retry_then_single_fallback():
-    seq = [_R(429), _R(429), _R(200, ATOM)]
-    slept, urls = [], []
-    posts, st = cf.fetch_reddit(lambda u: urls.append(u) or seq.pop(0), sleep=slept.append)
-    assert slept[0] == 60 and [a["kind"] for a in st["attempts"]] == ["combined", "combined_retry", "single"]
-    assert st["mode"] == "single" and st["subs_collected"] == 1 and urls[-1].startswith("https://www.reddit.com/r/biotechplays/")
+def test_duplicate_post_ids_removed():
+    seq = [_R(200, ATOM), _R(200, SINGLE)]
+    posts, st = cf.fetch_reddit(lambda u: seq.pop(0), sleep=lambda s: None)
+    assert sorted(p["id"] for p in posts) == ["t3_a", "t3_b", "t3_c", "t3_d"]     # t3_b 는 두 번 받았지만 한 번만
+    assert st["per_sub"] == {"pennystocks": 1, "biotechplays": 3}
+
+
+def test_429_retry_each_request():
+    seq = [_R(429), _R(429), _R(429), _R(200, SINGLE)]
+    slept = []
+    posts, st = cf.fetch_reddit(lambda u: seq.pop(0), sleep=slept.append)
+    assert [a["kind"] for a in st["attempts"]] == ["combined", "combined_retry", "single", "single_retry"]
+    assert slept.count(60) == 2 and st["subs_collected"] == 1 and st["mode"] == "single_retry"
 
 
 def test_all_blocked_notifies_once(tmp_path, monkeypatch):
