@@ -41,6 +41,14 @@
 - 3: 07:00 = biotechplays 단독 먼저 + 06:30 묶음 파일 `<RUNTIME>/reddit_combined_<날짜>.json` 읽기 (없으면 묶음 1회 · 재시도 없음) · 429 재시도 모두 제거 · cron "30 6 * * * … --step=reddit-combined" · 서버 reddit-combined → 30분 뒤 reddit-probe · 테스트 3
 - 4: 배포 후 화면 "(자동)" · "기타" 카드 수 · 오늘 SEC 최종 합계
 
+**진행 (2026-10-02 18시대)**:
+- PR #80 → 배포 `e278a5a` · 13경로 200 · crontab 6줄 (06:30 레딧 묶음 추가)
+- 1: condition_categories 1,656행 · 화면 "(자동)" 0 · "기타" 1 (ABCL · 수동 분류 '기타')
+- 2: 검수 대조 91.8% → 93.8% (목표 97% 미달) · 지시 조정 2건 (얕은 트리 점 1개 이하 · 암 어간 경계 예외) 근거 = 점 2개 90.6% · 경계 적용 시 −1.7%p
+- 3: 서버 reddit-combined 18:19 = 200 · 글 100 (wsb 56 · penny 26 · stocks 18) · 30분 뒤 reddit-probe 18:50 = 단독 200 + 묶음 파일 200 · 글 200 · biotechplays 100 · 4곳 중 4곳
+- 4: 오늘 SEC 최종 346 · 레딧·자동 분류는 SEC 아님
+- 10/3 07:00 대조: reddit · "4곳 중 4곳" · biotechplays 글 수 · 06:30 reddit.log 줄
+
 ---
 
 ### [Biotech Catalyst Radar · WP98-3 즉시 · 남은 문제 3건 수정 · 자동 분류 재실행 · 레딧 재확인 (병합 승인됨 · 서버 단계 수동 실행 승인됨)] · 2026-10-02 발행
