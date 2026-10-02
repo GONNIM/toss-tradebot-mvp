@@ -42,6 +42,30 @@ detail: $msg
 }
 
 # 옵션: --aact-weekly-only (월요일 06:00 cron 용 · 주간 스냅샷만 실행 후 종료)
+# WP98-2 · 단계 하나만 실행 (--step=<이름>) · 일일 파이프 전체 재실행 대신 · 수동 확인용 (cron 은 쓰지 않음)
+case "${1:-}" in
+  --step=*)
+    STEP="${1#--step=}"
+    echo "=== $(date -u +%Y-%m-%dT%H:%M:%SZ) step only · $STEP ==="
+    case "$STEP" in
+      candidates)   $VENV -m backend.scripts.biotech_h48v3_candidates ;;
+      time_state)   $VENV -m backend.scripts.biotech_h50_ct_upcoming ;;
+      confirm)      $VENV -m backend.scripts.biotech_h48v3_confirm ;;
+      report)       $VENV -m backend.scripts.biotech_h48v3_report ;;
+      radar)        $VENV -m backend.scripts.biotech_h46v3_radar ;;
+      form4)        $VENV -m backend.scripts.biotech_h65_form4_daily ;;
+      alert_brief)  $VENV -m backend.scripts.biotech_h77_alert_brief ;;
+      mcap)         $VENV -m backend.scripts.biotech_mcap_daily daily ;;
+      status_gen)   $VENV -m backend.scripts.biotech_h57b_status_gen ;;
+      reddit-probe) $VENV -m backend.scripts.biotech_h48v3_confirm --reddit-probe ;;
+      *) echo "알 수 없는 단계: $STEP"; exit 2 ;;
+    esac
+    RC=$?
+    echo "=== $(date -u +%Y-%m-%dT%H:%M:%SZ) step only · $STEP · exit $RC ==="
+    exit $RC
+    ;;
+esac
+
 # WP95 · 레이더 전문가 채널 입력 주간 복구 (화 13D · 수 PubMed/Preprint) · 실패해도 종료 코드 0 (텔레그램 warning 은 파이썬 안에서 1회)
 if [ "${1:-}" = "--radar-13d-weekly-only" ]; then
     echo "=== $(date -u +%Y-%m-%dT%H:%M:%SZ) radar 13D weekly only ==="

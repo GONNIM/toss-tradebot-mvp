@@ -2,7 +2,7 @@
 import assert from "node:assert/strict";
 import * as fs from "node:fs";
 import * as path from "node:path";
-import { cardText, conditionsLine, daysSinceFiling, insiderTotalUsd, txCents, dday, THEME_RANK_NOTE, endLabel, stageLabel, exhibitLine, LEAD_LABEL, groupForm4, insiderSummary, insiderTxLine, mentionSentence, multSentence, trialSentence, rumorReason, shortName, summaryStatus, tickerOrUnknown } from "./biotech-display";
+import { cardText, conditionsLine, redditLine, daysSinceFiling, insiderTotalUsd, txCents, dday, THEME_RANK_NOTE, endLabel, stageLabel, exhibitLine, LEAD_LABEL, groupForm4, insiderSummary, insiderTxLine, mentionSentence, multSentence, trialSentence, rumorReason, shortName, summaryStatus, tickerOrUnknown } from "./biotech-display";
 
 const beauty = cardText({ category: "미용", interventions: [{ name: "X-1", type: "DRUG", type_ko: "약물" }] }, "PHASE2", "2026-11-30", 62);
 assert.ok(beauty.main?.startsWith("미용 · X-1 (약물) · 2상(효과 탐색)"), beauty.main ?? "null");
@@ -118,4 +118,8 @@ assert.equal(conditionsLine([{ en: "Hailey Hailey Disease", ko: "헤일리-헤�
   "헤일리-헤일리병(가족성 양성 천포창) (Hailey Hailey Disease)");
 assert.equal(conditionsLine([{ en: "Neoplasms by Histologic Type", ignored: true }, { en: "Lesion Skin", ignored: true }]),
   "Neoplasms by Histologic Type (일반 용어)");
+// WP98-2 · 소문 카드 머리 레딧 상태
+assert.equal(redditLine({ subs_total: 4, subs_collected: 4, mode: "combined" }), "레딧 4곳 중 4곳 수집");
+assert.equal(redditLine({ subs_total: 4, subs_collected: 0, mode: "none" }), "레딧 입력 없음(HTTP 429) · 4곳 모두 차단");
+assert.equal(redditLine(null), null);
 console.log("ok");

@@ -434,3 +434,13 @@ export function conditionsLine(conds?: { en: string; ko?: string; ignored?: bool
   if (!shown.length) return all.length ? `${all[0].en} ${GENERIC_TERM_NOTE}` : "";
   return shown.map((c) => (c.ko ? `${c.ko} (${c.en})` : c.en)).join(" · ");
 }
+
+// WP98-2 · 소문 카드 머리 · 레딧 수집 상태 (4곳 묶음 RSS · 대체 = biotechplays 단독)
+export type RedditStatus = { subs_total?: number; subs_collected?: number; mode?: string; date?: string };
+
+export function redditLine(st?: RedditStatus | null): string | null {
+  if (!st || typeof st.subs_collected !== "number") return null;
+  const total = st.subs_total ?? 4;
+  if (st.subs_collected === 0) return `레딧 입력 없음(HTTP 429) · ${total}곳 모두 차단`;
+  return `레딧 ${total}곳 중 ${st.subs_collected}곳 수집`;
+}
