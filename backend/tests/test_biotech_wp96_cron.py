@@ -27,7 +27,7 @@ def test_merge_twice_gives_five_entries_no_duplicates(tmp_path):
     first = _merge(cur)
     cur.write_text(first)
     second = _merge(cur)
-    assert len(_entries(first)) == 5 and second == first
+    assert len(_entries(first)) == 6 and second == first          # WP99 · 06:30 레딧 묶음 줄 추가
     assert first.startswith(EXISTING)                         # 기존 줄 (주석 포함) 은 순서·내용 그대로
     assert sum("--radar-13d-weekly-only" in ln for ln in _entries(second)) == 1
 
@@ -35,7 +35,7 @@ def test_merge_twice_gives_five_entries_no_duplicates(tmp_path):
 def test_empty_crontab_gets_two_lines(tmp_path):
     cur = tmp_path / "cron"
     cur.write_text("")
-    assert len(_entries(_merge(cur))) == 2
+    assert len(_entries(_merge(cur))) == 3
 
 
 def test_deploy_workflow_calls_merge_and_keeps_existing_restart():
@@ -47,4 +47,4 @@ def test_deploy_workflow_calls_merge_and_keeps_existing_restart():
 def test_missing_trailing_newline_does_not_join_lines(tmp_path):
     cur = tmp_path / "cron"
     cur.write_text(EXISTING.rstrip("\n"))
-    assert len(_entries(_merge(cur))) == 5
+    assert len(_entries(_merge(cur))) == 6

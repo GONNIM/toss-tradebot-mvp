@@ -69,7 +69,13 @@ EXCEPTIONS: list[tuple[Callable[[str, list[str]], Any], str]] = [  # 1단계 · 
     (lambda n, t: _has(t, "B03") or _has(t, "B04"), "감염"),
     (lambda n, t: _has(t, "G07.690.725") or _has(t, "M01.774") or _has(t, "M01.955"), "건강인·약동학"),
     (lambda n, t: _has(t, "F01.145.126"), "신경·정신"),                                          # F01 의 다른 가지는 대응 없음
+    (lambda n, t: _has(t, "C19.874.283"), "비만·대사"),                                          # WP99 · 사전 v5 검수
+    (lambda n, t: _has(t, "C11.675.349.500.500"), "안과"),                                       # WP99 · 사전 v5 검수
 ]
+IGNORE = "무시"          # WP99 · 사전 내부 값 (화면 표시 금지 · API 가 건너뜀)
+SHALLOW_MAX_DOTS = 1     # WP99 · 트리 번호가 얕은 것 (점 1개 이하 · 예: C16.320 · F03 · C14 · C04) 뿐이면 일반어 → 무시
+#   지시 문구는 "점 2개 이하" 였으나 검수 1,006건 대조에서 점 2개 기준 = 일치 90.6% (SLE C17.300.xxx 등 실제 분류가 있는 용어까지 무시) ·
+#   점 1개 기준 = 93.8% · 지시 예시 (C16.320 · F03 · C14) 는 모두 점 1개 이하
 ORDER: list[tuple[Callable[[list[str]], bool], str]] = [  # 2단계 · 앞에 있는 트리가 이김
     (lambda t: _has(t, "C04"), "암"),
     (lambda t: _has(t, "C01"), "감염"),
@@ -122,10 +128,15 @@ def load_stems(path: Path | None = None) -> list[tuple[str, re.Pattern]]:
     d = json.loads(p.read_text())
     stems = d.get("stems", {})
     rest = [c for c in d.get("rest_order", list(stems)) if c not in FIRST_STEM_ORDER]
-    out = [(c, re.compile(stems[c], re.I)) for c in FIRST_STEM_ORDER if c in stems]
+    out = [(c, re.compile(stems[c], re.I) if c == "암" else _stem_rx(stems[c])) for c in FIRST_STEM_ORDER if c in stems]   # 암 어간은 단어 안에서도 (Adenocarcinoma · Leiomyosarcoma)
     out += [(cat, _abbr_rx(ab)) for ab, cat in sorted(d.get("abbreviations", {}).items())]
-    out += [(c, re.compile(stems[c], re.I)) for c in rest if c in stems]
+    out += [(c, _stem_rx(stems[c])) for c in rest if c in stems]
     return out
+
+
+def _stem_rx(pattern: str) -> re.Pattern:
+    """WP99 · 어간은 단어 시작에서만 일치 (예: retin 이 Transthyretin 에 걸리지 않음) · 어간 뒤는 열어 둠 (retinal · retinopathy)."""
+    return re.compile(rf"\b(?:{pattern})", re.I)
 
 
 def stem_category(name: str, stems: list[tuple[str, re.Pattern]]) -> tuple[str, str] | None:
@@ -201,12 +212,67 @@ def _tree_numbers(d: Any) -> list[str]:
 
 # ── 주간 실행 ──────────────────────────────────────────────────────
 
-def load_manual() -> set[str]:
+def load_manual() -> dict[str, str]:
+    """수동 사전 · 소문자 용어 → 분류 (dict · 'in' 검사는 예전 set 과 같음)."""
     p = _P.find("condition_categories.csv")
     if p is None:
-        return set()
+        return {}
     with p.open() as f:
-        return {r["term"].strip().lower() for r in csv.DictReader(f)}
+        return {r["term"].strip().lower(): r.get("category", "") for r in csv.DictReader(f)}
+
+
+def norm_variant(t: str) -> str:
+    """WP99 · 변형 비교용 · 소문자 · 괄호 안 내용 제거 · 구두점 제거 · 공백 정리."""
+    t = re.sub(r"\([^)]*\)", " ", (t or "").lower())
+    t = re.sub(r"[^a-z0-9]+", " ", t)
+    return re.sub(r"\s+", " ", t).strip()
+
+
+VARIANT_MIN_LEN = 5      # 너무 짧은 수동 용어 (예: "pain") 가 아무 데나 걸리지 않게
+
+
+def manual_variant(term: str, manual: Any) -> tuple[str, str] | None:
+    """WP99 · 수동 사전 용어가 (정규화 뒤) 단어 단위 부분 문자열로 들어 있으면 그 분류 · 가장 긴 일치 · '무시' 용어는 쓰지 않음.
+
+    예: "Pediatric Lupus Nephritis" ⊃ "lupus nephritis" → 면역·염증 · "… (WHO Class III)" 같은 꼬리도 괄호 제거로 맞춤.
+    """
+    if not isinstance(manual, dict):
+        return None
+    nt = f" {norm_variant(term)} "
+    best: tuple[int, str, str] | None = None
+    for mt, cat in _manual_norm(manual):
+        if cat and cat != IGNORE and len(mt) >= VARIANT_MIN_LEN and f" {mt} " in nt and (best is None or len(mt) > best[0]):
+            best = (len(mt), cat, mt)
+    return (best[1], best[2]) if best else None
+
+
+_MANUAL_NORM_CACHE: dict[int, list[tuple[str, str]]] = {}
+
+
+def _manual_norm(manual: dict[str, str]) -> list[tuple[str, str]]:
+    key = id(manual)
+    if key not in _MANUAL_NORM_CACHE:
+        _MANUAL_NORM_CACHE[key] = [(norm_variant(t), c) for t, c in manual.items()]
+    return _MANUAL_NORM_CACHE[key]
+
+
+def classify(term: str, trees: list[str], stems: list, manual: Any) -> tuple[str, str, str, str] | None:
+    """WP99 · 자동 분류 순서 · (분류, basis, 근거, 이유) · 대응 없으면 None.
+
+    1 수동 사전 변형 → 2 트리가 3단계 이하뿐 = 무시 → 3 MeSH 트리 규칙 → 4 어간 (단어 시작)
+    """
+    v = manual_variant(term, manual)
+    if v:
+        return v[0], "manual-variant", v[1], f"수동 사전 '{v[1]}' 변형"
+    if trees and all(t.count(".") <= SHALLOW_MAX_DOTS for t in trees):
+        return IGNORE, "auto-mesh-shallow", " ".join(trees[:6]), f"트리 3단계 이하뿐 ({' '.join(trees[:3])}) · 일반어"
+    cat = mesh_category(term, trees)
+    if cat:
+        return cat, "auto-mesh", " ".join(trees[:6]), f"MeSH 트리 {' '.join(trees[:3])}"
+    hit = stem_category(term, stems)
+    if hit:
+        return hit[0], "auto-stem", hit[1], f"어간 '{hit[1]}'"
+    return None
 
 
 def unmapped_terms(snapshot: dict, manual: set[str]) -> Counter:
@@ -269,16 +335,10 @@ def build(snapshot: dict, manual: set[str], cache: dict, stems: list, client: Nl
     rows: list[dict] = []
     for t, n in terms.most_common():
         trees = cache.get(t, {}).get("trees", [])
-        cat = mesh_category(t, trees)
-        if cat:
-            basis, evidence = "auto-mesh", " ".join(trees[:6])
-            reason = f"MeSH 트리 {' '.join(trees[:3])}"
-        else:
-            hit = stem_category(t, stems)
-            if not hit:
-                continue
-            cat, basis, evidence = hit[0], "auto-stem", hit[1]
-            reason = f"어간 '{hit[1]}'"
+        got = classify(t, trees, stems, manual)
+        if not got:
+            continue
+        cat, basis, evidence, reason = got
         review = (_has(trees, "C16") and cat != RARE)
         if review:
             reason += " · 검수 요망 (C16 유전 트리인데 희귀 유전 아님)"

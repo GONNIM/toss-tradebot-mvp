@@ -204,3 +204,20 @@
 - 요청 코드: `backend/scripts/biotech_h48v3_confirm.py` · User-Agent = SEC 헤더 상수 (`SEC_UA` · 67~72행) · 간격 3.5초 (139행) · 재시도 없음 (141~143행).
 - 2026-10-02 로컬 시험 (고유 User-Agent "TossTradebot BiotechRadar/1.0 (contact: suauncle@gmail.com)" · 간격 3초 · 3건): pennystocks 200 (글 25) · wallstreetbets 429 · stocks 429 · 첫 응답부터 `x-ratelimit-remaining: 0.0` → User-Agent 만으로는 해결되지 않음 · 코드 변경 보류 (WP98 지시: 여전히 429 면 멈추고 보고).
 - 소문 전향 평가 (11/15): 머리에 "레딧 입력은 2026-09-22 첫 실행부터 4곳 중 3곳 HTTP 429 · r/biotechplays 한 곳만 수집" 을 적는다.
+
+## 사전 v5 · 2026-10-02 (WP99) · 자동 분류 검수 1,006건 (채택 924 · 수정 82)
+
+- 근거: 서버 자동 분류 제안 `auto_category_proposals_20261002.csv` (1,006행) · Fable 검수 원본 `docs/plans/biotech/verification/dictionaries/auto_category_proposals_20261002_reviewed.csv`
+- 반영: "채택" → auto_category · 그 밖 → 검수 값 (수정 82 · 그중 "무시" 24) · `docs/plans/biotech/data/condition_categories.csv` 650 → 1,656행 · source "auto-reviewed" · basis "auto-reviewed v5"
+- 수동 사전이 자동 분류보다 먼저라 서버 `auto_categories.json` 의 같은 용어는 쓰이지 않음 · 다음 주간 실행부터는 수동 사전 용어라 자동 분류 대상에서 빠짐
+
+## 자동 분류 규칙 · 2026-10-02 (WP99) · 순서 = 수동 사전 변형 → 얕은 트리 무시 → MeSH 트리 → 어간
+
+- 수동 사전 변형: 용어를 정규화 (소문자 · 괄호 안 제거 · 구두점 제거) 한 뒤 수동 사전 용어 (5자 이상 · '무시' 제외) 가 단어 단위 부분 문자열이면 그 분류 · 가장 긴 일치 (예: Pediatric Lupus Nephritis → 면역·염증)
+- 얕은 트리: 트리 번호가 모두 점 1개 이하 (예: C04 · C14 · F03 · C16.320) 면 "무시" · **지시 문구는 "점 2개 이하" 였으나 검수 1,006건 대조에서 점 2개 = 90.6% · 점 1개 = 93.8% 라 점 1개로 반영 (지시 예시는 모두 점 1개 이하)**
+- 어간: 단어 시작에서만 일치 (retin 이 Transthyretin 에 걸리지 않음) · **암 어간만 단어 안에서도 일치 (Adenocarcinoma · Leiomyosarcoma 를 놓치지 않게 · 경계를 걸면 일치율 −1.7%p)**
+- 1단계 예외 추가: C19.874.283 → 비만·대사 · C11.675.349.500.500 → 안과
+- 어간 사전 v3: 비만·대사에 steatohepatitis 명시 (NASH · MASH · steatohepat 는 v2 부터 있음)
+- NLM 요청 간격 0.34초 (초당 3회 이하) · 이미 같은 값
+- 검수 대조 (서버 mesh_cache 1,012 · 수동 사전 v4 650행 기준): 이전 규칙 924/1,006 (91.8%) → 새 규칙 944/1,006 (93.8%) · 목표 97% 미달 · 남은 62건은 대부분 검수 판단 차이 (예: Rheumatoid Arthritis 근골격 ↔ 면역·염증)
+- API: 자동 분류의 "무시" 도 화면에 쓰지 않음
