@@ -371,6 +371,10 @@ def run(mode: str, get_tiingo: Callable[..., Any] | None = None, get_sec: Callab
     cands = load_candidates()
     mdir = _P.out_dir("mcap")
     if mode == "weekly":
+        if (mdir / f"shares_{today:%Y%m%d}.json").exists():   # WP98-3 · 같은 날 이미 받았으면 다시 받지 않음
+            LOG.info("SEC 주식수 조회 건너뜀 · 오늘 파일 shares_%s.json 있음 (요청 0)", f"{today:%Y%m%d}")
+            _record_sec(0, today, ledger)
+            return {"mode": mode, "skipped": True, "reason": "already today"}
         counter = None
         if get_sec is None:
             counter = _ByteCountingClient(build_client())  # biotech_sec_common 단일 헤더 상수 · 받은 용량 집계
