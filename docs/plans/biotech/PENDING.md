@@ -34,6 +34,15 @@
 
 ## PENDING
 
+### [Biotech Catalyst Radar · WP99 즉시 · 사전 v5 · 자동 분류 규칙 수정 · 레딧 순서·예약 변경 (사전 변경 승인됨 · 병합 승인됨 · 서버 단계 수동 실행 승인됨)] · 2026-10-02 발행
+
+- 1: `/Users/gonnim/Downloads/20261002_auto-category-reviewed-v2.zip` (1,006 · 채택 924 · 수정 82) → condition_categories.csv (기대 1,656행 · basis "auto-reviewed v5") · changelog · 검수 원본 보관 · 수동 사전 우선이라 자동 값 안 쓰임 테스트
+- 2: 트리 3단계 이하뿐 → "무시" (테스트) · 어간 단어 경계 (retin ≠ Transthyretin 테스트) · 비만·대사 어간 steatohepatitis · NASH · MASH · 수동 사전 변형 (정규화 후 부분 문자열 · 가장 긴 일치) ("Pediatric Lupus Nephritis" → 면역·염증 테스트) · 1단계 예외 C19.874.283 → 비만·대사 · C11.675.349.500.500 → 안과 · NLM 0.34초 · 로컬 캐시로 1,006건 재분류 일치율 (목표 97%+)
+- 3: 07:00 = biotechplays 단독 먼저 + 06:30 묶음 파일 `<RUNTIME>/reddit_combined_<날짜>.json` 읽기 (없으면 묶음 1회 · 재시도 없음) · 429 재시도 모두 제거 · cron "30 6 * * * … --step=reddit-combined" · 서버 reddit-combined → 30분 뒤 reddit-probe · 테스트 3
+- 4: 배포 후 화면 "(자동)" · "기타" 카드 수 · 오늘 SEC 최종 합계
+
+---
+
 ### [Biotech Catalyst Radar · WP98-3 즉시 · 남은 문제 3건 수정 · 자동 분류 재실행 · 레딧 재확인 (병합 승인됨 · 서버 단계 수동 실행 승인됨)] · 2026-10-02 발행
 
 - 1 (한 PR): 레딧 = 묶음 1회 + biotechplays 단독 1회 · 합치고 글 ID 중복 제거 · 단독 429 → 60초 1회 재시도 · "4곳 중 N곳" 은 두 결과 합쳐 셈 · 테스트 2 / 자동 분류 = 요청마다 예외 → 그 용어 skipped · 계속 · 캐시 50건마다 + finally · 다음 실행 재시도 · 실패 조건 = 요청 절반 이상 실패 · 테스트 2 / SEC 상한 = 13D submissions 도 상한 · 닿으면 미룸 · 주간 주식수는 같은 날 shares_<오늘>.json 있으면 건너뜀 · 테스트 2 / (옵션 없으면 --step=auto_category)
