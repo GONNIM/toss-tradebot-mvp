@@ -1,0 +1,1007 @@
+term,n_trials,example_ticker,auto_category,basis,tree_numbers,reason,검수 요망,reviewer_decision
+Colorectal Cancer,26,CRVS,암,auto-mesh,C04.588.274.476.411.307 C06.301.371.411.307 C06.405.249.411.307 C06.405.469.158.356 C06.405.469.491.307 C06.405.469.860.180,MeSH 트리 C04.588.274.476.411.307 C06.301.371.411.307 C06.405.249.411.307,,채택
+Renal Cell Carcinoma,24,EXEL,암,auto-mesh,C04.557.470.200.025.390 C04.588.945.947.535.160 C12.050.351.937.820.535.160 C12.050.351.968.419.473.160 C12.200.758.820.750.160 C12.200.777.419.473.160 C12.900.820.535.160 C12.950.419.473.160 C12.950.983.535.160,MeSH 트리 C04.557.470.200.025.390 C04.588.945.947.535.160 C12.050.351.937.820.535.160,,채택
+Chronic Hepatitis B,21,ASMB,감염,auto-mesh,C01.221.250.500.100 C01.925.256.430.400.100 C01.925.440.435.100 C06.552.380.350.100 C06.552.380.705.437.100 C23.550.291.500.477.500,MeSH 트리 C01.221.250.500.100 C01.925.256.430.400.100 C01.925.440.435.100,,채택
+Cancer,21,EXEL,암,auto-mesh,C04,MeSH 트리 C04,,채택
+Cervical Cancer,14,CRVS,암,auto-mesh,C04.588.945.418.948.850 C12.050.351.500.852.593.131 C12.050.351.500.852.762.850 C12.050.351.937.418.875.850 C12.100.250.852.593.131 C12.100.250.852.762.850 C12.900.418.875.850,MeSH 트리 C04.588.945.418.948.850 C12.050.351.500.852.593.131 C12.050.351.500.852.762.850,,채택
+Hereditary Angioedema,14,BCRX,희귀 유전,auto-mesh,C14.907.079.500 C16.320.798.500.500 C17.800.862.945.066.500 C20.543.480.904.066.500 C20.673.795.500.500,MeSH 트리 C14.907.079.500 C16.320.798.500.500 C17.800.862.945.066.500,,채택
+Gastric Cancer,13,ADCT,암,auto-mesh,C04.588.274.476.767 C06.301.371.767 C06.405.249.767 C06.405.748.789,MeSH 트리 C04.588.274.476.767 C06.301.371.767 C06.405.249.767,,채택
+Head and Neck Cancer,13,INO,암,auto-mesh,C04.588.443,MeSH 트리 C04.588.443,,채택
+Hepatocellular Carcinoma,12,EXEL,암,auto-mesh,C04.557.470.200.025.255 C04.588.274.623.160 C06.301.623.160 C06.552.697.160,MeSH 트리 C04.557.470.200.025.255 C04.588.274.623.160 C06.301.623.160,,채택
+Breast Cancer,12,IOVA,암,auto-mesh,C04.588.180 C17.800.090.500,MeSH 트리 C04.588.180 C17.800.090.500,,채택
+Influenza,12,BCRX,감염,auto-mesh,C01.748.310 C01.925.782.620.365 C08.730.310,MeSH 트리 C01.748.310 C01.925.782.620.365 C08.730.310,,채택
+Pancreatic Cancer,11,CRVS,암,auto-mesh,C04.588.274.761 C04.588.322.475 C06.301.761 C06.689.667 C19.344.421,MeSH 트리 C04.588.274.761 C04.588.322.475 C06.301.761,,채택
+Non-Small Cell Lung Cancer,11,CRVS,암,auto-mesh,C04.588.894.797.520.109.220.249 C08.381.540.140.500 C08.785.520.100.220.500,MeSH 트리 C04.588.894.797.520.109.220.249 C08.381.540.140.500 C08.785.520.100.220.500,,채택
+Atopic Dermatitis,11,APGE,피부,auto-stem,,어간 'Dermat',,채택
+Metastatic Melanoma,11,IOVA,암,auto-stem,,어간 'Metasta',,채택
+Major Depressive Disorder,11,ANRO,신경·정신,auto-mesh,F03.600.300.375,MeSH 트리 F03.600.300.375,,채택
+Prostate Cancer,10,EXEL,암,auto-mesh,C04.588.945.440.770 C12.100.500.260.750 C12.100.500.565.625 C12.200.294.260.750 C12.200.294.565.625 C12.200.758.409.750 C12.900.619.750,MeSH 트리 C04.588.945.440.770 C12.100.500.260.750 C12.100.500.565.625,,채택
+Ovarian Cancer,10,CRVS,암,auto-mesh,C04.588.322.455 C12.050.351.500.056.630.705 C12.050.351.937.418.685 C12.100.250.056.630.705 C12.900.418.685 C19.344.410 C19.391.630.705,MeSH 트리 C04.588.322.455 C12.050.351.500.056.630.705 C12.050.351.937.418.685,,채택
+Endometrial Cancer,10,CRVS,암,auto-mesh,C04.588.945.418.948.585 C12.050.351.500.852.762.200 C12.050.351.937.418.875.200 C12.100.250.852.762.200 C12.900.418.875.200,MeSH 트리 C04.588.945.418.948.585 C12.050.351.500.852.762.200 C12.050.351.937.418.875.200,,채택
+Head and Neck Squamous Cell Carcinoma,10,BCAX,암,auto-mesh,C04.557.470.200.400.565 C04.588.443.177,MeSH 트리 C04.557.470.200.400.565 C04.588.443.177,,채택
+Acute Myeloid Leukemia,10,FATE,암,auto-mesh,C04.557.337.539.275 C15.378.508.539.275,MeSH 트리 C04.557.337.539.275 C15.378.508.539.275,,채택
+Metastatic Cancer,9,AGEN,암,auto-stem,,어간 'Metasta',,채택
+Sickle Cell Disease,9,EDIT,희귀 유전,auto-mesh,C15.378.050.141.150.150 C15.378.420.155 C16.320.070.150 C16.320.365.155,MeSH 트리 C15.378.050.141.150.150 C15.378.420.155 C16.320.070.150,,채택
+Triple Negative Breast Cancer,8,CRVS,암,auto-mesh,C04.588.180.788 C17.800.090.500.788,MeSH 트리 C04.588.180.788 C17.800.090.500.788,,채택
+"Genetic Diseases, Inborn",8,FDMT,희귀 유전,auto-mesh,C16.320,MeSH 트리 C16.320,,무시
+Systemic Lupus Erythematosus,8,AUTL,면역·염증,auto-mesh,C17.300.480 C20.111.590,MeSH 트리 C17.300.480 C20.111.590,,채택
+Metastatic Renal Cell Carcinoma,7,EXEL,암,auto-stem,,어간 'Metasta',,채택
+Chronic Lymphocytic Leukemia,7,ADCT,암,auto-mesh,C04.557.337.428.080.125 C15.378.508.428.080.125 C15.604.515.560.080.125 C20.683.515.528.080.125 C23.550.291.500.483,MeSH 트리 C04.557.337.428.080.125 C15.378.508.428.080.125 C15.604.515.560.080.125,,채택
+Urothelial Carcinoma,7,INO,암,auto-stem,,어간 'Carcinom',,채택
+Bladder Cancer,6,EXEL,암,auto-mesh,C04.588.945.947.960 C12.050.351.937.820.945 C12.050.351.968.829.707 C12.200.758.820.968 C12.200.777.829.813 C12.900.820.945 C12.950.829.707 C12.950.983.945,MeSH 트리 C04.588.945.947.960 C12.050.351.937.820.945 C12.050.351.968.829.707,,채택
+Non-small Cell Lung Cancer,6,ADCT,암,auto-mesh,C04.588.894.797.520.109.220.249 C08.381.540.140.500 C08.785.520.100.220.500,MeSH 트리 C04.588.894.797.520.109.220.249 C08.381.540.140.500 C08.785.520.100.220.500,,채택
+Becker Muscular Dystrophy,6,EWTX,희귀 유전,auto-mesh,C05.651.534.500.300 C10.668.491.175.500.300 C16.320.322.562 C16.320.577.300,MeSH 트리 C05.651.534.500.300 C10.668.491.175.500.300 C16.320.322.562,,채택
+Non Small Cell Lung Cancer,6,IOVA,암,auto-stem,,어간 'Cancer',,채택
+"Carcinoma, Merkel Cell",6,FATE,암,auto-mesh,C01.925.256.721.150 C01.925.928.216 C04.557.465.625.650.240.325 C04.557.470.200.025.370.325 C04.557.580.625.650.240.325,MeSH 트리 C01.925.256.721.150 C01.925.928.216 C04.557.465.625.650.240.325,,채택
+Non-Hodgkin Lymphoma,6,HOWL,암,auto-mesh,C04.557.386.480 C15.604.515.569.480 C20.683.515.761.480,MeSH 트리 C04.557.386.480 C15.604.515.569.480 C20.683.515.761.480,,채택
+Unresectable Melanoma,6,IOVA,암,auto-stem,,어간 'Melanom',,채택
+Dystrophic Epidermolysis Bullosa,6,KRYS,희귀 유전,auto-mesh,C16.131.831.493.160 C16.320.850.275.160 C17.300.200.367 C17.800.804.493.160 C17.800.827.275.160 C17.800.865.410.160,MeSH 트리 C16.131.831.493.160 C16.320.850.275.160 C17.300.200.367,,채택
+"Neoplasms, Plasma Cell",5,GERN,암,auto-mesh,C04.557.595,MeSH 트리 C04.557.595,,채택
+Coronavirus Infection,5,INO,감염,auto-stem,,어간 'virus',,채택
+Acute Lymphoblastic Leukemia,5,ADCT,암,auto-mesh,C04.557.337.428.600 C15.378.508.428.600 C15.604.515.560.600 C20.683.515.528.600,MeSH 트리 C04.557.337.428.600 C15.378.508.428.600 C15.604.515.560.600,,채택
+Hematologic Malignancies,5,FATE,암,auto-mesh,C04.588.448 C15.378.400,MeSH 트리 C04.588.448 C15.378.400,,채택
+Malignant Melanoma,5,AGEN,암,auto-mesh,C04.557.465.625.650.510 C04.557.580.625.650.510 C04.557.665.510 C04.588.805.377 C17.800.882.445,MeSH 트리 C04.557.465.625.650.510 C04.557.580.625.650.510 C04.557.665.510,,채택
+Lung Cancer,5,IOVA,암,auto-mesh,C04.588.894.797.520 C08.381.540 C08.785.520,MeSH 트리 C04.588.894.797.520 C08.381.540 C08.785.520,,채택
+Epstein-Barr Virus Infections,5,ATRA,감염,auto-mesh,C01.925.256.466.313 C01.925.928.313,MeSH 트리 C01.925.256.466.313 C01.925.928.313,,채택
+Mycosis Fungoides,5,BCRX,암,auto-mesh,C04.557.386.480.750.800.550 C15.604.515.569.480.750.800.550 C20.683.515.761.480.750.800.550,MeSH 트리 C04.557.386.480.750.800.550 C15.604.515.569.480.750.800.550 C20.683.515.761.480.750.800.550,,채택
+Adenocarcinoma,5,EXEL,암,auto-mesh,C04.557.470.200.025,MeSH 트리 C04.557.470.200.025,,채택
+HER2-positive Breast Cancer,5,ELVN,암,auto-stem,,어간 'Cancer',,채택
+Myelofibrosis,5,GERN,암,auto-mesh,C15.378.190.636.765,MeSH 트리 C15.378.190.636.765,,채택
+Graves Ophthalmopathy,5,IMVT,희귀 유전,auto-mesh,C11.270.240 C11.675.349.500.500 C16.320.290.410 C19.874.283.605.500 C19.874.397.370.500 C20.111.555.500,MeSH 트리 C11.270.240 C11.675.349.500.500 C16.320.290.410,,안과
+Chronic Hepatitis C,4,AVIR,감염,auto-mesh,C01.221.250.750.120 C01.925.440.440.120 C01.925.782.350.350.120 C06.552.380.350.120 C06.552.380.705.440.120 C23.550.291.500.477.750,MeSH 트리 C01.221.250.750.120 C01.925.440.440.120 C01.925.782.350.350.120,,채택
+Diabetic Macular Edema,4,KOD,비만·대사,auto-stem,,어간 'Diabet',,안과
+Squamous Cell Carcinoma of the Head and Neck,4,CRVS,암,auto-mesh,C04.557.470.200.400.565 C04.588.443.177,MeSH 트리 C04.557.470.200.400.565 C04.588.443.177,,채택
+Mantle Cell Lymphoma,4,FATE,암,auto-stem,,어간 'Lymphom',,채택
+Follicular Lymphoma,4,FATE,암,auto-mesh,C04.557.386.480.350 C15.604.515.569.480.350 C20.683.515.761.480.350,MeSH 트리 C04.557.386.480.350 C15.604.515.569.480.350 C20.683.515.761.480.350,,채택
+"Muscular Dystrophy, Facioscapulohumeral",4,FULC,희귀 유전,auto-mesh,C05.651.534.500.400 C10.668.491.175.500.400 C16.320.577.400,MeSH 트리 C05.651.534.500.400 C10.668.491.175.500.400 C16.320.577.400,,채택
+Pancreas Cancer,4,ADCT,암,auto-mesh,C04.588.274.761 C04.588.322.475 C06.301.761 C06.689.667 C19.344.421,MeSH 트리 C04.588.274.761 C04.588.322.475 C06.301.761,,채택
+Hepatocellular Carcinoma (HCC),4,EXEL,암,auto-mesh,C04.557.470.200.025.255 C04.588.274.623.160 C06.301.623.160 C06.552.697.160,MeSH 트리 C04.557.470.200.025.255 C04.588.274.623.160 C06.301.623.160,,채택
+Acute Pancreatitis,4,CALC,소화기,auto-mesh,C06.689.750,MeSH 트리 C06.689.750,,채택
+Liver Neoplasms,4,EXEL,암,auto-mesh,C04.588.274.623 C06.301.623 C06.552.697,MeSH 트리 C04.588.274.623 C06.301.623 C06.552.697,,채택
+Skin Cancer,4,IOVA,암,auto-mesh,C04.588.805 C17.800.882,MeSH 트리 C04.588.805 C17.800.882,,채택
+"Carcinoma, Ovarian Epithelial",4,BCAX,암,auto-mesh,C04.557.470.200.295 C04.588.322.455.199 C12.050.351.500.056.630.705.350 C12.050.351.937.418.685.350 C12.100.250.056.630.705.350 C12.900.418.685.350 C19.344.410.199 C19.391.630.705.350,MeSH 트리 C04.557.470.200.295 C04.588.322.455.199 C12.050.351.500.056.630.705.350,,채택
+Graves Disease,4,IMVT,안과,auto-mesh,C11.675.349.500 C19.874.283.605 C19.874.397.370 C20.111.555,MeSH 트리 C11.675.349.500 C19.874.283.605 C19.874.397.370,,비만·대사
+Chronic Inflammatory Demyelinating Polyneuropathy,4,IMVT,신경·정신,auto-stem,,어간 'neuropath',,채택
+"Polyradiculoneuropathy, Chronic Inflammatory Demyelinating",4,IMVT,신경·정신,auto-mesh,C10.114.750.175 C10.314.750.700 C10.668.829.800.750.600 C20.111.258.750.800 C23.550.291.500.813,MeSH 트리 C10.114.750.175 C10.314.750.700 C10.668.829.800.750.600,,채택
+Clear Cell Renal Cell Carcinoma,4,EXEL,암,auto-mesh,C04.557.470.200.025.390 C04.588.945.947.535.160 C12.050.351.937.820.535.160 C12.050.351.968.419.473.160 C12.200.758.820.750.160 C12.200.777.419.473.160 C12.900.820.535.160 C12.950.419.473.160 C12.950.983.535.160,MeSH 트리 C04.557.470.200.025.390 C04.588.945.947.535.160 C12.050.351.937.820.535.160,,채택
+Paroxysmal Nocturnal Hemoglobinuria,4,BCRX,암,auto-mesh,C15.378.050.141.560 C15.378.190.625.460,MeSH 트리 C15.378.050.141.560 C15.378.190.625.460,,혈액
+Recessive Dystrophic Epidermolysis Bullosa,4,KRYS,피부,auto-stem,,어간 'Epidermolys',,희귀 유전
+Dominant Dystrophic Epidermolysis Bullosa,4,KRYS,피부,auto-stem,,어간 'Epidermolys',,희귀 유전
+Rectal Cancer,4,AGEN,암,auto-mesh,C04.588.274.476.411.307.790 C06.301.371.411.307.790 C06.405.249.411.307.790 C06.405.469.491.307.790 C06.405.469.860.180.500,MeSH 트리 C04.588.274.476.411.307.790 C06.301.371.411.307.790 C06.405.249.411.307.790,,채택
+Relapsed/Refractory Multiple Myeloma,4,DTIL,암,auto-stem,,어간 'Myelom',,채택
+Gliosarcoma,4,AGEN,암,auto-mesh,C04.557.465.625.600.380.400 C04.557.470.670.380.400 C04.557.580.625.600.380.400,MeSH 트리 C04.557.465.625.600.380.400 C04.557.470.670.380.400 C04.557.580.625.600.380.400,,채택
+Diffuse Large B-Cell Lymphoma,4,ADCT,암,auto-mesh,C04.557.386.480.150.585 C15.604.515.569.480.150.585 C20.683.515.761.480.150.585,MeSH 트리 C04.557.386.480.150.585 C15.604.515.569.480.150.585 C20.683.515.761.480.150.585,,채택
+Thyroid Cancer,4,EXEL,암,auto-mesh,C04.588.322.894 C04.588.443.915 C19.344.894 C19.874.788,MeSH 트리 C04.588.322.894 C04.588.443.915 C19.344.894,,채택
+Merkel Cell Carcinoma,4,FATE,암,auto-mesh,C01.925.256.721.150 C01.925.928.216 C04.557.465.625.650.240.325 C04.557.470.200.025.370.325 C04.557.580.625.650.240.325,MeSH 트리 C01.925.256.721.150 C01.925.928.216 C04.557.465.625.650.240.325,,채택
+Metastatic Colorectal Cancer,4,FTH,암,auto-stem,,어간 'Metasta',,채택
+"Thyroid Cancer, Papillary",4,EXEL,암,auto-mesh,C04.557.470.200.025.085.612 C04.588.322.894.400 C04.588.443.915.400 C19.344.894.400 C19.874.788.400,MeSH 트리 C04.557.470.200.025.085.612 C04.588.322.894.400 C04.588.443.915.400,,채택
+Sezary Syndrome,4,BCRX,암,auto-mesh,C04.557.386.480.750.800.775 C15.604.515.569.480.750.800.775 C15.604.515.841 C20.683.515.761.480.750.800.775 C20.683.515.920,MeSH 트리 C04.557.386.480.750.800.775 C15.604.515.569.480.750.800.775 C15.604.515.841,,채택
+Astrocytoma,4,BCRX,암,auto-mesh,C04.557.465.625.600.380.080 C04.557.470.670.380.080 C04.557.580.625.600.380.080,MeSH 트리 C04.557.465.625.600.380.080 C04.557.470.670.380.080 C04.557.580.625.600.380.080,,채택
+HCV Infection,3,AVIR,감염,auto-stem,,어간 'HCV',,채택
+Hepatitis C Virus Infection,3,AVIR,감염,auto-stem,,어간 'Hepatitis',,채택
+"Thrombocythemia, Essential",3,GERN,암,auto-mesh,C15.378.100.832 C15.378.140.860.800 C15.378.190.636.860.800 C15.378.463.825,MeSH 트리 C15.378.100.832 C15.378.140.860.800 C15.378.190.636.860.800,,채택
+Marginal Zone Lymphoma,3,FATE,암,auto-stem,,어간 'Lymphom',,채택
+Facioscapulohumeral Muscular Dystrophy (FSHD),3,FULC,희귀 유전,auto-mesh,C05.651.534.500.400 C10.668.491.175.500.400 C16.320.577.400,MeSH 트리 C05.651.534.500.400 C10.668.491.175.500.400 C16.320.577.400,,채택
+Colo-rectal Cancer,3,ADCT,암,auto-stem,,어간 'Cancer',,채택
+Esophageal Cancer,3,ADCT,암,auto-mesh,C04.588.274.476.205 C04.588.443.353 C06.301.371.205 C06.405.117.430 C06.405.249.205,MeSH 트리 C04.588.274.476.205 C04.588.443.353 C06.301.371.205,,채택
+Head and Neck Squamous Cell Carcinoma (HNSCC),3,EXEL,암,auto-mesh,C04.557.470.200.400.565 C04.588.443.177,MeSH 트리 C04.557.470.200.400.565 C04.588.443.177,,채택
+Renal Cell Carcinoma (RCC),3,EXEL,암,auto-mesh,C04.557.470.200.025.390 C04.588.945.947.535.160 C12.050.351.937.820.535.160 C12.050.351.968.419.473.160 C12.200.758.820.750.160 C12.200.777.419.473.160 C12.900.820.535.160 C12.950.419.473.160 C12.950.983.535.160,MeSH 트리 C04.557.470.200.025.390 C04.588.945.947.535.160 C12.050.351.937.820.535.160,,채택
+Colorectal Cancer (CRC),3,EXEL,암,auto-mesh,C04.588.274.476.411.307 C06.301.371.411.307 C06.405.249.411.307 C06.405.469.158.356 C06.405.469.491.307 C06.405.469.860.180,MeSH 트리 C04.588.274.476.411.307 C06.301.371.411.307 C06.405.249.411.307,,채택
+Epithelial Ovarian Cancer,3,BCAX,암,auto-mesh,C04.557.470.200.295 C04.588.322.455.199 C12.050.351.500.056.630.705.350 C12.050.351.937.418.685.350 C12.100.250.056.630.705.350 C12.900.418.685.350 C19.344.410.199 C19.391.630.705.350,MeSH 트리 C04.557.470.200.295 C04.588.322.455.199 C12.050.351.500.056.630.705.350,,채택
+Castration Resistant Prostate Cancer,3,EXEL,암,auto-stem,,어간 'Cancer',,채택
+Graves' Disease,3,IMVT,안과,auto-mesh,C11.675.349.500 C19.874.283.605 C19.874.397.370 C20.111.555,MeSH 트리 C11.675.349.500 C19.874.283.605 C19.874.397.370,,비만·대사
+Systemic Sclerosis (SSc),3,ARTV,면역·염증,auto-mesh,C17.300.799 C17.800.784,MeSH 트리 C17.300.799 C17.800.784,,채택
+Renal Impairment,3,AVIR,건강인·약동학,auto-stem,,어간 'Renal Impairment',,채택
+"Myasthenia Gravis, Generalized",3,AUPH,암,auto-mesh,C04.588.614.550.500 C04.730.856.490 C10.114.656 C10.574.781.588 C10.668.758.725 C20.111.258.500,MeSH 트리 C04.588.614.550.500 C04.730.856.490 C10.114.656,,신경·정신
+Neoplasms by Site,3,COGT,암,auto-mesh,C04.588,MeSH 트리 C04.588,,채택
+HNSCC,3,KURA,암,auto-mesh,C04.557.470.200.400.565 C04.588.443.177,MeSH 트리 C04.557.470.200.400.565 C04.588.443.177,,채택
+Esophageal Squamous Cell Carcinoma,3,EXEL,암,auto-mesh,C04.557.470.200.400.330 C04.557.470.700.400.565 C04.588.274.476.205.500 C04.588.443.353.500 C06.301.371.205.500 C06.405.117.430.500 C06.405.249.205.500,MeSH 트리 C04.557.470.200.400.330 C04.557.470.700.400.565 C04.588.274.476.205.500,,채택
+Metastatic Solid Tumor,3,EXEL,암,auto-stem,,어간 'Metasta',,채택
+Osteosarcoma,3,EXEL,암,auto-mesh,C04.557.450.565.575.650 C04.557.450.795.620,MeSH 트리 C04.557.450.565.575.650 C04.557.450.795.620,,채택
+Refractory B-Cell Non-Hodgkin Lymphoma,3,CRBU,암,auto-stem,,어간 'Lymphom',,채택
+Non Hodgkin Lymphoma,3,CRBU,암,auto-stem,,어간 'Lymphom',,채택
+Chronic Lymphocytic Leukemia (CLL),3,FATE,암,auto-mesh,C04.557.337.428.080.125 C15.378.508.428.080.125 C15.604.515.560.080.125 C20.683.515.528.080.125 C23.550.291.500.483,MeSH 트리 C04.557.337.428.080.125 C15.378.508.428.080.125 C15.604.515.560.080.125,,채택
+Soft Tissue Sarcoma,3,CCCC,암,auto-stem,,어간 'Sarcom',,채택
+Parkinson's Disease,3,ARDX,신경·정신,auto-stem,,어간 'Parkinson',,채택
+Kidney Transplant Rejection,3,ELDN,신장,auto-stem,,어간 'Kidney',,채택
+ALS,3,AMLX,신경·정신,auto-stem,,어간 'ALS',,채택
+Hematologic Malignancy,3,KURA,암,auto-mesh,C04.588.448 C15.378.400,MeSH 트리 C04.588.448 C15.378.400,,채택
+Metastatic Head and Neck Squamous Cell Carcinoma,3,AGEN,암,auto-stem,,어간 'Metasta',,채택
+Small Lymphocytic Lymphoma,3,IOVA,암,auto-stem,,어간 'Lymphom',,채택
+Duchenne Muscular Dystrophy,3,EWTX,희귀 유전,auto-mesh,C05.651.534.500.300 C10.668.491.175.500.300 C16.320.322.562 C16.320.577.300,MeSH 트리 C05.651.534.500.300 C10.668.491.175.500.300 C16.320.322.562,,채택
+EGFR Positive Solid Tumor,3,FATE,암,auto-stem,,어간 'Tumor',,채택
+Squamous Cell Carcinoma,3,FATE,암,auto-mesh,C04.557.470.200.400 C04.557.470.700.400,MeSH 트리 C04.557.470.200.400 C04.557.470.700.400,,채택
+Recurrent Pericarditis,3,KNSA,심혈관,auto-stem,,어간 'cardi',,채택
+Cognitive Dysfunction,3,ABOS,신경·정신,auto-mesh,F03.615.250.700,MeSH 트리 F03.615.250.700,,채택
+Chronic Weight Management,3,GPCR,비만·대사,auto-stem,,어간 'Weight',,채택
+Laryngeal Diseases,3,BCAX,청각·이비인후,auto-mesh,C08.360 C09.400,MeSH 트리 C08.360 C09.400,,무시
+Recurrent Head and Neck Squamous Cell Carcinoma,3,BCAX,암,auto-stem,,어간 'Carcinom',,채택
+DEB - Dystrophic Epidermolysis Bullosa,3,KRYS,피부,auto-stem,,어간 'Epidermolys',,희귀 유전
+"Adenocarcinoma, Follicular",3,EXEL,암,auto-mesh,C04.557.470.200.025.060,MeSH 트리 C04.557.470.200.025.060,,채택
+Congenital Abnormalities,3,EDIT,희귀 유전,auto-mesh,C16.131,MeSH 트리 C16.131,,무시
+Precursor T-Cell Lymphoblastic Leukemia-Lymphoma,3,BCRX,암,auto-mesh,C04.557.337.428.600.620 C15.378.508.428.600.620 C15.604.515.560.600.620 C20.683.515.528.600.620,MeSH 트리 C04.557.337.428.600.620 C15.378.508.428.600.620 C15.604.515.560.600.620,,채택
+Colorectal Adenocarcinoma,3,EXEL,암,auto-stem,,어간 'carcinom',,채택
+Colon Cancer,3,EXEL,암,auto-mesh,C04.588.274.476.411.307.180 C06.301.371.411.307.180 C06.405.249.411.307.180 C06.405.469.158.356.180 C06.405.469.491.307.180,MeSH 트리 C04.588.274.476.411.307.180 C06.301.371.411.307.180 C06.405.249.411.307.180,,채택
+Ewing Sarcoma,3,INBX,암,auto-mesh,C04.557.450.565.575.650.800 C04.557.450.795.620.800,MeSH 트리 C04.557.450.565.575.650.800 C04.557.450.795.620.800,,채택
+Thyroid Eye Disease,3,IMVT,희귀 유전,auto-mesh,C11.270.240 C11.675.349.500.500 C16.320.290.410 C19.874.283.605.500 C19.874.397.370.500 C20.111.555.500,MeSH 트리 C11.270.240 C11.675.349.500.500 C16.320.290.410,,안과
+Non-small-cell Lung Cancer,3,EXEL,암,auto-stem,,어간 'Cancer',,채택
+Gastroesophageal Junction Adenocarcinoma,3,ALXO,암,auto-stem,,어간 'carcinom',,채택
+End Stage Renal Disease,2,ARDX,신장,auto-stem,,어간 'Renal',,채택
+Metastatic Urothelial Carcinoma,2,EXEL,암,auto-stem,,어간 'Metasta',,채택
+Renal Cell Cancer,2,CRVS,암,auto-mesh,C04.557.470.200.025.390 C04.588.945.947.535.160 C12.050.351.937.820.535.160 C12.050.351.968.419.473.160 C12.200.758.820.750.160 C12.200.777.419.473.160 C12.900.820.535.160 C12.950.419.473.160 C12.950.983.535.160,MeSH 트리 C04.557.470.200.025.390 C04.588.945.947.535.160 C12.050.351.937.820.535.160,,채택
+B-cell Acute Lymphoblastic Leukemia,2,AUTL,암,auto-stem,,어간 'Leukemi',,채택
+Diffuse Large B Cell Lymphoma,2,FATE,암,auto-stem,,어간 'Lymphom',,채택
+Brain and Central Nervous System Tumors,2,AGEN,암,auto-stem,,어간 'Tumor',,채택
+Clear Cell Renal Cell Carcinoma (ccRCC),2,EXEL,암,auto-mesh,C04.557.470.200.025.390 C04.588.945.947.535.160 C12.050.351.937.820.535.160 C12.050.351.968.419.473.160 C12.200.758.820.750.160 C12.200.777.419.473.160 C12.900.820.535.160 C12.950.419.473.160 C12.950.983.535.160,MeSH 트리 C04.557.470.200.025.390 C04.588.945.947.535.160 C12.050.351.937.820.535.160,,채택
+Non-Clear Cell Renal Cell Carcinoma (nccRCC),2,EXEL,암,auto-stem,,어간 'Carcinom',,채택
+Diffuse Cutaneous Systemic Sclerosis,2,CRBP,면역·염증,auto-mesh,C17.300.799.602 C17.800.784.602,MeSH 트리 C17.300.799.602 C17.800.784.602,,채택
+Liver Cancer,2,EXEL,암,auto-mesh,C04.588.274.623 C06.301.623 C06.552.697,MeSH 트리 C04.588.274.623 C06.301.623 C06.552.697,,채택
+Melanoma (Skin),2,IOVA,암,auto-mesh,C04.557.465.625.650.510 C04.557.580.625.650.510 C04.557.665.510 C04.588.805.377 C17.800.882.445,MeSH 트리 C04.557.465.625.650.510 C04.557.580.625.650.510 C04.557.665.510,,채택
+Cutaneous Squamous Cell Carcinoma,2,BCAX,암,auto-mesh,C04.557.470.200.649.001 C04.588.805.511.001 C17.800.882.623.001,MeSH 트리 C04.557.470.200.649.001 C04.588.805.511.001 C17.800.882.623.001,,채택
+Metastatic Prostate Cancer,2,EXEL,암,auto-stem,,어간 'Metasta',,채택
+Lymphoblastic Leukemia,2,KURA,암,auto-mesh,C04.557.337.428.600 C15.378.508.428.600 C15.604.515.560.600 C20.683.515.528.600,MeSH 트리 C04.557.337.428.600 C15.378.508.428.600 C15.604.515.560.600,,채택
+Lipid Metabolism Disorders,2,FDMT,비만·대사,auto-mesh,C18.452.584,MeSH 트리 C18.452.584,,채택
+Cerebral Small Vessel Diseases,2,FDMT,신경·정신,auto-mesh,C10.228.140.300.275 C14.907.253.329,MeSH 트리 C10.228.140.300.275 C14.907.253.329,,채택
+Cardiovascular Diseases,2,FDMT,심혈관,auto-mesh,C14,MeSH 트리 C14,,무시
+Cerebrovascular Disorders,2,FDMT,신경·정신,auto-mesh,C10.228.140.300 C14.907.253,MeSH 트리 C10.228.140.300 C14.907.253,,채택
+Vascular Diseases,2,FDMT,심혈관,auto-mesh,C14.907,MeSH 트리 C14.907,,무시
+Myeloma,2,FATE,암,auto-stem,,어간 'Myelom',,채택
+"AML, Adult",2,FATE,암,auto-stem,,어간 'AML',,채택
+Hyperthyroidism,2,IMVT,비만·대사,auto-mesh,C19.874.397,MeSH 트리 C19.874.397,,채택
+Progressive Multiple Sclerosis,2,CABA,신경·정신,auto-stem,,어간 'Multiple Sclerosis',,채택
+Duchenne Muscular Dystrophy (DMD),2,DYN,희귀 유전,auto-mesh,C05.651.534.500.300 C10.668.491.175.500.300 C16.320.322.562 C16.320.577.300,MeSH 트리 C05.651.534.500.300 C10.668.491.175.500.300 C16.320.322.562,,채택
+Advanced Soft Tissue Sarcoma,2,IOVA,암,auto-stem,,어간 'Sarcom',,채택
+Non-Small Cell Lung Cancer (NSCLC),2,AGEN,암,auto-mesh,C04.588.894.797.520.109.220.249 C08.381.540.140.500 C08.785.520.100.220.500,MeSH 트리 C04.588.894.797.520.109.220.249 C08.381.540.140.500 C08.785.520.100.220.500,,채택
+Clear-cell metastatic renal cell carcinoma,2,EXEL,암,auto-stem,,어간 'metasta',,채택
+Scleroderma,2,ARTV,면역·염증,auto-stem,,어간 'Scleroderma',,채택
+Endocrine System Diseases,2,ELDN,비만·대사,auto-mesh,C19,MeSH 트리 C19,,무시
+Metastatic Uveal Melanoma,2,IOVA,암,auto-stem,,어간 'Metasta',,채택
+Triple Negative Breast Cancer (TNBC),2,IOVA,암,auto-mesh,C04.588.180.788 C17.800.090.500.788,MeSH 트리 C04.588.180.788 C17.800.090.500.788,,채택
+Metastatic Solid Tumors,2,IOVA,암,auto-stem,,어간 'Metasta',,채택
+Locally Advanced or Metastatic Solid Tumors,2,EXEL,암,auto-stem,,어간 'Metasta',,채택
+Locally Advanced Solid Tumor,2,EXEL,암,auto-stem,,어간 'Tumor',,채택
+Advanced or Metastatic Solid Tumors,2,HOWL,암,auto-stem,,어간 'Metasta',,채택
+Platinum-Resistant Ovarian Carcinoma,2,IOVA,암,auto-stem,,어간 'Carcinom',,채택
+Malignant Solid Neoplasm,2,IOVA,암,auto-stem,,어간 'Malignan',,채택
+Pathologic Stage IIIC Cutaneous Melanoma AJCC v8,2,IOVA,암,auto-stem,,어간 'Melanom',,채택
+Macular Edema Secondary to Inflammation,2,KOD,안과,auto-stem,,어간 'Macula',,채택
+B Cell Lymphoma,2,CRBU,암,auto-stem,,어간 'Lymphom',,채택
+Dementia With Lewy Bodies,2,LONA,신경·정신,auto-stem,,어간 'Dementia',,채택
+Nonalcoholic Steatohepatitis,2,ALGS,비만·대사,auto-mesh,C06.552.241.519,MeSH 트리 C06.552.241.519,,채택
+Small Cell Lung Cancer,2,CMPX,암,auto-mesh,C04.588.894.797.520.109.220.624 C08.381.540.140.750 C08.785.520.100.220.750,MeSH 트리 C04.588.894.797.520.109.220.624 C08.381.540.140.750 C08.785.520.100.220.750,,채택
+Metastatic Breast Cancer,2,LONA,암,auto-stem,,어간 'Metasta',,채택
+Chronic Myeloid Leukemia,2,EXEL,암,auto-stem,,어간 'Leukemi',,채택
+"Leukemia, Lymphoid",2,EXEL,암,auto-mesh,C04.557.337.428 C15.378.508.428 C15.604.515.560 C20.683.515.528,MeSH 트리 C04.557.337.428 C15.378.508.428 C15.604.515.560,,채택
+Brain Diseases,2,LONA,신경·정신,auto-mesh,C10.228.140,MeSH 트리 C10.228.140,,무시
+Neurocognitive Disorders,2,LONA,신경·정신,auto-mesh,F03.615,MeSH 트리 F03.615,,채택
+Mental Disorders,2,LONA,신경·정신,auto-mesh,F03,MeSH 트리 F03,,무시
+Ulcerative Colitis,2,AVTX,소화기,auto-mesh,C06.405.205.265.231 C06.405.205.731.249 C06.405.469.158.188.231 C06.405.469.432.249,MeSH 트리 C06.405.205.265.231 C06.405.205.731.249 C06.405.469.158.188.231,,채택
+Non-Hodgkin's Lymphoma (NHL),2,FATE,암,auto-stem,,어간 'Lymphom',,채택
+Hodgkin Lymphoma,2,ADCT,암,auto-mesh,C04.557.386.355 C15.604.515.569.355 C20.683.515.761.355,MeSH 트리 C04.557.386.355 C15.604.515.569.355 C20.683.515.761.355,,채택
+Paroxysmal Nocturnal Hemoglobinuria (PNH),2,BCRX,암,auto-mesh,C15.378.050.141.560 C15.378.190.625.460,MeSH 트리 C15.378.050.141.560 C15.378.190.625.460,,혈액
+Constipation,2,ARDX,소화기,auto-stem,C23.888.821.150,어간 'Constipat',,채택
+Lupus Nephritis - WHO Class III,2,ARTV,신장,auto-stem,,어간 'Nephr',,면역·염증
+Lupus Nephritis - WHO Class IV,2,ARTV,신장,auto-stem,,어간 'Nephr',,면역·염증
+Myeloid Malignancies,2,KYMR,암,auto-stem,,어간 'Malignan',,채택
+Angiosarcoma,2,AGEN,암,auto-mesh,C04.557.450.795.390 C04.557.645.390,MeSH 트리 C04.557.450.795.390 C04.557.645.390,,채택
+Demyelinating Diseases,2,ATRA,신경·정신,auto-mesh,C10.314,MeSH 트리 C10.314,,채택
+Idiopathic Inflammatory Myositis (IIM),2,FATE,신경·정신,auto-mesh,C05.651.594 C10.668.491.562,MeSH 트리 C05.651.594 C10.668.491.562,,면역·염증
+Anti-Neutrophil Cytoplasmic Antibody-Associated Vasculitis,2,FATE,심혈관,auto-mesh,C14.907.940.897.249 C17.800.862.105 C20.111.193,MeSH 트리 C14.907.940.897.249 C17.800.862.105 C20.111.193,,면역·염증
+Systemic Lupus Erythematosus (SLE),2,FATE,면역·염증,auto-mesh,C17.300.480 C20.111.590,MeSH 트리 C17.300.480 C20.111.590,,채택
+Agitation and Aggression in Alzheimer's Disease,2,ACAD,신경·정신,auto-stem,,어간 'Agitation',,채택
+Refractory Diffuse Large B-Cell Lymphoma,2,ADCT,암,auto-stem,,어간 'Lymphom',,채택
+Chromophobe Renal Cell Carcinoma,2,EXEL,암,auto-mesh,C04.557.470.200.025.390 C04.588.945.947.535.160 C12.050.351.937.820.535.160 C12.050.351.968.419.473.160 C12.200.758.820.750.160 C12.200.777.419.473.160 C12.900.820.535.160 C12.950.419.473.160 C12.950.983.535.160,MeSH 트리 C04.557.470.200.025.390 C04.588.945.947.535.160 C12.050.351.937.820.535.160,,채택
+Papillary Renal Cell Carcinoma,2,EXEL,암,auto-mesh,C04.557.470.200.025.390 C04.588.945.947.535.160 C12.050.351.937.820.535.160 C12.050.351.968.419.473.160 C12.200.758.820.750.160 C12.200.777.419.473.160 C12.900.820.535.160 C12.950.419.473.160 C12.950.983.535.160,MeSH 트리 C04.557.470.200.025.390 C04.588.945.947.535.160 C12.050.351.937.820.535.160,,채택
+Unclassified Renal Cell Carcinoma,2,EXEL,암,auto-stem,,어간 'Carcinom',,채택
+Acute Myeloid Leukemia (AML),2,KURA,암,auto-mesh,C04.557.337.539.275 C15.378.508.539.275,MeSH 트리 C04.557.337.539.275 C15.378.508.539.275,,채택
+AML With Mutated NPM1,2,KURA,암,auto-stem,,어간 'AML',,채택
+Metastatic Soft-tissue Sarcoma,2,EXEL,암,auto-stem,,어간 'Metasta',,채택
+Metastatic Pancreatic Cancer,2,AGEN,암,auto-stem,,어간 'Metasta',,채택
+"Leukemia, Myeloid, Chronic-Phase",2,ELVN,암,auto-mesh,C04.557.337.539.250.400 C15.378.190.636.370.400 C15.378.508.539.250.400 C23.550.291.500.485.400,MeSH 트리 C04.557.337.539.250.400 C15.378.190.636.370.400 C15.378.508.539.250.400,,채택
+"Obesity, Overweight, or Chronic Weight Management",2,GPCR,비만·대사,auto-stem,,어간 'Obes',,채택
+Neoplasm Malignant,2,EXEL,암,auto-stem,,어간 'Neoplas',,채택
+Hormone Receptor Positive Breast Carcinoma,2,EXEL,암,auto-stem,,어간 'Carcinom',,채택
+Memory Disorders,2,ABOS,신경·정신,auto-mesh,C10.597.606.525 C23.888.592.604.529 F01.700.625,MeSH 트리 C10.597.606.525 C23.888.592.604.529 F01.700.625,,채택
+Locally Advanced Hepatocellular Carcinoma,2,EXEL,암,auto-stem,,어간 'Carcinom',,채택
+"Leukemia, Lymphocytic, Chronic",2,DTIL,암,auto-mesh,C04.557.337.428.080.125 C15.378.508.428.080.125 C15.604.515.560.080.125 C20.683.515.528.080.125 C23.550.291.500.483,MeSH 트리 C04.557.337.428.080.125 C15.378.508.428.080.125 C15.604.515.560.080.125,,채택
+B-cell Non Hodgkin Lymphoma,2,DTIL,암,auto-stem,,어간 'Lymphom',,채택
+Cervical Dysplasia,2,INO,암,auto-mesh,C04.834.818 C12.050.351.500.852.593.074 C12.100.250.852.593.074,MeSH 트리 C04.834.818 C12.050.351.500.852.593.074 C12.100.250.852.593.074,,채택
+Advanced Non-Small Cell Lung Cancer,2,AVBP,암,auto-stem,,어간 'Cancer',,채택
+Metastatic Non-Small Cell Lung Cancer,2,AVBP,암,auto-stem,,어간 'Metasta',,채택
+Esophageal Adenocarcinoma,2,EXEL,암,auto-stem,,어간 'carcinom',,채택
+Differentiated Thyroid Cancer,2,EXEL,암,auto-stem,,어간 'Cancer',,채택
+Translocation Renal Cell Carcinoma,2,EXEL,암,auto-stem,,어간 'Carcinom',,채택
+Eye Disorders Congenital,2,EDIT,안과,auto-stem,,어간 'Eye',,채택
+Retinal Disease,2,EDIT,안과,auto-stem,,어간 'Retin',,채택
+Germ Cell Tumor,2,EXEL,암,auto-mesh,C04.557.465,MeSH 트리 C04.557.465,,채택
+Brain Metastases,2,EXEL,암,auto-mesh,C04.588.614.250.195 C10.228.140.211 C10.551.240.250,MeSH 트리 C04.588.614.250.195 C10.228.140.211 C10.551.240.250,,채택
+Pemphigus,2,ARTV,피부,auto-mesh,C17.800.865.716 C20.111.736,MeSH 트리 C17.800.865.716 C20.111.736,,채택
+Pemphigus Vulgaris,2,ARTV,피부,auto-mesh,C17.800.865.716 C20.111.736,MeSH 트리 C17.800.865.716 C20.111.736,,채택
+Rheumatoid Arthritis,2,ARTV,면역·염증,auto-mesh,C05.550.114.154 C05.799.114 C17.300.775.099 C20.111.199,MeSH 트리 C05.550.114.154 C05.799.114 C17.300.775.099,,채택
+Bile Duct Neoplasms,2,BCRX,암,auto-mesh,C04.588.274.120.250 C06.130.120.120 C06.130.320.120 C06.301.120.250,MeSH 트리 C04.588.274.120.250 C06.130.120.120 C06.130.320.120,,채택
+"Lymphoma, Large-Cell, Immunoblastic",2,BCRX,암,auto-mesh,C04.557.386.480.493 C15.604.515.569.480.493 C20.683.515.761.480.487,MeSH 트리 C04.557.386.480.493 C15.604.515.569.480.493 C20.683.515.761.480.487,,채택
+Pediatric Lupus Nephritis,2,AUPH,신장,auto-stem,,어간 'Nephr',,면역·염증
+Adolescent Lupus Nephritis,2,AUPH,신장,auto-stem,,어간 'Nephr',,면역·염증
+Covid19,2,BIOA,감염,auto-mesh,C01.748.610.763.500 C01.925.705.500 C01.925.782.600.550.200.163 C08.381.677.807.500 C08.730.610.763.500,MeSH 트리 C01.748.610.763.500 C01.925.705.500 C01.925.782.600.550.200.163,,채택
+Chronic Hepatitis B Infection,2,ALGS,감염,auto-stem,,어간 'Hepatitis',,채택
+Type2 Diabetes Mellitus,2,GPCR,비만·대사,auto-stem,,어간 'Diabet',,채택
+Non Small Cell Lung Cancer (NSCLC),2,EXEL,암,auto-stem,,어간 'Cancer',,채택
+Castration-resistant Prostate Cancer,2,EXEL,암,auto-stem,,어간 'Cancer',,채택
+"Thyroid Carcinoma, Anaplastic",2,EXEL,암,auto-mesh,C04.557.470.200.725,MeSH 트리 C04.557.470.200.725,,채택
+Angioimmunoblastic T-cell Lymphoma,2,AUTL,암,auto-stem,,어간 'Lymphom',,채택
+"Peripheral T-Cell Lymphoma, Not Otherwise Specified",2,AUTL,암,auto-stem,,어간 'Lymphom',,채택
+Lupus,2,CRBU,면역·염증,auto-stem,,어간 'Lupus',,채택
+Kidney Cancer,2,AGEN,암,auto-mesh,C04.588.945.947.535 C12.050.351.937.820.535 C12.050.351.968.419.473 C12.200.758.820.750 C12.200.777.419.473 C12.900.820.535 C12.950.419.473 C12.950.983.535,MeSH 트리 C04.588.945.947.535 C12.050.351.937.820.535 C12.050.351.968.419.473,,채택
+Poorly Differentiated Thyroid Gland Carcinoma,2,IOVA,암,auto-stem,,어간 'Carcinom',,채택
+Dementia of Alzheimer Type,2,LONA,신경·정신,auto-stem,,어간 'Dementia',,채택
+Nasal Obstruction,2,BCRX,청각·이비인후,auto-mesh,C08.460.525 C08.618.846.185.525 C09.603.525,MeSH 트리 C08.460.525 C08.618.846.185.525 C09.603.525,,무시
+Seasonal Influenza,2,BCRX,감염,auto-stem,,어간 'Influenza',,채택
+Sore Throat,2,BCRX,감염,auto-mesh,C01.748.561 C07.550.781 C08.730.561 C09.775.649,MeSH 트리 C01.748.561 C07.550.781 C08.730.561,,채택
+Pharyngitis,2,BCRX,감염,auto-mesh,C01.748.561 C07.550.781 C08.730.561 C09.775.649,MeSH 트리 C01.748.561 C07.550.781 C08.730.561,,채택
+Headache,2,BCRX,통증,auto-mesh,C23.888.592.612.441 F02.830.816.444.441 G11.561.790.444.473,MeSH 트리 C23.888.592.612.441 F02.830.816.444.441 G11.561.790.444.473,,채택
+Cough,2,BCRX,호흡기,auto-mesh,C08.618.248 C23.888.852.293,MeSH 트리 C08.618.248 C23.888.852.293,,채택
+NASH - Nonalcoholic Steatohepatitis,2,ALT,감염,auto-stem,,어간 'hepatitis',,비만·대사
+Recurrent Genital Herpes Simplex Type 2,2,ASMB,감염,auto-stem,,어간 'Herpes',,채택
+Medullary Thyroid Cancer,2,EXEL,암,auto-stem,,어간 'Cancer',,채택
+HPV-Related Carcinoma,2,IOVA,암,auto-stem,,어간 'Carcinom',,채택
+HPV Positive Oropharyngeal Squamous Cell Carcinoma,2,IOVA,암,auto-stem,,어간 'Carcinom',,채택
+HPV-Related Vulvar Squamous Cell Carcinoma,2,IOVA,암,auto-stem,,어간 'Carcinom',,채택
+Vaginal Cancer,2,IOVA,암,auto-mesh,C04.588.945.418.955 C12.050.351.500.894.834 C12.050.351.937.418.937 C12.100.250.894.834 C12.900.418.937,MeSH 트리 C04.588.945.418.955 C12.050.351.500.894.834 C12.050.351.937.418.937,,채택
+HPV-Related Anal Squamous Cell Carcinoma,2,IOVA,암,auto-stem,,어간 'Carcinom',,채택
+HPV-Related Endocervical Adenocarcinoma,2,IOVA,암,auto-stem,,어간 'carcinom',,채택
+HPV-Related Malignancy,2,IOVA,암,auto-stem,,어간 'Malignan',,채택
+HPV-Related Squamous Cell Carcinoma,2,IOVA,암,auto-stem,,어간 'Carcinom',,채택
+Vaginal Neoplasms,2,IOVA,암,auto-mesh,C04.588.945.418.955 C12.050.351.500.894.834 C12.050.351.937.418.937 C12.100.250.894.834 C12.900.418.937,MeSH 트리 C04.588.945.418.955 C12.050.351.500.894.834 C12.050.351.937.418.937,,채택
+Penile Neoplasms,2,IOVA,암,auto-mesh,C04.588.945.440.715 C12.100.500.260.500 C12.100.500.494.591 C12.200.294.260.500 C12.200.294.494.591 C12.200.758.409.500 C12.900.619.500,MeSH 트리 C04.588.945.440.715 C12.100.500.260.500 C12.100.500.494.591,,채택
+Oropharynx Cancer,2,IOVA,암,auto-mesh,C04.588.443.665.710.684 C07.550.745.671 C09.647.710.685 C09.775.549.685,MeSH 트리 C04.588.443.665.710.684 C07.550.745.671 C09.647.710.685,,채택
+Penile Cancer,2,IOVA,암,auto-mesh,C04.588.945.440.715 C12.100.500.260.500 C12.100.500.494.591 C12.200.294.260.500 C12.200.294.494.591 C12.200.758.409.500 C12.900.619.500,MeSH 트리 C04.588.945.440.715 C12.100.500.260.500 C12.100.500.494.591,,채택
+HPV-Related Penile Squamous Cell Carcinoma,2,IOVA,암,auto-stem,,어간 'Carcinom',,채택
+HPV-Related Adenosquamous Carcinoma,2,IOVA,암,auto-stem,,어간 'Carcinom',,채택
+HPV-Related Adenocarcinoma,2,IOVA,암,auto-stem,,어간 'carcinom',,채택
+Anal Cancer,2,IOVA,암,auto-mesh,C04.588.274.476.411.307.790.040 C06.301.371.411.307.790.040 C06.405.249.411.307.790.040 C06.405.469.491.307.790.040 C06.405.469.860.101.163 C06.405.469.860.180.500.040,MeSH 트리 C04.588.274.476.411.307.790.040 C06.301.371.411.307.790.040 C06.405.249.411.307.790.040,,채택
+Vulvar Neoplasms,2,IOVA,암,auto-mesh,C04.588.945.418.968 C12.050.351.500.944.819 C12.050.351.937.418.968 C12.100.250.944.819 C12.900.418.968,MeSH 트리 C04.588.945.418.968 C12.050.351.500.944.819 C12.050.351.937.418.968,,채택
+Hereditary Angioedema (HAE),2,BCRX,희귀 유전,auto-mesh,C14.907.079.500 C16.320.798.500.500 C17.800.862.945.066.500 C20.543.480.904.066.500 C20.673.795.500.500,MeSH 트리 C14.907.079.500 C16.320.798.500.500 C17.800.862.945.066.500,,채택
+Glioblastoma Multiforme,2,EXEL,암,auto-mesh,C04.557.465.625.600.380.080.335 C04.557.470.670.380.080.335 C04.557.580.625.600.380.080.335,MeSH 트리 C04.557.465.625.600.380.080.335 C04.557.470.670.380.080.335 C04.557.580.625.600.380.080.335,,채택
+Relapsed Acute Myeloid Leukemia,2,GERN,암,auto-stem,,어간 'Leukemi',,채택
+"Acute Myeloid Leukemia, in Relapse",2,CRBU,암,auto-stem,,어간 'Leukemi',,채택
+HER2-positive Metastatic Breast Cancer,2,ELVN,암,auto-stem,,어간 'Metasta',,채택
+Metastatic Cervical Cancer,2,AGEN,암,auto-stem,,어간 'Metasta',,채택
+Hormone Receptor-positive Breast Cancer,2,EXEL,암,auto-stem,,어간 'Cancer',,채택
+NSCLC Stage IV,2,EXEL,암,auto-stem,,어간 'NSCLC',,채택
+Advanced NSCLC,2,EXEL,암,auto-stem,,어간 'NSCLC',,채택
+Papillary Thyroid Cancer,2,EXEL,암,auto-stem,,어간 'Cancer',,채택
+Pulmonary Arterial Hypertension (PAH),2,IKT,심혈관,auto-mesh,C08.381.423.847,MeSH 트리 C08.381.423.847,,채택
+"Carcinoma, Adenosquamous",2,IOVA,암,auto-mesh,C04.557.435.250 C04.557.470.200.150,MeSH 트리 C04.557.435.250 C04.557.470.200.150,,채택
+Newly Diagnosed Glioblastoma,2,AGEN,암,auto-stem,,어간 'Glioblastom',,채택
+Relapsed or Refractory B Cell Acute Lymphoblastic Leukemia,2,AUTL,암,auto-stem,,어간 'Leukemi',,채택
+ESRD,1,ARDX,신장,auto-mesh,C12.050.351.968.419.780.750.500 C12.200.777.419.780.750.500 C12.950.419.780.750.500 C23.550.291.500.906.500,MeSH 트리 C12.050.351.968.419.780.750.500 C12.200.777.419.780.750.500 C12.950.419.780.750.500,,채택
+Chronic Kidney Disease Stage 5,1,ARDX,신장,auto-stem,,어간 'Kidney',,채택
+Basal Cell Carcinoma (BCC),1,EXEL,암,auto-mesh,C04.557.470.200.649.002 C04.557.470.565.165 C04.588.805.511.002 C17.800.882.623.002,MeSH 트리 C04.557.470.200.649.002 C04.557.470.565.165 C04.588.805.511.002,,채택
+Obesity and Cardiovascular Risk,1,BIOA,비만·대사,auto-stem,,어간 'Obes',,채택
+Non-hodgkin Lymphoma,1,CRVS,암,auto-mesh,C04.557.386.480 C15.604.515.569.480 C20.683.515.761.480,MeSH 트리 C04.557.386.480 C15.604.515.569.480 C20.683.515.761.480,,채택
+B Acute Lymphoblastic Leukemia,1,AUTL,암,auto-stem,,어간 'Leukemi',,채택
+Refractory Childhood Acute Lymphoblastic Leukemia,1,AUTL,암,auto-stem,,어간 'Leukemi',,채택
+Recurrent Childhood Acute Lymphoblastic Leukemia,1,AUTL,암,auto-stem,,어간 'Leukemi',,채택
+Primary Sjögren's Syndrome,1,IMVT,면역·염증,auto-stem,,어간 'Sjögren',,채택
+SARS-CoV2 Infection,1,IMNM,감염,auto-stem,,어간 'SARS-CoV',,채택
+Proteinuria,1,ELDN,신장,auto-mesh,C12.050.351.968.934.734 C12.200.777.934.734 C12.950.934.734 C23.888.942.750,MeSH 트리 C12.050.351.968.934.734 C12.200.777.934.734 C12.950.934.734,,채택
+IgA Nephropathy,1,ELDN,신장,auto-mesh,C12.050.351.968.419.570.363.608 C12.200.777.419.570.363.608 C12.950.419.570.363.608 C20.111.525,MeSH 트리 C12.050.351.968.419.570.363.608 C12.200.777.419.570.363.608 C12.950.419.570.363.608,,채택
+"Lymphoma, Small Lymphocytic",1,AGEN,암,auto-mesh,C04.557.337.428.080.125 C15.378.508.428.080.125 C15.604.515.560.080.125 C20.683.515.528.080.125 C23.550.291.500.483,MeSH 트리 C04.557.337.428.080.125 C15.378.508.428.080.125 C15.604.515.560.080.125,,채택
+Metastatic Triple-Negative Breast Carcinoma,1,AGEN,암,auto-stem,,어간 'Metasta',,채택
+Anatomic Stage IV Breast Cancer AJCC v8,1,AGEN,암,auto-stem,,어간 'Cancer',,채택
+Essential Thrombocythemia,1,GERN,심혈관,auto-stem,,어간 'Thromb',,암
+Transformed Indolent Non-Hodgkin's Lymphoma,1,FATE,암,auto-stem,,어간 'Lymphom',,채택
+Triple-negative Breast Cancer,1,ADCT,암,auto-mesh,C04.588.180.788 C17.800.090.500.788,MeSH 트리 C04.588.180.788 C17.800.090.500.788,,채택
+Head and Neck Cancer Squamous Cell Carcinoma,1,ADCT,암,auto-stem,,어간 'Cancer',,채택
+Fallopian Tube Cancer,1,ADCT,암,auto-mesh,C04.588.945.418.365 C12.050.351.500.056.390.390 C12.050.351.937.418.365 C12.100.250.056.390.390 C12.900.418.365,MeSH 트리 C04.588.945.418.365 C12.050.351.500.056.390.390 C12.050.351.937.418.365,,채택
+Drug-Drug Interaction (DDI),1,EXEL,건강인·약동학,auto-stem,,어간 'Drug-Drug',,채택
+Non-small Cell Lung Cancer (NSCLC),1,EXEL,암,auto-mesh,C04.588.894.797.520.109.220.249 C08.381.540.140.500 C08.785.520.100.220.500,MeSH 트리 C04.588.894.797.520.109.220.249 C08.381.540.140.500 C08.785.520.100.220.500,,채택
+Metastatic Castration-Resistant Prostate Cancer (mCRPC),1,EXEL,암,auto-stem,,어간 'Metasta',,채택
+Urothelial Carcinoma (UC),1,EXEL,암,auto-stem,,어간 'Carcinom',,채택
+Post Bariatric Hypoglycemia,1,AMLX,비만·대사,auto-stem,,어간 'Hypoglyc',,채택
+Anal Neoplasm,1,INO,암,auto-stem,,어간 'Neoplas',,채택
+SARS-CoV 2,1,INO,감염,auto-stem,,어간 'SARS-CoV',,채택
+HEPATITIS B CHRONIC,1,DTIL,감염,auto-stem,,어간 'HEPATITIS',,채택
+Genital Herpes,1,AGEN,감염,auto-mesh,C01.221.812.640.350 C01.778.640.350 C01.925.256.466.382.290 C01.925.813.350 C12.050.351.500.342 C12.100.250.342 C12.100.500.329 C12.100.937.640.350 C12.200.294.329,MeSH 트리 C01.221.812.640.350 C01.778.640.350 C01.925.256.466.382.290,,채택
+Obese,1,GPCR,비만·대사,auto-stem,,어간 'Obes',,채택
+Weight Loss,1,GPCR,비만·대사,auto-stem,C23.888.144.243.963 G07.345.249.314.120.200.963,어간 'Weight',,채택
+Obesity Type 2 Diabetes Mellitus,1,GPCR,비만·대사,auto-stem,,어간 'Obes',,채택
+Squamous Cell Carcinoma of the Lung,1,BCAX,암,auto-stem,,어간 'Carcinom',,채택
+Squamous Cell Carcinoma of Anal Canal,1,BCAX,암,auto-stem,,어간 'Carcinom',,채택
+Severe Acute Respiratory Syndrome Coronavirus 2 (SARS CoV 2 Infection),1,AVIR,감염,auto-mesh,B04.820.578.500.540.150.113.937.500,MeSH 트리 B04.820.578.500.540.150.113.937.500,,채택
+Aerodigestive Precancerous Lesions and Malignancies,1,INO,암,auto-stem,,어간 'cancer',,채택
+Advanced Leiomyosarcoma,1,EXEL,암,auto-stem,,어간 'sarcom',,채택
+Advanced Liposarcoma,1,EXEL,암,auto-stem,,어간 'sarcom',,채택
+Adipocytic Sarcoma,1,EXEL,암,auto-stem,,어간 'Sarcom',,채택
+Prostate Adenocarcinoma,1,EXEL,암,auto-stem,,어간 'carcinom',,채택
+Chronic Myelogenous Leukemia,1,FATE,암,auto-stem,,어간 'Leukemi',,채택
+Recurrent Childhood Acute Myeloid Leukemia,1,GERN,암,auto-stem,,어간 'Leukemi',,채택
+Refractory Juvenile Myelomonocytic Leukemia,1,GERN,암,auto-stem,,어간 'Myelom',,채택
+Refractory Childhood Myelodysplastic Syndrome,1,GERN,암,auto-stem,,어간 'Myelodysplas',,채택
+Refractory Childhood Acute Myeloid Leukemia,1,GERN,암,auto-stem,,어간 'Leukemi',,채택
+Recurrent Childhood Myelodysplastic Syndrome,1,GERN,암,auto-stem,,어간 'Myelodysplas',,채택
+Recurrent Juvenile Myelomonocytic Leukemia,1,GERN,암,auto-stem,,어간 'Myelom',,채택
+COVID 19,1,ALGS,감염,auto-stem,,어간 'COVID',,채택
+Liver Metastases,1,AGEN,암,auto-stem,,어간 'Metasta',,채택
+Colorectal Cancer Metastatic,1,AGEN,암,auto-stem,,어간 'Cancer',,채택
+Acute Posthemorrhagic Anemia,1,BIOA,혈액,auto-stem,,어간 'Anemi',,채택
+Middle East Respiratory Syndrome Coronavirus (MERS-CoV),1,INO,감염,auto-mesh,B04.820.578.500.540.150.113.750,MeSH 트리 B04.820.578.500.540.150.113.750,,채택
+"Postoperative Pain, Acute",1,ENSC,통증,auto-stem,,어간 'Pain',,채택
+Multiple Sclerosis (Relapsing Remitting),1,CABA,신경·정신,auto-mesh,C10.114.375.500 C10.314.350.500 C20.111.258.250.500,MeSH 트리 C10.114.375.500 C10.314.350.500 C20.111.258.250.500,,채택
+Relapsing Multiple Sclerosis (RMS),1,CABA,신경·정신,auto-stem,,어간 'Multiple Sclerosis',,채택
+Progressive Multiple Sclerosis (PMS),1,CABA,신경·정신,auto-stem,,어간 'Multiple Sclerosis',,채택
+Multiple Sclerosis (MS) - Relapsing-remitting,1,CABA,신경·정신,auto-stem,,어간 'Multiple Sclerosis',,채택
+Multiple Sclerosis - Relapsing Remitting,1,CABA,신경·정신,auto-stem,,어간 'Multiple Sclerosis',,채택
+NPM1-mutant Refractory or Relapsed AML,1,KURA,암,auto-stem,,어간 'AML',,채택
+Atopic Dermatitis Eczema,1,CRVS,피부,auto-stem,,어간 'Dermat',,채택
+Hypertrophic Cardiomyopathy,1,EWTX,심혈관,auto-stem,,어간 'Cardi',,채택
+Insomnia Chronic,1,ACAD,신경·정신,auto-stem,,어간 'Insomnia',,채택
+Myelodysplastic (MDS) / Myeloproliferative (MPN) Diseases,1,GERN,암,auto-stem,,어간 'Myelodysplas',,채택
+Undifferentiated Pleomorphic Sarcoma (UPS),1,IOVA,암,auto-stem,,어간 'Sarcom',,채택
+Dedifferentiated Liposarcoma (DDLPS),1,IOVA,암,auto-stem,,어간 'sarcom',,채택
+Soft Tissue Sarcoma (STS),1,IOVA,암,auto-stem,,어간 'Sarcom',,채택
+Metastases to Bone,1,EXEL,암,auto-stem,,어간 'Metasta',,채택
+Clear Cell Renal Cell Carcinoma Metastatic,1,EXEL,암,auto-stem,,어간 'Carcinom',,채택
+"Bone, Metastatic Cancer",1,EXEL,암,auto-stem,,어간 'Metasta',,채택
+Clear Cell Renal Cancer,1,EXEL,암,auto-stem,,어간 'Cancer',,채택
+Clear Cell Renal Cell Cancer (ccRCC),1,EXEL,암,auto-stem,,어간 'Cancer',,채택
+Bone Metastases of a Malignant Tumor,1,EXEL,암,auto-stem,,어간 'Metasta',,채택
+Clear Cell Renal Carcinoma,1,EXEL,암,auto-mesh,C04.557.470.200.025.390 C04.588.945.947.535.160 C12.050.351.937.820.535.160 C12.050.351.968.419.473.160 C12.200.758.820.750.160 C12.200.777.419.473.160 C12.900.820.535.160 C12.950.419.473.160 C12.950.983.535.160,MeSH 트리 C04.557.470.200.025.390 C04.588.945.947.535.160 C12.050.351.937.820.535.160,,채택
+Idiopathic Inflammatory Myopathies (IIMs),1,ARTV,신경·정신,auto-mesh,C05.651.594 C10.668.491.562,MeSH 트리 C05.651.594 C10.668.491.562,,면역·염증
+Refractory Rheumatoid Arthritis (RA),1,ARTV,근골격,auto-stem,,어간 'Arthrit',,면역·염증
+Rheumatoid Arthritis (RA,1,ARTV,근골격,auto-stem,,어간 'Arthrit',,면역·염증
+Sjogrens Disease,1,ARTV,면역·염증,auto-stem,,어간 'Sjogren',,채택
+Sjogren Syndrome,1,ARTV,면역·염증,auto-mesh,C05.550.114.154.774 C05.799.114.774 C07.465.815.929.669 C11.496.260.719 C17.300.775.099.774 C20.111.199.774,MeSH 트리 C05.550.114.154.774 C05.799.114.774 C07.465.815.929.669,,채택
+Gastroesophageal Cancer (GC),1,CMPX,암,auto-stem,,어간 'Cancer',,채택
+Melanoma Stage III,1,KRYS,암,auto-stem,,어간 'Melanom',,채택
+Cutaneous Melanoma,1,KRYS,암,auto-stem,,어간 'Melanom',,채택
+Melanoma Stage IV,1,KRYS,암,auto-stem,,어간 'Melanom',,채택
+Recurrent Squamous Cell Carcinoma,1,EXEL,암,auto-stem,,어간 'Carcinom',,채택
+"Neoplasm Recurrence, Local",1,EXEL,암,auto-mesh,C04.697.655 C23.550.727.655,MeSH 트리 C04.697.655 C23.550.727.655,,채택
+Metastatic Squamous Cell Carcinoma,1,EXEL,암,auto-stem,,어간 'Metasta',,채택
+Alcohol Use Disorder (AUD),1,ALT,신경·정신,auto-mesh,C25.775.100.250 F03.900.100.350,MeSH 트리 C25.775.100.250 F03.900.100.350,,채택
+Polycythemia Vera (PV),1,IRON,암,auto-mesh,C04.588.448.200.500 C15.378.190.250.500 C15.378.190.636.753 C15.378.400.200.500,MeSH 트리 C04.588.448.200.500 C15.378.190.250.500 C15.378.190.636.753,,채택
+"Melanoma, Uveal",1,IMCR,암,auto-mesh,C04.557.465.625.650.510.762 C04.557.580.625.650.510.762 C04.557.665.510.762 C04.588.364.978.312 C11.319.494.299 C11.941.855.299,MeSH 트리 C04.557.465.625.650.510.762 C04.557.580.625.650.510.762 C04.557.665.510.762,,채택
+Brittle Type 1 Diabetes Mellitus,1,ELDN,비만·대사,auto-stem,,어간 'Diabet',,채택
+Hyperglycemia,1,ELDN,비만·대사,auto-mesh,C18.452.394.952,MeSH 트리 C18.452.394.952,,채택
+Relapsed/Refractory NPM1-m Acute Leukemia,1,KURA,암,auto-stem,,어간 'Leukemi',,채택
+Relapsed/Refractory KMT2A-r Acute Leukemia,1,KURA,암,auto-stem,,어간 'Leukemi',,채택
+Relapsed/Refractory NUP98-r Acute Leukemia,1,KURA,암,auto-stem,,어간 'Leukemi',,채택
+Renal Failure,1,BCRX,신장,auto-mesh,C12.050.351.968.419.780 C12.200.777.419.780 C12.950.419.780,MeSH 트리 C12.050.351.968.419.780 C12.200.777.419.780 C12.950.419.780,,채택
+ColoRectal Cancer,1,INO,암,auto-mesh,C04.588.274.476.411.307 C06.301.371.411.307 C06.405.249.411.307 C06.405.469.158.356 C06.405.469.491.307 C06.405.469.860.180,MeSH 트리 C04.588.274.476.411.307 C06.301.371.411.307 C06.405.249.411.307,,채택
+HepatoCellular Carcinoma,1,INO,암,auto-mesh,C04.557.470.200.025.255 C04.588.274.623.160 C06.301.623.160 C06.552.697.160,MeSH 트리 C04.557.470.200.025.255 C04.588.274.623.160 C06.301.623.160,,채택
+SM With an Associated Hematologic Neoplasm (SM-AHN),1,COGT,암,auto-stem,,어간 'Neoplas',,채택
+Mast Cell Leukemia (MCL),1,COGT,암,auto-stem,,어간 'Leukemi',,채택
+Aggressive Systemic Mastocytosis (ASM),1,COGT,암,auto-mesh,C04.557.450.565.465.750 C20.762.750.750,MeSH 트리 C04.557.450.565.465.750 C20.762.750.750,,채택
+Unresectable Solid Tumor,1,IOVA,암,auto-stem,,어간 'Tumor',,채택
+Hormone-receptor-positive Breast Cancer,1,EXEL,암,auto-stem,,어간 'Cancer',,채택
+Esophageal Squamous Cell Cancer,1,EXEL,암,auto-stem,,어간 'Cancer',,채택
+NSCLC (Non-small Cell Lung Cancer),1,EXEL,암,auto-stem,,어간 'NSCLC',,채택
+Urothelial Cancer of Renal Pelvis,1,EXEL,암,auto-stem,,어간 'Cancer',,채택
+"Urothelial Cancer (Urinary Bladder, Ureters, or Renal Pelvis Cancer)",1,EXEL,암,auto-stem,,어간 'Cancer',,채택
+Solid Cancers,1,EXEL,암,auto-stem,,어간 'Cancer',,채택
+Solid Tumor Malignancy,1,EXEL,암,auto-stem,,어간 'Tumor',,채택
+Solid Tumor Cancer,1,EXEL,암,auto-stem,,어간 'Tumor',,채택
+Rhabdoid Tumor,1,EXEL,암,auto-mesh,C04.557.435.710,MeSH 트리 C04.557.435.710,,채택
+Eosinophilic Asthma,1,KYMR,호흡기,auto-stem,,어간 'Asthma',,채택
+Non-Alcoholic Steatohepatitis (NASH),1,ALT,감염,auto-stem,,어간 'hepatitis',,비만·대사
+Recurrent Ovarian Carcinosarcoma,1,IOVA,암,auto-stem,,어간 'sarcom',,채택
+Metastatic Colorectal Adenocarcinoma,1,IOVA,암,auto-stem,,어간 'Metasta',,채택
+Stage IVC Colorectal Cancer AJCC v8,1,IOVA,암,auto-stem,,어간 'Cancer',,채택
+Stage IVA Colorectal Cancer AJCC v8,1,IOVA,암,auto-stem,,어간 'Cancer',,채택
+Stage IVB Colorectal Cancer AJCC v8,1,IOVA,암,auto-stem,,어간 'Cancer',,채택
+Metastatic Ovarian Carcinoma,1,IOVA,암,auto-stem,,어간 'Metasta',,채택
+Recurrent High Grade Ovarian Serous Adenocarcinoma,1,IOVA,암,auto-stem,,어간 'carcinom',,채택
+Refractory Colorectal Carcinoma,1,IOVA,암,auto-stem,,어간 'Carcinom',,채택
+Stage IV Colorectal Cancer AJCC v8,1,IOVA,암,auto-stem,,어간 'Cancer',,채택
+Facioscapulohumeral Muscular Dystrophy,1,DYN,희귀 유전,auto-mesh,C05.651.534.500.400 C10.668.491.175.500.400 C16.320.577.400,MeSH 트리 C05.651.534.500.400 C10.668.491.175.500.400 C16.320.577.400,,채택
+Juvenile Idiopathic Inflammatory Myopathy (JIIM),1,CABA,근골격,auto-stem,,어간 'Myopath',,면역·염증
+Juvenile Dermatomyositis,1,CABA,면역·염증,auto-mesh,C05.651.594.819.500 C10.668.491.562.575.500 C17.300.250 C17.800.185,MeSH 트리 C05.651.594.819.500 C10.668.491.562.575.500 C17.300.250,,채택
+Juvenile Polymyositis,1,CABA,면역·염증,auto-stem,,어간 'myositis',,채택
+Immune-Mediated Necrotizing Myopathy,1,CABA,근골격,auto-stem,,어간 'Myopath',,면역·염증
+Juvenile Myositis,1,CABA,면역·염증,auto-mesh,C05.651.594.819.500 C10.668.491.562.575.500 C17.300.250 C17.800.185,MeSH 트리 C05.651.594.819.500 C10.668.491.562.575.500 C17.300.250,,채택
+Idiopathic Inflammatory Myopathy,1,CABA,신경·정신,auto-mesh,C05.651.594 C10.668.491.562,MeSH 트리 C05.651.594 C10.668.491.562,,면역·염증
+Systemic Sclerosis,1,CABA,면역·염증,auto-mesh,C17.300.799 C17.800.784,MeSH 트리 C17.300.799 C17.800.784,,채택
+Interstitial Lung Diseases,1,CABA,호흡기,auto-mesh,C08.381.483,MeSH 트리 C08.381.483,,채택
+B-Cell Lymphomas,1,ADCT,암,auto-stem,,어간 'Lymphom',,채택
+Locally Advanced Melanoma,1,IOVA,암,auto-stem,,어간 'Melanom',,채택
+Pathologic Stage IIIB Cutaneous Melanoma AJCC v8,1,IOVA,암,auto-stem,,어간 'Melanom',,채택
+Stage IV Melanoma,1,IOVA,암,auto-stem,,어간 'Melanom',,채택
+Pathologic Stage IIID Cutaneous Melanoma AJCC v8,1,IOVA,암,auto-stem,,어간 'Melanom',,채택
+Ampullary Cancer,1,CMPX,암,auto-stem,,어간 'Cancer',,채택
+Biliary Tract Cancer,1,CMPX,암,auto-mesh,C04.588.274.120 C06.130.320 C06.301.120,MeSH 트리 C04.588.274.120 C06.130.320 C06.301.120,,채택
+Gall Bladder Cancer,1,CMPX,암,auto-mesh,C04.588.274.120.401 C06.130.320.401 C06.130.564.401 C06.301.120.401,MeSH 트리 C04.588.274.120.401 C06.130.320.401 C06.130.564.401,,채택
+Gallbladder Neoplasms,1,CMPX,암,auto-mesh,C04.588.274.120.401 C06.130.320.401 C06.130.564.401 C06.301.120.401,MeSH 트리 C04.588.274.120.401 C06.130.320.401 C06.130.564.401,,채택
+B Cell Non-Hodgkin's Lymphoma,1,CRBU,암,auto-stem,,어간 'Lymphom',,채택
+Relapsed Non Hodgkin Lymphoma,1,CRBU,암,auto-stem,,어간 'Lymphom',,채택
+Parkinson Disease Dementia,1,LONA,신경·정신,auto-stem,,어간 'Parkinson',,채택
+"Deafness, Autosomal Recessive 39",1,LONA,청각·이비인후,auto-stem,,어간 'Deaf',,희귀 유전
+Metabolic Dysfunction-Associated Steatohepatitis,1,ALGS,비만·대사,auto-mesh,C06.552.241.519,MeSH 트리 C06.552.241.519,,채택
+NASH,1,ALGS,비만·대사,auto-stem,,어간 'NASH',,채택
+MASH,1,ALGS,비만·대사,auto-stem,,어간 'MASH',,채택
+Type 1 Diabetes Mellitus,1,ELDN,비만·대사,auto-mesh,C18.452.394.750.124 C19.246.267 C20.111.327,MeSH 트리 C18.452.394.750.124 C19.246.267 C20.111.327,,채택
+Mesothelioma,1,CMPX,암,auto-mesh,C04.557.470.035.510 C04.557.470.660.510,MeSH 트리 C04.557.470.035.510 C04.557.470.660.510,,채택
+Hepatitis Delta Virus,1,ASMB,감염,auto-mesh,B04.265.270 B04.450.411 B04.820.480.875,MeSH 트리 B04.265.270 B04.450.411 B04.820.480.875,,채택
+T Cell Lymphoma,1,AUTL,암,auto-stem,,어간 'Lymphom',,채택
+Hidradenitis Suppurativa (HS),1,CRVS,감염,auto-mesh,C01.150.252.819.420 C01.800.720.420 C01.830.499 C17.800.838.765.420 C17.800.946.315.320,MeSH 트리 C01.150.252.819.420 C01.800.720.420 C01.830.499,,피부
+"Brain Diseases, Metabolic",1,FDMT,신경·정신,auto-mesh,C10.228.140.163 C18.452.132,MeSH 트리 C10.228.140.163 C18.452.132,,채택
+Malignant Pleural Mesothelioma (MPM),1,ATRA,암,auto-mesh,C04.557.470.035.510.757 C04.557.470.660.510.757 C04.588.894.797.520.173 C04.588.894.797.640.350 C08.381.540.144 C08.785.520.124 C08.785.640.350,MeSH 트리 C04.557.470.035.510.757 C04.557.470.660.510.757 C04.588.894.797.520.173,,채택
+"Leukemia, Lymphoblastic, Acute, Philadelphia-Positive",1,EXEL,암,auto-mesh,C04.557.337.428.600 C15.378.508.428.600 C15.604.515.560.600 C20.683.515.528.600,MeSH 트리 C04.557.337.428.600 C15.378.508.428.600 C15.604.515.560.600,,채택
+"Leukemia, Lymphocytic",1,BCRX,암,auto-mesh,C04.557.337.428 C15.378.508.428 C15.604.515.560 C20.683.515.528,MeSH 트리 C04.557.337.428 C15.378.508.428 C15.604.515.560,,채택
+Anhedonia,1,ANRO,신경·정신,auto-mesh,C10.597.606.057 C23.888.592.604.039 F01.700.039,MeSH 트리 C10.597.606.057 C23.888.592.604.039 F01.700.039,,채택
+Large B-cell Lymphoma,1,ADCT,암,auto-stem,,어간 'Lymphom',,채택
+Sensorineural Hearing Loss,1,CTNM,청각·이비인후,auto-mesh,C09.218.458.341.887 C10.597.751.418.341.887 C23.888.592.763.393.341.887,MeSH 트리 C09.218.458.341.887 C10.597.751.418.341.887 C23.888.592.763.393.341.887,,채택
+B Cell Lymphomas,1,COGT,암,auto-stem,,어간 'Lymphom',,채택
+Lip Neoplasms,1,BCAX,암,auto-mesh,C04.588.443.591.550 C07.465.409.640 C07.465.530.550,MeSH 트리 C04.588.443.591.550 C07.465.409.640 C07.465.530.550,,채택
+Jaw Neoplasms,1,BCAX,암,auto-mesh,C04.588.149.721.450 C05.116.231.754.450 C05.500.499 C07.320.515,MeSH 트리 C04.588.149.721.450 C05.116.231.754.450 C05.500.499,,채택
+HPV-Negative Squamous Cell Carcinoma,1,BCAX,암,auto-stem,,어간 'Carcinom',,채택
+Tongue Neoplasms,1,BCAX,암,auto-mesh,C04.588.443.591.925 C07.465.530.925 C07.465.910.470,MeSH 트리 C04.588.443.591.925 C07.465.530.925 C07.465.910.470,,채택
+Acute Lymphoblastic Leukemia (ALL),1,FATE,암,auto-mesh,C04.557.337.428.600 C15.378.508.428.600 C15.604.515.560.600 C20.683.515.528.600,MeSH 트리 C04.557.337.428.600 C15.378.508.428.600 C15.604.515.560.600,,채택
+Acute Myelogenous Leukemia (AML),1,FATE,암,auto-mesh,C04.557.337.539.275 C15.378.508.539.275,MeSH 트리 C04.557.337.539.275 C15.378.508.539.275,,채택
+Long COVID,1,AVIR,감염,auto-mesh,C01.748.610.763.500.500 C01.925.705.500.500 C01.925.782.600.550.200.163.500 C08.381.677.807.500.500 C08.730.610.763.500.500 C23.550.291.500.829.375,MeSH 트리 C01.748.610.763.500.500 C01.925.705.500.500 C01.925.782.600.550.200.163.500,,채택
+Post-Acute COVID-19 Syndrome,1,AVIR,감염,auto-mesh,C01.748.610.763.500.500 C01.925.705.500.500 C01.925.782.600.550.200.163.500 C08.381.677.807.500.500 C08.730.610.763.500.500 C23.550.291.500.829.375,MeSH 트리 C01.748.610.763.500.500 C01.925.705.500.500 C01.925.782.600.550.200.163.500,,채택
+T-Cell Lymphoblastic Leukemia/Lymphoma,1,BEAM,암,auto-stem,,어간 'Leukemi',,채택
+Lymphoblastic Lymphoma,1,BEAM,암,auto-mesh,C04.557.337.428.600 C15.378.508.428.600 C15.604.515.560.600 C20.683.515.528.600,MeSH 트리 C04.557.337.428.600 C15.378.508.428.600 C15.604.515.560.600,,채택
+Intrahepatic Cholangiocarcinoma (Icc),1,COGT,암,auto-mesh,C04.557.470.200.025.450,MeSH 트리 C04.557.470.200.025.450,,채택
+"Other Solid Tumors, Adult",1,COGT,암,auto-stem,,어간 'Tumor',,채택
+Cutaneous T-Cell Lymphoma (CTCL),1,KYMR,암,auto-mesh,C04.557.386.480.750.800 C15.604.515.569.480.750.800 C20.683.515.761.480.750.800,MeSH 트리 C04.557.386.480.750.800 C15.604.515.569.480.750.800 C20.683.515.761.480.750.800,,채택
+Peripheral T-cell Lymphoma (PTCL),1,KYMR,암,auto-mesh,C04.557.386.480.750.825 C15.604.515.569.480.750.825 C20.683.515.761.480.750.825,MeSH 트리 C04.557.386.480.750.825 C15.604.515.569.480.750.825 C20.683.515.761.480.750.825,,채택
+T-cell Prolymphocytic Leukemia (T-PLL),1,KYMR,암,auto-mesh,C04.557.337.428.565.750 C04.557.337.428.580.075 C15.378.508.428.565.750 C15.378.508.428.580.075 C15.604.515.560.550.750 C15.604.515.560.575.125 C20.683.515.528.565.750 C20.683.515.528.582.125,MeSH 트리 C04.557.337.428.565.750 C04.557.337.428.580.075 C15.378.508.428.565.750,,채택
+Non Hodgkin Lymphoma (NHL),1,KYMR,암,auto-stem,,어간 'Lymphom',,채택
+Large Granular Lymphocytic Leukemia (LGL-L),1,KYMR,암,auto-stem,,어간 'Leukemi',,채택
+Covid 19,1,IMUX,감염,auto-stem,,어간 'Covid',,채택
+Synovial Sarcoma,1,CCCC,암,auto-stem,,어간 'Sarcom',,채택
+Recurrent Adult Brain Tumor,1,AGEN,암,auto-stem,,어간 'Tumor',,채택
+Recurrent Glioblastoma,1,AGEN,암,auto-stem,,어간 'Glioblastom',,채택
+Carcinoid Tumor of GI System,1,EXEL,암,auto-stem,,어간 'Tumor',,채택
+High-grade B-cell Lymphoma,1,ADCT,암,auto-stem,,어간 'Lymphom',,채택
+Synucleinopathies,1,ARDX,신경·정신,auto-mesh,C10.574.928 C18.452.845.650,MeSH 트리 C10.574.928 C18.452.845.650,,채택
+Primary Mediastinal B-cell Lymphoma,1,ADCT,암,auto-stem,,어간 'Lymphom',,채택
+Burkitt's Lymphoma,1,ADCT,암,auto-stem,,어간 'Lymphom',,채택
+"Lymphoma, Marginal Zone",1,ADCT,암,auto-stem,,어간 'Lymphom',,채택
+Relapsed/Refractory Diffuse Large B-Cell Lymphoma (DLBCL),1,AUTL,암,auto-stem,,어간 'Lymphom',,채택
+Diffuse Large B-cell Lymphoma,1,ADCT,암,auto-mesh,C04.557.386.480.150.585 C15.604.515.569.480.150.585 C20.683.515.761.480.150.585,MeSH 트리 C04.557.386.480.150.585 C15.604.515.569.480.150.585 C20.683.515.761.480.150.585,,채택
+"Glomerulonephritis, Membranoproliferative",1,BCRX,신장,auto-mesh,C12.050.351.968.419.570.363.615 C12.200.777.419.570.363.615 C12.950.419.570.363.615 C20.425,MeSH 트리 C12.050.351.968.419.570.363.615 C12.200.777.419.570.363.615 C12.950.419.570.363.615,,채택
+"Glomerulonephritis, Membranous",1,BCRX,신장,auto-mesh,C12.050.351.968.419.570.363.625 C12.200.777.419.570.363.625 C12.950.419.570.363.625 C20.111.535,MeSH 트리 C12.050.351.968.419.570.363.625 C12.200.777.419.570.363.625 C12.950.419.570.363.625,,채택
+Complement 3 Glomerulopathy,1,BCRX,신장,auto-mesh,C12.050.351.968.419.570.363.615 C12.200.777.419.570.363.615 C12.950.419.570.363.615 C20.425,MeSH 트리 C12.050.351.968.419.570.363.615 C12.200.777.419.570.363.615 C12.950.419.570.363.615,,채택
+Membranous Nephropathy,1,BCRX,신장,auto-mesh,C12.050.351.968.419.570.363.625 C12.200.777.419.570.363.625 C12.950.419.570.363.625 C20.111.535,MeSH 트리 C12.050.351.968.419.570.363.625 C12.200.777.419.570.363.625 C12.950.419.570.363.625,,채택
+Immunoglobulin A Nephropathy,1,BCRX,신장,auto-mesh,C12.050.351.968.419.570.363.608 C12.200.777.419.570.363.608 C12.950.419.570.363.608 C20.111.525,MeSH 트리 C12.050.351.968.419.570.363.608 C12.200.777.419.570.363.608 C12.950.419.570.363.608,,채택
+COVID,1,KNSA,감염,auto-stem,,어간 'COVID',,채택
+Refractory Systemic Lupus Erythematosus,1,ARTV,면역·염증,auto-stem,,어간 'Lupus',,채택
+Lymphomas,1,KYMR,암,auto-stem,,어간 'Lymphom',,채택
+Acute Lymphocytic Leukemia,1,KYMR,암,auto-stem,,어간 'Leukemi',,채택
+Primary Progressive Multiple Sclerosis,1,ATRA,신경·정신,auto-mesh,C10.114.375.500.200 C10.314.350.500.200 C20.111.258.250.500.200 C23.550.291.500.625,MeSH 트리 C10.114.375.500.200 C10.314.350.500.200 C20.111.258.250.500.200,,채택
+Inflammation,1,ATRA,면역·염증,auto-mesh,C23.550.470,MeSH 트리 C23.550.470,,무시
+Secondary Progressive Multiple Sclerosis,1,ATRA,신경·정신,auto-mesh,C10.114.375.500.200 C10.314.350.500.200 C20.111.258.250.500.200 C23.550.291.500.625,MeSH 트리 C10.114.375.500.200 C10.314.350.500.200 C20.111.258.250.500.200,,채택
+Polymyositis,1,FATE,신경·정신,auto-mesh,C05.651.594.819 C10.668.491.562.575,MeSH 트리 C05.651.594.819 C10.668.491.562.575,,면역·염증
+ANCA-Associated Vasculitis (AAV),1,FATE,심혈관,auto-mesh,C14.907.940.897.249 C17.800.862.105 C20.111.193,MeSH 트리 C14.907.940.897.249 C17.800.862.105 C20.111.193,,면역·염증
+Rheumatoid Arthritis (RA),1,FATE,면역·염증,auto-mesh,C05.550.114.154 C05.799.114 C17.300.775.099 C20.111.199,MeSH 트리 C05.550.114.154 C05.799.114 C17.300.775.099,,채택
+Advanced/Metastatic,1,EXEL,암,auto-stem,,어간 'Metasta',,채택
+Soft-Tissue Sarcoma,1,EXEL,암,auto-stem,,어간 'Sarcom',,채택
+"Cutaneous T-cell Lymphoma (CTCL),",1,BCRX,암,auto-mesh,C04.557.386.480.750.800 C15.604.515.569.480.750.800 C20.683.515.761.480.750.800,MeSH 트리 C04.557.386.480.750.800 C15.604.515.569.480.750.800 C20.683.515.761.480.750.800,,채택
+Precursor B-Cell Lymphoblastic Leukemia-Lymphoma,1,FATE,암,auto-mesh,C04.557.337.428.600.600 C15.378.508.428.600.600 C15.604.515.560.600.600 C20.683.515.528.600.600,MeSH 트리 C04.557.337.428.600.600 C15.378.508.428.600.600 C15.604.515.560.600.600,,채택
+Precursor B-Cell Acute Lymphoblastic Leukemia,1,FATE,암,auto-stem,,어간 'Leukemi',,채택
+Endometrial Carcinoma,1,FATE,암,auto-mesh,C04.588.945.418.948.585 C12.050.351.500.852.762.200 C12.050.351.937.418.875.200 C12.100.250.852.762.200 C12.900.418.875.200,MeSH 트리 C04.588.945.418.948.585 C12.050.351.500.852.762.200 C12.050.351.937.418.875.200,,채택
+Unresectable or Metastatic Melanoma,1,IOVA,암,auto-stem,,어간 'Metasta',,채택
+"Refractory Diffuse Large B-Cell Lymphoma, Not Otherwise Specified",1,ADCT,암,auto-stem,,어간 'Lymphom',,채택
+Refractory Primary Mediastinal (Thymic) Large B-Cell Lymphoma,1,ADCT,암,auto-stem,,어간 'Lymphom',,채택
+"Recurrent Diffuse Large B-Cell Lymphoma, Not Otherwise Specified",1,ADCT,암,auto-stem,,어간 'Lymphom',,채택
+Refractory Transformed Follicular Lymphoma to Diffuse Large B-Cell Lymphoma,1,ADCT,암,auto-stem,,어간 'Lymphom',,채택
+Recurrent Transformed Follicular Lymphoma to Diffuse Large B-Cell Lymphoma,1,ADCT,암,auto-stem,,어간 'Lymphom',,채택
+Recurrent Diffuse Large B-Cell Lymphoma,1,ADCT,암,auto-stem,,어간 'Lymphom',,채택
+Recurrent High Grade B-Cell Lymphoma With MYC and BCL2 or BCL6 Rearrangements,1,ADCT,암,auto-stem,,어간 'Lymphom',,채택
+Recurrent Primary Mediastinal (Thymic) Large B-Cell Lymphoma,1,ADCT,암,auto-stem,,어간 'Lymphom',,채택
+Refractory High Grade B-Cell Lymphoma With MYC and BCL2 or BCL6 Rearrangements,1,ADCT,암,auto-stem,,어간 'Lymphom',,채택
+"Gastrointestinal Neoplasms, Gastrointestinal Stromal Tumors",1,COGT,암,auto-stem,,어간 'Neoplas',,채택
+Stage IV Renal Cell Cancer AJCC v8,1,EXEL,암,auto-stem,,어간 'Cancer',,채택
+Renal Cell Carcinoma Associated With Xp11.2 Translocations/TFE3 Gene Fusions,1,EXEL,암,auto-stem,,어간 'Carcinom',,채택
+Malignant Neoplasms of Urinary Tract,1,EXEL,암,auto-stem,,어간 'Malignan',,채택
+Sarcomatoid Renal Cell Carcinoma,1,EXEL,암,auto-mesh,C04.557.470.200.025.390 C04.588.945.947.535.160 C12.050.351.937.820.535.160 C12.050.351.968.419.473.160 C12.200.758.820.750.160 C12.200.777.419.473.160 C12.900.820.535.160 C12.950.419.473.160 C12.950.983.535.160,MeSH 트리 C04.557.470.200.025.390 C04.588.945.947.535.160 C12.050.351.937.820.535.160,,채택
+Urologic Neoplasms,1,EXEL,암,auto-mesh,C04.588.945.947 C12.050.351.937.820 C12.200.758.820 C12.900.820 C12.950.983,MeSH 트리 C04.588.945.947 C12.050.351.937.820 C12.200.758.820,,채택
+Macular Neovascularization Secondary to Age-Related Macular Degeneration,1,FDMT,안과,auto-stem,,어간 'Macula',,채택
+Warm Autoimmune Hemolytic Anemia,1,IMVT,혈액,auto-stem,,어간 'Anemi',,채택
+AML,1,KURA,암,auto-stem,,어간 'AML',,채택
+Acute Leukemia,1,KURA,암,auto-stem,,어간 'Leukemi',,채택
+NonHodgkin Lymphoma,1,ALXO,암,auto-stem,,어간 'Lymphom',,채택
+Thyroid Carcinoma,1,EXEL,암,auto-mesh,C04.588.322.894 C04.588.443.915 C19.344.894 C19.874.788,MeSH 트리 C04.588.322.894 C04.588.443.915 C19.344.894,,채택
+Blasts 5 Percent or More of Bone Marrow Nucleated Cells,1,ADCT,근골격,auto-stem,,어간 'Bone',,암
+Recurrent B Acute Lymphoblastic Leukemia,1,ADCT,암,auto-stem,,어간 'Leukemi',,채택
+Refractory B Acute Lymphoblastic Leukemia,1,ADCT,암,auto-stem,,어간 'Leukemi',,채택
+Advanced Pancreatic Ductal Adenocarcinoma,1,AGEN,암,auto-stem,,어간 'carcinom',,채택
+Myotonic Dystrophy 1,1,DYN,희귀 유전,auto-mesh,C05.651.534.500.500 C05.651.662.750 C10.574.500.547 C10.668.491.175.500.500 C10.668.491.606.750 C16.320.400.542 C16.320.577.500,MeSH 트리 C05.651.534.500.500 C05.651.662.750 C10.574.500.547,,채택
+ERBB2 Altered Breast Cancer,1,COGT,암,auto-stem,,어간 'Cancer',,채택
+"Advanced Solid Tumor, Adult",1,COGT,암,auto-stem,,어간 'Tumor',,채택
+Neovascular Age-Related Macular Degeneration (nAMD),1,FDMT,안과,auto-stem,,어간 'Macula',,채택
+RNA Virus Infections,1,INO,감염,auto-mesh,C01.925.782,MeSH 트리 C01.925.782,,채택
+Orthomyxoviridae Infections,1,INO,감염,auto-mesh,C01.925.782.620,MeSH 트리 C01.925.782.620,,채택
+Respiratory Tract Diseases,1,INO,호흡기,auto-mesh,C08,MeSH 트리 C08,,무시
+Prevention of Rejection in Kidney Transplant,1,ELDN,신장,auto-stem,,어간 'Kidney',,채택
+Genital Diseases,1,FTH,신장,auto-mesh,C12.100,MeSH 트리 C12.100,,무시
+"Carcinoma, Endometrioid",1,FTH,암,auto-mesh,C04.557.470.200.025.240 C04.588.945.418.948.585.124 C12.050.351.500.056.630.705.331 C12.050.351.937.418.685.331 C12.050.351.937.418.875.200.124 C12.100.250.056.630.705.331 C12.900.418.685.331 C12.900.418.875.200.124 C19.391.630.705.331,MeSH 트리 C04.557.470.200.025.240 C04.588.945.418.948.585.124 C12.050.351.500.056.630.705.331,,채택
+HER2 Positive Solid Tumors,1,ELVN,암,auto-stem,,어간 'Tumor',,채택
+HER2-positive Gastric Cancer,1,ELVN,암,auto-stem,,어간 'Cancer',,채택
+Small-cell Lung Cancer,1,FATE,암,auto-stem,,어간 'Cancer',,채택
+CML (Chronic Myelogenous Leukemia),1,ELVN,암,auto-stem,,어간 'Leukemi',,채택
+Relapsed or Refractory Diffuse Large B-Cell Lymphoma (R/R DLBCL),1,ADCT,암,auto-stem,,어간 'Lymphom',,채택
+Non-MSI-H or pMMR Colorectal Cancer With Liver Metastasis,1,AGEN,암,auto-stem,,어간 'Cancer',,채택
+Mixed Lineage Leukemia,1,KURA,암,auto-stem,,어간 'Leukemi',,채택
+Acute Leukemia of Ambiguous Lineage,1,KURA,암,auto-stem,,어간 'Leukemi',,채택
+Mixed Phenotype Acute Leukemia,1,KURA,암,auto-stem,,어간 'Leukemi',,채택
+Mixed Lineage Acute Leukemia,1,KURA,암,auto-stem,,어간 'Leukemi',,채택
+Mantle Cell Lymphoma (MCL),1,EXEL,암,auto-stem,,어간 'Lymphom',,채택
+Activated B-Cell Type Diffuse Large B-Cell Lymphoma (ABC-DLBCL),1,EXEL,암,auto-stem,,어간 'Lymphom',,채택
+Small Lymphocytic Lymphoma (SLL),1,EXEL,암,auto-stem,,어간 'Lymphom',,채택
+Relapsed Diffuse Large B-Cell Lymphoma,1,ADCT,암,auto-stem,,어간 'Lymphom',,채택
+Moderate Hepatic Impairment,1,EXEL,건강인·약동학,auto-stem,,어간 'Hepatic Impairment',,채택
+Pharyngeal Neoplasms,1,ATRA,암,auto-mesh,C04.588.443.665.710 C07.550.745 C09.647.710 C09.775.549,MeSH 트리 C04.588.443.665.710 C07.550.745 C09.647.710,,채택
+Otorhinolaryngologic Diseases,1,ATRA,청각·이비인후,auto-mesh,C09,MeSH 트리 C09,,무시
+Pharyngeal Diseases,1,ATRA,청각·이비인후,auto-mesh,C07.550 C09.775,MeSH 트리 C07.550 C09.775,,무시
+Nasopharyngeal Neoplasms,1,ATRA,암,auto-mesh,C04.588.443.665.710.650 C07.550.350.650 C07.550.745.650 C09.647.710.650 C09.775.350.650 C09.775.549.650,MeSH 트리 C04.588.443.665.710.650 C07.550.350.650 C07.550.745.650,,채택
+Epstein-Barr Virus-associated Nasopharyngeal Carcinoma (EBV+ NPC),1,ATRA,암,auto-stem,,어간 'Carcinom',,채택
+Nasopharyngeal Diseases,1,ATRA,청각·이비인후,auto-mesh,C07.550.350 C09.775.350,MeSH 트리 C07.550.350 C09.775.350,,무시
+Otorhinolaryngologic Neoplasms,1,ATRA,암,auto-mesh,C04.588.443.665 C09.647,MeSH 트리 C04.588.443.665 C09.647,,채택
+Nose Neoplasms,1,ATRA,암,auto-mesh,C04.588.149.721.600 C04.588.443.665.650 C05.116.231.754.600 C08.460.669 C08.785.600 C09.603.669 C09.647.685,MeSH 트리 C04.588.149.721.600 C04.588.443.665.650 C05.116.231.754.600,,채택
+Multifocal Motor Neuropathy,1,DNTH,신경·정신,auto-stem,,어간 'Neuropath',,채택
+Primary Immunodeficiency Diseases,1,ATRA,희귀 유전,auto-mesh,C16.320.798 C20.673.795,MeSH 트리 C16.320.798 C20.673.795,,채택
+Epstein-Barr Virus-associated Lymphoproliferative Disease (EBV+ LPD) With Acquired Immunodeficiency (AID),1,ATRA,감염,auto-stem,,어간 'EBV',,암
+Nasopharyngeal Carcinoma (NPC),1,ATRA,암,auto-mesh,C04.557.470.200.623 C04.588.443.665.710.650.500 C07.550.350.650.500 C07.550.745.650.500 C09.647.710.650.500 C09.775.350.650.500 C09.775.549.650.500,MeSH 트리 C04.557.470.200.623 C04.588.443.665.710.650.500 C07.550.350.650.500,,채택
+Leiomyosarcoma (LMS),1,ATRA,암,auto-mesh,C04.557.450.590.455 C04.557.450.795.455,MeSH 트리 C04.557.450.590.455 C04.557.450.795.455,,채택
+"Lymphoma, AIDS-Related",1,ATRA,암,auto-mesh,C04.557.386.480.150.450 C15.604.515.569.480.150.450 C20.683.515.761.480.150.450,MeSH 트리 C04.557.386.480.150.450 C15.604.515.569.480.150.450 C20.683.515.761.480.150.450,,채택
+Epstein-Barr Virus (EBV) Infections,1,ATRA,감염,auto-mesh,C01.925.256.466.313 C01.925.928.313,MeSH 트리 C01.925.256.466.313 C01.925.928.313,,채택
+Lymphoproliferative Disorders,1,ATRA,혈액,auto-mesh,C15.604.515 C20.683.515,MeSH 트리 C15.604.515 C20.683.515,,암
+EBV+ Associated Lymphoma,1,ATRA,암,auto-stem,,어간 'Lymphom',,채택
+Epstein-Barr Virus-associated Lymphoproliferative Disease (EBV+ LPD) With Primary Immunodeficiency (PID),1,ATRA,감염,auto-stem,,어간 'EBV',,암
+Leiomyosarcoma,1,ATRA,암,auto-mesh,C04.557.450.590.455 C04.557.450.795.455,MeSH 트리 C04.557.450.590.455 C04.557.450.795.455,,채택
+"Lymphoma, AIDS-related",1,ATRA,암,auto-mesh,C04.557.386.480.150.450 C15.604.515.569.480.150.450 C20.683.515.761.480.150.450,MeSH 트리 C04.557.386.480.150.450 C15.604.515.569.480.150.450 C20.683.515.761.480.150.450,,채택
+Relapsed B-Cell Non-Hodgkin Lymphoma,1,ADCT,암,auto-stem,,어간 'Lymphom',,채택
+B-Cell Non-Hodgkin Lymphoma,1,ADCT,암,auto-stem,,어간 'Lymphom',,채택
+Chronic Lymphoid Leukemia in Relapse,1,DTIL,암,auto-stem,,어간 'Leukemi',,채택
+"Non-Hodgkin's Lymphoma, Relapsed",1,DTIL,암,auto-stem,,어간 'Lymphom',,채택
+Non-Hodgkin's Lymphoma Refractory,1,DTIL,암,auto-stem,,어간 'Lymphom',,채택
+B-cell Chronic Lymphocytic Leukemia,1,DTIL,암,auto-mesh,C04.557.337.428.080.125 C15.378.508.428.080.125 C15.604.515.560.080.125 C20.683.515.528.080.125 C23.550.291.500.483,MeSH 트리 C04.557.337.428.080.125 C15.378.508.428.080.125 C15.604.515.560.080.125,,채택
+Herpes Simplex Type 2,1,AGEN,감염,auto-stem,,어간 'Herpes',,채택
+Progressive Supranuclear Palsy,1,AMLX,신경·정신,auto-mesh,C10.228.140.079.882 C10.228.662.700 C10.292.562.750.500 C10.574.945.500 C10.597.622.447.690 C11.590.472.500 C23.888.592.636.447.690,MeSH 트리 C10.228.140.079.882 C10.228.662.700 C10.292.562.750.500,,채택
+Atypical Parkinsonism,1,AMLX,신경·정신,auto-stem,,어간 'Parkinson',,채택
+Sickle Cell Anemia,1,FULC,희귀 유전,auto-mesh,C15.378.050.141.150.150 C15.378.420.155 C16.320.070.150 C16.320.365.155,MeSH 트리 C15.378.050.141.150.150 C15.378.420.155 C16.320.070.150,,채택
+Clinical Stage IV Cutaneous Melanoma AJCC v8,1,IOVA,암,auto-stem,,어간 'Melanom',,채택
+Metastatic Triple Negative Breast Cancer,1,IOVA,암,auto-stem,,어간 'Metasta',,채택
+Metastasis to Pleura,1,IOVA,암,auto-stem,,어간 'Metasta',,채택
+Malignant Pleural Effusion,1,IOVA,암,auto-mesh,C04.588.894.797.640.700 C08.528.652.700 C08.528.694.700 C08.785.640.700,MeSH 트리 C04.588.894.797.640.700 C08.528.652.700 C08.528.694.700,,채택
+Malignant Mesothelioma,1,IOVA,암,auto-mesh,C04.557.470.035.510.757 C04.557.470.660.510.757 C04.588.894.797.520.173 C04.588.894.797.640.350 C08.381.540.144 C08.785.520.124 C08.785.640.350,MeSH 트리 C04.557.470.035.510.757 C04.557.470.660.510.757 C04.588.894.797.520.173,,채택
+"Thyroid cancer, follicular",1,EXEL,암,auto-stem,,어간 'cancer',,채택
+Oropharyngeal Carcinoma,1,INBX,암,auto-stem,,어간 'Carcinom',,채택
+Non-seminomatous Germ Cell Tumor,1,EXEL,암,auto-stem,,어간 'Tumor',,채택
+Ovarian Germ Cell Tumor,1,EXEL,암,auto-stem,,어간 'Tumor',,채택
+Influenza A Subtype H5N1 Infection,1,ALT,감염,auto-stem,,어간 'Influenza',,채택
+High Grade Squamous Intraepithelial Neoplasia,1,INO,암,auto-stem,,어간 'Neoplas',,채택
+Human Papillomavirus-18 Positive,1,INO,감염,auto-stem,,어간 'virus',,암
+HIV Positivity,1,INO,감염,auto-stem,,어간 'HIV',,채택
+Anal Intraepithelial Neoplasia,1,INO,암,auto-stem,,어간 'Neoplas',,채택
+Human Papillomavirus-16 Positive,1,INO,감염,auto-stem,,어간 'virus',,암
+Hemoglobinopathy,1,BEAM,혈액,auto-stem,,어간 'Hemoglobin',,희귀 유전
+Treatment-resistant Depression (TRD),1,ANRO,신경·정신,auto-stem,,어간 'Depress',,채택
+Granulomatosis With Polyangiitis,1,ARTV,호흡기,auto-mesh,C08.381.483.950 C14.907.940.897.249.750 C17.800.862.105.875 C20.111.193.875,MeSH 트리 C08.381.483.950 C14.907.940.897.249.750 C17.800.862.105.875,,면역·염증
+Granulomatosis with Polyangiitis,1,ARTV,호흡기,auto-mesh,C08.381.483.950 C14.907.940.897.249.750 C17.800.862.105.875 C20.111.193.875,MeSH 트리 C08.381.483.950 C14.907.940.897.249.750 C17.800.862.105.875,,면역·염증
+"Glioma, Subependymal",1,BCRX,암,auto-mesh,C04.557.465.625.600.380.290.390 C04.557.470.670.380.290.390 C04.557.580.625.600.380.290.390,MeSH 트리 C04.557.465.625.600.380.290.390 C04.557.470.670.380.290.390 C04.557.580.625.600.380.290.390,,채택
+"Leukemia, Hairy Cell",1,BCRX,암,auto-mesh,C04.557.337.415 C15.378.508.415 C15.604.515.553 C20.683.515.517,MeSH 트리 C04.557.337.415 C15.378.508.415 C15.604.515.553,,채택
+"Leukemia, Prolymphocytic",1,BCRX,암,auto-mesh,C04.557.337.428.565 C15.378.508.428.565 C15.604.515.560.550 C20.683.515.528.565,MeSH 트리 C04.557.337.428.565 C15.378.508.428.565 C15.604.515.560.550,,채택
+Intraocular Lymphoma,1,BCRX,암,auto-mesh,C04.557.386.435 C04.588.364.447 C15.604.515.569.417 C20.683.515.761.417,MeSH 트리 C04.557.386.435 C04.588.364.447 C15.604.515.569.417,,채택
+Pdgfra-Associated Chronic Eosinophilic Leukemia,1,BCRX,암,auto-stem,,어간 'Leukemi',,채택
+"Leukemia, Neutrophilic, Chronic",1,BCRX,암,auto-mesh,C15.378.190.636.380 C23.550.291.500.497,MeSH 트리 C15.378.190.636.380 C23.550.291.500.497,,채택
+"Leukemia, Myeloid, Chronic, Atypical, BCR-ABL Negative",1,BCRX,암,auto-mesh,C04.557.337.539.300 C15.378.190.615.500 C15.378.508.539.300 C23.550.291.500.493,MeSH 트리 C04.557.337.539.300 C15.378.190.615.500 C15.378.508.539.300,,채택
+Pediatric Cancer,1,EXEL,암,auto-stem,,어간 'Cancer',,채택
+Nervous System Neoplasms,1,EXEL,암,auto-mesh,C04.588.614 C10.551,MeSH 트리 C04.588.614 C10.551,,채택
+Bile Duct Cancer,1,EXEL,암,auto-mesh,C04.588.274.120.250 C06.130.120.120 C06.130.320.120 C06.301.120.250,MeSH 트리 C04.588.274.120.250 C06.130.120.120 C06.130.320.120,,채택
+Intrahepatic Cholangiocarcinoma,1,EXEL,암,auto-mesh,C04.557.470.200.025.450,MeSH 트리 C04.557.470.200.025.450,,채택
+Cholangiocarcinoma of the Extrahepatic Bile Duct,1,EXEL,암,auto-stem,,어간 'carcinom',,채택
+Immune Sensitive Tumor,1,EXEL,암,auto-stem,,어간 'Tumor',,채택
+Ebola Virus Infection,1,BCRX,감염,auto-mesh,C01.925.782.417.415 C01.925.782.580.250.400,MeSH 트리 C01.925.782.417.415 C01.925.782.580.250.400,,채택
+Filovirus Infections,1,BCRX,감염,auto-mesh,C01.925.782.580.250,MeSH 트리 C01.925.782.580.250,,채택
+"Multiple Sclerosis, Secondary Progressive",1,CTNM,신경·정신,auto-mesh,C10.114.375.500.200 C10.314.350.500.200 C20.111.258.250.500.200 C23.550.291.500.625,MeSH 트리 C10.114.375.500.200 C10.314.350.500.200 C20.111.258.250.500.200,,채택
+Autoimmune Diseases of the Nervous System,1,CTNM,신경·정신,auto-mesh,C10.114 C20.111.258,MeSH 트리 C10.114 C20.111.258,,채택
+"Multiple Sclerosis, Progressive",1,CTNM,신경·정신,auto-stem,,어간 'Multiple Sclerosis',,채택
+Idiopathic Pulmonary Fibrosis (IPF),1,CTNM,호흡기,auto-mesh,C08.381.483.652.500,MeSH 트리 C08.381.483.652.500,,채택
+"Multiple Sclerosis, Primary Progressive",1,CTNM,신경·정신,auto-mesh,C10.114.375.500.200 C10.314.350.500.200 C20.111.258.250.500.200 C23.550.291.500.625,MeSH 트리 C10.114.375.500.200 C10.314.350.500.200 C20.111.258.250.500.200,,채택
+"Demyelinating Autoimmune Diseases, CNS",1,CTNM,신경·정신,auto-mesh,C10.114.375 C10.228.140.695.562 C10.314.350 C20.111.258.250,MeSH 트리 C10.114.375 C10.228.140.695.562 C10.314.350,,채택
+Neuroinflammatory Diseases,1,CTNM,면역·염증,auto-mesh,C10.586 C23.550.470.544,MeSH 트리 C10.586 C23.550.470.544,,신경·정신
+"Multiple Sclerosis, MS",1,CTNM,신경·정신,auto-stem,,어간 'Multiple Sclerosis',,채택
+"Carcinoma, Non-small Cell Lung Cancer",1,EXEL,암,auto-stem,,어간 'Carcinom',,채택
+Albuminuria,1,ARDX,신장,auto-mesh,C12.050.351.968.934.734.269 C12.200.777.934.734.269 C12.950.934.734.269 C23.888.942.750.269,MeSH 트리 C12.050.351.968.934.734.269 C12.200.777.934.734.269 C12.950.934.734.269,,채택
+Type 2 Diabetes Mellitus,1,ARDX,비만·대사,auto-mesh,C18.452.394.750.149 C19.246.300,MeSH 트리 C18.452.394.750.149 C19.246.300,,채택
+Chronic Kidney Disease,1,ARDX,신장,auto-stem,,어간 'Kidney',,채택
+Intermittent Explosive Disorder,1,ACAD,신경·정신,auto-mesh,F03.250,MeSH 트리 F03.250,,채택
+Metastatic Biliary Tract Cancer,1,CMPX,암,auto-stem,,어간 'Metasta',,채택
+MAC Lung Disease,1,ANTX,호흡기,auto-stem,,어간 'Lung',,채택
+Treatment Refractory MAC Lung Disease,1,ANTX,호흡기,auto-stem,,어간 'Lung',,채택
+T-cell Lymphoma,1,CRVS,암,auto-mesh,C04.557.386.480.750 C15.604.515.569.480.750 C20.683.515.761.480.750,MeSH 트리 C04.557.386.480.750 C15.604.515.569.480.750 C20.683.515.761.480.750,,채택
+Dementia With Lewy Bodies (DLB),1,CRVO,신경·정신,auto-stem,,어간 'Dementia',,채택
+Non-proliferative Diabetic Retinopathy,1,KOD,비만·대사,auto-stem,,어간 'Diabet',,안과
+Colon Adenocarcinoma,1,EXEL,암,auto-mesh,C04.588.274.476.411.307.180 C06.301.371.411.307.180 C06.405.249.411.307.180 C06.405.469.158.356.180 C06.405.469.491.307.180,MeSH 트리 C04.588.274.476.411.307.180 C06.301.371.411.307.180 C06.405.249.411.307.180,,채택
+Rectum Cancer,1,EXEL,암,auto-mesh,C04.588.274.476.411.307.790 C06.301.371.411.307.790 C06.405.249.411.307.790 C06.405.469.491.307.790 C06.405.469.860.180.500,MeSH 트리 C04.588.274.476.411.307.790 C06.301.371.411.307.790 C06.405.249.411.307.790,,채택
+Rectal Adenocarcinoma,1,EXEL,암,auto-stem,,어간 'carcinom',,채택
+"Hepatitis, Chronic",1,INO,소화기,auto-mesh,C06.552.380.350 C23.550.291.500.477,MeSH 트리 C06.552.380.350 C23.550.291.500.477,,채택
+Chronic Hepatitis,1,INO,소화기,auto-mesh,C06.552.380.350 C23.550.291.500.477,MeSH 트리 C06.552.380.350 C23.550.291.500.477,,채택
+Hepatitis C Infection,1,INO,감염,auto-stem,,어간 'Hepatitis',,채택
+Polycythemia,1,GERN,혈액,auto-mesh,C15.378.738,MeSH 트리 C15.378.738,,채택
+Thrombocytosis,1,GERN,암,auto-mesh,C15.378.140.860 C15.378.190.636.860,MeSH 트리 C15.378.140.860 C15.378.190.636.860,,혈액
+Moderate to Severe Acute Ischaemic Stroke,1,CRVO,심혈관,auto-stem,,어간 'Stroke',,신경·정신
+Ischaemic Stroke,1,CRVO,신경·정신,auto-mesh,C10.228.140.300.775.400 C14.907.253.855.400,MeSH 트리 C10.228.140.300.775.400 C14.907.253.855.400,,채택
+Myelodysplastic Syndrome (MDS),1,ADCT,암,auto-stem,,어간 'Myelodysplas',,채택
+Myeloproliferative Neoplasm (MDS/MPN),1,ADCT,암,auto-stem,,어간 'Neoplas',,채택
+"Leukemia, Myeloid, Chronic",1,AGEN,암,auto-mesh,C04.557.337.539.250 C15.378.190.636.370 C15.378.508.539.250 C23.550.291.500.485,MeSH 트리 C04.557.337.539.250 C15.378.190.636.370 C15.378.508.539.250,,채택
+Non-small Cell Lung Carcinoma,1,EXEL,암,auto-mesh,C04.588.894.797.520.109.220.249 C08.381.540.140.500 C08.785.520.100.220.500,MeSH 트리 C04.588.894.797.520.109.220.249 C08.381.540.140.500 C08.785.520.100.220.500,,채택
+"Gastrointestinal Carcinoma, Non-colon",1,EXEL,암,auto-stem,,어간 'Carcinom',,채택
+Upper Aerodigestive Tract Carcinoma,1,EXEL,암,auto-stem,,어간 'Carcinom',,채택
+Iron Deficiency Anemia,1,KROS,혈액,auto-stem,,어간 'Anemi',,채택
+Malignancies,1,AGEN,암,auto-stem,,어간 'Malignan',,채택
+B-Cell Lymphoma,1,AGEN,암,auto-mesh,C04.557.386.480.150 C15.604.515.569.480.150 C20.683.515.761.480.150,MeSH 트리 C04.557.386.480.150 C15.604.515.569.480.150 C20.683.515.761.480.150,,채택
+Transplant Patients With EBV Viremia at High Risk of Developing a Recurrent EBV Lymphoma,1,ATRA,암,auto-stem,,어간 'Lymphom',,채택
+"Dendritic Cell Sarcoma, Interdigitating",1,ATRA,암,auto-mesh,C04.557.227.199 C15.604.250.390.199,MeSH 트리 C04.557.227.199 C15.604.250.390.199,,채택
+Clear-cell Metastatic Renal Cell Carcinoma,1,EXEL,암,auto-stem,,어간 'Metasta',,채택
+Metastatic Non Small Cell Lung Cancer,1,IOVA,암,auto-stem,,어간 'Metasta',,채택
+HR+ HER2- Breast Cancer,1,FTH,암,auto-stem,,어간 'Cancer',,채택
+Open-angle Glaucoma,1,ANNX,안과,auto-mesh,C11.525.381.407,MeSH 트리 C11.525.381.407,,채택
+Head Neck Cancer,1,INO,암,auto-stem,,어간 'Cancer',,채택
+Post-bariatric Hypoglycemia,1,AMLX,비만·대사,auto-stem,,어간 'Hypoglyc',,채택
+Prostate Cancer Metastatic,1,EXEL,암,auto-stem,,어간 'Cancer',,채택
+Prostate Cancer Adenocarcinoma,1,EXEL,암,auto-stem,,어간 'Cancer',,채택
+Non-Metastatic,1,EXEL,암,auto-stem,,어간 'Metasta',,채택
+Metastases to the Brain,1,EXEL,암,auto-stem,,어간 'Metasta',,채택
+Metastatic Cutaneous Squamous Cell Carcinoma,1,IOVA,암,auto-stem,,어간 'Metasta',,채택
+Anaplastic Thyroid Cancer,1,EXEL,암,auto-stem,,어간 'Cancer',,채택
+BRAF Mutation-Related Tumors,1,EXEL,암,auto-stem,,어간 'Tumor',,채택
+Guillain-Barré Syndrome,1,ANNX,신경·정신,auto-mesh,C10.114.750.100 C10.314.750.450 C10.668.829.800.750.300 C20.111.258.750.400 C23.550.291.500.829.313,MeSH 트리 C10.114.750.100 C10.314.750.450 C10.668.829.800.750.300,,채택
+Chronic Kidney Disease Requiring Chronic Dialysis,1,ARDX,신장,auto-stem,,어간 'Kidney',,채택
+Type 2 Diabetes,1,ALT,비만·대사,auto-mesh,C18.452.394.750.149 C19.246.300,MeSH 트리 C18.452.394.750.149 C19.246.300,,채택
+T Cell Non-Hodgkin Lymphoma,1,AUTL,암,auto-stem,,어간 'Lymphom',,채택
+Anaplastic Large Cell Lymphoma,1,AUTL,암,auto-stem,,어간 'Lymphom',,채택
+Lupus Erythematosus,1,CRBU,면역·염증,auto-stem,,어간 'Lupus',,채택
+HER2 Positive Gastric Cancer,1,FATE,암,auto-stem,,어간 'Cancer',,채택
+Acute Postoperative Pain,1,ACAD,통증,auto-mesh,C23.550.767.700 C23.888.592.612.832 F02.830.816.444.775 G11.561.790.444.775,MeSH 트리 C23.550.767.700 C23.888.592.612.832 F02.830.816.444.775,,채택
+Infiltrating Bladder Urothelial Carcinoma With Squamous Differentiation,1,EXEL,암,auto-stem,,어간 'Carcinom',,채택
+Locally Advanced Urothelial Carcinoma,1,EXEL,암,auto-stem,,어간 'Carcinom',,채택
+Unresectable Urothelial Carcinoma,1,EXEL,암,auto-stem,,어간 'Carcinom',,채택
+Open Angle Glaucoma,1,ANNX,안과,auto-stem,,어간 'Glaucom',,채택
+Metastatic Soft Tissue Sarcoma,1,AGEN,암,auto-stem,,어간 'Metasta',,채택
+Cervical Intraepithelial Neoplasia,1,INO,암,auto-mesh,C04.557.470.200.240.250 C04.834.818 C12.050.351.500.852.593.074 C12.100.250.852.593.074,MeSH 트리 C04.557.470.200.240.250 C04.834.818 C12.050.351.500.852.593.074,,채택
+Major Depressive Disorder (MDD),1,ACAD,신경·정신,auto-mesh,F03.600.300.375,MeSH 트리 F03.600.300.375,,채택
+SLE - Systemic Lupus Erythematosus,1,FATE,면역·염증,auto-stem,,어간 'SLE',,채택
+Asthma (Diagnosis),1,KYMR,호흡기,auto-mesh,C08.127.108 C08.381.495.108 C08.674.095 C20.543.480.680.095,MeSH 트리 C08.127.108 C08.381.495.108 C08.674.095,,채택
+Metastatic Uveal Melanoma in the Liver,1,IMCR,암,auto-stem,,어간 'Metasta',,채택
+Brain Tumor - Metastatic,1,EXEL,암,auto-stem,,어간 'Tumor',,채택
+Thyroid Gland Squamous Cell Carcinoma,1,IOVA,암,auto-stem,,어간 'Carcinom',,채택
+Bone Sarcoma,1,IOVA,암,auto-stem,,어간 'Sarcom',,채택
+Recurrent Ovarian Carcinoma,1,IOVA,암,auto-stem,,어간 'Carcinom',,채택
+Malignancy in Giant Cell Tumor of Bone,1,IOVA,암,auto-stem,,어간 'Malignan',,채택
+Dedifferentiated Chondrosarcoma,1,IOVA,암,auto-stem,,어간 'sarcom',,채택
+Undifferentiated High Grade Pleomorphic Sarcoma of Bone,1,IOVA,암,auto-stem,,어간 'Sarcom',,채택
+Thyroid Gland Anaplastic Carcinoma,1,IOVA,암,auto-stem,,어간 'Carcinom',,채택
+Giant Cell Tumor of Bone,1,IOVA,암,auto-mesh,C04.557.450.565.380.380 C04.557.450.565.575.420,MeSH 트리 C04.557.450.565.380.380 C04.557.450.565.575.420,,채택
+Ovarian Carcinosarcoma,1,IOVA,암,auto-stem,,어간 'sarcom',,채택
+Recurrent Osteosarcoma,1,IOVA,암,auto-stem,,어간 'sarcom',,채택
+Refractory Osteosarcoma,1,IOVA,암,auto-stem,,어간 'sarcom',,채택
+Myalgia,1,BCRX,통증,auto-mesh,C05.651.542 C10.668.491.525 C23.888.592.612.547.249 F02.830.816.444.482.001 G11.561.790.444.509.001,MeSH 트리 C05.651.542 C10.668.491.525 C23.888.592.612.547.249,,채택
+Stage III Non-small Cell Lung Cancer,1,IOVA,암,auto-stem,,어간 'Cancer',,채택
+Stage IV Non-small Cell Lung Cancer,1,IOVA,암,auto-stem,,어간 'Cancer',,채택
+Relapsed/Refractory B-cell Non-Hodgkin Lymphoma,1,ATRA,암,auto-stem,,어간 'Lymphom',,채택
+"Chronic Phase Chronic Myeloid Leukemia, BCR-ABL1 Positive",1,ELVN,암,auto-stem,,어간 'Leukemi',,채택
+Melanoma (Skin Cancer),1,IOVA,암,auto-mesh,C04.557.465.625.650.510 C04.557.580.625.650.510 C04.557.665.510 C04.588.805.377 C17.800.882.445,MeSH 트리 C04.557.465.625.650.510 C04.557.580.625.650.510 C04.557.665.510,,채택
+Chronic Low Back Pain,1,CTNM,통증,auto-stem,,어간 'Pain',,채택
+Chronic Osteoarthritis Pain,1,CTNM,근골격,auto-stem,,어간 'Osteo',,통증
+Kidney Transplant Infection,1,AUPH,감염,auto-stem,,어간 'Infect',,채택
+Bone Marrow Mastocytosis,1,COGT,근골격,auto-stem,,어간 'Bone',,암
+"Nevus, Blue",1,IMCR,암,auto-mesh,C04.557.665.560.615.550,MeSH 트리 C04.557.665.560.615.550,,피부
+Astrocytic Tumors,1,EXEL,암,auto-stem,,어간 'Tumor',,채택
+Antineutrophilic Cytoplasmic Antibody (ANCA)- Associated Vasculitis (AAV),1,FATE,면역·염증,auto-stem,,어간 'Vasculit',,채택
+Post Traumatic Stress Disorder,1,ANRO,신경·정신,auto-mesh,F03.950.750.500,MeSH 트리 F03.950.750.500,,채택
+Unresectable Pancreatic Carcinoma,1,EXEL,암,auto-stem,,어간 'Carcinom',,채택
+Stage IIIA Colorectal Cancer,1,EXEL,암,auto-stem,,어간 'Cancer',,채택
+Stage IV Pancreatic Cancer,1,EXEL,암,auto-stem,,어간 'Cancer',,채택
+Stage III Colorectal Cancer,1,EXEL,암,auto-stem,,어간 'Cancer',,채택
+Stage IV Colorectal Cancer,1,EXEL,암,auto-stem,,어간 'Cancer',,채택
+Stage IVB Pancreatic Cancer,1,EXEL,암,auto-stem,,어간 'Cancer',,채택
+Stage IVA Pancreatic Cancer,1,EXEL,암,auto-stem,,어간 'Cancer',,채택
+Stage IVA Colorectal Cancer,1,EXEL,암,auto-stem,,어간 'Cancer',,채택
+Stage IVB Colorectal Cancer,1,EXEL,암,auto-stem,,어간 'Cancer',,채택
+Recurrent Pancreatic Carcinoma,1,EXEL,암,auto-stem,,어간 'Carcinom',,채택
+Stage IIIB Colorectal Cancer,1,EXEL,암,auto-stem,,어간 'Cancer',,채택
+Recurrent Colorectal Carcinoma,1,EXEL,암,auto-stem,,어간 'Carcinom',,채택
+Stage III Pancreatic Cancer,1,EXEL,암,auto-stem,,어간 'Cancer',,채택
+Dementia-related Psychosis,1,ACAD,신경·정신,auto-stem,,어간 'Dementia',,채택
+Recurrent Oropharyngeal Squamous Cell Carcinoma,1,EXEL,암,auto-stem,,어간 'Carcinom',,채택
+Stage IVA Oropharyngeal Squamous Cell Carcinoma AJCC v7,1,EXEL,암,auto-stem,,어간 'Carcinom',,채택
+Stage IV Oropharyngeal Squamous Cell Carcinoma AJCC v7,1,EXEL,암,auto-stem,,어간 'Carcinom',,채택
+Unresectable Head and Neck Squamous Cell Carcinoma,1,EXEL,암,auto-stem,,어간 'Carcinom',,채택
+Stage IVB Laryngeal Squamous Cell Carcinoma AJCC v7,1,EXEL,암,auto-stem,,어간 'Carcinom',,채택
+Stage IV Hypopharyngeal Squamous Cell Carcinoma AJCC v7,1,EXEL,암,auto-stem,,어간 'Carcinom',,채택
+Stage IVA Hypopharyngeal Squamous Cell Carcinoma AJCC v7,1,EXEL,암,auto-stem,,어간 'Carcinom',,채택
+Recurrent Hypopharyngeal Squamous Cell Carcinoma,1,EXEL,암,auto-stem,,어간 'Carcinom',,채택
+Stage IVC Oral Cavity Squamous Cell Carcinoma AJCC v6 and v7,1,EXEL,암,auto-stem,,어간 'Carcinom',,채택
+Recurrent Oral Cavity Squamous Cell Carcinoma,1,EXEL,암,auto-stem,,어간 'Carcinom',,채택
+Stage IV Oral Cavity Squamous Cell Carcinoma AJCC v6 and v7,1,EXEL,암,auto-stem,,어간 'Carcinom',,채택
+Stage IVA Oral Cavity Squamous Cell Carcinoma AJCC v6 and v7,1,EXEL,암,auto-stem,,어간 'Carcinom',,채택
+Recurrent Laryngeal Squamous Cell Carcinoma,1,EXEL,암,auto-stem,,어간 'Carcinom',,채택
+Stage IVB Oropharyngeal Squamous Cell Carcinoma AJCC v7,1,EXEL,암,auto-stem,,어간 'Carcinom',,채택
+Metastatic Head and Neck Carcinoma,1,EXEL,암,auto-stem,,어간 'Metasta',,채택
+Stage IVB Hypopharyngeal Squamous Cell Carcinoma AJCC v7,1,EXEL,암,auto-stem,,어간 'Carcinom',,채택
+Stage IVC Hypopharyngeal Squamous Cell Carcinoma AJCC v7,1,EXEL,암,auto-stem,,어간 'Carcinom',,채택
+Stage IVC Oropharyngeal Squamous Cell Carcinoma AJCC v7,1,EXEL,암,auto-stem,,어간 'Carcinom',,채택
+Stage IVA Laryngeal Squamous Cell Carcinoma AJCC v7,1,EXEL,암,auto-stem,,어간 'Carcinom',,채택
+Stage IVB Oral Cavity Squamous Cell Carcinoma AJCC v6 and v7,1,EXEL,암,auto-stem,,어간 'Carcinom',,채택
+Paranasal Sinus Squamous Cell Carcinoma,1,EXEL,암,auto-stem,,어간 'Carcinom',,채택
+Stage IVC Laryngeal Squamous Cell Carcinoma AJCC v7,1,EXEL,암,auto-stem,,어간 'Carcinom',,채택
+Stage IV Laryngeal Squamous Cell Carcinoma AJCC v7,1,EXEL,암,auto-stem,,어간 'Carcinom',,채택
+Neovascular (Wet) Age-Related Macular Degeneration,1,FDMT,안과,auto-stem,,어간 'Macula',,채택
+Relapsing-Remitting Multiple Sclerosis (RRMS),1,IMUX,신경·정신,auto-mesh,C10.114.375.500.600 C10.314.350.500.600 C20.111.258.250.500.600,MeSH 트리 C10.114.375.500.600 C10.314.350.500.600 C20.111.258.250.500.600,,채택
+Mycobacterium Abscessus Infection,1,ANTX,감염,auto-mesh,C01.150.252.410.040.552.475,MeSH 트리 C01.150.252.410.040.552.475,,채택
+Multiple Myeloma in Relapse,1,COGT,암,auto-stem,,어간 'Myelom',,채택
+Refractory Multiple Myeloma,1,COGT,암,auto-stem,,어간 'Myelom',,채택
+Locally Advanced Unresectable Uveal Melanoma,1,IMCR,암,auto-stem,,어간 'Melanom',,채택
+Squamous Cell Carcinoma Head and Neck Cancer (HNSCC),1,KURA,암,auto-stem,,어간 'Carcinom',,채택
+HRAS Mutant Tumor,1,KURA,암,auto-stem,,어간 'Tumor',,채택
+Other Squamous Cell Carcinoma (SCC) With HRAS Mutant Tumor,1,KURA,암,auto-stem,,어간 'Carcinom',,채택
+HCC,1,EXEL,암,auto-stem,,어간 'HCC',,채택
+Gastrointestinal Stromal Cancer,1,KURA,암,auto-stem,,어간 'Cancer',,채택
+Gastrointestinal Stromal Cell Tumors,1,KURA,암,auto-stem,,어간 'Tumor',,채택
+Gastrointestinal Stromal Neoplasm,1,KURA,암,auto-mesh,C04.557.450.565.370 C06.301.371.308 C06.405.249.308,MeSH 트리 C04.557.450.565.370 C06.301.371.308 C06.405.249.308,,채택
+Gastrointestinal Stromal Tumor (GIST),1,KURA,암,auto-mesh,C04.557.450.565.370 C06.301.371.308 C06.405.249.308,MeSH 트리 C04.557.450.565.370 C06.301.371.308 C06.405.249.308,,채택
+"Gastrointestinal Stromal Tumor, Malignant",1,KURA,암,auto-stem,,어간 'Tumor',,채택
+Fibrolamellar Carcinoma,1,AGEN,암,auto-stem,,어간 'Carcinom',,채택
+Colorectal Cancer Without Liver Metastases,1,AGEN,암,auto-stem,,어간 'Cancer',,채택
+HPV-Associated Cervical Carcinoma,1,IOVA,암,auto-stem,,어간 'Carcinom',,채택
+Vulvar Cancer,1,IOVA,암,auto-mesh,C04.588.945.418.968 C12.050.351.500.944.819 C12.050.351.937.418.968 C12.100.250.944.819 C12.900.418.968,MeSH 트리 C04.588.945.418.968 C12.050.351.500.944.819 C12.050.351.937.418.968,,채택
+Locally Recurrent or Metastatic Breast Cancer,1,GERN,암,auto-stem,,어간 'Metasta',,채택
+Lung Cancer Metastatic,1,KRYS,암,auto-stem,,어간 'Cancer',,채택
+"Lung Cancer, Non-small Cell",1,KRYS,암,auto-stem,,어간 'Cancer',,채택
+Lung Cancer (NSCLC),1,KRYS,암,auto-mesh,C04.588.894.797.520 C08.381.540 C08.785.520,MeSH 트리 C04.588.894.797.520 C08.381.540 C08.785.520,,채택
+Overweight or Obesity,1,GPCR,비만·대사,auto-stem,,어간 'Overweight',,채택
+Throat Cancer,1,IOVA,암,auto-stem,,어간 'Cancer',,채택
+HPV-Related Cervical Carcinoma,1,IOVA,암,auto-stem,,어간 'Carcinom',,채택
+HPV-Associated Vaginal Adenocarcinoma,1,IOVA,암,auto-stem,,어간 'carcinom',,채택
+Vulva Cancer,1,IOVA,암,auto-mesh,C04.588.945.418.968 C12.050.351.500.944.819 C12.050.351.937.418.968 C12.100.250.944.819 C12.900.418.968,MeSH 트리 C04.588.945.418.968 C12.050.351.500.944.819 C12.050.351.937.418.968,,채택
+HPV Positive Rectal Squamous Cell Carcinoma,1,IOVA,암,auto-stem,,어간 'Carcinom',,채택
+Myelodysplastic Syndrome,1,ATRA,암,auto-stem,,어간 'Myelodysplas',,채택
+Relapsed Hodgkin Lymphoma,1,ADCT,암,auto-stem,,어간 'Lymphom',,채택
+Refractory Hodgkin Lymphoma,1,ADCT,암,auto-stem,,어간 'Lymphom',,채택
+Dengue Fever,1,AVIR,감염,auto-mesh,C01.920.852.157 C01.925.081.270 C01.925.782.350.250.214 C01.925.782.417.214,MeSH 트리 C01.920.852.157 C01.925.081.270 C01.925.782.350.250.214,,채택
+Metastatic GI Cancers,1,AGEN,암,auto-stem,,어간 'Metasta',,채택
+Refractory Metastatic Colorectal Cancer,1,AGEN,암,auto-stem,,어간 'Metasta',,채택
+Metastatic Microsatellite-stable Colorectal Cancer,1,AGEN,암,auto-stem,,어간 'Metasta',,채택
+Stage I Rectal Cancer,1,AGEN,암,auto-stem,,어간 'Cancer',,채택
+Early Rectal Cancer,1,AGEN,암,auto-stem,,어간 'Cancer',,채택
+ATTR Amyloidosis With Cardiomyopathy,1,BBIO,심혈관,auto-stem,,어간 'Cardi',,채택
+Differentiated Thyroid Cancer (DTC),1,EXEL,암,auto-stem,,어간 'Cancer',,채택
+Extra-Pancreatic NET (epNET),1,EXEL,소화기,auto-stem,,어간 'Pancrea',,암
+Pancreatic Neuroendocrine Tumors (pNET),1,EXEL,암,auto-stem,,어간 'Tumor',,채택
+SARS-CoV-2,1,IVVD,감염,auto-mesh,B04.820.578.500.540.150.113.937.500,MeSH 트리 B04.820.578.500.540.150.113.937.500,,채택
+Secondary Myelofibrosis,1,GERN,암,auto-stem,,어간 'Myelofibros',,채택
+Anemia of Chronic Kidney Disease,1,IRON,신장,auto-stem,,어간 'Kidney',,채택
+Chronic Kidney Diseases,1,IRON,신장,auto-mesh,C12.050.351.968.419.780.750 C12.200.777.419.780.750 C12.950.419.780.750 C23.550.291.500.906,MeSH 트리 C12.050.351.968.419.780.750 C12.200.777.419.780.750 C12.950.419.780.750,,채택
+Uterine Cancer,1,EXEL,암,auto-mesh,C04.588.945.418.948 C12.050.351.500.852.762 C12.050.351.937.418.875 C12.100.250.852.762 C12.900.418.875,MeSH 트리 C04.588.945.418.948 C12.050.351.500.852.762 C12.050.351.937.418.875,,채택
+Uterine Neoplasms,1,EXEL,암,auto-mesh,C04.588.945.418.948 C12.050.351.500.852.762 C12.050.351.937.418.875 C12.100.250.852.762 C12.900.418.875,MeSH 트리 C04.588.945.418.948 C12.050.351.500.852.762 C12.050.351.937.418.875,,채택
+Relapsed or Refractory Multiple Myeloma,1,EXEL,암,auto-stem,,어간 'Myelom',,채택
+Acute Lymphocytic Leukemia (ALL),1,AUTL,암,auto-stem,,어간 'Leukemi',,채택
+Refractory Follicular Lymphoma,1,ADCT,암,auto-stem,,어간 'Lymphom',,채택
+Relapsed Follicular Lymphoma,1,ADCT,암,auto-stem,,어간 'Lymphom',,채택
+Multiple Myeloma (MM),1,CCCC,암,auto-mesh,C04.557.595.500 C14.907.454.460 C15.378.147.780.650 C15.378.463.515.460 C20.683.515.845 C20.683.780.650,MeSH 트리 C04.557.595.500 C14.907.454.460 C15.378.147.780.650,,채택
+Acute Myeloid Leukemia Refractory,1,CRBU,암,auto-stem,,어간 'Leukemi',,채택
+Relapsed/Refractory Acute Myeloid Leukemia,1,CRBU,암,auto-stem,,어간 'Leukemi',,채택
+B-Cell Non-Hodgkin's Lymphoma,1,CRBU,암,auto-stem,,어간 'Lymphom',,채택
+Relapsed Non-Hodgkin Lymphoma,1,CRBU,암,auto-stem,,어간 'Lymphom',,채택
+Cystic Fibrosis Lung,1,FDMT,호흡기,auto-stem,,어간 'Lung',,희귀 유전
+Primary Central Nervous System Carcinoma,1,IOVA,암,auto-stem,,어간 'Carcinom',,채택
+Heart Failure With Preserved Ejection Fraction,1,EWTX,심혈관,auto-stem,,어간 'Heart',,채택
+HER2 Mutant Non-small Cell Lung Cancer,1,ELVN,암,auto-stem,,어간 'Cancer',,채택
+Aphasia,1,CRVO,신경·정신,auto-mesh,C10.597.606.150.500.800.100 C23.888.592.604.150.500.800.100,MeSH 트리 C10.597.606.150.500.800.100 C23.888.592.604.150.500.800.100,,채택
+"Aphasia, Primary Progressive",1,CRVO,신경·정신,auto-mesh,C10.228.140.380.132 C10.597.606.150.500.800.100.155 C23.888.592.604.150.500.800.100.155 F03.615.400.125,MeSH 트리 C10.228.140.380.132 C10.597.606.150.500.800.100.155 C23.888.592.604.150.500.800.100.155,,채택
+Language Disorders,1,CRVO,신경·정신,auto-mesh,C10.597.606.150.500 C23.888.592.604.150.500,MeSH 트리 C10.597.606.150.500 C23.888.592.604.150.500,,채택
+Frontotemporal Dementia,1,CRVO,신경·정신,auto-mesh,C10.228.140.380.266.299 C10.574.950.300.299 C18.452.845.800.300.299 F03.615.400.380.299,MeSH 트리 C10.228.140.380.266.299 C10.574.950.300.299 C18.452.845.800.300.299,,채택
+Chronic HBV Infection,1,DTIL,감염,auto-stem,,어간 'HBV',,채택
+Refractory Acute Myeloid Leukemia,1,EXEL,암,auto-stem,,어간 'Leukemi',,채택
+IBS,1,ARDX,소화기,auto-stem,,어간 'IBS',,채택
+IBS - Irritable Bowel Syndrome,1,ARDX,소화기,auto-stem,,어간 'IBS',,채택
+"Skin Diseases, Vesiculobullous",1,CABA,피부,auto-mesh,C17.800.865,MeSH 트리 C17.800.865,,무시
+Nutrition Disorders,1,CRBP,비만·대사,auto-mesh,C18.654,MeSH 트리 C18.654,,무시
+Nutritional and Metabolic Diseases,1,CRBP,비만·대사,auto-mesh,C18,MeSH 트리 C18,,무시
+Obese But Otherwise Healthy Participants,1,CRBP,건강인·약동학,auto-stem,,어간 'Healthy',,채택
+Body Weight,1,CRBP,비만·대사,auto-stem,C23.888.144 E01.370.600.115.100.160.120 E01.370.600.115.450.375 E05.041.124.160.750 G07.100.100.160.120 G07.100.175.313 G07.345.249.314.120,어간 'Weight',,무시
+Neuroendocrine Neoplasm,1,CMPX,암,auto-stem,,어간 'Neoplas',,채택
+Neuroendocrine Carcinomas,1,CMPX,암,auto-stem,,어간 'Carcinom',,채택
+Relapsed/Refractory B-Cell Lymphoma,1,FATE,암,auto-stem,,어간 'Lymphom',,채택
+CMV Viremia,1,ATRA,감염,auto-stem,,어간 'CMV',,채택
+CMV Disease,1,ATRA,감염,auto-stem,,어간 'CMV',,채택
+Nucleophosmin 1-mutated Acute Myeloid Leukemia,1,KURA,암,auto-stem,,어간 'Leukemi',,채택
+Refractory AML,1,KURA,암,auto-stem,,어간 'AML',,채택
+Acute Myeloid Leukemia Recurrent,1,KURA,암,auto-stem,,어간 'Leukemi',,채택
+Myeloid Sarcoma,1,KURA,암,auto-mesh,C04.557.337.539.775 C04.557.450.795.853 C15.378.508.539.775,MeSH 트리 C04.557.337.539.775 C04.557.450.795.853 C15.378.508.539.775,,채택
+Mixed Lineage Leukemia Gene Mutation,1,KURA,암,auto-stem,,어간 'Leukemi',,채택
+Dry Eye,1,AUPH,안과,auto-mesh,C11.496.260,MeSH 트리 C11.496.260,,채택
+Stage IIIB Melanoma,1,IOVA,암,auto-stem,,어간 'Melanom',,채택
+Stage IIIC Melanoma,1,IOVA,암,auto-stem,,어간 'Melanom',,채택
+Stage IIID Melanoma,1,IOVA,암,auto-stem,,어간 'Melanom',,채택
+Stage III Renal Cell Cancer AJCC v8,1,EXEL,암,auto-stem,,어간 'Cancer',,채택
+Tissue Factor-Expressing Solid Tumors,1,EXEL,암,auto-stem,,어간 'Tumor',,채택
+Esophageal SCC,1,EXEL,소화기,auto-stem,,어간 'Esophag',,암
+Peripheral T Cell Lymphoma,1,ARTV,암,auto-stem,,어간 'Lymphom',,채택
+Relapsed or Refractory Hodgkin Lymphoma,1,ARTV,암,auto-stem,,어간 'Lymphom',,채택
+Stage IV Hepatocellular Carcinoma AJCC v8,1,EXEL,암,auto-stem,,어간 'Carcinom',,채택
+Stage III Hepatocellular Carcinoma AJCC v8,1,EXEL,암,auto-stem,,어간 'Carcinom',,채택
+Unresectable Hepatocellular Carcinoma,1,EXEL,암,auto-stem,,어간 'Carcinom',,채택
+Metastatic NSCLC - Non-Small Cell Lung Cancer,1,EXEL,암,auto-stem,,어간 'Metasta',,채택
+Giant Cell Glioblastoma,1,EXEL,암,auto-mesh,C04.557.465.625.600.380.080.335 C04.557.470.670.380.080.335 C04.557.580.625.600.380.080.335,MeSH 트리 C04.557.465.625.600.380.080.335 C04.557.470.670.380.080.335 C04.557.580.625.600.380.080.335,,채택
+Oropharyngeal Cancer,1,AGEN,암,auto-mesh,C04.588.443.665.710.684 C07.550.745.671 C09.647.710.685 C09.775.549.685,MeSH 트리 C04.588.443.665.710.684 C07.550.745.671 C09.647.710.685,,채택
+Ebola Virus Disease,1,INO,감염,auto-mesh,C01.925.782.417.415 C01.925.782.580.250.400,MeSH 트리 C01.925.782.417.415 C01.925.782.580.250.400,,채택
+Oropharyngeal Carcinoma (OPC),1,CRBP,암,auto-stem,,어간 'Carcinom',,채택
+Friedreich's Ataxia,1,LRMR,신경·정신,auto-stem,,어간 'Ataxia',,희귀 유전
+Oral Cavity Squamous Cell Carcinoma,1,EXEL,암,auto-mesh,C04.557.470.200.400.565 C04.588.443.177,MeSH 트리 C04.557.470.200.400.565 C04.588.443.177,,채택
+Squamous Non-small-cell Lung Cancer,1,FTH,암,auto-stem,,어간 'Cancer',,채택
+Squamous Non-Small Cell Neoplasm of Lung,1,FTH,암,auto-stem,,어간 'Neoplas',,채택
+Obesity/Overweight,1,ALT,비만·대사,auto-stem,,어간 'Obes',,채택
+Transfusion-dependent Beta-Thalassemia,1,EDIT,혈액,auto-stem,,어간 'Thalass',,희귀 유전
+Desmoid Tumor,1,IMNM,암,auto-stem,,어간 'Tumor',,채택
+Transthyretin (TTR) Amyloid Cardiomyopathy,1,BBIO,안과,auto-stem,,어간 'retin',,심혈관
+Resectable Non-Small-Cell Lung Cancer,1,INBX,암,auto-stem,,어간 'Cancer',,채택
+Solid Tumors With HRAS Alterations,1,KURA,암,auto-stem,,어간 'Tumor',,채택
+Renal Cell Carcinoma (Kidney Cancer),1,KURA,암,auto-mesh,C04.557.470.200.025.390 C04.588.945.947.535.160 C12.050.351.937.820.535.160 C12.050.351.968.419.473.160 C12.200.758.820.750.160 C12.200.777.419.473.160 C12.900.820.535.160 C12.950.419.473.160 C12.950.983.535.160,MeSH 트리 C04.557.470.200.025.390 C04.588.945.947.535.160 C12.050.351.937.820.535.160,,채택
+Non Clear Cell Renal Cell Carcinoma (nccRCC),1,KURA,암,auto-stem,,어간 'Carcinom',,채택
+Pancreatic Ductal Adenocarcinoma (PDAC),1,KURA,암,auto-stem,,어간 'carcinom',,채택
+Adenosquamous Carcinoma,1,IOVA,암,auto-stem,,어간 'Carcinom',,채택
+Adenocarcinomas,1,IOVA,암,auto-stem,,어간 'carcinom',,채택
+Metastatic Non-small Cell Lung Cancer,1,IOVA,암,auto-stem,,어간 'Metasta',,채택
+Psychosis,1,ACAD,신경·정신,auto-mesh,F03.700.675,MeSH 트리 F03.700.675,,채택
+Hepatic Cirrhosis,1,AVIR,소화기,auto-mesh,C06.552.630 C23.550.355.412,MeSH 트리 C06.552.630 C23.550.355.412,,채택
+Chronic Hepatitis C Virus,1,AVIR,감염,auto-stem,,어간 'Hepatitis',,채택
+HIV-1 Infection,1,INO,감염,auto-stem,,어간 'HIV',,채택
+"Lymphoblastic Leukemia, Acute, Adult",1,AUTL,암,auto-mesh,C04.557.337.428.600 C15.378.508.428.600 C15.604.515.560.600 C20.683.515.528.600,MeSH 트리 C04.557.337.428.600 C15.378.508.428.600 C15.604.515.560.600,,채택
+T-Cell Acute Lymphoblastic Leukemia/Lymphoma,1,BEAM,암,auto-stem,,어간 'Leukemi',,채택
+Dry Eye Syndrome,1,AUPH,안과,auto-stem,,어간 'Eye',,채택
+Refractory Cutaneous Melanoma,1,EXEL,암,auto-stem,,어간 'Melanom',,채택
+Metabolic Disorders,1,FATE,비만·대사,auto-stem,,어간 'Metabolic',,무시
+Papillomavirus Infections,1,INO,감염,auto-mesh,C01.221.812.640.700 C01.778.640.700 C01.925.256.650 C01.925.813.700 C01.925.928.725 C12.100.937.640.700 C23.550.291.531.937.640.500,MeSH 트리 C01.221.812.640.700 C01.778.640.700 C01.925.256.650,,채택
+Pulmonary Arterial Hypertension (PAH) (WHO Group 1 PH),1,IKT,심혈관,auto-mesh,C08.381.423.847,MeSH 트리 C08.381.423.847,,채택
+Relapsed or Refractory Peripheral T-Cell Lymphoma,1,KURA,암,auto-stem,,어간 'Lymphom',,채택
+Focal Segmental Glomerulosclerosis,1,AUPH,신장,auto-mesh,C12.050.351.968.419.570.363.640 C12.200.777.419.570.363.660 C12.950.419.570.363.640,MeSH 트리 C12.050.351.968.419.570.363.640 C12.200.777.419.570.363.660 C12.950.419.570.363.640,,채택
+Thalassemia Major,1,EDIT,희귀 유전,auto-mesh,C15.378.050.141.150.875.150 C15.378.420.826.150 C16.320.070.875.150 C16.320.365.826.150,MeSH 트리 C15.378.050.141.150.875.150 C15.378.420.826.150 C16.320.070.875.150,,채택
+Thalassemia Intermedia,1,EDIT,희귀 유전,auto-mesh,C15.378.050.141.150.875.150 C15.378.420.826.150 C16.320.070.875.150 C16.320.365.826.150,MeSH 트리 C15.378.050.141.150.875.150 C15.378.420.826.150 C16.320.070.875.150,,채택
+Transfusion Dependent Beta Thalassemia,1,EDIT,혈액,auto-stem,,어간 'Thalass',,희귀 유전
+Metastatic Ncc Renal Cell Carcinoma,1,EXEL,암,auto-stem,,어간 'Metasta',,채택
+Unresectable Advanced Renal Cell Carcinoma,1,EXEL,암,auto-stem,,어간 'Carcinom',,채택
+Collecting Duct Renal Cell Carcinoma,1,EXEL,암,auto-stem,,어간 'Carcinom',,채택
+Advanced Non-Small Cell Squamous Lung Cancer,1,BDTX,암,auto-stem,,어간 'Cancer',,채택
+Metastatic Lung Cancer,1,BDTX,암,auto-stem,,어간 'Metasta',,채택
+EGF-R Positive Non-Small Cell Lung Cancer,1,BDTX,암,auto-stem,,어간 'Cancer',,채택
+Metastatic Lung Non-Small Cell Carcinoma,1,BDTX,암,auto-stem,,어간 'Metasta',,채택
+Advanced Lung Carcinoma,1,BDTX,암,auto-stem,,어간 'Carcinom',,채택
+"Epidermolysis Bullosa Dystrophica, Recessive",1,KRYS,희귀 유전,auto-mesh,C16.131.831.493.160 C16.320.850.275.160 C17.300.200.367 C17.800.804.493.160 C17.800.827.275.160 C17.800.865.410.160,MeSH 트리 C16.131.831.493.160 C16.320.850.275.160 C17.300.200.367,,채택
+Epidermolysis Bullosa Dystrophica Dominans,1,KRYS,피부,auto-stem,,어간 'Epidermolys',,희귀 유전
+Advanced Gastrointestinal Stromal Tumors,1,COGT,암,auto-stem,,어간 'Tumor',,채택
+"Advanced Solid Tumors, Adult",1,COGT,암,auto-stem,,어간 'Tumor',,채택
+HR Positive/HER-2 Negative Breast Cancer,1,COGT,암,auto-stem,,어간 'Cancer',,채택
+HER2-low Breast Cancer,1,COGT,암,auto-stem,,어간 'Cancer',,채택
+Refractory Hematologic Cancer,1,EXEL,암,auto-stem,,어간 'Cancer',,채택
+Subacute Cutaneous Lupus Erythematosus,1,IMVT,면역·염증,auto-stem,,어간 'Lupus',,채택
+Chronic Cutaneous Lupus Erythematosus,1,IMVT,면역·염증,auto-stem,,어간 'Lupus',,채택
+"Lupus Erythematosus, Discoid",1,IMVT,면역·염증,auto-mesh,C17.300.475.479 C17.800.480.479,MeSH 트리 C17.300.475.479 C17.800.480.479,,채택
+"Lupus Erythematosus, Cutaneous",1,IMVT,면역·염증,auto-mesh,C17.300.475 C17.800.480,MeSH 트리 C17.300.475 C17.800.480,,채택
+Huerthle Cell Thyroid Cancer,1,EXEL,암,auto-stem,,어간 'Cancer',,채택
+Follicular Thyroid Cancer,1,EXEL,암,auto-stem,,어간 'Cancer',,채택
+Pulmonary Cancer,1,AGEN,암,auto-mesh,C04.588.894.797.520 C08.381.540 C08.785.520,MeSH 트리 C04.588.894.797.520 C08.381.540 C08.785.520,,채택
+Non-Small-Cell Lung Carcinoma,1,AGEN,암,auto-mesh,C04.588.894.797.520.109.220.249 C08.381.540.140.500 C08.785.520.100.220.500,MeSH 트리 C04.588.894.797.520.109.220.249 C08.381.540.140.500 C08.785.520.100.220.500,,채택
+Respiratory Papillomatosis,1,INO,호흡기,auto-stem,,어간 'Respirat',,감염
+HRAS Mutations or Peripheral T Cell Lymphoma (PTCL),1,KURA,암,auto-stem,,어간 'Lymphom',,채택
+Persistent Cervical Cancer,1,EXEL,암,auto-stem,,어간 'Cancer',,채택
+Recurrent Cervical Cancer,1,EXEL,암,auto-stem,,어간 'Cancer',,채택
+MuSK Myasthenia Gravis,1,CABA,암,auto-mesh,C04.588.614.550.500 C04.730.856.490 C10.114.656 C10.574.781.588 C10.668.758.725 C20.111.258.500,MeSH 트리 C04.588.614.550.500 C04.730.856.490 C10.114.656,,신경·정신
+Muscle Weakness,1,CABA,근골격,auto-mesh,C05.651.515 C10.597.613.593 C23.550.695 C23.888.592.608.593,MeSH 트리 C05.651.515 C10.597.613.593 C23.550.695,,무시
+Squamous Cell Carcinoma of Head and Neck (SCCHN),1,BCAX,암,auto-mesh,C04.557.470.200.400.565 C04.588.443.177,MeSH 트리 C04.557.470.200.400.565 C04.588.443.177,,채택
+"Acute Myeloid Leukemia, With KMT2A Rearrangements",1,KURA,암,auto-stem,,어간 'Leukemi',,채택
+"Acute Myeloid Leukemia, With NPM1 Mutations",1,KURA,암,auto-stem,,어간 'Leukemi',,채택
+"Acute Lymphoblastic Leukemia, With KMT2A Rearrangements",1,KURA,암,auto-stem,,어간 'Leukemi',,채택
+Pericarditis Acute,1,KNSA,심혈관,auto-stem,,어간 'cardi',,채택
+"Glioblastoma, Isocitric Dehydrogenase (IDH)-Wildtype",1,AGEN,암,auto-stem,,어간 'Glioblastom',,채택
+Non-Small-Cell Lung Cancer,1,AVBP,암,auto-stem,,어간 'Cancer',,채택
+Advanced Non-Small-Cell Lung Cancer,1,AVBP,암,auto-stem,,어간 'Cancer',,채택
+Metastatic Non-Small-Cell Lung Cancer,1,AVBP,암,auto-stem,,어간 'Metasta',,채택
+Solid Carcinoma,1,ALXO,암,auto-stem,,어간 'Carcinom',,채택
+HER2 Low Breast Cancer,1,ALXO,암,auto-stem,,어간 'Cancer',,채택
+PR-positive Breast Cancer,1,ALXO,암,auto-stem,,어간 'Cancer',,채택
+Minimal Residual Disease,1,ALXO,암,auto-mesh,C04.697.700 C23.550.727.700,MeSH 트리 C04.697.700 C23.550.727.700,,채택
+Hormone Receptor Negative Breast Carcinoma,1,ALXO,암,auto-stem,,어간 'Carcinom',,채택
+Adenocarcinoma of Colon,1,ALXO,암,auto-stem,,어간 'carcinom',,채택
+HER2-negative Breast Cancer,1,ALXO,암,auto-stem,,어간 'Cancer',,채택
+HER2 Low Breast Carcinoma,1,ALXO,암,auto-stem,,어간 'Carcinom',,채택
+HER2 Mutation-Related Tumors,1,ALXO,암,auto-stem,,어간 'Tumor',,채택
+Metastatic,1,ALXO,암,auto-stem,Y05.020.010,어간 'Metasta',,채택
+ER Positive Breast Cancer,1,ALXO,암,auto-stem,,어간 'Cancer',,채택
+"Neoplasm, Residual",1,ALXO,암,auto-mesh,C04.697.700 C23.550.727.700,MeSH 트리 C04.697.700 C23.550.727.700,,채택
+Estrogen Receptor Positive Tumor,1,ALXO,암,auto-stem,,어간 'Tumor',,채택
+Progesterone Receptor-positive Breast Cancer,1,ALXO,암,auto-stem,,어간 'Cancer',,채택
+Glioblastoma (GBM),1,BDTX,암,auto-mesh,C04.557.465.625.600.380.080.335 C04.557.470.670.380.080.335 C04.557.580.625.600.380.080.335,MeSH 트리 C04.557.465.625.600.380.080.335 C04.557.470.670.380.080.335 C04.557.580.625.600.380.080.335,,채택
+Brain Cancer,1,BDTX,암,auto-mesh,C04.588.614.250.195 C10.228.140.211 C10.551.240.250,MeSH 트리 C04.588.614.250.195 C10.228.140.211 C10.551.240.250,,채택
+Glioblastoma Multiforme (GBM),1,BDTX,암,auto-mesh,C04.557.465.625.600.380.080.335 C04.557.470.670.380.080.335 C04.557.580.625.600.380.080.335,MeSH 트리 C04.557.465.625.600.380.080.335 C04.557.470.670.380.080.335 C04.557.580.625.600.380.080.335,,채택
+CRC (Colorectal Cancer),1,ALXO,암,auto-stem,,어간 'Cancer',,채택
+Esophageal Squamous Cell Carcinoma (ESCC),1,ALXO,암,auto-mesh,C04.557.470.200.400.330 C04.557.470.700.400.565 C04.588.274.476.205.500 C04.588.443.353.500 C06.301.371.205.500 C06.405.117.430.500 C06.405.249.205.500,MeSH 트리 C04.557.470.200.400.330 C04.557.470.700.400.565 C04.588.274.476.205.500,,채택
+NSCLC (Advanced Non-small Cell Lung Cancer),1,ALXO,암,auto-stem,,어간 'NSCLC',,채택
+"Adenoma, Islet Cell",1,EXEL,암,auto-mesh,C04.557.470.035.100 C04.588.274.761.249 C04.588.322.475.249 C06.301.761.249 C06.689.667.249 C19.344.421.249,MeSH 트리 C04.557.470.035.100 C04.588.274.761.249 C04.588.322.475.249,,채택
+Pancreatic Neuroendocrine Tumor (pNET),1,EXEL,암,auto-stem,,어간 'Tumor',,채택
+Extra-Pancreatic Neuroendocrine Tumor (epNET),1,EXEL,암,auto-stem,,어간 'Tumor',,채택
+Yellow Fever,1,BCRX,감염,auto-mesh,C01.920.852.875 C01.925.081.980 C01.925.782.350.250.980 C01.925.782.417.881,MeSH 트리 C01.920.852.875 C01.925.081.980 C01.925.782.350.250.980,,채택
+Relapsed or Refractory Large B-cell Lymphoma,1,ADCT,암,auto-stem,,어간 'Lymphom',,채택
+Squamous Non-Small Cell Lung Cancer (NSCLC),1,EXEL,암,auto-stem,,어간 'Cancer',,채택
+Systemic Anaplastic Large Cell Lymphoma,1,CRVS,암,auto-stem,,어간 'Lymphom',,채택
+Follicular T-Cell Lymphoma,1,CRVS,암,auto-stem,,어간 'Lymphom',,채택
+Nodal Peripheral T-Cell Lymphoma With TFH Phenotype,1,CRVS,암,auto-stem,,어간 'Lymphom',,채택
+Immunosuppression After Kidney Transplantation,1,ELDN,신장,auto-stem,,어간 'Kidney',,채택
+Kidney Failure,1,ELDN,신장,auto-mesh,C12.050.351.968.419.780 C12.200.777.419.780 C12.950.419.780,MeSH 트리 C12.050.351.968.419.780 C12.200.777.419.780 C12.950.419.780,,채택
+Transplant Recipient (Kidney),1,ELDN,신장,auto-stem,M01.925,어간 'Kidney',,채택
+Cervical Carcinoma,1,IOVA,암,auto-stem,,어간 'Carcinom',,채택
+"Breast Cancer, Metastatic",1,ALXO,암,auto-stem,,어간 'Cancer',,채택
+Steinert Disease,1,DYN,희귀 유전,auto-mesh,C05.651.534.500.500 C05.651.662.750 C10.574.500.547 C10.668.491.175.500.500 C10.668.491.606.750 C16.320.400.542 C16.320.577.500,MeSH 트리 C05.651.534.500.500 C05.651.662.750 C10.574.500.547,,채택
+Bone Sarcomas,1,EXEL,암,auto-stem,,어간 'Sarcom',,채택
+SARS-CoV2,1,ABCL,감염,auto-stem,,어간 'SARS-CoV',,채택
+Lower Esophageal Cancer,1,EXEL,암,auto-stem,,어간 'Cancer',,채택
+Stomach Cancer,1,IMNM,암,auto-mesh,C04.588.274.476.767 C06.301.371.767 C06.405.249.767 C06.405.748.789,MeSH 트리 C04.588.274.476.767 C06.301.371.767 C06.405.249.767,,채택
+Inflammatory Bowel Disease (IBD),1,IRON,면역·염증,auto-stem,,어간 'Inflammat',,소화기
+Inflammatory Bowel Disease (IBD); Anemia,1,IRON,혈액,auto-stem,,어간 'Anemi',,무시
+Post-essential Thrombocythemia Myelofibrosis,1,IRON,암,auto-stem,,어간 'Myelofibros',,채택
+Myelofibrosis; Anemia,1,IRON,암,auto-stem,,어간 'Myelofibros',,채택
+Myelofibrosis Due to and Following Polycythemia Vera,1,IRON,암,auto-stem,,어간 'Myelofibros',,채택
+Non-muscle Invasive Bladder Cancer With Carcinoma in Situ,1,ENGN,암,auto-stem,,어간 'Cancer',,채택
+Carcinoma in Situ,1,ENGN,암,auto-mesh,C04.557.470.200.240,MeSH 트리 C04.557.470.200.240,,채택
+Superficial Bladder Cancer,1,ENGN,암,auto-stem,,어간 'Cancer',,채택
+Non-muscle Invasive Bladder Cancer,1,ENGN,암,auto-mesh,C04.557.470.200.674 C04.588.945.947.960.500 C12.050.351.937.820.945.500 C12.050.351.968.829.707.500 C12.200.758.820.968.500 C12.200.777.829.813.500 C12.900.820.945.500 C12.950.829.707.500 C12.950.983.945.500,MeSH 트리 C04.557.470.200.674 C04.588.945.947.960.500 C12.050.351.937.820.945.500,,채택
+Non-Muscle Invasive Bladder Neoplasms,1,ENGN,암,auto-mesh,C04.557.470.200.674 C04.588.945.947.960.500 C12.050.351.937.820.945.500 C12.050.351.968.829.707.500 C12.200.758.820.968.500 C12.200.777.829.813.500 C12.900.820.945.500 C12.950.829.707.500 C12.950.983.945.500,MeSH 트리 C04.557.470.200.674 C04.588.945.947.960.500 C12.050.351.937.820.945.500,,채택
+"Lymphoma, Non-Hodgkin's",1,CCCC,암,auto-stem,,어간 'Lymphom',,채택
+Severe Acute Respiratory Syndrome Coronavirus 2 (SARS-CoV-2),1,INO,감염,auto-mesh,B04.820.578.500.540.150.113.937.500,MeSH 트리 B04.820.578.500.540.150.113.937.500,,채택
+COVID-19 Disease,1,INO,감염,auto-stem,,어간 'COVID',,채택
+Hematological Malignancy,1,FATE,암,auto-stem,,어간 'Malignan',,채택
+Type 1 Diabetes,1,IMCR,비만·대사,auto-mesh,C18.452.394.750.124 C19.246.267 C20.111.327,MeSH 트리 C18.452.394.750.124 C19.246.267 C20.111.327,,채택
+Diabetes Type 1,1,IMCR,비만·대사,auto-stem,,어간 'Diabet',,채택
+Type 1 Diabetes (T1D),1,IMCR,비만·대사,auto-mesh,C18.452.394.750.124 C19.246.267 C20.111.327,MeSH 트리 C18.452.394.750.124 C19.246.267 C20.111.327,,채택
+Relapsed or Refractory B Cell Non-Hodgkin Lymphoma,1,AUTL,암,auto-stem,,어간 'Lymphom',,채택
+"Muscular Dystrophies (Duchenne, Becker, Myotonic Dystrophy)",1,DYN,희귀 유전,auto-mesh,C05.651.534.500 C10.668.491.175.500 C16.320.577,MeSH 트리 C05.651.534.500 C10.668.491.175.500 C16.320.577,,채택
+Neuromuscular Diseases (NMD),1,DYN,신경·정신,auto-mesh,C10.668,MeSH 트리 C10.668,,채택
+"Muscular Dystrophy, Duchenne Type",1,DYN,희귀 유전,auto-mesh,C05.651.534.500.300 C10.668.491.175.500.300 C16.320.322.562 C16.320.577.300,MeSH 트리 C05.651.534.500.300 C10.668.491.175.500.300 C16.320.322.562,,채택
+"Muscular Dystrophy, Duchenne and Becker Types",1,DYN,희귀 유전,auto-mesh,C05.651.534.500.300 C10.668.491.175.500.300 C16.320.322.562 C16.320.577.300,MeSH 트리 C05.651.534.500.300 C10.668.491.175.500.300 C16.320.322.562,,채택
+Muscular Dystrophy (DMD),1,DYN,희귀 유전,auto-mesh,C05.651.534.500 C10.668.491.175.500 C16.320.577,MeSH 트리 C05.651.534.500 C10.668.491.175.500 C16.320.577,,채택
+"Congenital, Hereditary, and Neonatal Diseases and Abnormalities",1,DYN,희귀 유전,auto-mesh,C16,MeSH 트리 C16,,무시
+"Genetic Diseases, X-Linked",1,DYN,희귀 유전,auto-mesh,C16.320.322,MeSH 트리 C16.320.322,,무시
+"Hereditary Angioedema, HAE",1,BCRX,희귀 유전,auto-stem,,어간 'HAE',,채택
+Ocular Melanoma,1,IOVA,암,auto-mesh,C04.557.465.625.650.510.762 C04.557.580.625.650.510.762 C04.557.665.510.762 C04.588.364.978.312 C11.319.494.299 C11.941.855.299,MeSH 트리 C04.557.465.625.650.510.762 C04.557.580.625.650.510.762 C04.557.665.510.762,,채택
+Microsatellite Stable Metastatic Colorectal Cancer,1,ALXO,암,auto-stem,,어간 'Metasta',,채택
+"Muscular Dystrophy, Becker",1,EWTX,희귀 유전,auto-mesh,C05.651.534.500.300 C10.668.491.175.500.300 C16.320.322.562 C16.320.577.300,MeSH 트리 C05.651.534.500.300 C10.668.491.175.500.300 C16.320.322.562,,채택
+"Uveal Melanoma, Metastatic",1,IMCR,암,auto-stem,,어간 'Melanom',,채택
+Cytokine Release Syndrome,1,IMCR,면역·염증,auto-mesh,C23.550.470.790.250 C23.550.835.900.356,MeSH 트리 C23.550.470.790.250 C23.550.835.900.356,,채택
+Sarcomas,1,EXEL,암,auto-stem,,어간 'Sarcom',,채택
+Metastatic Endometrial Cancer,1,AVBP,암,auto-stem,,어간 'Metasta',,채택
+Platinum-resistant Ovarian Cancer (PROC),1,AVBP,암,auto-stem,,어간 'Cancer',,채택
+Metastatic Ovarian Cancer,1,AVBP,암,auto-stem,,어간 'Metasta',,채택
+Stage III Thyroid Gland Follicular Carcinoma,1,EXEL,암,auto-stem,,어간 'Carcinom',,채택
+Stage I Thyroid Gland Papillary Carcinoma,1,EXEL,암,auto-stem,,어간 'Carcinom',,채택
+Stage IVC Thyroid Gland Follicular Carcinoma,1,EXEL,암,auto-stem,,어간 'Carcinom',,채택
+Stage IVB Thyroid Gland Follicular Carcinoma,1,EXEL,암,auto-stem,,어간 'Carcinom',,채택
+"Thyroid cancer, Hurthle cell",1,EXEL,암,auto-stem,,어간 'cancer',,채택
+Stage I Thyroid Gland Follicular Carcinoma,1,EXEL,암,auto-stem,,어간 'Carcinom',,채택
+Thyroid Gland Oncocytic Follicular Carcinoma,1,EXEL,암,auto-stem,,어간 'Carcinom',,채택
+Tall Cell Variant Thyroid Gland Papillary Carcinoma,1,EXEL,암,auto-stem,,어간 'Carcinom',,채택
+Recurrent Thyroid Gland Carcinoma,1,EXEL,암,auto-stem,,어간 'Carcinom',,채택
+Stage IVA Thyroid Gland Papillary Carcinoma,1,EXEL,암,auto-stem,,어간 'Carcinom',,채택
+Stage IVB Thyroid Gland Papillary Carcinoma,1,EXEL,암,auto-stem,,어간 'Carcinom',,채택
+Stage IVA Thyroid Gland Follicular Carcinoma,1,EXEL,암,auto-stem,,어간 'Carcinom',,채택
+Stage II Thyroid Gland Follicular Carcinoma,1,EXEL,암,auto-stem,,어간 'Carcinom',,채택
+Stage II Thyroid Gland Papillary Carcinoma,1,EXEL,암,auto-stem,,어간 'Carcinom',,채택
+Stage III Thyroid Gland Papillary Carcinoma,1,EXEL,암,auto-stem,,어간 'Carcinom',,채택
+Stage IVC Thyroid Gland Papillary Carcinoma,1,EXEL,암,auto-stem,,어간 'Carcinom',,채택
+"Advanced Cancer, Various, NOS",1,EXEL,암,auto-stem,,어간 'Cancer',,채택
+Immune Thrombocytopenia (ITP),1,CLYM,혈액,auto-mesh,C15.378.100.802.687.600 C15.378.140.855.925.750.600 C15.378.243.937.925.750.600 C15.378.463.740 C20.111.759 C20.841.600 C23.550.414.950.687.600 C23.888.885.687.687.600,MeSH 트리 C15.378.100.802.687.600 C15.378.140.855.925.750.600 C15.378.243.937.925.750.600,,채택
+Inherited Retinal Dystrophies,1,EDIT,안과,auto-stem,,어간 'Retin',,희귀 유전
+CD19 Expressing Malignancies,1,DTIL,암,auto-stem,,어간 'Malignan',,채택
+Leukaemia (Chronic),1,INO,암,auto-stem,,어간 'Leukaemi',,채택
+Leukaemia (Acute Promyelocytic),1,INO,암,auto-stem,,어간 'Leukaemi',,채택
+Leukaemia (Acute Myeloid),1,INO,암,auto-stem,,어간 'Leukaemi',,채택
+Leukaemia (Acute Lymphoblastic),1,INO,암,auto-stem,,어간 'Leukaemi',,채택
+Leukaemia (Acute),1,INO,암,auto-stem,,어간 'Leukaemi',,채택
+Solid Tumor Malignancies,1,GERN,암,auto-stem,,어간 'Tumor',,채택
+Acute Myelogenous Leukemia,1,FATE,암,auto-mesh,C04.557.337.539.275 C15.378.508.539.275,MeSH 트리 C04.557.337.539.275 C15.378.508.539.275,,채택
+B-cell Lymphoma,1,FATE,암,auto-mesh,C04.557.386.480.150 C15.604.515.569.480.150 C20.683.515.761.480.150,MeSH 트리 C04.557.386.480.150 C15.604.515.569.480.150 C20.683.515.761.480.150,,채택
+Psychoses,1,ACAD,신경·정신,auto-mesh,F03.700.675,MeSH 트리 F03.700.675,,채택

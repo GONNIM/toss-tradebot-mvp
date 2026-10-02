@@ -78,7 +78,7 @@ APEWISDOM = "https://apewisdom.io/api/v1.0/filter/all-stocks/page/{page}"
 #   2026-09-22~10-02: 곳마다 1회씩 4회 요청 → 첫 곳만 200 · 나머지 3곳 매일 429 (x-ratelimit-remaining 0)
 REDDIT_UA = "TossTradebot BiotechRadar/1.0 (contact: suauncle@gmail.com)"
 REDDIT_HEADERS = {"User-Agent": REDDIT_UA, "Accept": "application/atom+xml"}
-REDDIT_RETRY_WAIT = 60      # 429 이면 60초 뒤 1회 재시도
+REDDIT_RETRY_WAIT = 60      # WP99 · 쓰지 않음 (재시도 없앰 · 429 뒤 재시도가 403 을 불렀음) · 하위 호환 상수
 REDDIT_MIN_GAP = 2.0        # 요청 사이 최소 간격 (초)
 REDDIT_FALLBACK_SUB = "biotechplays"
 REDDIT_SUBS = ["biotechplays", "pennystocks", "wallstreetbets", "stocks"]
@@ -158,54 +158,74 @@ def parse_reddit_atom(text: str) -> list[dict]:
     return out
 
 
-def fetch_reddit(get: Callable[[str], Any], sleep: Callable[[float], None] = time.sleep) -> tuple[list[dict], dict]:
-    """WP98-3 · 4곳 묶음 RSS 1회 + biotechplays 단독 1회 (하루 2회) · 각각 429 면 60초 뒤 1회 재시도 · 403 은 즉시 중단.
+def combined_file(day: str) -> Path:
+    """06:30 예약 (--step=reddit-combined) 이 남기는 묶음 RSS 결과 · <RUNTIME>/reddit_combined_<날짜>.json."""
+    base = RUNTIME_DIR if RUNTIME_DIR else (DATA_DIR / "biotech")
+    return base / f"reddit_combined_{day}.json"
 
-    묶음은 글이 많은 곳 (wallstreetbets 등) 이 최근 100개를 채워 biotechplays 가 빠짐 (2026-10-02 서버 시험 0개) → 단독으로 보충.
-    두 결과를 합치고 글 ID 로 중복 제거 · "4곳 중 N곳" = 성공한 요청이 덮는 곳의 합집합.
-    """
+
+def _reddit_urls() -> tuple[str, str]:
     combined = f"https://www.reddit.com/r/{'+'.join(REDDIT_SUBS)}/new/.rss?limit=100"
     single = f"https://www.reddit.com/r/{REDDIT_FALLBACK_SUB}/new/.rss?limit=100"
+    return combined, single
+
+
+def _get_once(get: Callable[[str], Any], kind: str, url: str, attempts: list[dict]) -> list[dict] | None:
+    """요청 1회 · 재시도 없음 (WP99 · 429 뒤 재시도가 403 을 불렀음) · 200 이면 글 목록 · 아니면 None."""
+    try:
+        r = get(url)
+    except Exception as e:  # noqa: BLE001
+        attempts.append({"kind": kind, "http": f"err_{e.__class__.__name__}"})
+        return None
+    attempts.append({"kind": kind, "http": r.status_code})
+    if r.status_code != 200:
+        return None
+    try:
+        return parse_reddit_atom(r.text)
+    except ET.ParseError:
+        attempts[-1]["http"] = "parse_fail"
+        return None
+
+
+def fetch_reddit_combined_only(get: Callable[[str], Any]) -> dict:
+    """06:30 예약 단계 · 묶음 RSS 1회 · 재시도 없음 · 결과 (상태 + 글) 를 돌려줌 (저장은 호출부)."""
+    attempts: list[dict] = []
+    posts = _get_once(get, "combined", _reddit_urls()[0], attempts)
+    return {"attempts": attempts, "ok": posts is not None, "posts": posts or []}
+
+
+def fetch_reddit(get: Callable[[str], Any], sleep: Callable[[float], None] = time.sleep,
+                 combined_path: Path | None = None) -> tuple[list[dict], dict]:
+    """WP99 · 07:00 · biotechplays 단독 1회를 먼저 → 묶음은 06:30 파일을 읽음 (없으면 묶음 1회) · 재시도 없음 · 403 이면 그 뒤 요청 안 함.
+
+    서버 IP 에서는 짧은 시간에 레딧 요청 1회만 통과 (2026-10-02: 묶음 200 → 단독 429 → 60초 뒤 403) →
+    두 요청을 06:30 (묶음) · 07:00 (단독) 으로 나눔. 두 결과를 합치고 글 ID 로 중복 제거 ·
+    "4곳 중 N곳" = 성공한 쪽이 덮는 곳의 합집합.
+    """
+    combined, single = _reddit_urls()
     attempts: list[dict] = []
     covered: set[str] = set()
     merged: dict[str, dict] = {}
-    stop = False
 
-    def _one(kind: str, url: str, subs: list[str]) -> None:
-        nonlocal stop
-        r = None
-        for k in (kind, f"{kind}_retry"):
-            try:
-                r = get(url)
-                attempts.append({"kind": k, "http": r.status_code})
-            except Exception as e:  # noqa: BLE001
-                attempts.append({"kind": k, "http": f"err_{e.__class__.__name__}"})
-                r = None
-                break
-            if r.status_code == 429 and k == kind:
-                sleep(REDDIT_RETRY_WAIT)
-                continue
-            break
-        if r is None:
-            return
-        if r.status_code == 403:
-            stop = True
-            return
-        if r.status_code != 200:
-            return
-        try:
-            posts = parse_reddit_atom(r.text)
-        except ET.ParseError:
-            attempts[-1]["http"] = "parse_fail"
-            return
+    def _add(posts: list[dict], subs: list[str]) -> None:
         covered.update(subs)
         for p in posts:
             merged.setdefault(p.get("id") or p.get("link") or p["title"], p)
 
-    _one("combined", combined, list(REDDIT_SUBS))
-    if not stop:
+    got = _get_once(get, "single", single, attempts)
+    if got is not None:
+        _add(got, [REDDIT_FALLBACK_SUB])
+    blocked = attempts[-1]["http"] == 403
+    if combined_path is not None and combined_path.exists():
+        saved = json.loads(combined_path.read_text())
+        attempts.append({"kind": "combined_file", "http": (saved.get("attempts") or [{}])[-1].get("http")})
+        if saved.get("ok"):
+            _add(saved.get("posts", []), list(REDDIT_SUBS))
+    elif not blocked:
         sleep(REDDIT_MIN_GAP)
-        _one("single", single, [REDDIT_FALLBACK_SUB])
+        got = _get_once(get, "combined", combined, attempts)
+        if got is not None:
+            _add(got, list(REDDIT_SUBS))
     posts = list(merged.values())
     per_sub: dict[str, int] = {}
     for p in posts:
@@ -311,11 +331,30 @@ def _notify_reddit_blocked(day: str, status: dict) -> None:
 
 
 def reddit_probe() -> dict:
-    """WP98-2 · 시험 모드 · 요청만 보내고 결과 출력 · 파일 쓰기 없음."""
+    """시험 모드 · 07:00 과 같은 순서 (단독 먼저 · 오늘 묶음 파일 읽기 · 없으면 묶음 1회) · 파일 쓰기 없음."""
+    from backend.scripts import _biotech_paths as _Pp
     with httpx.Client(headers=REDDIT_HEADERS, timeout=15.0) as rclient:
-        _posts, status = fetch_reddit(rclient.get)
+        _posts, status = fetch_reddit(rclient.get, combined_path=combined_file(_Pp.today_kst_str()))
     print(json.dumps(status, ensure_ascii=False))
     return status
+
+
+def reddit_combined_step() -> dict:
+    """WP99 · 06:30 예약 · 묶음 RSS 1회 · 재시도 없음 · <RUNTIME>/reddit_combined_<날짜>.json 에만 저장."""
+    from backend.scripts import _biotech_paths as _Pp
+    day = _Pp.today_kst_str()
+    with httpx.Client(headers=REDDIT_HEADERS, timeout=15.0) as rclient:
+        res = fetch_reddit_combined_only(rclient.get)
+    p = combined_file(day)
+    p.parent.mkdir(parents=True, exist_ok=True)
+    p.write_text(json.dumps({"date": day, **res}, ensure_ascii=False))
+    per_sub: dict[str, int] = {}
+    for x in res["posts"]:
+        per_sub[x["sub"]] = per_sub.get(x["sub"], 0) + 1
+    out = {"file": str(p), "attempts": res["attempts"], "ok": res["ok"], "posts": len(res["posts"]), "per_sub": per_sub}
+    LOG.info("reddit 묶음 (06:30) · %s", json.dumps(out, ensure_ascii=False))
+    print(json.dumps(out, ensure_ascii=False))
+    return out
 
 
 def main():
@@ -324,6 +363,9 @@ def main():
     import sys as _sys
     if "--reddit-probe" in _sys.argv:
         reddit_probe()
+        return
+    if "--reddit-combined" in _sys.argv:
+        reddit_combined_step()
         return
     sha = git_sha()
 
@@ -343,7 +385,7 @@ def main():
 
         # WP98-2 · 레딧 묶음 RSS (레딧 전용 클라이언트 · SEC 헤더 아님)
         with httpx.Client(headers=REDDIT_HEADERS, timeout=15.0) as rclient:
-            reddit_posts, reddit_status = fetch_reddit(rclient.get)
+            reddit_posts, reddit_status = fetch_reddit(rclient.get, combined_path=combined_file(today_str))
         for p in reddit_posts:
             p["title_upper"] = (p["title"] or "").upper()
         reddit_errors = {a["kind"]: a["http"] for a in reddit_status["attempts"] if a["http"] != 200}
