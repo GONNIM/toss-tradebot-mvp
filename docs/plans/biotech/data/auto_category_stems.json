@@ -1,13 +1,13 @@
 {
   "spec": "질환명 키워드 어간 (자동 분류 3순위 · 수동 사전 > MeSH 트리 > 어간 > 기타)",
-  "version": "v2 · 2026-09-30 · 약어 42 (검수 등재) · 어간 AML·CLL·MDS 3건 약어로 이동",
+  "version": "v3 · 2026-10-02 (WP99) · 어간은 단어 시작에서만 일치 (코드) · 비만·대사에 steatohepatitis 명시 (NASH · MASH · steatohepat 는 v2 부터 있음) · v2 · 2026-09-30 · 약어 42 (검수 등재) · 어간 AML·CLL·MDS 3건 약어로 이동",
   "source": "docs/plans/biotech/verification/dictionaries/auto_category_design.md 6절",
   "order_rule": "암 어간 → 건강인·약동학 어간 → 약어 → 나머지 어간 (rest_order 순) · 코드가 강제 (backend/scripts/biotech_auto_category.py load_stems)",
   "stems": {
     "암": "cancer|carcinom|tumou?r|neoplas|malignan|lymphom|leukemi|leukaemi|myelom|sarcom|melanom|gliom|glioblastom|blastoma|metasta|oncolog|dysplasi|myelodysplas|myelofibros|nsclc|sclc|\\bhcc\\b",
     "건강인·약동학": "healthy|volunteer|pharmacokinetic|bioavailab|bioequival|drug[- ]drug|drug interaction|food effect|hepatic impairment|renal impairment|\\bpk\\b|\\bddi\\b",
     "감염": "infect|viral|virus|\\bhiv\\b|hepatitis|covid|sars-cov|influenza|bacteri|fungal|tubercul|sepsis|pneumoni|\\brsv\\b|\\bcmv\\b|herpes",
-    "비만·대사": "obes|overweight|diabet|metabolic|dyslipid|cholesterol|hyperlipid|\\bnash\\b|\\bmash\\b|fatty liver|steatohepat|weight|hypoglyc|thyroid|parathyroid|hyperuric",
+    "비만·대사": "obes|overweight|diabet|metabolic|dyslipid|cholesterol|hyperlipid|\\bnash\\b|\\bmash\\b|fatty liver|steatohepatitis|steatohepat|weight|hypoglyc|thyroid|parathyroid|hyperuric",
     "신경·정신": "alzheimer|parkinson|dementia|depress|schizo|epilep|seizure|multiple sclerosis|migraine|psych|autism|\\bals\\b|amyotrophic|neuropath|huntington|bipolar|anxiety|insomnia|narcolep|ataxia|agitation",
     "안과": "retin|macula|ocular|\\beye\\b|glaucom|uveit|cornea|vision|keratit|conjunctiv|blind",
     "청각·이비인후": "hearing|deaf|tinnitus|otitis|\\bear\\b|cochlea|sinusit|rhinit",

@@ -89,7 +89,7 @@ def _snap(*terms):
 
 
 def test_manual_dictionary_wins_and_is_never_auto_classified():
-    cache = {"Obesity": {"trees": ["C18.654.726.500"]}, "Weird Term": {"trees": ["C10.114"]}}
+    cache = {"Obesity": {"trees": ["C18.654.726.500"]}, "Weird Term": {"trees": ["C10.114.375.500"]}}
     auto, rows, _ = ac.build(_snap("Obesity", "Weird Term"), {"obesity"}, cache, ac.load_stems(), None, "20260930")
     assert "Obesity" not in auto and auto["Weird Term"]["category"] == "신경·정신"
 
@@ -131,7 +131,7 @@ def test_nlm_stops_on_429_and_uses_cache_without_requests():
         return _Resp(429)
 
     client = ac.NlmClient(get=get)
-    cache = {"Cached Term": {"trees": ["C04.1"]}}
+    cache = {"Cached Term": {"trees": ["C04.557.470.200"]}}
     auto, _, stats = ac.build(_snap("Cached Term", "New A", "New B"), set(), cache, [], client, "20260930")
     assert stats["nlm_blocked"] is True and len(calls) == 1          # 첫 429 에서 즉시 중단
     assert auto["Cached Term"]["category"] == "암"                    # 캐시 용어는 요청 없이 분류

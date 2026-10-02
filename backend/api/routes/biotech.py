@@ -468,6 +468,8 @@ def _trial_display(nct: str) -> dict[str, Any]:
             if (cats.get((t or "").strip().lower()) or {}).get("category") == IGNORE_CATEGORY:   # WP97-2 · '무시' 용어는 자동 분류에도 안 씀
                 continue
             hit = auto.get(t)
+            if hit and hit.get("category") == IGNORE_CATEGORY:   # WP99 · 자동 분류의 '무시' (얕은 트리 일반어) 도 화면에 쓰지 않음
+                continue
             if hit:
                 category, cat_src, category_auto = hit.get("category", ""), t, True
                 break
