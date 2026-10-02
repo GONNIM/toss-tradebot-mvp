@@ -58,6 +58,7 @@ case "${1:-}" in
       mcap)         $VENV -m backend.scripts.biotech_mcap_daily daily ;;
       status_gen)   $VENV -m backend.scripts.biotech_h57b_status_gen ;;
       reddit-probe) $VENV -m backend.scripts.biotech_h48v3_confirm --reddit-probe ;;
+      auto_category) $VENV -m backend.scripts.biotech_auto_category ;;   # WP98-3 · 기존 ctgov_snapshot.json 으로 자동 분류만 (AACT 다운로드 없음)
       *) echo "알 수 없는 단계: $STEP"; exit 2 ;;
     esac
     RC=$?

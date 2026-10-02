@@ -149,10 +149,14 @@ def run_13d(get: Callable[[str], Any] | None = None, today: date | None = None, 
             if r.status_code == 403:
                 raise SecBlockedError("403")
             return r
-    requests = headers = added = deferred = 0
+    requests = headers = added = deferred = deferred_registry = 0
     blocked = None
     try:
-        for reg in registry:
+        for i, reg in enumerate(registry):
+            if ledger.total() >= SEC_DAILY_CAP:   # WP98-3 · 등록부 조회도 하루 상한 안에서만 · 나머지는 미룸
+                deferred_registry = len(registry) - i
+                LOG.warning("13D 주간 · 하루 SEC 상한 %d 도달 · 등록부 %d곳 조회 미룸", SEC_DAILY_CAP, deferred_registry)
+                break
             requests += 1
             ledger.add("h3_events")
             r = get(f"https://data.sec.gov/submissions/CIK{reg['cik']}.json")
@@ -206,9 +210,10 @@ def run_13d(get: Callable[[str], Any] | None = None, today: date | None = None, 
     if blocked:
         LOG.error("13D 주간 · %s · 즉시 중단 · 받은 것까지 반영", blocked)
         (notify or _notify_warning)("biotech 13D 주간 단계 중단", f"{blocked} · 요청 {requests}")
-    LOG.info("13D 주간 · 활동가 %d · SEC 요청 %d (헤더 %d) · 새 13D/13G %d · 상한으로 미룸 %d · 전체 행 %d · %s",
-             len(registry), requests, headers, added, deferred, len(rows), out_p)
-    return {"requests": requests, "headers": headers, "added": added, "deferred": deferred, "rows": len(rows), "blocked": blocked}
+    LOG.info("13D 주간 · 활동가 %d · SEC 요청 %d (헤더 %d) · 새 13D/13G %d · 상한으로 미룸 헤더 %d · 등록부 %d · 전체 행 %d · %s",
+             len(registry), requests, headers, added, deferred, deferred_registry, len(rows), out_p)
+    return {"requests": requests, "headers": headers, "added": added, "deferred": deferred, "deferred_registry": deferred_registry,
+            "rows": len(rows), "blocked": blocked}
 
 
 # ── PubMed · Preprint (NLM esearch) ───────────────────────────────

@@ -150,7 +150,8 @@ def parse_reddit_atom(text: str) -> list[dict]:
     for e in root.findall("atom:entry", ns):
         cat = e.find("atom:category", ns)
         link_el = e.find("atom:link", ns)
-        out.append({"title": (e.findtext("atom:title", "", ns) or "").strip(),
+        out.append({"id": (e.findtext("atom:id", "", ns) or "").strip(),
+                    "title": (e.findtext("atom:title", "", ns) or "").strip(),
                     "link": link_el.get("href", "") if link_el is not None else "",
                     "updated": e.findtext("atom:updated", "", ns),
                     "sub": (cat.get("term", "") if cat is not None else "").lower()})
@@ -158,46 +159,59 @@ def parse_reddit_atom(text: str) -> list[dict]:
 
 
 def fetch_reddit(get: Callable[[str], Any], sleep: Callable[[float], None] = time.sleep) -> tuple[list[dict], dict]:
-    """4곳 묶음 RSS 1회 → 429 면 60초 뒤 1회 → 실패면 biotechplays 단독 1회 · 403 은 즉시 중단 (재시도·대체 없음).
+    """WP98-3 · 4곳 묶음 RSS 1회 + biotechplays 단독 1회 (하루 2회) · 각각 429 면 60초 뒤 1회 재시도 · 403 은 즉시 중단.
 
-    반환: (글 목록, 상태 {subs_total · subs_collected · mode · attempts · posts · per_sub})
+    묶음은 글이 많은 곳 (wallstreetbets 등) 이 최근 100개를 채워 biotechplays 가 빠짐 (2026-10-02 서버 시험 0개) → 단독으로 보충.
+    두 결과를 합치고 글 ID 로 중복 제거 · "4곳 중 N곳" = 성공한 요청이 덮는 곳의 합집합.
     """
     combined = f"https://www.reddit.com/r/{'+'.join(REDDIT_SUBS)}/new/.rss?limit=100"
     single = f"https://www.reddit.com/r/{REDDIT_FALLBACK_SUB}/new/.rss?limit=100"
     attempts: list[dict] = []
+    covered: set[str] = set()
+    merged: dict[str, dict] = {}
+    stop = False
 
-    def _try(kind: str, url: str):
+    def _one(kind: str, url: str, subs: list[str]) -> None:
+        nonlocal stop
+        r = None
+        for k in (kind, f"{kind}_retry"):
+            try:
+                r = get(url)
+                attempts.append({"kind": k, "http": r.status_code})
+            except Exception as e:  # noqa: BLE001
+                attempts.append({"kind": k, "http": f"err_{e.__class__.__name__}"})
+                r = None
+                break
+            if r.status_code == 429 and k == kind:
+                sleep(REDDIT_RETRY_WAIT)
+                continue
+            break
+        if r is None:
+            return
+        if r.status_code == 403:
+            stop = True
+            return
+        if r.status_code != 200:
+            return
         try:
-            r = get(url)
-        except Exception as e:  # noqa: BLE001
-            attempts.append({"kind": kind, "http": f"err_{e.__class__.__name__}"})
-            return None
-        attempts.append({"kind": kind, "http": r.status_code})
-        return r
-
-    posts: list[dict] = []
-    mode, collected = "none", 0
-    r = _try("combined", combined)
-    if r is not None and r.status_code == 429:
-        sleep(REDDIT_RETRY_WAIT)
-        r = _try("combined_retry", combined)
-    if r is not None and r.status_code == 200:
-        try:
-            posts, mode, collected = parse_reddit_atom(r.text), "combined", len(REDDIT_SUBS)
+            posts = parse_reddit_atom(r.text)
         except ET.ParseError:
             attempts[-1]["http"] = "parse_fail"
-    elif r is None or r.status_code != 403:
+            return
+        covered.update(subs)
+        for p in posts:
+            merged.setdefault(p.get("id") or p.get("link") or p["title"], p)
+
+    _one("combined", combined, list(REDDIT_SUBS))
+    if not stop:
         sleep(REDDIT_MIN_GAP)
-        r2 = _try("single", single)
-        if r2 is not None and r2.status_code == 200:
-            try:
-                posts, mode, collected = parse_reddit_atom(r2.text), "single", 1
-            except ET.ParseError:
-                attempts[-1]["http"] = "parse_fail"
+        _one("single", single, [REDDIT_FALLBACK_SUB])
+    posts = list(merged.values())
     per_sub: dict[str, int] = {}
     for p in posts:
         per_sub[p["sub"]] = per_sub.get(p["sub"], 0) + 1
-    return posts, {"subs_total": len(REDDIT_SUBS), "subs_collected": collected, "mode": mode,
+    mode = "+".join(a["kind"] for a in attempts if a["http"] == 200) or "none"
+    return posts, {"subs_total": len(REDDIT_SUBS), "subs_collected": len(covered), "mode": mode,
                    "attempts": attempts, "posts": len(posts), "per_sub": per_sub}
 
 
