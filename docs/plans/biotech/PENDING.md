@@ -34,6 +34,19 @@
 
 ## PENDING
 
+### [Biotech Catalyst Radar · WP98-2 즉시 · 레딧 묶음 RSS · 서버 단계 수동 실행 (서버 수동 실행 · 사용자 승인됨 · 병합 승인됨)] · 2026-10-02 발행
+
+- 규칙: 일일 파이프 전체 재실행 금지 · 단계별 옵션만 · 403·429 즉시 중단 · SEC 300 · Tiingo 시간당 50 · NLM 초당 3 · 보고는 번들 zip (경로 · SHA-256)
+- 0: daily_server.sh 단계 옵션 확인 · 없는 단계 (mcap · radar · status_gen · reddit-probe) `--step=<이름>` 추가 · 먼저 배포
+- 1: 레딧 4곳 묶음 RSS 1회 · 레딧 전용 UA · 429 → 60초 뒤 1회 재시도 · 실패 → biotechplays 단독 · 소문 카드 머리 "레딧 4곳 중 N곳 수집" · 전부 차단 시 텔레그램 1회 · 테스트 3건 · `--step=reddit-probe` (쓰기 없음 · 상태 코드 · 글 수 · 곳별 글 수) · 배포 뒤 서버 1회 실행 인용
+- 2: `--step=mcap` 서버 실행 · IEX 줄 · 백필 완료 · 주식수 자체 시작 · 월 고유 ≥154 · mcap_display.json 행 수 · 배지 스크린샷
+- 3: `--aact-weekly-only` 서버 실행 · 7개 항목 · 별칭 효과 (71→76) · SEC 명부 · 자동 분류 제안 CSV + 검수 요망 행 번들 (term · n_trials · example_ticker · auto_category · basis · tree_numbers · reason · reviewer_decision)
+- 4: `--radar-nlm-weekly-only` · `--radar-13d-weekly-only` 서버 실행 · 요청 수 · 양성 회사 · 등록부 55 · 새 신고 · 헤더 · 미룸 · 오늘 SEC 합계
+- 5: `--step=radar` · `--step=status_gen` · inputs_missing · radar_v3_full_start.json · 상위 30 변화 · 화면 머리 스크린샷 · 생기면 params · PENDING 에 "v3-전체 시작일 2026-10-02 (수동 실행)" 문서 PR · 3구간 복구일 2026-10-02
+- 6: 순서 0→5 · 한도 걸리면 그 단계 멈추고 다음 · 멈춘 사실 기록
+
+---
+
 ### [Biotech Catalyst Radar · WP98 레딧 429 조사·수정 · 주식수 자체 시작 · Tiingo 장부 통합 · 보고 번들 규칙] · 2026-10-02 발행
 
 - 0: 보고 번들 규칙 (영구 규칙)
