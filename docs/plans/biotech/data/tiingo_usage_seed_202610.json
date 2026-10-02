@@ -1,0 +1,622 @@
+{
+ "month": "202610",
+ "source": "로컬 장부 backend/data/biotech/tiingo_usage_202610.json 종목 목록 (2026-10-02 · 요청 시각·키 제외)",
+ "symbols": {
+  "AAPL": {
+   "first_use": "2026-10-01",
+   "by": "H6"
+  },
+  "AARD": {
+   "first_use": "2026-10-01",
+   "by": "H6"
+  },
+  "ABBV": {
+   "first_use": "2026-10-01",
+   "by": "H6"
+  },
+  "ABCL": {
+   "first_use": "2026-10-01",
+   "by": "WP75-IEX-test"
+  },
+  "ABOS": {
+   "first_use": "2026-10-01",
+   "by": "WP75-IEX-test"
+  },
+  "ABT": {
+   "first_use": "2026-10-01",
+   "by": "H6"
+  },
+  "ACAD": {
+   "first_use": "2026-10-01",
+   "by": "WP75-IEX-test"
+  },
+  "ACIU": {
+   "first_use": "2026-10-01",
+   "by": "H6"
+  },
+  "ACRS": {
+   "first_use": "2026-10-01",
+   "by": "H6"
+  },
+  "ADCT": {
+   "first_use": "2026-10-01",
+   "by": "WP75-IEX-test"
+  },
+  "AGEN": {
+   "first_use": "2026-10-01",
+   "by": "WP75-IEX-test"
+  },
+  "ALGS": {
+   "first_use": "2026-10-01",
+   "by": "WP75-IEX-test"
+  },
+  "ALNY": {
+   "first_use": "2026-10-01",
+   "by": "H6"
+  },
+  "ALT": {
+   "first_use": "2026-10-01",
+   "by": "H6"
+  },
+  "ALXO": {
+   "first_use": "2026-10-01",
+   "by": "WP75-IEX-test"
+  },
+  "AMGN": {
+   "first_use": "2026-10-01",
+   "by": "H6"
+  },
+  "AMLX": {
+   "first_use": "2026-10-01",
+   "by": "WP75-IEX-test"
+  },
+  "ANNX": {
+   "first_use": "2026-10-01",
+   "by": "WP75-IEX-test"
+  },
+  "ANRO": {
+   "first_use": "2026-10-01",
+   "by": "WP75-IEX-test"
+  },
+  "ANTX": {
+   "first_use": "2026-10-01",
+   "by": "WP75-IEX-test"
+  },
+  "APGE": {
+   "first_use": "2026-10-01",
+   "by": "WP75-IEX-test"
+  },
+  "APMD": {
+   "first_use": "2026-10-01",
+   "by": "H6"
+  },
+  "ARDX": {
+   "first_use": "2026-10-01",
+   "by": "WP75-IEX-test"
+  },
+  "ARTV": {
+   "first_use": "2026-10-01",
+   "by": "WP75-IEX-test"
+  },
+  "ARWR": {
+   "first_use": "2026-10-01",
+   "by": "H6"
+  },
+  "ASMB": {
+   "first_use": "2026-10-01",
+   "by": "WP75-IEX-test"
+  },
+  "ATRA": {
+   "first_use": "2026-10-01",
+   "by": "WP75-IEX-test"
+  },
+  "AUPH": {
+   "first_use": "2026-10-01",
+   "by": "WP75-IEX-test"
+  },
+  "AUTL": {
+   "first_use": "2026-10-01",
+   "by": "WP75-IEX-test"
+  },
+  "AVBP": {
+   "first_use": "2026-10-01",
+   "by": "WP75-IEX-test"
+  },
+  "AVIR": {
+   "first_use": "2026-10-01",
+   "by": "WP75-IEX-test"
+  },
+  "AVTX": {
+   "first_use": "2026-10-01",
+   "by": "WP75-IEX-test"
+  },
+  "AZN": {
+   "first_use": "2026-10-01",
+   "by": "H6"
+  },
+  "BAX": {
+   "first_use": "2026-10-01",
+   "by": "H6"
+  },
+  "BBIO": {
+   "first_use": "2026-10-01",
+   "by": "WP75-IEX-test"
+  },
+  "BCAX": {
+   "first_use": "2026-10-01",
+   "by": "WP75-IEX-test"
+  },
+  "BCRX": {
+   "first_use": "2026-10-01",
+   "by": "WP75-IEX-test"
+  },
+  "BDTX": {
+   "first_use": "2026-10-01",
+   "by": "WP75-IEX-test"
+  },
+  "BEAM": {
+   "first_use": "2026-10-01",
+   "by": "WP75-IEX-test"
+  },
+  "BIIB": {
+   "first_use": "2026-10-01",
+   "by": "H6"
+  },
+  "BIOA": {
+   "first_use": "2026-10-01",
+   "by": "WP75-IEX-test"
+  },
+  "BMEA": {
+   "first_use": "2026-10-01",
+   "by": "H6"
+  },
+  "BMRN": {
+   "first_use": "2026-10-01",
+   "by": "H6"
+  },
+  "BMY": {
+   "first_use": "2026-10-01",
+   "by": "H6"
+  },
+  "BODI": {
+   "first_use": "2026-10-01",
+   "by": "H6"
+  },
+  "BSX": {
+   "first_use": "2026-10-01",
+   "by": "H6"
+  },
+  "CABA": {
+   "first_use": "2026-10-01",
+   "by": "WP75-IEX-test"
+  },
+  "CALC": {
+   "first_use": "2026-10-01",
+   "by": "WP75-IEX-test"
+  },
+  "CANF": {
+   "first_use": "2026-10-01",
+   "by": "H6"
+  },
+  "CCCC": {
+   "first_use": "2026-10-01",
+   "by": "WP75-IEX-test"
+  },
+  "CGTX": {
+   "first_use": "2026-10-01",
+   "by": "H6"
+  },
+  "CLYM": {
+   "first_use": "2026-10-01",
+   "by": "WP75-IEX-test"
+  },
+  "CMPX": {
+   "first_use": "2026-10-01",
+   "by": "WP75-IEX-test"
+  },
+  "CNTB": {
+   "first_use": "2026-10-01",
+   "by": "WP75-IEX-test"
+  },
+  "COGT": {
+   "first_use": "2026-10-01",
+   "by": "WP75-IEX-test"
+  },
+  "CORT": {
+   "first_use": "2026-10-01",
+   "by": "H6"
+  },
+  "CRBP": {
+   "first_use": "2026-10-01",
+   "by": "WP75-IEX-test"
+  },
+  "CRBU": {
+   "first_use": "2026-10-01",
+   "by": "WP75-IEX-test"
+  },
+  "CRVO": {
+   "first_use": "2026-10-01",
+   "by": "WP75-IEX-test"
+  },
+  "CRVS": {
+   "first_use": "2026-10-01",
+   "by": "WP75-IEX-test"
+  },
+  "CTNM": {
+   "first_use": "2026-10-01",
+   "by": "WP75-IEX-test"
+  },
+  "CYPH": {
+   "first_use": "2026-10-01",
+   "by": "WP75-IEX-test"
+  },
+  "DNTH": {
+   "first_use": "2026-10-01",
+   "by": "WP75-IEX-test"
+  },
+  "DTIL": {
+   "first_use": "2026-10-01",
+   "by": "WP75-IEX-test"
+  },
+  "DYN": {
+   "first_use": "2026-10-01",
+   "by": "WP75-IEX-test"
+  },
+  "EDIT": {
+   "first_use": "2026-10-01",
+   "by": "WP75-IEX-test"
+  },
+  "ELDN": {
+   "first_use": "2026-10-01",
+   "by": "WP75-IEX-test"
+  },
+  "ELVN": {
+   "first_use": "2026-10-01",
+   "by": "WP75-IEX-test"
+  },
+  "ENGN": {
+   "first_use": "2026-10-01",
+   "by": "WP75-IEX-test"
+  },
+  "ENSC": {
+   "first_use": "2026-10-01",
+   "by": "WP75-IEX-test"
+  },
+  "ENTA": {
+   "first_use": "2026-10-01",
+   "by": "H6"
+  },
+  "ENTX": {
+   "first_use": "2026-10-01",
+   "by": "WP75-IEX-test"
+  },
+  "EOCN": {
+   "first_use": "2026-10-01",
+   "by": "H6"
+  },
+  "EWTX": {
+   "first_use": "2026-10-01",
+   "by": "WP75-IEX-test"
+  },
+  "EXEL": {
+   "first_use": "2026-10-01",
+   "by": "WP75-IEX-test"
+  },
+  "FATE": {
+   "first_use": "2026-10-01",
+   "by": "WP75-IEX-test"
+  },
+  "FBRX": {
+   "first_use": "2026-10-01",
+   "by": "WP75-IEX-test"
+  },
+  "FDMT": {
+   "first_use": "2026-10-01",
+   "by": "WP75-IEX-test"
+  },
+  "FTH": {
+   "first_use": "2026-10-01",
+   "by": "WP75-IEX-test"
+  },
+  "FULC": {
+   "first_use": "2026-10-01",
+   "by": "WP75-IEX-test"
+  },
+  "GALT": {
+   "first_use": "2026-10-01",
+   "by": "H6"
+  },
+  "GERN": {
+   "first_use": "2026-10-01",
+   "by": "WP75-IEX-test"
+  },
+  "GILD": {
+   "first_use": "2026-10-01",
+   "by": "H6"
+  },
+  "GLMD": {
+   "first_use": "2026-10-01",
+   "by": "H6"
+  },
+  "GPCR": {
+   "first_use": "2026-10-01",
+   "by": "WP75-IEX-test"
+  },
+  "GSK": {
+   "first_use": "2026-10-01",
+   "by": "H6"
+  },
+  "GUTS": {
+   "first_use": "2026-10-01",
+   "by": "H6"
+  },
+  "GYRE": {
+   "first_use": "2026-10-01",
+   "by": "WP75-IEX-test"
+  },
+  "HOWL": {
+   "first_use": "2026-10-01",
+   "by": "WP75-IEX-test"
+  },
+  "HUM": {
+   "first_use": "2026-10-01",
+   "by": "H6"
+  },
+  "IBIO": {
+   "first_use": "2026-10-01",
+   "by": "H6"
+  },
+  "IKT": {
+   "first_use": "2026-10-01",
+   "by": "WP75-IEX-test"
+  },
+  "IMCR": {
+   "first_use": "2026-10-01",
+   "by": "WP75-IEX-test"
+  },
+  "IMNM": {
+   "first_use": "2026-10-01",
+   "by": "WP75-IEX-test"
+  },
+  "IMRN": {
+   "first_use": "2026-10-01",
+   "by": "H6"
+  },
+  "IMUX": {
+   "first_use": "2026-10-01",
+   "by": "WP75-IEX-test"
+  },
+  "IMVT": {
+   "first_use": "2026-10-01",
+   "by": "WP75-IEX-test"
+  },
+  "INBX": {
+   "first_use": "2026-10-01",
+   "by": "WP75-IEX-test"
+  },
+  "INCY": {
+   "first_use": "2026-10-01",
+   "by": "H6"
+  },
+  "INGR": {
+   "first_use": "2026-10-01",
+   "by": "H6"
+  },
+  "INO": {
+   "first_use": "2026-10-01",
+   "by": "WP75-IEX-test"
+  },
+  "IONS": {
+   "first_use": "2026-10-01",
+   "by": "H6"
+  },
+  "IOVA": {
+   "first_use": "2026-10-01",
+   "by": "WP75-IEX-test"
+  },
+  "IRON": {
+   "first_use": "2026-10-01",
+   "by": "WP75-IEX-test"
+  },
+  "ISRG": {
+   "first_use": "2026-10-01",
+   "by": "H6"
+  },
+  "IVVD": {
+   "first_use": "2026-10-01",
+   "by": "WP75-IEX-test"
+  },
+  "IWM": {
+   "first_use": "2026-10-01",
+   "by": "H6"
+  },
+  "JNJ": {
+   "first_use": "2026-10-01",
+   "by": "H6"
+  },
+  "KNSA": {
+   "first_use": "2026-10-01",
+   "by": "WP75-IEX-test"
+  },
+  "KOD": {
+   "first_use": "2026-10-01",
+   "by": "WP75-IEX-test"
+  },
+  "KROS": {
+   "first_use": "2026-10-01",
+   "by": "WP75-IEX-test"
+  },
+  "KRYS": {
+   "first_use": "2026-10-01",
+   "by": "WP75-IEX-test"
+  },
+  "KURA": {
+   "first_use": "2026-10-01",
+   "by": "WP75-IEX-test"
+  },
+  "KYMR": {
+   "first_use": "2026-10-01",
+   "by": "WP75-IEX-test"
+  },
+  "LEXX": {
+   "first_use": "2026-10-01",
+   "by": "H6"
+  },
+  "LLY": {
+   "first_use": "2026-10-01",
+   "by": "H6"
+  },
+  "LONA": {
+   "first_use": "2026-10-01",
+   "by": "WP75-IEX-test"
+  },
+  "LPCN": {
+   "first_use": "2026-10-01",
+   "by": "H6"
+  },
+  "LRMR": {
+   "first_use": "2026-10-01",
+   "by": "WP75-IEX-test"
+  },
+  "MANE": {
+   "first_use": "2026-10-01",
+   "by": "H6"
+  },
+  "MBX": {
+   "first_use": "2026-10-01",
+   "by": "H6"
+  },
+  "MDGL": {
+   "first_use": "2026-10-01",
+   "by": "H6"
+  },
+  "MDT": {
+   "first_use": "2026-10-01",
+   "by": "H6"
+  },
+  "MED": {
+   "first_use": "2026-10-01",
+   "by": "H6"
+  },
+  "MIRM": {
+   "first_use": "2026-10-01",
+   "by": "H6"
+  },
+  "MNOV": {
+   "first_use": "2026-10-01",
+   "by": "H6"
+  },
+  "MRK": {
+   "first_use": "2026-10-01",
+   "by": "H6"
+  },
+  "NVO": {
+   "first_use": "2026-10-01",
+   "by": "H6"
+  },
+  "NVS": {
+   "first_use": "2026-10-01",
+   "by": "H6"
+  },
+  "OGN": {
+   "first_use": "2026-10-01",
+   "by": "H6"
+  },
+  "OMDA": {
+   "first_use": "2026-10-01",
+   "by": "H6"
+  },
+  "OPK": {
+   "first_use": "2026-10-01",
+   "by": "H6"
+  },
+  "PFE": {
+   "first_use": "2026-10-01",
+   "by": "H6"
+  },
+  "PRE": {
+   "first_use": "2026-10-01",
+   "by": "H6"
+  },
+  "PTN": {
+   "first_use": "2026-10-01",
+   "by": "H6"
+  },
+  "RANI": {
+   "first_use": "2026-10-01",
+   "by": "H6"
+  },
+  "REGN": {
+   "first_use": "2026-10-01",
+   "by": "H6"
+  },
+  "RMD": {
+   "first_use": "2026-10-01",
+   "by": "H6"
+  },
+  "RYTM": {
+   "first_use": "2026-10-01",
+   "by": "H6"
+  },
+  "SGMT": {
+   "first_use": "2026-10-01",
+   "by": "H6"
+  },
+  "SKYE": {
+   "first_use": "2026-10-01",
+   "by": "H6"
+  },
+  "SNY": {
+   "first_use": "2026-10-01",
+   "by": "H6"
+  },
+  "TAK": {
+   "first_use": "2026-10-01",
+   "by": "H6"
+  },
+  "TEVA": {
+   "first_use": "2026-10-01",
+   "by": "H6"
+  },
+  "TLSA": {
+   "first_use": "2026-10-01",
+   "by": "H6"
+  },
+  "UNH": {
+   "first_use": "2026-10-01",
+   "by": "H6"
+  },
+  "VANI": {
+   "first_use": "2026-10-01",
+   "by": "H6"
+  },
+  "VERU": {
+   "first_use": "2026-10-01",
+   "by": "H6"
+  },
+  "VKTX": {
+   "first_use": "2026-10-01",
+   "by": "H6"
+  },
+  "VNDA": {
+   "first_use": "2026-10-01",
+   "by": "H6"
+  },
+  "VTVT": {
+   "first_use": "2026-10-01",
+   "by": "H6"
+  },
+  "WW": {
+   "first_use": "2026-10-01",
+   "by": "H6"
+  },
+  "XBI": {
+   "first_use": "2026-10-01",
+   "by": "H6"
+  },
+  "ZBH": {
+   "first_use": "2026-10-01",
+   "by": "H6"
+  }
+ }
+}
