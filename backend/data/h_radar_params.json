@@ -42,7 +42,8 @@
     "v1.5-wp78": "WP78 · 급등 경보 조건 정합 (기준선 7일 미만 제외 · 배수 조건에 오늘 5건 이상 추가 · 레딧 3건 유지) · 표시 계층 · 가중치·점수·단계 무변경",
     "v1.5-wp86": "WP86 · 배수 계산 기준선 하한 1건 (max(1.0, 평균)) · 경보 조건 무변경 · 가중치·점수·단계 무변경",
     "v3-score (2026-10-02)": "WP93 · 전문가 채널 (b) H6 소속 +3 제거 · 다른 채널·정규화·가중치 무변경 · 영향 (로컬 입력 기준) 점수 78/80 · 순위 52종목 · 상위 30 ARTV 진입 · AVBP 탈락 · 서버 영향 0 (서버에 h6_membership 파일 없음 · 2026-10-01 확인)",
-    "v3-inputs (2026-10-01 · WP95)": "전문가 채널 입력 복구 (13D 주간 · b98 범위 그대로 · SCHEDULE 13D/13G 추가 · PubMed/Preprint 주간) · 미반영 채널 가격 입력 = IEX 누적 파일 + XBI · h6_membership 설계 입력에서 제외 · 가중치·정규화·계산식 무변경"
+    "v3-inputs (2026-10-01 · WP95)": "전문가 채널 입력 복구 (13D 주간 · b98 범위 그대로 · SCHEDULE 13D/13G 추가 · PubMed/Preprint 주간) · 미반영 채널 가격 입력 = IEX 누적 파일 + XBI · h6_membership 설계 입력에서 제외 · 가중치·정규화·계산식 무변경",
+    "v3-full (2026-10-02 · WP98-2)": "레이더 v3-전체 시작일 2026-10-02 (수동 실행) · inputs_missing 없음 · 11/15 3구간 복구일 = 2026-10-02"
   },
   "alerts_definition_wp78": {
     "spec": "급등 경보 조건 정합 · WP78 · 2026-09-28 · 표시 계층 규칙 (점수·단계·후보 선정 무관)",
@@ -82,7 +83,8 @@
     "removed": "h6_membership (v3 에서 쓰지 않음) · h3_prices_merged · benchmarks_*.csv (가격 누적 파일로 대체 · 계산식 무변경)"
   },
   "v3_full_start": {
-    "value": null,
-    "auto_record": "<RUNTIME>/radar_v3_full_start.json (inputs_missing 이 빈 첫 실행일 · 한 번만) · 관측 세션이 이 값으로 갱신"
+    "value": "2026-10-02",
+    "auto_record": "<RUNTIME>/radar_v3_full_start.json (inputs_missing 이 빈 첫 실행일 · 한 번만) · 관측 세션이 이 값으로 갱신",
+    "note": "2026-10-02 수동 실행 (WP98-2 · 서버 단계 옵션 --step=radar · 10:41 KST) · 같은 날 07:00 실행은 v3-부분이었고 수동 실행이 그날 산출을 v3-전체로 덮어씀"
   }
 }
