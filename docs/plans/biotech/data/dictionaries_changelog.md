@@ -196,3 +196,11 @@
 - `docs/plans/biotech/data/condition_categories.csv` "무시" 2건 추가 (648 → 650행): Lesion Skin · Neoplasms by Histologic Type (일반어)
 - 화면 분류 보완: '무시' 용어는 자동 분류와 "기타 (원문)" 원문 자리에도 쓰지 않음 (`backend/api/routes/biotech.py` `_trial_display`)
 - 앞으로 제안 파일의 category 열은 카드 분류가 아니라 용어의 사전 분류를 적음 (v3 예: "Central Nervous System Diseases · 암" 은 카드 분류였음)
+
+## 규칙 기록 · 2026-10-02 (WP98) · 레딧 입력 부분 차단 (HTTP 429)
+
+- 사실 (`/root/toss-tradebot-mvp/var/biotech/logs/daily.log` · 2026-09-22 ~ 2026-10-02 · 11일): 매일 레딧 RSS 4곳 요청 · r/biotechplays 만 200 (글 25개) · r/pennystocks · r/wallstreetbets · r/stocks 는 매일 HTTP 429 → 11일 동안 요청 44 · 429 33 · 성공 11 · 받은 글 275 (하루 25 · 같은 새 글 목록이 겹칠 수 있음).
+- 레딧 매치가 0 이 아니었던 날: 11일 모두 (예: ENTX 2~4 · CRVO 1 · 10/1~2 IVVD 1 · KOD 1) · 매치는 r/biotechplays 글에서만 나옴.
+- 요청 코드: `backend/scripts/biotech_h48v3_confirm.py` · User-Agent = SEC 헤더 상수 (`SEC_UA` · 67~72행) · 간격 3.5초 (139행) · 재시도 없음 (141~143행).
+- 2026-10-02 로컬 시험 (고유 User-Agent "TossTradebot BiotechRadar/1.0 (contact: suauncle@gmail.com)" · 간격 3초 · 3건): pennystocks 200 (글 25) · wallstreetbets 429 · stocks 429 · 첫 응답부터 `x-ratelimit-remaining: 0.0` → User-Agent 만으로는 해결되지 않음 · 코드 변경 보류 (WP98 지시: 여전히 429 면 멈추고 보고).
+- 소문 전향 평가 (11/15): 머리에 "레딧 입력은 2026-09-22 첫 실행부터 4곳 중 3곳 HTTP 429 · r/biotechplays 한 곳만 수집" 을 적는다.

@@ -74,9 +74,18 @@ def usage_path(month: str) -> Path:
     return _P.out_dir("h6").parent / f"tiingo_usage_{month}.json"
 
 
+SEED_DIR: Path | None = _P.DATA_DIR_DOCS   # WP98 · 로컬 사용분 씨앗 위치 (테스트는 None)
+
+
 def load_usage(month: str) -> dict:
+    """월 장부 · WP98 · 같은 계정의 로컬 사용분 (docs/plans/biotech/data/tiingo_usage_seed_<월>.json) 을 합쳐 월 고유 종목을 셈."""
     p = usage_path(month)
-    return json.loads(p.read_text()) if p.exists() else {"month": month, "symbols": {}}
+    u = json.loads(p.read_text()) if p.exists() else {"month": month, "symbols": {}}
+    seed = (SEED_DIR / f"tiingo_usage_seed_{month}.json") if SEED_DIR else None
+    if seed is not None and seed.exists():
+        for tk, v in (json.loads(seed.read_text()).get("symbols") or {}).items():
+            u["symbols"].setdefault(tk, {"first_use": v.get("first_use", ""), "by": f"local-seed:{v.get('by', '')}"})
+    return u
 
 
 def save_usage(u: dict) -> None:

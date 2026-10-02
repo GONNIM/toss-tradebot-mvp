@@ -39,7 +39,7 @@ from backend.scripts.biotech_h6_collect_prices import (
     MONTHLY_ALLOCATION, TiingoBlocked, fetch_iex, fetch_one, hourly_check, load_usage, record_request, save_usage,
 )
 from collections import Counter
-from backend.scripts.biotech_sec_common import SecBlockedError, SecDailyLedger, build_client, nearest_shares_outstanding, sec_get
+from backend.scripts.biotech_sec_common import SEC_DAILY_CAP, SecBlockedError, SecDailyLedger, build_client, nearest_shares_outstanding, sec_get
 
 LOG = logging.getLogger("biotech_mcap_daily")
 
@@ -399,6 +399,15 @@ def run(mode: str, get_tiingo: Callable[..., Any] | None = None, get_sec: Callab
     if not key:
         LOG.warning("TIINGO_API_KEY 없음 · 가격 단계 건너뜀")
         return {"mode": mode, "skipped": True, "reason": "no key"}
+    # WP98 · 주식수 파일이 아직 없으면 (플래그 켠 뒤 첫 주간 잡 전) 주간 주식수 조회를 지금 1회 · 하루 SEC 상한 안에서만
+    if not _latest_json("shares"):
+        led = ledger or SecDailyLedger.load(f"{today:%Y%m%d}")
+        need = sum(1 for cik in cands.values() if cik)
+        if led.total() + need > SEC_DAILY_CAP:
+            LOG.warning("주식수 파일 없음 · 오늘 SEC %d + 필요 %d > 상한 %d · 주식수 조회 건너뜀 (배지 표시 0)", led.total(), need, SEC_DAILY_CAP)
+        else:
+            LOG.info("주식수 파일 없음 · 주간 주식수 조회를 지금 1회 실행 (SEC 약 %d회 · 장부 mcap_shares)", need)
+            run("weekly", get_sec=get_sec, today=today, ledger=led)
     if get_tiingo is None:
         import httpx
         get_tiingo = httpx.Client(timeout=30).get
