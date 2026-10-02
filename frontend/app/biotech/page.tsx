@@ -18,8 +18,8 @@ import { SectionCard } from "@/components/ui/section-card";
 import { BiotechTable, BiotechTableColumn } from "@/components/biotech/BiotechTable";
 import { RumorCard } from "@/components/biotech/RumorCard";
 import type { SessionInfo } from "@/lib/auth";
-import { cardText, checkedAtLabel, conditionsLine, ctgovUrl, exhibitLine, inputLabel, inputsMissingLine, groupForm4, insiderSummary, insiderTxLine, LEAD_LABEL, mcapBadge, mentionSentence, multSentence, refreshLabel, rumorReason, shortName, sortFilterCards, sortLabel, summaryStatus, tickerOrUnknown, trialSentence } from "@/lib/biotech-display";
-import type { CardSort, Form4Tx, ThemeRank, TrialDisplay } from "@/lib/biotech-display";
+import { cardText, checkedAtLabel, conditionsLine, redditLine, ctgovUrl, exhibitLine, inputLabel, inputsMissingLine, groupForm4, insiderSummary, insiderTxLine, LEAD_LABEL, mcapBadge, mentionSentence, multSentence, refreshLabel, rumorReason, shortName, sortFilterCards, sortLabel, summaryStatus, tickerOrUnknown, trialSentence } from "@/lib/biotech-display";
+import type { CardSort, RedditStatus, Form4Tx, ThemeRank, TrialDisplay } from "@/lib/biotech-display";
 
 // 백엔드 스키마
 type RadarRow = {
@@ -79,7 +79,7 @@ type AlertBrief = {
   schedule: string;
   summary?: { ok: boolean; model?: string; lines?: string[]; error?: string };
 };
-type RumorJson = { date: string; generated: string; rows: RumorRow[] };
+type RumorJson = { date: string; generated: string; rows: RumorRow[]; reddit_status?: RedditStatus };
 
 type BiotechKpi = {
   generated: string;
@@ -417,6 +417,9 @@ export default function BiotechPage() {
             count={cards.length}
             hint={aMode && !quietOnly ? `발표가 다가오는 종목 ${aAll.length}개 전체` : `발표가 다가오는데 아직 조용한 종목 ${t1.length}개 (임박한 순)`}
           >
+            {redditLine(rumor?.reddit_status) && (
+              <div className="mb-2 text-xs text-muted-foreground">{redditLine(rumor?.reddit_status)}</div>
+            )}
             <div className="flex flex-wrap items-center gap-2">
               {aMode && (
                 <button type="button" aria-pressed={quietOnly} onClick={() => setQuietOnly((v) => !v)} className={chip(quietOnly)}>

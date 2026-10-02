@@ -568,6 +568,22 @@ class RumorJson(BaseModel):
     date: str             # YYYY-MM-DD
     generated: str
     rows: list[RumorRow]
+    reddit_status: dict[str, Any] = {}   # WP98-2 · 레딧 수집 상태 (4곳 중 몇 곳) · 표시 전용
+
+
+def _latest_reddit_status() -> dict[str, Any]:
+    """confirm 단계가 남긴 reddit_status_<날짜>.json 최신 1개 · 없으면 빈 dict."""
+    hits: list[Path] = []
+    for base in _search_dirs("community_daily"):
+        if base.exists():
+            hits.extend(base.glob("reddit_status_*.json"))
+    if not hits:
+        return {}
+    p = max(hits, key=lambda x: x.name)
+    try:
+        return {**json.loads(p.read_text()), "date": p.stem.rsplit("_", 1)[-1]}
+    except Exception:
+        return {}
 
 
 @router.get("/rumor.json", response_model=RumorJson)
@@ -773,6 +789,7 @@ async def get_rumor_json(
         date=date_dash,
         generated=datetime.now(timezone.utc).isoformat(),
         rows=rows,
+        reddit_status=_latest_reddit_status(),
     )
 
 

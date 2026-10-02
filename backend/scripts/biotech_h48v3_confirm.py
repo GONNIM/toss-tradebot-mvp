@@ -33,6 +33,7 @@ from backend.scripts._biotech_bootstrap import require_secure_logging
 from backend.scripts.biotech_sec_common import SEC_UA, SEC_FROM, SEC_ACCEPT_ENCODING
 
 import csv
+from typing import Any, Callable
 import json
 import logging
 import os
@@ -72,6 +73,14 @@ HEADERS = {
 }
 
 APEWISDOM = "https://apewisdom.io/api/v1.0/filter/all-stocks/page/{page}"
+
+# WP98-2 · 레딧은 레딧 전용 User-Agent (SEC 헤더 상수 쓰지 않음) · 4곳 묶음 RSS 1회
+#   2026-09-22~10-02: 곳마다 1회씩 4회 요청 → 첫 곳만 200 · 나머지 3곳 매일 429 (x-ratelimit-remaining 0)
+REDDIT_UA = "TossTradebot BiotechRadar/1.0 (contact: suauncle@gmail.com)"
+REDDIT_HEADERS = {"User-Agent": REDDIT_UA, "Accept": "application/atom+xml"}
+REDDIT_RETRY_WAIT = 60      # 429 이면 60초 뒤 1회 재시도
+REDDIT_MIN_GAP = 2.0        # 요청 사이 최소 간격 (초)
+REDDIT_FALLBACK_SUB = "biotechplays"
 REDDIT_SUBS = ["biotechplays", "pennystocks", "wallstreetbets", "stocks"]
 
 KEYWORDS = {
@@ -131,6 +140,65 @@ def fetch_apewisdom_map(client: httpx.Client, pages: int = 3) -> tuple[dict[str,
             break
         time.sleep(1.0)
     return out, ok
+
+
+def parse_reddit_atom(text: str) -> list[dict]:
+    """Atom → 글 목록 · 곳 이름은 <category term> (묶음 RSS 에서 곳 구분)."""
+    ns = {"atom": "http://www.w3.org/2005/Atom"}
+    root = ET.fromstring(text)
+    out = []
+    for e in root.findall("atom:entry", ns):
+        cat = e.find("atom:category", ns)
+        link_el = e.find("atom:link", ns)
+        out.append({"title": (e.findtext("atom:title", "", ns) or "").strip(),
+                    "link": link_el.get("href", "") if link_el is not None else "",
+                    "updated": e.findtext("atom:updated", "", ns),
+                    "sub": (cat.get("term", "") if cat is not None else "").lower()})
+    return out
+
+
+def fetch_reddit(get: Callable[[str], Any], sleep: Callable[[float], None] = time.sleep) -> tuple[list[dict], dict]:
+    """4곳 묶음 RSS 1회 → 429 면 60초 뒤 1회 → 실패면 biotechplays 단독 1회 · 403 은 즉시 중단 (재시도·대체 없음).
+
+    반환: (글 목록, 상태 {subs_total · subs_collected · mode · attempts · posts · per_sub})
+    """
+    combined = f"https://www.reddit.com/r/{'+'.join(REDDIT_SUBS)}/new/.rss?limit=100"
+    single = f"https://www.reddit.com/r/{REDDIT_FALLBACK_SUB}/new/.rss?limit=100"
+    attempts: list[dict] = []
+
+    def _try(kind: str, url: str):
+        try:
+            r = get(url)
+        except Exception as e:  # noqa: BLE001
+            attempts.append({"kind": kind, "http": f"err_{e.__class__.__name__}"})
+            return None
+        attempts.append({"kind": kind, "http": r.status_code})
+        return r
+
+    posts: list[dict] = []
+    mode, collected = "none", 0
+    r = _try("combined", combined)
+    if r is not None and r.status_code == 429:
+        sleep(REDDIT_RETRY_WAIT)
+        r = _try("combined_retry", combined)
+    if r is not None and r.status_code == 200:
+        try:
+            posts, mode, collected = parse_reddit_atom(r.text), "combined", len(REDDIT_SUBS)
+        except ET.ParseError:
+            attempts[-1]["http"] = "parse_fail"
+    elif r is None or r.status_code != 403:
+        sleep(REDDIT_MIN_GAP)
+        r2 = _try("single", single)
+        if r2 is not None and r2.status_code == 200:
+            try:
+                posts, mode, collected = parse_reddit_atom(r2.text), "single", 1
+            except ET.ParseError:
+                attempts[-1]["http"] = "parse_fail"
+    per_sub: dict[str, int] = {}
+    for p in posts:
+        per_sub[p["sub"]] = per_sub.get(p["sub"], 0) + 1
+    return posts, {"subs_total": len(REDDIT_SUBS), "subs_collected": collected, "mode": mode,
+                   "attempts": attempts, "posts": len(posts), "per_sub": per_sub}
 
 
 def fetch_reddit_rss(client: httpx.Client, sub: str) -> tuple[list[dict], bool]:
@@ -213,9 +281,36 @@ def stage(apewisdom_24h: int, ape_rank: int, reddit_matches: int, baseline_n: in
     return "spread"
 
 
+def _notify_reddit_blocked(day: str, status: dict) -> None:
+    """레딧 전부 차단 · 텔레그램 warning 하루 1회 (표시 파일로 중복 방지)."""
+    marker = OUT_DIR / f"reddit_blocked_warned_{day}"
+    if marker.exists():
+        return
+    marker.write_text(json.dumps(status.get("attempts", []), ensure_ascii=False))
+    try:
+        import asyncio
+        from backend.services.notifier import TelegramNotifier
+        asyncio.run(TelegramNotifier().send_warning(
+            title="biotech 레딧 입력 없음", body=f"4곳 묶음 · 재시도 · biotechplays 단독 모두 실패 · 시도 {status.get('attempts')}"))
+    except Exception as e:  # noqa: BLE001
+        LOG.warning("notifier 실패 · %s", e.__class__.__name__)
+
+
+def reddit_probe() -> dict:
+    """WP98-2 · 시험 모드 · 요청만 보내고 결과 출력 · 파일 쓰기 없음."""
+    with httpx.Client(headers=REDDIT_HEADERS, timeout=15.0) as rclient:
+        _posts, status = fetch_reddit(rclient.get)
+    print(json.dumps(status, ensure_ascii=False))
+    return status
+
+
 def main():
     require_secure_logging()
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
+    import sys as _sys
+    if "--reddit-probe" in _sys.argv:
+        reddit_probe()
+        return
     sha = git_sha()
 
     today_str = _P.today_kst_str("%Y%m%d")
@@ -232,20 +327,17 @@ def main():
         ape_map, ape_ok = fetch_apewisdom_map(client, pages=3)
         LOG.info("apewisdom · %d tickers · ok=%s", len(ape_map), ape_ok)
 
-        reddit_posts: list[dict] = []
-        reddit_errors: dict[str, str] = {}
-        for sub in REDDIT_SUBS:
-            posts, rss_ok = fetch_reddit_rss(client, sub)
-            if not rss_ok:
-                # 403/429 · 즉시 이 소스 skip · 다른 sub 계속 시도 · 다른 소스 안 건드림
-                reddit_errors[sub] = "blocked"
-                continue
-            if posts and posts[0].get("_status"):
-                reddit_errors[sub] = str(posts[0]["_status"])
-                continue
-            for p in posts:
-                p["title_upper"] = (p["title"] or "").upper()
-            reddit_posts.extend(posts)
+        # WP98-2 · 레딧 묶음 RSS (레딧 전용 클라이언트 · SEC 헤더 아님)
+        with httpx.Client(headers=REDDIT_HEADERS, timeout=15.0) as rclient:
+            reddit_posts, reddit_status = fetch_reddit(rclient.get)
+        for p in reddit_posts:
+            p["title_upper"] = (p["title"] or "").upper()
+        reddit_errors = {a["kind"]: a["http"] for a in reddit_status["attempts"] if a["http"] != 200}
+        (OUT_DIR / f"reddit_status_{today_str}.json").write_text(json.dumps(reddit_status, ensure_ascii=False))
+        LOG.info("reddit · 4곳 중 %d곳 수집 · 방식 %s · 글 %d · 곳별 %s · 시도 %s", reddit_status["subs_collected"],
+                 reddit_status["mode"], reddit_status["posts"], reddit_status["per_sub"], reddit_status["attempts"])
+        if reddit_status["subs_collected"] == 0:
+            _notify_reddit_blocked(today_str, reddit_status)
         LOG.info("reddit · %d posts · errors=%s", len(reddit_posts), reddit_errors)
 
         rows = []
