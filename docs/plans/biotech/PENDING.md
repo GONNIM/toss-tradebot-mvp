@@ -34,6 +34,15 @@
 
 ## PENDING
 
+### [Biotech Catalyst Radar · 대기 · 날짜별 대조만 (새 작업 없음)] · 2026-10-02 발행
+
+- 10/3 07:00 뒤: daily.log · reddit.log 의 06:30 묶음 줄 · 07:00 단독 줄 · "레딧 4곳 중 N곳 수집" · 경보 N건 · SEC 합계 · [8/9] 시총 줄 · 10/2 수동 실행 값과 다른 항목만 표
+- 10/5 06:00 뒤: 주간 잡 소요 · 자동 분류 새 용어 수 · 제안 파일 (새 용어만) zip · 별칭 · 명부 갱신
+- 10/6 · 10/7: 13D (미룬 120건 포함) · 문헌 지수 요청 수와 결과
+- 로그 WARNING · 텔레그램은 그날 보고에 포함 · 보고마다 번들 zip 경로 · SHA-256
+
+---
+
 ### [Biotech Catalyst Radar · WP99 즉시 · 사전 v5 · 자동 분류 규칙 수정 · 레딧 순서·예약 변경 (사전 변경 승인됨 · 병합 승인됨 · 서버 단계 수동 실행 승인됨)] · 2026-10-02 발행
 
 - 1: `/Users/gonnim/Downloads/20261002_auto-category-reviewed-v2.zip` (1,006 · 채택 924 · 수정 82) → condition_categories.csv (기대 1,656행 · basis "auto-reviewed v5") · changelog · 검수 원본 보관 · 수동 사전 우선이라 자동 값 안 쓰임 테스트
