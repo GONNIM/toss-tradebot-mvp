@@ -34,6 +34,15 @@
 
 ## PENDING
 
+### [Biotech Catalyst Radar · WP98-3 즉시 · 남은 문제 3건 수정 · 자동 분류 재실행 · 레딧 재확인 (병합 승인됨 · 서버 단계 수동 실행 승인됨)] · 2026-10-02 발행
+
+- 1 (한 PR): 레딧 = 묶음 1회 + biotechplays 단독 1회 · 합치고 글 ID 중복 제거 · 단독 429 → 60초 1회 재시도 · "4곳 중 N곳" 은 두 결과 합쳐 셈 · 테스트 2 / 자동 분류 = 요청마다 예외 → 그 용어 skipped · 계속 · 캐시 50건마다 + finally · 다음 실행 재시도 · 실패 조건 = 요청 절반 이상 실패 · 테스트 2 / SEC 상한 = 13D submissions 도 상한 · 닿으면 미룸 · 주간 주식수는 같은 날 shares_<오늘>.json 있으면 건너뜀 · 테스트 2 / (옵션 없으면 --step=auto_category)
+- 2: 서버 자동 분류 단계만 재실행 (AACT 재다운로드 금지) · 소요 · NLM 요청 · 403/429 · 건너뛴 용어 · 캐시 · 제안 행 · 검수 요망 · 자동 분류 용어 수·분류별 분포 · 화면 "(자동)" 카드 수 · 제안 파일 + 검수 요망 행 번들 (term · n_trials · example_ticker · auto_category · basis · tree_numbers · reason · reviewer_decision)
+- 3: 서버 reddit-probe 1회 · 묶음·단독 상태 코드 · 글 수 · 곳별 (biotechplays 포함)
+- 4: 오늘 SEC 장부 최종 합계 · 내일 07:00 예상 요청 수 · 주간 잡 예약 그대로
+
+---
+
 ### [Biotech Catalyst Radar · WP98-2 즉시 · 레딧 묶음 RSS · 서버 단계 수동 실행 (서버 수동 실행 · 사용자 승인됨 · 병합 승인됨)] · 2026-10-02 발행
 
 - 규칙: 일일 파이프 전체 재실행 금지 · 단계별 옵션만 · 403·429 즉시 중단 · SEC 300 · Tiingo 시간당 50 · NLM 초당 3 · 보고는 번들 zip (경로 · SHA-256)
