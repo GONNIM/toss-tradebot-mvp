@@ -296,7 +296,9 @@ def sources_for(b: dict) -> list[str]:
         mult_txt = "수집 중 (7일 미만)" if mult in ("collecting", "", None) else f"{mult}배"
         src.append(f"apewisdom (커뮤니티 언급 집계 사이트) 24시간 언급 수: 어제 {b['mentions']['yesterday']} → 오늘 {b['mentions']['today']} · "
                    f"apewisdom 평소 대비 {mult_txt}")
-        src.append(f"레딧 RSS 제목 매치 오늘 {b['mentions']['reddit_today']}건")
+        rm = b["mentions"].get("reddit_mean")
+        src.append(f"레딧 24시간 제목 매치 {b['mentions']['reddit_today']}건" +
+                   (f" · 레딧 평소 하루 {rm}건 (7일)" if rm is not None else " · 레딧 평소: 수집 중 (7일 미만)"))
     for p in b["reddit"]:
         src.append(f"레딧 글 제목{'' if b.get('reddit_time_checked', True) else ' (게시 시각 미확인)'}: {p['title']}")
     for f in b["sec_8k"]:
@@ -347,7 +349,8 @@ def main():
                 "today": hist[-1]["apewisdom_24h"] if hist else None,
                 "mult": r.get("st_baseline_mult", ""),
                 "mean": _f(r.get("st_baseline_mean")) if r.get("st_baseline_mean") not in (None, "") else None,  # WP86
-                "reddit_today": int(_f(r.get("reddit_rss_matches"))),
+                "reddit_today": int(_f(r.get("reddit_rss_matches"))),   # WP100 · 24시간 안 글
+                "reddit_mean": (_f(r.get("reddit_baseline_mean")) if int(_f(r.get("reddit_baseline_n"))) >= 7 else None),
                 "history": hist,
             },
             "reddit": [],

@@ -116,13 +116,16 @@ def test_alert_rule_wp78():
     # 기준선 7일 · 6배지만 오늘 1건 → 절대량 미달
     assert judge({"st_baseline_n": "7", "st_baseline_mult": "6.0", "apewisdom_24h": "1", "reddit_rss_matches": "0"}) == (False, "none")
     assert judge({"st_baseline_n": "7", "st_baseline_mult": "5.0", "apewisdom_24h": "5", "reddit_rss_matches": "0"}) == (True, "mult")
-    assert judge({"st_baseline_n": "8", "st_baseline_mult": "collecting", "apewisdom_24h": "0", "reddit_rss_matches": "3"}) == (True, "rss")
+    assert judge({"st_baseline_n": "8", "st_baseline_mult": "collecting", "apewisdom_24h": "0", "reddit_rss_matches": "3",
+                  "reddit_baseline_n": "7", "reddit_baseline_mean": "0"}) == (True, "rss")      # WP100 · 레딧 기준선 7일 · 평균 하한 1 → 2배 2 ≤ 3
+    assert judge({"st_baseline_n": "8", "st_baseline_mult": "collecting", "apewisdom_24h": "0", "reddit_rss_matches": "3"}) == (False, "rss_collecting")
     # ENTX 형태 · 레딧 3건이어도 기준선 6일이면 수집 중
     assert judge({"st_baseline_n": "6", "st_baseline_mult": "collecting", "apewisdom_24h": "0", "reddit_rss_matches": "3"}) == (False, "collecting")
 
 
 def test_pick_alerts_cap_and_order():
-    rows = [{"ticker": f"T{i}", "st_baseline_n": "7", "st_baseline_mult": "1.0", "apewisdom_24h": "0", "reddit_rss_matches": "3"} for i in range(7)]
+    rows = [{"ticker": f"T{i}", "st_baseline_n": "7", "st_baseline_mult": "1.0", "apewisdom_24h": "0", "reddit_rss_matches": "3",
+             "reddit_baseline_n": "7", "reddit_baseline_mean": "0"} for i in range(7)]
     rows.append({"ticker": "M", "st_baseline_n": "9", "st_baseline_mult": "6.0", "apewisdom_24h": "12", "reddit_rss_matches": "0"})
     picked = [r["ticker"] for r in br.pick_alerts(rows)]
     assert picked[0] == "M" and len(picked) == 5
