@@ -157,7 +157,7 @@ def load_prices_and_mcap(sha: str) -> tuple[dict, dict]:
                     close[tk] = (d, c)
         close = {tk: v[1] for tk, v in close.items()}
     # WP100 · h3_prices_merged 가 없으면 (서버) 여기서는 시총 구간을 비워 둠 · 경고 없음
-    #   시총은 mcap 단계 (일일 [8/9] 시총 단계 · IEX 일일 가격 × SEC 주식수) 가 담당 · 이 단계는 그 결과를 읽지 않음
+    #   시총은 mcap 단계 (일일 [8/10] 시총 단계 · IEX 일일 가격 × SEC 주식수) 가 담당 · 이 단계는 그 결과를 읽지 않음
     shares: dict = {}
     p2 = _find(f"h3_mcap_{sha}.csv") or _find_glob("h3_mcap_*.csv")
     if p2 is not None and p2.exists():

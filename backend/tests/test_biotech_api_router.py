@@ -190,6 +190,7 @@ def test_o_no_hardcoded_data_paths():
         "biotech_auto_category.py",
         "biotech_h6_collect_prices.py",
         "biotech_mcap_daily.py",
+        "biotech_filings.py",          # P3a ② · ③
     ]
     pats = [
         re.compile(r'\bPath\(\s*[frbu]?["\']backend/data'),

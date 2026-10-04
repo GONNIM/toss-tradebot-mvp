@@ -57,6 +57,7 @@ case "${1:-}" in
       alert_brief)  $VENV -m backend.scripts.biotech_h77_alert_brief ;;
       mcap)         $VENV -m backend.scripts.biotech_mcap_daily daily ;;
       status_gen)   $VENV -m backend.scripts.biotech_h57b_status_gen ;;
+      filings)      $VENV -m backend.scripts.biotech_filings submissions ;;   # P3a ② · 수동 확인용
       reddit-probe) $VENV -m backend.scripts.biotech_h48v3_confirm --reddit-probe ;;
       reddit-combined) $VENV -m backend.scripts.biotech_h48v3_confirm --reddit-combined ;;   # WP99 · 06:30 예약 · 묶음 1회 · 파일만
       auto_category) $VENV -m backend.scripts.biotech_auto_category ;;   # WP98-3 · 기존 ctgov_snapshot.json 으로 자동 분류만 (AACT 다운로드 없음)
@@ -93,39 +94,44 @@ STARTED=$(date -u +%Y-%m-%dT%H:%M:%SZ)
 echo "=== $STARTED biotech daily start (server · KST $(date +%H:%M)) ==="
 
 # 1. 후보 우주 갱신 (biotech_candidates_YYYYMMDD.csv · v1)
-echo "[1/9] candidates"
+echo "[1/10] candidates"
 $VENV -m backend.scripts.biotech_h48v3_candidates || { _notify_failure "candidates" "exit $?"; exit 11; }
 
 # 2. 시간 상태 판정 (h50 · AACT ctgov_snapshot.json 참조 · A/B/C · candidates_v3 산출)
-echo "[2/9] time_state (h50 · AACT JSON)"
+echo "[2/10] time_state (h50 · AACT JSON)"
 $VENV -m backend.scripts.biotech_h50_ct_upcoming || { _notify_failure "time_state" "exit $?"; exit 12; }
 
 # 3. 커뮤니티 확인 (community_confirm_YYYYMMDD.csv · apewisdom+Reddit · WP69-3d γ)
-echo "[3/9] confirm"
+echo "[3/10] confirm"
 $VENV -m backend.scripts.biotech_h48v3_confirm || { _notify_failure "confirm" "exit $?"; exit 13; }
 
 # 4. 소문 확인 일일 리포트
-echo "[4/9] rumor report"
+echo "[4/10] rumor report"
 $VENV -m backend.scripts.biotech_h48v3_report || { _notify_failure "report" "exit $?"; exit 14; }
 
 # 5. 레이더 리스트 v1.4
-echo "[5/9] radar"
+echo "[5/10] radar"
 $VENV -m backend.scripts.biotech_h46v3_radar || { _notify_failure "radar" "exit $?"; exit 15; }
 
 # 6. Form 4 증분 (403 시 skip 정책 유지)
-echo "[6/9] form4 (skip 허용)"
+echo "[6/10] form4 (skip 허용)"
 $VENV -m backend.scripts.biotech_h65_form4_daily || echo "  WP65 skip (SEC 403 등 · 다음 실행 재시도)"
 
 # 7. WP77 급등 브리핑 수집 + 자동 요약 (경보 종목만 · 최대 5 · 표시용 · 실패해도 파이프 계속)
-echo "[7/9] alert_brief (skip 허용)"
+echo "[7/10] alert_brief (skip 허용)"
 $VENV -m backend.scripts.biotech_h77_alert_brief || echo "  WP77 skip (SEC/z.ai 실패 · 패널 없이 진행)"
 
 # 8. WP75 시총 매일 산정 (표시 전용 · BIOTECH_MCAP_ENABLED 꺼지면 건너뜀 · 실패해도 파이프 계속)
-echo "[8/9] mcap_daily (skip 허용)"
+echo "[8/10] mcap_daily (skip 허용)"
 $VENV -m backend.scripts.biotech_mcap_daily daily || echo "  WP75 skip (Tiingo 실패 · 기존 배지 유지)"
 
-# 9. STATUS.md 자동 생성
-echo "[9/9] status_gen"
+# 9. P3a ② 후보 회사 SEC 제출 목록 (submissions · 종목당 1건 · 장부 filings_submissions · 하루 300 상한 · 403/429 즉시 중단)
+#    파생 = 외국 발행사 · S-3 유효 · 12개월 증자 공시 · 최근 8-K 접수 시각 · 자금 여력 (최신 재무 파일 · 요청 0) · 실패해도 파이프 계속
+echo "[9/10] filings (skip 허용)"
+$VENV -m backend.scripts.biotech_filings submissions || echo "  P3a filings skip (SEC 실패 등 · 다음 실행 재시도)"
+
+# 10. STATUS.md 자동 생성
+echo "[10/10] status_gen"
 $VENV -m backend.scripts.biotech_h57b_status_gen || { _notify_failure "status_gen" "exit $?"; exit 17; }
 
 # 90일 넘은 로그 정리
