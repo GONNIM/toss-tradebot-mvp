@@ -64,6 +64,12 @@ RUNTIME_DIR = Path(_rt) if _rt else None
 FALLBACK_DIR = PROJECT_ROOT / "docs" / "plans" / "biotech" / "data"
 OUT_DIR = RUNTIME_DIR if RUNTIME_DIR else FALLBACK_DIR
 OUT_JSON = OUT_DIR / "ctgov_snapshot.json"
+SNAPSHOT_KEEP_DAYS = 26 * 7          # P3a ④ · 날짜별 사본 ctgov_snapshot_YYYYMMDD.json 26주 보관 (변경 이력용 · PRD FR-3)
+DATE_TYPE_FIELDS = ("primary_completion_date_type", "last_update_posted_date", "completion_date_type")   # P3a ④ · 없으면 로그 · 빈값
+# P3a ④ · PRD v0.5 FR-6a "이 임상의 비중" 범위
+ACTIVE_STATUSES = ("RECRUITING", "ACTIVE_NOT_RECRUITING", "NOT_YET_RECRUITING", "ENROLLING_BY_INVITATION")
+PHASE2_PLUS = ("PHASE2", "PHASE2/PHASE3", "PHASE3")
+PHASE1_2 = ("PHASE1/PHASE2",)
 
 # candidates_v3 조회 · WP69-3b _search_dirs 정합
 CANDIDATES_SEARCH = [
@@ -336,6 +342,11 @@ def _parse_studies_and_sponsors(zip_path: Path, candidate_norm_map: dict[str, st
         with zf.open(studies_name, "r") as f:
             text = io.TextIOWrapper(f, encoding="utf-8", errors="replace")
             reader = csv.DictReader(text, delimiter="|")
+            missing_fields = [f for f in DATE_TYPE_FIELDS if f not in (reader.fieldnames or [])]
+            for fld in missing_fields:   # P3a ④ · PRD FR-3 · 첫 실행에서 머리글 확인
+                LOG.warning("studies.txt 머리글에 %s 없음 · 빈값으로 저장", fld)
+            if not missing_fields:
+                LOG.info("studies.txt 머리글 · 날짜 종류 필드 3개 있음 (%s)", " · ".join(DATE_TYPE_FIELDS))
             processed = 0
             for row in reader:
                 processed += 1
@@ -362,6 +373,7 @@ def _parse_studies_and_sponsors(zip_path: Path, candidate_norm_map: dict[str, st
                     "phase": row.get("phase", ""),
                     "overall_status": row.get("overall_status", ""),
                     "primary_completion_date": pcd_raw,
+                    **{fld: (row.get(fld) or "").strip() for fld in DATE_TYPE_FIELDS},   # P3a ④
                     "days_to": days_to,
                     "brief_title": (row.get("brief_title") or "")[:300],
                     # WP76-1 · 카드 문장용 시험 필드 (원문 · 후보 매칭분만)
@@ -379,6 +391,50 @@ def _parse_studies_and_sponsors(zip_path: Path, candidate_norm_map: dict[str, st
         for m in matches:
             m.update(details.get(m["nct_id"], {}))
     return matches
+
+
+def sponsor_active_counts(matches: list[dict]) -> dict[str, dict]:
+    """P3a ④ · 종목별 진행 중 임상 수 (PRD v0.5 FR-6a).
+
+    lead = 주 스폰서 · 진행 중 4상태 · 2상 이상 (PHASE2 · PHASE2/PHASE3 · PHASE3) 과 1/2상 (PHASE1/PHASE2) 을 따로 센다.
+    collaborator = 같은 상태 · 같은 단계 범위 (2상 이상 + 1/2상) 의 공동 참여 시험 수 (별도 표시용).
+    한 시험은 매칭 때 한 종목에만 붙는다 (lead 매칭 우선 · _parse_studies_and_sponsors).
+    """
+    out: dict[str, dict] = {}
+    for m in matches:
+        if m.get("overall_status") not in ACTIVE_STATUSES:
+            continue
+        ph = m.get("phase") or ""
+        c = out.setdefault(m["ticker"], {"lead_phase2_plus": 0, "lead_phase1_2": 0, "collaborator": 0,
+                                         "lead_phase2_plus_ncts": []})
+        if m.get("role") == "lead":
+            if ph in PHASE2_PLUS:
+                c["lead_phase2_plus"] += 1
+                c["lead_phase2_plus_ncts"].append(m["nct_id"])
+            elif ph in PHASE1_2:
+                c["lead_phase1_2"] += 1
+        elif m.get("role") == "collaborator" and ph in PHASE2_PLUS + PHASE1_2:
+            c["collaborator"] += 1
+    return out
+
+
+def snapshot_copy_path(date_str: str) -> Path:
+    """AACT 자료 날짜 (YYYY-MM-DD) → ctgov_snapshot_YYYYMMDD.json."""
+    return OUT_DIR / f"ctgov_snapshot_{date_str.replace('-', '')}.json"
+
+
+def prune_snapshot_copies(today, keep_days: int = SNAPSHOT_KEEP_DAYS) -> int:
+    """26주 지난 날짜별 사본 삭제 (파일 이름 날짜 기준) · 지운 수."""
+    n = 0
+    for f in OUT_DIR.glob("ctgov_snapshot_*.json"):
+        try:
+            d = datetime.strptime(f.stem.rsplit("_", 1)[1], "%Y%m%d").date()
+        except ValueError:
+            continue
+        if (today - d).days > keep_days:
+            f.unlink()
+            n += 1
+    return n
 
 
 def _member(names: list[str], base: str) -> str | None:
@@ -628,9 +684,16 @@ def main():
         "candidate_matches": len({m["ticker"] for m in matches}),
         "study_matches": len(matches),
         "matches": matches,
+        "sponsor_active_counts": sponsor_active_counts(matches),   # P3a ④ · FR-6a
     }
     OUT_JSON.write_text(json.dumps(out, ensure_ascii=False, indent=2))
     LOG.info("ctgov_snapshot.json 크기 · %d KB", OUT_JSON.stat().st_size // 1024)
+    # P3a ④ · 날짜별 사본 (변경 이력 · 26주 보관)
+    copy = snapshot_copy_path(date_str)
+    copy.write_text(OUT_JSON.read_text())
+    pruned = prune_snapshot_copies(datetime.now(timezone.utc).date())
+    LOG.info("날짜별 사본 · %s · 26주 지나 지운 사본 %d · 보관 사본 %d", copy.name, pruned,
+             len(list(OUT_DIR.glob("ctgov_snapshot_*.json"))))
     LOG.info("ctgov_snapshot.json · %d study · %d unique ticker · %s",
              len(matches), len({m["ticker"] for m in matches}), OUT_JSON)
 
