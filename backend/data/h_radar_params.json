@@ -43,7 +43,8 @@
     "v1.5-wp86": "WP86 · 배수 계산 기준선 하한 1건 (max(1.0, 평균)) · 경보 조건 무변경 · 가중치·점수·단계 무변경",
     "v3-score (2026-10-02)": "WP93 · 전문가 채널 (b) H6 소속 +3 제거 · 다른 채널·정규화·가중치 무변경 · 영향 (로컬 입력 기준) 점수 78/80 · 순위 52종목 · 상위 30 ARTV 진입 · AVBP 탈락 · 서버 영향 0 (서버에 h6_membership 파일 없음 · 2026-10-01 확인)",
     "v3-inputs (2026-10-01 · WP95)": "전문가 채널 입력 복구 (13D 주간 · b98 범위 그대로 · SCHEDULE 13D/13G 추가 · PubMed/Preprint 주간) · 미반영 채널 가격 입력 = IEX 누적 파일 + XBI · h6_membership 설계 입력에서 제외 · 가중치·정규화·계산식 무변경",
-    "v3-full (2026-10-02 · WP98-2)": "레이더 v3-전체 시작일 2026-10-02 (수동 실행) · inputs_missing 없음 · 11/15 3구간 복구일 = 2026-10-02"
+    "v3-full (2026-10-02 · WP98-2)": "레이더 v3-전체 시작일 2026-10-02 (수동 실행) · inputs_missing 없음 · 11/15 3구간 복구일 = 2026-10-02",
+    "v1.5-wp100 (2026-10-04)": "WP100 · 레딧 경보 조건 = 24시간 글 매치 ≥3 AND 레딧 7일 평균 2배 이상 (하한 1) · 레딧 기준선 7일 미만 수집 중 · 단계 판정의 레딧 매치도 24시간 글 수"
   },
   "alerts_definition_wp78": {
     "spec": "급등 경보 조건 정합 · WP78 · 2026-09-28 · 표시 계층 규칙 (점수·단계·후보 선정 무관)",
@@ -58,7 +59,8 @@
     "rule": "기준선 7일 이상 종목만 · (apewisdom 평소 대비 ≥ 5배 AND 오늘 apewisdom 언급 ≥ 5건) OR 레딧 RSS 제목 매치 ≥ 3건",
     "multiple": "평소 대비 배수 = 오늘 apewisdom 언급 / max(1.0, 기준선 평균) · 평균 0 이어도 계산 (이전: 평균 0 이면 None · 평균 0.25 면 그대로 나눔)",
     "code": "backend/scripts/biotech_h48v3_confirm.py baseline_multiple() · 판정 backend/scripts/biotech_alert_rule.py judge() (무변경)",
-    "reason": "IOVA 9/30 기준선 평균 0.25 → 오늘 32건이 128배로 부풀려짐 · KOD 9/29 기준선 평균 0 → 오늘 14건인데 배수 없음으로 경보 누락"
+    "reason": "IOVA 9/30 기준선 평균 0.25 → 오늘 32건이 128배로 부풀려짐 · KOD 9/29 기준선 평균 0 → 오늘 14건인데 배수 없음으로 경보 누락",
+    "superseded_by": "alerts_definition_wp100 (2026-10-04 · 레딧 조건만 바뀜 · 배수 기준선 하한은 그대로)"
   },
   "score_version": "v3 (2026-10-02 · H6 소속 +3 제거 · 근거: 관문 2 폐기)",
   "score_versions": {
@@ -86,5 +88,11 @@
     "value": "2026-10-02",
     "auto_record": "<RUNTIME>/radar_v3_full_start.json (inputs_missing 이 빈 첫 실행일 · 한 번만) · 관측 세션이 이 값으로 갱신",
     "note": "2026-10-02 수동 실행 (WP98-2 · 서버 단계 옵션 --step=radar · 10:41 KST) · 같은 날 07:00 실행은 v3-부분이었고 수동 실행이 그날 산출을 v3-전체로 덮어씀"
+  },
+  "alerts_definition_wp100": {
+    "date": "2026-10-04",
+    "rule": "기준선 (apewisdom) 7일 이상 · (배수 ≥5 AND 오늘 ≥5건) OR (레딧 24시간 안에 쓴 글의 제목 매치 ≥3건 AND 레딧 7일 평균의 2배 이상 · 평균 하한 1건) · 레딧 기준선 (reddit_24h 기록) 7일 미만이면 레딧 조건은 수집 중",
+    "code": "backend/scripts/biotech_alert_rule.py judge() · 레딧 24시간 = backend/scripts/biotech_h48v3_confirm.py posts_within()",
+    "reason": "2026-10-03 ENTX · 레딧 매치 10건 (모두 9/18 이전 글 · 24시간 안 0) · apewisdom 0 → 경보 1건 · 레딧 복구 뒤 오래된 글 매치로 매일 경보"
   }
 }

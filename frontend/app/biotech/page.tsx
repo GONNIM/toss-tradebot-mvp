@@ -18,7 +18,7 @@ import { SectionCard } from "@/components/ui/section-card";
 import { BiotechTable, BiotechTableColumn } from "@/components/biotech/BiotechTable";
 import { RumorCard } from "@/components/biotech/RumorCard";
 import type { SessionInfo } from "@/lib/auth";
-import { cardText, checkedAtLabel, conditionsLine, redditLine, ctgovUrl, exhibitLine, inputLabel, inputsMissingLine, groupForm4, insiderSummary, insiderTxLine, LEAD_LABEL, mcapBadge, mentionSentence, multSentence, refreshLabel, rumorReason, shortName, sortFilterCards, sortLabel, summaryStatus, tickerOrUnknown, trialSentence } from "@/lib/biotech-display";
+import { alertCriteria, cardText, checkedAtLabel, conditionsLine, redditLine, ctgovUrl, exhibitLine, inputLabel, inputsMissingLine, groupForm4, insiderSummary, insiderTxLine, LEAD_LABEL, mcapBadge, mentionSentence, multSentence, refreshLabel, rumorReason, shortName, sortFilterCards, sortLabel, summaryStatus, tickerOrUnknown, trialSentence } from "@/lib/biotech-display";
 import type { CardSort, RedditStatus, Form4Tx, ThemeRank, TrialDisplay } from "@/lib/biotech-display";
 
 // 백엔드 스키마
@@ -89,6 +89,7 @@ type BiotechKpi = {
   alerts: number;
   alert_tickers?: string[];
   alert_briefs?: AlertBrief[];
+  reddit_baseline_days?: number;
   alerts_collecting?: number;
 };
 
@@ -175,7 +176,7 @@ function AlertBriefCard({ b, defaultOpen = false }: { b: AlertBrief; defaultOpen
           <div>
             <div className="font-semibold">(a) 언급량 · apewisdom 24시간</div>
             <div>
-              어제 {m.yesterday ?? "기록 없음"} → 오늘 {m.today ?? "기록 없음"} · {multSentence(m.mean, m.today) ?? (m.mult === "collecting" ? "평소 대비 배수: 수집 중 (7일 미만)" : `평소 대비 배수 ${m.mult}`)} · 레딧 매치 오늘 {m.reddit_today}건
+              어제 {m.yesterday ?? "기록 없음"} → 오늘 {m.today ?? "기록 없음"} · {multSentence(m.mean, m.today) ?? (m.mult === "collecting" ? "평소 대비 배수: 수집 중 (7일 미만)" : `평소 대비 배수 ${m.mult}`)} · 레딧 24시간 매치 {m.reddit_today}건
             </div>
             <div className="font-mono text-muted-foreground">
               최근 {m.history.length}일 (날짜 언급 수): {m.history.map((h) => `${Number(h.date.slice(4, 6))}/${Number(h.date.slice(6, 8))} ${h.apewisdom_24h}`).join(" · ")}
@@ -565,7 +566,7 @@ export default function BiotechPage() {
                   {(kpi.alert_tickers ?? []).map((tk) => (
                     <span key={tk} className="rounded bg-rose-100 px-2 py-0.5 font-mono font-bold text-rose-800 dark:bg-rose-900/40 dark:text-rose-200">{tk}</span>
                   ))}
-                  <span className="text-muted-foreground">기준: 기준선 7일 이상 종목 중 오늘 언급 5건 이상이면서 평소의 5배 이상, 또는 레딧 매치 3건 이상 · 카드를 누르면 브리핑이 펼쳐집니다.</span>
+                  <span className="text-muted-foreground">{alertCriteria(kpi.reddit_baseline_days)}</span>
                 </div>
                 {(kpi.alert_briefs ?? []).map((b, i) => (
                   <AlertBriefCard key={b.ticker} b={b} defaultOpen={i === 0} />

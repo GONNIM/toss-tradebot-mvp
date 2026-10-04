@@ -289,13 +289,47 @@ def load_baseline(ticker: str) -> tuple[int, float]:
     return (len(vals), sum(vals) / len(vals))
 
 
-def save_baseline(ticker: str, date_str: str, apewisdom_24h: int, reddit_matches: int):
+def save_baseline(ticker: str, date_str: str, apewisdom_24h: int, reddit_matches: int, reddit_24h: int | None = None):
     p = BASELINE_DIR / f"{ticker}_{date_str}.json"
-    p.write_text(json.dumps({
-        "date": date_str,
-        "apewisdom_24h": apewisdom_24h,
-        "reddit_matches": reddit_matches,
-    }))
+    d = {"date": date_str, "apewisdom_24h": apewisdom_24h, "reddit_matches": reddit_matches}
+    if reddit_24h is not None:
+        d["reddit_24h"] = reddit_24h          # WP100 · 24시간 안에 쓴 글의 매치 (레딧 경보 기준선)
+    p.write_text(json.dumps(d))
+
+
+REDDIT_WINDOW_HOURS = 24      # WP100 · 레딧 매치 = 작성 시각 (Atom <updated>) 24시간 안의 글
+REDDIT_BASELINE_DAYS = 7      # 레딧 평균 = 최근 7일 (reddit_24h 기록이 있는 날만)
+
+
+def posts_within(posts: list[dict], now: datetime, hours: int = REDDIT_WINDOW_HOURS) -> list[dict]:
+    """작성 시각이 now 기준 hours 안인 글 · 시각을 못 읽으면 넣지 않음."""
+    out = []
+    for p in posts:
+        try:
+            t = datetime.fromisoformat((p.get("updated") or "").replace("Z", "+00:00"))
+        except ValueError:
+            continue
+        if t.tzinfo is None:
+            t = t.replace(tzinfo=timezone.utc)
+        if timedelta(0) <= now - t <= timedelta(hours=hours) or (t > now and t - now < timedelta(minutes=10)):
+            out.append(p)
+    return out
+
+
+def load_reddit_baseline(ticker: str) -> tuple[int, float]:
+    """(레딧 기록 일수, 최근 7일 평균) · reddit_24h 필드가 있는 날만 (WP100 이전 기록은 시간 한정이 없어 쓰지 않음)."""
+    vals = []
+    for f in sorted(BASELINE_DIR.glob(f"{ticker}_*.json")):
+        try:
+            d = json.loads(f.read_text())
+        except Exception:
+            continue
+        if "reddit_24h" in d:
+            vals.append(int(d["reddit_24h"] or 0))
+    if not vals:
+        return (0, 0.0)
+    last = vals[-REDDIT_BASELINE_DAYS:]
+    return (len(vals), sum(last) / len(last))
 
 
 def stage(apewisdom_24h: int, ape_rank: int, reddit_matches: int, baseline_n: int, baseline_mean: float) -> str:
@@ -370,6 +404,7 @@ def main():
     sha = git_sha()
 
     today_str = _P.today_kst_str("%Y%m%d")
+    now_utc = datetime.now(timezone.utc)   # WP100 · 레딧 24시간 기준 시각
     today_dash = _P.today_kst_str("%Y-%m-%d")
 
     cands_path = _find_candidates_v3_input(today_str)
@@ -414,11 +449,13 @@ def main():
             ape_prev = _i(ape.get("mentions_24h_ago")) if ape else 0
 
             # Reddit 매치
-            reddit_hits = [p for p in reddit_posts if f"${tk}" in p["title_upper"] or f" {tk} " in f" {p['title_upper']} "]
+            reddit_hits_all = [p for p in reddit_posts if f"${tk}" in p["title_upper"] or f" {tk} " in f" {p['title_upper']} "]
+            reddit_hits = posts_within(reddit_hits_all, now_utc)    # WP100 · 24시간 안에 쓴 글만 (경보·단계·표시)
             reddit_samples = [{"title": p["title"][:80], "link": p["link"], "sub": p.get("sub", ""), "kw": classify(p["title"])} for p in reddit_hits[:3]]
 
             baseline_n, baseline_mean = load_baseline(tk)
-            save_baseline(tk, today_str, ape_24h, len(reddit_hits))
+            reddit_bn, reddit_bmean = load_reddit_baseline(tk)       # 오늘 저장 전 = 오늘 제외
+            save_baseline(tk, today_str, ape_24h, len(reddit_hits_all), len(reddit_hits))
 
             baseline_mult = baseline_multiple(ape_24h, baseline_mean)   # WP86 · 기준선 하한 1건 (평균 0 이어도 계산)
             stage_val = stage(ape_24h, ape_rank, len(reddit_hits), baseline_n, baseline_mean)
@@ -448,7 +485,10 @@ def main():
                 "st_baseline_n": baseline_n,
                 "st_baseline_mean": round(baseline_mean, 2),
                 "st_baseline_mult": baseline_mult if baseline_mult is not None else "collecting",
-                "reddit_rss_matches": len(reddit_hits),
+                "reddit_rss_matches": len(reddit_hits),             # WP100 · 24시간 안 글 매치
+                "reddit_rss_matches_all": len(reddit_hits_all),     # 참고 · 받은 피드 전체 매치 (시간 한정 없음)
+                "reddit_baseline_n": reddit_bn,
+                "reddit_baseline_mean": round(reddit_bmean, 2),
                 "stage": stage_val,
                 "keywords": "|".join(sorted(kws)) if kws else "",
                 # StockTwits 삭제 · 로컬 α 있으면 별도 CSV 병기 (미구현 · 다음 세션)
