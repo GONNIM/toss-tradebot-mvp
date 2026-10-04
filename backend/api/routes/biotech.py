@@ -804,6 +804,7 @@ class BiotechKpi(BaseModel):
     alerts: int                 # 급등 경보 (rose 섹션 · 향후 신호 채널) · 현재 0
     alert_tickers: list[str] = []  # WP74 4단계 · 경보 종목 (표시용 · 판정 무변경)
     alerts_collecting: int = 0  # WP78 · 기준선 7일 미만이라 경보 판정에서 뺀 종목 수
+    reddit_baseline_days: int = 0  # WP100 · 레딧 24시간 매치 기준선 기록 일수 (최대값 · 7 미만이면 레딧 조건 수집 중)
     alert_briefs: list[dict[str, Any]] = []  # WP77 · 급등 브리핑 패널 + 자동 요약 (수집 자료 · 판정 무변경)
     inputs_missing: list[str] = []  # WP94 · 레이더 점수 입력 부족 (radar CSV 기록 · 표시 전용)
 
@@ -851,6 +852,7 @@ async def get_kpi(_admin: str = Depends(require_sniper_token)) -> BiotechKpi:
     #   apewisdom baseline_mult ≥ 5 OR reddit_rss_matches ≥ 3 인 티커 수
     alerts = 0
     alerts_collecting = 0
+    reddit_days = 0
     alert_tickers: list[str] = []
     confirm_pick: Path | None = None
     for base in _search_dirs("community_daily"):
@@ -863,6 +865,7 @@ async def get_kpi(_admin: str = Depends(require_sniper_token)) -> BiotechKpi:
         with confirm_pick.open() as f:
             for r in csv.DictReader(f):
                 # WP78 · 공용 규칙 (backend/scripts/biotech_alert_rule.py) · 기준선 7일 미만 = 수집 중 (판정 제외)
+                reddit_days = max(reddit_days, int(float(r.get("reddit_baseline_n") or 0)))
                 ok, why = _alert_judge(r)
                 if why == "collecting":
                     alerts_collecting += 1
@@ -878,6 +881,7 @@ async def get_kpi(_admin: str = Depends(require_sniper_token)) -> BiotechKpi:
         alerts=alerts,
         alert_tickers=alert_tickers,
         alerts_collecting=alerts_collecting,
+        reddit_baseline_days=reddit_days,
         alert_briefs=_latest_alert_briefs(),
         inputs_missing=_radar_inputs_missing(_latest_radar_csv()),
     )
