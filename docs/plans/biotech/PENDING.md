@@ -41,6 +41,23 @@
 
 ## PENDING
 
+### [Biotech Catalyst Radar · P3a 데이터 단계 구현 PR (PRD v0.5 10절 · 화면 P3b 제외 · 병합·배포는 사용자 승인)] · 2026-10-04 발행
+
+- PRD: `/Users/gonnim/Downloads/biotech-prd-price-outlook-20261004.md` (v0.5 · P2 실측 반영) · P2 결과 = `docs/plans/biotech/fable-bundles/20261004_PRD-P2.zip` 안 RESULTS.md
+- ① 가격 기록: HISTORY_KEEP_DAYS ≥400 · BACKFILL_DAYS 380 · 기록 시작일 > 오늘−365 종목 백필 대상 · BACKFILL_MAX 50 유지 · XBI 포함 · 멈춘 종목 제외 유지 · 단위 테스트 (보관 · 대상 · 상한)
+- ② submissions 일일 단계 (후보 종목당 1건 · 07:00 파이프): form · filingDate · acceptanceDateTime · accessionNumber · items · primaryDocument · 20-F/6-K = 외국 발행사 · S-3 유효 (3년) · 최근 12개월 S-3 · 424B5 · S-1 · 최근 8-K 접수 시각 · 장부
+- ③ companyfacts 주간 단계 (후보 종목당 1건): 현금 · 영업현금흐름 (start · end · form · filed) · 차입금 4 · Liabilities · 12개월 = 연간 + 올해 누적 − 전년 같은 기간 누적 · 남은 개월 (분기 말 · 오늘) · 분기 말 뒤 증자 공시면 "증자 반영 전" · 테스트 EDIT · ABCL · BCRX
+- ④ AACT 주간: primary_completion_date_type · last_update_posted_date · completion_date_type (머리글 없으면 로그 · 빈값) · ctgov_snapshot_YYYYMMDD.json 26주 보관 · 스폰서별 진행 중 2상 이상 수 (FR-6a 범위)
+- ⑤ 반응일 모듈: 접수 시각 UTC→동부 · FR-6b 표 · NYSE 휴장일 파일 2019~2027 (출처) · WP39 주말 d_day 232건 재계산 = 주말·휴장일 0 (명부 무변경)
+- ⑥ INCY (CIK 879169) 티커 빈칸 원인 가설 1개 · 수정 전후 후보 CSV 행 인용
+- ⑦ 424B5 표지 규칙 검증 20건 (SEC 20 · 장부) → `docs/plans/biotech/data/proposals/atm_cover_rule_20261004.md` (코드 반영 금지 · ATM 값 "미확인")
+- ⑧ 차입금 태그 제안 (요청 0) → `docs/plans/biotech/data/proposals/debt_tags_20261004.md`
+- ⑨ mcap_bucket 80행 unknown 원인 가설 1개 · 읽는 코드 확인 · 보고만
+- 보고: 번들 `docs/plans/biotech/fable-bundles/20261004_P3a.zip` · SHA-256 · PR 번호 · 변경 파일 · 테스트 · SEC 장부 합계 · 배포 뒤 예상 요청량 · 서버 디스크 증가 추정 · 네 절 (결과 보고 · 백로그 · 다음 작업 제안 · 미해결 질문)
+- 금지: 화면 코드 · FR-6c 설계 · 사전·검색어·표지 문구 코드 반영 · 서버 실행 · 로컬 Tiingo · WP39 명부·코드 수정
+
+---
+
 ### [Biotech Catalyst Radar · WP100-2 기록 보완 (문서 · 자동 병합) · 이후 날짜별 대조만] · 2026-10-04 발행
 
 - 1: changelog · 영구 규칙 2줄 (PR #83 · `c6d6d53`) · 11/15 머리 문장 모음 (영구 규칙)
