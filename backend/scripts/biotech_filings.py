@@ -243,6 +243,7 @@ INV_LONG = ("MarketableSecuritiesNoncurrent", "AvailableForSaleSecuritiesDebtSec
 INV_TOTAL = ("AvailableForSaleSecuritiesDebtSecurities", "MarketableSecurities")   # 단기 · 장기 둘 다 없을 때만
 INV_NONE = "투자자산 항목 없음 · 현금만"
 INV_MISMATCH = "투자자산 기준일 불일치 · 현금만"
+INV_RANGE = "합계 항목 · 현금성 증권 포함 여부 미확인 · 범위 표시"   # PRD v0.7 FR-5 · 합계 항목 경로 (하한으로 계산)
 WINDOW_MONTHS = 15        # PRD v0.7 FR-5 · FR-6a · "기준일 불일치" · 차입금 0 판정에 보는 현금 분기 말 직전 창
 # PRD v0.6 FR-6a · 차입금 사다리 (리스 포함 항목 · DebtInstrumentCarryingAmount 는 쓰지 않음)
 DEBT_TOTAL = "LongTermDebt"                                    # ① 유동분 포함 합계
@@ -386,6 +387,10 @@ def cash_investments(ug: dict, cash: dict | None) -> dict | None:
     parts = {"short": short, "long": long_, "total_item": total}
     used = [v for v in parts.values() if v]
     dropped = d1 + d2 + d3
+    if total:   # P3a-3 ④ · 합계 항목에 현금성 증권이 들었을 수 있음 · 하한 = max(현금, 합계) · 상한 = 현금 + 합계 · 계산은 하한
+        low, high = max(cash["val"], total["val"]), cash["val"] + total["val"]
+        return {"val": low, "end": end, "cash": cash["val"], **parts, "range": {"low": low, "high": high},
+                "note": INV_RANGE, "dropped": dropped}
     note = None
     if not used:   # P3a-3 ② · "기준일 불일치" 는 버린 항목이 직전 15개월 안에 값이 있을 때만 · 더 오래된 값만 있으면 "항목 없음"
         note = INV_MISMATCH if _recent_dropped(ug, dropped, end) else INV_NONE

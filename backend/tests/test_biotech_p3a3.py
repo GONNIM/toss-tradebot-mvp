@@ -80,6 +80,32 @@ def test_debt_zero_without_recent_nonzero_stays_zero():
     assert d["val"] == 0 and d["step"] == 2
 
 
+# ── ④ 합계 항목 범위 ─────────────────────────────────────────────────
+
+
+def test_fulc_total_item_range_low_used_for_runway():
+    f = _facts({C: [_i(48466000)], "AvailableForSaleSecuritiesDebtSecurities": [_i(270374000)]})
+    ci = bf.extract_finance(f)["cash_inv"]
+    assert ci["range"] == {"low": 270374000, "high": 318840000} and ci["val"] == 270374000
+    assert ci["note"] == "합계 항목 · 현금성 증권 포함 여부 미확인 · 범위 표시"
+    f["facts"]["us-gaap"][bf.OCF_TAG] = {"units": {"USD": [
+        {"start": "2025-07-01", "end": QE, "val": -120000000, "form": "10-Q", "filed": "2026-08-05", "accn": "x"}]}}
+    r = bf.runway(bf.extract_finance(f), None, date(2026, 10, 5))
+    assert r["cash_inv"] == 270374000 and r["cash_inv_detail"]["range"]["high"] == 318840000
+
+
+def test_total_item_range_low_is_cash_when_cash_larger():
+    ci = bf.extract_finance(_facts({C: [_i(100)], "MarketableSecurities": [_i(40)]}))["cash_inv"]
+    assert ci["range"] == {"low": 100, "high": 140} and ci["val"] == 100
+
+
+def test_edit_short_path_has_no_range():
+    f = _facts({C: [_i(181815000)], "MarketableSecuritiesCurrent": [_i(29830000)],
+                "AvailableForSaleSecuritiesDebtSecurities": [_i(211645000)]})
+    ci = bf.extract_finance(f)["cash_inv"]
+    assert "range" not in ci and ci["val"] == 211645000 and ci["total_item"] is None and ci["note"] is None
+
+
 # ── ① 격일 복귀 방지 ─────────────────────────────────────────────────
 
 

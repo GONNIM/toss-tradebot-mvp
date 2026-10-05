@@ -95,7 +95,8 @@ def test_crbu_short_sum_then_long_noncurrent():
 def test_total_item_only_when_no_short_and_long():
     f = _facts({C: [_i(48466000)], "AvailableForSaleSecuritiesDebtSecurities": [_i(270374000)]})   # FULC
     ci = bf.extract_finance(f)["cash_inv"]
-    assert ci["total_item"]["tag"] == "AvailableForSaleSecuritiesDebtSecurities" and ci["val"] == 318840000
+    assert ci["total_item"]["tag"] == "AvailableForSaleSecuritiesDebtSecurities"
+    assert ci["val"] == 270374000 and ci["range"] == {"low": 270374000, "high": 318840000}   # P3a-3 ④ · 하한으로 계산
 
 
 def test_negative_short_sum_skipped():
