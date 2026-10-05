@@ -52,6 +52,8 @@
 - 보고: 번들 `docs/plans/biotech/fable-bundles/20261005_P3a2.zip` · SHA-256 · PR · 변경 파일 · 테스트 · SEC 장부 · 네 절
 - 금지: 화면 코드 · FR-6c 설계 · 검색어 사전 · 표지 문구 확장 · 서버 실행 · 로컬 Tiingo · WP39 명부·코드 수정
 
+**진행 (2026-10-05 11시대)**: PR #85 (`feature/biotech-p3a-2` · 기준 `feature/biotech-p3a` · 병합·배포 대기) · 번들 `docs/plans/biotech/fable-bundles/20261005_P3a2.zip` (SHA-256 094b677f…564a) · SEC 0 · Tiingo 0 · 424B5 표지 백필 80건 미실행 (10/5 월요일 · 10/7 수 이후 · 대상 목록 번들 out/atm_backfill_todo.json) · 이상 1 = ⑤ 5B 초과 제외 종목이 다음 날 unknown 으로 복귀 (⑤ 배포 보류) · Fable 판정 대기
+
 ---
 
 ### [Biotech Catalyst Radar · P3a 데이터 단계 구현 PR (PRD v0.5 10절 · 화면 P3b 제외 · 병합·배포는 사용자 승인)] · 2026-10-04 발행
