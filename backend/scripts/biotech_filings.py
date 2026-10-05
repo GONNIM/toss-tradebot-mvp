@@ -4,7 +4,8 @@
   - 헤더 = biotech_sec_common.build_client() 단일 상수 · 403 · 429 즉시 중단 · 하루 300 장부에 닿으면 남은 종목은 건너뜀
   - 원본: <RUNTIME>/filings/submissions_<YYYYMMDD>.json (최근 3년 + 여유 · 필드 6개) · 7일 보관
   - 파생: <RUNTIME>/filings/filings_derived_<YYYYMMDD>.json · 외국 발행사 (20-F · 6-K) · S-3 유효 (제출 후 3년)
-    · 최근 12개월 S-3 · 424B5 · S-1 목록 · 최근 8-K 접수 시각 (UTC · 미국 동부) · ATM = "미확인" (표지 규칙 검수 전)
+    · 최근 12개월 S-3 · 424B5 · S-1 목록 · 최근 8-K 접수 시각 (UTC · 미국 동부)
+    · ATM = "확인(표지 규칙)" 또는 "미확인" (P3a-2 ③ · biotech_atm_cover · 새 424B5 표지 1건씩 · 장부 "atm_cover")
 ③ companyfacts 재무 (주간 · 요청 0 추가) · 월요일 시총 주식수 단계가 이미 받는 companyfacts 응답에서 추출
   - <RUNTIME>/finance/companyfacts_<YYYYMMDD>.json · 현금 · 현금 및 투자자산 사다리 (PRD v0.6 FR-5 · 분해값 · 쓴 태그)
     · 영업현금흐름 (start · end · form · filed) · 차입금 사다리 (FR-6a · 쓴 태그 · end) · Liabilities
@@ -33,7 +34,9 @@ from typing import Any, Callable
 from zoneinfo import ZoneInfo
 
 from backend.scripts import _biotech_paths as _P
-from backend.scripts.biotech_sec_common import SEC_DAILY_CAP, SecBlockedError, SecDailyLedger, build_client, sec_get
+from backend.scripts import biotech_atm_cover as _atm
+from backend.scripts.biotech_sec_common import (SEC_DAILY_CAP, SecBlockedError, SecDailyLedger, build_client, sec_get,
+                                               sec_get_text)
 
 LOG = logging.getLogger("biotech_filings")
 ET = ZoneInfo("America/New_York")
@@ -50,7 +53,7 @@ SHELF_YEARS = 3
 RAW_DAYS = SHELF_YEARS * 366 + 30               # 원본에 남기는 기간 (S-3 3년 판정 + 여유)
 RAW_KEEP_DAYS = 7                               # 원본 파일 보관 일수
 DERIVED_KEEP_DAYS = 400                         # 파생 파일 보관 일수
-ATM_UNKNOWN = "미확인"                          # PRD FR-6a · 표지 규칙 Fable 검수 전
+ATM_UNKNOWN = _atm.UNKNOWN                      # PRD v0.6 FR-6a · 표지 규칙 판정 전 기본값 ("없음" 은 만들지 않음)
 
 # ── 공통 ─────────────────────────────────────────────────────────────
 
@@ -160,7 +163,8 @@ def derive(filings: list[dict], today: date, older_pages: bool) -> dict:
 
 
 def run_submissions(today: date | None = None, get: Callable[[str], dict] | None = None,
-                    ledger: SecDailyLedger | None = None, cands: list[dict] | None = None) -> dict:
+                    ledger: SecDailyLedger | None = None, cands: list[dict] | None = None,
+                    get_text: Callable[[str], dict] | None = None) -> dict:
     today = today or _kst_today()
     cands = cands if cands is not None else load_candidates()
     ledger = ledger or SecDailyLedger.load(f"{today:%Y%m%d}")
@@ -168,6 +172,7 @@ def run_submissions(today: date | None = None, get: Callable[[str], dict] | None
     if get is None:
         client = build_client()                        # biotech_sec_common 단일 헤더 상수
         get = lambda url: sec_get(client, url)         # noqa: E731
+        get_text = lambda url: sec_get_text(client, url)   # noqa: E731
     raw, derived = {}, {}
     sent, blocked, capped = 0, None, 0
     lo = (today - timedelta(days=RAW_DAYS)).isoformat()
@@ -198,6 +203,8 @@ def run_submissions(today: date | None = None, get: Callable[[str], dict] | None
                         "older_pages": older, "filings": [f for f in rows if f["filingDate"] >= lo]}
             derived[cik] = {"ticker": c["ticker"] or ((j.get("tickers") or [""])[0]), "ticker_in_candidates": c["ticker"],
                             **derive(rows, today, older)}
+        # ③ 새 424B5 표지 1건씩 판정 (최근 7일 · 하루 10) · 403 · 429 로 멈췄으면 더 보내지 않음
+        atm = _atm.judge_new(derived, today, None if blocked else get_text, ledger)
     finally:
         if client is not None:
             client.close()
@@ -206,17 +213,20 @@ def run_submissions(today: date | None = None, get: Callable[[str], dict] | None
     if capped:
         LOG.warning("submissions · 하루 SEC 상한 %d 도달 · %d 종목 건너뜀", SEC_DAILY_CAP, capped)
     fdir = _P.out_dir("filings")
-    meta = {"date": today.isoformat(), "requests": sent, "blocked": blocked, "capped": capped, "companies": len(derived)}
+    meta = {"date": today.isoformat(), "requests": sent, "blocked": blocked, "capped": capped, "companies": len(derived),
+            "atm_cover": atm}
     (fdir / f"submissions_{today:%Y%m%d}.json").write_text(json.dumps({**meta, "companies_raw": raw}, ensure_ascii=False))
     (fdir / f"filings_derived_{today:%Y%m%d}.json").write_text(
         json.dumps({**meta, "rows": derived}, ensure_ascii=False, indent=1))
     pr = _prune(fdir, "submissions", today, RAW_KEEP_DAYS) + _prune(fdir, "filings_derived", today, DERIVED_KEEP_DAYS)
     rw = write_runway(today, derived)
-    LOG.info("submissions · 요청 %d · 회사 %d · 외국 발행사 %d · S-3 유효 %d · 미확인 %d · 12개월 증자 공시 보유 %d · 지운 파일 %d · 자금 여력 %s",
+    LOG.info("submissions · 요청 %d · 회사 %d · 외국 발행사 %d · S-3 유효 %d · 미확인 %d · 12개월 증자 공시 보유 %d · 지운 파일 %d · 자금 여력 %s"
+             " · ATM 표지 새 %d · 요청 %d · 확인 %d · 회사 확인 %d",
              sent, len(derived), sum(1 for d in derived.values() if d["foreign_issuer"]),
              sum(1 for d in derived.values() if d["s3"]["effective"] is True),
              sum(1 for d in derived.values() if d["s3"]["effective"] is None),
-             sum(1 for d in derived.values() if d["offerings_12m"]), pr, rw)
+             sum(1 for d in derived.values() if d["offerings_12m"]), pr, rw, atm["new"], atm["sent"], atm["positive"],
+             sum(1 for d in derived.values() if d["atm"] == _atm.CONFIRMED))
     return meta
 
 # ── ③ companyfacts 재무 ─────────────────────────────────────────────
