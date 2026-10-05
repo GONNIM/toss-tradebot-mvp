@@ -7,7 +7,9 @@
 
 요청 (SEC · 헤더 = biotech_sec_common.build_client 단일 상수 · 장부 범주 "atm_cover" · 403 · 429 즉시 중단):
   - 백필 1회 (Fable 승인 PRD 12절): 최근 12개월 424B5 중 받지 않은 것 · 상한 80 · 하루 300 장부 안
-    · 월요일 · 화요일 (KST) 에는 실행하지 않는다. 결과는 저장소 시드 파일 (atm_cover_seed.json) 로 커밋한다.
+    · 실행 직전 장부 실측 조건 (P3a-3 ⓪ · 요일 금지 대체): 서버 장부 오늘 파일 (ssh 조회 전용 · 없으면 0) + 로컬 장부 오늘 합계
+      + 이번 실행 예정 건수 ≤ 300 일 때만 실행. 둘 중 하나라도 읽지 못하면 실행하지 않는다.
+      결과는 저장소 시드 파일 (atm_cover_seed.json) 로 커밋한다.
   - 일일 (submissions 단계 안): 제출일이 최근 7일 안이고 아직 판정하지 않은 424B5 표지 · 하루 상한 10.
 판정 저장: 시드 (저장소 · docs/plans/biotech/data/atm_cover_seed.json) + 런타임 (<RUNTIME>/filings/atm_cover.json).
 
@@ -24,6 +26,7 @@ import html
 import json
 import logging
 import re
+import subprocess
 from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 from typing import Callable
@@ -45,7 +48,8 @@ UNKNOWN = "미확인"
 FORM = "424B5"
 LEDGER_CAT = "atm_cover"
 BACKFILL_MAX = 80
-BACKFILL_BLOCKED_WEEKDAYS = (0, 1)        # 월 · 화 (KST) · 그날 SEC 합계가 크다 (PRD 12절)
+SERVER_SSH = "root@optimus8.cafe24.com"   # P3a-3 ⓪ · 서버 장부 조회 전용 (cat) · 쓰기 · 실행 없음
+SERVER_LEDGER = "/root/toss-tradebot-mvp/var/biotech/sec_usage/sec_usage_{day}.json"
 DAILY_MAX = 10
 NEW_DAYS = 7
 YEAR_DAYS = 365
@@ -188,17 +192,68 @@ def judge_new(derived: dict[str, dict], today: date, get_text: Callable[[str], d
             "positive": sum(1 for r in res["rows"].values() if r["result"] == CONFIRMED)}
 
 
+def _ledger_sum(text: str) -> int:
+    return sum(int(v) for v in (json.loads(text).get("counts") or {}).values())
+
+
+def read_server_ledger_total(day: str, run: Callable[..., subprocess.CompletedProcess] = subprocess.run) -> int | None:
+    """P3a-3 ⓪ · 서버 장부 오늘 합계 · ssh 로 파일을 읽기만 한다 · 파일이 없으면 0 · 읽지 못하면 None."""
+    path = SERVER_LEDGER.format(day=day)
+    cmd = ["ssh", "-o", "BatchMode=yes", "-o", "ConnectTimeout=15", SERVER_SSH,
+           f"if [ -f {path} ]; then cat {path}; else echo NO_FILE; fi"]
+    try:
+        r = run(cmd, capture_output=True, text=True, timeout=60)
+    except (OSError, subprocess.TimeoutExpired):
+        return None
+    if r.returncode != 0:
+        return None
+    out = (r.stdout or "").strip()
+    if out == "NO_FILE":
+        return 0
+    try:
+        return _ledger_sum(out)
+    except (ValueError, TypeError, AttributeError):
+        return None
+
+
+def read_local_ledger_total(day: str) -> int | None:
+    """P3a-3 ⓪ · 로컬 장부 오늘 합계 · 파일이 없으면 0 · 읽지 못하면 None."""
+    p = _P.out_dir("sec_usage") / f"sec_usage_{day}.json"
+    if not p.exists():
+        return 0
+    try:
+        return _ledger_sum(p.read_text())
+    except (ValueError, TypeError, AttributeError, OSError):
+        return None
+
+
+def ledger_gate(server_total: int | None, local_total: int | None, planned: int) -> tuple[bool, str]:
+    """P3a-3 ⓪ · 서버 + 로컬 + 예정 ≤ 300 일 때만 실행 · 하나라도 읽지 못하면 실행하지 않음."""
+    if server_total is None:
+        return False, "서버 장부를 읽지 못함 · 실행하지 않음"
+    if local_total is None:
+        return False, "로컬 장부를 읽지 못함 · 실행하지 않음"
+    total = server_total + local_total + planned
+    msg = f"서버 {server_total} + 로컬 {local_total} + 예정 {planned} = {total} (상한 {SEC_DAILY_CAP})"
+    return total <= SEC_DAILY_CAP, msg + (" · 실행" if total <= SEC_DAILY_CAP else " · 초과 · 실행하지 않음")
+
+
 def backfill(derived: dict[str, dict], today: date, get_text: Callable[[str], dict], ledger: SecDailyLedger,
-             already: set[str]) -> dict:
-    """1회 백필 · 최근 12개월 424B5 중 시드 · 런타임 · already (P2 · P3a 에서 받은 원문) 에 없는 것 · 상한 80."""
-    if today.weekday() in BACKFILL_BLOCKED_WEEKDAYS:
-        raise SystemExit(f"{today} 는 {'월화'[today.weekday()]}요일 · 백필 금지 (PRD 12절)")
+             already: set[str], gate: Callable[[int], tuple[bool, str]] | None = None) -> dict:
+    """1회 백필 · 최근 12개월 424B5 중 시드 · 런타임 · already (P2 · P3a 에서 받은 원문) 에 없는 것 · 상한 80.
+
+    gate (P3a-3 ⓪) · 대상 건수를 받아 (실행 여부, 설명) · 거부면 요청 0 으로 끝냄."""
     judged = load_judged()
     lo = (today - timedelta(days=YEAR_DAYS)).isoformat()
     todo = [it for it in items_from_derived(derived)
             if it["filingDate"] >= lo and it["accessionNumber"] not in judged and it["accessionNumber"] not in already]
     if len(todo) > BACKFILL_MAX:
         raise SystemExit(f"백필 대상 {len(todo)}건 > 승인 상한 {BACKFILL_MAX} · 실행하지 않음")
+    if gate is not None:
+        ok, why = gate(len(todo))
+        LOG.info("SEC 장부 조건 · %s", why)
+        if not ok:
+            raise SystemExit(f"SEC 장부 조건 불충족 · {why}")
     res = fetch_judge(todo, get_text, ledger, BACKFILL_MAX, f"backfill_{today:%Y%m%d}", today)
     seed = _rows(seed_path())
     seed.update(res["rows"])
@@ -245,9 +300,14 @@ def main():
         print(json.dumps({"judged": len(rows), "positive": sum(r["result"] == CONFIRMED for r in rows.values())}))
         return
     already = {f.stem for d in (a.already or "").split(",") if d for f in Path(d).iterdir()}
-    ledger = SecDailyLedger.load(f"{today:%Y%m%d}")
+    day = f"{today:%Y%m%d}"
+    ledger = SecDailyLedger.load(day)
+
+    def gate(n: int) -> tuple[bool, str]:
+        return ledger_gate(read_server_ledger_total(day), read_local_ledger_total(day), n)
+
     with build_client() as client:
-        out = backfill(derived, today, lambda u: sec_get_text(client, u), ledger, already)
+        out = backfill(derived, today, lambda u: sec_get_text(client, u), ledger, already, gate)
     print(json.dumps({**out, "ledger_total": ledger.total(), "ledger": ledger.counts}, ensure_ascii=False))
 
 

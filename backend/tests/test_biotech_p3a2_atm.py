@@ -132,11 +132,45 @@ def test_fetch_respects_300_cap(rt):
     assert r["sent"] == 1 and r["capped"] == 2 and led.total() == 300
 
 
-@pytest.mark.parametrize("day", [date(2026, 10, 5), date(2026, 10, 6)])
-def test_backfill_refused_on_monday_tuesday(rt, day):
-    with pytest.raises(SystemExit):
-        atm.backfill(_derived(("1", "X", "A", "2026-09-01")), day, lambda u: {"status": 200, "text": ANTX},
-                     SecDailyLedger.load("x"), set())
+class _Run:
+    """ssh 대신 · 서버 장부 cat 결과를 흉내 (returncode · stdout)."""
+
+    def __init__(self, rc: int, out: str):
+        self.rc, self.out, self.cmds = rc, out, []
+
+    def __call__(self, cmd, **k):
+        self.cmds.append(cmd)
+        return type("R", (), {"returncode": self.rc, "stdout": self.out})()
+
+
+def test_backfill_gate_passes_with_measured_ledgers(rt):
+    """P3a-3 ⓪ · 요일 금지 대신 장부 실측 · 서버 147 + 로컬 0 + 예정 1 ≤ 300 → 실행 (월요일이어도)."""
+    run = _Run(0, json.dumps({"date": "20261005", "counts": {"filings_submissions": 80, "form4": 66, "alert_brief": 1}}))
+    server = atm.read_server_ledger_total("20261005", run)
+    assert server == 147 and run.cmds[0][-1].startswith("if [ -f /root/toss-tradebot-mvp/var/biotech/sec_usage/sec_usage_20261005.json ]")
+    assert atm.read_local_ledger_total("20261005") == 0                                # 파일 없음 → 0
+    assert atm.read_server_ledger_total("20261005", _Run(0, "NO_FILE")) == 0
+    urls = []
+    r = atm.backfill(_derived(("0000000001", "X", "A", "2026-09-01")), date(2026, 10, 5),
+                     lambda u: urls.append(u) or {"status": 200, "text": ANTX}, SecDailyLedger.load("20261005"), set(),
+                     lambda n: atm.ledger_gate(server, 0, n))
+    assert r["sent"] == 1 and len(urls) == 1
+
+
+def test_backfill_gate_refuses_over_cap_or_unreadable(rt):
+    ok, why = atm.ledger_gate(147, 70, 85)
+    assert not ok and "302" in why
+    assert atm.ledger_gate(None, 0, 85) == (False, "서버 장부를 읽지 못함 · 실행하지 않음")
+    assert atm.read_server_ledger_total("20261005", _Run(255, "")) is None              # ssh 실패
+    atm._P.out_dir("sec_usage").joinpath("sec_usage_20261005.json").write_text("{깨짐")
+    assert atm.read_local_ledger_total("20261005") is None
+    urls = []
+    for gate in (lambda n: atm.ledger_gate(147, 70, n + 84), lambda n: atm.ledger_gate(None, 0, n)):
+        with pytest.raises(SystemExit):
+            atm.backfill(_derived(("0000000001", "X", "A", "2026-09-01")), date(2026, 10, 5),
+                         lambda u: urls.append(u) or {"status": 200, "text": ANTX}, SecDailyLedger.load("20261005"),
+                         set(), gate)
+    assert urls == []
 
 
 def test_backfill_skips_judged_and_already_and_old_and_writes_seed(rt):
