@@ -7,7 +7,7 @@
     · 최근 12개월 S-3 · 424B5 · S-1 목록 · 최근 8-K 접수 시각 (UTC · 미국 동부) · ATM = "미확인" (표지 규칙 검수 전)
 ③ companyfacts 재무 (주간 · 요청 0 추가) · 월요일 시총 주식수 단계가 이미 받는 companyfacts 응답에서 추출
   - <RUNTIME>/finance/companyfacts_<YYYYMMDD>.json · 현금 · 현금 및 투자자산 사다리 (PRD v0.6 FR-5 · 분해값 · 쓴 태그)
-    · 영업현금흐름 (start · end · form · filed) · 차입금 4 · Liabilities
+    · 영업현금흐름 (start · end · form · filed) · 차입금 사다리 (FR-6a · 쓴 태그 · end) · Liabilities
   - 최근 12개월 영업현금흐름 = 직전 연간 + 올해 누적 − 전년 같은 기간 누적 (FR-5 · 분기 차감 안 함)
   - 남은 개월 수 = 현금 및 투자자산 ÷ (12개월 소모 ÷ 12) · 분기 말 기준과 오늘 기준 (경과 개월 보정) · 분기 말 뒤 424B5 가 있으면 "증자 반영 전"
     · 오늘 기준 0 이하면 숫자 대신 RUNWAY_ZERO 문구
@@ -223,7 +223,6 @@ def run_submissions(today: date | None = None, get: Callable[[str], dict] | None
 
 CASH_TAG = "CashAndCashEquivalentsAtCarryingValue"
 OCF_TAG = "NetCashProvidedByUsedInOperatingActivities"
-DEBT_TAGS = ("LongTermDebt", "LongTermDebtNoncurrent", "DebtCurrent", "ConvertibleNotesPayable")   # PRD FR-6a
 LIAB_TAG = "Liabilities"
 # PRD v0.6 FR-5 · 현금 및 투자자산 사다리 · 묶음마다 현금과 같은 end 값이 있는 첫 항목 하나
 INV_SHORT_SUM = "CashCashEquivalentsAndShortTermInvestments"   # 현금을 뺀 값 (0 이상일 때) 이 단기 투자 첫 항목
@@ -234,6 +233,14 @@ INV_LONG = ("MarketableSecuritiesNoncurrent", "AvailableForSaleSecuritiesDebtSec
 INV_TOTAL = ("AvailableForSaleSecuritiesDebtSecurities", "MarketableSecurities")   # 단기 · 장기 둘 다 없을 때만
 INV_NONE = "투자자산 항목 없음 · 현금만"
 INV_MISMATCH = "투자자산 기준일 불일치 · 현금만"
+# PRD v0.6 FR-6a · 차입금 사다리 (리스 포함 항목 · DebtInstrumentCarryingAmount 는 쓰지 않음)
+DEBT_TOTAL = "LongTermDebt"                                    # ① 유동분 포함 합계
+DEBT_NONCURRENT = ("LongTermDebtNoncurrent", "LongTermNotesPayable", "ConvertibleLongTermNotesPayable",
+                   "NotesPayableRelatedPartiesNoncurrent")
+DEBT_CURRENT = ("LongTermDebtCurrent", "DebtCurrent", "NotesPayableCurrent", "ConvertibleNotesPayableCurrent",
+                "NotesPayableRelatedPartiesClassifiedCurrent")
+DEBT_LAST = "NotesPayable"                                     # ③ 둘 다 없을 때
+DEBT_NONE = "차입금 미확인"
 RUNWAY_ZERO = "0개월 이하 · 분기 말 뒤 소진 추정 · 증자 또는 투자자산 확인 필요"   # PRD v0.6 FR-5
 REPORT_FORMS = ("10-Q", "10-K", "10-Q/A", "10-K/A")
 PT_FIELDS = ("start", "end", "val", "form", "filed", "accn")
@@ -348,6 +355,30 @@ def cash_investments(ug: dict, cash: dict | None) -> dict | None:
             "note": note, "dropped": d1 + d2 + d3}
 
 
+def debt_ladder(ug: dict, end: str | None) -> dict:
+    """차입금 (PRD v0.6 FR-6a 사다리) · ① LongTermDebt → ② 비유동 첫 항목 + 유동 첫 항목 → ③ NotesPayable.
+
+    최근값 = end 가 현금 분기 말과 같은 값. 찾지 못하면 0 으로 두지 않고 "차입금 미확인".
+    """
+    if not end:
+        return {"val": None, "label": DEBT_NONE, "reason": "현금 분기 말 없음", "items": []}
+    p = _at(ug, DEBT_TOTAL, end)
+    if p is not None:
+        return {"val": p["val"], "end": end, "step": 1, "items": [_item(DEBT_TOTAL, p)]}
+    nc, d1 = _first(ug, DEBT_NONCURRENT, end)
+    cur, d2 = _first(ug, DEBT_CURRENT, end)
+    items = [x for x in (nc, cur) if x]
+    if items:
+        return {"val": sum(x["val"] for x in items), "end": end, "step": 2, "items": items}
+    p = _at(ug, DEBT_LAST, end)
+    if p is not None:
+        return {"val": p["val"], "end": end, "step": 3, "items": [_item(DEBT_LAST, p)]}
+    other = [{"tag": t, "end": q["end"]} for t in (DEBT_TOTAL, *DEBT_NONCURRENT, *DEBT_CURRENT, DEBT_LAST)
+             if (q := _latest(_pts(ug, t)))]
+    return {"val": None, "label": DEBT_NONE, "reason": "차입금 기준일 불일치" if other else "사다리 항목 없음",
+            "items": [], "dropped": other}
+
+
 def extract_finance(facts: dict) -> dict:
     """companyfacts 응답 → 저장할 재무 값 (요청 없음 · 순수 함수)."""
     allf = (facts or {}).get("facts") or {}
@@ -361,7 +392,7 @@ def extract_finance(facts: dict) -> dict:
         "cash_inv": cash_investments(ug, cash),
         "ocf_latest": _pick(_latest([p for p in ocf if p.get("start")])),
         "ocf_ttm": ttm_ocf(ocf),
-        "debt": {t: _pick(_latest(_pts(ug, t))) for t in DEBT_TAGS},
+        "debt": debt_ladder(ug, cash["end"] if cash else None),
         "liabilities": _pick(_latest(_pts(ug, LIAB_TAG))),
     }
 

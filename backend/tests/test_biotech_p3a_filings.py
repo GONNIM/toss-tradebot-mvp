@@ -240,7 +240,7 @@ def test_latest_annual_is_ttm():
 
 def test_debt_and_liabilities_saved():
     fin = bf.extract_finance(EDIT)
-    assert fin["debt"]["LongTermDebtNoncurrent"]["val"] == 48238000 and fin["debt"]["DebtCurrent"] is None
+    assert fin["debt"]["val"] == 48238000 and [x["tag"] for x in fin["debt"]["items"]] == ["LongTermDebtNoncurrent"]
     assert fin["liabilities"]["val"] == 132083000
     assert set(fin["ocf_latest"]) == {"start", "end", "val", "form", "filed", "accn"}
 

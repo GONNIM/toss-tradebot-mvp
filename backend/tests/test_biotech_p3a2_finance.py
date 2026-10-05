@@ -130,3 +130,36 @@ def test_runway_today_zero_or_below_label():
     assert r["months_qe"] == round(18738000 / (98504000 / 12), 2) == 2.28
     assert r["months_today"] is None and r["months_today_calc"] == round(2.2827 - 97 / bf.MONTH_DAYS, 2) < 0
     assert r["label"] == "0개월 이하 · 분기 말 뒤 소진 추정 · 증자 또는 투자자산 확인 필요"
+
+
+# ── ④ 차입금 사다리 ──────────────────────────────────────────────────
+
+
+def test_debt_agen_total_once():
+    d = bf.extract_finance(AGEN)["debt"]
+    assert d["val"] == 30068000 and d["step"] == 1 and [x["tag"] for x in d["items"]] == ["LongTermDebt"]
+
+
+def test_debt_edit_noncurrent_plus_current():
+    d = bf.extract_finance(EDIT)["debt"]
+    assert d["val"] == 48238000 + 7500000 == 55738000 and d["step"] == 2
+    assert [(x["tag"], x["end"]) for x in d["items"]] == [("LongTermDebtNoncurrent", QE), ("LongTermDebtCurrent", QE)]
+
+
+def test_debt_bcrx_noncurrent_only():
+    d = bf.extract_finance(BCRX)["debt"]
+    assert d["val"] == 395400000 and [x["tag"] for x in d["items"]] == ["LongTermDebtNoncurrent"]
+
+
+def test_debt_not_found_is_unconfirmed_not_zero():
+    d = bf.extract_finance(KYMR)["debt"]
+    assert d["val"] is None and d["label"] == "차입금 미확인" and d["reason"] == "사다리 항목 없음"
+    d = bf.extract_finance(ABCL)["debt"]                                                # 2020 값만 있음
+    assert d["val"] is None and d["reason"] == "차입금 기준일 불일치"
+
+
+def test_debt_notes_payable_last_and_lease_ignored():
+    f = _facts({C: [_i(1)], "NotesPayable": [_i(7)], "LongTermDebtAndCapitalLeaseObligations": [_i(99)],
+                "DebtInstrumentCarryingAmount": [_i(98)]})
+    d = bf.extract_finance(f)["debt"]
+    assert d["val"] == 7 and d["step"] == 3
