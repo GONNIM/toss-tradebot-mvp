@@ -14,6 +14,8 @@ CIK → ticker 매핑 확장:
 
 시총 필터: $50M~$5B (companyfacts shares × 최근 종가 · h3_mcap + h3_prices_merged)
   · P3a-2 ⑤ · h3_prices_merged 가 없으면 (서버) 일일 시총 단계 결과 <RUNTIME>/mcap_display.json (전날 [8/10] · 주식수 × IEX 종가) 로 구간을 매김
+  · P3a-3 ① (PRD v0.7 6절 (가)) · 5B 초과 제외 기록 <RUNTIME>/mcap/over_5b_excluded.json (종목 · 시총 · 확인 날짜)
+    마지막 확인일부터 30일 동안은 시총이 unknown 이어도 제외 유지 · 30일이 지나고 새 값이 없으면 다시 판정 (unknown)
 """
 from __future__ import annotations
 
@@ -25,7 +27,7 @@ import json
 import logging
 import subprocess
 from collections import defaultdict
-from datetime import datetime, timedelta, timezone
+from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 
 import os
@@ -297,6 +299,64 @@ def load_mcap_display() -> tuple[dict, str | None]:
     return out, j.get("generated")
 
 
+OVER5B_KEEP_DAYS = 30   # P3a-3 ① · 마지막 확인일부터 제외 유지 기간 (PRD v0.7 6절 (가))
+
+
+def mcap_bucket(mcap: float) -> str:
+    if 50e6 <= mcap < 300e6:
+        return "50M-300M"
+    if 300e6 <= mcap < 1e9:
+        return "300M-1B"
+    if 1e9 <= mcap < 5e9:
+        return "1B-5B"
+    if mcap >= 5e9:
+        return "over_5B_excluded"
+    return "unknown"
+
+
+def _over5b_path() -> Path:
+    return _P.out_dir("mcap") / "over_5b_excluded.json"
+
+
+def load_over5b() -> dict:
+    p = _over5b_path()
+    if not p.exists():
+        return {}
+    try:
+        return json.loads(p.read_text()).get("rows") or {}
+    except (ValueError, OSError):
+        LOG.warning("over_5b_excluded.json 읽기 실패 · 제외 기록 없이 판정")
+        return {}
+
+
+def keep_over5b(rows: list[dict], memo: dict, today: date) -> tuple[dict, list[str], list[str]]:
+    """P3a-3 ① · rows (ticker · cik · mcap_usd · mcap_bucket) 를 제자리에서 고치고 (새 기록, 유지 종목, 다시 판정 종목) 반환.
+
+    - 오늘 5B 초과 → 기록 갱신 (시총 · 확인 날짜 = 오늘)
+    - 오늘 unknown + 기록 있음 + 확인일부터 30일 이내 → 제외 유지 (구간 over_5B_excluded · 시총 = 기록값)
+    - 오늘 unknown + 기록 있음 + 30일 지남 → 기록 삭제 · unknown 그대로 (다시 판정)
+    - 오늘 5B 미만 값 → 기록 삭제 (새 값이 우선)
+    """
+    memo = dict(memo)
+    kept, expired = [], []
+    for c in rows:
+        k = c["ticker"] or c["cik"]
+        m = memo.get(k)
+        if c["mcap_bucket"] == "over_5B_excluded":
+            memo[k] = {"ticker": c["ticker"], "cik": c["cik"], "mcap_usd": int(c["mcap_usd"]), "date": today.isoformat()}
+        elif c["mcap_bucket"] == "unknown" and m:
+            if (today - date.fromisoformat(m["date"])).days <= OVER5B_KEEP_DAYS:
+                c["mcap_bucket"] = "over_5B_excluded"
+                c["mcap_usd"] = int(m["mcap_usd"])
+                kept.append(k)
+            else:
+                memo.pop(k)
+                expired.append(k)
+        elif m:
+            memo.pop(k)
+    return memo, kept, expired
+
+
 def main():
     require_secure_logging()
     from backend.scripts._biotech_bootstrap import data_sha
@@ -387,16 +447,16 @@ def main():
         p = close.get(tk, 0)
         mcap = s * p if s and p else display.get(tk, 0)
         c["mcap_usd"] = int(mcap)
-        if 50e6 <= mcap < 300e6:
-            c["mcap_bucket"] = "50M-300M"
-        elif 300e6 <= mcap < 1e9:
-            c["mcap_bucket"] = "300M-1B"
-        elif 1e9 <= mcap < 5e9:
-            c["mcap_bucket"] = "1B-5B"
-        elif mcap >= 5e9:
-            c["mcap_bucket"] = "over_5B_excluded"
-        else:
-            c["mcap_bucket"] = "unknown"
+        c["mcap_bucket"] = mcap_bucket(mcap)
+    # P3a-3 ① · 5B 초과 제외 기록 (30일 유지)
+    run_day = datetime.strptime(_P.today_kst_str("%Y%m%d"), "%Y%m%d").date()
+    memo, over5b_kept, over5b_expired = keep_over5b(list(candidates.values()), load_over5b(), run_day)
+    _over5b_path().write_text(json.dumps({"updated": run_day.isoformat(), "keep_days": OVER5B_KEEP_DAYS, "rows": memo},
+                                         ensure_ascii=False, indent=1))
+    if over5b_kept or over5b_expired:
+        LOG.info("5B 초과 제외 기록 · 유지 %d %s · 30일 지나 다시 판정 %d %s",
+                 len(over5b_kept), sorted(over5b_kept), len(over5b_expired), sorted(over5b_expired))
+    for c in candidates.values():
         if c["mcap_bucket"] in ("50M-300M", "300M-1B", "1B-5B", "unknown"):
             filtered.append(c)
 
@@ -439,6 +499,8 @@ def main():
         "mcap_distribution": dict(mcap_dist),
         "mcap_source": "h3" if close else f"mcap_display {display_date}",
         "over_5B_excluded": sorted(c["ticker"] or c["cik"] for c in candidates.values() if c["mcap_bucket"] == "over_5B_excluded"),
+        "over_5B_kept_by_record": sorted(over5b_kept),
+        "over_5B_record_expired": sorted(over5b_expired),
     }
     LOG.info("summary=%s", json.dumps(summary, ensure_ascii=False, indent=2))
     print(json.dumps(summary, ensure_ascii=False, indent=2))
