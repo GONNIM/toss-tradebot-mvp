@@ -253,6 +253,7 @@ DEBT_CURRENT = ("LongTermDebtCurrent", "DebtCurrent", "NotesPayableCurrent", "Co
 DEBT_LAST = "NotesPayable"                                     # ③ 둘 다 없을 때
 DEBT_ALL = (DEBT_TOTAL, *DEBT_NONCURRENT, *DEBT_CURRENT, DEBT_LAST)
 DEBT_NONE = "차입금 미확인"
+DEBT_ZERO_MISMATCH = "최근 분기 태그 불일치"                    # PRD v0.7 FR-6a · 0 인데 직전 15개월에 0 이 아닌 값
 RUNWAY_ZERO = "0개월 이하 · 분기 말 뒤 소진 추정 · 증자 또는 투자자산 확인 필요"   # PRD v0.6 FR-5
 REPORT_FORMS = ("10-Q", "10-K", "10-Q/A", "10-K/A")
 PT_FIELDS = ("start", "end", "val", "form", "filed", "accn")
@@ -399,6 +400,18 @@ def debt_ladder(ug: dict, end: str | None) -> dict:
     """
     if not end:
         return {"val": None, "label": DEBT_NONE, "reason": "현금 분기 말 없음", "items": []}
+    res = _debt_steps(ug, end)
+    if res.get("val") == 0:   # P3a-3 ③ · 0 인데 사다리 어떤 항목이든 직전 15개월 안에 0 이 아닌 값이 있으면 미확인
+        prior = [{"tag": t, **_pick(q)} for t in DEBT_ALL for q in _pts(ug, t)
+                 if not q.get("start") and q["val"] != 0 and _in_window(q["end"], end)]
+        if prior:
+            x = max(prior, key=lambda q: (q["end"], q.get("filed", "")))
+            return {"val": None, "end": end, "label": f"{DEBT_NONE} · {DEBT_ZERO_MISMATCH}(직전 값 {x['val']:,} · {x['end']})",
+                    "reason": DEBT_ZERO_MISMATCH, "zero_items": res["items"], "prior": x, "items": []}
+    return res
+
+
+def _debt_steps(ug: dict, end: str) -> dict:
     p = _at(ug, DEBT_TOTAL, end)
     if p is not None:
         return {"val": p["val"], "end": end, "step": 1, "items": [_item(DEBT_TOTAL, p)]}

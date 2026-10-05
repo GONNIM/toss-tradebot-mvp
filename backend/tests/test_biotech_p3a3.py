@@ -58,6 +58,28 @@ def test_debt_recent_dropped_keeps_mismatch():
     assert bf.extract_finance(f)["debt"]["reason"] == "차입금 기준일 불일치"
 
 
+# ── ③ 차입금 0 → 미확인 ──────────────────────────────────────────────
+
+
+HOWL = _facts({C: [_i(21987000, filed="2026-07-31")],
+               "LongTermDebt": [_i(32085000, end="2026-03-31", filed="2026-05-07")],
+               "NotesPayableCurrent": [_i(0, filed="2026-07-31")]})
+
+
+def test_debt_howl_zero_with_recent_nonzero_is_unconfirmed():
+    d = bf.extract_finance(HOWL)["debt"]
+    assert d["val"] is None and d["reason"] == "최근 분기 태그 불일치"
+    assert d["label"] == "차입금 미확인 · 최근 분기 태그 불일치(직전 값 32,085,000 · 2026-03-31)"
+    assert d["prior"]["tag"] == "LongTermDebt" and [x["tag"] for x in d["zero_items"]] == ["NotesPayableCurrent"]
+
+
+def test_debt_zero_without_recent_nonzero_stays_zero():
+    f = _facts({C: [_i(1)], "LongTermDebt": [_i(32085000, end="2024-12-31", form="10-K")],
+                "NotesPayableCurrent": [_i(0)]})
+    d = bf.extract_finance(f)["debt"]
+    assert d["val"] == 0 and d["step"] == 2
+
+
 # ── ① 격일 복귀 방지 ─────────────────────────────────────────────────
 
 
