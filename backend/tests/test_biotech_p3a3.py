@@ -42,6 +42,20 @@ def test_investment_old_values_only_is_none():
     assert ci["val"] == 125903000 and ci["note"] == bf.INV_NONE and len(ci["dropped"]) == 3
 
 
+def test_kod_zero_only_in_window_is_none():
+    """P3a-3 ⑦ · KOD · 창 안 값이 MarketableSecurities 2025-12-31 = 0 뿐 → "투자자산 항목 없음 · 현금만"."""
+    f = _facts({C: [_i(125903000)], "MarketableSecuritiesCurrent": [_i(0, end="2023-12-31", form="10-K")],
+                "AvailableForSaleSecuritiesDebtSecuritiesCurrent": [_i(104576000, end="2023-03-31")],
+                "MarketableSecurities": [_i(0, end="2024-12-31", form="10-K"), _i(0, end="2025-12-31", form="10-K")]})
+    ci = bf.extract_finance(f)["cash_inv"]
+    assert ci["val"] == 125903000 and ci["note"] == "투자자산 항목 없음 · 현금만"
+
+
+def test_debt_zero_only_in_window_is_ladder_none():
+    f = _facts({C: [_i(1)], "LongTermDebtNoncurrent": [_i(0, end="2025-12-31", form="10-K")]})
+    assert bf.extract_finance(f)["debt"]["reason"] == "사다리 항목 없음"
+
+
 def test_investment_recent_dropped_keeps_mismatch():
     f = _facts({C: [_i(18738000)], bf.INV_SHORT_SUM: [_i(3500000, end="2025-09-30")]})      # AGEN 유형
     assert bf.extract_finance(f)["cash_inv"]["note"] == bf.INV_MISMATCH

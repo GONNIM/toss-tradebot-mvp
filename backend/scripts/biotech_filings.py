@@ -350,10 +350,13 @@ def _in_window(pt_end: str, end: str) -> bool:
 
 
 def _recent_dropped(ug: dict, dropped: list[dict], end: str) -> list[dict]:
-    """버린 항목 중 직전 15개월 안에 값이 있는 것 (그 창 안 가장 최근 end)."""
+    """버린 항목 중 직전 15개월 안에 0 이 아닌 값이 있는 것 (그 창 안 가장 최근 end).
+
+    P3a-3 ⑦ (PRD FR-5 · FR-6a · 16:30 보완) · 창 안의 값이 0 뿐이면 "항목 없음" 으로 본다 (KOD MarketableSecurities 2025-12-31 = 0)."""
     out = []
     for d in dropped:
-        ends = [p["end"] for p in _pts(ug, d["tag"]) if not p.get("start") and _in_window(p["end"], end)]
+        ends = [p["end"] for p in _pts(ug, d["tag"])
+                if not p.get("start") and p["val"] != 0 and _in_window(p["end"], end)]
         if ends:
             out.append({"tag": d["tag"], "end": max(ends)})
     return out
