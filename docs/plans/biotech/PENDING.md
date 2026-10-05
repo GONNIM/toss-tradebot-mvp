@@ -41,6 +41,19 @@
 
 ## PENDING
 
+### [Biotech Catalyst Radar · P3a-2 후속 PR (PRD v0.6 12절 · 화면 P3b 제외 · 브랜치 feature/biotech-p3a 위)] · 2026-10-05 발행
+
+- PRD: `/Users/gonnim/Downloads/biotech-prd-price-outlook-20261004.md` (v0.6 · P3a 판정 반영) · FR-5 · FR-6a · 12절
+- ① 현금 및 투자자산 사다리 (FR-5) · 묶음마다 최근값 첫 항목 하나 · 현금과 같은 end · 분해값 · 쓴 태그 · "투자자산 항목 없음 · 현금만" · companyfacts 20개 태그 존재 · end 표 · 테스트 KYMR · EDIT · ABCL · BCRX · 1종목 (원문 대조가 필요하면 요청 수와 함께 질문)
+- ② 오늘 기준 0 이하 → label "0개월 이하 · 분기 말 뒤 소진 추정 · 증자 또는 투자자산 확인 필요" · 테스트 1
+- ③ ATM 표지 규칙 (A · B · C · 제안 파일 2절 고정) → "확인(표지 규칙)" / "미확인" · 인용 앞뒤 60자 · 접수번호 · 제출일 · 최근 12개월 424B5 미수신분 (약 78건) 1회 백필 (하루 300 · 장부 atm_cover · 월 · 화 금지 · 403 · 429 즉시 중단) · 이후 submissions 단계가 새 424B5 표지 1건 판정 · 양성 인용 전부 번들
+- ④ 차입금 사다리 (FR-6a) · 쓴 태그 · end · 테스트 AGEN 30,068,000 · EDIT 55,738,000 · BCRX 395,400,000 · "차입금 미확인"
+- ⑤ 후보 시총 구간 unknown: 가설 1개 (서버에 h3 파일 없음 · mcap_display.json · 주식수 파일 있음) · 서버 사본 인용 · 맞으면 후보 단계 수정 · 전후 80행 분포 · 5B 초과 제외 종목 · Tiingo 월 고유 · SEC 일일 변화 계산
+- 보고: 번들 `docs/plans/biotech/fable-bundles/20261005_P3a2.zip` · SHA-256 · PR · 변경 파일 · 테스트 · SEC 장부 · 네 절
+- 금지: 화면 코드 · FR-6c 설계 · 검색어 사전 · 표지 문구 확장 · 서버 실행 · 로컬 Tiingo · WP39 명부·코드 수정
+
+---
+
 ### [Biotech Catalyst Radar · P3a 데이터 단계 구현 PR (PRD v0.5 10절 · 화면 P3b 제외 · 병합·배포는 사용자 승인)] · 2026-10-04 발행
 
 - PRD: `/Users/gonnim/Downloads/biotech-prd-price-outlook-20261004.md` (v0.5 · P2 실측 반영) · P2 결과 = `docs/plans/biotech/fable-bundles/20261004_PRD-P2.zip` 안 RESULTS.md
