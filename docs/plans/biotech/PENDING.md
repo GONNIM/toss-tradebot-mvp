@@ -41,6 +41,20 @@
 
 ## PENDING
 
+### [Biotech Catalyst Radar · P3a-3 (PR #85 보강 커밋 · PRD v0.7 13절 · 새 PR 없음 · 화면 P3b 제외)] · 2026-10-05 발행
+
+- PRD: `/Users/gonnim/Downloads/biotech-prd-price-outlook-20261004.md` (v0.7 · P3a-2 판정 반영) · FR-5 · FR-6a · 6절 · 13절
+- ① 격일 복귀 방지 (6절): (나) 시총 단계 가격 대상 = 오늘 후보 ∪ 최근 30일 후보 · IEX 일괄 1건 유지 · (가) `mcap/over_5b_excluded.json` (종목 · 시총 · 확인 날짜) · 30일 동안 unknown 이어도 제외 유지 · 테스트 = 모의 2일차 재실행 (제외 9종목 유지) · 월 고유 불변 장부 계산
+- ② 15개월 창: "투자자산 기준일 불일치" · "차입금 기준일 불일치" 는 버린 항목 end 가 현금 분기 말 직전 15개월 안일 때만 · 테스트 KOD · ABCL (항목 없음)
+- ③ 차입금 0 → "차입금 미확인 · 최근 분기 태그 불일치(직전 값 X · 날짜)" · 테스트 HOWL
+- ④ 합계 항목 범위: 하한 max(현금, 합계) · 상한 현금 + 합계 · 남은 개월 = 하한 · 메모 "합계 항목 · 현금성 증권 포함 여부 미확인 · 범위 표시" · 테스트 FULC 270,374,000 / 318,840,000 · EDIT 범위 없음
+- ⑤ 2026-10-07 (수) 로컬: (a) 424B5 표지 백필 80건 (out/atm_backfill_todo.json · 장부 atm_cover) · 시드 + 양성 A · B 인용 커밋 · (b) 10-Q 본문 5건 (KYMR · EDIT · FULC · CRBU · ABCL · 2026-06-30 · 장부 finance_check) · 유동성 합계 문장 인용 · FULC AFS 머니마켓펀드 포함 여부 · CRBU 1,486,000 원인 · 원문은 번들 제외 · 실행 전 조건 로컬 장부 + 서버 수요일 약 146 ≤ 300 (80 + 5 + 146 = 231) · 월 · 화 금지 · 403 · 429 즉시 중단
+- ⑥ docs 브랜치 푸시 + docs PR · PR #84 병합 시 #85 기준 브랜치 main
+- 보고: 번들 `docs/plans/biotech/fable-bundles/20261007_P3a3.zip` (⑤ 끝난 뒤 하나로) · SHA-256 · 커밋 · 테스트 · SEC 합계 · ⑤ 인용 · 네 절
+- 금지: 화면 코드 · FR-6c 설계 · 검색어 사전 · 표지 문구 확장 · 서버 실행 · 로컬 Tiingo · 새 PR (docs PR 제외) · WP39 명부·코드 수정
+
+---
+
 ### [Biotech Catalyst Radar · P3a-2 후속 PR (PRD v0.6 12절 · 화면 P3b 제외 · 브랜치 feature/biotech-p3a 위)] · 2026-10-05 발행
 
 - PRD: `/Users/gonnim/Downloads/biotech-prd-price-outlook-20261004.md` (v0.6 · P3a 판정 반영) · FR-5 · FR-6a · 12절
