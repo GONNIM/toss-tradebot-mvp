@@ -120,3 +120,13 @@ def test_runway_uses_cash_and_investments():
     assert r["ocf_ttm"] == ttm == -236762000
     assert r["cash"] == 124477000 and r["cash_inv"] == 1504886000
     assert r["months_qe"] == round(1504886000 / (236762000 / 12), 2) == 76.27        # P3a 현금만 = 6.31
+
+
+# ── ② 오늘 기준 0개월 이하 ────────────────────────────────────────────
+
+
+def test_runway_today_zero_or_below_label():
+    r = bf.runway(bf.extract_finance(AGEN), None, TODAY)
+    assert r["months_qe"] == round(18738000 / (98504000 / 12), 2) == 2.28
+    assert r["months_today"] is None and r["months_today_calc"] == round(2.2827 - 97 / bf.MONTH_DAYS, 2) < 0
+    assert r["label"] == "0개월 이하 · 분기 말 뒤 소진 추정 · 증자 또는 투자자산 확인 필요"

@@ -10,6 +10,7 @@
     · 영업현금흐름 (start · end · form · filed) · 차입금 4 · Liabilities
   - 최근 12개월 영업현금흐름 = 직전 연간 + 올해 누적 − 전년 같은 기간 누적 (FR-5 · 분기 차감 안 함)
   - 남은 개월 수 = 현금 및 투자자산 ÷ (12개월 소모 ÷ 12) · 분기 말 기준과 오늘 기준 (경과 개월 보정) · 분기 말 뒤 424B5 가 있으면 "증자 반영 전"
+    · 오늘 기준 0 이하면 숫자 대신 RUNWAY_ZERO 문구
   - 파생: <RUNTIME>/finance/runway_<YYYYMMDD>.json (일일 submissions 단계 끝에 최신 재무 파일로 다시 계산 · 요청 0)
 
 표시 · 점수 · 후보 판정에는 쓰지 않는다 (화면은 P3b).
@@ -233,6 +234,7 @@ INV_LONG = ("MarketableSecuritiesNoncurrent", "AvailableForSaleSecuritiesDebtSec
 INV_TOTAL = ("AvailableForSaleSecuritiesDebtSecurities", "MarketableSecurities")   # 단기 · 장기 둘 다 없을 때만
 INV_NONE = "투자자산 항목 없음 · 현금만"
 INV_MISMATCH = "투자자산 기준일 불일치 · 현금만"
+RUNWAY_ZERO = "0개월 이하 · 분기 말 뒤 소진 추정 · 증자 또는 투자자산 확인 필요"   # PRD v0.6 FR-5
 REPORT_FORMS = ("10-Q", "10-K", "10-Q/A", "10-K/A")
 PT_FIELDS = ("start", "end", "val", "form", "filed", "accn")
 MONTH_DAYS = 365.25 / 12
@@ -387,7 +389,10 @@ def runway(fin: dict, filings: dict | None, today: date) -> dict:
     out = {**base, "months_qe": round(months_qe, 2), "elapsed_months": round(elapsed, 2)}
     if raises:
         return {**out, "months_today": None, "label": "증자 반영 전", "raises_after_qe": raises}
-    return {**out, "months_today": round(months_qe - elapsed, 2), "label": "그 사이 증자가 없다고 가정"}
+    today_val = round(months_qe - elapsed, 2)
+    if today_val <= 0:                                     # 음수를 그대로 저장 · 표시하지 않는다 (FR-6a 는 12개월 미만 문장)
+        return {**out, "months_today": None, "months_today_calc": today_val, "label": RUNWAY_ZERO}
+    return {**out, "months_today": today_val, "label": "그 사이 증자가 없다고 가정"}
 
 
 def finance_path(today: date) -> Path:
