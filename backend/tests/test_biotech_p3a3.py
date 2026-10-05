@@ -25,6 +25,39 @@ def _facts(tags: dict) -> dict:
     return {"facts": {"us-gaap": {k: {"units": {"USD": v}} for k, v in tags.items()}, "dei": {}}}
 
 
+# ── ② 15개월 창 ──────────────────────────────────────────────────────
+
+
+def test_window_lo_is_15_months_before_quarter_end():
+    assert bf._window_lo("2026-06-30") == date(2025, 3, 30)
+    assert bf._in_window("2025-03-31", QE) and not bf._in_window("2025-03-29", QE)
+
+
+def test_investment_old_values_only_is_none():
+    """KOD 유형 · 투자자산 태그가 2019~2023 에만 있음 → "투자자산 항목 없음 · 현금만"."""
+    f = _facts({C: [_i(125903000)], "MarketableSecuritiesCurrent": [_i(0, end="2023-12-31", form="10-K")],
+                "AvailableForSaleSecuritiesDebtSecuritiesCurrent": [_i(104576000, end="2023-03-31")],
+                "AvailableForSaleSecuritiesDebtSecurities": [_i(23571000, end="2019-09-30")]})
+    ci = bf.extract_finance(f)["cash_inv"]
+    assert ci["val"] == 125903000 and ci["note"] == bf.INV_NONE and len(ci["dropped"]) == 3
+
+
+def test_investment_recent_dropped_keeps_mismatch():
+    f = _facts({C: [_i(18738000)], bf.INV_SHORT_SUM: [_i(3500000, end="2025-09-30")]})      # AGEN 유형
+    assert bf.extract_finance(f)["cash_inv"]["note"] == bf.INV_MISMATCH
+
+
+def test_debt_abcl_2020_only_is_ladder_none():
+    f = _facts({C: [_i(120065000)], "LongTermDebtCurrent": [_i(1, end="2020-12-31", form="10-K")]})
+    d = bf.extract_finance(f)["debt"]
+    assert d["val"] is None and d["label"] == "차입금 미확인" and d["reason"] == "사다리 항목 없음"
+
+
+def test_debt_recent_dropped_keeps_mismatch():
+    f = _facts({C: [_i(1)], "LongTermDebtNoncurrent": [_i(5, end="2025-12-31", form="10-K")]})
+    assert bf.extract_finance(f)["debt"]["reason"] == "차입금 기준일 불일치"
+
+
 # ── ① 격일 복귀 방지 ─────────────────────────────────────────────────
 
 

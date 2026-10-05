@@ -243,6 +243,7 @@ INV_LONG = ("MarketableSecuritiesNoncurrent", "AvailableForSaleSecuritiesDebtSec
 INV_TOTAL = ("AvailableForSaleSecuritiesDebtSecurities", "MarketableSecurities")   # 단기 · 장기 둘 다 없을 때만
 INV_NONE = "투자자산 항목 없음 · 현금만"
 INV_MISMATCH = "투자자산 기준일 불일치 · 현금만"
+WINDOW_MONTHS = 15        # PRD v0.7 FR-5 · FR-6a · "기준일 불일치" · 차입금 0 판정에 보는 현금 분기 말 직전 창
 # PRD v0.6 FR-6a · 차입금 사다리 (리스 포함 항목 · DebtInstrumentCarryingAmount 는 쓰지 않음)
 DEBT_TOTAL = "LongTermDebt"                                    # ① 유동분 포함 합계
 DEBT_NONCURRENT = ("LongTermDebtNoncurrent", "LongTermNotesPayable", "ConvertibleLongTermNotesPayable",
@@ -250,6 +251,7 @@ DEBT_NONCURRENT = ("LongTermDebtNoncurrent", "LongTermNotesPayable", "Convertibl
 DEBT_CURRENT = ("LongTermDebtCurrent", "DebtCurrent", "NotesPayableCurrent", "ConvertibleNotesPayableCurrent",
                 "NotesPayableRelatedPartiesClassifiedCurrent")
 DEBT_LAST = "NotesPayable"                                     # ③ 둘 다 없을 때
+DEBT_ALL = (DEBT_TOTAL, *DEBT_NONCURRENT, *DEBT_CURRENT, DEBT_LAST)
 DEBT_NONE = "차입금 미확인"
 RUNWAY_ZERO = "0개월 이하 · 분기 말 뒤 소진 추정 · 증자 또는 투자자산 확인 필요"   # PRD v0.6 FR-5
 REPORT_FORMS = ("10-Q", "10-K", "10-Q/A", "10-K/A")
@@ -331,6 +333,30 @@ def _item(tag: str, p: dict, val=None) -> dict:
     return {"tag": tag, **_pick(p), **({"val": val} if val is not None else {})}
 
 
+def _window_lo(end: str) -> date:
+    """현금 분기 말에서 WINDOW_MONTHS 개월 전 (말일은 그 달 말일로 맞춤)."""
+    e = date.fromisoformat(end)
+    y, m = divmod(e.year * 12 + e.month - 1 - WINDOW_MONTHS, 12)
+    m += 1
+    nxt = date(y + (m == 12), m % 12 + 1, 1)
+    return date(y, m, min(e.day, (nxt - timedelta(days=1)).day))
+
+
+def _in_window(pt_end: str, end: str) -> bool:
+    """P3a-3 ② · ③ · pt_end 가 현금 분기 말 직전 15개월 안 (분기 말 포함)."""
+    return _window_lo(end) <= date.fromisoformat(pt_end) <= date.fromisoformat(end)
+
+
+def _recent_dropped(ug: dict, dropped: list[dict], end: str) -> list[dict]:
+    """버린 항목 중 직전 15개월 안에 값이 있는 것 (그 창 안 가장 최근 end)."""
+    out = []
+    for d in dropped:
+        ends = [p["end"] for p in _pts(ug, d["tag"]) if not p.get("start") and _in_window(p["end"], end)]
+        if ends:
+            out.append({"tag": d["tag"], "end": max(ends)})
+    return out
+
+
 def _first(ug: dict, tags: tuple, end: str, cash_val=None) -> tuple[dict | None, list[dict]]:
     """사다리 묶음에서 end 값이 있는 첫 항목 하나 · 그 앞 항목 중 다른 end 에만 값이 있는 것은 버린 목록으로."""
     dropped = []
@@ -358,11 +384,12 @@ def cash_investments(ug: dict, cash: dict | None) -> dict | None:
     total, d3 = (None, []) if (short or long_) else _first(ug, INV_TOTAL, end)
     parts = {"short": short, "long": long_, "total_item": total}
     used = [v for v in parts.values() if v]
+    dropped = d1 + d2 + d3
     note = None
-    if not used:
-        note = INV_MISMATCH if (d1 or d2 or d3) else INV_NONE
+    if not used:   # P3a-3 ② · "기준일 불일치" 는 버린 항목이 직전 15개월 안에 값이 있을 때만 · 더 오래된 값만 있으면 "항목 없음"
+        note = INV_MISMATCH if _recent_dropped(ug, dropped, end) else INV_NONE
     return {"val": cash["val"] + sum(v["val"] for v in used), "end": end, "cash": cash["val"], **parts,
-            "note": note, "dropped": d1 + d2 + d3}
+            "note": note, "dropped": dropped}
 
 
 def debt_ladder(ug: dict, end: str | None) -> dict:
@@ -383,9 +410,9 @@ def debt_ladder(ug: dict, end: str | None) -> dict:
     p = _at(ug, DEBT_LAST, end)
     if p is not None:
         return {"val": p["val"], "end": end, "step": 3, "items": [_item(DEBT_LAST, p)]}
-    other = [{"tag": t, "end": q["end"]} for t in (DEBT_TOTAL, *DEBT_NONCURRENT, *DEBT_CURRENT, DEBT_LAST)
-             if (q := _latest(_pts(ug, t)))]
-    return {"val": None, "label": DEBT_NONE, "reason": "차입금 기준일 불일치" if other else "사다리 항목 없음",
+    other = [{"tag": t, "end": q["end"]} for t in DEBT_ALL if (q := _latest(_pts(ug, t)))]
+    # P3a-3 ② · "차입금 기준일 불일치" 는 직전 15개월 안에 값이 있던 항목이 있을 때만 · 더 오래된 값만 있으면 "사다리 항목 없음"
+    return {"val": None, "label": DEBT_NONE, "reason": "차입금 기준일 불일치" if _recent_dropped(ug, other, end) else "사다리 항목 없음",
             "items": [], "dropped": other}
 
 

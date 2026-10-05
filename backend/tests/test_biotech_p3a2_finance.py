@@ -155,7 +155,7 @@ def test_debt_not_found_is_unconfirmed_not_zero():
     d = bf.extract_finance(KYMR)["debt"]
     assert d["val"] is None and d["label"] == "차입금 미확인" and d["reason"] == "사다리 항목 없음"
     d = bf.extract_finance(ABCL)["debt"]                                                # 2020 값만 있음
-    assert d["val"] is None and d["reason"] == "차입금 기준일 불일치"
+    assert d["val"] is None and d["reason"] == "사다리 항목 없음"                       # P3a-3 ② · 15개월 창 밖
 
 
 def test_debt_notes_payable_last_and_lease_ignored():
