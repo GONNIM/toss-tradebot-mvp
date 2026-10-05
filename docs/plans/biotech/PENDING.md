@@ -56,6 +56,8 @@
 - 보고: 번들 `docs/plans/biotech/fable-bundles/20261004_P3a.zip` · SHA-256 · PR 번호 · 변경 파일 · 테스트 · SEC 장부 합계 · 배포 뒤 예상 요청량 · 서버 디스크 증가 추정 · 네 절 (결과 보고 · 백로그 · 다음 작업 제안 · 미해결 질문)
 - 금지: 화면 코드 · FR-6c 설계 · 사전·검색어·표지 문구 코드 반영 · 서버 실행 · 로컬 Tiingo · WP39 명부·코드 수정
 
+**진행 (2026-10-05 10시대)**: PR #84 (`feature/biotech-p3a` · 병합·배포 대기) · 번들 `docs/plans/biotech/fable-bundles/20261004_P3a.zip` (SHA-256 2fb77f82…cbca7) · SEC 로컬 100건 (submissions 80 · 424B5 20 · 장부 합계 125) · Tiingo 0 · 이상 1 = 현금 정의에 단기 투자 빠짐 (KYMR) · Fable 판정 대기
+
 ---
 
 ### [Biotech Catalyst Radar · WP100-2 기록 보완 (문서 · 자동 병합) · 이후 날짜별 대조만] · 2026-10-04 발행
