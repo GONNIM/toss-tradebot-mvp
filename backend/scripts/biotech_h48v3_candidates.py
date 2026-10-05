@@ -13,6 +13,7 @@ CIK → ticker 매핑 확장:
 - SEC company_tickers.json (모든 CIK → ticker · SIC 미확인 시 companyfacts 조회 필요 · 시간상 SEC 매치만)
 
 시총 필터: $50M~$5B (companyfacts shares × 최근 종가 · h3_mcap + h3_prices_merged)
+  · P3a-2 ⑤ · h3_prices_merged 가 없으면 (서버) 일일 시총 단계 결과 <RUNTIME>/mcap_display.json (전날 [8/10] · 주식수 × IEX 종가) 로 구간을 매김
 """
 from __future__ import annotations
 
@@ -164,8 +165,7 @@ def load_prices_and_mcap(sha: str) -> tuple[dict, dict]:
                 if tk not in close or d > close[tk][0]:
                     close[tk] = (d, c)
         close = {tk: v[1] for tk, v in close.items()}
-    # WP100 · h3_prices_merged 가 없으면 (서버) 여기서는 시총 구간을 비워 둠 · 경고 없음
-    #   시총은 mcap 단계 (일일 [8/10] 시총 단계 · IEX 일일 가격 × SEC 주식수) 가 담당 · 이 단계는 그 결과를 읽지 않음
+    # P3a-2 ⑤ · h3_prices_merged 가 없으면 (서버) close 가 비고, main 이 load_mcap_display() 로 구간을 매김
     shares: dict = {}
     p2 = _find(f"h3_mcap_{sha}.csv") or _find_glob("h3_mcap_*.csv")
     if p2 is not None and p2.exists():
@@ -275,6 +275,28 @@ def source_d_adcom(sha: str, days_around: int = 60) -> list[dict]:
     return out
 
 
+def load_mcap_display() -> tuple[dict, str | None]:
+    """P3a-2 ⑤ · ticker → 시총 (주식수 × 종가) · 일일 시총 단계 [8/10] 결과 mcap_display.json (전날 실행분).
+
+    h3 가격 파일이 없는 서버에서만 쓴다. 파일이 없거나 읽지 못하면 빈 값 (구간 unknown · 기존과 같음).
+    """
+    p = _find("mcap_display.json")
+    if p is None:
+        return {}, None
+    try:
+        j = json.loads(p.read_text())
+    except (ValueError, OSError):
+        LOG.warning("mcap_display.json 읽기 실패 · 시총 구간 unknown")
+        return {}, None
+    out = {}
+    for tk, r in (j.get("rows") or {}).items():
+        try:
+            out[tk] = float(r["shares"]) * float(r["close"])
+        except (KeyError, TypeError, ValueError):
+            continue
+    return out, j.get("generated")
+
+
 def main():
     require_secure_logging()
     from backend.scripts._biotech_bootstrap import data_sha
@@ -293,6 +315,9 @@ def main():
     close, shares = load_prices_and_mcap(sha)
     LOG.info("cik_meta: %d · tk_meta: %d · prices: %d · shares: %d",
              len(cik_meta), len(tk_meta), len(close), len(shares))
+    display, display_date = ({}, None) if close else load_mcap_display()   # P3a-2 ⑤ · 서버 (h3 가격 없음)
+    if not close:
+        LOG.info("h3 가격 파일 없음 · 시총 구간 = mcap_display.json (generated %s · %d 종목)", display_date, len(display))
 
     candidates: dict[str, dict] = {}
 
@@ -360,7 +385,7 @@ def main():
         cik = c["cik"]
         s = shares.get(cik, 0)
         p = close.get(tk, 0)
-        mcap = s * p if s and p else 0
+        mcap = s * p if s and p else display.get(tk, 0)
         c["mcap_usd"] = int(mcap)
         if 50e6 <= mcap < 300e6:
             c["mcap_bucket"] = "50M-300M"
@@ -412,6 +437,8 @@ def main():
         "multi_source_2_plus": multi_source,
         "source_distribution": dict(src_dist),
         "mcap_distribution": dict(mcap_dist),
+        "mcap_source": "h3" if close else f"mcap_display {display_date}",
+        "over_5B_excluded": sorted(c["ticker"] or c["cik"] for c in candidates.values() if c["mcap_bucket"] == "over_5B_excluded"),
     }
     LOG.info("summary=%s", json.dumps(summary, ensure_ascii=False, indent=2))
     print(json.dumps(summary, ensure_ascii=False, indent=2))

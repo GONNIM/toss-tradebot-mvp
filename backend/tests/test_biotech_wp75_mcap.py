@@ -44,11 +44,18 @@ def test_badge_rule_12_months_and_60_days(tmp_path, monkeypatch):
 
 
 def test_mcap_not_in_decision_inputs():
-    """후보 선정 · 시간 상태 · 커뮤니티 · 레이더 점수 스크립트는 시총 표시 파일을 읽지 않는다."""
-    for name in ("biotech_h48v3_candidates.py", "biotech_h50_ct_upcoming.py", "biotech_h48v3_confirm.py", "biotech_h46v3_radar.py"):
+    """시간 상태 · 커뮤니티 · 레이더 점수 스크립트는 시총 표시 파일을 읽지 않는다.
+
+    P3a-2 ⑤ (PRD v0.6 12절 · Fable 승인): 후보 단계만 h3 가격이 없을 때 mcap_display.json 으로 5B 초과 제외 구간을 매긴다.
+    후보 단계도 가격 · 주식수 원본 (prices_2 · shares_2) 과 시총 모듈은 읽지 않는다.
+    """
+    for name in ("biotech_h50_ct_upcoming.py", "biotech_h48v3_confirm.py", "biotech_h46v3_radar.py"):
         text = (SCRIPTS / name).read_text()
         for needle in ("mcap_display", "biotech_mcap_daily", "prices_2", "shares_2"):
             assert needle not in text, f"{name} 가 {needle} 를 참조"
+    text = (SCRIPTS / "biotech_h48v3_candidates.py").read_text()
+    for needle in ("biotech_mcap_daily", "prices_2", "shares_2"):
+        assert needle not in text, f"biotech_h48v3_candidates.py 가 {needle} 를 참조"
 
 
 def test_sec_header_constant_only():
