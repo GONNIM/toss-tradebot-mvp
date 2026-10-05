@@ -53,6 +53,8 @@
 - 보고: 번들 `docs/plans/biotech/fable-bundles/20261007_P3a3.zip` (⑤ 끝난 뒤 하나로) · SHA-256 · 커밋 · 테스트 · SEC 합계 · ⑤ 인용 · 네 절
 - 금지: 화면 코드 · FR-6c 설계 · 검색어 사전 · 표지 문구 확장 · 서버 실행 · 로컬 Tiingo · 새 PR (docs PR 제외) · WP39 명부·코드 수정
 
+**진행 (2026-10-05 15시대)**: ①~④ PR #85 커밋 (dbd874b · 65131b9 · fdcd196 · 17d47c0 · 푸시) · biotech pytest 572 passed · 4 skipped · 모의 2일차 제외 9종목 유지 ((나) 단독 · (가) 단독 둘 다) · 월 고유 154 → 161 (P3a-2 ⑤ 새 후보 7 · (나) 추가 0) · 이상 1 = KOD 투자자산 메모 "기준일 불일치" 유지 (MarketableSecurities 2025-12-31 값 0 이 15개월 창 안 · 규칙 그대로 · 수정 안 함) · SEC 0 · Tiingo 0 · PR #84 미병합 (기준 브랜치 변경 안 함) · ⑤ 2026-10-07 (수) 대기 · 번들 원본 `docs/plans/biotech/fable-bundles/20261007_P3a3_src/`
+
 ---
 
 ### [Biotech Catalyst Radar · P3a-2 후속 PR (PRD v0.6 12절 · 화면 P3b 제외 · 브랜치 feature/biotech-p3a 위)] · 2026-10-05 발행
