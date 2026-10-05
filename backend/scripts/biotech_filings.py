@@ -6,9 +6,10 @@
   - 파생: <RUNTIME>/filings/filings_derived_<YYYYMMDD>.json · 외국 발행사 (20-F · 6-K) · S-3 유효 (제출 후 3년)
     · 최근 12개월 S-3 · 424B5 · S-1 목록 · 최근 8-K 접수 시각 (UTC · 미국 동부) · ATM = "미확인" (표지 규칙 검수 전)
 ③ companyfacts 재무 (주간 · 요청 0 추가) · 월요일 시총 주식수 단계가 이미 받는 companyfacts 응답에서 추출
-  - <RUNTIME>/finance/companyfacts_<YYYYMMDD>.json · 현금 · 영업현금흐름 (start · end · form · filed) · 차입금 4 · Liabilities
+  - <RUNTIME>/finance/companyfacts_<YYYYMMDD>.json · 현금 · 현금 및 투자자산 사다리 (PRD v0.6 FR-5 · 분해값 · 쓴 태그)
+    · 영업현금흐름 (start · end · form · filed) · 차입금 4 · Liabilities
   - 최근 12개월 영업현금흐름 = 직전 연간 + 올해 누적 − 전년 같은 기간 누적 (FR-5 · 분기 차감 안 함)
-  - 남은 개월 수 = 현금 ÷ (12개월 소모 ÷ 12) · 분기 말 기준과 오늘 기준 (경과 개월 보정) · 분기 말 뒤 424B5 가 있으면 "증자 반영 전"
+  - 남은 개월 수 = 현금 및 투자자산 ÷ (12개월 소모 ÷ 12) · 분기 말 기준과 오늘 기준 (경과 개월 보정) · 분기 말 뒤 424B5 가 있으면 "증자 반영 전"
   - 파생: <RUNTIME>/finance/runway_<YYYYMMDD>.json (일일 submissions 단계 끝에 최신 재무 파일로 다시 계산 · 요청 0)
 
 표시 · 점수 · 후보 판정에는 쓰지 않는다 (화면은 P3b).
@@ -223,6 +224,15 @@ CASH_TAG = "CashAndCashEquivalentsAtCarryingValue"
 OCF_TAG = "NetCashProvidedByUsedInOperatingActivities"
 DEBT_TAGS = ("LongTermDebt", "LongTermDebtNoncurrent", "DebtCurrent", "ConvertibleNotesPayable")   # PRD FR-6a
 LIAB_TAG = "Liabilities"
+# PRD v0.6 FR-5 · 현금 및 투자자산 사다리 · 묶음마다 현금과 같은 end 값이 있는 첫 항목 하나
+INV_SHORT_SUM = "CashCashEquivalentsAndShortTermInvestments"   # 현금을 뺀 값 (0 이상일 때) 이 단기 투자 첫 항목
+INV_SHORT = (INV_SHORT_SUM, "ShortTermInvestments", "MarketableSecuritiesCurrent",
+             "AvailableForSaleSecuritiesDebtSecuritiesCurrent", "AvailableForSaleSecuritiesCurrent")
+INV_LONG = ("MarketableSecuritiesNoncurrent", "AvailableForSaleSecuritiesDebtSecuritiesNoncurrent",
+            "AvailableForSaleSecuritiesNoncurrent", "LongTermInvestments")
+INV_TOTAL = ("AvailableForSaleSecuritiesDebtSecurities", "MarketableSecurities")   # 단기 · 장기 둘 다 없을 때만
+INV_NONE = "투자자산 항목 없음 · 현금만"
+INV_MISMATCH = "투자자산 기준일 불일치 · 현금만"
 REPORT_FORMS = ("10-Q", "10-K", "10-Q/A", "10-K/A")
 PT_FIELDS = ("start", "end", "val", "form", "filed", "accn")
 MONTH_DAYS = 365.25 / 12
@@ -292,6 +302,50 @@ def ttm_ocf(pts: list[dict]) -> dict:
     return {"ttm": None, "end": end, "reason": "영업현금흐름 기간 불일치", "ytd": _pick(at_end[0])}
 
 
+def _at(ug: dict, tag: str, end: str) -> dict | None:
+    """그 태그의 end 값 (가장 늦게 제출된 값) · 없으면 None."""
+    pts = [p for p in _pts(ug, tag) if p["end"] == end and not p.get("start")]
+    return max(pts, key=lambda p: (p.get("filed", ""), p.get("accn", ""))) if pts else None
+
+
+def _item(tag: str, p: dict, val=None) -> dict:
+    return {"tag": tag, **_pick(p), **({"val": val} if val is not None else {})}
+
+
+def _first(ug: dict, tags: tuple, end: str, cash_val=None) -> tuple[dict | None, list[dict]]:
+    """사다리 묶음에서 end 값이 있는 첫 항목 하나 · 그 앞 항목 중 다른 end 에만 값이 있는 것은 버린 목록으로."""
+    dropped = []
+    for t in tags:
+        p = _at(ug, t, end)
+        if p is not None:
+            if t == INV_SHORT_SUM:                    # 현금 및 단기 투자 합계 − 현금 (0 이상일 때만)
+                if cash_val is None or p["val"] - cash_val < 0:
+                    continue
+                return _item(t, p, p["val"] - cash_val), dropped
+            return _item(t, p), dropped
+        last = _latest(_pts(ug, t))
+        if last is not None:
+            dropped.append({"tag": t, "end": last["end"]})
+    return None, dropped
+
+
+def cash_investments(ug: dict, cash: dict | None) -> dict | None:
+    """현금 및 투자자산 (PRD v0.6 FR-5 사다리) · 분해값 (현금 · 단기 · 장기 · 합계 항목) 과 쓴 태그를 함께 저장."""
+    if not cash:
+        return None
+    end = cash["end"]
+    short, d1 = _first(ug, INV_SHORT, end, cash["val"])
+    long_, d2 = _first(ug, INV_LONG, end)
+    total, d3 = (None, []) if (short or long_) else _first(ug, INV_TOTAL, end)
+    parts = {"short": short, "long": long_, "total_item": total}
+    used = [v for v in parts.values() if v]
+    note = None
+    if not used:
+        note = INV_MISMATCH if (d1 or d2 or d3) else INV_NONE
+    return {"val": cash["val"] + sum(v["val"] for v in used), "end": end, "cash": cash["val"], **parts,
+            "note": note, "dropped": d1 + d2 + d3}
+
+
 def extract_finance(facts: dict) -> dict:
     """companyfacts 응답 → 저장할 재무 값 (요청 없음 · 순수 함수)."""
     allf = (facts or {}).get("facts") or {}
@@ -299,8 +353,10 @@ def extract_finance(facts: dict) -> dict:
     if not ug:
         return {"reason": "XBRL us-gaap 없음 (외국 발행사 20-F 등)", "taxonomies": sorted(allf)}
     ocf = _pts(ug, OCF_TAG)
+    cash = _pick(_latest([p for p in _pts(ug, CASH_TAG) if not p.get("start")]))
     return {
-        "cash": _pick(_latest(_pts(ug, CASH_TAG))),
+        "cash": cash,
+        "cash_inv": cash_investments(ug, cash),
         "ocf_latest": _pick(_latest([p for p in ocf if p.get("start")])),
         "ocf_ttm": ttm_ocf(ocf),
         "debt": {t: _pick(_latest(_pts(ug, t))) for t in DEBT_TAGS},
@@ -320,11 +376,12 @@ def runway(fin: dict, filings: dict | None, today: date) -> dict:
     if t.get("ttm") is None:
         return {"months_qe": None, "months_today": None, "label": "계산 불가", "reason": t.get("reason", "영업현금흐름 없음"),
                 "cash": cash["val"], "qe": cash["end"]}
-    base = {"cash": cash["val"], "qe": cash["end"], "ocf_ttm": t["ttm"], "ocf_end": t.get("end"),
-            "period_match": t.get("end") == cash["end"]}
+    inv = fin.get("cash_inv") or {"val": cash["val"], "cash": cash["val"], "note": INV_NONE}
+    base = {"cash": cash["val"], "cash_inv": inv["val"], "cash_inv_detail": inv, "qe": cash["end"],
+            "ocf_ttm": t["ttm"], "ocf_end": t.get("end"), "period_match": t.get("end") == cash["end"]}
     if t["ttm"] >= 0:
         return {**base, "months_qe": None, "months_today": None, "label": "현금 소모 없음"}
-    months_qe = cash["val"] / (-t["ttm"] / 12)
+    months_qe = inv["val"] / (-t["ttm"] / 12)              # PRD v0.6 FR-5 · 현금 및 투자자산 기준
     elapsed = (today - date.fromisoformat(cash["end"])).days / MONTH_DAYS
     raises = [o for o in (filings or {}).get("offerings_12m", []) if o["form"] in RAISE_FORMS and o["filingDate"] > cash["end"]]
     out = {**base, "months_qe": round(months_qe, 2), "elapsed_months": round(elapsed, 2)}
