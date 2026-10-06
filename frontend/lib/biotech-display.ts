@@ -449,6 +449,6 @@ export function redditLine(st?: RedditStatus | null): string | null {
 export function alertCriteria(redditDays?: number | null): string {
   const reddit = typeof redditDays === "number" && redditDays >= 7
     ? "레딧 24시간 매치 3건 이상이면서 레딧 평소의 2배 이상"
-    : `레딧 조건은 기준선 수집 중(${Math.max(0, redditDays ?? 0)}/7일)`;
+    : `레딧 조건은 기준선 수집 중(어제까지 ${Math.max(0, redditDays ?? 0)}/7일)`;
   return `기준: 기준선 7일 이상 종목 중 오늘 언급 5건 이상이면서 평소의 5배 이상, 또는 ${reddit} · 카드를 누르면 브리핑이 펼쳐집니다.`;
 }
