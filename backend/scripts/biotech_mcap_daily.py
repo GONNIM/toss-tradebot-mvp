@@ -11,6 +11,8 @@
   · 403 · 429 즉시 중단 · 키 = config 로더의 환경변수 TIINGO_API_KEY · 요청 헤더로만
   · P3a-3 ① (PRD v0.7 6절 (나)) · 가격 대상 = 오늘 후보 ∪ 최근 30일 날짜별 후보 CSV 의 종목 중 이번 달 장부에 이미 있는 종목
     (5B 초과로 후보에서 빠진 종목이 다음 날 시총 없음으로 돌아오지 않게 · IEX 일괄 1건 그대로 · 월 고유 변동 없음)
+  · P3a-5 (PRD v0.9 6절 (나)) · 5B 초과 제외 기록 (mcap/over_5b_excluded.json) 종목도 장부 여부와 관계없이 가격 대상
+    (후보 CSV 에는 제외 종목이 없어 30일 뒤 가격이 끊기고 약 60일 뒤 하루 복귀 · 월이 바뀌어도 받아야 함 · 월 고유 최대 +9)
 - 표시: <RUNTIME>/mcap_display.json (ticker → shares · shares_asof · close · close_date) · API 가 읽어 배지 계산
   · 배지 조건 (API): 주식수 12개월 이내 AND 종가 60일 이내 · 기준일 병기
 - 후보 선정 · 점수 · 판정에는 쓰지 않는다 (candidates · time_state · confirm · radar 는 이 파일을 읽지 않음 · 테스트로 강제)
@@ -236,29 +238,42 @@ def recent_candidates(today: date, days: int = RECENT_CAND_DAYS) -> list[str]:
     return sorted(out)
 
 
-def price_tickers(cands: dict[str, str] | list[str], recent: list[str], month_symbols: dict) -> tuple[list[str], list[str]]:
-    """P3a-3 ① · 가격 대상 = 오늘 후보 ∪ (최근 후보 중 이번 달 Tiingo 장부에 이미 있는 종목).
+def price_tickers(cands: dict[str, str] | list[str], recent: list[str], month_symbols: dict,
+                  excluded: list[str] = ()) -> tuple[list[str], list[str], list[str]]:
+    """가격 대상 = 오늘 후보 ∪ (최근 후보 중 이번 달 Tiingo 장부에 이미 있는 종목 · P3a-3 ①)
+    ∪ (5B 초과 제외 기록 종목 · 장부 여부와 관계없이 · P3a-5) → (대상, 최근 후보 추가분, 제외 기록 추가분).
 
     장부에 없는 최근 후보 (예: 월 첫날의 지난달 후보) 는 넣지 않는다 · 월 고유가 늘지 않게.
-    그런 종목의 5B 초과 제외는 후보 단계의 제외 기록 (mcap/over_5b_excluded.json · 30일) 이 유지한다."""
+    제외 기록 종목은 월이 바뀌어도 넣는다 · 그래야 시총과 제외 기록이 갱신된다 (월 고유 최대 +9)."""
     today_set = sorted(cands)
-    extra = [t for t in recent if t not in set(today_set) and t in month_symbols]
-    return today_set + extra, extra
+    seen = set(today_set)
+    extra = [t for t in recent if t not in seen and t in month_symbols]
+    seen.update(extra)
+    excl = sorted(t for t in set(excluded) if t not in seen)
+    return today_set + extra + excl, extra, excl
 
 
 # ── 주식수 (주간) ────────────────────────────────────────────────────
 
-def over5b_record() -> dict[str, str]:
-    """P3a-4 ③ · 후보 단계의 5B 초과 제외 기록 → ticker → cik (CIK 없는 항목은 뺌 · 파일이 없거나 못 읽으면 빈 값)."""
+def _over5b_rows() -> dict:
     p = _P.out_dir("mcap") / "over_5b_excluded.json"
     if not p.exists():
         return {}
     try:
-        rows = json.loads(p.read_text()).get("rows") or {}
+        return json.loads(p.read_text()).get("rows") or {}
     except (ValueError, OSError):
-        LOG.warning("over_5b_excluded.json 읽기 실패 · 주식수 대상은 오늘 후보만")
+        LOG.warning("over_5b_excluded.json 읽기 실패 · 제외 기록 종목 없이 진행")
         return {}
-    return {(r.get("ticker") or k): r["cik"] for k, r in rows.items() if r.get("cik")}
+
+
+def over5b_record() -> dict[str, str]:
+    """P3a-4 ③ · 후보 단계의 5B 초과 제외 기록 → ticker → cik (CIK 없는 항목은 뺌 · 파일이 없거나 못 읽으면 빈 값)."""
+    return {(r.get("ticker") or k): r["cik"] for k, r in _over5b_rows().items() if r.get("cik")}
+
+
+def over5b_tickers() -> list[str]:
+    """P3a-5 · 제외 기록 종목의 티커 (티커 없는 항목은 가격을 받을 수 없어 뺌)."""
+    return sorted({r["ticker"] for r in _over5b_rows().values() if r.get("ticker")})
 
 
 def weekly_targets(cands: dict[str, str]) -> tuple[dict[str, str], list[str]]:
@@ -501,11 +516,12 @@ def run(mode: str, get_tiingo: Callable[..., Any] | None = None, get_sec: Callab
     if get_tiingo is None:
         import httpx
         get_tiingo = httpx.Client(timeout=30).get
-    tickers, extra = price_tickers(cands, recent_candidates(today), load_usage(today.strftime("%Y%m"))["symbols"])
-    LOG.info("가격 대상 · 오늘 후보 %d + 최근 %d일 후보 중 이번 달 장부에 있는 종목 %d = %d (IEX 일괄 1건)",
-             len(cands), RECENT_CAND_DAYS, len(extra), len(tickers))
+    tickers, extra, excl = price_tickers(cands, recent_candidates(today), load_usage(today.strftime("%Y%m"))["symbols"],
+                                         over5b_tickers())
+    LOG.info("가격 대상 · 오늘 후보 %d + 최근 %d일 후보 중 이번 달 장부에 있는 종목 %d + 5B 초과 제외 기록 %d %s = %d (IEX 일괄 1건)",
+             len(cands), RECENT_CAND_DAYS, len(extra), len(excl), excl, len(tickers))
     res = daily_prices(tickers, key, get_tiingo, today)
-    res["recent_extra"] = extra
+    res["recent_extra"], res["over5b_extra"] = extra, excl
     res["backfill"] = backfill_prices(list(dict.fromkeys([*sorted(cands), BENCH])), key, get_tiingo, today)   # WP95
     del key
     (mdir / f"prices_{today:%Y%m%d}.json").write_text(json.dumps(res, ensure_ascii=False, indent=1))

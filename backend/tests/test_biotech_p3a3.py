@@ -169,8 +169,8 @@ def test_recent_candidates_union_30_days(tmp_path, monkeypatch):
 
 
 def test_price_tickers_only_adds_symbols_already_in_month_ledger():
-    tickers, extra = mc.price_tickers({"ABCL": "1", "MBX": "2"}, ["ABCL", "KYMR", "NEWX"], {"KYMR": {}, "ABCL": {}})
-    assert tickers == ["ABCL", "MBX", "KYMR"] and extra == ["KYMR"]                      # NEWX 는 장부에 없어 넣지 않음
+    tickers, extra, excl = mc.price_tickers({"ABCL": "1", "MBX": "2"}, ["ABCL", "KYMR", "NEWX"], {"KYMR": {}, "ABCL": {}})
+    assert tickers == ["ABCL", "MBX", "KYMR"] and extra == ["KYMR"] and excl == []                      # NEWX 는 장부에 없어 넣지 않음
 
 
 def test_daily_run_sends_one_iex_request_with_recent(tmp_path, monkeypatch):
@@ -291,3 +291,107 @@ def _fake_fin(tmp_path, rows):
     p = tmp_path / "finance_fake.json"
     p.write_text(json.dumps({"rows": rows}))
     return p
+
+
+# ── P3a-5 일일 시총 가격 대상 ∪ 제외 기록 (PRD v0.9 6절 (나)) ────────
+
+
+import os
+from datetime import timedelta
+
+from backend.scripts import biotech_h6_collect_prices as h6p
+
+NORMAL = ["AAA", "BBB", "CCC"]
+
+
+def test_p3a5_excluded_in_price_targets_even_if_not_in_ledger():
+    """(a) 제외 기록 종목은 이번 달 장부에 없어도 가격 대상 · 최근 후보 쪽 장부 조건은 그대로."""
+    tickers, extra, excl = mc.price_tickers({"AAA": "1"}, ["OLDC"], {}, ["KYMR", "AAA"])
+    assert extra == [] and excl == ["KYMR"] and tickers == ["AAA", "KYMR"]
+
+
+def _env(tmp_path, monkeypatch):
+    monkeypatch.setattr(mc._P, "RUNTIME_DIR", tmp_path)
+    monkeypatch.setattr(h6p, "SEED_DIR", None)
+    monkeypatch.setenv(mc.FLAG, "1")
+    monkeypatch.setenv("TIINGO_API_KEY", "k" * 20)
+    monkeypatch.setattr(mc, "hourly_check", lambda u, n: (True, None))
+    monkeypatch.setattr(mc, "backfill_prices", lambda *a, **k: {"requests": 0})
+    asked = []
+
+    def fake_iex(get, tickers, key):           # 제외 9종목은 1주 100달러 (주식수 1억 → 100억 달러) · 나머지 1달러
+        asked.append(list(tickers))
+        return [{"ticker": t, "tngoLast": 100.0 if t in EXCL9 else 1.0, "timestamp": "2026-10-02T20:00:00+00:00"}
+                for t in tickers]
+
+    monkeypatch.setattr(mc, "fetch_iex", fake_iex)
+    (tmp_path / "mcap").mkdir(exist_ok=True)
+    (tmp_path / "candidates").mkdir(exist_ok=True)
+    (tmp_path / "mcap" / "shares_20261005.json").write_text(json.dumps({"shares": {
+        t: {"shares": 100_000_000, "shares_asof": "2026-08-01"} for t in [*NORMAL, *EXCL9]}}))
+    return asked
+
+
+def _candidate_step(tmp_path, day: date) -> list[str]:
+    """후보 단계의 시총 판정 부분만 (raw = 정상 3 + 제외 9 · 구간 = 전날 mcap_display · 제외 기록 30일) → 최종 후보 CSV."""
+    disp = json.loads((tmp_path / "mcap_display.json").read_text())["rows"]
+    rows = []
+    for t in [*NORMAL, *EXCL9]:
+        m = disp[t]["shares"] * disp[t]["close"] if t in disp else 0
+        rows.append({"ticker": t, "cik": "1", "mcap_usd": int(m), "mcap_bucket": hc.mcap_bucket(m)})
+    memo, _, _ = hc.keep_over5b(rows, hc.load_over5b(), day)
+    hc._over5b_path().write_text(json.dumps({"rows": memo}))
+    final = [r for r in rows if r["mcap_bucket"] in ("50M-300M", "300M-1B", "1B-5B", "unknown")]
+    p = tmp_path / "candidates" / f"biotech_candidates_{day:%Y%m%d}.csv"
+    p.write_text("ticker,cik\n" + "".join(f"{r['ticker']},{r['cik']}\n" for r in final))
+    ts = 1_700_000_000 + (day - date(2026, 1, 1)).days * 86400     # 최신 파일 = 최신 날짜 (find_glob 은 mtime 순)
+    os.utime(p, (ts, ts))
+    return [r["ticker"] for r in final]
+
+
+def _simulate(tmp_path, days: int) -> dict[str, list[str]]:
+    d0 = date(2026, 10, 5)
+    (tmp_path / "mcap_display.json").write_text(json.dumps({"rows": {
+        t: {"shares": 100_000_000, "close": 100.0 if t in EXCL9 else 1.0} for t in [*NORMAL, *EXCL9]}}))
+    finals = {}
+    for i in range(days + 1):
+        day = d0 + timedelta(days=i)
+        finals[day.isoformat()] = _candidate_step(tmp_path, day)
+        mc.run("daily", get_tiingo=lambda *a, **k: None, today=day)
+    return finals
+
+
+def test_p3a5_sim_60_days_no_return(tmp_path, monkeypatch):
+    """(b) 제외된 날 (10/5) 부터 60일 뒤 (12/4) 까지 · 10월 → 11월 → 12월 · 제외 9종목이 최종 후보에 한 번도 돌아오지 않음."""
+    asked = _env(tmp_path, monkeypatch)
+    finals = _simulate(tmp_path, 60)
+    returned = {d: sorted(set(f) & set(EXCL9)) for d, f in finals.items() if set(f) & set(EXCL9)}
+    assert returned == {} and len(finals) == 61 and finals["2026-12-04"] == NORMAL
+    assert len(asked) == 61 and all(set(EXCL9) <= set(a) for a in asked)                 # 하루 IEX 1건 · 매일 9종목 포함
+    memo = hc.load_over5b()
+    assert sorted(memo) == EXCL9 and {m["date"] for m in memo.values()} == {"2026-12-04"}   # 확인 날짜가 매일 갱신
+
+
+def test_p3a5_sim_without_fix_returns(tmp_path, monkeypatch):
+    """대조 · 고치기 전 동작 (제외 기록 종목을 가격 대상에 넣지 않음) 이면 기록 30일이 지난 날 9종목이 돌아온다."""
+    _env(tmp_path, monkeypatch)
+    monkeypatch.setattr(mc, "over5b_tickers", lambda: [])
+    finals = _simulate(tmp_path, 60)
+    first = min(d for d, f in finals.items() if set(f) & set(EXCL9))
+    assert first == "2026-11-05" and sorted(set(finals[first]) & set(EXCL9)) == EXCL9   # 10/5 + 31일
+
+
+def test_p3a5_month_first_day_empty_ledger(tmp_path, monkeypatch):
+    """(c) 11/1 · 새 달 장부가 비어 있어도 제외 종목이 가격 대상 · 제외 기록 때문에 늘어나는 월 고유는 9."""
+    asked = _env(tmp_path, monkeypatch)
+    (tmp_path / "candidates" / "biotech_candidates_20261031.csv").write_text("ticker,cik\n" + "".join(f"{t},1\n" for t in NORMAL))
+    (tmp_path / "mcap" / "over_5b_excluded.json").write_text(json.dumps({"rows": {
+        t: {"ticker": t, "cik": "1", "mcap_usd": 10_000_000_000, "date": "2026-10-31"} for t in EXCL9}}))
+    assert mc.load_usage("202611")["symbols"] == {}
+    res = mc.run("daily", get_tiingo=lambda *a, **k: None, today=date(2026, 11, 1))
+    assert len(asked) == 1 and set(EXCL9) <= set(asked[0])
+    usage = mc.load_usage("202611")["symbols"]
+    assert res["monthly_unique_used"] == len(usage) == 3 + 1 + 9                          # 오늘 후보 3 + XBI + 제외 9
+    assert len(set(usage) & set(EXCL9)) == 9
+    disp = json.loads((tmp_path / "mcap_display.json").read_text())["rows"]
+    assert set(EXCL9) <= set(disp)
