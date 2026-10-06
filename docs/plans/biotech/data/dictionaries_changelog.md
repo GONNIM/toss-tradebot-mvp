@@ -235,3 +235,14 @@
 
 - 레딧 매치는 2026-09-22~10-04 동안 글 작성 시각 한정 없이 센 값이다. 그 기간의 레딧 조건 경보 (9/29 · 10/3 · 10/4 ENTX) 는 급증 신호가 아니다. 10/5부터 24시간 기준.
 - WP100 · 단계 판정 (과열) 의 레딧 5건 조건도 24시간 매치로 변경.
+
+## 사전 v5-1 · 2026-10-06 · 자동 분류 제안 4건 (판정 출처 PRD 19절 · Fable 2026-10-06 17:20)
+
+- 근거: 서버 자동 분류 제안 `/root/toss-tradebot-mvp/var/biotech/auto_category_proposals_20261005.csv` (4행 · 2026-10-05 06:07 주간 단계) · 검수 결과 `docs/plans/biotech/verification/dictionaries/auto_category_proposals_20261005_reviewed.csv` (reviewer_decision 채움)
+- 반영 (`docs/plans/biotech/data/condition_categories.csv` · source "auto-reviewed" · basis "auto-reviewed v5-1"): 4건
+  1. Generalized Myasthenia Gravis → 신경·정신 (승인 · 자동 manual-variant 그대로)
+  2. Graves' Ophthalmopathy → 안과 (승인)
+  3. Graves' Ophthalmopathy (GO) → 안과 (승인)
+  4. Mild Hepatic Imparement → 건강인·약동학 (자동 어간 'Hepat' → 소화기는 기각 · 사전 규칙 (6) 참가 조건 용어 · 'Hepatic Impairment' 의 철자 변형 (Imparement) 으로 등록)
+- 행 수: 1,656 → 1,660 (머리 줄 제외)
+- 한국어 (`ko_terms.csv`) 는 바꾸지 않음 (이번 승인 범위 밖 · 화면은 영어 원문 규칙 그대로)

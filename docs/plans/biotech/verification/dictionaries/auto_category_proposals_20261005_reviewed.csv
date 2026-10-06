@@ -1,0 +1,5 @@
+term,n_trials,example_ticker,auto_category,basis,tree_numbers,reason,검수 요망,reviewer_decision
+Generalized Myasthenia Gravis,2,IMVT,신경·정신,manual-variant,,수동 사전 'generalized myasthenia gravis' 변형,,채택
+Graves' Ophthalmopathy,1,IMVT,안과,manual-variant,,수동 사전 'graves ophthalmopathy' 변형,,채택
+Mild Hepatic Imparement,1,ASMB,소화기,auto-stem,,어간 'Hepat',,건강인·약동학
+Graves' Ophthalmopathy (GO),1,IMVT,안과,manual-variant,,수동 사전 'graves ophthalmopathy' 변형,,채택
