@@ -98,6 +98,7 @@ def test_debt_zero_without_recent_nonzero_stays_zero():
 
 
 def test_fulc_total_item_range_low_used_for_runway():
+    """AFS 총액만 있는 경우 (가상 · v0.8 에서도 범위 유지)."""
     f = _facts({C: [_i(48466000)], "AvailableForSaleSecuritiesDebtSecurities": [_i(270374000)]})
     ci = bf.extract_finance(f)["cash_inv"]
     assert ci["range"] == {"low": 270374000, "high": 318840000} and ci["val"] == 270374000
@@ -109,7 +110,7 @@ def test_fulc_total_item_range_low_used_for_runway():
 
 
 def test_total_item_range_low_is_cash_when_cash_larger():
-    ci = bf.extract_finance(_facts({C: [_i(100)], "MarketableSecurities": [_i(40)]}))["cash_inv"]
+    ci = bf.extract_finance(_facts({C: [_i(100)], "AvailableForSaleSecuritiesDebtSecurities": [_i(40)]}))["cash_inv"]
     assert ci["range"] == {"low": 100, "high": 140} and ci["val"] == 100
 
 
@@ -232,3 +233,21 @@ def test_p3a4_derived_plus_long_is_range():
     ci = bf.extract_finance(f)["cash_inv"]
     assert ci["range"] == {"low": 1000, "high": 1050} and ci["val"] == 1000
     assert ci["note"] == "총액 파생 · 장기 포함 여부 미확인 · 범위 표시"
+
+
+# ── P3a-4 ② 합계 항목 경로 순서 (PRD v0.8 FR-5) ──────────────────────
+
+
+def test_p3a4_fulc_marketable_securities_first_no_range():
+    """FULC · MarketableSecurities 270,374,000 이 같은 날 있음 → 48,466,000 + 270,374,000 = 318,840,000 (10-Q 일치)."""
+    f = _facts({C: [_i(48466000)], "MarketableSecurities": [_i(270374000)],
+                "AvailableForSaleSecuritiesDebtSecurities": [_i(270374000)]})
+    ci = bf.extract_finance(f)["cash_inv"]
+    assert ci["total_item"]["tag"] == "MarketableSecurities" and ci["val"] == 318840000
+    assert "range" not in ci and ci["note"] == "대차대조표 시장성 증권 항목 · 중복 없음"
+
+
+def test_p3a4_afs_total_only_keeps_range():
+    f = _facts({C: [_i(181815000)], "AvailableForSaleSecuritiesDebtSecurities": [_i(211645000)]})
+    ci = bf.extract_finance(f)["cash_inv"]
+    assert ci["range"] == {"low": 211645000, "high": 393460000} and ci["note"] == bf.INV_RANGE

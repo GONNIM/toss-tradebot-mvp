@@ -241,10 +241,13 @@ INV_SHORT = ("ShortTermInvestments", "MarketableSecuritiesCurrent",
              "AvailableForSaleSecuritiesDebtSecuritiesCurrent", "AvailableForSaleSecuritiesCurrent", INV_SHORT_SUM)
 INV_LONG = ("MarketableSecuritiesNoncurrent", "AvailableForSaleSecuritiesDebtSecuritiesNoncurrent",
             "AvailableForSaleSecuritiesNoncurrent", "LongTermInvestments")
-INV_TOTAL = ("AvailableForSaleSecuritiesDebtSecurities", "MarketableSecurities")   # 단기 · 장기 둘 다 없을 때만
+INV_MS = "MarketableSecurities"                               # 대차대조표 시장성 증권 줄 (현금성 자산과 별도 · 중복 없음)
+INV_AFS_TOTAL = "AvailableForSaleSecuritiesDebtSecurities"      # 머니마켓펀드가 섞일 수 있음 (범위)
+INV_TOTAL = (INV_MS, INV_AFS_TOTAL)   # 단기 · 장기 둘 다 없을 때만 · P3a-4 ② (PRD v0.8) · MarketableSecurities 먼저
 INV_NONE = "투자자산 항목 없음 · 현금만"
 INV_MISMATCH = "투자자산 기준일 불일치 · 현금만"
 INV_DERIVED_RANGE = "총액 파생 · 장기 포함 여부 미확인 · 범위 표시"   # P3a-4 ① · 파생 단기 + 장기 (하한으로 계산)
+INV_MS_NOTE = "대차대조표 시장성 증권 항목 · 중복 없음"            # P3a-4 ② · 범위 없이 현금 + 값
 INV_RANGE = "합계 항목 · 현금성 증권 포함 여부 미확인 · 범위 표시"   # PRD v0.7 FR-5 · 합계 항목 경로 (하한으로 계산)
 WINDOW_MONTHS = 15        # PRD v0.7 FR-5 · FR-6a · "기준일 불일치" · 차입금 0 판정에 보는 현금 분기 말 직전 창
 # PRD v0.6 FR-6a · 차입금 사다리 (리스 포함 항목 · DebtInstrumentCarryingAmount 는 쓰지 않음)
@@ -392,7 +395,10 @@ def cash_investments(ug: dict, cash: dict | None) -> dict | None:
     parts = {"short": short, "long": long_, "total_item": total}
     used = [v for v in parts.values() if v]
     dropped = d1 + d2 + d3
-    if total:   # P3a-3 ④ · 합계 항목에 현금성 증권이 들었을 수 있음 · 하한 = max(현금, 합계) · 상한 = 현금 + 합계 · 계산은 하한
+    if total and total["tag"] == INV_MS:   # P3a-4 ② · 대차대조표 줄 · 범위 없이 현금 + 값
+        return {"val": cash["val"] + total["val"], "end": end, "cash": cash["val"], **parts, "note": INV_MS_NOTE,
+                "dropped": dropped}
+    if total:   # P3a-3 ④ · AFS 총액 · 합계 항목에 현금성 증권이 들었을 수 있음 · 하한 = max(현금, 합계) · 상한 = 현금 + 합계 · 계산은 하한
         low, high = max(cash["val"], total["val"]), cash["val"] + total["val"]
         return {"val": low, "end": end, "cash": cash["val"], **parts, "range": {"low": low, "high": high},
                 "note": INV_RANGE, "dropped": dropped}
