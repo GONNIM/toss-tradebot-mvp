@@ -11,7 +11,28 @@
 
 ## 영구 규칙
 
-- **Fable 확인 문서 = 번들 zip (2026-09-28~)**: Fable 에게 확인받아야 할 문서는 번들 zip 파일로 제공한다. 생성 = `python3 scripts/fable_bundle.py <주제> <파일·폴더...> --question "<검수 질문>"` · 출력 = `docs/plans/biotech/fable-bundles/<YYYYMMDD>_<주제>.zip` (git 제외) · zip 안 첫 파일 `MANIFEST.md` (커밋 해시 · 파일별 SHA-256 · 검수 질문) · 자격증명 의심 패턴이 있으면 생성 중단. 보고에는 zip 전체 경로를 적는다.
+- **PR 병합 (2026-10-01~ · WP92 개정)**: 화면 문구·표시·문서·테스트·로그만 바꾸는 PR 은 pytest · tsx · next build 통과 시 승인 없이 병합·배포한다. 그 밖의 PR 은 Fable 프롬프트에 '병합 승인됨 · PR #번호'로 적힌 것만 병합하고, 적히지 않으면 승인 요청까지만 한다.
+- **확인은 즉시 · 로컬 (2026-10-01~ · WP92)**: 서버 07:00 실행을 기다리지 않는다. 배포 직후 영향받은 단계를 로컬에서 서버 스냅샷 복사본으로 돌려 바로 확인한다. 서버 실행은 다음 날 대조만 한다.
+- **승인 없이 진행 (WP92)**: 로컬 실행·검증 전부 · 장부 한도 안의 SEC·Tiingo·NLM 요청 · 화면 문구·표시·문서·테스트·로그만 바꾸는 PR 의 병합·배포 (검사 통과 시).
+- **승인 필요 (WP92)**: 점수·후보·판정·경보 규칙 변경 · 설계 파일·사전 변경 · 서버 설정과 서버 수동 실행 · 한도 초과 요청.
+- **제안 파일 category 열 (WP97-2)**: 용어 제안 파일의 category 열에는 카드 분류가 아니라 그 용어의 사전 분류 (condition_categories.csv · 없으면 빈칸) 를 적는다. (예: v3 의 "Central Nervous System Diseases · 암" 은 카드 분류였음)
+- **보고 번들 (WP98 · 이번 보고부터)**: Fable 에게 보내는 모든 보고는 번들 zip 으로 제공하고 본문에 zip 전체 경로와 SHA-256 을 적는다. 번들에는 변경 비교본 (diff) · 인용한 로그 발췌 (원문 줄) · 산출 파일 · 스크린샷 · MANIFEST.md (파일 목록 · 검수 질문) 를 넣는다. 키 · 토큰 · 암호화 파일은 넣지 않는다 (자격증명 검사 통과 필수). 저장 위치 = `docs/plans/biotech/fable-bundles/<YYYYMMDD>_<WP번호>.zip`.
+- **레딧 매치 기간 (WP100-2)**: 레딧 매치는 2026-09-22~10-04 동안 글 작성 시각 한정 없이 센 값이다. 그 기간의 레딧 조건 경보 (9/29 · 10/3 · 10/4 ENTX) 는 급증 신호가 아니다. 10/5부터 24시간 기준.
+- **단계 판정 레딧 (WP100-2)**: WP100 · 단계 판정 (과열) 의 레딧 5건 조건도 24시간 매치로 변경.
+- **11/15 소문 전향 평가 머리 문장 모음 (WP100-2)**:
+  1. 레딧 수집 실태: 2026-09-22~10-02 는 4곳 중 3곳 (pennystocks · wallstreetbets · stocks) HTTP 429 · r/biotechplays 한 곳만 수집 · 10-02 18:50 부터 4곳 (06:30 묶음 + 07:00 단독)
+  2. 레딧 매치 시간 한정 없음: 2026-09-22~10-04 매치는 받은 피드 전체 글 (작성 시각 무관) · 그 기간 레딧 조건 경보 (9/29 · 10/3 · 10/4 ENTX) 는 급증 신호 아님 · 10-05 부터 24시간 기준 · 레딧 조건 판정은 기준선 7일이 차는 10-12 부터
+  3. 레이더 점수 구간: 09-22~10-01 v2-부분 · 10-02 07:00 v3-부분 · 10-02~ v3-전체
+  4. 13D 입력은 SEC 양식 이름 변경으로 2024-12-06 이후 누락된 상태로 검정이 확정됨 · 재판정 시 고려.
+- **소문 전향 평가 머리 (WP98)**: 11/15 소문 전향 평가는 머리에 "레딧 입력은 2026-09-22 첫 실행부터 4곳 중 3곳 HTTP 429 · r/biotechplays 한 곳만 수집" 을 적는다.
+- **Tiingo 요청 (WP98)**: 로컬 Tiingo 요청은 Fable 승인 없이 하지 않는다. 서버 장부가 기준이다.
+- **날짜 항목 (WP92)**: 날짜가 정해진 항목은 이 파일에만 두고, 보고에 "그날 한다" 를 반복하지 않는다.
+- **보고는 한 번에 (WP92)**: 한 지시의 결과는 단계별로 나누지 않고 한 번에 보고한다.
+- **서버 레이더 입력 0 (WP94)**: 서버 레이더 점수는 2026-09-22 시작 (daily.log 첫 실행 `=== 2026-09-21T22:00:01Z biotech daily start (server · KST 07:00) ===`) 부터 전문가 채널 입력 0 상태였음 (v2-부분 · 10회 모두 "prices tickers: 0" · "pub_idx: 0 · pre_idx: 0"). 11/15 채점표는 서버 실제 판정 기준으로 하되 이 사실을 머리에 적는다.
+- **11/15 채점표 3구간 (WP95 · 복구일 2026-10-02)**: 2026-09-22~10-01 = v2-부분 (서버 전문가·미반영 입력 0) · 10-02 07:00 실행 = v3-부분 (같은 날 10:41 수동 실행이 그날 산출을 v3-전체로 덮어씀) · 2026-10-02~ = v3-전체 (inputs_missing 이 빈 첫 실행일 · 자동 기록 `backend/data/h_radar_params.json` v3_full_start · 아래 줄). 구간마다 나누어 적는다.
+- **레이더 v3-전체 시작일 (WP95 · 자동 기록)**: **2026-10-02 (수동 실행 · WP98-2 · `--step=radar` 10:41 KST)** · 서버 `/root/toss-tradebot-mvp/var/biotech/radar_v3_full_start.json` · `backend/data/h_radar_params.json` v3_full_start
+- **전향 평가 점수 버전 (WP93)**: 11/15 첫 채점표는 10/1 까지 v2 판정과 10/2 이후 v3 판정을 나누어 적는다. 일일 산출물로 두 버전을 재계산할 수 있어야 한다.
+- **Fable 확인 문서 = 번들 zip (2026-09-28~)**: Fable 에게 확인받아야 할 문서는 번들 zip 파일로 제공한다. 생성 = `python3 scripts/fable_bundle.py <주제> <파일·폴더...> --question "<검수 질문>"` · 출력 = `docs/plans/biotech/fable-bundles/<YYYYMMDD>_<주제>.zip` (git 제외) · zip 안 첫 파일 `MANIFEST.md` (커밋 해시 · 파일별 SHA-256 · 검수 질문) · 자격증명 의심 패턴이 있으면 생성 중단. 보고에는 zip 전체 경로를 적는다. **(2026-09-30 재확인)** Fable 에게 줄 문서는 매번 번들 zip 으로 묶고, 보고에 절대 경로 (`/Users/gonnim/Project-MVP/Source/toss-tradebot-mvp/docs/plans/biotech/fable-bundles/<YYYYMMDD>_<주제>.zip`) 와 zip SHA-256 을 적는다.
 - **보고 문체 (2026-09-28~)**: 완전한 문장으로 쓴다. 명사를 나열하는 전보식 문장은 쓰지 않는다. 비유를 쓰지 않는다. 쉬운 어휘를 쓴다. 한 문장에는 한 내용만 담는다. 영어 용어는 처음 나올 때 한국어 뜻을 함께 적는다. 표와 수치는 유지하되, 표 밖 설명은 말로 풀어 쓴다.
 - **세션 첫 작업 = 관측 (2026-09-28~)**: 매 세션 시작 시 서버 `/root/toss-tradebot-mvp/var/biotech/logs/daily.log` 최신 실행 (2026-09-29 부터 8단계 · WP75 배포 후 9단계 · alert_brief · mcap_daily 는 skip 허용) 과 /biotech 두 탭 (레이더·소문) 날짜를 확인하고, 정상이면 한 줄로 보고한다.
 - **보고 시 전체 경로 (2026-09-28~)**: 문서·파일·산출물 언급은 전체 경로로 적는다. 저장소 파일 = 저장소 루트 기준 (예: `docs/plans/biotech/data/sponsor_aliases.csv`) · 서버 파일 = 절대 경로 (예: `/root/toss-tradebot-mvp/var/biotech/h6/aact_theme_studies_2026-09-28.csv`). 파일 이름만 적지 않는다.
@@ -19,6 +40,489 @@
 ---
 
 ## PENDING
+
+### [Biotech Catalyst Radar · P2b 준비 · FR-6c 표본 가용성 실측 (요청 0 · 코드 변경 없음 · 설계 파일 안 씀)] · 2026-10-06 발행
+
+- PRD v0.9 (P3a-5까지 통과 · PR #85 병합 가능) · FR-6b · FR-6c · 16절
+- 표본 = 최근 12개월 · 후보 80 + 제외 9 · ① WP39 명부 2025-10-01 이후 8-K (2.02 제외 전후) ② 방향 ③ 현재 시총 구간 ④ 20건 ⑤ 9/1~10/4 8-K ⑥ 반응일 가격 ⑦ 단계 귀속 ⑧ 축적 속도
+- 보고: 번들 `docs/plans/biotech/fable-bundles/20261006_P2b-measure.zip` · 결론 없이 "설계 파일에서 정해야 할 것"
+
+**진행 (2026-10-06)**: 검색어 맞은 8-K 548 → 2.02 제외 219 · 긍정 43 · 혼재 19 · 부정 6 · 미분류 151 · 시총 × 방향 15칸 모두 20 미만 (최대 칸 합계 19) · 반응 계산 지금 37 · 백필 뒤 최대 215 · 9/1~10/4 8-K 53 (2.02 제외 52) · SHA-256 9e22d9d0…a7999e1 · Fable 판정 대기
+
+---
+
+### [Biotech Catalyst Radar · P3a-5 (PR #85 마지막 커밋 · PRD v0.9 15절 · 일일 시총 가격 대상 ∪ 제외 기록 · 외부 요청 0)] · 2026-10-06 발행
+
+- Fable 판정: P3a-4 통과 · 이상 1 가설 맞음 · ATRA · FATE 원문 확인 안 함
+- ① 가격 대상에 over_5b_excluded.json 종목 (장부 조건 없음 · 최근 후보 쪽 장부 조건 유지 · IEX 1건 · 월 고유 최대 +9)
+- ② 테스트 (a) 장부 없어도 포함 · (b) 60일 뒤 모의 복귀 0 · (c) 월 첫날 빈 장부 +9 · ③ #84 병합 시 #85 기준 main
+- 보고: 번들 `docs/plans/biotech/fable-bundles/20261006_P3a5.zip`
+
+**진행 (2026-10-06)**: acb0f31 (푸시) · pytest 585 passed · 61일 모의 복귀 0 (고치기 전 동작 대조는 11/5 복귀) · 11/1 월 고유 +9 · 10월 +0 (9종목 이미 장부) · PR #84 미병합 · Fable 판정 대기
+
+---
+
+### [Biotech Catalyst Radar · P3a-4 (PR #85 보강 커밋 · PRD v0.8 14절 · 사다리 순서 · 주식수 단계 · 외부 요청 0)] · 2026-10-06 발행
+
+- PRD: `/Users/gonnim/Downloads/biotech-prd-price-outlook-20261004.md` (v0.8 · P3a-3 판정 반영) · FR-5 사다리 · 6절 (다) · 14절
+- Fable 판정: P3a-3 통과 · 이상 2건 가설 맞음 · ATM 양성 19/19 확인 · 규칙 고정 · 다음 재확인 양성 29건
+- ① 단기 사다리 명시 항목 먼저 · 파생값 마지막 · 파생 + 장기 = 범위 (하한 총액 · 상한 현금 + 파생 + 장기) · CRBU 113,818,000 · ABCL 파생 420,039,000
+- ② 합계 항목 MarketableSecurities 먼저 (범위 없음 · "대차대조표 시장성 증권 항목 · 중복 없음") → AFS 총액 (범위) · FULC 318,840,000
+- ③ 주간 주식수 대상 = 오늘 후보 ∪ mcap/over_5b_excluded.json · 월요일 예상 약 236
+- ④ 20개 재적용 · 10-Q 5건 대조표 5/5 일치 · ⑤ #84 병합 시 #85 기준 main
+- 보고: 번들 `docs/plans/biotech/fable-bundles/20261006_P3a4.zip`
+
+**진행 (2026-10-06)**: b6eb8f3 · ab7c760 · 755112e (푸시) · pytest 581 passed · 10-Q 5/5 일치 · 20개 중 값 변화 ATRA · CRBU · FATE · FULC · 월요일 예상 233~243 · 이상 1 = (나) 가격 대상 (최근 후보 CSV) 에 제외 종목이 없어 제외 뒤 약 60일에 unknown 복귀 가능 (수정 안 함) · PR #84 미병합 · 번들 SHA-256 e0efa4fb…ee5c7a · Fable 판정 대기
+
+---
+
+### [Biotech Catalyst Radar · P3a-3 (PR #85 보강 커밋 · PRD v0.7 13절 · 새 PR 없음 · 화면 P3b 제외)] · 2026-10-05 발행
+
+- PRD: `/Users/gonnim/Downloads/biotech-prd-price-outlook-20261004.md` (v0.7 · P3a-2 판정 반영) · FR-5 · FR-6a · 6절 · 13절
+- ① 격일 복귀 방지 (6절): (나) 시총 단계 가격 대상 = 오늘 후보 ∪ 최근 30일 후보 · IEX 일괄 1건 유지 · (가) `mcap/over_5b_excluded.json` (종목 · 시총 · 확인 날짜) · 30일 동안 unknown 이어도 제외 유지 · 테스트 = 모의 2일차 재실행 (제외 9종목 유지) · 월 고유 불변 장부 계산
+- ② 15개월 창: "투자자산 기준일 불일치" · "차입금 기준일 불일치" 는 버린 항목 end 가 현금 분기 말 직전 15개월 안일 때만 · 테스트 KOD · ABCL (항목 없음)
+- ③ 차입금 0 → "차입금 미확인 · 최근 분기 태그 불일치(직전 값 X · 날짜)" · 테스트 HOWL
+- ④ 합계 항목 범위: 하한 max(현금, 합계) · 상한 현금 + 합계 · 남은 개월 = 하한 · 메모 "합계 항목 · 현금성 증권 포함 여부 미확인 · 범위 표시" · 테스트 FULC 270,374,000 / 318,840,000 · EDIT 범위 없음
+- ⑤ 2026-10-07 (수) 로컬: (a) 424B5 표지 백필 80건 (out/atm_backfill_todo.json · 장부 atm_cover) · 시드 + 양성 A · B 인용 커밋 · (b) 10-Q 본문 5건 (KYMR · EDIT · FULC · CRBU · ABCL · 2026-06-30 · 장부 finance_check) · 유동성 합계 문장 인용 · FULC AFS 머니마켓펀드 포함 여부 · CRBU 1,486,000 원인 · 원문은 번들 제외 · 실행 전 조건 로컬 장부 + 서버 수요일 약 146 ≤ 300 (80 + 5 + 146 = 231) · 월 · 화 금지 · 403 · 429 즉시 중단
+- ⑥ docs 브랜치 푸시 + docs PR · PR #84 병합 시 #85 기준 브랜치 main
+- 보고: 번들 `docs/plans/biotech/fable-bundles/20261007_P3a3.zip` (⑤ 끝난 뒤 하나로) · SHA-256 · 커밋 · 테스트 · SEC 합계 · ⑤ 인용 · 네 절
+- 금지: 화면 코드 · FR-6c 설계 · 검색어 사전 · 표지 문구 확장 · 서버 실행 · 로컬 Tiingo · 새 PR (docs PR 제외) · WP39 명부·코드 수정
+
+**추가 지시 (2026-10-05 16시대 · Fable)**: ⓪ 424B5 백필 월 · 화 금지 삭제 → 실행 직전 서버 장부 (ssh 조회 전용 · 없으면 0) + 로컬 장부 + 예정 ≤ 300 · 하나라도 못 읽으면 중단 · ⑦ 기준일 불일치 메모는 15개월 창 안 0 이 아닌 값만 (KOD → 항목 없음) · ⑤ 오늘 실행 · 번들 `docs/plans/biotech/fable-bundles/20261005_P3a3.zip`
+
+**진행 (2026-10-05 17시대 · 번들 10-06)**: ⓪ 8a6b5ae · ⑦ 55bf175 · ⑤(b) 090739e (80건 · 확인 16건 15종목 · 미확인 64건) · ⑤(c) 10-Q 5건 (KYMR · EDIT · ABCL 일치 · FULC 상한 일치 · CRBU +1,486,000 = 반올림 총액 태그) · SEC 서버 144 + 로컬 85 = 229 · 403 · 429 없음 · pytest 574 passed · PR #84 미병합 · 번들 `docs/plans/biotech/fable-bundles/20261005_P3a3.zip` (SHA-256 8e994a62…382bcb) · Fable 판정 대기
+
+**진행 (2026-10-05 15시대)**: ①~④ PR #85 커밋 (dbd874b · 65131b9 · fdcd196 · 17d47c0 · 푸시) · biotech pytest 572 passed · 4 skipped · 모의 2일차 제외 9종목 유지 ((나) 단독 · (가) 단독 둘 다) · 월 고유 154 → 161 (P3a-2 ⑤ 새 후보 7 · (나) 추가 0) · 이상 1 = KOD 투자자산 메모 "기준일 불일치" 유지 (MarketableSecurities 2025-12-31 값 0 이 15개월 창 안 · 규칙 그대로 · 수정 안 함) · SEC 0 · Tiingo 0 · PR #84 미병합 (기준 브랜치 변경 안 함) · ⑤ 2026-10-07 (수) 대기 · 번들 원본 `docs/plans/biotech/fable-bundles/20261007_P3a3_src/`
+
+---
+
+### [Biotech Catalyst Radar · P3a-2 후속 PR (PRD v0.6 12절 · 화면 P3b 제외 · 브랜치 feature/biotech-p3a 위)] · 2026-10-05 발행
+
+- PRD: `/Users/gonnim/Downloads/biotech-prd-price-outlook-20261004.md` (v0.6 · P3a 판정 반영) · FR-5 · FR-6a · 12절
+- ① 현금 및 투자자산 사다리 (FR-5) · 묶음마다 최근값 첫 항목 하나 · 현금과 같은 end · 분해값 · 쓴 태그 · "투자자산 항목 없음 · 현금만" · companyfacts 20개 태그 존재 · end 표 · 테스트 KYMR · EDIT · ABCL · BCRX · 1종목 (원문 대조가 필요하면 요청 수와 함께 질문)
+- ② 오늘 기준 0 이하 → label "0개월 이하 · 분기 말 뒤 소진 추정 · 증자 또는 투자자산 확인 필요" · 테스트 1
+- ③ ATM 표지 규칙 (A · B · C · 제안 파일 2절 고정) → "확인(표지 규칙)" / "미확인" · 인용 앞뒤 60자 · 접수번호 · 제출일 · 최근 12개월 424B5 미수신분 (약 78건) 1회 백필 (하루 300 · 장부 atm_cover · 월 · 화 금지 · 403 · 429 즉시 중단) · 이후 submissions 단계가 새 424B5 표지 1건 판정 · 양성 인용 전부 번들
+- ④ 차입금 사다리 (FR-6a) · 쓴 태그 · end · 테스트 AGEN 30,068,000 · EDIT 55,738,000 · BCRX 395,400,000 · "차입금 미확인"
+- ⑤ 후보 시총 구간 unknown: 가설 1개 (서버에 h3 파일 없음 · mcap_display.json · 주식수 파일 있음) · 서버 사본 인용 · 맞으면 후보 단계 수정 · 전후 80행 분포 · 5B 초과 제외 종목 · Tiingo 월 고유 · SEC 일일 변화 계산
+- 보고: 번들 `docs/plans/biotech/fable-bundles/20261005_P3a2.zip` · SHA-256 · PR · 변경 파일 · 테스트 · SEC 장부 · 네 절
+- 금지: 화면 코드 · FR-6c 설계 · 검색어 사전 · 표지 문구 확장 · 서버 실행 · 로컬 Tiingo · WP39 명부·코드 수정
+
+**진행 (2026-10-05 11시대)**: PR #85 (`feature/biotech-p3a-2` · 기준 `feature/biotech-p3a` · 병합·배포 대기) · 번들 `docs/plans/biotech/fable-bundles/20261005_P3a2.zip` (SHA-256 094b677f…564a) · SEC 0 · Tiingo 0 · 424B5 표지 백필 80건 미실행 (10/5 월요일 · 10/7 수 이후 · 대상 목록 번들 out/atm_backfill_todo.json) · 이상 1 = ⑤ 5B 초과 제외 종목이 다음 날 unknown 으로 복귀 (⑤ 배포 보류) · Fable 판정 대기
+
+---
+
+### [Biotech Catalyst Radar · P3a 데이터 단계 구현 PR (PRD v0.5 10절 · 화면 P3b 제외 · 병합·배포는 사용자 승인)] · 2026-10-04 발행
+
+- PRD: `/Users/gonnim/Downloads/biotech-prd-price-outlook-20261004.md` (v0.5 · P2 실측 반영) · P2 결과 = `docs/plans/biotech/fable-bundles/20261004_PRD-P2.zip` 안 RESULTS.md
+- ① 가격 기록: HISTORY_KEEP_DAYS ≥400 · BACKFILL_DAYS 380 · 기록 시작일 > 오늘−365 종목 백필 대상 · BACKFILL_MAX 50 유지 · XBI 포함 · 멈춘 종목 제외 유지 · 단위 테스트 (보관 · 대상 · 상한)
+- ② submissions 일일 단계 (후보 종목당 1건 · 07:00 파이프): form · filingDate · acceptanceDateTime · accessionNumber · items · primaryDocument · 20-F/6-K = 외국 발행사 · S-3 유효 (3년) · 최근 12개월 S-3 · 424B5 · S-1 · 최근 8-K 접수 시각 · 장부
+- ③ companyfacts 주간 단계 (후보 종목당 1건): 현금 · 영업현금흐름 (start · end · form · filed) · 차입금 4 · Liabilities · 12개월 = 연간 + 올해 누적 − 전년 같은 기간 누적 · 남은 개월 (분기 말 · 오늘) · 분기 말 뒤 증자 공시면 "증자 반영 전" · 테스트 EDIT · ABCL · BCRX
+- ④ AACT 주간: primary_completion_date_type · last_update_posted_date · completion_date_type (머리글 없으면 로그 · 빈값) · ctgov_snapshot_YYYYMMDD.json 26주 보관 · 스폰서별 진행 중 2상 이상 수 (FR-6a 범위)
+- ⑤ 반응일 모듈: 접수 시각 UTC→동부 · FR-6b 표 · NYSE 휴장일 파일 2019~2027 (출처) · WP39 주말 d_day 232건 재계산 = 주말·휴장일 0 (명부 무변경)
+- ⑥ INCY (CIK 879169) 티커 빈칸 원인 가설 1개 · 수정 전후 후보 CSV 행 인용
+- ⑦ 424B5 표지 규칙 검증 20건 (SEC 20 · 장부) → `docs/plans/biotech/data/proposals/atm_cover_rule_20261004.md` (코드 반영 금지 · ATM 값 "미확인")
+- ⑧ 차입금 태그 제안 (요청 0) → `docs/plans/biotech/data/proposals/debt_tags_20261004.md`
+- ⑨ mcap_bucket 80행 unknown 원인 가설 1개 · 읽는 코드 확인 · 보고만
+- 보고: 번들 `docs/plans/biotech/fable-bundles/20261004_P3a.zip` · SHA-256 · PR 번호 · 변경 파일 · 테스트 · SEC 장부 합계 · 배포 뒤 예상 요청량 · 서버 디스크 증가 추정 · 네 절 (결과 보고 · 백로그 · 다음 작업 제안 · 미해결 질문)
+- 금지: 화면 코드 · FR-6c 설계 · 사전·검색어·표지 문구 코드 반영 · 서버 실행 · 로컬 Tiingo · WP39 명부·코드 수정
+
+**진행 (2026-10-05 10시대)**: PR #84 (`feature/biotech-p3a` · 병합·배포 대기) · 번들 `docs/plans/biotech/fable-bundles/20261004_P3a.zip` (SHA-256 2fb77f82…cbca7) · SEC 로컬 100건 (submissions 80 · 424B5 20 · 장부 합계 125) · Tiingo 0 · 이상 1 = 현금 정의에 단기 투자 빠짐 (KYMR) · Fable 판정 대기
+
+---
+
+### [Biotech Catalyst Radar · WP100-2 기록 보완 (문서 · 자동 병합) · 이후 날짜별 대조만] · 2026-10-04 발행
+
+- 1: changelog · 영구 규칙 2줄 (PR #83 · `c6d6d53`) · 11/15 머리 문장 모음 (영구 규칙)
+- 2 날짜별 대조 (한 번에 보고): 10/5 07:00 = reddit_24h 첫 기록 · "레딧 조건 기준선 수집 중(1/7일)" 표시 · candidates WARNING 사라짐 · 경보 N건 / 10/5 06:00 주간 잡 = 소요 · 자동 분류 새 용어 수 · 제안 zip (새 용어만) · 별칭 · 명부 · SEC 장부 / 10/6 · 10/7 = 13D (미룬 120건) · 문헌 지수
+- 3: 새 작업 금지
+
+---
+
+### [Biotech Catalyst Radar · WP100 레딧 경보 조건 정비 (경보 규칙 변경 · 승인됨 · 병합 승인됨)] · 2026-10-04 발행
+
+- 1: confirm 레딧 매치 코드 인용 · 글 작성 시각 24시간 한정 여부 (아니면 한정) · 10/3 ENTX 매치 10건의 작성 날짜 분포 · 한정 뒤 건수
+- 2: alert_rule 레딧 조건 = 24시간 매치 ≥3 AND 7일 평균의 2배 이상 (평균 하한 1) · 기준선 7일 미만 = 수집 중 · 레딧 일별 기록 (종목 · 날짜 · 24시간 매치) 런타임 · 기존 자료 있으면 사용 · 없으면 오늘부터 · h_radar_params alerts_definition_wp100 · wp86 대체 표시 · changelog (ENTX 10/3 레딧 10 · apewisdom 0) · 화면 경보 기준 문구 · 브리핑 (b) 줄 · 테스트 4
+- 3: candidates 단계 "h3_prices_merged 파일 없음" 경고 제거 · 주석
+- 4: 배포 후 서버 복사본으로 10/3 · 10/4 재판정 (ENTX) 표 · 10/5 주간 잡 대조는 대기 항목대로
+
+**진행 (2026-10-04 11시대)**: PR #81 → 배포 `0550276` · 13경로 200 · 10/3 ENTX 저장 매치 5건 작성일 9/18 · 8/31 · 8/18 · 8/10 · 8/04 → 24시간 0 · 재판정 10/3 · 10/4 ENTX 경보 → 비경보 (none) · 새 규칙 경보 0 · 레딧 기준선은 10/5 실행부터 쌓여 10/12 실행부터 레딧 조건 판정 (문서 PR #82) · 옛 경고 제거
+- **10/5 07:00 대조 추가**: confirm CSV 에 reddit_baseline_n · reddit_24h 기록 시작 · WARNING 'h3_prices_merged' 없어짐
+
+---
+
+### [Biotech Catalyst Radar · 대기 · 날짜별 대조만 (새 작업 없음)] · 2026-10-02 발행
+
+- 10/3 07:00 뒤: daily.log · reddit.log 의 06:30 묶음 줄 · 07:00 단독 줄 · "레딧 4곳 중 N곳 수집" · 경보 N건 · SEC 합계 · [8/9] 시총 줄 · 10/2 수동 실행 값과 다른 항목만 표
+- 10/5 06:00 뒤: 주간 잡 소요 · 자동 분류 새 용어 수 · 제안 파일 (새 용어만) zip · 별칭 · 명부 갱신
+- 10/6 · 10/7: 13D (미룬 120건 포함) · 문헌 지수 요청 수와 결과
+- 로그 WARNING · 텔레그램은 그날 보고에 포함 · 보고마다 번들 zip 경로 · SHA-256
+- **10/3 · 10/4 대조 (2026-10-04 10시대)**: 06:30 묶음 200 (글 100) · 07:00 단독 200 · "4곳 중 4곳" · 글 200 (biotechplays 100) · 경보 1 (ENTX · 레딧 매치 10 · 배수 0 · 평균 0) · z.ai 1/5 · SEC 66/300 · [8/9] IEX 1 · 가격 78 · 숨김 2 · 배지 76 · 월 고유 154 · 백필 완료 · 텔레그램 0 · WARNING = h3_prices_merged 없음 (candidates 단계 · 첫 실행부터 매일)
+
+---
+
+### [Biotech Catalyst Radar · WP99 즉시 · 사전 v5 · 자동 분류 규칙 수정 · 레딧 순서·예약 변경 (사전 변경 승인됨 · 병합 승인됨 · 서버 단계 수동 실행 승인됨)] · 2026-10-02 발행
+
+- 1: `/Users/gonnim/Downloads/20261002_auto-category-reviewed-v2.zip` (1,006 · 채택 924 · 수정 82) → condition_categories.csv (기대 1,656행 · basis "auto-reviewed v5") · changelog · 검수 원본 보관 · 수동 사전 우선이라 자동 값 안 쓰임 테스트
+- 2: 트리 3단계 이하뿐 → "무시" (테스트) · 어간 단어 경계 (retin ≠ Transthyretin 테스트) · 비만·대사 어간 steatohepatitis · NASH · MASH · 수동 사전 변형 (정규화 후 부분 문자열 · 가장 긴 일치) ("Pediatric Lupus Nephritis" → 면역·염증 테스트) · 1단계 예외 C19.874.283 → 비만·대사 · C11.675.349.500.500 → 안과 · NLM 0.34초 · 로컬 캐시로 1,006건 재분류 일치율 (목표 97%+)
+- 3: 07:00 = biotechplays 단독 먼저 + 06:30 묶음 파일 `<RUNTIME>/reddit_combined_<날짜>.json` 읽기 (없으면 묶음 1회 · 재시도 없음) · 429 재시도 모두 제거 · cron "30 6 * * * … --step=reddit-combined" · 서버 reddit-combined → 30분 뒤 reddit-probe · 테스트 3
+- 4: 배포 후 화면 "(자동)" · "기타" 카드 수 · 오늘 SEC 최종 합계
+
+**진행 (2026-10-02 18시대)**:
+- PR #80 → 배포 `e278a5a` · 13경로 200 · crontab 6줄 (06:30 레딧 묶음 추가)
+- 1: condition_categories 1,656행 · 화면 "(자동)" 0 · "기타" 1 (ABCL · 수동 분류 '기타')
+- 2: 검수 대조 91.8% → 93.8% (목표 97% 미달) · 지시 조정 2건 (얕은 트리 점 1개 이하 · 암 어간 경계 예외) 근거 = 점 2개 90.6% · 경계 적용 시 −1.7%p
+- 3: 서버 reddit-combined 18:19 = 200 · 글 100 (wsb 56 · penny 26 · stocks 18) · 30분 뒤 reddit-probe 18:50 = 단독 200 + 묶음 파일 200 · 글 200 · biotechplays 100 · 4곳 중 4곳
+- 4: 오늘 SEC 최종 346 · 레딧·자동 분류는 SEC 아님
+- 10/3 07:00 대조: reddit · "4곳 중 4곳" · biotechplays 글 수 · 06:30 reddit.log 줄
+
+---
+
+### [Biotech Catalyst Radar · WP98-3 즉시 · 남은 문제 3건 수정 · 자동 분류 재실행 · 레딧 재확인 (병합 승인됨 · 서버 단계 수동 실행 승인됨)] · 2026-10-02 발행
+
+- 1 (한 PR): 레딧 = 묶음 1회 + biotechplays 단독 1회 · 합치고 글 ID 중복 제거 · 단독 429 → 60초 1회 재시도 · "4곳 중 N곳" 은 두 결과 합쳐 셈 · 테스트 2 / 자동 분류 = 요청마다 예외 → 그 용어 skipped · 계속 · 캐시 50건마다 + finally · 다음 실행 재시도 · 실패 조건 = 요청 절반 이상 실패 · 테스트 2 / SEC 상한 = 13D submissions 도 상한 · 닿으면 미룸 · 주간 주식수는 같은 날 shares_<오늘>.json 있으면 건너뜀 · 테스트 2 / (옵션 없으면 --step=auto_category)
+- 2: 서버 자동 분류 단계만 재실행 (AACT 재다운로드 금지) · 소요 · NLM 요청 · 403/429 · 건너뛴 용어 · 캐시 · 제안 행 · 검수 요망 · 자동 분류 용어 수·분류별 분포 · 화면 "(자동)" 카드 수 · 제안 파일 + 검수 요망 행 번들 (term · n_trials · example_ticker · auto_category · basis · tree_numbers · reason · reviewer_decision)
+- 3: 서버 reddit-probe 1회 · 묶음·단독 상태 코드 · 글 수 · 곳별 (biotechplays 포함)
+- 4: 오늘 SEC 장부 최종 합계 · 내일 07:00 예상 요청 수 · 주간 잡 예약 그대로
+
+**진행 (2026-10-02 12시대)**:
+- 1: PR #79 → 배포 `33254d1` · 13경로 200 · pytest 458
+- 2: 서버 `--step=auto_category` · 소요 2,330초 (39분) · NLM 2,275 · 403/429 없음 · 건너뜀 0 · 캐시 1,012 · 제안 1,006 행 · 검수 요망 0 · 자동 분류 1,006 (mesh 375 · 어간 631 · 암 683 · 신경·정신 60 · 감염 56 …) · 화면 "(자동)" 카드 0 (A 카드·순위표 용어는 모두 수동 사전) · **주간 잡 합계 약 55분 (AACT 15.7 + 자동 분류 39) > 50분 → 05:00 이동 제안 (WP82 규칙)**
+- 3: 서버 reddit-probe · 묶음 200 (글 100 · wallstreetbets 55 · pennystocks 27 · stocks 18 · biotechplays 0) · 단독 429 → 60초 뒤 **403** → 즉시 중단 · 서버 IP 에서 짧은 시간에 레딧 1회만 통과 → 승인 필요 대안: 단독을 먼저 · 두 요청을 다른 시각 (예: 06:30 · 07:00) 으로 나눔 · OAuth
+- 4: 오늘 SEC 최종 346 (13D 등록부 상한 미적용분 포함 · 이후 수정 배포) · 내일 07:00 예상 = Form 4 약 64 + 가격 보충 ≤10 + 브리핑 0~35 (경보 있을 때) · 주식수는 오늘 파일 있어 0 · Tiingo IEX 1 · 백필 0
+
+---
+
+### [Biotech Catalyst Radar · WP98-2 즉시 · 레딧 묶음 RSS · 서버 단계 수동 실행 (서버 수동 실행 · 사용자 승인됨 · 병합 승인됨)] · 2026-10-02 발행
+
+- 규칙: 일일 파이프 전체 재실행 금지 · 단계별 옵션만 · 403·429 즉시 중단 · SEC 300 · Tiingo 시간당 50 · NLM 초당 3 · 보고는 번들 zip (경로 · SHA-256)
+- 0: daily_server.sh 단계 옵션 확인 · 없는 단계 (mcap · radar · status_gen · reddit-probe) `--step=<이름>` 추가 · 먼저 배포
+- 1: 레딧 4곳 묶음 RSS 1회 · 레딧 전용 UA · 429 → 60초 뒤 1회 재시도 · 실패 → biotechplays 단독 · 소문 카드 머리 "레딧 4곳 중 N곳 수집" · 전부 차단 시 텔레그램 1회 · 테스트 3건 · `--step=reddit-probe` (쓰기 없음 · 상태 코드 · 글 수 · 곳별 글 수) · 배포 뒤 서버 1회 실행 인용
+- 2: `--step=mcap` 서버 실행 · IEX 줄 · 백필 완료 · 주식수 자체 시작 · 월 고유 ≥154 · mcap_display.json 행 수 · 배지 스크린샷
+- 3: `--aact-weekly-only` 서버 실행 · 7개 항목 · 별칭 효과 (71→76) · SEC 명부 · 자동 분류 제안 CSV + 검수 요망 행 번들 (term · n_trials · example_ticker · auto_category · basis · tree_numbers · reason · reviewer_decision)
+- 4: `--radar-nlm-weekly-only` · `--radar-13d-weekly-only` 서버 실행 · 요청 수 · 양성 회사 · 등록부 55 · 새 신고 · 헤더 · 미룸 · 오늘 SEC 합계
+- 5: `--step=radar` · `--step=status_gen` · inputs_missing · radar_v3_full_start.json · 상위 30 변화 · 화면 머리 스크린샷 · 생기면 params · PENDING 에 "v3-전체 시작일 2026-10-02 (수동 실행)" 문서 PR · 3구간 복구일 2026-10-02
+- 6: 순서 0→5 · 한도 걸리면 그 단계 멈추고 다음 · 멈춘 사실 기록
+
+**진행 (2026-10-02 10시대 · 서버 수동 실행 로그 `/root/toss-tradebot-mvp/var/biotech/logs/manual-20261002.log` · `manual-20261002-aact.log`)**:
+- 0·1: PR #77 → 배포 `5c89044` · `--step=` 옵션 · 레딧 묶음 · reddit-probe 서버 결과 = combined 200 · 글 100 · wallstreetbets 51 · pennystocks 27 · stocks 22 · **biotechplays 0 (글 많은 곳에 밀림)** → 승인 필요: biotechplays 별도 1회 추가 등
+- 2: mcap · 주식수 자체 시작 SEC 79 · 백필 31 · 백필 완료 · IEX 1 · 가격 78 · 숨김 2 · 배지 표시 76 · 월 고유 154 · 순위표 배지 27/30
+- 3: AACT 주간 15.7분 · **자동 분류 실패 (ConnectError · 400초 · 캐시 미저장)** · SEC 명부 10,434사 · 주식수 SEC 79 (같은 날 두 번째) · 매칭 진단 lead 44 → 전체 75 · 임상 있는 종목 77 → 수정 제안 (요청별 예외 처리 · 실패해도 캐시 저장)
+- 4: NLM 316 · 오류 0 · PubMed 양성 23 · Preprint 양성 7 · 13D SEC 118 (헤더 63 · 새 신고 63 · 미룸 120) · **오늘 SEC 346 > 300 (13D submissions 에 상한 미적용)** → 수정 제안
+- 5: radar · inputs_missing 없음 · v3-전체 시작일 2026-10-02 · 상위 30 진입 ALGS ARTV COGT CRBP EDIT FDMT IKT · 탈락 ADCT ANNX EXEL FBRX IMCR KOD KRYS · status_gen 82줄 · params PR #78
+
+---
+
+### [Biotech Catalyst Radar · WP98 레딧 429 조사·수정 · 주식수 자체 시작 · Tiingo 장부 통합 · 보고 번들 규칙] · 2026-10-02 발행
+
+- 0: 보고 번들 규칙 (영구 규칙)
+- 1 (병합 승인됨): daily.log 9/22 이후 레딧 요청 날짜별 요청·429·성공·받은 글 수 · 매치 0 아닌 날 · 요청 코드 인용 · 고유 UA "TossTradebot BiotechRadar/1.0 (contact: suauncle@gmail.com)" · 간격 2초 이상 · 429 시 그날 1회 재시도 (60초 뒤) · SEC 헤더 상수 사용 금지 · 로컬 실제 요청 3건 200 확인 (여전히 429 면 멈춤) · 레딧 입력 0건이면 텔레그램 warning 하루 1회 + 소문 카드 머리 "레딧 입력 없음(HTTP 429)" · 테스트 2건 · changelog · PENDING 기록 · 소문 전향 평가 (11/15) 머리 표기 규칙
+- 2 (병합 승인됨): mcap 일일 단계에서 shares_*.json 없으면 주식수 조회 1회 (장부 mcap_shares · 300 안) · 있으면 안 함 · 테스트 2건 · 다음 07:00 "배지 표시 K" > 0 확인
+- 3 (자동 병합): 로컬 Tiingo 장부 종목 목록 → `docs/plans/biotech/data/tiingo_usage_seed_202610.json` · 서버 월 고유 = 씨앗과 합집합 · 다음 날 "월 고유 N" ≥ 154 확인 · 영구 규칙
+- 4: 번들 (레딧 로그 발췌 9/22~10/2 · diff · 로컬 실제 요청 3건 · 테스트)
+
+**진행 (2026-10-02 10시대)**:
+- 1: 레딧은 0건이 아님 · 11일 매일 4곳 요청 · biotechplays 200 (글 25) · 3곳 429 (요청 44 · 429 33 · 성공 11 · 글 275) · 매치 11일 모두 있음 · 로컬 고유 UA 3건 시험 = 200 · 429 · 429 (`x-ratelimit-remaining 0.0`) → **멈춤 · 코드 변경 없음** · 기록 PR #76 (`242c443`) · 대안 (승인 필요): 여러 곳을 한 주소로 묶은 RSS 1회 (`/r/a+b+c/new/.rss`) · 곳 사이 간격 늘리기 · 레딧 OAuth API
+- 2·3: PR #75 → 배포 `28a1f8f` · 13경로 200 · 10/3 07:00 확인: "배지 표시 K" > 0 · "월 고유 N" ≥ 154 · 주식수 자체 시작 줄
+
+---
+
+### [Biotech Catalyst Radar · WP97-3 대상 질환 줄 정리 (표시 전용 · 자동 병합) · 이후 날짜별 확인만] · 2026-10-01 발행
+
+- 1: 카드 "대상 질환" 줄에서 사전 분류 "무시" 용어 제외 · 남은 용어 없으면 첫 원문 + "(일반 용어)" · biotech-display.ts 함수 · 테스트 2건 · 병합·배포 · 배포 후 영어 질환명 남은 A 카드 수 (기대 0 또는 "(일반 용어)" 카드 수)
+- 2: 날짜별 확인은 WP97 일정대로 (10/2·3 백필·시총 배지 · 10/5 주간 잡·검수 제안 zip · 10/6 13D · 10/7 NLM·radar_v3_full_start.json) · 새 작업 금지
+- **10/2 확인 (2026-10-02 08시대)**: 9/9 완료 07:00:01~07:01:28 · [8/9] IEX 1 · 가격 사용 78 · 숨김 2 (APGE · FBRX) · 배지 표시 0 (주식수 = 월요일 주간 단계 전) · 백필 49 · 시간당 한도 (다음 08:01) · 남은 31 · APGE 30일 제외 · SEC 69/300 · 경보 0 · inputs_missing 4 · 텔레그램 1 (warning 입력 부족) · form4_xml 14 · KOD 82행 · ETRA $19,999,995 · **결함 수정**: 빈 mcap_display.json 이 예전 입력보다 우선해 서버 배지 0 → PR #74 (`c41737d`) 로 빈 파일이면 예전 입력 표시 · 배지 7 복구 · 스크린샷 `docs/plans/biotech/screenshots/20261002_sha_c41737d/1002_radar_badges.webp` · 보고만: Tiingo 장부가 서버 (80) · 로컬 (154) 로 나뉘어 있음 (같은 계정)
+
+**진행 (2026-10-01 20시대)**: PR #73 → 배포 `ad7ba7f` · 13경로 200 · 서버 A 카드 63장 중 영어 질환명 남은 카드 0 · "(일반 용어)" 표시 카드 0
+
+---
+
+### [Biotech Catalyst Radar · WP97-2 한국어 v4 반영 · 일반어 2건 무시 등재 (사전 변경 · 승인됨 · 병합 승인됨)] · 2026-10-01 발행
+
+- 1: `/Users/gonnim/Downloads/20261001_ko-terms-visible-reviewed-v3.zip` 의 reviewed CSV · 채택 → proposed_ko · 제외 → 안 넣음 · 그 밖 → 그 값 · ko_terms.csv 134건 추가 (기대 360행) · "Lesion Skin" · "Neoplasms by Histologic Type" condition_categories.csv "무시" (기대 650행) · changelog "한국어 v4 · 134건 · 무시 2건 추가" · 검수 원본 `docs/plans/biotech/verification/dictionaries/` 보관 · 영구 규칙 (category 열 = 사전 분류)
+- 2: 테스트 2건 ("ALS" → "루게릭병(ALS)" · "Lesion Skin" 카드 분류 미사용) · pytest · tsx · build 통과 시 병합·배포 · 배포 후 서버 복사본 A 카드 63장 중 영어 질환명 남은 카드 수 · 한국어로 바뀐 카드 스크린샷 1장
+- 3: 날짜별 확인은 WP97 일정대로 · 새 작업 금지
+
+**진행 (2026-10-01 20시대)**:
+- PR #72 → 배포 `72ae4d0` · 13경로 200 · ko_terms 360행 · condition_categories 650행 · 서버 A 카드 63장 중 영어 질환명 남은 카드 56 → 2 (남은 2장 = 무시 등재한 Lesion Skin · Neoplasms by Histologic Type 의 "대상 질환" 원문) · 스크린샷 `docs/plans/biotech/screenshots/20261001_sha_72ae4d0/wp97_2_after_card_AVIR.webp`
+
+---
+
+### [Biotech Catalyst Radar · WP97 한국어 미등재 용어 제안 · 날짜별 확인 (새 기능 없음)] · 2026-10-01 발행
+
+- 1: 서버 rumor.json 복사본 A 카드 63장 + 순위표 30행에 표시되는 질환 용어 중 ko_terms.csv 미등재 · 열 term · category · n_cards · example_ticker · proposed_ko · reviewer_decision(빈칸) · 카드 노출 횟수 순 · `docs/plans/biotech/verification/dictionaries/ko_terms_visible_proposed_v3.csv` + zip · 검수 전 ko_terms.csv 반영 금지
+- 2 날짜별 확인 (각 날짜 한 번에 보고):
+  - 10/2 · 10/3 07:00: [8/9] 시총 줄 · 백필 요청 수 · "백필 완료" 여부 · 화면 시총 배지 종목 수 스크린샷 1장
+  - 10/5 06:00: 주간 잡 7개 항목 · 별칭 효과 (71→76) · SEC 장부 합계 · 제안 파일과 검수 요망 행 zip
+  - 10/6 06:00: 13D 요청 수 · 새 신고 수 · 미룬 헤더 수 · 07:00 보도자료 건너뜀 여부
+  - 10/7 06:00 · 07:00: NLM 요청 수 · 양성 회사 수 · inputs_missing · radar_v3_full_start.json 생성 여부 → 생기면 params · PENDING 옮겨 적고 문서 PR 병합
+- 3: 그 밖의 새 작업 금지
+
+**진행 (2026-10-01 19시대)**:
+- 1: 서버 rumor.json · radar.json 조회 복사 (로그인 세션 · GET 만) · A 63 + 순위표 30 · 미등재 136개 · `docs/plans/biotech/verification/dictionaries/ko_terms_visible_proposed_v3.csv` (PR #71 병합) · 번들 `/Users/gonnim/Project-MVP/Source/toss-tradebot-mvp/docs/plans/biotech/fable-bundles/20261001_ko-terms-visible-v3.zip` · 검수 대기
+
+---
+
+### [Biotech Catalyst Radar · WP96 서버 예약 실행표 · 비밀 금고 설정 (서버 변경 · 사용자 승인됨 · 병합 승인됨)] · 2026-10-01 발행
+
+- 1: `deploy/biotech_cron_lines.txt` (화 13D · 수 NLM 두 줄) · deploy.yml 에 "없으면 추가" 단계 (기존 세 줄 무변경) · 배포 후 crontab -l 5줄 인용 · 테스트 (두 번 실행해도 5줄)
+- 2: SOPS 두 항목 (TIINGO_API_KEY · BIOTECH_MCAP_ENABLED "1") · 값은 화면·로그·커밋·셸 기록에 남기지 않음 · git diff 에서 ENC[...] 만 확인 · 커밋·PR·병합 · 배포 후 서버 .env 두 이름 개수 (기대 2 · 값 안 봄) · 다음 07:00 [8/9] 줄과 백필 요청 수
+- 3 (문서 · 자동 병합): H3 검정 보고서와 dictionaries_changelog 에 "13D 입력은 SEC 양식 이름 변경 (2024-12) 때문에 2024-12-06 이후 기록이 누락된 상태로 확정 · 11/15 까지 재실행 금지 · 재판정 시 고려" · 검정 산출물 무변경
+- 4: 확인 일정 (PENDING 에만 · 날짜마다 로그 인용 · 한 번에 보고)
+  - 10/2 07:00 · 10/3 07:00: daily.log [8/9] "시총 가격 · IEX 요청 1 · …" · "가격 백필 · Tiingo 일봉 요청 N · 채운 종목 N · 남은 종목 N" (10/3 에 "백필 완료" 기대)
+  - 10/5 (월) 06:00: aact-weekly.log 주간 잡 (SEC 명부 · 주식수 조회 줄)
+  - 10/6 (화) 06:00: radar-weekly.log "13D 주간 · 활동가 55 · SEC 요청 N (헤더 N) · …"
+  - 10/7 (수) 06:00: radar-weekly.log "PubMed·Preprint 주간 · …"
+  - v3-전체 시작일: `/root/toss-tradebot-mvp/var/biotech/radar_v3_full_start.json` 생기면 params · 영구 규칙에 옮김
+
+**진행 (2026-10-01 19시대)**:
+- 1·2: PR #69 → 배포 `06ec7ce` · 13경로 200 · 서버 crontab 항목 5줄 (07:00 매일 · 월 06:00 · 15일 08:00 · 화 06:00 13D · 수 06:00 NLM) · 서버 `.env` 두 이름 개수 2 (값 안 봄) · SOPS 는 `sops set --value-stdin` 으로만 · diff 는 ENC[...] 만
+- 3: PR #70 (문서) 병합 `ac1c7c7` · H3 보고서 2곳 · changelog
+
+---
+
+### [Biotech Catalyst Radar · WP95 레이더 입력 복구 (점수 입력 변경 · 병합 승인됨)] · 2026-10-01 발행
+
+- 1: h6_membership 을 설계 입력·check_inputs 에서 제외 · params·changelog 기록
+- 2: 13D (h3_events) 주간 · 화 06:00 · b98 로직 → 주간 단계 · 후보당 SEC submissions 1회 (~80) · build_client · 403·429 즉시 중단 · 장부 "h3_events" · 런타임 산출 · 실패해도 계속 + 텔레그램 warning 1회
+- 3: PubMed · Preprint 주간 · 수 06:00 · 2개 연도 × 80사 · NLM ≤3/s · 403·429 중단 · 캐시 (결과 없음 포함) · 런타임 산출
+- 4: 가격 · 매일 · IEX 응답 → `<RUNTIME>/prices/iex_daily_history.csv` 누적 (100일) · XBI 추가 · 90거래일 미만 종목 하루 최대 50개 Tiingo 일봉 (120일) 백필 (H6 수집기·장부 재사용 · 플래그 꺼짐 건너뜀 · 대상 0 → "백필 완료" 로그) · 레이더 90일 수익률 입력 = 누적 파일 + XBI (계산식 그대로) · 테스트 4종
+- 5: crontab 관리 방식 확인 → 수동이면 사용자용 두 줄
+- 6: inputs_missing 빈 첫 실행일 = "레이더 v3-전체 시작일" 자동 기록 (params · 영구 규칙) · 11/15 3구간 규칙
+- 7: 서버 복사본 + 로컬 입력 전체 복구 상위 30 vs 현재 서버 (진입·탈락 7) · pytest · tsx · build 통과 시 병합·배포 · 13경로
+
+**진행 (2026-10-01 18시대)**:
+- PR #68 → 배포 `7bd1679` · 13경로 200
+- 13D 는 b98 범위 그대로 (활동가 55곳 + 펀드 Form 4) · 후보 기준 방식은 시험에서 994건 중 915건이 수동 13G 라 쓰지 않음 · SCHEDULE 13D/13G 추가 (b98 은 2024-12 이후 누락)
+- 백필 판정 조정: "90거래일" 대신 레이더 90일 (달력) 창을 덮는지 (120일 일봉은 약 83거래일이라 90거래일 미달) · 정지 종목 (APGE 9/4 · FBRX 8/27) 30일 제외
+- 미리보기 (서버 복사본 · 새 단계 실제 실행 · SEC 112 · NLM 316 · Tiingo IEX 1 + 백필 81): inputs_missing 없음 · 현재 서버 상위 30 대비 진입 ALGS ARTV COGT CRBP FDMT IKT · 탈락 ADCT ANNX EXEL FBRX KOD KRYS (6·6) · 예전 로컬 파일 기준은 7·7
+- **사용자 할 일 · 서버 crontab 두 줄 추가** (`crontab -e` · 서버 시간 KST):
+  - `0 6 * * 2 /bin/bash /root/toss-tradebot-mvp/backend/scripts/biotech_h48v3_daily_server.sh --radar-13d-weekly-only >> /root/toss-tradebot-mvp/var/biotech/logs/radar-weekly.log 2>&1`
+  - `0 6 * * 3 /bin/bash /root/toss-tradebot-mvp/backend/scripts/biotech_h48v3_daily_server.sh --radar-nlm-weekly-only >> /root/toss-tradebot-mvp/var/biotech/logs/radar-weekly.log 2>&1`
+- v3-전체 시작 조건: 화 13D · 수 NLM 실행 + 플래그 켬 (SOPS) 뒤 가격 누적·백필 (약 2일) → inputs_missing 빈 첫 daily 실행일이 `<RUNTIME>/radar_v3_full_start.json` 에 기록됨 → 관측 때 영구 규칙 줄과 params 에 옮겨 적음
+
+---
+
+### [Biotech Catalyst Radar · WP94 레이더 입력 부재 가시화 · 누락 입력 조사 · 표시 결함 2건] · 2026-10-01 발행
+
+- 1 (표시·로그 · 자동 병합): radar 가 h6_membership · h3_events · h57_pubmed_index · h58_preprint_index · h3_prices_merged 를 못 찾으면 WARNING 1줄씩 · 텔레그램 warning 1회 (목록) · 산출 CSV 머리와 kpi.json 에 inputs_missing · 화면 순위표 머리 "점수 입력 부족: 전문가 채널 미반영(파일 N개 없음)" (biotech-display.ts · 목록은 펼침) · 테스트 2건 · 배포 후 서버 복사본 inputs_missing 인용 · 규칙 기록 (changelog · 영구 규칙)
+- 2 (조사만): 누락 5개 입력별 표 (채널·가중치 코드 줄 · 로컬 생성 방법·스크립트 · 일일/주간 파이프 생성 가능성과 외부 요청 수 · 있을 때/없을 때 오늘 상위 30 차이) · h3_prices_merged 를 WP75 IEX 일일 가격 누적으로 대체 가능한지 · 90일 치 쌓이는 날짜 · 제안만
+- 3 (표시 · 자동 병합): shortName 접미사 LP · L.P. · SE · PLC 추가 (테스트 1) · 임원 매수 금액 = 거래별 센트까지 계산 → 합산 → 마지막 반올림 (KOD 두 화면 같은 값 테스트 1) · BIOTECH_API_ONLY 로컬 화면 스크린샷 1장
+
+**진행 (2026-10-01 13시대)**:
+- 1·3: PR #67 → 배포 `40d6de1` · 13경로 200 · 서버 복사본 (서버 조건) inputs_missing = h6_membership · h3_events · h57_pubmed_index · h58_preprint_index · h3_prices_merged · 서버 조건 v3 = 서버 실제 10/1 v2 (80행 같음) · 로컬 스크린샷 `docs/plans/biotech/screenshots/20261001_local/wp94_local_{1_insider,2_radar_inputs}.webp`
+- 2 조사 (구현 안 함 · 승인 대기) · 서버 조건 대비 그 입력만 있을 때 10/1 상위 30 변화: H6 소속 0 (v3 가점 0) · 13D 5 · PubMed 5 · Preprint 2 · 가격(+XBI) 3 · 전부 7
+- 제안 (승인 필요 · 점수 입력 변경): (a) h6_membership 은 v3 에서 쓰지 않으므로 설계 입력에서 뺌 (b) h3_events = 주간 잡 (화요일) SEC submissions 후보당 1회 ≈ 80회 · 13D 신규 건수 (c) h57 · h58 = 주간 잡 NLM esearch 후보당 2창 × 2 = 약 320회 (≤3/s · 약 2분) · y2025 캐시 뒤 약 160회/주 (d) 가격 = Tiingo 일봉 1회 백필 81회 (후보 80 + XBI · 시간당 50 → 2시간) 후 IEX 일일 (XBI 추가 · 누적 파일 100일 보관) · 백필 없이 IEX 누적만이면 90일 창이 차는 날 = 플래그 켠 날 + 90일 (10/2 켜면 2026-12-31) · (e) 벤치마크 XBI 도 서버에 없음 (6번째 · 미반영 채널)
+
+---
+
+### [Biotech Catalyst Radar · WP93 레이더 점수 v3 · 8-K 추출 테스트 · 로컬 화면 모드] · 2026-10-01 발행
+
+- 1 (점수 변경 · 병합 승인됨): `backend/scripts/biotech_h46v3_radar.py` 166행 H6 소속 +3 제거 (전문가 채널 다른 항목 유지) · `backend/data/h_radar_params.json` score_version "v3 (2026-10-02 · H6 소속 +3 제거 · 근거: 관문 2 폐기)" · 이전 정의 v2 보존 · `docs/plans/biotech/data/dictionaries_changelog.md` 규칙 기록 (전·후·근거·영향 78/80 · 52종목 · ARTV 진입 · AVBP 탈락) · 영구 규칙 (위) · 두 버전 재계산 가능 1회 확인 · 테스트 1건 · 배포 후 서버 복사본으로 상위 30 재계산
+- 2 (표시·테스트 · 자동 병합): IOVA 9/29 EX-99.1 줄인 픽스처 (제목·첫 문단·Forward-Looking · 2KB 이내 · 추가 SEC 요청 없음) · 제목·첫 문단 테스트 2건
+- 3 (표시·테스트 · 자동 병합): `backend/api/main.py` BIOTECH_API_ONLY=1 이면 스케줄러 미시작 (자동매매 코드 무변경 · 기본값 동일 · 서버 미사용) · 로컬 화면 스크린샷 2장 (임원 매수 KOD 82행·ETRA 금액 · 언급 카드) → `docs/plans/biotech/screenshots/<YYYYMMDD>_local/`
+- 4: 10/2 07:00 서버 결과는 아래 WP92 항목대로 로컬 값과 대조만
+
+**진행 (2026-10-01 12~13시)**:
+- 1: PR #65 → 배포 `a4478c2` · 13경로 200 · v3 / v2 재계산 1회 확인 (같은 입력 · ARTV 34→30 진입 · AVBP 20→40 탈락) · **정정: 서버에는 h6_membership · h3_events · h57 · h58 · h3_prices 파일이 없음 → 서버 점수 v3 영향 0** (서버 레이더 입력 부재는 별건 · 점수 입력 변경이라 승인 필요)
+- 2·3: PR #66 → 배포 `584875f` · 13경로 200 · IOVA 픽스처 1,190 B · BIOTECH_API_ONLY · "N일 전 신고" 신고일 기준 · 로컬 스크린샷 `docs/plans/biotech/screenshots/20261001_local/wp93_local_{1_insider,2_mentions}.webp`
+- 10/2 대조 추가: 서버 radar_v1_3_20261002.csv 의 score_version = v3 · 서버 순위가 10/1 v2 와 같은 입력이면 같아야 함 (H6 파일 부재)
+
+---
+
+### [Biotech Catalyst Radar · WP92 작업 규칙 수정 · 미룬 확인 즉시 실행 · WP91 병합] · 2026-10-01 발행
+
+- 0: 영구 규칙 개정 (위)
+- 1: 미룬 확인 5건 즉시 · 로컬 · 서버 스냅샷 복사본: h65 (sec_usage · form4_xml 수 · ETRA 가격 보충 · KOD 82행·1,941,755주) · h77 ("SEC 요청 · 브리핑 N · 보도자료 N · 오늘 합계 N/300" · 8-K 첫 문단 브리핑 1건) · mcap 플래그 켜고 로컬 키 ("IEX 요청 1 · 가격 사용 N · 숨김 M · 배지 표시 K") · form4_xml 실제 원문 픽스처 (신고자 이름 → "REPORTING PERSON") + 회귀 테스트 · 가능하면 로컬 화면 스크린샷 1장씩
+- 2: WP91 (병합 승인됨): 직전 프롬프트 1·2 (H6 폐기 확정 기록 · 순위의 점수 사용 정리) · 점수·순서가 바뀌면 멈추고 보고
+- 3: 보고 한 번에
+
+**진행 (2026-10-01 12시대)**:
+- 1 미룬 확인 (로컬 · 서버 런타임 복사본 `scratchpad/rt_20261001`): h65 SEC form4 64 · 가격 보충 5 · form4_xml 14개 · ETRA $15.00 × 1,333,333주 · KOD 82행 · 1,941,755주 · 82행 모두 가격 있음 · KPI 임원 매수 3 · h77 경보 0 · "SEC 요청 · 브리핑 0 · 보도자료 0 · 오늘 합계 69/300" · IOVA 8-K 시험에서 첫 문단 추출 결함 발견 → PR #63 수정 · mcap (플래그 켬 · 로컬 키) "IEX 요청 1 · 가격 사용 77 · 숨김 2 (FBRX 8/27 · APGE 9/4) · 배지 표시 76" · API 배지 73 (주식수 12개월 넘은 ALGS · ANNX · FDMT 숨김) · 실제 원문 픽스처 + 회귀 테스트 · 로컬 화면은 백엔드 시작 시 자동매매 스케줄러가 켜져 띄우지 않음
+- PR #63 (표시·테스트) 병합 → 배포 `8344911` · 13경로 200
+- 2 WP91: PR #64 병합 → 배포 `f50e1bb` · 13경로 200 · H6 폐기 확정 기록 · 테마 순위 줄 "검증 폐기 · 참고용" · **레이더 점수 H6 +3 유지 (제거 시 점수 78/80 · 순위 52종목 · 상위 30 ARTV↔AVBP) → 승인 대기**
+- 서버 대조 (10/2 07:00): h65 · h77 · mcap(플래그 켜진 뒤) 결과를 위 로컬 값과 대조
+
+---
+
+### [Biotech Catalyst Radar · WP90-2 입력 보충 · H6 본 백테스트 본 실행 · 관문 2 요청서] · 2026-10-01 발행
+
+**원문 요지** (보고 첫 줄 "지금 하는 일" · 전체 경로 · 서버 조회 전용 · 병합은 "병합 승인됨" 만 · `h6_params_v2.json` 은 changelog 추가만):
+
+1. 가격 보충 (Tiingo 19회 승인 · 로컬): XBI · IWM · 기존 17종목 2014-10-01~오늘 · 1종목 1호출 · H6 수집기·장부 (시간당 50 · 월 고유) 그대로 · 벤치마크 → `backend/data/biotech/h6/h6_benchmarks_tiingo_20261001.csv` · 17종목 → `h6_prices_tiingo_20261001.csv` 에 합침 · 합친 뒤 SHA-256 재계산 · summary.json input_seal 갱신 (이전 값 보존) · changelog "v2 정정 (2026-10-01) · 기존 17종목 · 벤치마크 2020년 이전 구간 없음 → 전 기간 재수집 · 신호·순위·판정 무변경" · 장부의 월 고유·시간당 요청 수 인용
+2. 규칙 (b) 주식수 (SEC companyfacts 최대 52회 승인 · 로컬): 비만 소속 52종목 회사당 1회 · build_client() · 403·429 즉시 중단 · 장부 "h6_shares" · dei:EntityCommonStockSharesOutstanding 이력에서 리밸런싱 분기 첫 영업일 이전 최신 공시 · 주식 종류 둘 이상 = WP83-2 합산 (같은 공시 안 합산 · 가장 최근 제출) · dei 없음 = unknown (목록·비율) · unknown 은 "대형 제외" 열에서도 유지 · 시총 = adj_close × 주식수 · 5B 이상만 제외 · `docs/plans/biotech/verification/H6/c3-20260928/h6_obesity_mcap_pit_20261001.csv` (종목 · 분기 · 주식수 · 공시일 · adj_close · 시총 · 판정)
+3. 창 커버 재계산: "2020년 전 거래 여부 미확인" 100 → 0 확인 · CSV 2개 갱신
+4. 본 실행: 설계 그대로 · 1차 판정 = 규칙 (a) 1안 · 1·4분기 · XBI 대비 로그 초과수익 · 상위 vs 하위 · cluster CI 하한 · 산출 (분기별 순위표 · 상위·하위 명단 · 테마별 기여 · 비만 2열 · 부트스트랩 CI) · 보고서 `docs/plans/biotech/verification/H6/c3-20260928/h6_backtest_v2_20261001.md` (필수 3건 · 생존편향 · unknown 비율 · 입력 봉인 해시) · 관문 2 요청서 `docs/plans/biotech/verification/H6/H6-gate2-request-20261001.md` (조건별 · 판정은 전체 열) · 소문·임원 매수 검정 금지 · 번들 (보고서 · 요청서 · summary · 창 커버 CSV 2 · 시총 CSV · 분기별 결과 CSV)
+5. 10/2 07:00 뒤: SEC 합계 줄 · sec_usage_20261002.json · form4_xml/ 수 · ETRA 금액 · KOD 82행 스크린샷 · 픽스처 + 회귀 테스트 · SOPS 들어갔으면 [8/9] 줄
+6. 순서: 1 → 2 → 3 → 4 · 5 는 10/2
+
+**진행 (2026-10-01)**:
+- 1: Tiingo 19/19 성공 · 월 고유 154/450 · 시간당 (장부 hourly) 09시 H6 51 · 10시 IEX 시험 1 + H6 10 · 11시 H6 19 · 재봉인 `a40dbf70c0f2affbc2b9ffc09583a9ac1d7b9234c672d195a8dea05a20580bb7` (이전 `75eba177…` 보존) · 벤치마크 `af4317a3afb5f013b74099f46a58c1463f0a6baa8e2eaa308fdf2e895de69e33` · changelog 1줄
+- 2: SEC 52/52 · 차단 없음 · 로컬 장부 h6_shares 52 · unknown 182/1,267 행 (14.4%) · dei 없음 5곳 (AZN BODI NVO RANI VTVT)
+- 3: "2020년 전 미확인" 100 → 0 · 소속 1,935 · 1Q 실패 0 · 4Q 실패 0 · 미완료 219
+- 4: **1차 판정 폐기** (1Q CI −4.3%~+5.7% · 4Q CI −19.3%~+15.8%) · 하위 묶음 빈 분기 4개 제외 (검수 요청) · 보고서 · 관문 2 요청서 · 브랜치 `feature/biotech-wp90` 커밋 `318186a` (PR 없음 · main 반영은 승인 필요) · 번들 `/Users/gonnim/Project-MVP/Source/toss-tradebot-mvp/docs/plans/biotech/fable-bundles/20261001_H6-gate2.zip` (SHA-256 `e9aede74b2ce88eda1dc36ad661b08a13b219f84db72541381955a2e9d009c0c`)
+
+---
+
+### [Biotech Catalyst Radar · WP89 화면 잔여 3건 · WP75-2 IEX 가격 단계 · WP90 H6 본 백테스트] · 2026-10-01 발행
+
+**원문 요지** (보고 첫 줄 "지금 하는 일" · 전체 경로 · 서버 조회 전용 · 병합은 "병합 승인됨" 만):
+
+1. WP89 (PR · 검사 통과 시 병합 승인됨): 임원 매수 `table4[:30]` → 신고자·회사·신고일로 묶은 뒤 묶음 단위 최근 30건 (테스트: KOD 82행 · 1,941,755주) · 언급 카드 단계 `spread` 한국어 + confirm `stage()` 전 값 대응 검사 테스트 · 종료 예정일 지난 시험 = "종료 예정일 지남(결과 발표 대기)" (biotech-display.ts 함수) · SEC 명부에 없는 발행사 = "비상장 추정" · 배포 후 임원 매수·언급 카드 스크린샷 2장
+2. WP75-2 IEX 가격 단계 (구현 승인됨 · PR · 검사 통과 시 병합 승인됨): `backend/scripts/biotech_mcap_daily.py` 가격 단계 = IEX 일괄 1회 · Tiingo 클라이언트·장부 재사용 · 요청 1회 장부 시간 단위 기록 · tngoLast timestamp 날짜 = 마지막 미국 거래일 (응답 최빈 날짜) 일 때만 사용 · 아니면 배지 숨김 + "가격 오래됨 · 종목 · 날짜" 로그 · 응답 원문 `/root/toss-tradebot-mvp/var/biotech/mcap/iex_<YYYYMMDD>.json` (해석기) · 30일 지난 파일 삭제 · 새 후보만 월 고유 추가 · 테스트 (1회 요청 · 오래된 timestamp 숨김 · 장부 등록 · 플래그 꺼짐 0회) · 배포 후 플래그 켜기 절차 (a~d) 안내 · SOPS 는 사용자 · 켜진 다음 날 07:00 [8/9] 결과 (요청 1회 · 배지 표시 수 · 숨김 수) 인용
+3. WP90 H6 본 백테스트 (승인됨 · 로컬): 입력 `backend/data/biotech/h6/h6_prices_tiingo_20261001.csv` SHA-256 을 summary.json 과 보고에 · `docs/plans/biotech/data/h6_params_v2.json` 그대로 (바꿔야 하면 멈추고 보고) · 창 커버 v2.1 을 종목·분기 창마다 · 분기별 창 커버 통과 수 표 · 12종목 (APMD … ACIU) 제외 창 수 · 보고서 `docs/plans/biotech/verification/H6/c3-20260928/h6_backtest_v2_20261001.md` (필수 서술 3건: 3테마 한정 결과 · 분기별 상위·하위 명단 · 테마별 기여 분해 · 규칙 (b) 전체 / 대형 5B+ 제외 두 열 · 판정은 전체 열 · 1차 판정 규칙 (a) 1안) · 관문 2 요청서 `docs/plans/biotech/verification/H6/H6-gate2-request-20261001.md` (조건별 충족 여부) · 소문·임원 매수 검정 금지 · 번들 (보고서 · 요청서 · summary · 분기별 표 CSV)
+4. 10/2 07:00 뒤: "SEC 요청 · … 오늘 합계 N/300" 줄 · sec_usage_20261002.json · form4_xml/ 파일 수 · 가격 보충 결과 (ETRA 금액) 인용 · form4_xml/ 1건으로 픽스처 + 회귀 테스트 (신고자 이름 "REPORTING PERSON")
+5. 순서: 1 → 2 → 3 · 3 은 1·2 배포 뒤
+
+**진행 (2026-10-01)**:
+- 1 WP89: PR #61 병합 → 배포 `4f1cb14` · 13경로 200 · 스크린샷 `docs/plans/biotech/screenshots/20261001_sha_4f1cb14/wp89_after_{1_insider,2_mentions}.webp` · KOD 카드는 서버 표 CSV 가 10/2 07:00 에 다시 만들어진 뒤 82행 반영 → 10/2 재촬영
+- 2 WP75-2: PR #62 병합 → 배포 `a1e82c1` · 13경로 200 · 플래그 켜기는 사용자 (SOPS) · 켜진 다음 날 [8/9] 인용
+- 3 WP90: **입력 부족으로 본 실행 중단** (설계 무변경) · 입력 봉인 SHA-256 `75eba17760f959b19f68ba142c0fc14c81d1d968141900079397b346cb7ffb8f` · 창 커버 v2.1 표 (브랜치 `feature/biotech-wp90` 커밋 `2f5627e`) · 승인 필요: (1) Tiingo 19회 (XBI · IWM · 기존 17종목 전 기간) (2) 규칙 (b) 주식수 SEC companyfacts 최대 52회 또는 unknown 처리 결정 · 번들 `/Users/gonnim/Project-MVP/Source/toss-tradebot-mvp/docs/plans/biotech/fable-bundles/20261001_WP90-stop.zip`
+
+---
+
+### [Biotech Catalyst Radar · WP84-2 병합 권한 규칙 · PR #58 배포 · H6 재요청 · WP75 시험 · 원인 확인] · 2026-10-01 발행
+
+**원문 요지** (보고 첫 줄 "지금 하는 일" · 전체 경로 · 서버 조회 전용 · 병합은 "병합 승인됨" PR 만):
+
+0. 병합 권한: 저장소 `.claude/settings.json` permissions.allow 에 `"Bash(gh pr merge:*)"` 만 추가 · 바꾼 줄 인용 · 이 파일 영구 규칙에 PR 병합 규칙 한 줄
+1. PR #58 (병합 승인됨 · PR #58): 병합 → 배포 커밋 해시 · 13경로 · deploy-watch 알림 내용 · 수정 후 스크린샷 `docs/plans/biotech/screenshots/<YYYYMMDD>_sha_<해시>/wp87_after_*.webp` · D-n 오늘 기준 (9/30 종료 시험 D+1) · 임원 매수 카드 제목·내용 일치 · "언급 늘어남"/"급등 경보" 구분
+2. WP88 PR (생성 후 병합 승인됨): `feature/biotech-wp88` main 위로 rebase · pytest · tsx · next build → PR · 모두 통과면 병합·배포 · 실패면 병합하지 않고 보고 · 배포 후 13경로 · 10/2 07:00 "SEC 요청 · … 오늘 합계 N/300" 줄 · `sec_usage_20261002.json` · `form4_xml/` 파일 수 인용
+3. H6 남은 10건 재요청 (승인됨 · 10:54 이후): 수집기에 시간당 50회 규칙 (장부에 시간 단위 요청 수 · 50회 도달 시 중단 · "시간당 한도 · 다음 가능 시각" 로그 · 테스트 1건) · 대상 IONS ISRG MDT MIRM MNOV OMDA PRE PTN INGR EOCN · 재보고 (종목·거래일 커버율 · 90% 미만 · 월 고유) · summary.json 에 종목별 first_bar_date (요청 0회) · EOCN 첫 거래일과 티커 변경 전 기록 연속 여부 · `docs/plans/biotech/verification/H6/c3-20260928/h6_membership_v2_summary_2026-09-28.json` 에 "GLMD → EOCN · 티커 변경 · CIK 1595353" 별칭
+4. 한도 문서 정정: `docs/plans/biotech/SOURCES.md` Tiingo 줄 "시간당 50회" (근거 2026-10-01 09:53 51번째 요청 429 · summary.json blocked) · `docs/plans/biotech/data/h6_params_v2.json` limit_basis 동일 · 3단계 수집기 변경과 함께 PR (병합 승인됨)
+5. Form 4 +85건 원인 (조회만): 신규 85건의 신고자별 건수 · 신고일 분포 인용 · 새 신고자 30일 누적 일괄 유입인지 한 줄 · 코드 변경 금지
+6. WP75 가격 조회 재설계 시험 (요청 1회 승인됨): Tiingo IEX `/iex/?tickers=…` 로 후보 79종목 전일 종가 1회 시험 · 무료 등급 허용 · 한 요청 종목 수 상한 · 응답 필드 (prevClose · last · 날짜) · 월 고유 종목 집계 방식 (Tiingo 문서 인용) · 장부 기록 · 표로 보고 · 가능하면 WP75 가격 단계 설계를 이 파일에 · 불가능하면 50회 + 29회 두 cron 안 · 구현은 승인 후 · 플래그·SOPS 보류
+7. 순서: 0 → 1 → 2 · 10:54 이후 3 → 4 · 그 사이 5 · 6
+
+**진행 (2026-10-01)**:
+- 0: `.claude/settings.json` (git 제외 · 로컬) 에 `"Bash(gh pr merge:*)"` 만 · 영구 규칙에 PR 병합 줄
+- 1: PR #58 병합 → 배포 `ed288bd` · 13경로 200 · deploy-watch "deploy.yml 실행 수=1" (알림 없음) · 스크린샷 `docs/plans/biotech/screenshots/20261001_sha_ed288bd/wp87_after_*.webp` (5장)
+- 2: WP88 rebase → pytest 391 / 4 건너뜀 · tsx · next build 통과 → PR #59 병합 → 배포 `1b716e5` · 13경로 200 · **10/2 07:00 장부 줄 · sec_usage_20261002.json · form4_xml/ 파일 수 인용 대기**
+- 3·4: 수집기 시간당 50회 · 재요청 10건 성공 · 59/59 · PR #60 병합 → 배포 `1600b23` · 13경로 200
+- 5: Form 4 +85 = Baker Bros. Advisors (CIK 0001263508) 가 9/30 에 낸 Form 4 3건 (Kodiak Sciences · 거래 82행 · 9/28 76행 · 9/29 6행) + OrbiMed 9/30 3행 · 30일 누적 일괄 유입 아님
+- 6: IEX 1회 시험 HTTP 200 · 79/79 반환 (아래 설계)
+
+**WP75 가격 단계 재설계안 (구현은 승인 후 · 플래그·SOPS 보류)**:
+- 방식: `GET https://api.tiingo.com/iex/?tickers=<79종목 쉼표>` **1회** (2026-10-01 10:54 시험 · HTTP 200 · 79/79 반환 · 23,197 B · 무료 등급에서 허용됨)
+- 값: KST 07:00 이후 실행 기준 `tngoLast` = 직전 미국 장 종가 · `prevClose` = 그 전날 종가 · `timestamp` 날짜로 기준일 표기 · `last` 는 무료 등급에서 null (79/79)
+- 오래된 값: 시험 응답 timestamp 날짜가 2026-09-30 외에 2026-08-27 · 2026-09-04 가 섞임 (종목 미기록) → timestamp 가 직전 거래일보다 오래된 종목은 시총 배지를 그 날짜로 표시하거나 숨김
+- 한 요청 종목 수 상한: 문서 미기재 · 79종목은 성공 · 상한 확인 전에는 100종목 이하로 나눠 요청
+- 월 고유 종목: Tiingo 문서 (pricing · general overview) 에 다종목 요청 집계 방식 미기재 → 장부에는 보수적으로 79종목 모두 등록 (`by: WP75-IEX-test`) · 실제 집계는 Tiingo 계정 화면 확인 필요
+- 요청 수: 하루 1회 (기존 79회 → 1회) · 시간당 50회 · 하루 1,000회 한도와 충돌 없음
+- 대안 (IEX 불가 시): 50회 + 29회 두 cron (예: 07:10 · 08:15)
+
+---
+
+### [Biotech Catalyst Radar · WP84 재확인 · 10월 1일 실행 (새 작업 없음)] · 2026-09-30 발행
+
+- 10월 1일 오전 실행 · 서버 조회 전용 · 새 작업 시작 금지
+- 1. 07:00 확인: `/root/toss-tradebot-mvp/var/biotech/logs/daily.log` 에서 "경보 N건 · z.ai 호출 N/5" · 경보 종목 배수와 기준선 평균 · `[8/9] mcap_daily` 건너뜀 · 9/9 완료 인용 · 9/29·9/30 대비 경보 종목 수 변화 한 줄
+- 2. H6 Tiingo 59종목 수집 (로컬): 이 파일 H6 항목대로 · 종목별 거래일 커버율 최솟값 · 90% 미만 목록 · summary.json 사본 경로 · 장부 인용 · 실패 종목 대안 티커 · 장부 기준 H6 + WP75 10월 하루 요청 수와 월 고유 종목 수를 9/30 예측 (138회 · 79회 · 137개) 과 나란히
+- 3. H6 보고 뒤 (승인됨): PR #58 병합·배포 → 13경로 → 수정 후 스크린샷 `wp87_after_*.webp` (임원 매수 카드 제목·내용 일치 여부) → WP88 PR 생성 → 번호 · pytest · tsx · next build 결과로 승인 요청
+- **진행 (2026-10-01 09:5x KST)**:
+  - 07:00 실행 정상 (9/9 · 07:01:15 완료) · 경보 0건 · z.ai 0/5 · mcap_daily 건너뜀 · Form 4 신규 매수 +85 (filer 1 → 2)
+  - H6 수집: 요청 51 · 성공 49 · 51번째에서 Tiingo 429 → 즉시 중단 (실패 GLMD empty · INGR blocked · 미시도 8: IONS ISRG MDT MIRM MNOV OMDA PRE PTN) · 월 고유 51/450 · summary 사본 `docs/plans/biotech/verification/H6/c3-20260928/h6_prices_tiingo_20261001.summary.json`
+  - 관측: 약 2분 15초에 51번째 요청에서 429 · 9/30 계산은 하루 1,000 · 월 500 만 반영하고 시간당 한도를 빠뜨림 → WP75 하루 79회 일괄 요청도 같은 문제 (설계 재검토 필요)
+  - 대안 티커: GLMD → EOCN (같은 SEC CIK 1595353 · 로컬 `docs/plans/biotech/data/sec_company_tickers.json` · SEC 요청 0회) · INGR 은 티커 문제가 아니라 429 시점 요청 → 재요청만 필요
+  - 재요청 (10건 · 미시도 8 + INGR + EOCN) 은 승인 대기
+  - PR #58 병합 시도 → auto mode 분류기가 "Production Deploy" 로 차단 · 병합 안 됨 · 사용자 결정 대기 (스크린샷 · WP88 PR 도 대기)
+- 준비 확인 (2026-09-30 20:23 KST · 실행 안 함): 대상 `docs/plans/biotech/verification/H6/c3-20260928/h6_price_targets_59.csv` 59행 (+머리글) · 로컬 TIINGO_API_KEY 설정됨 (값 미출력) · 10월 장부 `backend/data/biotech/tiingo_usage_202610.json` 은 첫 실행 때 생성
+
+---
+
+### [Biotech Catalyst Radar · WP88-3 결정 반영 · 10월 1일 실행] · 2026-09-30 발행
+
+**원문 요지** (보고 첫 줄 "지금 하는 일" · 전체 경로 · 서버 조회 전용 · 배포는 승인 후에만):
+
+1. WP88 브랜치 보완 2건 (`feature/biotech-wp88`)
+   - `backend/scripts/biotech_mcap_daily.py` `run("weekly")`: `weekly_shares()` 호출을 try/finally 로 감싸 예외로 끝나도 그때까지 보낸 요청 수를 장부에 기록 · 요청 수는 counter 또는 weekly_shares 내부 집계에서 · 테스트 1건 (3번째 요청에서 예외 → 장부 mcap_shares 2 이상)
+   - `backend/scripts/biotech_h65_form4_daily.py`: 새로 받은 Form 4 XML 원문을 `/root/toss-tradebot-mvp/var/biotech/form4_xml/<accession>.xml` 로 보관 (경로는 해석기로만) · 30일 지난 파일은 실행 시작 때 삭제 · SEC 요청 수 증가 없음 · 테스트 2건 (파일이 남는지 · 31일 된 파일이 지워지는지)
+   - 픽스처는 다음 단계 · 이번에는 코드만
+   - pytest · tsx · next build 재실행
+2. 10월 1일 (예정대로)
+   - 07:00 실행 뒤 daily.log 인용: "경보 N건 · z.ai 호출 N/5" · 경보 종목 배수·평균 · `[8/9] mcap_daily` 건너뜀 줄 · **장부 줄은 10월 2일에 인용**
+   - H6 수집 (WP84) 실행 · 이 파일 H6 항목대로 보고 · 장부 기준 한도 재계산
+3. 순서
+   - H6 보고 → PR #58 병합·배포 → 수정 후 스크린샷 → WP88 PR 생성·승인 요청
+   - WP88 배포 다음 날 (XML 첫 보관 뒤) `form4_xml/` 에서 1건을 복사해 `backend/tests/fixtures/biotech_form4_real_<accession>.xml` 픽스처 생성 · 신고자 이름 필드는 "REPORTING PERSON" 으로 교체 · 같은 회귀 테스트를 이 파일로도 실행
+
+**진행 (2026-09-30)**:
+- 1항 완료 · `feature/biotech-wp88` 커밋 `96268f1` · pytest biotech 391 통과 / 4 건너뜀 · tsx 통과 · next build 성공 · 번들 `/Users/gonnim/Project-MVP/Source/toss-tradebot-mvp/docs/plans/biotech/fable-bundles/20260930_WP88-3.zip` (SHA-256 `aae70c12131cdd080d94eab4cce488d44390f2b824f9d034d99e54dc97318755`)
+
+(WP88-2 의 "확인된 제약" 2건은 이 지시로 결정됨: 장부 줄 = 10월 2일 인용 · 실제 XML = h65 보관 방식)
+
+---
+
+### [Biotech Catalyst Radar · WP88-2 장부 범위 확장 · build_client 통일 · 10월 1일 실행] · 2026-09-30 발행
+
+**원문 요지** (보고 첫 줄 "지금 하는 일" · 전체 경로 · 서버 조회 전용 · 배포는 승인 후에만):
+
+1. WP88 브랜치 보완 (`feature/biotech-wp88` · PR 은 #58 병합 뒤)
+   - `backend/scripts/biotech_sec_common.py` `SEC_DAILY_CAP` = 300 · 주석 "SEC 실제 한도는 초당 10회 · 이 값은 자체 상한 · 주간 잡 포함" · `REQ_INTERVAL` 0.5초 그대로
+   - 주간 잡 SEC 요청도 같은 장부에: a) WP86 SEC 명부 갱신 (`refresh_sec_company_tickers`) → "company_tickers" · b) WP75 주식수 조회 (`backend/scripts/biotech_mcap_daily.py` SEC 부분) → "mcap_shares" · 플래그 꺼짐이면 0회 · 테스트 각 1건
+   - `build_client()` 가 `event_hooks` 인자를 받게 · h65 는 `httpx.Client` 직접 생성 대신 `build_client(event_hooks=...)` · 테스트 1건 (h65 클라이언트 User-Agent · From · Accept-Encoding = `build_client()` 와 같음)
+   - 설계서 9절 상한 값 300 으로 · 이유 기록
+   - pytest · tsx · next build 재실행
+2. 10월 1일 (예정대로)
+   - 07:00 실행 뒤 daily.log 인용: "경보 N건 · z.ai 호출 N/5" · 경보 종목 배수·평균 · `[8/9] mcap_daily` 건너뜀 줄 · "SEC 요청 · … 오늘 합계 N" 줄 · `sec_usage_20261001.json` 내용
+   - H6 수집 (WP84) 실행 · 이 파일 H6 항목대로 보고 · 장부 기준 한도 재계산
+   - 실행 뒤 런타임 캐시의 실제 Form 4 XML 1건을 `backend/tests/fixtures/biotech_form4_real_<accession>.xml` 로 복사 (SEC 요청 0회) · 같은 회귀 테스트를 이 파일로도 실행 · 신고자 이름 등 개인정보가 있으면 파일 대신 필드 값만 테스트에 넣음
+3. 순서: H6 보고 → PR #58 병합·배포 → 수정 후 스크린샷 → WP88 PR 생성·승인 요청
+
+**진행 (2026-09-30)**:
+- 1항 완료 · `feature/biotech-wp88` 커밋 `e90e784` · pytest biotech 388 통과 / 4 건너뜀 · tsx 통과 · next build 성공 · 번들 `/Users/gonnim/Project-MVP/Source/toss-tradebot-mvp/docs/plans/biotech/fable-bundles/20260930_WP88-2.zip` (SHA-256 `0bd57ec04430fc7ac4065fb042b2dab4e28969da80a3f2f20ca0974212ed4442`)
+
+**확인된 제약 (2026-09-30 20:1x KST)**:
+- 서버 조회 결과 `/root/toss-tradebot-mvp/var/biotech` · `/root/toss-tradebot-mvp/backend/data` 아래 XML 파일 0개 · h65 는 XML 을 파싱 결과 (`h28v2_form4_issuer_buys_*.json`) 로만 저장 → 2항 셋째 작업은 SEC 요청 0회로 불가 · 사용자 결정 필요
+- 10/1 07:00 실행 시점에는 PR #58 (장부) 미배포 → "SEC 요청 · … 오늘 합계" 줄과 `sec_usage_20261001.json` 은 생기지 않음 · 사용자 결정 필요
+
+---
+
+### [Biotech Catalyst Radar · WP87-2 PR #58 병합 전 확인 · WP88 구현 · 10월 1일 실행] · 2026-09-30 발행
+
+**원문 요지** (보고 첫 줄 "지금 하는 일" · 전체 경로 · 서버 조회 전용 · 배포는 승인 후에만):
+
+1. PR #58 병합 전 확인 (같은 PR 에 커밋)
+   - `backend/scripts/biotech_h28v2_form4_channel.py` `parse_form4()` 회귀 테스트 1건: 신고서 XML 표본 (테스트 픽스처) 으로 거래 코드 · 주식 수 · 날짜가 고치기 전과 같은지 확인 · 가격 열만 새로 추가
+   - 임원 매수 검정 산출 파일 (`docs/plans/biotech/verification/` 아래) 이 바뀌지 않았음을 git status 로 인용 · 검정 재실행 금지
+   - 가격 보충 요청 (하루 최대 10건) 이 SEC 요청 수 집계에 포함되는지 코드 줄로 인용 · 없으면 포함
+   - `shortName()`: 원문이 전부 대문자일 때만 표기 변경 · 대소문자 섞인 원문 (OrbiMed · McArdle · BioNTech) 은 그대로 · 테스트 2건
+   - 10월 1일 H6 보고가 끝나면 병합·배포 · 수정 후 스크린샷 `docs/plans/biotech/screenshots/<YYYYMMDD>_sha_<해시>/wp87_after_*.webp` · 임원 매수 카드 제목과 내용 일치 여부 기록
+2. WP88 구현 (설계서 승인 · PR 은 H6 보고 뒤)
+   - 결정: 하루 SEC 요청 상한 150회 · 첫 문단 400자 · 항목 7.01+9.01 도 포함
+   - 상한 150회 = 브리핑 · Form 4 · 가격 보충 · 8-K 첨부 합산 · 닿으면 그날 보도자료 읽기만 건너뛰고 나머지 단계 계속 · 건너뛴 사실을 daily.log 에 기록
+   - 첫 문단은 "진위 미검증" 표시와 함께 브리핑 (c) 회사 공시 줄에 붙임 · z.ai 입력 전 `FORBIDDEN_RE` 로 문장마다 검사
+   - 테스트: 상한 도달 시 건너뜀 · 400자 자르기 · 7.01 포함 · 금지어 문장 제외
+   - pytest · tsx · next build 결과와 PR 번호를 적어 승인 요청
+3. 10월 1일 (예정대로)
+   - 07:00 실행 뒤 daily.log 의 "경보 N건 · z.ai 호출 N/5" 줄 · 경보 종목의 배수 · 평균 값 · `[8/9] mcap_daily` 건너뜀 줄 인용
+   - H6 수집 (WP84) 실행 · 이 파일의 H6 항목대로 보고
+   - 장부 기준 한도 재계산 함께 보고
+4. (추가 지시) Fable 에게 줄 문서는 번들 zip 으로 묶고 정확한 경로를 제시
+
+**진행 (2026-09-30)**:
+- 1항 완료 · PR #58 커밋 `1c7439d` · 표본 `backend/tests/fixtures/biotech_form4_sample.xml` (Form 4 형식 기반 합성 · 실제 원문 아님) · 테스트 `backend/tests/test_biotech_wp87_2_regression.py` · 하루 SEC 공용 장부 `SecDailyLedger` (`<RUNTIME>/sec_usage/sec_usage_<YYYYMMDD>.json`) · verification 폴더 변경 없음 · shortName 은 기존 코드가 이미 규칙대로 (테스트만 추가)
+- 2항 구현 완료 · 브랜치 `feature/biotech-wp88` 커밋 `c300920` · pytest biotech 384 통과 / 4 건너뜀 · tsx · tsc 통과 · next build 성공 · **PR 은 아직 없음 (H6 보고 뒤 생성)**
+- 4항 완료 · 번들 `/Users/gonnim/Project-MVP/Source/toss-tradebot-mvp/docs/plans/biotech/fable-bundles/20260930_WP87-2_WP88.zip` (SHA-256 `a0f5fe798cb5fc5c425f4f4fdb5f51c7b15f40f571b920d3f5e218b9a976891f` · 파일 13개 · 검수 질문 5개) · Fable 회신 대기
+
+**남은 일 (순서)**:
+1. 10/1 07:00 뒤 daily.log 인용 (3항)
+2. H6 수집 · 보고 · 장부 기준 한도 재계산
+3. PR #58 병합·배포 · 13경로 확인 · 수정 후 스크린샷 · 임원 매수 카드 제목·내용 확인 (ETRA 금액은 배포 다음 날 가격 보충 뒤 표시)
+4. WP88 PR 생성 (PR #58 위에 쌓인 브랜치) · 번호 보고 · 승인 대기
+5. Fable 번들 회신 반영
+
+---
+
+### [Biotech Catalyst Radar · WP87 D-n 기준일 · 순위표 회사명 · 임원 매수 카드 · 언급 카드 · WP88 설계] · 2026-09-30 발행
+
+- PR #57 배포 (`7bcf0c9` · 13경로 200) · 10/1 07:00 "경보 N건 · z.ai 호출 N/5" 줄과 경보 종목 배수·평균 인용 (WP87-2 3항으로 이관)
+- D-n 은 화면 날짜 (KST) 기준 · 지난 날짜는 D+n · 정렬 무변경 · 테스트 (오늘 → D-0 · 어제 → D+1)
+- 순위표 회사명에 `shortName()` 적용
+- 임원 매수 카드: 신고서 주당 가격 필드 인용 · 있으면 금액 · 없으면 "금액 미기재" · 같은 회사·같은 신고자·같은 신고일은 한 카드 (개별 거래는 "자세히") · "D+8" → "8일 전 신고"
+- 언급 카드: 경보 조건 충족 종목만 "급등 경보" · 과열 단계지만 경보 아님 → "언급 늘어남" · 테스트 (4건·6.4배 → 언급 늘어남 · 32건·32배 → 급등 경보)
+- 전후 스크린샷 (순위표 · 임원 매수 · 언급 · 소문 카드) · 수정 전 = `docs/plans/biotech/screenshots/20260930_sha_7bcf0c9/wp87_before_*.webp`
+- PR #58 (https://github.com/GONNIM/toss-tradebot-mvp/pull/58) · **배포는 10/1 H6 보고 뒤**
+- WP88 설계서 `docs/plans/biotech/verification/briefing/wp88_8k_exhibit_design.md` 작성 → WP87-2 에서 승인·구현
 
 ### [Biotech Catalyst Radar · WP86 경보 기준선 하한 · 주석 정정 · SEC 명부 주간 갱신] · 2026-09-30 발행
 
