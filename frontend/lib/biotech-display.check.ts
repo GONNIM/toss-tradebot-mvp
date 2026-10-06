@@ -123,6 +123,9 @@ assert.equal(redditLine({ subs_total: 4, subs_collected: 4, mode: "combined" }),
 assert.equal(redditLine({ subs_total: 4, subs_collected: 0, mode: "none" }), "레딧 입력 없음(HTTP 429) · 4곳 모두 차단");
 assert.equal(redditLine(null), null);
 // WP100 · 경보 기준 문구
-assert.ok(alertCriteria(3).includes("레딧 조건은 기준선 수집 중(3/7일)"));
+assert.ok(alertCriteria(3).includes("레딧 조건은 기준선 수집 중(어제까지 3/7일)"));
+// PRD 19절 · 기준선 일수는 오늘 기록 저장 전에 센 값 (어제까지) · 계산은 그대로 · 문구만
+assert.ok(alertCriteria(0).includes("레딧 조건은 기준선 수집 중(어제까지 0/7일)"));
+assert.ok(!alertCriteria(7).includes("어제까지"));
 assert.ok(alertCriteria(7).includes("레딧 24시간 매치 3건 이상이면서 레딧 평소의 2배 이상"));
 console.log("ok");
