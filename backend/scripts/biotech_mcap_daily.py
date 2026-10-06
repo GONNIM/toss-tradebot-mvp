@@ -2,6 +2,8 @@
 
 - 주식수: SEC companyfacts 의 dei:EntityCommonStockSharesOutstanding · 주 1회 (월요일 주간 AACT 잡 끝) · 후보 종목만
   · P3a-4 ③ (PRD v0.8 6절 (다)) · 대상 = 오늘 후보 ∪ 5B 초과 제외 기록 (mcap/over_5b_excluded.json) 종목 · 주 최대 약 9건 추가
+  · P4-0 (PRD 20절 · FR-6c 봉인 설계 5절) · 같은 응답의 dei 주식수 전체 이력을 <RUNTIME>/mcap/shares_history.json 에 저장 (요청 0)
+    · 같은 end 처리는 dei_shares() 와 같은 함수 (_combine_same_end · 같은 공시 합산 · 가장 최근 제출 공시)
   · P3a ③ · 같은 응답에서 재무 값 (현금 · 영업현금흐름 · 차입금 · 총부채) 도 뽑아 저장 (biotech_filings.extract_finance · 추가 요청 0)
   · 헤더 = biotech_sec_common.build_client() 단일 상수 · 403 · 429 즉시 중단
 - 가격 (WP75-2 · 2026-10-01): Tiingo IEX 일괄 **1회** (`/iex/?tickers=…` · 후보 전 종목) · PR #52 클라이언트 모듈
@@ -386,12 +388,47 @@ def dei_shares(facts: dict, asof: str) -> dict | None:
     if not base:
         return None
     same_end = [it for it in (node.get("units", {}) or {}).get("shares", []) if it.get("end") == base["asof"] and it.get("val") is not None]
+    c = _combine_same_end(same_end)
+    return {"asof": base["asof"], "shares": c["shares"], "accn": c["accn"],
+            "concept": "dei:EntityCommonStockSharesOutstanding", "n_values": c["n_values"]}
+
+
+def _combine_same_end(items: list[dict]) -> dict:
+    """같은 end 의 값들 · 같은 공시 (accn) 안은 합산 (주식 종류 둘 이상) · 여러 공시면 가장 최근 제출 (filed) 공시 하나."""
     by_accn: dict[str, list[dict]] = {}
-    for it in same_end:
+    for it in items:
         by_accn.setdefault(it.get("accn", ""), []).append(it)
-    accn, items = max(by_accn.items(), key=lambda kv: (max(i.get("filed", "") for i in kv[1]), kv[0]))
-    return {"asof": base["asof"], "shares": sum(int(i["val"]) for i in items), "accn": accn,
-            "concept": "dei:EntityCommonStockSharesOutstanding", "n_values": len(items)}
+    accn, picked = max(by_accn.items(), key=lambda kv: (max(i.get("filed", "") for i in kv[1]), kv[0]))
+    return {"shares": sum(int(i["val"]) for i in picked), "accn": accn, "filed": max(i.get("filed", "") for i in picked),
+            "n_values": len(picked)}
+
+
+def dei_shares_history(facts: dict) -> list[dict]:
+    """P4-0 · dei:EntityCommonStockSharesOutstanding 전체 이력 · end 마다 _combine_same_end 1개 · end 오름차순 (요청 0)."""
+    node = (facts.get("facts", {}) or {}).get("dei", {}).get("EntityCommonStockSharesOutstanding")
+    if not node:
+        return []
+    by_end: dict[str, list[dict]] = {}
+    for it in (node.get("units", {}) or {}).get("shares", []):
+        if it.get("end") and it.get("val") is not None:
+            by_end.setdefault(it["end"], []).append(it)
+    return [{"end": e, **_combine_same_end(v)} for e, v in sorted(by_end.items())]
+
+
+def shares_history_path() -> Path:
+    return _P.out_dir("mcap") / "shares_history.json"
+
+
+def save_shares_history(new: dict[str, dict], today: date) -> Path:
+    """P4-0 · 종목별 이력을 덮어씀 · 이번 주에 받지 않은 종목 (후보에서 빠짐) 은 그대로 둔다."""
+    p = shares_history_path()
+    cur = json.loads(p.read_text()).get("rows", {}) if p.exists() else {}
+    for tk, v in new.items():
+        cur[tk] = {**v, "fetched": today.isoformat()}
+    p.write_text(json.dumps({"updated": today.isoformat(), "concept": "dei:EntityCommonStockSharesOutstanding",
+                             "rule": "end 마다 같은 공시 합산 · 가장 최근 제출 공시 (fr6c_design_v1 5절)", "rows": cur},
+                            ensure_ascii=False, indent=1))
+    return p
 
 
 class _ByteCountingClient:
@@ -409,6 +446,7 @@ class _ByteCountingClient:
 def weekly_shares(cands: dict[str, str], get: Callable[[str], dict], today: date) -> dict:
     out: dict[str, dict] = {}
     finance: dict[str, dict] = {}       # P3a ③ · 같은 companyfacts 응답에서 재무 값 추출 (추가 요청 0)
+    history: dict[str, dict] = {}       # P4-0 · 같은 응답의 dei 주식수 전체 이력 (추가 요청 0)
     requests, blocked = 0, None
     for tk, cik in sorted(cands.items()):
         if not cik:
@@ -425,6 +463,7 @@ def weekly_shares(cands: dict[str, str], get: Callable[[str], dict], today: date
         if r.get("status") != 200 or not r.get("json"):
             continue
         finance[tk] = {"cik": cik, **extract_finance(r["json"])}
+        history[tk] = {"cik": cik, "points": dei_shares_history(r["json"])}
         hit = dei_shares(r["json"], today.isoformat())
         if hit:
             if hit["n_values"] > 1:
@@ -433,7 +472,8 @@ def weekly_shares(cands: dict[str, str], get: Callable[[str], dict], today: date
                        "n_values": hit["n_values"]}
     if blocked:
         LOG.error("%s · SEC 주식수 조회 즉시 중단", blocked)
-    return {"date": today.isoformat(), "requests": requests, "blocked": blocked, "shares": out, "_finance": finance}
+    return {"date": today.isoformat(), "requests": requests, "blocked": blocked, "shares": out, "_finance": finance,
+            "_history": history}
 
 
 # ── 가격 (일일) ──────────────────────────────────────────────────────
@@ -581,6 +621,10 @@ def run(mode: str, get_tiingo: Callable[..., Any] | None = None, get_sec: Callab
         finally:
             _record_sec(sent["n"], today, ledger)
         fin_path = save_finance(res.pop("_finance"), today)   # P3a ③ · <RUNTIME>/finance/companyfacts_<날짜>.json
+        hist_new = res.pop("_history")
+        hist_path = save_shares_history(hist_new, today)        # P4-0 · <RUNTIME>/mcap/shares_history.json
+        LOG.info("주식수 이력 저장 · %s · 종목 %d · 이력 점 %d (추가 SEC 요청 0)", hist_path.name, len(hist_new),
+                 sum(len(v["points"]) for v in hist_new.values()))
         LOG.info("재무 값 저장 · %s · 종목 %d (추가 SEC 요청 0)", fin_path.name, len(json.loads(fin_path.read_text())["rows"]))
         res["elapsed_sec"] = round(time.time() - t0, 1)
         res["bytes_received"] = counter.bytes if counter else None
