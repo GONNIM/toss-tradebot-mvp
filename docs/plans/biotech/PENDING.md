@@ -41,6 +41,20 @@
 
 ## PENDING
 
+### [Biotech Catalyst Radar · P3a-4 (PR #85 보강 커밋 · PRD v0.8 14절 · 사다리 순서 · 주식수 단계 · 외부 요청 0)] · 2026-10-06 발행
+
+- PRD: `/Users/gonnim/Downloads/biotech-prd-price-outlook-20261004.md` (v0.8 · P3a-3 판정 반영) · FR-5 사다리 · 6절 (다) · 14절
+- Fable 판정: P3a-3 통과 · 이상 2건 가설 맞음 · ATM 양성 19/19 확인 · 규칙 고정 · 다음 재확인 양성 29건
+- ① 단기 사다리 명시 항목 먼저 · 파생값 마지막 · 파생 + 장기 = 범위 (하한 총액 · 상한 현금 + 파생 + 장기) · CRBU 113,818,000 · ABCL 파생 420,039,000
+- ② 합계 항목 MarketableSecurities 먼저 (범위 없음 · "대차대조표 시장성 증권 항목 · 중복 없음") → AFS 총액 (범위) · FULC 318,840,000
+- ③ 주간 주식수 대상 = 오늘 후보 ∪ mcap/over_5b_excluded.json · 월요일 예상 약 236
+- ④ 20개 재적용 · 10-Q 5건 대조표 5/5 일치 · ⑤ #84 병합 시 #85 기준 main
+- 보고: 번들 `docs/plans/biotech/fable-bundles/20261006_P3a4.zip`
+
+**진행 (2026-10-06)**: b6eb8f3 · ab7c760 · 755112e (푸시) · pytest 581 passed · 10-Q 5/5 일치 · 20개 중 값 변화 ATRA · CRBU · FATE · FULC · 월요일 예상 233~243 · 이상 1 = (나) 가격 대상 (최근 후보 CSV) 에 제외 종목이 없어 제외 뒤 약 60일에 unknown 복귀 가능 (수정 안 함) · PR #84 미병합 · 번들 SHA-256 e0efa4fb…ee5c7a · Fable 판정 대기
+
+---
+
 ### [Biotech Catalyst Radar · P3a-3 (PR #85 보강 커밋 · PRD v0.7 13절 · 새 PR 없음 · 화면 P3b 제외)] · 2026-10-05 발행
 
 - PRD: `/Users/gonnim/Downloads/biotech-prd-price-outlook-20261004.md` (v0.7 · P3a-2 판정 반영) · FR-5 · FR-6a · 6절 · 13절
