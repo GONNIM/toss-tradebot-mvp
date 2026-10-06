@@ -251,3 +251,43 @@ def test_p3a4_afs_total_only_keeps_range():
     f = _facts({C: [_i(181815000)], "AvailableForSaleSecuritiesDebtSecurities": [_i(211645000)]})
     ci = bf.extract_finance(f)["cash_inv"]
     assert ci["range"] == {"low": 211645000, "high": 393460000} and ci["note"] == bf.INV_RANGE
+
+
+# ── P3a-4 ③ 주간 주식수 대상 (PRD v0.8 6절 (다)) ────────────────────
+
+
+EXCL9 = ["BBIO", "COGT", "EXEL", "GPCR", "IMVT", "IOVA", "KOD", "KRYS", "KYMR"]
+
+
+def test_p3a4_weekly_shares_adds_exclusion_record(tmp_path, monkeypatch):
+    """제외 기록 9종목이 대상에 들어가고 SEC 요청은 9건만 늘어남 · 장부 범주 mcap_shares 그대로."""
+    monkeypatch.setattr(mc._P, "RUNTIME_DIR", tmp_path)
+    monkeypatch.setenv(mc.FLAG, "1")
+    cdir = tmp_path / "candidates"
+    cdir.mkdir()
+    (cdir / "biotech_candidates_20261012.csv").write_text("ticker,cik\nABCL,1703057\nEDIT,1650664\nNOCIK,\n")
+    memo = {tk: {"ticker": tk, "cik": str(1000 + i), "mcap_usd": 6e9, "date": "2026-10-05"} for i, tk in enumerate(EXCL9)}
+    memo["ABCL"] = {"ticker": "ABCL", "cik": "1703057", "mcap_usd": 6e9, "date": "2026-10-05"}   # 오늘 후보와 겹침 · 한 번만
+    memo["NOCIK2"] = {"ticker": "NOCIK2", "cik": "", "mcap_usd": 6e9, "date": "2026-10-05"}      # CIK 없음 · 요청 안 함
+    (tmp_path / "mcap").mkdir(exist_ok=True)
+    (tmp_path / "mcap" / "over_5b_excluded.json").write_text(json.dumps({"rows": memo}))
+    monkeypatch.setattr(mc, "save_finance", lambda rows, today: _fake_fin(tmp_path, rows))
+    urls = []
+    led = mc.SecDailyLedger.load("20261012")
+    res = mc.run("weekly", get_sec=lambda u: urls.append(u) or {"status": 404, "json": None}, today=date(2026, 10, 12),
+                 ledger=led)
+    assert res["requests"] == 2 + 9 == len(urls) == 11                                    # 오늘 후보 (CIK 있음) 2 + 제외 9
+    assert led.counts == {"mcap_shares": 11}
+    assert sum("CIK0000001000" in u for u in urls) == 1 and not any("CIK0001703057" in u and urls.count(u) > 1 for u in urls)
+
+
+def test_p3a4_weekly_targets_without_record_is_candidates_only(tmp_path, monkeypatch):
+    monkeypatch.setattr(mc._P, "RUNTIME_DIR", tmp_path)
+    t, extra = mc.weekly_targets({"ABCL": "1703057"})
+    assert t == {"ABCL": "1703057"} and extra == []
+
+
+def _fake_fin(tmp_path, rows):
+    p = tmp_path / "finance_fake.json"
+    p.write_text(json.dumps({"rows": rows}))
+    return p

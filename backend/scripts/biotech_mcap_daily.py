@@ -1,6 +1,7 @@
 """WP75 · 시총 매일 산정 (표시 전용 · 2026-09-28 승인 설계 · 설정 플래그 기본 꺼짐).
 
 - 주식수: SEC companyfacts 의 dei:EntityCommonStockSharesOutstanding · 주 1회 (월요일 주간 AACT 잡 끝) · 후보 종목만
+  · P3a-4 ③ (PRD v0.8 6절 (다)) · 대상 = 오늘 후보 ∪ 5B 초과 제외 기록 (mcap/over_5b_excluded.json) 종목 · 주 최대 약 9건 추가
   · P3a ③ · 같은 응답에서 재무 값 (현금 · 영업현금흐름 · 차입금 · 총부채) 도 뽑아 저장 (biotech_filings.extract_finance · 추가 요청 0)
   · 헤더 = biotech_sec_common.build_client() 단일 상수 · 403 · 429 즉시 중단
 - 가격 (WP75-2 · 2026-10-01): Tiingo IEX 일괄 **1회** (`/iex/?tickers=…` · 후보 전 종목) · PR #52 클라이언트 모듈
@@ -247,6 +248,25 @@ def price_tickers(cands: dict[str, str] | list[str], recent: list[str], month_sy
 
 # ── 주식수 (주간) ────────────────────────────────────────────────────
 
+def over5b_record() -> dict[str, str]:
+    """P3a-4 ③ · 후보 단계의 5B 초과 제외 기록 → ticker → cik (CIK 없는 항목은 뺌 · 파일이 없거나 못 읽으면 빈 값)."""
+    p = _P.out_dir("mcap") / "over_5b_excluded.json"
+    if not p.exists():
+        return {}
+    try:
+        rows = json.loads(p.read_text()).get("rows") or {}
+    except (ValueError, OSError):
+        LOG.warning("over_5b_excluded.json 읽기 실패 · 주식수 대상은 오늘 후보만")
+        return {}
+    return {(r.get("ticker") or k): r["cik"] for k, r in rows.items() if r.get("cik")}
+
+
+def weekly_targets(cands: dict[str, str]) -> tuple[dict[str, str], list[str]]:
+    """P3a-4 ③ · 오늘 후보 ∪ 제외 기록 종목 (오늘 후보에 없는 것만 더함)."""
+    extra = {tk: cik for tk, cik in over5b_record().items() if tk not in cands}
+    return {**cands, **extra}, sorted(extra)
+
+
 def dei_shares(facts: dict, asof: str) -> dict | None:
     """dei:EntityCommonStockSharesOutstanding 만 (us-gaap 제외).
 
@@ -449,8 +469,10 @@ def run(mode: str, get_tiingo: Callable[..., Any] | None = None, get_sec: Callab
             sent["n"] += 1
             return inner(url)
 
+        targets, extra = weekly_targets(cands)
+        LOG.info("SEC 주식수 대상 · 오늘 후보 %d + 5B 초과 제외 기록 %d %s = %d", len(cands), len(extra), extra, len(targets))
         try:
-            res = weekly_shares(cands, counted, today)
+            res = weekly_shares(targets, counted, today)
         finally:
             _record_sec(sent["n"], today, ledger)
         fin_path = save_finance(res.pop("_finance"), today)   # P3a ③ · <RUNTIME>/finance/companyfacts_<날짜>.json
@@ -470,7 +492,7 @@ def run(mode: str, get_tiingo: Callable[..., Any] | None = None, get_sec: Callab
     # WP98 · 주식수 파일이 아직 없으면 (플래그 켠 뒤 첫 주간 잡 전) 주간 주식수 조회를 지금 1회 · 하루 SEC 상한 안에서만
     if not _latest_json("shares"):
         led = ledger or SecDailyLedger.load(f"{today:%Y%m%d}")
-        need = sum(1 for cik in cands.values() if cik)
+        need = sum(1 for cik in weekly_targets(cands)[0].values() if cik)
         if led.total() + need > SEC_DAILY_CAP:
             LOG.warning("주식수 파일 없음 · 오늘 SEC %d + 필요 %d > 상한 %d · 주식수 조회 건너뜀 (배지 표시 0)", led.total(), need, SEC_DAILY_CAP)
         else:
