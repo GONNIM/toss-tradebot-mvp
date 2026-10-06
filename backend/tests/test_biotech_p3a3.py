@@ -203,3 +203,32 @@ def test_daily_run_sends_one_iex_request_with_recent(tmp_path, monkeypatch):
     assert res["monthly_unique_used"] == 3
     disp = json.loads((tmp_path / "mcap_display.json").read_text())["rows"]
     assert sorted(disp) == ["ABCL", "KYMR"]                                             # 후보에서 빠진 KYMR 도 시총 값 유지
+
+
+# ── P3a-4 ① 단기 사다리 순서 (PRD v0.8 FR-5) ─────────────────────────
+
+
+def test_p3a4_crbu_explicit_short_first_no_range():
+    """CRBU · 명시 항목 (AFS 유동 86,120,000) 이 파생값 (113,800,000 − 현금) 보다 먼저 · 10-Q 표 113,818,000."""
+    f = _facts({C: [_i(26194000)], bf.INV_SHORT_SUM: [_i(113800000)],
+                "AvailableForSaleSecuritiesDebtSecuritiesCurrent": [_i(86120000)],
+                "AvailableForSaleSecuritiesDebtSecuritiesNoncurrent": [_i(1504000)]})
+    ci = bf.extract_finance(f)["cash_inv"]
+    assert ci["short"]["tag"] == "AvailableForSaleSecuritiesDebtSecuritiesCurrent"
+    assert ci["val"] == 26194000 + 86120000 + 1504000 == 113818000 and "range" not in ci and ci["note"] is None
+
+
+def test_p3a4_abcl_derived_only_no_long_no_range():
+    f = _facts({C: [_i(120065000)], bf.INV_SHORT_SUM: [_i(540104000)],
+                "AvailableForSaleSecuritiesDebtSecurities": [_i(420039000)]})
+    ci = bf.extract_finance(f)["cash_inv"]
+    assert ci["short"]["tag"] == bf.INV_SHORT_SUM and ci["short"]["val"] == 420039000
+    assert ci["val"] == 540104000 and "range" not in ci
+
+
+def test_p3a4_derived_plus_long_is_range():
+    """가상 · 파생 단기 + 장기 → 하한 = 총액 · 상한 = 현금 + 파생 + 장기 · 계산은 하한."""
+    f = _facts({C: [_i(100)], bf.INV_SHORT_SUM: [_i(1000)], "MarketableSecuritiesNoncurrent": [_i(50)]})
+    ci = bf.extract_finance(f)["cash_inv"]
+    assert ci["range"] == {"low": 1000, "high": 1050} and ci["val"] == 1000
+    assert ci["note"] == "총액 파생 · 장기 포함 여부 미확인 · 범위 표시"

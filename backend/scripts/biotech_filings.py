@@ -235,14 +235,16 @@ CASH_TAG = "CashAndCashEquivalentsAtCarryingValue"
 OCF_TAG = "NetCashProvidedByUsedInOperatingActivities"
 LIAB_TAG = "Liabilities"
 # PRD v0.6 FR-5 · 현금 및 투자자산 사다리 · 묶음마다 현금과 같은 end 값이 있는 첫 항목 하나
-INV_SHORT_SUM = "CashCashEquivalentsAndShortTermInvestments"   # 현금을 뺀 값 (0 이상일 때) 이 단기 투자 첫 항목
-INV_SHORT = (INV_SHORT_SUM, "ShortTermInvestments", "MarketableSecuritiesCurrent",
-             "AvailableForSaleSecuritiesDebtSecuritiesCurrent", "AvailableForSaleSecuritiesCurrent")
+INV_SHORT_SUM = "CashCashEquivalentsAndShortTermInvestments"   # 현금을 뺀 파생값 (0 이상일 때) · v0.8 부터 단기 마지막 항목
+# P3a-4 ① (PRD v0.8 FR-5) · 명시 항목 먼저 · 파생값 마지막 (CRBU · 반올림 총액에 장기 포함 → 장기 이중 계산)
+INV_SHORT = ("ShortTermInvestments", "MarketableSecuritiesCurrent",
+             "AvailableForSaleSecuritiesDebtSecuritiesCurrent", "AvailableForSaleSecuritiesCurrent", INV_SHORT_SUM)
 INV_LONG = ("MarketableSecuritiesNoncurrent", "AvailableForSaleSecuritiesDebtSecuritiesNoncurrent",
             "AvailableForSaleSecuritiesNoncurrent", "LongTermInvestments")
 INV_TOTAL = ("AvailableForSaleSecuritiesDebtSecurities", "MarketableSecurities")   # 단기 · 장기 둘 다 없을 때만
 INV_NONE = "투자자산 항목 없음 · 현금만"
 INV_MISMATCH = "투자자산 기준일 불일치 · 현금만"
+INV_DERIVED_RANGE = "총액 파생 · 장기 포함 여부 미확인 · 범위 표시"   # P3a-4 ① · 파생 단기 + 장기 (하한으로 계산)
 INV_RANGE = "합계 항목 · 현금성 증권 포함 여부 미확인 · 범위 표시"   # PRD v0.7 FR-5 · 합계 항목 경로 (하한으로 계산)
 WINDOW_MONTHS = 15        # PRD v0.7 FR-5 · FR-6a · "기준일 불일치" · 차입금 0 판정에 보는 현금 분기 말 직전 창
 # PRD v0.6 FR-6a · 차입금 사다리 (리스 포함 항목 · DebtInstrumentCarryingAmount 는 쓰지 않음)
@@ -394,6 +396,11 @@ def cash_investments(ug: dict, cash: dict | None) -> dict | None:
         low, high = max(cash["val"], total["val"]), cash["val"] + total["val"]
         return {"val": low, "end": end, "cash": cash["val"], **parts, "range": {"low": low, "high": high},
                 "note": INV_RANGE, "dropped": dropped}
+    if short and long_ and short["tag"] == INV_SHORT_SUM:
+        # P3a-4 ① · 총액에 장기가 이미 들었을 수 있음 · 하한 = 총액 (현금 + 파생 단기) · 상한 = 현금 + 파생 단기 + 장기 · 계산은 하한
+        low, high = cash["val"] + short["val"], cash["val"] + short["val"] + long_["val"]
+        return {"val": low, "end": end, "cash": cash["val"], **parts, "range": {"low": low, "high": high},
+                "note": INV_DERIVED_RANGE, "dropped": dropped}
     note = None
     if not used:   # P3a-3 ② · "기준일 불일치" 는 버린 항목이 직전 15개월 안에 값이 있을 때만 · 더 오래된 값만 있으면 "항목 없음"
         note = INV_MISMATCH if _recent_dropped(ug, dropped, end) else INV_NONE

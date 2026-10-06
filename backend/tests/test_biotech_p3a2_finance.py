@@ -87,9 +87,9 @@ def test_bcrx_short_and_zero_long():
 
 
 def test_crbu_short_sum_then_long_noncurrent():
-    ci = bf.extract_finance(CRBU)["cash_inv"]
-    assert ci["short"]["val"] == 113800000 - 26194000 and ci["long"]["val"] == 1504000
-    assert ci["val"] == 115304000
+    ci = bf.extract_finance(CRBU)["cash_inv"]                                         # P3a-4 ① · 명시 항목 먼저 (10-Q 113,818,000)
+    assert ci["short"]["tag"] == "AvailableForSaleSecuritiesDebtSecuritiesCurrent" and ci["long"]["val"] == 1504000
+    assert ci["val"] == 113818000
 
 
 def test_total_item_only_when_no_short_and_long():
@@ -100,8 +100,8 @@ def test_total_item_only_when_no_short_and_long():
 
 
 def test_negative_short_sum_skipped():
-    f = _facts({C: [_i(100)], bf.INV_SHORT_SUM: [_i(90)], "ShortTermInvestments": [_i(5)]})
-    assert bf.extract_finance(f)["cash_inv"]["short"]["tag"] == "ShortTermInvestments"
+    f = _facts({C: [_i(100)], bf.INV_SHORT_SUM: [_i(90)]})                            # P3a-4 ① · 파생값은 마지막 · 음수면 건너뜀
+    assert bf.extract_finance(f)["cash_inv"]["short"] is None
 
 
 def test_no_investment_items_cash_only():
