@@ -192,6 +192,7 @@ def test_daily_run_sends_one_iex_request_with_recent(tmp_path, monkeypatch):
     monkeypatch.setattr(mc, "hourly_check", lambda u, n: (True, None))
     monkeypatch.setattr(mc, "record_request", lambda u, n, by: None)
     monkeypatch.setattr(mc, "backfill_prices", lambda *a, **k: {"requests": 0})
+    monkeypatch.setattr(mc, "fr6c_backfill_once", lambda *a, **k: {"requests": 0})   # P4-1a 단계는 test_biotech_p4_1a 에서 따로 검사
     sent = []
 
     def fake_iex(get, tickers, key):
@@ -317,6 +318,7 @@ def _env(tmp_path, monkeypatch):
     monkeypatch.setenv("TIINGO_API_KEY", "k" * 20)
     monkeypatch.setattr(mc, "hourly_check", lambda u, n: (True, None))
     monkeypatch.setattr(mc, "backfill_prices", lambda *a, **k: {"requests": 0})
+    monkeypatch.setattr(mc, "fr6c_backfill_once", lambda *a, **k: {"requests": 0})   # P4-1a 단계는 test_biotech_p4_1a 에서 따로 검사
     asked = []
 
     def fake_iex(get, tickers, key):           # 제외 9종목은 1주 100달러 (주식수 1억 → 100억 달러) · 나머지 1달러
