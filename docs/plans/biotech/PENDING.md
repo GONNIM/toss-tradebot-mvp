@@ -41,13 +41,20 @@
 
 ## PENDING
 
+### [Biotech Catalyst Radar · FR-6c 봉인 확정 · P4 계획 승인 (Fable 2026-10-06 18:30)] · 2026-10-06 발행
+
+- a. 봉인 docs PR (전체 정합판) → 해시 보고 · b. P4-1a PR: 봉인 표본 중 기준일 · 반응일 종가가 없는 종목 1회 백필 (BBIO · COGT · GPCR · KOD · APGE · Tiingo 5건 · 서버 WP75-backfill 경로 · backfill_skip 무시 1회 · 빈 응답 = 가격 없음) · 10/8 07:00 전 배포 목표 · c. P4-0 PR: 주식수 이력 저장 (봉인 5절 그대로 · 10/12 06:00 전 배포)
+- 이후: 10/8 결정 10 대조 (10종목 · 요청 0) → P4-1 (목표 10/15 · 기한 11/12 · retro_prices_v1.csv SHA-256 보고) → P4-2 (집계 · cells_<YYYYMM>.json 없으면 첫 판정) → P4-3 (/biotech 과거 기록 표) → P4-4 (새 8-K 본문 · 하루 10 · readout_text)
+
+---
+
 ### [Biotech Catalyst Radar · FR-6c 설계 v1 조건부 봉인 · NA 규칙 · P4 계획 요청 (Fable 2026-10-06 18:00)] · 2026-10-06 발행
 
 - 질문 답: 단계 빈칸 lead 41건 제외 그대로 · NA 시험은 1순위 후보에서 뺌 (2순위 문구로) · EARLY_PHASE1 은 1순위 유지 · 단계 귀속 6열 봉인 승인
 - 수정 범위: 설계 파일 6절 1줄 · 부록 A (NA 1→0 · 문구 3상 12→13) · 표본 목록 1행 · 범위 밖 줄은 되돌리고 보고 · docs PR 병합 · 봉인은 Fable
 - P4 계획 초안 1)~7) 대화로만 · 코드 변경 금지 · 10/7 07:00 확인은 프롬프트 2 (별도)
 
-**진행 (2026-10-06 18시대)**: PR #87 60fe71a → 병합 e67aaaa (배포 없음) · 설계 파일 SHA-256 a29d6a7e…efdccf5 · 표본 목록 ecc855dc…61e1382c · 이상 1 = FTH 1건이 68건 안이라 부록 B 등 8줄이 맞지 않음 → 대안 전체 정합판 (e1cd8490…) 을 번들에만 둠 · 번들 `docs/plans/biotech/fable-bundles/20261006_fr6c_seal2.zip` · P4 계획 보고 · Fable 봉인 판정 대기
+**봉인 완료 · 2026-10-06 (Fable 18:30)**: 봉인값 2개 = 설계 파일 `docs/plans/biotech/design/fr6c_design_v1.md` SHA-256 e1cd8490daffa7c829bd4874f34f467f848e4737219db034541debdaac7c7e42 (전체 정합판) · 표본 목록 `docs/plans/biotech/design/fr6c_retro_sample_v1.csv` SHA-256 ecc855dc5cf56366aaa91c511ae14be71b770fe29f27b74274ec17e661e1382c · 봉인 뒤 PRD 10절 절차 없이 변경 금지 · 가격 네 칸은 P4-1 별도 파일 · 해석 기록: 6절 "2순위 문구로 내려간다" 는 1순위 후보가 하나도 남지 않을 때 (다른 1순위 시험이 있으면 그 시험)
 
 ---
 
