@@ -44,6 +44,7 @@
 ### [Biotech Catalyst Radar · FR-6c 봉인 확정 · P4 계획 승인 (Fable 2026-10-06 18:30)] · 2026-10-06 발행
 
 - a. 봉인 docs PR (전체 정합판) → 해시 보고 · b. P4-1a PR: 봉인 표본 중 기준일 · 반응일 종가가 없는 종목 1회 백필 (BBIO · COGT · GPCR · KOD · APGE · Tiingo 5건 · 서버 WP75-backfill 경로 · backfill_skip 무시 1회 · 빈 응답 = 가격 없음) · 10/8 07:00 전 배포 목표 · c. P4-0 PR: 주식수 이력 저장 (봉인 5절 그대로 · 10/12 06:00 전 배포)
+**진행 (2026-10-06 18시대)**: a 봉인 PR #91 (73a93da · 해시 e1cd8490… · ecc855dc… 봉인값과 같음) · b P4-1a PR #92 (4a290da · run 37439266160 성공) · c P4-0 PR #93 (6836fd2 · run 37440089407 성공) · 번들 `docs/plans/biotech/fable-bundles/20261006_p4_seal.zip` · 1회 백필은 10/7 시간당 한도면 10/8 실행 예상
 - 이후: 10/8 결정 10 대조 (10종목 · 요청 0) → P4-1 (목표 10/15 · 기한 11/12 · retro_prices_v1.csv SHA-256 보고) → P4-2 (집계 · cells_<YYYYMM>.json 없으면 첫 판정) → P4-3 (/biotech 과거 기록 표) → P4-4 (새 8-K 본문 · 하루 10 · readout_text)
 
 ---
