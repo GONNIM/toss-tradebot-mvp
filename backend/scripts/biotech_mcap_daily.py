@@ -1,6 +1,7 @@
 """WP75 · 시총 매일 산정 (표시 전용 · 2026-09-28 승인 설계 · 설정 플래그 기본 꺼짐).
 
 - 주식수: SEC companyfacts 의 dei:EntityCommonStockSharesOutstanding · 주 1회 (월요일 주간 AACT 잡 끝) · 후보 종목만
+  · P3a-4 ③ (PRD v0.8 6절 (다)) · 대상 = 오늘 후보 ∪ 5B 초과 제외 기록 (mcap/over_5b_excluded.json) 종목 · 주 최대 약 9건 추가
   · P3a ③ · 같은 응답에서 재무 값 (현금 · 영업현금흐름 · 차입금 · 총부채) 도 뽑아 저장 (biotech_filings.extract_finance · 추가 요청 0)
   · 헤더 = biotech_sec_common.build_client() 단일 상수 · 403 · 429 즉시 중단
 - 가격 (WP75-2 · 2026-10-01): Tiingo IEX 일괄 **1회** (`/iex/?tickers=…` · 후보 전 종목) · PR #52 클라이언트 모듈
@@ -8,6 +9,10 @@
   · tngoLast 의 timestamp 날짜 = 마지막 미국 거래일 (응답 최빈 날짜) 인 종목만 사용 · 아니면 배지 숨김 + "가격 오래됨" 로그
   · 응답 원문 <RUNTIME>/mcap/iex_<YYYYMMDD>.json (30일 지난 파일 삭제) · 새 후보 종목만 월 고유에 추가 등록
   · 403 · 429 즉시 중단 · 키 = config 로더의 환경변수 TIINGO_API_KEY · 요청 헤더로만
+  · P3a-3 ① (PRD v0.7 6절 (나)) · 가격 대상 = 오늘 후보 ∪ 최근 30일 날짜별 후보 CSV 의 종목 중 이번 달 장부에 이미 있는 종목
+    (5B 초과로 후보에서 빠진 종목이 다음 날 시총 없음으로 돌아오지 않게 · IEX 일괄 1건 그대로 · 월 고유 변동 없음)
+  · P3a-5 (PRD v0.9 6절 (나)) · 5B 초과 제외 기록 (mcap/over_5b_excluded.json) 종목도 장부 여부와 관계없이 가격 대상
+    (후보 CSV 에는 제외 종목이 없어 30일 뒤 가격이 끊기고 약 60일 뒤 하루 복귀 · 월이 바뀌어도 받아야 함 · 월 고유 최대 +9)
 - 표시: <RUNTIME>/mcap_display.json (ticker → shares · shares_asof · close · close_date) · API 가 읽어 배지 계산
   · 배지 조건 (API): 주식수 12개월 이내 AND 종가 60일 이내 · 기준일 병기
 - 후보 선정 · 점수 · 판정에는 쓰지 않는다 (candidates · time_state · confirm · radar 는 이 파일을 읽지 않음 · 테스트로 강제)
@@ -57,6 +62,7 @@ SHORT_GAP_DAYS = 10                 # P3a · 백필 첫 거래일이 요청 시�
 MIN_DATES_IN_WINDOW = 55            # 90일 창 안 거래일 수 하한 (약 62 거래일 중) · 미만이면 백필 대상
 STALE_DAYS = 10                     # 백필로 받은 마지막 거래일이 이보다 오래되면 거래 정지 등으로 보고
 SKIP_DAYS = 30                      # 그런 종목은 30일 동안 백필 대상에서 뺌 (2026-10-01 · APGE 9/4 · FBRX 8/27 에서 멈춤)
+RECENT_CAND_DAYS = 30               # P3a-3 ① · 최근 후보 창 (PRD v0.7 6절 (나))
 
 
 def _skip_path() -> Path:
@@ -212,7 +218,69 @@ def load_candidates() -> dict[str, str]:
         return {r["ticker"]: (r.get("cik") or "") for r in csv.DictReader(f) if r.get("ticker")}
 
 
+def recent_candidates(today: date, days: int = RECENT_CAND_DAYS) -> list[str]:
+    """P3a-3 ① · 최근 days 일 (today 포함) 날짜별 후보 CSV biotech_candidates_<YYYYMMDD>.csv 의 종목 합집합.
+
+    최신 후보 파일과 같은 폴더만 본다 (load_candidates 와 같은 해석기 조회 · v2 · v3 파일 제외)."""
+    p = _P.find_glob("biotech_candidates_2*.csv", subdir="candidates") or _P.find_glob("biotech_candidates_2*.csv")
+    if p is None:
+        return []
+    lo = today - timedelta(days=days)
+    out: set[str] = set()
+    for f in p.parent.glob("biotech_candidates_2*.csv"):
+        try:
+            d = datetime.strptime(f.stem.rsplit("_", 1)[1], "%Y%m%d").date()
+        except ValueError:
+            continue
+        if lo <= d <= today:
+            with f.open() as fh:
+                out.update(r["ticker"] for r in csv.DictReader(fh) if r.get("ticker"))
+    return sorted(out)
+
+
+def price_tickers(cands: dict[str, str] | list[str], recent: list[str], month_symbols: dict,
+                  excluded: list[str] = ()) -> tuple[list[str], list[str], list[str]]:
+    """가격 대상 = 오늘 후보 ∪ (최근 후보 중 이번 달 Tiingo 장부에 이미 있는 종목 · P3a-3 ①)
+    ∪ (5B 초과 제외 기록 종목 · 장부 여부와 관계없이 · P3a-5) → (대상, 최근 후보 추가분, 제외 기록 추가분).
+
+    장부에 없는 최근 후보 (예: 월 첫날의 지난달 후보) 는 넣지 않는다 · 월 고유가 늘지 않게.
+    제외 기록 종목은 월이 바뀌어도 넣는다 · 그래야 시총과 제외 기록이 갱신된다 (월 고유 최대 +9)."""
+    today_set = sorted(cands)
+    seen = set(today_set)
+    extra = [t for t in recent if t not in seen and t in month_symbols]
+    seen.update(extra)
+    excl = sorted(t for t in set(excluded) if t not in seen)
+    return today_set + extra + excl, extra, excl
+
+
 # ── 주식수 (주간) ────────────────────────────────────────────────────
+
+def _over5b_rows() -> dict:
+    p = _P.out_dir("mcap") / "over_5b_excluded.json"
+    if not p.exists():
+        return {}
+    try:
+        return json.loads(p.read_text()).get("rows") or {}
+    except (ValueError, OSError):
+        LOG.warning("over_5b_excluded.json 읽기 실패 · 제외 기록 종목 없이 진행")
+        return {}
+
+
+def over5b_record() -> dict[str, str]:
+    """P3a-4 ③ · 후보 단계의 5B 초과 제외 기록 → ticker → cik (CIK 없는 항목은 뺌 · 파일이 없거나 못 읽으면 빈 값)."""
+    return {(r.get("ticker") or k): r["cik"] for k, r in _over5b_rows().items() if r.get("cik")}
+
+
+def over5b_tickers() -> list[str]:
+    """P3a-5 · 제외 기록 종목의 티커 (티커 없는 항목은 가격을 받을 수 없어 뺌)."""
+    return sorted({r["ticker"] for r in _over5b_rows().values() if r.get("ticker")})
+
+
+def weekly_targets(cands: dict[str, str]) -> tuple[dict[str, str], list[str]]:
+    """P3a-4 ③ · 오늘 후보 ∪ 제외 기록 종목 (오늘 후보에 없는 것만 더함)."""
+    extra = {tk: cik for tk, cik in over5b_record().items() if tk not in cands}
+    return {**cands, **extra}, sorted(extra)
+
 
 def dei_shares(facts: dict, asof: str) -> dict | None:
     """dei:EntityCommonStockSharesOutstanding 만 (us-gaap 제외).
@@ -416,8 +484,10 @@ def run(mode: str, get_tiingo: Callable[..., Any] | None = None, get_sec: Callab
             sent["n"] += 1
             return inner(url)
 
+        targets, extra = weekly_targets(cands)
+        LOG.info("SEC 주식수 대상 · 오늘 후보 %d + 5B 초과 제외 기록 %d %s = %d", len(cands), len(extra), extra, len(targets))
         try:
-            res = weekly_shares(cands, counted, today)
+            res = weekly_shares(targets, counted, today)
         finally:
             _record_sec(sent["n"], today, ledger)
         fin_path = save_finance(res.pop("_finance"), today)   # P3a ③ · <RUNTIME>/finance/companyfacts_<날짜>.json
@@ -437,7 +507,7 @@ def run(mode: str, get_tiingo: Callable[..., Any] | None = None, get_sec: Callab
     # WP98 · 주식수 파일이 아직 없으면 (플래그 켠 뒤 첫 주간 잡 전) 주간 주식수 조회를 지금 1회 · 하루 SEC 상한 안에서만
     if not _latest_json("shares"):
         led = ledger or SecDailyLedger.load(f"{today:%Y%m%d}")
-        need = sum(1 for cik in cands.values() if cik)
+        need = sum(1 for cik in weekly_targets(cands)[0].values() if cik)
         if led.total() + need > SEC_DAILY_CAP:
             LOG.warning("주식수 파일 없음 · 오늘 SEC %d + 필요 %d > 상한 %d · 주식수 조회 건너뜀 (배지 표시 0)", led.total(), need, SEC_DAILY_CAP)
         else:
@@ -446,7 +516,12 @@ def run(mode: str, get_tiingo: Callable[..., Any] | None = None, get_sec: Callab
     if get_tiingo is None:
         import httpx
         get_tiingo = httpx.Client(timeout=30).get
-    res = daily_prices(sorted(cands), key, get_tiingo, today)
+    tickers, extra, excl = price_tickers(cands, recent_candidates(today), load_usage(today.strftime("%Y%m"))["symbols"],
+                                         over5b_tickers())
+    LOG.info("가격 대상 · 오늘 후보 %d + 최근 %d일 후보 중 이번 달 장부에 있는 종목 %d + 5B 초과 제외 기록 %d %s = %d (IEX 일괄 1건)",
+             len(cands), RECENT_CAND_DAYS, len(extra), len(excl), excl, len(tickers))
+    res = daily_prices(tickers, key, get_tiingo, today)
+    res["recent_extra"], res["over5b_extra"] = extra, excl
     res["backfill"] = backfill_prices(list(dict.fromkeys([*sorted(cands), BENCH])), key, get_tiingo, today)   # WP95
     del key
     (mdir / f"prices_{today:%Y%m%d}.json").write_text(json.dumps(res, ensure_ascii=False, indent=1))

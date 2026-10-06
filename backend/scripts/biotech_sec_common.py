@@ -112,6 +112,19 @@ def sec_get(client: httpx.Client, url: str, params: dict | None = None) -> dict:
     return {"status": r.status_code, "json": None, "text_sig": r.text[:80].replace("\n", " ")}
 
 
+def sec_get_text(client: httpx.Client, url: str) -> dict:
+    """단일 SEC GET (HTML · 텍스트 원문) · 403 즉시 raise · 헤더는 build_client 단일 상수 (P3a-2 424B5 표지).
+
+    반환 shape: {'status': int, 'text': str | None}
+    """
+    time.sleep(REQ_INTERVAL)
+    r = client.get(url, timeout=25.0)
+    if r.status_code == 403:
+        sig = "Undeclared Automated Tool" if "Undeclared Automated Tool" in r.text[:2000] else r.text[:80]
+        raise SecBlockedError(f"403 · {sig} · UA 순환·재시도 금지 · 대기+탐침 프로토콜 (biotech_sec_probe)")
+    return {"status": r.status_code, "text": r.text if r.status_code == 200 else None}
+
+
 def build_client(event_hooks: dict | None = None, timeout: float = 25.0) -> httpx.Client:
     """공용 SEC httpx.Client · UA·From·Accept-Encoding (WP23 지정 형식) · WP88-2 · 요청 집계용 event_hooks 선택."""
     return httpx.Client(

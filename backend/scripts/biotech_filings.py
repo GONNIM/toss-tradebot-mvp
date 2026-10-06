@@ -4,11 +4,14 @@
   - 헤더 = biotech_sec_common.build_client() 단일 상수 · 403 · 429 즉시 중단 · 하루 300 장부에 닿으면 남은 종목은 건너뜀
   - 원본: <RUNTIME>/filings/submissions_<YYYYMMDD>.json (최근 3년 + 여유 · 필드 6개) · 7일 보관
   - 파생: <RUNTIME>/filings/filings_derived_<YYYYMMDD>.json · 외국 발행사 (20-F · 6-K) · S-3 유효 (제출 후 3년)
-    · 최근 12개월 S-3 · 424B5 · S-1 목록 · 최근 8-K 접수 시각 (UTC · 미국 동부) · ATM = "미확인" (표지 규칙 검수 전)
+    · 최근 12개월 S-3 · 424B5 · S-1 목록 · 최근 8-K 접수 시각 (UTC · 미국 동부)
+    · ATM = "확인(표지 규칙)" 또는 "미확인" (P3a-2 ③ · biotech_atm_cover · 새 424B5 표지 1건씩 · 장부 "atm_cover")
 ③ companyfacts 재무 (주간 · 요청 0 추가) · 월요일 시총 주식수 단계가 이미 받는 companyfacts 응답에서 추출
-  - <RUNTIME>/finance/companyfacts_<YYYYMMDD>.json · 현금 · 영업현금흐름 (start · end · form · filed) · 차입금 4 · Liabilities
+  - <RUNTIME>/finance/companyfacts_<YYYYMMDD>.json · 현금 · 현금 및 투자자산 사다리 (PRD v0.6 FR-5 · 분해값 · 쓴 태그)
+    · 영업현금흐름 (start · end · form · filed) · 차입금 사다리 (FR-6a · 쓴 태그 · end) · Liabilities
   - 최근 12개월 영업현금흐름 = 직전 연간 + 올해 누적 − 전년 같은 기간 누적 (FR-5 · 분기 차감 안 함)
-  - 남은 개월 수 = 현금 ÷ (12개월 소모 ÷ 12) · 분기 말 기준과 오늘 기준 (경과 개월 보정) · 분기 말 뒤 424B5 가 있으면 "증자 반영 전"
+  - 남은 개월 수 = 현금 및 투자자산 ÷ (12개월 소모 ÷ 12) · 분기 말 기준과 오늘 기준 (경과 개월 보정) · 분기 말 뒤 424B5 가 있으면 "증자 반영 전"
+    · 오늘 기준 0 이하면 숫자 대신 RUNWAY_ZERO 문구
   - 파생: <RUNTIME>/finance/runway_<YYYYMMDD>.json (일일 submissions 단계 끝에 최신 재무 파일로 다시 계산 · 요청 0)
 
 표시 · 점수 · 후보 판정에는 쓰지 않는다 (화면은 P3b).
@@ -31,7 +34,9 @@ from typing import Any, Callable
 from zoneinfo import ZoneInfo
 
 from backend.scripts import _biotech_paths as _P
-from backend.scripts.biotech_sec_common import SEC_DAILY_CAP, SecBlockedError, SecDailyLedger, build_client, sec_get
+from backend.scripts import biotech_atm_cover as _atm
+from backend.scripts.biotech_sec_common import (SEC_DAILY_CAP, SecBlockedError, SecDailyLedger, build_client, sec_get,
+                                               sec_get_text)
 
 LOG = logging.getLogger("biotech_filings")
 ET = ZoneInfo("America/New_York")
@@ -48,7 +53,7 @@ SHELF_YEARS = 3
 RAW_DAYS = SHELF_YEARS * 366 + 30               # 원본에 남기는 기간 (S-3 3년 판정 + 여유)
 RAW_KEEP_DAYS = 7                               # 원본 파일 보관 일수
 DERIVED_KEEP_DAYS = 400                         # 파생 파일 보관 일수
-ATM_UNKNOWN = "미확인"                          # PRD FR-6a · 표지 규칙 Fable 검수 전
+ATM_UNKNOWN = _atm.UNKNOWN                      # PRD v0.6 FR-6a · 표지 규칙 판정 전 기본값 ("없음" 은 만들지 않음)
 
 # ── 공통 ─────────────────────────────────────────────────────────────
 
@@ -158,7 +163,8 @@ def derive(filings: list[dict], today: date, older_pages: bool) -> dict:
 
 
 def run_submissions(today: date | None = None, get: Callable[[str], dict] | None = None,
-                    ledger: SecDailyLedger | None = None, cands: list[dict] | None = None) -> dict:
+                    ledger: SecDailyLedger | None = None, cands: list[dict] | None = None,
+                    get_text: Callable[[str], dict] | None = None) -> dict:
     today = today or _kst_today()
     cands = cands if cands is not None else load_candidates()
     ledger = ledger or SecDailyLedger.load(f"{today:%Y%m%d}")
@@ -166,6 +172,7 @@ def run_submissions(today: date | None = None, get: Callable[[str], dict] | None
     if get is None:
         client = build_client()                        # biotech_sec_common 단일 헤더 상수
         get = lambda url: sec_get(client, url)         # noqa: E731
+        get_text = lambda url: sec_get_text(client, url)   # noqa: E731
     raw, derived = {}, {}
     sent, blocked, capped = 0, None, 0
     lo = (today - timedelta(days=RAW_DAYS)).isoformat()
@@ -196,6 +203,8 @@ def run_submissions(today: date | None = None, get: Callable[[str], dict] | None
                         "older_pages": older, "filings": [f for f in rows if f["filingDate"] >= lo]}
             derived[cik] = {"ticker": c["ticker"] or ((j.get("tickers") or [""])[0]), "ticker_in_candidates": c["ticker"],
                             **derive(rows, today, older)}
+        # ③ 새 424B5 표지 1건씩 판정 (최근 7일 · 하루 10) · 403 · 429 로 멈췄으면 더 보내지 않음
+        atm = _atm.judge_new(derived, today, None if blocked else get_text, ledger)
     finally:
         if client is not None:
             client.close()
@@ -204,25 +213,54 @@ def run_submissions(today: date | None = None, get: Callable[[str], dict] | None
     if capped:
         LOG.warning("submissions · 하루 SEC 상한 %d 도달 · %d 종목 건너뜀", SEC_DAILY_CAP, capped)
     fdir = _P.out_dir("filings")
-    meta = {"date": today.isoformat(), "requests": sent, "blocked": blocked, "capped": capped, "companies": len(derived)}
+    meta = {"date": today.isoformat(), "requests": sent, "blocked": blocked, "capped": capped, "companies": len(derived),
+            "atm_cover": atm}
     (fdir / f"submissions_{today:%Y%m%d}.json").write_text(json.dumps({**meta, "companies_raw": raw}, ensure_ascii=False))
     (fdir / f"filings_derived_{today:%Y%m%d}.json").write_text(
         json.dumps({**meta, "rows": derived}, ensure_ascii=False, indent=1))
     pr = _prune(fdir, "submissions", today, RAW_KEEP_DAYS) + _prune(fdir, "filings_derived", today, DERIVED_KEEP_DAYS)
     rw = write_runway(today, derived)
-    LOG.info("submissions · 요청 %d · 회사 %d · 외국 발행사 %d · S-3 유효 %d · 미확인 %d · 12개월 증자 공시 보유 %d · 지운 파일 %d · 자금 여력 %s",
+    LOG.info("submissions · 요청 %d · 회사 %d · 외국 발행사 %d · S-3 유효 %d · 미확인 %d · 12개월 증자 공시 보유 %d · 지운 파일 %d · 자금 여력 %s"
+             " · ATM 표지 새 %d · 요청 %d · 확인 %d · 회사 확인 %d",
              sent, len(derived), sum(1 for d in derived.values() if d["foreign_issuer"]),
              sum(1 for d in derived.values() if d["s3"]["effective"] is True),
              sum(1 for d in derived.values() if d["s3"]["effective"] is None),
-             sum(1 for d in derived.values() if d["offerings_12m"]), pr, rw)
+             sum(1 for d in derived.values() if d["offerings_12m"]), pr, rw, atm["new"], atm["sent"], atm["positive"],
+             sum(1 for d in derived.values() if d["atm"] == _atm.CONFIRMED))
     return meta
 
 # ── ③ companyfacts 재무 ─────────────────────────────────────────────
 
 CASH_TAG = "CashAndCashEquivalentsAtCarryingValue"
 OCF_TAG = "NetCashProvidedByUsedInOperatingActivities"
-DEBT_TAGS = ("LongTermDebt", "LongTermDebtNoncurrent", "DebtCurrent", "ConvertibleNotesPayable")   # PRD FR-6a
 LIAB_TAG = "Liabilities"
+# PRD v0.6 FR-5 · 현금 및 투자자산 사다리 · 묶음마다 현금과 같은 end 값이 있는 첫 항목 하나
+INV_SHORT_SUM = "CashCashEquivalentsAndShortTermInvestments"   # 현금을 뺀 파생값 (0 이상일 때) · v0.8 부터 단기 마지막 항목
+# P3a-4 ① (PRD v0.8 FR-5) · 명시 항목 먼저 · 파생값 마지막 (CRBU · 반올림 총액에 장기 포함 → 장기 이중 계산)
+INV_SHORT = ("ShortTermInvestments", "MarketableSecuritiesCurrent",
+             "AvailableForSaleSecuritiesDebtSecuritiesCurrent", "AvailableForSaleSecuritiesCurrent", INV_SHORT_SUM)
+INV_LONG = ("MarketableSecuritiesNoncurrent", "AvailableForSaleSecuritiesDebtSecuritiesNoncurrent",
+            "AvailableForSaleSecuritiesNoncurrent", "LongTermInvestments")
+INV_MS = "MarketableSecurities"                               # 대차대조표 시장성 증권 줄 (현금성 자산과 별도 · 중복 없음)
+INV_AFS_TOTAL = "AvailableForSaleSecuritiesDebtSecurities"      # 머니마켓펀드가 섞일 수 있음 (범위)
+INV_TOTAL = (INV_MS, INV_AFS_TOTAL)   # 단기 · 장기 둘 다 없을 때만 · P3a-4 ② (PRD v0.8) · MarketableSecurities 먼저
+INV_NONE = "투자자산 항목 없음 · 현금만"
+INV_MISMATCH = "투자자산 기준일 불일치 · 현금만"
+INV_DERIVED_RANGE = "총액 파생 · 장기 포함 여부 미확인 · 범위 표시"   # P3a-4 ① · 파생 단기 + 장기 (하한으로 계산)
+INV_MS_NOTE = "대차대조표 시장성 증권 항목 · 중복 없음"            # P3a-4 ② · 범위 없이 현금 + 값
+INV_RANGE = "합계 항목 · 현금성 증권 포함 여부 미확인 · 범위 표시"   # PRD v0.7 FR-5 · 합계 항목 경로 (하한으로 계산)
+WINDOW_MONTHS = 15        # PRD v0.7 FR-5 · FR-6a · "기준일 불일치" · 차입금 0 판정에 보는 현금 분기 말 직전 창
+# PRD v0.6 FR-6a · 차입금 사다리 (리스 포함 항목 · DebtInstrumentCarryingAmount 는 쓰지 않음)
+DEBT_TOTAL = "LongTermDebt"                                    # ① 유동분 포함 합계
+DEBT_NONCURRENT = ("LongTermDebtNoncurrent", "LongTermNotesPayable", "ConvertibleLongTermNotesPayable",
+                   "NotesPayableRelatedPartiesNoncurrent")
+DEBT_CURRENT = ("LongTermDebtCurrent", "DebtCurrent", "NotesPayableCurrent", "ConvertibleNotesPayableCurrent",
+                "NotesPayableRelatedPartiesClassifiedCurrent")
+DEBT_LAST = "NotesPayable"                                     # ③ 둘 다 없을 때
+DEBT_ALL = (DEBT_TOTAL, *DEBT_NONCURRENT, *DEBT_CURRENT, DEBT_LAST)
+DEBT_NONE = "차입금 미확인"
+DEBT_ZERO_MISMATCH = "최근 분기 태그 불일치"                    # PRD v0.7 FR-6a · 0 인데 직전 15개월에 0 이 아닌 값
+RUNWAY_ZERO = "0개월 이하 · 분기 말 뒤 소진 추정 · 증자 또는 투자자산 확인 필요"   # PRD v0.6 FR-5
 REPORT_FORMS = ("10-Q", "10-K", "10-Q/A", "10-K/A")
 PT_FIELDS = ("start", "end", "val", "form", "filed", "accn")
 MONTH_DAYS = 365.25 / 12
@@ -292,6 +330,126 @@ def ttm_ocf(pts: list[dict]) -> dict:
     return {"ttm": None, "end": end, "reason": "영업현금흐름 기간 불일치", "ytd": _pick(at_end[0])}
 
 
+def _at(ug: dict, tag: str, end: str) -> dict | None:
+    """그 태그의 end 값 (가장 늦게 제출된 값) · 없으면 None."""
+    pts = [p for p in _pts(ug, tag) if p["end"] == end and not p.get("start")]
+    return max(pts, key=lambda p: (p.get("filed", ""), p.get("accn", ""))) if pts else None
+
+
+def _item(tag: str, p: dict, val=None) -> dict:
+    return {"tag": tag, **_pick(p), **({"val": val} if val is not None else {})}
+
+
+def _window_lo(end: str) -> date:
+    """현금 분기 말에서 WINDOW_MONTHS 개월 전 (말일은 그 달 말일로 맞춤)."""
+    e = date.fromisoformat(end)
+    y, m = divmod(e.year * 12 + e.month - 1 - WINDOW_MONTHS, 12)
+    m += 1
+    nxt = date(y + (m == 12), m % 12 + 1, 1)
+    return date(y, m, min(e.day, (nxt - timedelta(days=1)).day))
+
+
+def _in_window(pt_end: str, end: str) -> bool:
+    """P3a-3 ② · ③ · pt_end 가 현금 분기 말 직전 15개월 안 (분기 말 포함)."""
+    return _window_lo(end) <= date.fromisoformat(pt_end) <= date.fromisoformat(end)
+
+
+def _recent_dropped(ug: dict, dropped: list[dict], end: str) -> list[dict]:
+    """버린 항목 중 직전 15개월 안에 0 이 아닌 값이 있는 것 (그 창 안 가장 최근 end).
+
+    P3a-3 ⑦ (PRD FR-5 · FR-6a · 16:30 보완) · 창 안의 값이 0 뿐이면 "항목 없음" 으로 본다 (KOD MarketableSecurities 2025-12-31 = 0)."""
+    out = []
+    for d in dropped:
+        ends = [p["end"] for p in _pts(ug, d["tag"])
+                if not p.get("start") and p["val"] != 0 and _in_window(p["end"], end)]
+        if ends:
+            out.append({"tag": d["tag"], "end": max(ends)})
+    return out
+
+
+def _first(ug: dict, tags: tuple, end: str, cash_val=None) -> tuple[dict | None, list[dict]]:
+    """사다리 묶음에서 end 값이 있는 첫 항목 하나 · 그 앞 항목 중 다른 end 에만 값이 있는 것은 버린 목록으로."""
+    dropped = []
+    for t in tags:
+        p = _at(ug, t, end)
+        if p is not None:
+            if t == INV_SHORT_SUM:                    # 현금 및 단기 투자 합계 − 현금 (0 이상일 때만)
+                if cash_val is None or p["val"] - cash_val < 0:
+                    continue
+                return _item(t, p, p["val"] - cash_val), dropped
+            return _item(t, p), dropped
+        last = _latest(_pts(ug, t))
+        if last is not None:
+            dropped.append({"tag": t, "end": last["end"]})
+    return None, dropped
+
+
+def cash_investments(ug: dict, cash: dict | None) -> dict | None:
+    """현금 및 투자자산 (PRD v0.6 FR-5 사다리) · 분해값 (현금 · 단기 · 장기 · 합계 항목) 과 쓴 태그를 함께 저장."""
+    if not cash:
+        return None
+    end = cash["end"]
+    short, d1 = _first(ug, INV_SHORT, end, cash["val"])
+    long_, d2 = _first(ug, INV_LONG, end)
+    total, d3 = (None, []) if (short or long_) else _first(ug, INV_TOTAL, end)
+    parts = {"short": short, "long": long_, "total_item": total}
+    used = [v for v in parts.values() if v]
+    dropped = d1 + d2 + d3
+    if total and total["tag"] == INV_MS:   # P3a-4 ② · 대차대조표 줄 · 범위 없이 현금 + 값
+        return {"val": cash["val"] + total["val"], "end": end, "cash": cash["val"], **parts, "note": INV_MS_NOTE,
+                "dropped": dropped}
+    if total:   # P3a-3 ④ · AFS 총액 · 합계 항목에 현금성 증권이 들었을 수 있음 · 하한 = max(현금, 합계) · 상한 = 현금 + 합계 · 계산은 하한
+        low, high = max(cash["val"], total["val"]), cash["val"] + total["val"]
+        return {"val": low, "end": end, "cash": cash["val"], **parts, "range": {"low": low, "high": high},
+                "note": INV_RANGE, "dropped": dropped}
+    if short and long_ and short["tag"] == INV_SHORT_SUM:
+        # P3a-4 ① · 총액에 장기가 이미 들었을 수 있음 · 하한 = 총액 (현금 + 파생 단기) · 상한 = 현금 + 파생 단기 + 장기 · 계산은 하한
+        low, high = cash["val"] + short["val"], cash["val"] + short["val"] + long_["val"]
+        return {"val": low, "end": end, "cash": cash["val"], **parts, "range": {"low": low, "high": high},
+                "note": INV_DERIVED_RANGE, "dropped": dropped}
+    note = None
+    if not used:   # P3a-3 ② · "기준일 불일치" 는 버린 항목이 직전 15개월 안에 값이 있을 때만 · 더 오래된 값만 있으면 "항목 없음"
+        note = INV_MISMATCH if _recent_dropped(ug, dropped, end) else INV_NONE
+    return {"val": cash["val"] + sum(v["val"] for v in used), "end": end, "cash": cash["val"], **parts,
+            "note": note, "dropped": dropped}
+
+
+def debt_ladder(ug: dict, end: str | None) -> dict:
+    """차입금 (PRD v0.6 FR-6a 사다리) · ① LongTermDebt → ② 비유동 첫 항목 + 유동 첫 항목 → ③ NotesPayable.
+
+    최근값 = end 가 현금 분기 말과 같은 값. 찾지 못하면 0 으로 두지 않고 "차입금 미확인".
+    """
+    if not end:
+        return {"val": None, "label": DEBT_NONE, "reason": "현금 분기 말 없음", "items": []}
+    res = _debt_steps(ug, end)
+    if res.get("val") == 0:   # P3a-3 ③ · 0 인데 사다리 어떤 항목이든 직전 15개월 안에 0 이 아닌 값이 있으면 미확인
+        prior = [{"tag": t, **_pick(q)} for t in DEBT_ALL for q in _pts(ug, t)
+                 if not q.get("start") and q["val"] != 0 and _in_window(q["end"], end)]
+        if prior:
+            x = max(prior, key=lambda q: (q["end"], q.get("filed", "")))
+            return {"val": None, "end": end, "label": f"{DEBT_NONE} · {DEBT_ZERO_MISMATCH}(직전 값 {x['val']:,} · {x['end']})",
+                    "reason": DEBT_ZERO_MISMATCH, "zero_items": res["items"], "prior": x, "items": []}
+    return res
+
+
+def _debt_steps(ug: dict, end: str) -> dict:
+    p = _at(ug, DEBT_TOTAL, end)
+    if p is not None:
+        return {"val": p["val"], "end": end, "step": 1, "items": [_item(DEBT_TOTAL, p)]}
+    nc, d1 = _first(ug, DEBT_NONCURRENT, end)
+    cur, d2 = _first(ug, DEBT_CURRENT, end)
+    items = [x for x in (nc, cur) if x]
+    if items:
+        return {"val": sum(x["val"] for x in items), "end": end, "step": 2, "items": items}
+    p = _at(ug, DEBT_LAST, end)
+    if p is not None:
+        return {"val": p["val"], "end": end, "step": 3, "items": [_item(DEBT_LAST, p)]}
+    other = [{"tag": t, "end": q["end"]} for t in DEBT_ALL if (q := _latest(_pts(ug, t)))]
+    # P3a-3 ② · "차입금 기준일 불일치" 는 직전 15개월 안에 값이 있던 항목이 있을 때만 · 더 오래된 값만 있으면 "사다리 항목 없음"
+    return {"val": None, "label": DEBT_NONE, "reason": "차입금 기준일 불일치" if _recent_dropped(ug, other, end) else "사다리 항목 없음",
+            "items": [], "dropped": other}
+
+
 def extract_finance(facts: dict) -> dict:
     """companyfacts 응답 → 저장할 재무 값 (요청 없음 · 순수 함수)."""
     allf = (facts or {}).get("facts") or {}
@@ -299,11 +457,13 @@ def extract_finance(facts: dict) -> dict:
     if not ug:
         return {"reason": "XBRL us-gaap 없음 (외국 발행사 20-F 등)", "taxonomies": sorted(allf)}
     ocf = _pts(ug, OCF_TAG)
+    cash = _pick(_latest([p for p in _pts(ug, CASH_TAG) if not p.get("start")]))
     return {
-        "cash": _pick(_latest(_pts(ug, CASH_TAG))),
+        "cash": cash,
+        "cash_inv": cash_investments(ug, cash),
         "ocf_latest": _pick(_latest([p for p in ocf if p.get("start")])),
         "ocf_ttm": ttm_ocf(ocf),
-        "debt": {t: _pick(_latest(_pts(ug, t))) for t in DEBT_TAGS},
+        "debt": debt_ladder(ug, cash["end"] if cash else None),
         "liabilities": _pick(_latest(_pts(ug, LIAB_TAG))),
     }
 
@@ -320,17 +480,21 @@ def runway(fin: dict, filings: dict | None, today: date) -> dict:
     if t.get("ttm") is None:
         return {"months_qe": None, "months_today": None, "label": "계산 불가", "reason": t.get("reason", "영업현금흐름 없음"),
                 "cash": cash["val"], "qe": cash["end"]}
-    base = {"cash": cash["val"], "qe": cash["end"], "ocf_ttm": t["ttm"], "ocf_end": t.get("end"),
-            "period_match": t.get("end") == cash["end"]}
+    inv = fin.get("cash_inv") or {"val": cash["val"], "cash": cash["val"], "note": INV_NONE}
+    base = {"cash": cash["val"], "cash_inv": inv["val"], "cash_inv_detail": inv, "qe": cash["end"],
+            "ocf_ttm": t["ttm"], "ocf_end": t.get("end"), "period_match": t.get("end") == cash["end"]}
     if t["ttm"] >= 0:
         return {**base, "months_qe": None, "months_today": None, "label": "현금 소모 없음"}
-    months_qe = cash["val"] / (-t["ttm"] / 12)
+    months_qe = inv["val"] / (-t["ttm"] / 12)              # PRD v0.6 FR-5 · 현금 및 투자자산 기준
     elapsed = (today - date.fromisoformat(cash["end"])).days / MONTH_DAYS
     raises = [o for o in (filings or {}).get("offerings_12m", []) if o["form"] in RAISE_FORMS and o["filingDate"] > cash["end"]]
     out = {**base, "months_qe": round(months_qe, 2), "elapsed_months": round(elapsed, 2)}
     if raises:
         return {**out, "months_today": None, "label": "증자 반영 전", "raises_after_qe": raises}
-    return {**out, "months_today": round(months_qe - elapsed, 2), "label": "그 사이 증자가 없다고 가정"}
+    today_val = round(months_qe - elapsed, 2)
+    if today_val <= 0:                                     # 음수를 그대로 저장 · 표시하지 않는다 (FR-6a 는 12개월 미만 문장)
+        return {**out, "months_today": None, "months_today_calc": today_val, "label": RUNWAY_ZERO}
+    return {**out, "months_today": today_val, "label": "그 사이 증자가 없다고 가정"}
 
 
 def finance_path(today: date) -> Path:
