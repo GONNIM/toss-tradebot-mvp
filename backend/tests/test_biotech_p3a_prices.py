@@ -116,5 +116,6 @@ def test_run_includes_xbi_in_backfill(tmp_path, monkeypatch):
                                                              "monthly_unique_used": 0, "new_symbols": 0})
     seen = {}
     monkeypatch.setattr(mc, "backfill_prices", lambda tickers, *a, **k: seen.setdefault("t", tickers) and {"requests": 0})
+    monkeypatch.setattr(mc, "fr6c_backfill_once", lambda *a, **k: {"requests": 0})   # P4-1a 단계는 test_biotech_p4_1a 에서 따로 검사
     mc.run("daily", get_tiingo=lambda *a, **k: None, today=TODAY)
     assert seen["t"] == ["AAA", "XBI"]

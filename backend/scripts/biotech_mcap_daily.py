@@ -11,6 +11,8 @@
   · 403 · 429 즉시 중단 · 키 = config 로더의 환경변수 TIINGO_API_KEY · 요청 헤더로만
   · P3a-3 ① (PRD v0.7 6절 (나)) · 가격 대상 = 오늘 후보 ∪ 최근 30일 날짜별 후보 CSV 의 종목 중 이번 달 장부에 이미 있는 종목
     (5B 초과로 후보에서 빠진 종목이 다음 날 시총 없음으로 돌아오지 않게 · IEX 일괄 1건 그대로 · 월 고유 변동 없음)
+  · P4-1a (PRD 20절 · Fable 2026-10-06 18:30) · FR-6c 봉인 표본 종목 중 기준일 · 반응일 종가가 없고 정규 백필이 덮지 않는 종목
+    (오늘 후보가 아님 또는 backfill_skip) 을 종목당 1회만 380일 백필 · 빈 응답이면 그 종목은 "가격 없음" (P4-1 에서 n 제외)
   · P3a-5 (PRD v0.9 6절 (나)) · 5B 초과 제외 기록 (mcap/over_5b_excluded.json) 종목도 장부 여부와 관계없이 가격 대상
     (후보 CSV 에는 제외 종목이 없어 30일 뒤 가격이 끊기고 약 60일 뒤 하루 복귀 · 월이 바뀌어도 받아야 함 · 월 고유 최대 +9)
 - 표시: <RUNTIME>/mcap_display.json (ticker → shares · shares_asof · close · close_date) · API 가 읽어 배지 계산
@@ -63,6 +65,9 @@ MIN_DATES_IN_WINDOW = 55            # 90일 창 안 거래일 수 하한 (약 62
 STALE_DAYS = 10                     # 백필로 받은 마지막 거래일이 이보다 오래되면 거래 정지 등으로 보고
 SKIP_DAYS = 30                      # 그런 종목은 30일 동안 백필 대상에서 뺌 (2026-10-01 · APGE 9/4 · FBRX 8/27 에서 멈춤)
 RECENT_CAND_DAYS = 30               # P3a-3 ① · 최근 후보 창 (PRD v0.7 6절 (나))
+FR6C_SAMPLE = _P.PROJECT_ROOT / "docs" / "plans" / "biotech" / "design" / "fr6c_retro_sample_v1.csv"
+FR6C_SAMPLE_SHA256 = "ecc855dc5cf56366aaa91c511ae14be71b770fe29f27b74274ec17e661e1382c"   # 봉인값 (2026-10-06 · PRD 20절)
+FR6C_ONCE_MAX = 10                  # P4-1a · 하루 1회 백필 종목 상한 (지금 대상 5)
 
 
 def _skip_path() -> Path:
@@ -194,6 +199,91 @@ def backfill_prices(tickers: list[str], key: str, get: Callable[..., Any], today
     LOG.info("가격 백필 · Tiingo 일봉 요청 %d · 채운 종목 %d · 남은 종목 %d%s", requests, filled, remaining,
              " · 백필 완료" if remaining == 0 else "")
     return {"requests": requests, "filled": filled, "remaining": remaining, "blocked": blocked}
+
+
+def _fr6c_once_path() -> Path:
+    return _P.out_dir("prices") / "fr6c_backfill_once.json"
+
+
+def fr6c_sample_rows() -> list[dict] | None:
+    """봉인 표본 목록 · SHA-256 이 봉인값과 다르면 None (쓰지 않음)."""
+    import hashlib
+    if not FR6C_SAMPLE.exists():
+        LOG.warning("FR-6c 봉인 표본 없음 · %s · 1회 백필 건너뜀", FR6C_SAMPLE)
+        return None
+    raw = FR6C_SAMPLE.read_bytes()
+    if hashlib.sha256(raw).hexdigest() != FR6C_SAMPLE_SHA256:
+        LOG.warning("FR-6c 봉인 표본 SHA-256 불일치 · 1회 백필 건너뜀 (봉인 파일이 바뀜)")
+        return None
+    return list(csv.DictReader(raw.decode("utf-8").splitlines()))
+
+
+def fr6c_once_targets(rows: list[dict], hist: dict[tuple[str, str], float], cands: list[str], skip: dict[str, str],
+                      done: dict[str, dict]) -> list[str]:
+    """P4-1a · 봉인 표본 종목 중 기준일 또는 반응일 종가가 기록에 없고, 정규 백필이 덮지 않는 종목 (오늘 후보 아님 · backfill_skip)
+    · 이미 1회 시도한 종목은 뺀다."""
+    out = set()
+    for r in rows:
+        tk = r["ticker"]
+        if (tk, r["base_date"]) in hist and (tk, r["reaction_date"]) in hist:
+            continue
+        if tk in done:
+            continue
+        if tk not in cands or tk in skip:
+            out.add(tk)
+    return sorted(out)
+
+
+def fr6c_backfill_once(cands: list[str], key: str, get: Callable[..., Any], today: date,
+                       now: Callable[[], datetime] | None = None) -> dict:
+    """P4-1a · 봉인 표본의 가격 공백 종목 1회 백필 (WP75-backfill 경로 · 380일 · backfill_skip 무시 1회 · 시간당 50 장부 안)."""
+    now = now or (lambda: datetime.now(timezone(timedelta(hours=9))))
+    rows = fr6c_sample_rows()
+    if rows is None:
+        return {"requests": 0, "targets": [], "skipped": "sample"}
+    hist = load_history()
+    done = json.loads(_fr6c_once_path().read_text()) if _fr6c_once_path().exists() else {}
+    targets = fr6c_once_targets(rows, hist, cands, _load_skip(today), done)
+    if not targets:
+        return {"requests": 0, "targets": []}
+    usage = load_usage(today.strftime("%Y%m"))
+    start = (today - timedelta(days=BACKFILL_DAYS)).isoformat()
+    requests, blocked, results = 0, None, {}
+    for tk in targets[:FR6C_ONCE_MAX]:
+        ok, next_at = hourly_check(usage, now())
+        if not ok:
+            blocked = f"hourly_limit · next {next_at:%Y-%m-%d %H:%M}"
+            break
+        if tk not in usage["symbols"]:
+            if len(usage["symbols"]) >= MONTHLY_ALLOCATION:
+                continue
+            usage["symbols"][tk] = {"first_use": today.isoformat(), "by": "WP75-backfill-fr6c"}
+        record_request(usage, now(), by="WP75-backfill-fr6c")
+        requests += 1
+        try:
+            bars = fetch_one(get, tk, key, today.isoformat(), start=start)
+        except TiingoBlocked as e:
+            blocked = str(e)
+            LOG.error("%s · FR-6c 1회 백필 즉시 중단", e)
+            break
+        except LookupError as e:
+            results[tk] = {"date": today.isoformat(), "result": "empty", "reason": str(e)}
+            continue
+        for b in bars:
+            hist[(tk, b["date"])] = float(b["close"])
+        ds = sorted(b["date"] for b in bars)
+        results[tk] = {"date": today.isoformat(), "result": "filled", "bars": len(bars), "first": ds[0], "last": ds[-1]}
+    save_usage(usage)
+    if any(v["result"] == "filled" for v in results.values()):
+        save_history(hist, today)
+    done.update(results)
+    _fr6c_once_path().write_text(json.dumps(done, ensure_ascii=False, indent=1))
+    still = [r["accession"] for r in rows if not ((r["ticker"], r["base_date"]) in hist and (r["ticker"], r["reaction_date"]) in hist)]
+    LOG.info("FR-6c 1회 백필 · 대상 %s · Tiingo 일봉 요청 %d · 결과 %s · 중단 %s · 표본 중 가격 공백 %d건 (정규 백필 진행 중 포함)",
+             targets, requests, {k: v["result"] for k, v in results.items()}, blocked, len(still))
+    return {"requests": requests, "targets": targets, "results": results, "blocked": blocked, "sample_missing": len(still)}
+
+
 SEC_FACTS_URL = "https://data.sec.gov/api/xbrl/companyfacts/CIK{cik}.json"
 
 
@@ -523,6 +613,8 @@ def run(mode: str, get_tiingo: Callable[..., Any] | None = None, get_sec: Callab
     res = daily_prices(tickers, key, get_tiingo, today)
     res["recent_extra"], res["over5b_extra"] = extra, excl
     res["backfill"] = backfill_prices(list(dict.fromkeys([*sorted(cands), BENCH])), key, get_tiingo, today)   # WP95
+    if not (res["backfill"] or {}).get("blocked"):
+        res["fr6c_backfill"] = fr6c_backfill_once(sorted(cands), key, get_tiingo, today)   # P4-1a
     del key
     (mdir / f"prices_{today:%Y%m%d}.json").write_text(json.dumps(res, ensure_ascii=False, indent=1))
     display = build_display(_latest_json("shares").get("shares", {}), res["prices"])
