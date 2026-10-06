@@ -80,6 +80,9 @@ def git_sha() -> str:
         return "unknown"
 
 
+SEC_BY_CIK: dict[str, dict] = {}   # P3a ⑥ · SEC company_tickers 의 CIK → {ticker, name} (load_cik_ticker_map 이 채움)
+
+
 def load_cik_ticker_map(sha: str) -> tuple[dict, dict]:
     """CIK ↔ ticker 확장 · biotech SIC 필터.
 
@@ -119,12 +122,17 @@ def load_cik_ticker_map(sha: str) -> tuple[dict, dict]:
                 cik_meta[cik] = {"ticker": "", "name": "", "source": "efts_sc13d"}
 
     # 3) SEC company_tickers → 위 CIK 에 ticker 채움 · 이름 채움
+    #    P3a ⑥ · 위 두 원천에 없는 CIK (예: INCY 879169 · h3_targets_v2 SIC 8731 · sic_biotech False) 는 SEC_BY_CIK 로 따로 둠
+    #    → 다른 원천 (WP39 결과 발표 등) 으로 후보가 된 CIK 의 티커 · 이름을 채움 · cik_meta (우주) 는 넓히지 않음
+    SEC_BY_CIK.clear()
     sec_p = _find("sec_company_tickers.json") or (DATA_DIR / "sec_company_tickers.json")
     if sec_p.exists():
         for _, e in json.loads(sec_p.read_text()).items():
             cik = str(e.get("cik_str", "")).zfill(10)
             tk = str(e.get("ticker", "")).upper()
             nm = str(e.get("title", ""))
+            if cik not in SEC_BY_CIK:              # 같은 CIK 의 여러 티커 중 명부 첫 항목
+                SEC_BY_CIK[cik] = {"ticker": tk, "name": nm}
             if cik in cik_meta:
                 if not cik_meta[cik]["ticker"]:
                     cik_meta[cik]["ticker"] = tk
@@ -157,7 +165,7 @@ def load_prices_and_mcap(sha: str) -> tuple[dict, dict]:
                     close[tk] = (d, c)
         close = {tk: v[1] for tk, v in close.items()}
     # WP100 · h3_prices_merged 가 없으면 (서버) 여기서는 시총 구간을 비워 둠 · 경고 없음
-    #   시총은 mcap 단계 (일일 [8/9] 시총 단계 · IEX 일일 가격 × SEC 주식수) 가 담당 · 이 단계는 그 결과를 읽지 않음
+    #   시총은 mcap 단계 (일일 [8/10] 시총 단계 · IEX 일일 가격 × SEC 주식수) 가 담당 · 이 단계는 그 결과를 읽지 않음
     shares: dict = {}
     p2 = _find(f"h3_mcap_{sha}.csv") or _find_glob("h3_mcap_*.csv")
     if p2 is not None and p2.exists():
@@ -292,7 +300,7 @@ def main():
         # key 우선 = cik (CIK 있으면 CIK 기준 · 없으면 ticker)
         if key_cik and key_cik != "0000000000":
             key = key_cik
-            info = cik_meta.get(key_cik, {"ticker": key_ticker, "name": ""})
+            info = cik_meta.get(key_cik) or SEC_BY_CIK.get(key_cik) or {"ticker": key_ticker, "name": ""}   # P3a ⑥
             tk = info.get("ticker") or key_ticker
             nm = info.get("name") or ""
         else:

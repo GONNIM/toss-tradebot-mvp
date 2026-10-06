@@ -81,7 +81,7 @@
     "expert_13d": "h3_events_*.csv (주간 화 06:00 · biotech_radar_inputs_weekly 13d · 활동가 등록부 55곳 submissions + 새 13D/13G 헤더 · b98 씨앗 + h65 Form 4 · SC/SCHEDULE 13D·13G · 5년 창)",
     "expert_pubmed": "h57_pubmed_index_*.json (주간 수 06:00 · NLM esearch · 올해·작년)",
     "expert_preprint": "h58_preprint_index_*.json (주간 수 06:00 · NLM esearch preprint[SB] · 올해·작년)",
-    "unnoticed_prices": "<RUNTIME>/prices/iex_daily_history.csv (mcap 일일 IEX + 백필 · XBI 포함 · 100일 보관 · XBI 90일 창 55거래일 이상이면 갖춰짐)",
+    "unnoticed_prices": "<RUNTIME>/prices/iex_daily_history.csv (mcap 일일 IEX + 백필 · XBI 포함 · 400일 보관 (P3a · 레이더는 90일 창만 읽음) · XBI 90일 창 55거래일 이상이면 갖춰짐)",
     "removed": "h6_membership (v3 에서 쓰지 않음) · h3_prices_merged · benchmarks_*.csv (가격 누적 파일로 대체 · 계산식 무변경)"
   },
   "v3_full_start": {

@@ -1,6 +1,7 @@
 """WP75 · 시총 매일 산정 (표시 전용 · 2026-09-28 승인 설계 · 설정 플래그 기본 꺼짐).
 
 - 주식수: SEC companyfacts 의 dei:EntityCommonStockSharesOutstanding · 주 1회 (월요일 주간 AACT 잡 끝) · 후보 종목만
+  · P3a ③ · 같은 응답에서 재무 값 (현금 · 영업현금흐름 · 차입금 · 총부채) 도 뽑아 저장 (biotech_filings.extract_finance · 추가 요청 0)
   · 헤더 = biotech_sec_common.build_client() 단일 상수 · 403 · 429 즉시 중단
 - 가격 (WP75-2 · 2026-10-01): Tiingo IEX 일괄 **1회** (`/iex/?tickers=…` · 후보 전 종목) · PR #52 클라이언트 모듈
   (biotech_h6_collect_prices.fetch_iex · 같은 헤더 규칙) 과 월 사용 장부 재사용 · 요청 1회를 장부 시간 단위에도 기록
@@ -39,6 +40,7 @@ from backend.scripts.biotech_h6_collect_prices import (
     MONTHLY_ALLOCATION, TiingoBlocked, fetch_iex, fetch_one, hourly_check, load_usage, record_request, save_usage,
 )
 from collections import Counter
+from backend.scripts.biotech_filings import extract_finance, save_finance
 from backend.scripts.biotech_sec_common import SEC_DAILY_CAP, SecBlockedError, SecDailyLedger, build_client, nearest_shares_outstanding, sec_get
 
 LOG = logging.getLogger("biotech_mcap_daily")
@@ -46,10 +48,12 @@ LOG = logging.getLogger("biotech_mcap_daily")
 FLAG = "BIOTECH_MCAP_ENABLED"
 IEX_KEEP_DAYS = 30                  # WP75-2 · IEX 응답 원문 보관 기간
 BENCH = "XBI"                       # WP95 · 레이더 미반영 채널 기준 (90일 수익률 비교) · IEX 요청에 항상 포함
-HISTORY_KEEP_DAYS = 100             # WP95 · 가격 누적 파일 보관 (레이더 90일 창 + 여유)
+HISTORY_KEEP_DAYS = 400             # P3a · 가격 누적 파일 보관 (PRD v0.5 6절 · 52주 · 12개월 차트) · WP95 는 100
 WINDOW_DAYS = 90                    # 레이더 load_returns_90d 의 달력 90일 창
 BACKFILL_MAX = 50                   # 하루 백필 종목 상한 (시간당 50 장부 안에서)
-BACKFILL_DAYS = 120                 # 백필 일봉 기간 (달력) · 90일 창을 덮음
+BACKFILL_DAYS = 380                 # P3a · 백필 일봉 기간 (달력) · 12개월 + 여유 · WP95 는 120
+YEAR_DAYS = 365                     # P3a · 기록 시작일이 오늘−365일보다 늦으면 백필 대상 (12개월 기록)
+SHORT_GAP_DAYS = 10                 # P3a · 백필 첫 거래일이 요청 시작일보다 이만큼 늦으면 상장 뒤 기록이 짧은 종목으로 봄
 MIN_DATES_IN_WINDOW = 55            # 90일 창 안 거래일 수 하한 (약 62 거래일 중) · 미만이면 백필 대상
 STALE_DAYS = 10                     # 백필로 받은 마지막 거래일이 이보다 오래되면 거래 정지 등으로 보고
 SKIP_DAYS = 30                      # 그런 종목은 30일 동안 백필 대상에서 뺌 (2026-10-01 · APGE 9/4 · FBRX 8/27 에서 멈춤)
@@ -57,6 +61,16 @@ SKIP_DAYS = 30                      # 그런 종목은 30일 동안 백필 대�
 
 def _skip_path() -> Path:
     return _P.out_dir("prices") / "backfill_skip.json"
+
+
+def _short_path() -> Path:
+    """P3a · Tiingo 일봉이 12개월보다 짧은 종목 (상장 1년 미만 등) · ticker → 첫 거래일 · 매일 다시 받지 않게."""
+    return _P.out_dir("prices") / "backfill_short.json"
+
+
+def _load_short() -> dict[str, str]:
+    p = _short_path()
+    return json.loads(p.read_text()) if p.exists() else {}
 
 
 def _load_skip(today: date) -> dict[str, str]:
@@ -85,7 +99,7 @@ def load_history(path: Path | None = None) -> dict[tuple[str, str], float]:
 
 
 def save_history(hist: dict[tuple[str, str], float], today: date, path: Path | None = None) -> int:
-    """100일 지난 행 삭제 후 저장 · 삭제 행 수."""
+    """HISTORY_KEEP_DAYS 일 지난 행 삭제 후 저장 · 삭제 행 수."""
     path = path or history_path()
     cutoff = (today - timedelta(days=HISTORY_KEEP_DAYS)).isoformat()
     keep = {k: v for k, v in hist.items() if k[1] >= cutoff}
@@ -99,9 +113,13 @@ def save_history(hist: dict[tuple[str, str], float], today: date, path: Path | N
     return len(hist) - len(keep)
 
 
-def needs_backfill(hist: dict[tuple[str, str], float], tickers: list[str], today: date) -> list[str]:
-    """레이더 90일 창을 덮지 못한 종목 (창 시작 이전 기록 없음 또는 창 안 거래일 < 55)."""
+def needs_backfill(hist: dict[tuple[str, str], float], tickers: list[str], today: date,
+                   short: dict[str, str] | None = None) -> list[str]:
+    """레이더 90일 창을 덮지 못한 종목 (창 시작 이전 기록 없음 또는 창 안 거래일 < 55)
+    + P3a · 기록 시작일이 오늘−365일보다 늦은 종목 (Tiingo 첫 거래일까지 이미 받은 짧은 종목은 제외)."""
     lo = (today - timedelta(days=WINDOW_DAYS)).isoformat()
+    lo_year = (today - timedelta(days=YEAR_DAYS)).isoformat()
+    short = short or {}
     by: dict[str, list[str]] = {}
     for tk, d in hist:
         by.setdefault(tk, []).append(d)
@@ -110,18 +128,22 @@ def needs_backfill(hist: dict[tuple[str, str], float], tickers: list[str], today
         ds = by.get(tk, [])
         if not ds or min(ds) > lo or sum(1 for d in ds if d >= lo) < MIN_DATES_IN_WINDOW:
             out.append(tk)
+        elif min(ds) > lo_year and not (tk in short and min(ds) <= short[tk]):
+            out.append(tk)
     return out
 
 
 def backfill_prices(tickers: list[str], key: str, get: Callable[..., Any], today: date,
                     now: Callable[[], datetime] | None = None) -> dict:
-    """WP95 · 90일 창을 못 덮은 종목을 하루 최대 50개 Tiingo 일봉 (120일) 로 채움 · H6 수집기·장부 (시간당 50 · 월 고유) 재사용."""
+    """WP95 · 90일 창을 못 덮은 종목을 하루 최대 50개 Tiingo 일봉으로 채움 · H6 수집기·장부 (시간당 50 · 월 고유) 재사용.
+    P3a · 기간 380일 · 12개월 기록이 없는 종목도 대상."""
     now = now or (lambda: datetime.now(timezone(timedelta(hours=9))))
     hist = load_history()
     skip = _load_skip(today)
-    todo = [t for t in needs_backfill(hist, tickers, today) if t not in skip]
+    short = _load_short()
+    todo = [t for t in needs_backfill(hist, tickers, today, short) if t not in skip]
     if not todo:
-        LOG.info("가격 누적 · 백필 완료 (90일 창을 못 덮은 종목 0)")
+        LOG.info("가격 누적 · 백필 완료 (90일 창 · 12개월 기록을 못 덮은 종목 0)")
         return {"requests": 0, "filled": 0, "remaining": 0, "blocked": None}
     usage = load_usage(today.strftime("%Y%m"))
     start = (today - timedelta(days=BACKFILL_DAYS)).isoformat()
@@ -151,13 +173,18 @@ def backfill_prices(tickers: list[str], key: str, get: Callable[..., Any], today
             hist[(tk, b["date"])] = float(b["close"])
         filled += 1
         last_bar = max(b["date"] for b in bars)
+        first_bar = min(b["date"] for b in bars)
+        if first_bar > (date.fromisoformat(start) + timedelta(days=SHORT_GAP_DAYS)).isoformat():
+            short[tk] = first_bar
+            LOG.info("가격 백필 · %s 첫 거래일 %s (12개월보다 짧은 기록 · 다시 받지 않음)", tk, first_bar)
         if last_bar < (today - timedelta(days=STALE_DAYS)).isoformat():
             skip[tk] = today.isoformat()
             LOG.info("가격 백필 · %s 마지막 거래일 %s · %d일 동안 백필 제외", tk, last_bar, SKIP_DAYS)
     save_usage(usage)
     save_history(hist, today)
     _skip_path().write_text(json.dumps(skip, ensure_ascii=False))
-    remaining = len([t for t in needs_backfill(hist, tickers, today) if t not in skip])
+    _short_path().write_text(json.dumps(short, ensure_ascii=False))
+    remaining = len([t for t in needs_backfill(hist, tickers, today, short) if t not in skip])
     LOG.info("가격 백필 · Tiingo 일봉 요청 %d · 채운 종목 %d · 남은 종목 %d%s", requests, filled, remaining,
              " · 백필 완료" if remaining == 0 else "")
     return {"requests": requests, "filled": filled, "remaining": remaining, "blocked": blocked}
@@ -223,6 +250,7 @@ class _ByteCountingClient:
 
 def weekly_shares(cands: dict[str, str], get: Callable[[str], dict], today: date) -> dict:
     out: dict[str, dict] = {}
+    finance: dict[str, dict] = {}       # P3a ③ · 같은 companyfacts 응답에서 재무 값 추출 (추가 요청 0)
     requests, blocked = 0, None
     for tk, cik in sorted(cands.items()):
         if not cik:
@@ -238,6 +266,7 @@ def weekly_shares(cands: dict[str, str], get: Callable[[str], dict], today: date
             break
         if r.get("status") != 200 or not r.get("json"):
             continue
+        finance[tk] = {"cik": cik, **extract_finance(r["json"])}
         hit = dei_shares(r["json"], today.isoformat())
         if hit:
             if hit["n_values"] > 1:
@@ -246,7 +275,7 @@ def weekly_shares(cands: dict[str, str], get: Callable[[str], dict], today: date
                        "n_values": hit["n_values"]}
     if blocked:
         LOG.error("%s · SEC 주식수 조회 즉시 중단", blocked)
-    return {"date": today.isoformat(), "requests": requests, "blocked": blocked, "shares": out}
+    return {"date": today.isoformat(), "requests": requests, "blocked": blocked, "shares": out, "_finance": finance}
 
 
 # ── 가격 (일일) ──────────────────────────────────────────────────────
@@ -391,6 +420,8 @@ def run(mode: str, get_tiingo: Callable[..., Any] | None = None, get_sec: Callab
             res = weekly_shares(cands, counted, today)
         finally:
             _record_sec(sent["n"], today, ledger)
+        fin_path = save_finance(res.pop("_finance"), today)   # P3a ③ · <RUNTIME>/finance/companyfacts_<날짜>.json
+        LOG.info("재무 값 저장 · %s · 종목 %d (추가 SEC 요청 0)", fin_path.name, len(json.loads(fin_path.read_text())["rows"]))
         res["elapsed_sec"] = round(time.time() - t0, 1)
         res["bytes_received"] = counter.bytes if counter else None
         (mdir / f"shares_{today:%Y%m%d}.json").write_text(json.dumps(res, ensure_ascii=False, indent=1))

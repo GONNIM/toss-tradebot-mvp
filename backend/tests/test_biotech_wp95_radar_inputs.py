@@ -28,14 +28,14 @@ def _rt(tmp_path, monkeypatch):
 
 def test_history_accumulates_and_keeps_100_days(tmp_path, monkeypatch):
     _rt(tmp_path, monkeypatch)
-    old = (TODAY - timedelta(days=101)).isoformat()
+    old = (TODAY - timedelta(days=mc.HISTORY_KEEP_DAYS + 1)).isoformat()   # P3a · 보관 400일로 변경 · 상수 기준
     mc.save_history({("AAA", old): 1.0, ("AAA", "2026-09-30"): 2.0}, TODAY)
     rows = [{"ticker": "AAA", "tngoLast": 3.0, "timestamp": "2026-10-01T20:00:00+00:00"},
             {"ticker": "XBI", "tngoLast": 90.0, "timestamp": "2026-10-01T20:00:00+00:00"}]
     res = mc.daily_prices(["AAA"], KEY, lambda *a, **k: _R(200, rows), TODAY,
                           now=lambda: datetime(2026, 10, 2, 7, 1, tzinfo=KST))
     h = mc.load_history()
-    assert h == {("AAA", "2026-09-30"): 2.0, ("AAA", "2026-10-01"): 3.0, ("XBI", "2026-10-01"): 90.0}   # 101일 전 행 삭제
+    assert h == {("AAA", "2026-09-30"): 2.0, ("AAA", "2026-10-01"): 3.0, ("XBI", "2026-10-01"): 90.0}   # 보관 기간 지난 행 삭제
     assert res["history_added"] == 2
 
 
