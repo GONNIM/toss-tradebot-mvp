@@ -53,6 +53,10 @@
 - 보고: 번들 `docs/plans/biotech/fable-bundles/20261007_P3a3.zip` (⑤ 끝난 뒤 하나로) · SHA-256 · 커밋 · 테스트 · SEC 합계 · ⑤ 인용 · 네 절
 - 금지: 화면 코드 · FR-6c 설계 · 검색어 사전 · 표지 문구 확장 · 서버 실행 · 로컬 Tiingo · 새 PR (docs PR 제외) · WP39 명부·코드 수정
 
+**추가 지시 (2026-10-05 16시대 · Fable)**: ⓪ 424B5 백필 월 · 화 금지 삭제 → 실행 직전 서버 장부 (ssh 조회 전용 · 없으면 0) + 로컬 장부 + 예정 ≤ 300 · 하나라도 못 읽으면 중단 · ⑦ 기준일 불일치 메모는 15개월 창 안 0 이 아닌 값만 (KOD → 항목 없음) · ⑤ 오늘 실행 · 번들 `docs/plans/biotech/fable-bundles/20261005_P3a3.zip`
+
+**진행 (2026-10-05 17시대 · 번들 10-06)**: ⓪ 8a6b5ae · ⑦ 55bf175 · ⑤(b) 090739e (80건 · 확인 16건 15종목 · 미확인 64건) · ⑤(c) 10-Q 5건 (KYMR · EDIT · ABCL 일치 · FULC 상한 일치 · CRBU +1,486,000 = 반올림 총액 태그) · SEC 서버 144 + 로컬 85 = 229 · 403 · 429 없음 · pytest 574 passed · PR #84 미병합 · 번들 `docs/plans/biotech/fable-bundles/20261005_P3a3.zip` (SHA-256 8e994a62…382bcb) · Fable 판정 대기
+
 **진행 (2026-10-05 15시대)**: ①~④ PR #85 커밋 (dbd874b · 65131b9 · fdcd196 · 17d47c0 · 푸시) · biotech pytest 572 passed · 4 skipped · 모의 2일차 제외 9종목 유지 ((나) 단독 · (가) 단독 둘 다) · 월 고유 154 → 161 (P3a-2 ⑤ 새 후보 7 · (나) 추가 0) · 이상 1 = KOD 투자자산 메모 "기준일 불일치" 유지 (MarketableSecurities 2025-12-31 값 0 이 15개월 창 안 · 규칙 그대로 · 수정 안 함) · SEC 0 · Tiingo 0 · PR #84 미병합 (기준 브랜치 변경 안 함) · ⑤ 2026-10-07 (수) 대기 · 번들 원본 `docs/plans/biotech/fable-bundles/20261007_P3a3_src/`
 
 ---
