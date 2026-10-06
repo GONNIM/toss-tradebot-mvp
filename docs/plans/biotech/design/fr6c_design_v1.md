@@ -195,7 +195,7 @@ AACT 사본: 서버 `ctgov_snapshot.json` (aact_snapshot_date 2026-10-04 · 2026
 - 파일: `docs/plans/biotech/design/fr6c_retro_sample_v1.csv` (68행).
 - 열: accession · cik · ticker · accept_et · direction · direction_source · session · base_date · reaction_date · stage · stage_src · aact_nct · aact_phase · aact_pcd · aact_snapshot_date · price_base · price_reaction · xbi_base · xbi_reaction.
 - 가격 네 칸은 비어 있다 (10절 3).
-- 단계 귀속 다섯 칸 (stage ~ aact_snapshot_date) 은 6절의 "봉인 시점 사본으로 계산한 귀속 결과를 표본 목록에 적는다" 에 따라 넣었다.
+- 단계 귀속 여섯 칸 (stage · stage_src · aact_nct · aact_phase · aact_pcd · aact_snapshot_date) 은 6절의 "봉인 시점 사본으로 계산한 귀속 결과를 표본 목록에 적는다" 에 따라 넣었다.
 - SHA-256 은 이 파일과 함께 제출하는 보고의 첫머리에 적는다 (파일 안에 자기 해시를 적을 수 없기 때문).
 
 ## 부록 D · 가격 출처 대조 (봉인 전)
