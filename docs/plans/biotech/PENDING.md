@@ -41,6 +41,17 @@
 
 ## PENDING
 
+### [Biotech Catalyst Radar · P3a-5 (PR #85 마지막 커밋 · PRD v0.9 15절 · 일일 시총 가격 대상 ∪ 제외 기록 · 외부 요청 0)] · 2026-10-06 발행
+
+- Fable 판정: P3a-4 통과 · 이상 1 가설 맞음 · ATRA · FATE 원문 확인 안 함
+- ① 가격 대상에 over_5b_excluded.json 종목 (장부 조건 없음 · 최근 후보 쪽 장부 조건 유지 · IEX 1건 · 월 고유 최대 +9)
+- ② 테스트 (a) 장부 없어도 포함 · (b) 60일 뒤 모의 복귀 0 · (c) 월 첫날 빈 장부 +9 · ③ #84 병합 시 #85 기준 main
+- 보고: 번들 `docs/plans/biotech/fable-bundles/20261006_P3a5.zip`
+
+**진행 (2026-10-06)**: acb0f31 (푸시) · pytest 585 passed · 61일 모의 복귀 0 (고치기 전 동작 대조는 11/5 복귀) · 11/1 월 고유 +9 · 10월 +0 (9종목 이미 장부) · PR #84 미병합 · Fable 판정 대기
+
+---
+
 ### [Biotech Catalyst Radar · P3a-4 (PR #85 보강 커밋 · PRD v0.8 14절 · 사다리 순서 · 주식수 단계 · 외부 요청 0)] · 2026-10-06 발행
 
 - PRD: `/Users/gonnim/Downloads/biotech-prd-price-outlook-20261004.md` (v0.8 · P3a-3 판정 반영) · FR-5 사다리 · 6절 (다) · 14절
