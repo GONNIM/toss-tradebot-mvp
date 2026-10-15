@@ -834,6 +834,60 @@ async def get_fr6c(_admin: str = Depends(require_sniper_token)) -> Fr6cCells:
     return Fr6cCells(ready=False)
 
 
+class Fr6cReadouts(BaseModel):
+    """P4-4 · 새 8-K 확인 카드 (FR-6b) · 최근 30일 · 후보 방향 (WP39 규칙 · 자동) + 사용자 확정 상태."""
+    rows: list[dict] = []
+
+
+class Fr6cConfirmIn(BaseModel):
+    accession: str
+    clinical: bool
+    direction: str | None = None
+
+
+def _fr6c_runtime() -> Path | None:
+    for base in _search_dirs("fr6c"):
+        if base.name == "fr6c" and base.exists():
+            return base
+    return None
+
+
+@router.get("/fr6c/readouts", response_model=Fr6cReadouts)
+async def get_fr6c_readouts(_admin: str = Depends(require_sniper_token)) -> Fr6cReadouts:
+    """P4-4 · readout_text.json (8-K 본문 단계) + decisions.json (사용자 확정) · 접수 시각 늦은 순 · 최근 30일."""
+    base = _fr6c_runtime()
+    if base is None or not (base / "readout_text.json").exists():
+        return Fr6cReadouts(rows=[])
+    rows = json.loads((base / "readout_text.json").read_text()).get("rows", {})
+    dec = json.loads((base / "decisions.json").read_text()).get("rows", {}) if (base / "decisions.json").exists() else {}
+    lo = (datetime.now(timezone.utc) - timedelta(days=30)).date().isoformat()
+    out = [{"accession": a, **{k: r.get(k) for k in ("ticker", "cik", "accept_et", "items", "status", "candidate_direction",
+                                                      "keywords", "quote", "has_ex99")},
+            "sec_url": f"https://www.sec.gov/Archives/edgar/data/{int(r.get('cik') or 0)}/{a.replace('-', '')}/",
+            "decision": dec.get(a)}
+           for a, r in rows.items() if (r.get("accept_et") or "")[:10] >= lo]
+    return Fr6cReadouts(rows=sorted(out, key=lambda r: r.get("accept_et") or "", reverse=True))
+
+
+@router.post("/fr6c/confirm")
+async def post_fr6c_confirm(body: Fr6cConfirmIn, _admin: str = Depends(require_sniper_token)) -> dict:
+    """P4-4 · FR-6b 카드 "임상 발표 확정" + 방향 · 한 번만 · 임상 발표면 전향 표본 파일에 한 행 (설계 2.2절 37행)."""
+    from backend.scripts import biotech_fr6c as _f6   # 지연 import · 라우터 로드에 영향 없음
+    base = _fr6c_runtime()
+    store = json.loads((base / "readout_text.json").read_text()).get("rows", {}) if base and (base / "readout_text.json").exists() else {}
+    readout = store.get(body.accession)
+    if not readout:
+        raise HTTPException(status_code=404, detail="8-K 본문 단계 기록에 없는 접수번호")
+    snap_p = next((b / "ctgov_snapshot.json" for b in _search_dirs("") if (b / "ctgov_snapshot.json").exists()), None)
+    snapshot = json.loads(snap_p.read_text()) if snap_p else {}
+    try:
+        dec = _f6.confirm(body.accession, body.clinical, body.direction, readout, snapshot)
+    except ValueError as e:
+        code = 409 if "이미" in str(e) else 400
+        raise HTTPException(status_code=code, detail=str(e))
+    return {"accession": body.accession, **dec}
+
+
 @router.get("/kpi.json", response_model=BiotechKpi)
 async def get_kpi(_admin: str = Depends(require_sniper_token)) -> BiotechKpi:
     """KPI 4칸 · 총후보·뉴스예정A·임원매수20d·급등경보."""

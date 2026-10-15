@@ -35,6 +35,7 @@ from zoneinfo import ZoneInfo
 
 from backend.scripts import _biotech_paths as _P
 from backend.scripts import biotech_atm_cover as _atm
+from backend.scripts import biotech_readout_text as _readout
 from backend.scripts.biotech_sec_common import (SEC_DAILY_CAP, SecBlockedError, SecDailyLedger, build_client, sec_get,
                                                sec_get_text)
 
@@ -205,6 +206,8 @@ def run_submissions(today: date | None = None, get: Callable[[str], dict] | None
                             **derive(rows, today, older)}
         # ③ 새 424B5 표지 1건씩 판정 (최근 7일 · 하루 10) · 403 · 429 로 멈췄으면 더 보내지 않음
         atm = _atm.judge_new(derived, today, None if blocked else get_text, ledger)
+        # P4-4 · 새 8-K 본문 1건씩 (하루 10 · 장부 readout_text · 최신 우선 · 30일 지나면 본문 미수신) · 멈췄으면 보내지 않음
+        readout = _readout.run_daily(raw, today, None if (blocked or atm.get("blocked")) else get_text, ledger, to_et)
     finally:
         if client is not None:
             client.close()
@@ -214,7 +217,7 @@ def run_submissions(today: date | None = None, get: Callable[[str], dict] | None
         LOG.warning("submissions · 하루 SEC 상한 %d 도달 · %d 종목 건너뜀", SEC_DAILY_CAP, capped)
     fdir = _P.out_dir("filings")
     meta = {"date": today.isoformat(), "requests": sent, "blocked": blocked, "capped": capped, "companies": len(derived),
-            "atm_cover": atm}
+            "atm_cover": atm, "readout_text": readout}
     (fdir / f"submissions_{today:%Y%m%d}.json").write_text(json.dumps({**meta, "companies_raw": raw}, ensure_ascii=False))
     (fdir / f"filings_derived_{today:%Y%m%d}.json").write_text(
         json.dumps({**meta, "rows": derived}, ensure_ascii=False, indent=1))
