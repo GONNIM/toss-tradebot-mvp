@@ -137,6 +137,7 @@ $VENV -m backend.scripts.biotech_h57b_status_gen || { _notify_failure "status_ge
 
 # 11. P4 · FR-6c 봉인 설계 (요청 0 · 실패해도 파이프 계속)
 #     P4-1 · 봉인 표본 가격 고정 · <RUNTIME>/fr6c/retro_prices_v1.csv 가 없을 때 한 번만 쓴다 (봉인 해시 · 반응일 재계산 불일치면 멈춤)
+#     P4-2 · 칸 판정 · 매월 1일 KST 재판정 · 다른 날 "건너뜀" · 그 달 cells_<YYYYMM>.json 이 없으면 한 번 계산 (첫 판정)
 echo "[11/11] fr6c (skip 허용)"
 $VENV -m backend.scripts.biotech_fr6c || echo "  FR-6c skip (봉인 확인 실패 등 · 로그 확인)"
 
