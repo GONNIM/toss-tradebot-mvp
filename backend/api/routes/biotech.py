@@ -809,6 +809,31 @@ class BiotechKpi(BaseModel):
     inputs_missing: list[str] = []  # WP94 · 레이더 점수 입력 부족 (radar CSV 기록 · 표시 전용)
 
 
+class Fr6cCells(BaseModel):
+    """P4-3 · FR-6c 과거 기록 표 (월 칸 판정 결과 cells_<YYYYMM>.json 그대로 · 잔여 칸은 화면에서 비표시)."""
+    ready: bool
+    file: str | None = None
+    asof: str | None = None
+    window: dict = {}
+    events_in_window: int = 0
+    missing_price: int = 0
+    cells: list[dict] = []
+    display_rows: list[str] = []
+
+
+@router.get("/fr6c.json", response_model=Fr6cCells)
+async def get_fr6c(_admin: str = Depends(require_sniper_token)) -> Fr6cCells:
+    """P4-3 · 가장 최근 달의 칸 판정 파일 · 없으면 ready=False (화면은 "과거 기록 준비 중")."""
+    for base in _search_dirs("fr6c"):
+        files = sorted(base.glob("cells_[0-9][0-9][0-9][0-9][0-9][0-9].json")) if base.exists() else []
+        if files:
+            d = json.loads(files[-1].read_text())
+            return Fr6cCells(ready=True, file=files[-1].name, asof=d.get("asof"), window=d.get("window") or {},
+                             events_in_window=d.get("events_in_window", 0), missing_price=d.get("missing_price", 0),
+                             cells=d.get("cells") or [], display_rows=d.get("display_rows") or [])
+    return Fr6cCells(ready=False)
+
+
 @router.get("/kpi.json", response_model=BiotechKpi)
 async def get_kpi(_admin: str = Depends(require_sniper_token)) -> BiotechKpi:
     """KPI 4칸 · 총후보·뉴스예정A·임원매수20d·급등경보."""
