@@ -152,6 +152,26 @@ grep -l "push:\|workflow_dispatch:" .github/workflows/*.yml  # 트리거 파악
 
 ---
 
+## 에이전트 운용
+
+작업은 po가 받아 아래 표대로 나눕니다. 되돌리기 어려운 동작은 사용자 승인 후에 실행합니다.
+역할·공용 규칙·두 프로필(thetak·naver) 운용은 `.claude/PROJECT_PROFILE.md` 를 먼저 읽습니다.
+
+| 이런 일 | 맡는 역할 | 완료 확인 |
+|---|---|---|
+| 단계 계획 | po (planner 겸임) | `docs/plans/<주제>/` 문서 (승인 후 저장) |
+| 서버·API·마이그레이션 | backend | 단위 테스트 통과 |
+| 화면 | frontend | `tsc --noEmit` + 브라우저 렌더 확인 |
+| 검증 | tester | 수용 기준 대응표 |
+| 리뷰 | reviewer | 지적 목록 |
+
+## 축적된 규칙
+<!-- po가 작업을 마칠 때마다 1~3줄 추가합니다. 형식: - (YYYY-MM-DD) 규칙 — 이유 -->
+- (2026-10-21) 이 프로젝트는 thetak·naver 두 프로필에서 공용으로 연다. 오래 지킬 규칙은 메모리가 아니라 이 절이나 `.claude/PROJECT_PROFILE.md` 에 남긴다 — 메모리는 프로필마다 따로 쌓여 갈라진다.
+- (2026-10-21) 전체 pytest 는 기존 실패 21건이 있어 커밋 hook 에 걸지 않는다. hook 은 biotech 묶음·compileall·tsc 만 — 실패하는 검사를 걸면 모든 커밋이 막힌다.
+
+---
+
 ## 자매 프로젝트 참조
 
 `upbit-tradebot-mvp` (`/Users/gonnim/Project-MVP/Source/upbit-tradebot-mvp`) 의
@@ -169,5 +189,5 @@ grep -l "push:\|workflow_dispatch:" .github/workflows/*.yml  # 트리거 파악
 
 ---
 
-**마지막 업데이트**: 2026-07-08
-**버전**: 0.2 (배포 규칙 — 자동화 선확인 조항 추가)
+**마지막 업데이트**: 2026-10-21
+**버전**: 0.3 (에이전트 운용 · 축적된 규칙 절 추가 — 두 프로필 공용)
