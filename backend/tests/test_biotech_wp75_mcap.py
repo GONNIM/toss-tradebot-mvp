@@ -105,3 +105,13 @@ def test_dei_multiple_classes_summed_but_not_across_filings():
     ]}}}}}
     hit = mc.dei_shares(facts, "2026-10-05")
     assert hit["shares"] == 140 and hit["n_values"] == 2 and hit["accn"] == "Q2" and hit["asof"] == "2026-08-01"
+
+
+def test_latest_json_ignores_shares_history(tmp_path, monkeypatch):
+    """P4-0 의 shares_history.json 이 이름순으로 날짜 파일 뒤에 와도 날짜 파일을 고른다 (시총 배지 0 회귀)."""
+    d = tmp_path / "mcap"
+    d.mkdir()
+    (d / "shares_20261012.json").write_text(json.dumps({"shares": {"AAA": {"shares": 1}}}))
+    (d / "shares_history.json").write_text(json.dumps({"updated": "2026-10-20", "rows": {}}))
+    monkeypatch.setattr(mc, "_root", lambda: tmp_path)
+    assert mc._latest_json("shares") == {"shares": {"AAA": {"shares": 1}}}

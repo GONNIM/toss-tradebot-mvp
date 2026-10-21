@@ -576,7 +576,7 @@ def build_display(shares: dict, prices: dict) -> dict:
 
 
 def _latest_json(prefix: str) -> dict:
-    hits = sorted((_root() / "mcap").glob(f"{prefix}_*.json"))
+    hits = sorted((_root() / "mcap").glob(f"{prefix}_[0-9]*.json"))
     return json.loads(hits[-1].read_text()) if hits else {}
 
 
