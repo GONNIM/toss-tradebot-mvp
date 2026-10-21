@@ -19,6 +19,12 @@ NEG = "<TYPE>EX-99.1\nTopline data: the trial did not meet its primary endpoint.
 TODAY = date(2026, 10, 20)
 
 
+@pytest.fixture(autouse=True)
+def _fixed_start(monkeypatch):
+    # 픽스처 날짜는 시작일 2026-10-15 기준 · 운영 START_ET 는 배포일로 바뀐다 (Fable 2026-10-21 답 3)
+    monkeypatch.setattr(rt, "START_ET", "2026-10-15")
+
+
 class Ledger:
     def __init__(self, start=0):
         self.counts = {"other": start}
