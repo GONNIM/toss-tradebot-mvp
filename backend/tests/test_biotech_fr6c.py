@@ -109,6 +109,15 @@ def test_written_once_never_rewritten(tmp_path, monkeypatch):
     assert again == {"status": "fixed", "sha256": first}
 
 
+def test_meta_exists_csv_deleted_stops_and_not_recreated(tmp_path, monkeypatch):
+    _setup(tmp_path, monkeypatch)
+    f6.run(date(2026, 10, 16))
+    f6.out_path().unlink()
+    res = f6.run(date(2026, 10, 17))["prices"]
+    assert res["status"] == "stopped" and "다시 만들지 않음" in res["reason"]
+    assert not f6.out_path().exists()
+
+
 @pytest.mark.parametrize("missing_xbi", [True, False])
 def test_xbi_gap_counts_as_missing(tmp_path, monkeypatch, missing_xbi):
     hist = {("AAA", "2025-10-08"): 1.0, ("AAA", "2025-10-09"): 2.0, ("XBI", "2025-10-08"): 3.0}

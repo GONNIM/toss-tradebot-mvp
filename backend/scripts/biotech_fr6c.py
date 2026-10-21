@@ -155,6 +155,8 @@ def fix_prices(today: date | None = None) -> dict:
         h = sha256_bytes(out.read_bytes())
         LOG.info("FR-6c 가격 고정됨 · %s · SHA-256 %s · 다시 쓰지 않음", out.name, h)
         return {"status": "fixed", "sha256": h}
+    if meta_path().exists():   # meta 는 있는데 csv 가 없음 · 지워진 봉인 파일을 다시 만들지 않음
+        raise SealError(f"{meta_path().name} 있는데 {out.name} 없음 · 다시 만들지 않음")
     rows = sealed_sample()
     read_sealed(FR6C_DESIGN, FR6C_DESIGN_SHA256, "봉인 설계 파일")
     check_reaction_days(rows)

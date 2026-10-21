@@ -142,8 +142,8 @@ $VENV -m backend.scripts.biotech_fr6c || echo "  FR-6c skip (봉인 확인 실�
 
 # 90일 넘은 로그 정리
 find "$BIOTECH_RUNTIME_DIR/logs" -name '*.log' -mtime +90 -delete 2>/dev/null || true
-# 365일 넘은 산출 CSV 정리
-find "$BIOTECH_RUNTIME_DIR" -maxdepth 3 -name '*.csv' -mtime +365 -delete 2>/dev/null || true
+# 365일 넘은 산출 CSV 정리 (fr6c/ 봉인 산출물은 제외)
+find "$BIOTECH_RUNTIME_DIR" -maxdepth 3 -name '*.csv' -not -path "$BIOTECH_RUNTIME_DIR/fr6c/*" -mtime +365 -delete 2>/dev/null || true
 
 FINISHED=$(date -u +%Y-%m-%dT%H:%M:%SZ)
 echo "=== $FINISHED biotech daily done ==="
