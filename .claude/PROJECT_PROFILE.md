@@ -23,6 +23,7 @@
 | frontend | sonnet | (tools 줄 없음 · 세션 도구 전체 상속) | Next.js 구현 · chrome-devtools 렌더 확인. 상속 이유 동일 |
 | tester | sonnet | Read, Grep, Glob, Bash, Edit, Write | 테스트 작성·실행 · 수정은 테스트 파일만 |
 | reviewer | opus | Read, Grep, Glob, Bash | 지적만 |
+| fable | fable | Read, Grep, Glob, Bash | biotech 설계·봉인·PR 검수자. GO·조건부 GO·NO-GO 판정과 "병합 승인됨 · PR #번호" 발행. 배포 실행은 하지 않음 (2026-10-21 추가) |
 
 미배치: planner(po 겸임), db-migrator(backend 겸임), devops(배포 자동화가 이미 있음), security-auditor(실주문 인증 변경 시 일회성으로 검토 요청).
 

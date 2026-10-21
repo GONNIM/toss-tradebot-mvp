@@ -164,6 +164,7 @@ grep -l "push:\|workflow_dispatch:" .github/workflows/*.yml  # 트리거 파악
 | 화면 | frontend | `tsc --noEmit` + 브라우저 렌더 확인 |
 | 검증 | tester | 수용 기준 대응표 |
 | 리뷰 | reviewer | 지적 목록 |
+| biotech 판정·봉인·병합 승인 | fable | 판정 표 + "병합 승인됨 · PR #번호" |
 
 ## 축적된 규칙
 <!-- po가 작업을 마칠 때마다 1~3줄 추가합니다. 형식: - (YYYY-MM-DD) 규칙 — 이유 -->
