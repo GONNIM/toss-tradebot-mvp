@@ -42,11 +42,11 @@ async def _clean_db():
     yield
 
 
-def _mk(account_id, account_nm, sj_div, amount, fs_div="CFS"):
+def _mk(account_id, account_nm, sj_div, amount, fs_div="CFS", thstrm_add_amount=None):
     return DartFinancialItem(
         account_id=account_id, account_nm=account_nm,
         sj_div=sj_div, fs_div=fs_div, fs_nm="연결재무제표",
-        thstrm_amount=amount, frmtrm_amount=None, ord=1,
+        thstrm_amount=amount, thstrm_add_amount=thstrm_add_amount, frmtrm_amount=None, ord=1,
     )
 
 

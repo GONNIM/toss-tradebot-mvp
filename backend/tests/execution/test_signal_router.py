@@ -5,7 +5,9 @@ import os
 from datetime import datetime, timezone
 
 import pytest
+import pytest_asyncio
 
+from backend.tests.execution.conftest import cleanup_principles, seed_principles_pass
 from backend.execution.audit import list_recent_audits
 from backend.execution.risk_budget import RiskBudgetChecker
 from backend.execution.signal_router import SignalEvent, SignalRouter
@@ -13,6 +15,14 @@ from backend.execution.models import BrokerKind, OrderStatus
 
 
 TICKER = "005930"
+
+
+@pytest_asyncio.fixture(autouse=True)
+async def _principles_pass(db_ready):
+    """meme_stock 소스는 원칙 관문(principles_gate)을 거치므로 테스트 DB 에 PASS 행을 시딩."""
+    run_id = await seed_principles_pass(TICKER)
+    yield
+    await cleanup_principles(run_id)
 
 
 @pytest.fixture(autouse=True)
@@ -83,3 +93,19 @@ async def test_router_records_insufficient_as_rejected(paper, kill_switch, db_re
     assert result is not None
     assert result.status == OrderStatus.REJECTED
     assert result.error_code == "insufficient-cash"
+
+
+async def test_router_rejects_ticker_not_in_principles_pass(paper, kill_switch, db_ready):
+    """meme_stock 소스라도 원칙 PASS 목록에 없는 종목은 관문에서 거절."""
+    r = SignalRouter(paper, kill_switch=kill_switch)
+    result = await r.route(
+        SignalEvent(ticker="WEN", action="buy", strength=80, source="meme_stock", signal_id="gate-1")
+    )
+    assert result is not None
+    assert result.status == OrderStatus.REJECTED
+    assert result.error_code == "principles-principles_fail_closed"
+    rows = await list_recent_audits(ticker="WEN", limit=5)
+    assert any(
+        row.signal_id == "gate-1" and row.error_code == "principles-principles_fail_closed"
+        for row in rows
+    )
