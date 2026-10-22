@@ -59,7 +59,7 @@ jobs:
           echo "PR #$PR · merge $SHA · deploy.yml 실행 수=$n"
 
       - uses: actions/checkout@v4
-        if: steps.check.outputs.runs == '0'
+        if: steps.scope.outputs.deployable == '1' && steps.check.outputs.runs == '0'
         with:
           ref: main
           sparse-checkout: |
@@ -68,7 +68,7 @@ jobs:
           sparse-checkout-cone-mode: false
 
       - name: 텔레그램 warning 1회 (배포 미시작)
-        if: steps.check.outputs.runs == '0'
+        if: steps.scope.outputs.deployable == '1' && steps.check.outputs.runs == '0'
         run: |
           set -e
           sudo curl -sSfL "https://github.com/getsops/sops/releases/download/v3.13.2/sops-v3.13.2.linux.amd64" -o /usr/local/bin/sops
