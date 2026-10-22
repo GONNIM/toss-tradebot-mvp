@@ -77,3 +77,47 @@ export function fr6cHeader(d: Fr6cCells): string {
   const w = d.window ?? {};
   return `집계 기준일 ${d.asof ?? "-"} · 표시 창 최근 ${w.months ?? 24}개월(${w.from ?? "-"} ~ ${w.to ?? "-"}) · 창 안 발표 ${d.events_in_window ?? 0}건 · 가격 없음 ${d.missing_price ?? 0}건`;
 }
+
+// ─── P4-4 · 새 8-K 확인 카드 (PRD FR-6b · 확정은 사용자 · 후보 방향은 WP39 규칙 자동 태그) ───
+
+export const READOUT_PENDING_TITLE = "8-K 제출 감지 · 임상 발표 여부 미확정";
+export const READOUT_NOTE = "후보 방향은 사전 등록 검색어 규칙으로 붙인 자동 표시입니다. 임상 발표 여부와 방향은 원문을 읽고 직접 확정합니다.";
+
+export type ReadoutRow = {
+  accession: string;
+  ticker?: string;
+  cik?: string;
+  accept_et?: string;
+  items?: string;
+  status?: string;
+  candidate_direction?: string;
+  keywords?: string[];
+  quote?: string | null;
+  has_ex99?: boolean;
+  sec_url?: string;
+  decision?: { clinical: boolean; direction?: string | null; decided_at?: string; stage?: string } | null;
+};
+
+export const DIRECTION_KO: Record<string, string> = { positive: "긍정", mixed: "혼재", negative: "부정" };
+
+export function candidateLabel(c: string | undefined): string {
+  if (!c) return "후보 방향 없음";
+  if (c === "unclassified") return "후보 방향: 미분류";
+  if (DIRECTION_KO[c]) return `후보 방향: ${DIRECTION_KO[c]}`;
+  return `후보 방향: ${c}`;   // 항목 대상 아님 · 검색어 없음
+}
+
+export function readoutTitle(r: ReadoutRow): string {
+  const d = r.decision;
+  if (!d) return READOUT_PENDING_TITLE;
+  if (!d.clinical) return "8-K 제출 감지 · 임상 발표 아님(확정)";
+  return `임상 발표 확정 · ${DIRECTION_KO[d.direction ?? ""] ?? "-"}${d.stage ? ` · ${d.stage}` : ""}`;
+}
+
+export function readoutStatusLine(r: ReadoutRow): string {
+  const parts = [`접수 ${r.accept_et ?? "-"} (미국 동부)`, `항목 ${r.items || "-"}`];
+  if (r.status === "본문 미수신") parts.push("본문 미수신(30일 경과)");
+  else if (r.status === "오류") parts.push("본문 받기 실패 · 다음 실행에서 다시 시도");
+  else parts.push(r.has_ex99 ? "보도자료(EX-99) 있음" : "보도자료(EX-99) 없음");
+  return parts.join(" · ");
+}

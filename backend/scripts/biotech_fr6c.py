@@ -297,6 +297,87 @@ def build_cells(events: list[dict], asof: date) -> dict:
             "cells": cells, "display_rows": [c["label"] for c in cells if c["status"] == "표시"]}
 
 
+# ─── P4-4 · 전향 표본 (사용자 확정 · 설계 2.2절 · 6절 단계 귀속 · 봉인 때 c2_seal2.py attribute() 와 같은 규칙) ───
+
+PROSPECTIVE_COLS = ("accession", "cik", "ticker", "accept_et", "direction", "direction_source", "session", "base_date",
+                    "reaction_date", "stage", "stage_src", "aact_nct", "aact_phase", "aact_pcd", "aact_snapshot_date",
+                    "items", "candidate_direction", "confirmed_at")
+USER_SOURCE = "사용자 확정"
+PHASE_RANK = {"EARLY_PHASE1": (0.5, "초기 1상"), "PHASE1": (1, "1상"), "PHASE1/PHASE2": (2, "2상"),
+              "PHASE2": (2, "2상"), "PHASE2/PHASE3": (3, "3상"), "PHASE3": (3, "3상"), "PHASE4": (4, "4상")}
+
+
+def prospective_path() -> Path:
+    return _P.out_dir("fr6c") / "prospective_v1.csv"
+
+
+def decisions_path() -> Path:
+    return _P.out_dir("fr6c") / "decisions.json"
+
+
+def load_decisions() -> dict[str, dict]:
+    p = decisions_path()
+    return json.loads(p.read_text()).get("rows", {}) if p.exists() else {}
+
+
+def attribute_stage(ticker: str, announce: str, keywords: list[str], snapshot: dict) -> dict:
+    """설계 6절 · 1순위 AACT lead 시험 중 1차 완료일이 발표일 −240 ~ +30일 · 가장 높은 단계 (phase 빈칸 · NA 제외)
+    · 2순위 WP39 검색어 문구 (phase 3 → 3상 · phase 2 → 2상) · 둘 다 없으면 단계 미확인."""
+    d = date.fromisoformat(announce[:10])
+    hits = [s for s in snapshot.get("matches") or [] if s.get("ticker") == ticker and s.get("role") == "lead"
+            and s.get("phase") in PHASE_RANK and s.get("primary_completion_date")
+            and d - timedelta(days=240) <= date.fromisoformat(s["primary_completion_date"][:10]) <= d + timedelta(days=30)]
+    snap_date = snapshot.get("aact_snapshot_date") or ""
+    if hits:
+        top = max(hits, key=lambda s: (PHASE_RANK[s["phase"]][0], s["primary_completion_date"], s["nct_id"]))
+        return {"stage": PHASE_RANK[top["phase"]][1], "stage_src": "AACT", "aact_nct": top["nct_id"],
+                "aact_phase": top["phase"], "aact_pcd": top["primary_completion_date"], "aact_snapshot_date": snap_date}
+    kw = "|".join(keywords)
+    stage = "3상" if "phase 3" in kw else "2상" if "phase 2" in kw else "단계 미확인"
+    return {"stage": stage, "stage_src": "문구" if stage != "단계 미확인" else "미확인", "aact_nct": "", "aact_phase": "",
+            "aact_pcd": "", "aact_snapshot_date": snap_date}
+
+
+def confirm(accession: str, clinical: bool, direction: str | None, readout: dict, snapshot: dict,
+            now: datetime | None = None) -> dict:
+    """FR-6b 카드 확정 · 한 번만 · 임상 발표면 전향 표본 파일에 한 행을 더한다 (덮어쓰지 않음)."""
+    now = now or datetime.now(timezone(timedelta(hours=9)))
+    decisions = load_decisions()
+    if accession in decisions:
+        raise ValueError("이미 확정한 8-K")
+    if clinical and direction not in DIR_KO:
+        raise ValueError("방향은 positive · mixed · negative 중 하나")
+    dec = {"clinical": clinical, "direction": direction if clinical else None, "decided_at": now.isoformat(timespec="seconds")}
+    if clinical:
+        re_ = reaction(readout["accept_et"])
+        row = {"accession": accession, "cik": readout["cik"], "ticker": readout["ticker"], "accept_et": readout["accept_et"],
+               "direction": direction, "direction_source": USER_SOURCE, "session": re_["session"],
+               "base_date": re_["base_date"], "reaction_date": re_["reaction_date"],
+               **attribute_stage(readout["ticker"], readout["accept_et"], readout.get("keywords") or [], snapshot),
+               "items": readout.get("items") or "", "candidate_direction": readout.get("candidate_direction") or "",
+               "confirmed_at": dec["decided_at"]}
+        p = prospective_path()
+        new = not p.exists()
+        with p.open("a", newline="") as f:
+            w = csv.DictWriter(f, fieldnames=PROSPECTIVE_COLS, lineterminator="\n")
+            if new:
+                w.writeheader()
+            w.writerow(row)
+        dec["stage"] = row["stage"]
+    decisions[accession] = dec
+    decisions_path().write_text(json.dumps({"rows": decisions}, ensure_ascii=False, indent=1))
+    return dec
+
+
+def load_prospective(hist: dict[tuple[str, str], float]) -> list[dict]:
+    """전향 표본 · 가격은 칸 계산 때 가격 기록에서 채운다 (고정 파일 아님)."""
+    p = prospective_path()
+    if not p.exists():
+        return []
+    rows = list(csv.DictReader(p.open()))
+    return fill_prices(rows, hist)[0] if rows else []
+
+
 def cells_path(asof: date) -> Path:
     return _P.out_dir("fr6c") / f"cells_{asof:%Y%m}.json"
 
@@ -316,12 +397,14 @@ def monthly_cells(today: date | None = None) -> dict:
     if today.day != 1 and p.exists():
         LOG.info("FR-6c 칸 판정 · 건너뜀 (매월 1일 재판정 · %s 있음)", p.name)
         return {"status": "skipped", "file": p.name}
-    events = [to_event(r, load_shares_history()) for r in load_retro()]
-    res = build_cells(events, today)
+    shares = load_shares_history()
+    retro = [to_event(r, shares) for r in load_retro()]
+    pro = [to_event(r, shares) for r in load_prospective(load_history())]
+    res = build_cells(retro + pro, today)
     res.update(reason="1일 재판정" if today.day == 1 else "첫 판정 (그 달 결과 없음)",
                inputs={"retro_prices_sha256": json.loads(meta_path().read_text())["sha256"],
                        "sample_sha256": FR6C_SAMPLE_SHA256, "design_sha256": FR6C_DESIGN_SHA256},
-               events={"retro": len(events), "prospective": 0})
+               events={"retro": len(retro), "prospective": len(pro)})
     p.write_text(json.dumps(res, ensure_ascii=False, indent=1))
     shown = {c["label"]: c["n"] for c in res["cells"] if c["status"] == "표시"}
     LOG.info("FR-6c 칸 판정 · %s · %s · 창 %s~%s · 사건 %d · 가격 없음 %d · 표시 %s", p.name, res["reason"],

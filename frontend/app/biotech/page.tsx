@@ -18,7 +18,8 @@ import { SectionCard } from "@/components/ui/section-card";
 import { BiotechTable, BiotechTableColumn } from "@/components/biotech/BiotechTable";
 import { RumorCard } from "@/components/biotech/RumorCard";
 import { Fr6cTable } from "@/components/biotech/Fr6cTable";
-import type { Fr6cCells } from "@/lib/biotech-fr6c";
+import { ReadoutCards } from "@/components/biotech/ReadoutCards";
+import type { Fr6cCells, ReadoutRow } from "@/lib/biotech-fr6c";
 import type { SessionInfo } from "@/lib/auth";
 import { alertCriteria, cardText, checkedAtLabel, conditionsLine, redditLine, ctgovUrl, exhibitLine, inputLabel, inputsMissingLine, groupForm4, insiderSummary, insiderTxLine, LEAD_LABEL, mcapBadge, mentionSentence, multSentence, refreshLabel, rumorReason, shortName, sortFilterCards, sortLabel, summaryStatus, tickerOrUnknown, trialSentence } from "@/lib/biotech-display";
 import type { CardSort, RedditStatus, Form4Tx, ThemeRank, TrialDisplay } from "@/lib/biotech-display";
@@ -297,6 +298,7 @@ export default function BiotechPage() {
   const [radar, setRadar] = useState<RadarJson | null>(null);
   const [rumor, setRumor] = useState<RumorJson | null>(null);
   const [fr6c, setFr6c] = useState<Fr6cCells | null>(null);   // P4-3 · 과거 기록 표
+  const [readouts, setReadouts] = useState<ReadoutRow[]>([]);  // P4-4 · 새 8-K 확인 카드
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   // WP74 4단계 · 상호작용 상태 (표시만)
@@ -310,6 +312,10 @@ export default function BiotechPage() {
   const [openRadar, setOpenRadar] = useState(false);
 
   const isAdmin = session?.role === "admin";
+
+  const loadReadouts = useCallback(() => {
+    apiFetch<{ rows: ReadoutRow[] }>("/fr6c/readouts").then((j) => setReadouts(j.rows)).catch(() => setReadouts([]));
+  }, []);
 
   const loadAdminData = useCallback(async () => {
     setLoading(true);
@@ -325,13 +331,14 @@ export default function BiotechPage() {
       setRumor(ru);
       // P4-3 · 과거 기록은 따로 받는다 (실패해도 다른 섹션은 그대로)
       apiFetch<Fr6cCells>("/fr6c.json").then(setFr6c).catch(() => setFr6c(null));
+      loadReadouts();
     } catch (e) {
       const err = e as Error & { status?: number };
       setError(`${err.message} (status=${err.status ?? "?"})`);
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [loadReadouts]);
 
   useEffect(() => {
     if (isAdmin) loadAdminData();
@@ -587,6 +594,15 @@ export default function BiotechPage() {
         <SectionCard tone="amber" icon="📰" label="뉴스 통과 (팔 자리)" count={t2.length} hint="B 상태 · 이미 발표 · 관망">
           <CompactList rows={t2} emptyLabel="B 상태 종목 없음" kind="news" />
         </SectionCard>
+      )}
+
+      {/* P4-4 · 새 8-K 확인 (FR-6b 사실 카드 · 임상 발표 확정 · 방향) */}
+      {isAdmin && (
+        <div id="sec-readouts">
+          <SectionCard tone="slate" icon="🧾" label="새 8-K 확인" count={readouts.filter((r) => !r.decision).length} hint="후보 회사 8-K · 확정 전 카드 수" collapsible defaultOpen={readouts.some((r) => !r.decision)}>
+            <ReadoutCards rows={readouts} onSaved={loadReadouts} />
+          </SectionCard>
+        </div>
       )}
 
       {/* P4-3 · 과거 기록 (FR-6c 봉인 설계 · 표시 행만 · 잔여 칸 비표시) */}

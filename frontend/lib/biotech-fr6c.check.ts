@@ -2,8 +2,8 @@
 import assert from "node:assert/strict";
 import * as fs from "node:fs";
 import * as path from "node:path";
-import { FR6C_NOTICE, FR6C_PENDING, FR6C_SURVIVOR, fr6cHeader, fr6cPct, fr6cRowText, fr6cRows, fr6cSourceLine } from "./biotech-fr6c";
-import type { Fr6cCell } from "./biotech-fr6c";
+import { FR6C_NOTICE, FR6C_PENDING, FR6C_SURVIVOR, candidateLabel, fr6cHeader, fr6cPct, fr6cRowText, fr6cRows, fr6cSourceLine, readoutStatusLine, readoutTitle } from "./biotech-fr6c";
+import type { Fr6cCell, ReadoutRow } from "./biotech-fr6c";
 
 // 봉인 설계 문구 그대로 (1절 14행 · 9절 123행)
 const design = fs.readFileSync(path.join(__dirname, "../../docs/plans/biotech/design/fr6c_design_v1.md"), "utf8");
@@ -40,4 +40,16 @@ for (const f of ["./biotech-fr6c.ts", "../components/biotech/Fr6cTable.tsx"]) {
   const src = fs.readFileSync(path.join(__dirname, f), "utf8");
   for (const w of FORBIDDEN) assert.ok(!src.includes(w), `${f} 금지어 "${w}"`);
 }
+// P4-4 · 새 8-K 확인 카드 · 확정 전 제목은 PRD FR-6b 문구 그대로
+const base: ReadoutRow = { accession: "0000000000-26-000001", accept_et: "2026-10-16T07:05:00", items: "7.01,9.01", status: "수신", has_ex99: true, candidate_direction: "positive" };
+assert.equal(readoutTitle(base), "8-K 제출 감지 · 임상 발표 여부 미확정");
+assert.equal(readoutTitle({ ...base, decision: { clinical: true, direction: "mixed", stage: "2상" } }), "임상 발표 확정 · 혼재 · 2상");
+assert.equal(readoutTitle({ ...base, decision: { clinical: false } }), "8-K 제출 감지 · 임상 발표 아님(확정)");
+assert.equal(candidateLabel("positive"), "후보 방향: 긍정");
+assert.equal(candidateLabel("unclassified"), "후보 방향: 미분류");
+assert.equal(candidateLabel("항목 대상 아님"), "후보 방향: 항목 대상 아님");
+assert.equal(readoutStatusLine(base), "접수 2026-10-16T07:05:00 (미국 동부) · 항목 7.01,9.01 · 보도자료(EX-99) 있음");
+assert.ok(readoutStatusLine({ ...base, status: "본문 미수신" }).endsWith("본문 미수신(30일 경과)"));
+for (const w of FORBIDDEN) assert.ok(!fs.readFileSync(path.join(__dirname, "../components/biotech/ReadoutCards.tsx"), "utf8").includes(w), `ReadoutCards 금지어 "${w}"`);
+
 console.log("biotech-fr6c.check OK");
