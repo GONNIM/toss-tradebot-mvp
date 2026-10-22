@@ -7,9 +7,13 @@ mentions_24h_ago) 까지 제공.
 
 OAuth 승인 (Phase 2) 후에도 PRAW 와 병행 사용 가능 — 시그널 cross-check.
 """
+from backend.discovery.data_sources.apewisdom.aggregate import (
+    ApewisdomClient,
+    MentionStats,
+)
 from backend.discovery.data_sources.apewisdom.client import (
     ApeWisdomMention,
     fetch_filter,
 )
 
-__all__ = ["ApeWisdomMention", "fetch_filter"]
+__all__ = ["ApeWisdomMention", "ApewisdomClient", "MentionStats", "fetch_filter"]
