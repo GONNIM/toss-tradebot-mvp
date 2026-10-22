@@ -172,6 +172,9 @@ grep -l "push:\|workflow_dispatch:" .github/workflows/*.yml  # 트리거 파악
 - (2026-10-21) 전체 pytest 는 기존 실패 21건이 있어 커밋 hook 에 걸지 않는다. hook 은 biotech 묶음·compileall·tsc 만 — 실패하는 검사를 걸면 모든 커밋이 막힌다.
 - (2026-10-22) main 병합은 자동 모드 분류기가 막으므로 사용자가 `! gh pr merge N --merge` 로 한 건씩 실행하고, 각 배포 run 이 끝난 뒤 다음 건을 병합한다 — deploy.yml 에 concurrency 가 없어 배포가 겹칠 수 있다.
 - (2026-10-22) "배포일" 이 기준인 상수는 병합 직전에 KST 날짜를 다시 확인한다 — 병합 사이에 날짜가 넘어가 START_ET 를 두 번 고쳤다.
+- (2026-10-22) 테스트는 루트 `backend/tests/conftest.py` 맨 위에서 DATABASE_URL 을 메모리로, 텔레그램 토큰을 빈 값으로 강제한다 — `.env` 가 먼저 로드되면 테스트가 실 DB 를 지운 것으로 보이고 실 봇으로 발송했다.
+- (2026-10-22) 버전 번호는 `frontend/package.json` (화면 변경) · `backend/api/main.py` (서버 변경) 둘 다 쓴다 — 사용자 결정 · 그전에는 기준 파일이 정해지지 않아 0.1.0 그대로였다.
+- (2026-10-22) 화면 기준은 gonnim.dev /dominance · /sangsik 방식으로 바꾼다 (`docs/design-rules.md` 개정 예정 · `docs/plans/ui-ux-optimization/`) — 사용자 결정.
 
 ---
 
