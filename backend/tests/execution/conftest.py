@@ -7,17 +7,20 @@ import os
 os.environ.setdefault("DATABASE_URL", "sqlite+aiosqlite:///:memory:")
 
 import tempfile
+from datetime import datetime
 from pathlib import Path
 from typing import Optional
 
 import pytest
 import pytest_asyncio
+from sqlalchemy import delete
 
 from backend.execution.brokers.paper_adapter import PaperAdapter
 from backend.execution.brokers.toss_client import TossClient
 from backend.execution.kill_switch import KillSwitch
 from backend.execution.models import MarketInfo, MarketState
-from backend.services.db import init_db
+from backend.services.db import get_session, init_db
+from backend.services.models import PrinciplesResult, PrinciplesRun
 
 
 class _FakeTossClient(TossClient):
@@ -89,3 +92,22 @@ async def paper(db_ready, fake_toss, kill_switch, tmp_paths):
     )
     adapter.reset(cash_krw=10_000_000)
     return adapter
+
+
+async def seed_principles_pass(ticker: str) -> int:
+    """원칙 관문 통과용 · 방금 끝난 PrinciplesRun 1행 + 해당 티커 PASS 1행 (관문 코드 우회 아님). 호출 쪽 fixture 가 teardown 에서 cleanup_principles 로 지운다."""
+    async with get_session() as s:
+        run = PrinciplesRun(finished_at=datetime.now())
+        s.add(run)
+        await s.flush()
+        s.add(PrinciplesResult(run_id=run.id, ticker=ticker, verdict="PASS"))
+        await s.commit()
+        return run.id
+
+
+async def cleanup_principles(run_id: int) -> None:
+    """seed_principles_pass 가 넣은 행 제거."""
+    async with get_session() as s:
+        await s.execute(delete(PrinciplesResult).where(PrinciplesResult.run_id == run_id))
+        await s.execute(delete(PrinciplesRun).where(PrinciplesRun.id == run_id))
+        await s.commit()

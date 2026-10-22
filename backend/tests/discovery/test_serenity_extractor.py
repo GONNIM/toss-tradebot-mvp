@@ -191,7 +191,7 @@ async def test_process_pending_tweets_inserts_signals():
         ]
     })
     result = await process_pending_tweets(batch_size=10, concurrency=1, client=client)
-    assert result == {"tweets": 1, "signals_inserted": 1, "failed": 0}
+    assert result == {"tweets": 1, "signals_inserted": 1, "failed": 0, "pending_before": 1, "pending_after": 0}
 
     async with get_session() as session:
         n = (await session.execute(select(func.count(SerenitySignal.id)))).scalar_one()
@@ -202,7 +202,7 @@ async def test_process_pending_tweets_inserts_signals():
 async def test_process_pending_tweets_no_pending_returns_zero():
     client = _fake_client({"signals": []})
     result = await process_pending_tweets(batch_size=10, concurrency=1, client=client)
-    assert result == {"tweets": 0, "signals_inserted": 0, "failed": 0}
+    assert result == {"tweets": 0, "signals_inserted": 0, "failed": 0, "pending_before": 0, "pending_after": 0}
 
 
 @pytest.mark.asyncio
