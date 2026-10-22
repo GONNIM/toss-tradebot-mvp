@@ -146,6 +146,13 @@ class TelegramNotifier:
                 resp.raise_for_status()
             logger.info(f"[Notifier] sent [{level.value}] {title}")
             return True
+        except httpx.HTTPStatusError as e:
+            # 토큰이 든 URL 은 남기지 않고 상태 코드와 응답 본문 앞 200자만 기록
+            logger.error(
+                f"[Notifier] send failed: HTTP {e.response.status_code} "
+                f"body={e.response.text[:200]!r}"
+            )
+            return False
         except Exception as e:
             logger.error(f"[Notifier] send failed: {e}")
             return False
@@ -181,6 +188,16 @@ class TelegramNotifier:
 # ─────────────────────────────────────────────
 # Moonshot/Crazy Picks 알림 포맷
 # ─────────────────────────────────────────────
+
+
+def _fmt_won(v: Optional[float]) -> str:
+    """원화 가격. None(예: 과열 시 진입가 없음) 이면 "-"."""
+    return "-" if v is None else f"{v:,.0f}원"
+
+
+def _fmt_pct(v: Optional[float]) -> str:
+    """부호 있는 % . None 이면 "-"."""
+    return "-" if v is None else f"{v:+.1f}%"
 
 
 def format_moonshot_alert(picks: list) -> tuple[str, str]:
@@ -253,9 +270,9 @@ def format_sector_leaders_alert(
             f"\n<b>#{it.rank} {it.name} ({it.ticker})</b>"
             f"  매력도 <b>{it.attractiveness:.3f}</b>\n"
             f"품목: {it.item}\n"
-            f"현재가: {it.current_price:,.0f}원{price_tag}\n"
-            f"진입가: {it.entry_price:,.0f}원  ({it.entry_status})\n"
-            f"예측수익가: {it.point_price:,.0f}원  (+{it.point_pct:.1f}%)\n"
+            f"현재가: {_fmt_won(it.current_price)}{price_tag}\n"
+            f"진입가: {_fmt_won(it.entry_price)}  ({it.entry_status})\n"
+            f"예측수익가: {_fmt_won(it.point_price)}  ({_fmt_pct(it.point_pct)})\n"
         )
 
     return title, "".join(lines)

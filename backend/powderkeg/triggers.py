@@ -94,7 +94,7 @@ def _body_for_direction(direction: str, base_body: str) -> str:
         return (
             f"{base_body}\n\n"
             f"⚠️ 실증 캐비어트 · 이 이벤트 타입은 백테스트 5년 표본에서 12M CAR 이 통계 유의 음수 "
-            f"(mean < -5%, n ≥ 50). 매수 판단 시 화약고 10 조건 등 다른 필터와 조합 후 검토."
+            f"(mean -5% 미만, n 50 이상). 매수 판단 시 화약고 10 조건 등 다른 필터와 조합 후 검토."
         )
     if direction == "buy_candidate":
         return f"{base_body}\n\n✅ 백테스트 게이트 통과 (validated · t>2 · 승률≥50%)."
