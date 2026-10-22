@@ -89,12 +89,18 @@ Claude Code 는 **현재 프로필의** 프로젝트 메모리만 자동으로 �
 - 커밋 전 검사(스테이징 목록 + 명령 문자열 기준): `backend/` → compileall + biotech 테스트, `frontend/` → `tsc --noEmit`. venv·node_modules 가 없으면 경고 후 건너뜀.
 - 전체 pytest 는 기존 실패 21건이 정리될 때까지 걸지 않는다.
 
-## 다음 과제 (2026-10-22 갱신 · 새 세션은 여기와 `docs/plans/biotech/PENDING.md` 최상단부터 읽는다)
+## 다음 과제 (2026-10-22 저녁 갱신 · 새 세션은 여기와 `docs/plans/biotech/PENDING.md` 최상단부터 읽는다)
 1. **세션 첫 작업 = 서버 관측** (PENDING 영구 규칙 · 조회 전용): `/root/toss-tradebot-mvp/var/biotech/logs/daily.log` 최신 실행이 `[11/11]` 까지 갔는지, `/biotech` 날짜.
 2. **10/23 07:00 P4 첫 실행 확인** (PENDING 2026-10-21 Fable 판정 항목): P4-2 `var/biotech/fr6c/cells_202610.json` 첫 판정 (표시 행 전체 68 · 긍정 43 기대) · P4-4 readout_text 단계 첫 실행 (전향 시작 START_ET 2026-10-22) · SEC 장부 합계 ≤ 300 · 배지 표시 수 · 화면 빌드 해시 · /biotech 과거 기록 · 새 8-K 확인 섹션 스크린샷 → `scripts/fable_bundle.py` 번들 zip (절대 경로 + zip SHA-256) 으로 fable 역할에 보고.
-3. PENDING 영구 규칙 추가 (문서 PR): Fable 답 2 · 3 · 4 해석 3건 · "fr6c/ 폴더는 정리 제외 · retro_prices_v1.csv 는 지우지 않는다" · 가격 고정 SHA 2c2f96db… (10/22 서버 확정).
-4. 11/1 07:00 FR-6c 첫 월간 재판정 대조.
-5. 사용자 결정 대기: 로컬 브랜치 `feature/biotech-wp72-info-structure` (main 병합됨 · 원격보다 앞선 커밋 있음 · `-D` 여부) · 미병합 `feature/biotech-aact-weekly` · `wip/local-docs` (9월 · 각 1커밋) · 미추적 `docs/plans/PRD/biotech/` (10/04 PRD v0.4 사본 · 최신은 `~/Downloads/biotech-prd-price-outlook-20261004.md` v1.2).
-6. 기존 실패 테스트 21건 분류 (serenity_extractor 4 · dart_financials 8 · rulebook 2 · signal_router 2 · integration_dod 2 · data_sources 2 · powderkeg_models 1).
+3. 11/1 07:00 FR-6c 첫 월간 재판정 대조.
+4. **테스트 PR 병합 (장 마감 뒤 사용자)**: PR #105 (브랜치 `test/fix-stale-16`) · 낡은 테스트 16건 수정 · 테스트 텔레그램 차단 · 테스트 DB 메모리 고정. 병합 = 배포 run.
+5. **0순위 · 알림 고장 수리 (각각 작은 PR · 사용자 승인 (CLAUDE.md HOW 절) · fable 검수)**: ① 모듈·패키지 이름 충돌 2건 (`backend/discovery/data_sources/apewisdom.py` ↔ `apewisdom/` → Crazy·Moonshot 6월 이후 무발송 · `reddit.py` ↔ `reddit/` → 죽은 테스트 정리) ② Sector Leaders `NoneType.__format__` (28회 중 26회 실패) ③ 텔레그램 400 (A3 본문 `<` · HTML escape) ④ deploy-watch 오발송 (건너뛴 step output null) ⑤ Kill Switch 해제 API (`execution` 라우터 미등록) · 그리고 조용히 실패하는 잡에 실패 warning 추가. 근거: `docs/plans/alert-settings/README.md`.
+6. **1순위 · 알림 설정 페이지** `/admin/notifications`: 사용자가 이 페이지에서 알림 11묶음별로 켜기·끄기·요약·재발송 간격을 직접 설정한다 (기본값 = 2026-10-22 유용성 검증 권고). 기획안: `docs/plans/alert-settings/`.
+7. **2~8순위 · 사이트 UI/UX 최적화** (gonnim.dev /dominance · /sangsik 방식): 2 홈 "오늘" · 3 메뉴 15→5 · 4 로그인 하나·비로그인 처리 · 5 문구 (내부 코드 숨김) · 6 시각 통일 (`docs/design-rules.md` 를 gonnim 기준으로 개정 · 사용자 결정 2026-10-22) · 7 모바일 · 8 정리. 기획안: `docs/plans/ui-ux-optimization/`. 순위마다 기획 → Fable → 승인 → 배포.
+8. 사용자 결정 대기: 미병합 `feature/biotech-aact-weekly` · `wip/local-docs` (각 1커밋) · 미추적 `docs/plans/PRD/biotech/` (10/04 PRD v0.4 사본).
+9. 남은 실패 테스트 4건 (serenity_extractor 2 · test_stooq 1 · powderkeg_models 1 순서 의존) 원인 조사.
 
+참고: 로컬 `backend/data/tradebot.db` 는 ORM 표가 없는 상태이며 사용자 결정 (2026-10-22) 으로 그대로 둔다. 원인은 테스트가 실 DB 를 가리킨 채 `drop_db()` 를 돈 것으로 보이며 테스트 PR 이 재발을 막는다.
+
+완료 (2026-10-22 오후): 세션 관측 정상 · PENDING 영구 규칙 5줄 (#104) · wp72 로컬 브랜치 삭제 · 텔레그램 알림 인벤토리·유용성 검증 (`docs/plans/biotech/fable-bundles/20261022_observe/` 로컬 · git 제외) · UI/UX 감사.
 완료 (2026-10-21~22): fable 역할 추가 · P4 판정 수령 · #100 (시총 배지) · #95~#98 (P4-1~P4-4) 병합 · 배포 success · #101 · #102 문서 · worktree 정리 · 병합된 로컬 브랜치 103개 삭제.
