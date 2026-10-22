@@ -14,13 +14,23 @@ from __future__ import annotations
 import os
 
 import pytest
+import pytest_asyncio
 
+from backend.tests.execution.conftest import cleanup_principles, seed_principles_pass
 from backend.execution.audit import list_recent_audits
 from backend.execution.signal_router import SignalEvent, SignalRouter
 from backend.execution.models import BrokerKind, OrderStatus
 
 
 TICKER = "005930"
+
+
+@pytest_asyncio.fixture(autouse=True)
+async def _principles_pass(db_ready):
+    """meme_stock 소스는 원칙 관문(principles_gate)을 거치므로 테스트 DB 에 PASS 행을 시딩."""
+    run_id = await seed_principles_pass(TICKER)
+    yield
+    await cleanup_principles(run_id)
 
 
 @pytest.fixture(autouse=True)

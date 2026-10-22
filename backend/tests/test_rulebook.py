@@ -26,10 +26,13 @@ async def _clean_db():
 
 
 @pytest_asyncio.fixture
-async def client():
+async def client(monkeypatch):
+    monkeypatch.setenv("SNIPER_API_TOKEN", "test-token-rulebook")
     from backend.api.main import app
 
-    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test",
+        headers={"X-API-Token": os.environ["SNIPER_API_TOKEN"]},
+    ) as ac:
         yield ac
 
 
@@ -193,6 +196,7 @@ async def test_judgment_create_persists_entry_price(client: AsyncClient):
         "invalidation_price": 70000,
         "target_price": 100000,
         "entry_price": 80000,
+        "strategy": "swing",
         "horizon_days": 7,
         "mood": "cool",
     }
