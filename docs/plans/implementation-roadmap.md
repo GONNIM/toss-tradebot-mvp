@@ -157,7 +157,7 @@ frontend/
 - ✅ `backend/discovery/data_sources/finnhub.py` — 어닝 캘린더·애널리스트
 - ✅ `backend/discovery/data_sources/sec_edgar.py` — Form 4 (인사이더 cluster)
 - ✅ `backend/discovery/data_sources/finra.py` — 단기매도 일일 거래량 (RegSHO)
-- ✅ `backend/discovery/data_sources/reddit.py` — PRAW (WSB 멘션 카운트)
+- ~~`backend/discovery/data_sources/reddit.py` — PRAW (WSB 멘션 카운트)~~ (2026-10-22 삭제 · 패키지 `reddit/` 의 `fetch_mentions` 로 대체)
 - ✅ `backend/discovery/data_sources/rss.py` — feedparser (PRNewswire / GlobeNewswire)
 - ✅ `backend/services/llm.py` — Anthropic Claude Haiku 4.5 (thesis 생성)
 

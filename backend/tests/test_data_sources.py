@@ -323,32 +323,6 @@ async def test_sec_edgar_cluster_stats_no_filings():
 
 
 # ─────────────────────────────────────────────
-# Reddit 단위 테스트 (PRAW mock)
-# ─────────────────────────────────────────────
-
-
-@pytest.mark.skip(reason="reddit/ 패키지가 reddit.py 모듈을 가림 · RedditClient 는 런타임 미사용")
-def test_reddit_init_without_credentials_warns():
-    """REDDIT_CLIENT_ID 미설정 시 호출 시 RuntimeError."""
-    import os
-    from backend.discovery.data_sources.reddit import RedditClient
-
-    # env 정리
-    old_id = os.environ.pop("REDDIT_CLIENT_ID", None)
-    old_secret = os.environ.pop("REDDIT_CLIENT_SECRET", None)
-
-    try:
-        client = RedditClient()
-        with pytest.raises(RuntimeError, match="REDDIT_CLIENT_ID"):
-            client._ensure_reddit()
-    finally:
-        if old_id:
-            os.environ["REDDIT_CLIENT_ID"] = old_id
-        if old_secret:
-            os.environ["REDDIT_CLIENT_SECRET"] = old_secret
-
-
-# ─────────────────────────────────────────────
 # LLM 단위 테스트
 # ─────────────────────────────────────────────
 
