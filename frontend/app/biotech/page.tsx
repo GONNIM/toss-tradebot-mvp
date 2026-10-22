@@ -17,6 +17,8 @@ import { StatBox } from "@/components/ui/stat-box";
 import { SectionCard } from "@/components/ui/section-card";
 import { BiotechTable, BiotechTableColumn } from "@/components/biotech/BiotechTable";
 import { RumorCard } from "@/components/biotech/RumorCard";
+import { Fr6cTable } from "@/components/biotech/Fr6cTable";
+import type { Fr6cCells } from "@/lib/biotech-fr6c";
 import type { SessionInfo } from "@/lib/auth";
 import { alertCriteria, cardText, checkedAtLabel, conditionsLine, redditLine, ctgovUrl, exhibitLine, inputLabel, inputsMissingLine, groupForm4, insiderSummary, insiderTxLine, LEAD_LABEL, mcapBadge, mentionSentence, multSentence, refreshLabel, rumorReason, shortName, sortFilterCards, sortLabel, summaryStatus, tickerOrUnknown, trialSentence } from "@/lib/biotech-display";
 import type { CardSort, RedditStatus, Form4Tx, ThemeRank, TrialDisplay } from "@/lib/biotech-display";
@@ -294,6 +296,7 @@ export default function BiotechPage() {
   const [kpi, setKpi] = useState<BiotechKpi | null>(null);
   const [radar, setRadar] = useState<RadarJson | null>(null);
   const [rumor, setRumor] = useState<RumorJson | null>(null);
+  const [fr6c, setFr6c] = useState<Fr6cCells | null>(null);   // P4-3 · 과거 기록 표
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   // WP74 4단계 · 상호작용 상태 (표시만)
@@ -320,6 +323,8 @@ export default function BiotechPage() {
       setKpi(k);
       setRadar(r);
       setRumor(ru);
+      // P4-3 · 과거 기록은 따로 받는다 (실패해도 다른 섹션은 그대로)
+      apiFetch<Fr6cCells>("/fr6c.json").then(setFr6c).catch(() => setFr6c(null));
     } catch (e) {
       const err = e as Error & { status?: number };
       setError(`${err.message} (status=${err.status ?? "?"})`);
@@ -582,6 +587,15 @@ export default function BiotechPage() {
         <SectionCard tone="amber" icon="📰" label="뉴스 통과 (팔 자리)" count={t2.length} hint="B 상태 · 이미 발표 · 관망">
           <CompactList rows={t2} emptyLabel="B 상태 종목 없음" kind="news" />
         </SectionCard>
+      )}
+
+      {/* P4-3 · 과거 기록 (FR-6c 봉인 설계 · 표시 행만 · 잔여 칸 비표시) */}
+      {isAdmin && (
+        <div id="sec-history">
+          <SectionCard tone="slate" icon="📚" label="과거 기록" count={fr6c?.display_rows?.length ?? 0} hint="같은 조건의 과거 임상 발표 뒤 주가 반응 분포">
+            <Fr6cTable data={fr6c} />
+          </SectionCard>
+        </div>
       )}
 
       {/* 섹션 5: 순위표 전체 · slate · 접기 · BiotechTable ≤7열 */}
