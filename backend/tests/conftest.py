@@ -23,7 +23,7 @@ def _no_tiingo_local_seed(monkeypatch):
 def pytest_configure(config):
     config.addinivalue_line(
         "markers",
-        "real_notifier_send: TelegramNotifier.send 를 stub 하지 않음 (테스트가 httpx 를 직접 가짜로 바꿀 때만)",
+        "real_notifier_send: TelegramNotifier.send 를 stub 하지 않음 (테스트가 httpx 를 직접 가짜로 바꿀 때만 · config 를 직접 넘기는 테스트는 httpx.AsyncClient 를 반드시 가짜로 바꾼다)",
     )
 
 
