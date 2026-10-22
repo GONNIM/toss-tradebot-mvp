@@ -257,6 +257,28 @@ async def universe_refresh():
     return stats
 
 
+@router.get("/kill-switch/status", dependencies=[Depends(require_sniper_token)])
+async def kill_switch_status():
+    """Kill Switch 현재 상태 · 인증 필수 (execution 라우터는 미등록이라 여기서 제공)."""
+    s = get_kill_switch().status()
+    return {
+        "active": s.active,
+        "reason": s.reason,
+        "activated_at": s.activated_at.isoformat() if s.activated_at else None,
+        "activated_by": s.activated_by,
+        "deactivated_at": s.deactivated_at.isoformat() if s.deactivated_at else None,
+        "deactivated_by": s.deactivated_by,
+    }
+
+
+@router.delete("/kill-switch", dependencies=[Depends(require_sniper_token)])
+async def kill_switch_deactivate(actor: str = Query("user:manual", pattern=r"^[\w:.\-]{1,64}$")):
+    """Kill Switch 수동 해제 · 인증 필수 · actor 기록."""
+    s = get_kill_switch().deactivate(actor=actor)
+    logger.warning("kill switch 해제 요청 · active=%s · actor=%s", s.active, actor)
+    return {"active": s.active, "deactivated_by": s.deactivated_by}
+
+
 @router.post("/entry", dependencies=[Depends(require_sniper_live_token)])
 async def manual_entry(
     ticker: str = Body(..., embed=True),

@@ -711,15 +711,16 @@ export const api = {
   execution: {
     status: () => get<ExecutionStatus>(`/execution/status`),
     killSwitch: {
-      status: () => get<KillSwitchStatus>(`/execution/kill-switch/status`),
+      status: () => getWithSession<KillSwitchStatus>(`/sniper/kill-switch/status`),
       activate: (reason: string, actor = "user:manual") =>
         post<{ active: boolean; reason: string; activated_by: string }>(
           `/execution/kill-switch`,
           { reason, actor },
         ),
       deactivate: (actor = "user:manual") =>
-        del<{ active: boolean; deactivated_by: string }>(
-          `/execution/kill-switch?actor=${encodeURIComponent(actor)}`,
+        delWithToken<{ active: boolean; deactivated_by: string }>(
+          `/sniper/kill-switch?actor=${encodeURIComponent(actor)}`,
+          "",
         ),
     },
     params: {

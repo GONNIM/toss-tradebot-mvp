@@ -156,7 +156,7 @@ class KillSwitch:
             f"<b>Actor</b>: {state.activated_by}\n"
             f"<b>발동 시각</b>: {state.activated_at.isoformat() if state.activated_at else '-'}\n\n"
             "모든 신규 주문 차단됨. 수동 해제 시까지 유지.\n"
-            "해제: <code>DELETE /api/v1/execution/kill-switch</code>"
+            "해제: <code>DELETE /api/v1/sniper/kill-switch</code> (관리자 로그인 필요)"
         )
 
         try:
