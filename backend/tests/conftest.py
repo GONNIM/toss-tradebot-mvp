@@ -1,3 +1,10 @@
+import os
+
+# backend/.env 의 실 DB·텔레그램 값이 services.config import 시점에 먼저 잡히지 않게 어떤 backend import 보다 먼저 덮어쓴다 (외부에서 DATABASE_URL 을 지정해도 무시함).
+os.environ["DATABASE_URL"] = "sqlite+aiosqlite:///:memory:"
+os.environ["TELEGRAM_BOT_TOKEN"] = ""
+os.environ["TELEGRAM_CHAT_ID"] = ""
+
 
 
 import pytest as _pytest_wp98
@@ -11,3 +18,30 @@ def _no_tiingo_local_seed(monkeypatch):
         monkeypatch.setattr(_h6, "SEED_DIR", None)
     except Exception:
         pass
+
+
+@_pytest_wp98.fixture(autouse=True)
+def _no_real_telegram(monkeypatch):
+    """services/config.py 가 import 때 backend/.env 를 읽어 테스트가 실제 봇으로 발송함 · env 를 비우고 발송 함수를 막는다."""
+    monkeypatch.setenv("TELEGRAM_BOT_TOKEN", "")
+    monkeypatch.setenv("TELEGRAM_CHAT_ID", "")
+
+    import importlib
+
+    async def _false(*args, **kwargs):
+        return False
+
+    for mod_name, attr in (
+        ("backend.services.notifier", "TelegramNotifier.send"),
+        ("backend.discovery.meme_watch.alert", "send_message"),
+        ("backend.services.telegram_notifier", "send_message"),
+    ):
+        try:
+            mod = importlib.import_module(mod_name)
+            if "." in attr:
+                cls_name, fn = attr.split(".")
+                monkeypatch.setattr(getattr(mod, cls_name), fn, _false)
+            else:
+                monkeypatch.setattr(mod, attr, _false)
+        except ImportError:
+            pass
