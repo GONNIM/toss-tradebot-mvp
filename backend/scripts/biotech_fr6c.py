@@ -187,11 +187,157 @@ def fix_prices(today: date | None = None) -> dict:
     return {"status": "created", "sha256": h, "rows": len(filled), "missing": len(missing), "sources": dict(src)}
 
 
+# ─── P4-2 · 집계 · 사분위 · 칸 판정 (설계 3 · 4 · 5 · 7절 · 요청 0 · numpy 없음) ───
+
+DIR_KO = {"positive": "긍정", "mixed": "혼재", "negative": "부정"}
+RESIDUAL_STAGES = frozenset({"단계 미확인", "4상", "초기 1상"})     # 설계 4절 78행
+NO_MCAP = "시총 없음"                                                # 설계 5절 92행 · 잔여 칸
+MIN_N = 20                                                           # 설계 4절 77행
+WINDOW_MONTHS = 24                                                   # 설계 7절 109행
+LEVELS = ("전체", "방향", "방향 × 단계", "방향 × 단계 × 시총")         # 세밀도 순서 (설계 4절 76행)
+
+
+def quantile(xs: list[float], p: float) -> float:
+    """선형 보간 (설계 3.1절 · numpy percentile method="linear" · R type 7)."""
+    s = sorted(xs)
+    h = (len(s) - 1) * p
+    j = int(h)
+    if j + 1 >= len(s):
+        return s[-1]
+    return s[j] + (h - j) * (s[j + 1] - s[j])
+
+
+def excess_return(r: dict) -> float | None:
+    """반응일 초과 수익률 = (종목 반응가 ÷ 종목 기준가 − 1) − (XBI 반응가 ÷ XBI 기준가 − 1) (설계 3절 56행)."""
+    try:
+        pb, pr, xb, xr = (float(r[c]) for c in PRICE_COLS)
+    except (KeyError, TypeError, ValueError):
+        return None
+    if pb <= 0 or xb <= 0:
+        return None
+    return (pr / pb - 1) - (xr / xb - 1)
+
+
+def mcap_bucket(m: float | None) -> str:
+    """설계 5절 91행 · 50M 미만 · 50M-300M · 300M-1B · 1B-5B · 5B 초과."""
+    if m is None:
+        return NO_MCAP
+    return ("50M 미만" if m < 50e6 else "50M-300M" if m < 300e6 else "300M-1B" if m < 1e9
+            else "1B-5B" if m < 5e9 else "5B 초과")
+
+
+def shares_at(points: list[dict], announce: str) -> int | None:
+    """발표일 이전 (end ≤ 발표일) 가장 최근 보고 주식수 (설계 5절 88행 · 같은 end 처리는 P4-0 저장 때 끝남)."""
+    ok = [p for p in points if p.get("end") and p["end"] <= announce and p.get("shares")]
+    return int(max(ok, key=lambda p: p["end"])["shares"]) if ok else None
+
+
+def load_shares_history() -> dict[str, list[dict]]:
+    p = _P.out_dir("mcap") / "shares_history.json"
+    rows = json.loads(p.read_text()).get("rows", {}) if p.exists() else {}
+    return {tk: v.get("points") or [] for tk, v in rows.items()}
+
+
+def to_event(r: dict, shares: dict[str, list[dict]]) -> dict:
+    announce = r["accept_et"][:10]
+    sh = shares_at(shares.get(r["ticker"], []), announce)
+    try:
+        m = float(r["price_base"]) * sh if sh else None
+    except (TypeError, ValueError):
+        m = None
+    return {"accession": r["accession"], "ticker": r["ticker"], "date": announce,
+            "direction": DIR_KO.get(r["direction"], r["direction"]), "stage": r.get("stage") or "단계 미확인",
+            "mcap": mcap_bucket(m), "source": r.get("direction_source") or "", "excess": excess_return(r)}
+
+
+def months_before(d: date, months: int) -> date:
+    y, m = divmod(d.year * 12 + d.month - 1 - months, 12)
+    m += 1
+    for day in (d.day, 30, 29, 28):
+        try:
+            return date(y, m, day)
+        except ValueError:
+            continue
+    raise ValueError(d)
+
+
+def cell_keys(e: dict) -> list[tuple[str, tuple[str, ...]]]:
+    return [("전체", ("전체",)), ("방향", (e["direction"],)), ("방향 × 단계", (e["direction"], e["stage"])),
+            ("방향 × 단계 × 시총", (e["direction"], e["stage"], e["mcap"]))]
+
+
+def is_residual(key: tuple[str, ...]) -> bool:
+    return any(k in RESIDUAL_STAGES or k == NO_MCAP for k in key)
+
+
+def build_cells(events: list[dict], asof: date) -> dict:
+    """24개월 창 안 사건으로 칸마다 n · 사분위 · 판정 (표시 · 표본 부족 · 잔여)."""
+    lo = months_before(asof, WINDOW_MONTHS).isoformat()
+    inside = [e for e in events if lo <= e["date"] <= asof.isoformat()]
+    groups: dict[tuple[str, tuple[str, ...]], list[dict]] = {}
+    for e in inside:
+        for level, key in cell_keys(e):
+            groups.setdefault((level, key), []).append(e)
+    cells = []
+    for (level, key), es in sorted(groups.items(), key=lambda kv: (LEVELS.index(kv[0][0]), kv[0][1])):
+        xs = [e["excess"] for e in es if e["excess"] is not None]
+        used = [e for e in es if e["excess"] is not None]
+        c = {"level": level, "key": list(key), "label": " · ".join(key), "n": len(xs), "missing_price": len(es) - len(xs),
+             "source": dict(Counter(e["source"] for e in used))}
+        if is_residual(key):
+            c["status"] = "잔여"
+        elif len(xs) >= MIN_N:
+            c.update(status="표시", median=quantile(xs, 0.5), q25=quantile(xs, 0.25), q75=quantile(xs, 0.75),
+                     min=min(xs), max=max(xs), period=[min(e["date"] for e in used), max(e["date"] for e in used)])
+        else:
+            c["status"] = "표본 부족"
+        cells.append(c)
+    return {"asof": asof.isoformat(), "window": {"from": lo, "to": asof.isoformat(), "months": WINDOW_MONTHS},
+            "events_in_window": len(inside), "missing_price": sum(1 for e in inside if e["excess"] is None),
+            "cells": cells, "display_rows": [c["label"] for c in cells if c["status"] == "표시"]}
+
+
+def cells_path(asof: date) -> Path:
+    return _P.out_dir("fr6c") / f"cells_{asof:%Y%m}.json"
+
+
+def load_retro() -> list[dict]:
+    """고정된 가격 파일 · meta 의 SHA-256 과 다르면 멈춤 · 봉인 표본 해시도 다시 확인."""
+    sealed_sample()
+    meta = json.loads(meta_path().read_text())
+    raw = read_sealed(out_path(), meta["sha256"], "고정 가격 파일")
+    return list(csv.DictReader(raw.decode("utf-8").splitlines()))
+
+
+def monthly_cells(today: date | None = None) -> dict:
+    """매월 1일 KST 재판정 · 다른 날은 건너뜀 · 그 달 결과 파일이 없으면 1일이 아니어도 한 번 계산 (첫 판정)."""
+    today = today or _kst_today()
+    p = cells_path(today)
+    if today.day != 1 and p.exists():
+        LOG.info("FR-6c 칸 판정 · 건너뜀 (매월 1일 재판정 · %s 있음)", p.name)
+        return {"status": "skipped", "file": p.name}
+    events = [to_event(r, load_shares_history()) for r in load_retro()]
+    res = build_cells(events, today)
+    res.update(reason="1일 재판정" if today.day == 1 else "첫 판정 (그 달 결과 없음)",
+               inputs={"retro_prices_sha256": json.loads(meta_path().read_text())["sha256"],
+                       "sample_sha256": FR6C_SAMPLE_SHA256, "design_sha256": FR6C_DESIGN_SHA256},
+               events={"retro": len(events), "prospective": 0})
+    p.write_text(json.dumps(res, ensure_ascii=False, indent=1))
+    shown = {c["label"]: c["n"] for c in res["cells"] if c["status"] == "표시"}
+    LOG.info("FR-6c 칸 판정 · %s · %s · 창 %s~%s · 사건 %d · 가격 없음 %d · 표시 %s", p.name, res["reason"],
+             res["window"]["from"], res["window"]["to"], res["events_in_window"], res["missing_price"], shown)
+    return {"status": "computed", "file": p.name, "display": shown, "missing_price": res["missing_price"]}
+
+
 def run(today: date | None = None) -> dict:
     try:
-        return {"prices": fix_prices(today)}
+        prices = fix_prices(today)
     except SealError as e:
         return {"prices": {"status": "stopped", "reason": str(e)}}
+    try:
+        return {"prices": prices, "cells": monthly_cells(today)}
+    except SealError as e:
+        return {"prices": prices, "cells": {"status": "stopped", "reason": str(e)}}
 
 
 def main():
