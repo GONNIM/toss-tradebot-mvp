@@ -89,8 +89,12 @@ Claude Code 는 **현재 프로필의** 프로젝트 메모리만 자동으로 �
 - 커밋 전 검사(스테이징 목록 + 명령 문자열 기준): `backend/` → compileall + biotech 테스트, `frontend/` → `tsc --noEmit`. venv·node_modules 가 없으면 경고 후 건너뜀.
 - 전체 pytest 는 기존 실패 21건이 정리될 때까지 걸지 않는다.
 
-## 다음 과제
-1. 사용자가 지시할 유지보수 작업.
-2. 기존 실패 테스트 21건 분류(serenity_extractor 4 · dart_financials 8 · rulebook 2 · signal_router 2 · integration_dod 2 · data_sources 2 · powderkeg_models 1).
-3. `feature/biotech-p4-4` 등 main 미병합 4커밋의 PR·병합 상태 확인.
-4. 미추적 `docs/plans/PRD/biotech/` 커밋 여부 사용자 결정.
+## 다음 과제 (2026-10-22 갱신 · 새 세션은 여기와 `docs/plans/biotech/PENDING.md` 최상단부터 읽는다)
+1. **세션 첫 작업 = 서버 관측** (PENDING 영구 규칙 · 조회 전용): `/root/toss-tradebot-mvp/var/biotech/logs/daily.log` 최신 실행이 `[11/11]` 까지 갔는지, `/biotech` 날짜.
+2. **10/23 07:00 P4 첫 실행 확인** (PENDING 2026-10-21 Fable 판정 항목): P4-2 `var/biotech/fr6c/cells_202610.json` 첫 판정 (표시 행 전체 68 · 긍정 43 기대) · P4-4 readout_text 단계 첫 실행 (전향 시작 START_ET 2026-10-22) · SEC 장부 합계 ≤ 300 · 배지 표시 수 · 화면 빌드 해시 · /biotech 과거 기록 · 새 8-K 확인 섹션 스크린샷 → `scripts/fable_bundle.py` 번들 zip (절대 경로 + zip SHA-256) 으로 fable 역할에 보고.
+3. PENDING 영구 규칙 추가 (문서 PR): Fable 답 2 · 3 · 4 해석 3건 · "fr6c/ 폴더는 정리 제외 · retro_prices_v1.csv 는 지우지 않는다" · 가격 고정 SHA 2c2f96db… (10/22 서버 확정).
+4. 11/1 07:00 FR-6c 첫 월간 재판정 대조.
+5. 사용자 결정 대기: 로컬 브랜치 `feature/biotech-wp72-info-structure` (main 병합됨 · 원격보다 앞선 커밋 있음 · `-D` 여부) · 미병합 `feature/biotech-aact-weekly` · `wip/local-docs` (9월 · 각 1커밋) · 미추적 `docs/plans/PRD/biotech/` (10/04 PRD v0.4 사본 · 최신은 `~/Downloads/biotech-prd-price-outlook-20261004.md` v1.2).
+6. 기존 실패 테스트 21건 분류 (serenity_extractor 4 · dart_financials 8 · rulebook 2 · signal_router 2 · integration_dod 2 · data_sources 2 · powderkeg_models 1).
+
+완료 (2026-10-21~22): fable 역할 추가 · P4 판정 수령 · #100 (시총 배지) · #95~#98 (P4-1~P4-4) 병합 · 배포 success · #101 · #102 문서 · worktree 정리 · 병합된 로컬 브랜치 103개 삭제.
