@@ -83,6 +83,7 @@ def test_f3_a3_body_has_no_angle_bracket():
     assert "미만" in body and "이상" in body
 
 
+@pytest.mark.real_notifier_send  # httpx.AsyncClient 를 아래에서 가짜로 바꾸므로 외부 발송 없음
 @pytest.mark.asyncio
 async def test_f3_http_error_logs_response_body_not_token(monkeypatch, caplog):
     import httpx

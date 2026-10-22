@@ -20,8 +20,15 @@ def _no_tiingo_local_seed(monkeypatch):
         pass
 
 
+def pytest_configure(config):
+    config.addinivalue_line(
+        "markers",
+        "real_notifier_send: TelegramNotifier.send 를 stub 하지 않음 (테스트가 httpx 를 직접 가짜로 바꿀 때만)",
+    )
+
+
 @_pytest_wp98.fixture(autouse=True)
-def _no_real_telegram(monkeypatch):
+def _no_real_telegram(monkeypatch, request):
     """services/config.py 가 import 때 backend/.env 를 읽어 테스트가 실제 봇으로 발송함 · env 를 비우고 발송 함수를 막는다."""
     monkeypatch.setenv("TELEGRAM_BOT_TOKEN", "")
     monkeypatch.setenv("TELEGRAM_CHAT_ID", "")
@@ -31,8 +38,9 @@ def _no_real_telegram(monkeypatch):
     async def _false(*args, **kwargs):
         return False
 
+    keep_send = request.node.get_closest_marker("real_notifier_send") is not None
     for mod_name, attr in (
-        ("backend.services.notifier", "TelegramNotifier.send"),
+        *(() if keep_send else (("backend.services.notifier", "TelegramNotifier.send"),)),
         ("backend.discovery.meme_watch.alert", "send_message"),
         ("backend.services.telegram_notifier", "send_message"),
     ):
