@@ -36,6 +36,11 @@
 - **보고 문체 (2026-09-28~)**: 완전한 문장으로 쓴다. 명사를 나열하는 전보식 문장은 쓰지 않는다. 비유를 쓰지 않는다. 쉬운 어휘를 쓴다. 한 문장에는 한 내용만 담는다. 영어 용어는 처음 나올 때 한국어 뜻을 함께 적는다. 표와 수치는 유지하되, 표 밖 설명은 말로 풀어 쓴다.
 - **세션 첫 작업 = 관측 (2026-09-28~)**: 매 세션 시작 시 서버 `/root/toss-tradebot-mvp/var/biotech/logs/daily.log` 최신 실행 (2026-09-29 부터 8단계 · WP75 배포 후 9단계 · alert_brief · mcap_daily 는 skip 허용) 과 /biotech 두 탭 (레이더·소문) 날짜를 확인하고, 정상이면 한 줄로 보고한다.
 - **보고 시 전체 경로 (2026-09-28~)**: 문서·파일·산출물 언급은 전체 경로로 적는다. 저장소 파일 = 저장소 루트 기준 (예: `docs/plans/biotech/data/sponsor_aliases.csv`) · 서버 파일 = 절대 경로 (예: `/root/toss-tradebot-mvp/var/biotech/h6/aact_theme_studies_2026-09-28.csv`). 파일 이름만 적지 않는다.
+- **해석 · P4-4 요청 대상 (Fable 2026-10-21 답 2)**: 설계 파일 `docs/plans/biotech/design/fr6c_design_v1.md` 116행 "본문 (EX-99 보도자료) 1건" 은 "EX-99 를 포함한 제출 전체 텍스트 1건" 으로 읽는다. 요청은 8-K 1건마다 제출 전체 텍스트 1건이다.
+- **해석 · 전향 시작일 (Fable 2026-10-21 답 3)**: "P4 배포일" 은 P4-4 배포일 (KST) 이다. 값은 2026-10-22 이고 `backend/scripts/biotech_readout_text.py` 의 START_ET 상수에 있다. 2026-10-15 부터 배포일 전까지 접수된 8-K 는 소급 표본에도 전향 표본에도 넣지 않는다.
+- **해석 · 발표 당시 주식수 (Fable 2026-10-21 답 4)**: 발표 당시 주식수는 기준 날짜 (end) 가 발표일 이하인 값 중 가장 늦은 것을 쓴다. 발표일은 미국 동부 시간 기준 접수일이다.
+- **fr6c 폴더 보존 (Fable 2026-10-21 답 5)**: 서버 `/root/toss-tradebot-mvp/var/biotech/fr6c/` 폴더는 365일 CSV 정리 대상에서 뺀다 (`backend/scripts/biotech_h48v3_daily_server.sh` 147행 `-not -path` 로 이미 제외). `retro_prices_v1.csv` 는 지우지 않는다. meta 파일이 있는데 csv 가 없으면 `fix_prices()` 가 SealError 로 멈춘다.
+- **가격 고정 SHA-256 (2026-10-22 서버 확정)**: `/root/toss-tradebot-mvp/var/biotech/fr6c/retro_prices_v1.csv` = 2c2f96db52d1273e841a278e7eb73961796a283ad92d55b10b6985819fcfa54f . 2026-10-22 07:00 서버 첫 실행 값이며, 로컬에서 미리 실행한 값과 같다. 코드는 csv 가 meta 파일의 SHA-256 과 다르면 SealError 로 멈춘다 (`backend/scripts/biotech_fr6c.py` `load_retro`). 서버 csv 또는 meta 의 값이 이 줄의 값과 다르면 FR-6c 판정 결과를 쓰지 않고 보고한다.
 
 ---
 
@@ -58,6 +63,7 @@
 **진행 (2026-10-21)**: fable 역할 생성 (`.claude/agents/fable.md`) · 판정 수령 · 시총 배지 수정과 #95 조건 1 · 2 를 backend 에 배정
 **진행 (2026-10-21 ~ 10-22)**: 병합 · 배포 순서대로 완료 · #100 e13b745 (run 39603468008) · #95 6dcadd5 (run 39607773222 · 조건 1 · 2 커밋 eedf758) · #96 5735682 (run 39724620007) · #97 2705609 (run 39725429538) · #98 6e4b873 (run 39726228802 · 조건 3 = START_ET 2026-10-22 · 커밋 8d23aeb · 배포가 KST 10-22 로 넘어가 10-21 값을 다시 고침) · 모두 success
 **서버 확인 (2026-10-22 14시대 · 조회 전용)**: HEAD 6e4b873 · BUILD_ID csqTRH5BtSIo_HQumRJ_j (14:10) · tradebot-api · tradebot-cron active · /health 200 · /biotech 200 · fr6c.json 토큰 없이 401 · 10/22 07:00 실행 `[8/11]` 배지 표시 87 (10/12~ 0 에서 복구) · `[11/11]` FR-6c 가격 고정 68행 · 가격 없음 0 · SHA-256 2c2f96db52d1273e841a278e7eb73961796a283ad92d55b10b6985819fcfa54f = 로컬 미리 실행 값과 같음 → **가격 고정 확정** · meta 의 표본 · 설계 해시 = 봉인값
+**진행 (2026-10-22 16시대)**: 세션 첫 관측 정상 (10/22 07:00 실행 [11/11] 까지 · done 07:01:53 KST · /biotech 2026-10-22) · 영구 규칙 5줄 추가 (문서 PR · 브랜치 `docs/pending-permanent-rules-p4`) · Fable 질의 2회 "수정 후 진행" 반영 · 질의서 로컬 보관 `docs/plans/biotech/fable-bundles/20261022_observe/` (git 제외)
 - 남은 것: 10/23 07:00 첫 실행 = P4-2 cells_202610.json 첫 판정 · P4-4 readout_text 단계 첫 실행 → 보고 번들 (zip 경로 + SHA-256) · 11/1 07:00 첫 재판정 대조
 
 ---
