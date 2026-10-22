@@ -89,18 +89,40 @@ Claude Code 는 **현재 프로필의** 프로젝트 메모리만 자동으로 �
 - 커밋 전 검사(스테이징 목록 + 명령 문자열 기준): `backend/` → compileall + biotech 테스트, `frontend/` → `tsc --noEmit`. venv·node_modules 가 없으면 경고 후 건너뜀.
 - 전체 pytest 는 기존 실패 21건이 정리될 때까지 걸지 않는다.
 
-## 다음 과제 (2026-10-22 저녁 갱신 · 새 세션은 여기와 `docs/plans/biotech/PENDING.md` 최상단부터 읽는다)
-1. **세션 첫 작업 = 서버 관측** (PENDING 영구 규칙 · 조회 전용): `/root/toss-tradebot-mvp/var/biotech/logs/daily.log` 최신 실행이 `[11/11]` 까지 갔는지, `/biotech` 날짜.
-2. **10/23 07:00 P4 첫 실행 확인** (PENDING 2026-10-21 Fable 판정 항목): P4-2 `var/biotech/fr6c/cells_202610.json` 첫 판정 (표시 행 전체 68 · 긍정 43 기대) · P4-4 readout_text 단계 첫 실행 (전향 시작 START_ET 2026-10-22) · SEC 장부 합계 ≤ 300 · 배지 표시 수 · 화면 빌드 해시 · /biotech 과거 기록 · 새 8-K 확인 섹션 스크린샷 → `scripts/fable_bundle.py` 번들 zip (절대 경로 + zip SHA-256) 으로 fable 역할에 보고.
-3. 11/1 07:00 FR-6c 첫 월간 재판정 대조.
-4. **테스트 PR 병합 (장 마감 뒤 사용자)**: PR #105 (브랜치 `test/fix-stale-16`) · 낡은 테스트 16건 수정 · 테스트 텔레그램 차단 · 테스트 DB 메모리 고정. 병합 = 배포 run.
-5. **0순위 · 알림 고장 수리 (각각 작은 PR · 사용자 승인 (CLAUDE.md HOW 절) · fable 검수)**: ① 모듈·패키지 이름 충돌 2건 (`backend/discovery/data_sources/apewisdom.py` ↔ `apewisdom/` → Crazy·Moonshot 6월 이후 무발송 · `reddit.py` ↔ `reddit/` → 죽은 테스트 정리) ② Sector Leaders `NoneType.__format__` (28회 중 26회 실패) ③ 텔레그램 400 (A3 본문 `<` · HTML escape) ④ deploy-watch 오발송 (건너뛴 step output null) ⑤ Kill Switch 해제 API (`execution` 라우터 미등록) · 그리고 조용히 실패하는 잡에 실패 warning 추가. 근거: `docs/plans/alert-settings/README.md`.
-6. **1순위 · 알림 설정 페이지** `/admin/notifications`: 사용자가 이 페이지에서 알림 11묶음별로 켜기·끄기·요약·재발송 간격을 직접 설정한다 (기본값 = 2026-10-22 유용성 검증 권고). 기획안: `docs/plans/alert-settings/`.
-7. **2~8순위 · 사이트 UI/UX 최적화** (gonnim.dev /dominance · /sangsik 방식): 2 홈 "오늘" · 3 메뉴 15→5 · 4 로그인 하나·비로그인 처리 · 5 문구 (내부 코드 숨김) · 6 시각 통일 (`docs/design-rules.md` 를 gonnim 기준으로 개정 · 사용자 결정 2026-10-22) · 7 모바일 · 8 정리. 기획안: `docs/plans/ui-ux-optimization/`. 순위마다 기획 → Fable → 승인 → 배포.
-8. 사용자 결정 대기: 미병합 `feature/biotech-aact-weekly` · `wip/local-docs` (각 1커밋) · 미추적 `docs/plans/PRD/biotech/` (10/04 PRD v0.4 사본).
-9. 남은 실패 테스트 4건 (serenity_extractor 2 · test_stooq 1 · powderkeg_models 1 순서 의존) 원인 조사.
+## 다음 과제 (2026-10-22 22시대 갱신 · 새 세션은 여기와 `docs/plans/biotech/PENDING.md` 최상단부터 읽는다)
 
-참고: 로컬 `backend/data/tradebot.db` 는 ORM 표가 없는 상태이며 사용자 결정 (2026-10-22) 으로 그대로 둔다. 원인은 테스트가 실 DB 를 가리킨 채 `drop_db()` 를 돈 것으로 보이며 테스트 PR 이 재발을 막는다.
+### 지금 남은 일 (10/22 22시대)
+| # | 진행 여부 | 할 일 | 누가 | 언제 | 확인 위치·끝 기준 |
+|---|---|---|---|---|---|
+| 1022-01 | 예정 (매 세션 첫 작업) | 서버 관측 | Claude | 세션 시작 | — |
+| 1022-02 | 예정 (10/23 07:00 뒤) | P4 첫 실행 확인 | Claude | 10/23 07:00 뒤 | — |
+| 1022-03 | 사용자 답 대기 (장 마감 뒤) | PR #107 병합 | 사용자 | 장 마감 뒤 | `! gh pr merge 107 --merge` 를 실행해 주십시오. |
+| 1022-04 | 예정 | #107 배포 뒤 확인 | Claude | 1022-03 뒤 | — |
+| 1022-05 | 예정 | 재가동 비용 확정 | Claude | 1022-03 뒤 | — |
+| 1022-06 | 사용자 답 대기 | 발동 버튼 경로 결정 | 사용자 | 아무 때나 | (가) 인증 API 추가 · (나) 숨김 · (다) 그대로 중 하나를 답해 주십시오. |
+| 1022-07 | 사용자 답 대기 | Sector 실패알림 횟수 | 사용자 | 아무 때나 | 시간대별 유지 · 하루 1회 합치기 중 하나를 답해 주십시오. |
+| 1022-08 | 예정 (11/1 07:00 뒤) | FR-6c 재판정 대조 | Claude | 11/1 07:00 뒤 | — |
+| 1022-09 | 미착수 (0순위 배포 뒤) | 알림 설정 페이지 기획 | Claude | 1022-04 뒤 | 기획 요약을 보시고 승인해 주십시오. |
+| 1022-10 | 미착수 | UI/UX 2~8순위 기획 | Claude | 1022-09 뒤 | 순위마다 기획 요약을 승인해 주십시오. |
+| 1022-11 | 사용자 답 대기 | 옛 브랜치·PRD 사본 | 사용자 | 아무 때나 | 지울지 남길지 답해 주십시오. |
+| 1022-12 | 미착수 | 남은 실패 테스트 4건 | Claude | 1022-10 뒤 | — |
 
-완료 (2026-10-22 오후): 세션 관측 정상 · PENDING 영구 규칙 5줄 (#104) · wp72 로컬 브랜치 삭제 · 텔레그램 알림 인벤토리·유용성 검증 (`docs/plans/biotech/fable-bundles/20261022_observe/` 로컬 · git 제외) · UI/UX 감사.
+자세히 (표와 같은 번호)
+- 1022-01: PENDING 영구 규칙 · 조회 전용. 서버 `/root/toss-tradebot-mvp/var/biotech/logs/daily.log` 최신 실행이 `[11/11]` 까지 갔는지 · `/biotech` 날짜 · 서버 HEAD.
+- 1022-02: PENDING 2026-10-21 Fable 판정 항목. P4-2 `var/biotech/fr6c/cells_202610.json` 첫 판정 (표시 행 68 · 긍정 43 기대) · P4-4 readout_text 첫 실행 (START_ET 2026-10-22) · SEC 장부 합계 ≤ 300 · 배지 표시 수 · 화면 빌드 해시 · /biotech 과거 기록 · 새 8-K 확인 섹션 스크린샷 → `scripts/fable_bundle.py` 번들 zip (절대 경로 + zip SHA-256) 으로 fable 역할에 보고.
+- 1022-03: PR #107 = 0순위 알림 고장 수리 (F1 apewisdom 이름 충돌 → Crazy·Moonshot 복구 · F1b reddit.py 삭제 · F2 Sector None · F3 400 · F4 deploy-watch 오발송 · F5 Kill Switch 해제 API `DELETE /api/v1/sniper/kill-switch` · F6 잡 실패 warning · 버전 0.1.1). 병합 = 배포 run (backend · frontend build). 계획 `docs/plans/alert-settings/p0-fixes.md`.
+- 1022-04: `gh run list --workflow=deploy.yml --limit 1` 로 run 번호 · success 확인 · 서버 `/var/log/toss-tradebot/cron.error.log` 에 `ApewisdomClient` ImportError 가 없음 · 다음 실행 crazy 06:30 · sector 09:05 / 17:05 · moonshot 16:50 의 `[Notifier] sent` 제목 확인 · 서버 HEAD · /health. 조회만 (수동 `--once` 실행은 승인 대상).
+- 1022-05: 서버 `backend/.env` 의 `LLM_PROVIDER` 이름 · `ticker_universe` 행 수 조회 (값 출력 금지). 추정: 외부 호출 약 826회/일 + universe 118회 · LLM 13~26회/일.
+- 1022-06: `frontend/app/lab/execution/page.tsx` 의 발동 버튼이 옛 경로 `/execution/kill-switch` (미등록 · 404) 를 부름. 자동 발동 (sniper 일일 손실 한도) 은 서버 안에서 따로 동작. 권고 (가).
+- 1022-07: F6 는 Sector Leaders 09:05 · 17:05 를 따로 하루 1회씩 보냄. 권고: 유지.
+- 1022-09: 1순위 `/admin/notifications` · 사용자가 알림 11묶음별로 켜기·끄기·요약·재발송 간격을 직접 설정 (기본값 = 2026-10-22 유용성 검증 권고). 범위·근거 `docs/plans/alert-settings/README.md`.
+- 1022-10: 2 홈 "오늘" · 3 메뉴 15→5 · 4 로그인 하나 · 5 문구 · 6 시각 통일 (`docs/design-rules.md` gonnim 기준 개정) · 7 모바일 · 8 정리. `docs/plans/ui-ux-optimization/README.md`.
+- 1022-11: 미병합 `feature/biotech-aact-weekly` · `wip/local-docs` (각 1커밋) · 미추적 `docs/plans/PRD/biotech/` (10/04 PRD v0.4 사본).
+- 1022-12: serenity_extractor 2 · test_stooq 1 · powderkeg_models 1 (순서 의존).
+
+참고
+- 로컬 `backend/data/tradebot.db` 는 ORM 표가 없는 상태이며 사용자 결정 (2026-10-22) 으로 그대로 둔다. 테스트는 이제 루트 conftest 가 메모리 DB · 빈 텔레그램 토큰으로 고정한다 (#105).
+- 이번 세션 Fable 질의·답변과 근거 자료: 로컬 `docs/plans/biotech/fable-bundles/20261022_observe/` (git 제외) · 알림 유용성 전문 `alerts-usefulness-report.md` · gonnim 규칙 요약 `gonnim-ui-rules.md`.
+
+완료 7건 (2026-10-22) | 세션 관측 정상 · PENDING 영구 규칙 5줄 (#104) · wp72 로컬 브랜치 삭제 · 테스트 16건 수정과 실 DB·실 텔레그램 차단 (#105 · 배포 run 39758639048 success · 서버 HEAD cdb09a2) · 다음 과제·기획 폴더 (#106) · 텔레그램 알림 인벤토리·유용성 검증 · UI/UX 감사와 중요도 순 제안
 완료 (2026-10-21~22): fable 역할 추가 · P4 판정 수령 · #100 (시총 배지) · #95~#98 (P4-1~P4-4) 병합 · 배포 success · #101 · #102 문서 · worktree 정리 · 병합된 로컬 브랜치 103개 삭제.
