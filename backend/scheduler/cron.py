@@ -441,6 +441,37 @@ async def run_moonshot_picks_job():
 # ─────────────────────────────────────────────
 
 
+# 실패 warning dedupe — (잡 이름) → 마지막으로 알린 KST 날짜. 프로세스 메모리 (재시작 시 초기화)
+_failure_alerted: dict[str, str] = {}
+
+
+async def _alert_job_failure(job_name: str, exc: BaseException) -> None:
+    """잡이 처리되지 않은 예외로 실패하면 텔레그램 warning 1회 (같은 잡 · 같은 KST 날짜).
+
+    알림 자체의 실패는 삼킨다 (잡 wrapper 를 다시 깨뜨리지 않음).
+    """
+    from zoneinfo import ZoneInfo
+
+    today = datetime.now(ZoneInfo("Asia/Seoul")).strftime("%Y-%m-%d")
+    if _failure_alerted.get(job_name) == today:
+        return
+    try:
+        import html
+
+        from backend.services.logging_setup import _mask
+        from backend.services.notifier import TelegramNotifier
+
+        # 마스킹 → 자르기 → HTML 이스케이프 (notifier 는 HTML parse_mode)
+        msg = _mask(str(exc))[:200]
+        detail = html.escape(f"{type(exc).__name__}: {msg}")
+        sent = await TelegramNotifier().send_warning(f"{job_name} 실패", detail)
+        # 발송 성공 때만 기록 — 실패하면 다음 실패 때 다시 시도
+        if sent:
+            _failure_alerted[job_name] = today
+    except Exception as notify_exc:  # noqa: BLE001
+        logger.error(f"[cron] 실패 알림 전송 실패 ({job_name}): {notify_exc}")
+
+
 async def job_universe_refresh():
     try:
         await run_universe_refresh()
@@ -453,6 +484,7 @@ async def job_crazy_picks():
         await run_crazy_picks_job()
     except Exception as e:
         logger.error(f"[cron] crazy picks failed: {e}", exc_info=True)
+        await _alert_job_failure("Crazy Picks", e)
 
 
 async def job_moonshot_picks():
@@ -460,6 +492,7 @@ async def job_moonshot_picks():
         await run_moonshot_picks_job()
     except Exception as e:
         logger.error(f"[cron] moonshot picks failed: {e}", exc_info=True)
+        await _alert_job_failure("Moonshot Picks", e)
 
 
 # ─────────────────────────────────────────────
@@ -521,6 +554,7 @@ async def job_sector_leaders_alert_0905():
         await run_sector_leaders_alert_job(slot="09:05")
     except Exception as e:
         logger.error(f"[cron] sector_leaders 09:05 failed: {e}", exc_info=True)
+        await _alert_job_failure("Sector Leaders 09:05", e)
 
 
 async def job_sector_leaders_alert_1705():
@@ -528,6 +562,7 @@ async def job_sector_leaders_alert_1705():
         await run_sector_leaders_alert_job(slot="17:05")
     except Exception as e:
         logger.error(f"[cron] sector_leaders 17:05 failed: {e}", exc_info=True)
+        await _alert_job_failure("Sector Leaders 17:05", e)
 
 
 # ─────────────────────────────────────────────
