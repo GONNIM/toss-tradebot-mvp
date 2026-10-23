@@ -14,9 +14,12 @@ from __future__ import annotations
 
 import logging
 import re
+import threading
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from typing import Optional
+
+import httpx
 
 logger = logging.getLogger(__name__)
 
@@ -45,14 +48,52 @@ CASHTAG_RE = re.compile(r"\$([A-Z]{1,5})\b")
 PAREN_TICKER_RE = re.compile(r"\(\s*(?:NASDAQ|NYSE|AMEX|OTC)\s*:\s*([A-Z]{1,6})\s*\)")
 
 
+_USER_AGENT = "Mozilla/5.0 (Macintosh; Intel Mac OS X) AppleWebKit/605.1 Safari/537 TossTradebot/1.0"
+# 피드당 4초 × 4개 = 16초 < 호출 측 wait_for 20초 (crazy_picks PER_STEP_TIMEOUT)
+FEED_TIMEOUT_SEC = 4.0
+
+
 class RSSClient:
     """RSS 뉴스 피드 통합 클라이언트.
 
     feedparser는 sync — Phase D 에서 asyncio.to_thread 로 감쌈.
+
+    피드는 httpx 로 시간 제한을 두고 받은 뒤 feedparser 로 해석한다 (2026-10-23 · 1023-01).
+    `feedparser.parse(url)` 는 시간 제한이 없어 멈춘 연결이 asyncio 기본 스레드를 붙잡고,
+    같은 프로세스의 DNS 조회까지 막아 cron 의 모든 외부 연결·알림이 실패했다.
+    피드 원문은 인스턴스(잡 1회) 동안 캐시 — 종목마다 다시 받지 않는다 (실패도 빈 목록으로 캐시).
     """
 
     def __init__(self, feeds: Optional[dict[str, str]] = None) -> None:
         self.feeds = feeds or DEFAULT_FEEDS
+        self._entries_cache: dict[str, list] = {}
+        self._cache_lock = threading.Lock()
+
+    def _fetch_entries(self, source_name: str, url: str) -> list:
+        """피드 1개 → feedparser 항목 목록. 실패하면 빈 목록."""
+        import feedparser
+
+        try:
+            resp = httpx.get(
+                url, timeout=FEED_TIMEOUT_SEC, follow_redirects=True,
+                headers={"User-Agent": _USER_AGENT},
+            )
+            if resp.status_code != 200:
+                logger.warning(f"[RSS] {source_name} HTTP {resp.status_code}")
+                return []
+            parsed = feedparser.parse(resp.text)
+        except Exception as e:
+            logger.warning(f"[RSS] {source_name} fetch failed: {e.__class__.__name__}: {e}")
+            return []
+        return list(parsed.entries)
+
+    def _cached_entries(self) -> dict[str, list]:
+        """모든 피드 항목 (처음 한 번만 받음 · 동시 호출은 잠금으로 기다림)."""
+        with self._cache_lock:
+            for source_name, url in self.feeds.items():
+                if source_name not in self._entries_cache:
+                    self._entries_cache[source_name] = self._fetch_entries(source_name, url)
+            return dict(self._entries_cache)
 
     def fetch_recent(
         self,
@@ -64,7 +105,7 @@ class RSSClient:
         Note: feedparser 미설치 시 즉시 fallback (빈 리스트).
         """
         try:
-            import feedparser
+            import feedparser  # noqa: F401
         except ImportError:
             logger.warning("feedparser 미설치 — RSS 사용 불가. `pip install feedparser`")
             return []
@@ -72,14 +113,8 @@ class RSSClient:
         cutoff = datetime.now(timezone.utc) - timedelta(hours=within_hours)
         items: list[NewsItem] = []
 
-        for source_name, url in self.feeds.items():
-            try:
-                parsed = feedparser.parse(url)
-            except Exception as e:
-                logger.warning(f"[RSS] {source_name} parse failed: {e}")
-                continue
-
-            for entry in parsed.entries[:max_items_per_feed]:
+        for source_name, entries in self._cached_entries().items():
+            for entry in entries[:max_items_per_feed]:
                 # published 파싱
                 pub = entry.get("published_parsed") or entry.get("updated_parsed")
                 if pub:
