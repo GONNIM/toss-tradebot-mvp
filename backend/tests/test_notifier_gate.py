@@ -295,3 +295,15 @@ async def test_bad_min_level_in_db_still_sends(env, monkeypatch):
 
     monkeypatch.setattr(ns, "_load_row", _bad)
     assert await env.send_info("t", "b", category="vip") is True
+
+
+@pytest.mark.asyncio
+async def test_wrapper_single_icon(env):
+    """제목이 아이콘으로 시작하면 등급 아이콘을 붙이지 않는다 (1023-05)."""
+    await env.send_info("🎯 VIP 감시 · A", "b", category="vip")
+    await env.send_warning("⚠️ 시스템 경고 · B", "b", category="system")
+    await env.send_info("아이콘 없음", "b", category="vip")
+    texts = [p["text"] for p in _FakeClient.posts]
+    assert texts[0].startswith("<b>🎯 VIP 감시")
+    assert texts[1].startswith("<b>⚠️ 시스템 경고")
+    assert texts[2].startswith("<b>ℹ️ 아이콘 없음")

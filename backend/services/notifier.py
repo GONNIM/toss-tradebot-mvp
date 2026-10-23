@@ -41,6 +41,23 @@ LEVEL_ICONS = {
 }
 
 
+def starts_with_icon(title: str) -> bool:
+    """제목 첫 글자가 그림 기호(유니코드 So)인지."""
+    import unicodedata
+
+    return bool(title) and unicodedata.category(title[0]) == "So"
+
+
+def strip_icon(title: str) -> str:
+    """앞쪽 아이콘(이모지 변형 선택자 포함)과 공백을 뗀 제목 — 하루 요약 줄용."""
+    import unicodedata
+
+    i = 0
+    while i < len(title) and (unicodedata.category(title[i]) in ("So", "Mn") or title[i] == "‍"):
+        i += 1
+    return title[i:].lstrip() if i else title
+
+
 @dataclass
 class TelegramConfig:
     bot_token: str
@@ -207,8 +224,8 @@ class TelegramNotifier:
             logger.debug(f"[Notifier] dedupe skip: {title}")
             return False
 
-        icon = LEVEL_ICONS[level]
-        text = f"<b>{icon} {title}</b>\n\n{body}"
+        # 제목이 아이콘으로 시작하면 등급 아이콘을 붙이지 않는다 (아이콘 1개 · 1023-05)
+        text = f"<b>{title}</b>\n\n{body}" if starts_with_icon(title) else f"<b>{LEVEL_ICONS[level]} {title}</b>\n\n{body}"
 
         url = f"https://api.telegram.org/bot{self.config.bot_token}/sendMessage"
         payload = {

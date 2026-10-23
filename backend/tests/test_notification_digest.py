@@ -162,3 +162,22 @@ async def test_one_category_error_does_not_block_others(db, monkeypatch):
     n = _Boom()
     assert await nd.send_daily_digest(n) == 1
     assert [i.category for i in await _queue()] == ["meme_blazing"]
+
+
+@pytest.mark.asyncio
+async def test_digest_line_drops_icon(db):
+    await nl.enqueue_digest("meme_blazing", "🔥 밈 · 급등 전 단계 · X", "b")
+    n = _FakeNotifier()
+    await nd.send_daily_digest(n)
+    assert "· 밈 · 급등 전 단계 · X" in n.calls[0]["body"]
+    assert "🔥" not in n.calls[0]["body"]
+
+
+@pytest.mark.asyncio
+async def test_digest_line_ampersand(db):
+    await nl.enqueue_digest("powderkeg_dnt", "🚨 화약고 거래 주의 · S&T(064960)", "b")
+    n = _FakeNotifier()
+    await nd.send_daily_digest(n)
+    body = n.calls[0]["body"]
+    assert "· 화약고 거래 주의 · S&amp;T(064960)" in body
+    assert "&amp;amp;" not in body

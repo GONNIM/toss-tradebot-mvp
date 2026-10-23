@@ -28,6 +28,9 @@ def _digest_message(category: str, titles: list[str]) -> tuple[str, str]:
     label = meta.label if meta else category
     title = f"📬 하루 요약 · {label} {len(titles)}건"
     lines = [f"오늘 하루 모아 둔 {label} 알림입니다."]
+    from backend.services.notifier import strip_icon
+
+    titles = [strip_icon(t) for t in titles]  # 요약 제목에 아이콘이 있으므로 줄마다는 뗀다
     lines += [f"· {html.escape(t if len(t) <= TITLE_CHARS else t[:TITLE_CHARS - 1] + '…')}" for t in titles[:MAX_TITLES]]
     if len(titles) > MAX_TITLES:
         lines.append(f"· 외 {len(titles) - MAX_TITLES}건")
