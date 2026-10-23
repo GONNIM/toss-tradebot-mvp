@@ -238,3 +238,18 @@ async def test_profile_source_from_category(env, monkeypatch):
     monkeypatch.setenv("TELEGRAM_PROFILE", "SNIPER")
     assert await env.send_info("시스템이 멈췄습니다", "b", category="kill_switch") is True
     assert await env.send_info("섹터 리더 3종목", "b", category="discovery_sector") is False
+
+
+@pytest.mark.asyncio
+async def test_last_result_reports_outcome(env):
+    await env.send_info("t", "b", category="vip")
+    assert env.last_result == "sent"
+    await ns.save_setting("meme_blazing", mode="digest")
+    await env.send_info("밈", "b", category="meme_blazing")
+    assert env.last_result == "queued"
+    await ns.save_setting("serenity", enabled=False)
+    await env.send_info("s", "b", category="serenity")
+    assert env.last_result == "skipped"
+    _FakeClient.status = 400
+    await env.send_info("t2", "b", category="vip")
+    assert env.last_result == "failed"

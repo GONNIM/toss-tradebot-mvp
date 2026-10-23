@@ -46,7 +46,6 @@ def _no_real_telegram(monkeypatch, request):
     keep_send = request.node.get_closest_marker("real_notifier_send") is not None
     for mod_name, attr in (
         *(() if keep_send else (("backend.services.notifier", "TelegramNotifier.send"),)),
-        ("backend.discovery.meme_watch.alert", "send_message"),
         ("backend.services.telegram_notifier", "send_message"),
     ):
         try:

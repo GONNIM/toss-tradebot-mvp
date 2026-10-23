@@ -78,6 +78,8 @@ class TelegramNotifier:
             )
         # dedupe 메모리: {hash: timestamp}
         self._sent: dict[str, float] = {}
+        # 마지막 send 결과: sent | queued | skipped | failed (호출 측이 '처리됨' 판단에 씀 · 예: meme 이력)
+        self.last_result: Optional[str] = None
 
     def _dedupe_check(self, key: str) -> bool:
         """동일 메시지 60초 내 재전송 차단."""
@@ -127,6 +129,7 @@ class TelegramNotifier:
                 logger.warning(f"[Notifier] 요약 대기열 실패 · 즉시 발송: {exc.__class__.__name__}")
                 return None
             await nl.record(category, dedupe_key, title, "queued")
+            self.last_result = "queued"
             return False
         return None
 
@@ -151,6 +154,7 @@ class TelegramNotifier:
         """
         from . import notification_log as nl
 
+        self.last_result = "skipped"
         if not self.config.bot_token or not self.config.chat_id:
             logger.debug(f"[Notifier] credentials 없음 — skip: {title}")
             return False
@@ -210,12 +214,14 @@ class TelegramNotifier:
                 resp.raise_for_status()
             logger.info(f"[Notifier] sent [{level.value}] {title}")
             await nl.record(category, dedupe_key, title, "sent")
+            self.last_result = "sent"
             return True
         except httpx.HTTPStatusError as e:
             # 토큰이 든 URL 은 남기지 않고 상태 코드와 응답 본문 앞 200자만 기록
             error = self._scrub(f"HTTP {e.response.status_code} body={e.response.text[:200]!r}")
             logger.error(f"[Notifier] send failed: {error}")
             await nl.record(category, dedupe_key, title, "failed", error)
+            self.last_result = "failed"
             return False
         except Exception as e:
             from .logging_setup import _mask
@@ -223,6 +229,7 @@ class TelegramNotifier:
             error = self._scrub(f"{type(e).__name__}: {_mask(str(e))[:200]}")
             logger.error(f"[Notifier] send failed: {error}")
             await nl.record(category, dedupe_key, title, "failed", error)
+            self.last_result = "failed"
             return False
 
     async def send_critical(self, title: str, body: str, category: Optional[str] = None, dedupe_id: Optional[str] = None) -> bool:
