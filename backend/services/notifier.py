@@ -53,6 +53,18 @@ class TelegramConfig:
         )
 
 
+# 알림 종류 → TELEGRAM_PROFILE 출처 (제목이 바뀌어도 프로필 필터가 같게 동작)
+_CATEGORY_SOURCE = {
+    "kill_switch": "kill_switch",
+    "execution": "execution",
+    "vip": "vip",
+    "activist_strong": "activist",
+    "activist_info": "activist",
+    "meme_erupting": "meme_stock",
+    "meme_blazing": "meme_stock",
+}
+
+
 class TelegramNotifier:
     """Telegram 알림 클라이언트 (HTML 포맷, dedupe, 비동기)."""
 
@@ -81,23 +93,74 @@ class TelegramNotifier:
     def _hash(title: str, body: str) -> str:
         return hashlib.md5(f"{title}|{body[:200]}".encode()).hexdigest()
 
+    def _scrub(self, text: str) -> str:
+        """기록·로그 문구에서 봇 토큰을 지운다 (_mask 는 `token=` 꼴만 잡음)."""
+        token = self.config.bot_token
+        return text.replace(token, "***") if token else text
+
+    async def _gate(self, level: Level, title: str, body: str, category: str, dedupe_key: str) -> Optional[bool]:
+        """설정 확인·최소 등급·재발송 간격·하루 요약 대기. 계속 보내면 None, 멈추면 반환값."""
+        from . import notification_log as nl
+        from . import notification_settings as ns
+
+        if category not in ns.CATEGORIES:
+            return None  # 모르는 종류는 항상 발송 (기록만)
+        setting = await ns.get_setting(category)
+        if not setting.enabled and category not in ns.LOCKED:
+            await nl.record(category, dedupe_key, title, "skipped", "설정: 꺼짐")
+            return False
+        if ns.LEVELS.index(level.value) < ns.LEVELS.index(setting.min_level):
+            await nl.record(category, dedupe_key, title, "skipped", f"설정: 최소 등급 {setting.min_level}")
+            return False
+        if setting.resend_minutes > 0:
+            try:
+                last = await nl.last_activity_at(category, dedupe_key)
+            except Exception:  # noqa: BLE001 — 읽기 실패 = 발송
+                last = None
+            if last is not None and (nl.utcnow() - last).total_seconds() < setting.resend_minutes * 60:
+                await nl.record(category, dedupe_key, title, "skipped", f"설정: 재발송 간격 {setting.resend_minutes}분")
+                return False
+        if setting.mode == "digest":
+            try:
+                await nl.enqueue_digest(category, title, body)
+            except Exception as exc:  # noqa: BLE001 — 대기열 실패 = 즉시 발송
+                logger.warning(f"[Notifier] 요약 대기열 실패 · 즉시 발송: {exc.__class__.__name__}")
+                return None
+            await nl.record(category, dedupe_key, title, "queued")
+            return False
+        return None
+
     async def send(
         self,
         level: Level,
         title: str,
         body: str,
         force: bool = False,
+        category: Optional[str] = None,
+        dedupe_id: Optional[str] = None,
+        gate: bool = True,
     ) -> bool:
-        """알림 전송. dedupe 통과 시 True, skip 시 False.
+        """알림 전송. 보냈으면 True, 건너뛰거나 실패하면 False.
 
-        TELEGRAM_PROFILE (SCOUT/SNIPER/WATCH) 필터 적용:
-        - SCOUT: 모두 발송
-        - SNIPER: SUPER_SIGNAL · URGENT/CRITICAL · execution/kill_switch 만
-        - WATCH: 즉시 발송 스킵, 큐잉 후 30분 배치 발송
+        순서 (1022-09 · docs/plans/alert-settings/design.md):
+        1. 알림 설정 (category 별 켜기·최소 등급·재발송 간격·하루 요약) — gate=False 면 건너뜀
+           (하루 요약 잡·WATCH 배치 전용). 끌 수 없는 종류(kill_switch·execution·system)는 꺼짐 무시.
+        2. TELEGRAM_PROFILE (SCOUT/SNIPER/WATCH) 필터 — force=True 면 우회
+        3. 60초 메모리 중복 억제 — force=True 면 우회
+        모든 시도는 notification_log 에 기록 (기록 실패는 발송과 무관).
         """
+        from . import notification_log as nl
+
         if not self.config.bot_token or not self.config.chat_id:
             logger.debug(f"[Notifier] credentials 없음 — skip: {title}")
             return False
+
+        category = category or self._infer_category(title)
+        dedupe_key = dedupe_id or title
+        if gate:
+            stop = await self._gate(level, title, body, category, dedupe_key)
+            if stop is not None:
+                return stop
 
         # 프로파일 필터 (force=True 시 우회 · 예: Kill Switch · WATCH 배치 자체)
         if not force:
@@ -108,7 +171,7 @@ class TelegramNotifier:
                     get_watch_queue,
                     should_send_by_profile,
                 )
-                source = self._infer_source(title)
+                source = _CATEGORY_SOURCE.get(category) or self._infer_source(title)
                 tags: tuple[str, ...] = ()
                 if "SUPER" in title.upper() or "🌟" in title:
                     tags = ("SUPER_SIGNAL",)
@@ -120,6 +183,7 @@ class TelegramNotifier:
                         logger.debug(f"[Notifier] WATCH 큐잉: {title}")
                     else:
                         logger.debug(f"[Notifier] 프로파일 필터 skip: {title}")
+                    await nl.record(category, dedupe_key, title, "skipped", f"프로필 {current_profile()}")
                     return False
             except ImportError:
                 pass  # profile 모듈 없으면 기본 동작
@@ -145,26 +209,35 @@ class TelegramNotifier:
                 resp = await client.post(url, json=payload)
                 resp.raise_for_status()
             logger.info(f"[Notifier] sent [{level.value}] {title}")
+            await nl.record(category, dedupe_key, title, "sent")
             return True
         except httpx.HTTPStatusError as e:
             # 토큰이 든 URL 은 남기지 않고 상태 코드와 응답 본문 앞 200자만 기록
-            logger.error(
-                f"[Notifier] send failed: HTTP {e.response.status_code} "
-                f"body={e.response.text[:200]!r}"
-            )
+            error = self._scrub(f"HTTP {e.response.status_code} body={e.response.text[:200]!r}")
+            logger.error(f"[Notifier] send failed: {error}")
+            await nl.record(category, dedupe_key, title, "failed", error)
             return False
         except Exception as e:
-            logger.error(f"[Notifier] send failed: {e}")
+            from .logging_setup import _mask
+
+            error = self._scrub(f"{type(e).__name__}: {_mask(str(e))[:200]}")
+            logger.error(f"[Notifier] send failed: {error}")
+            await nl.record(category, dedupe_key, title, "failed", error)
             return False
 
-    async def send_critical(self, title: str, body: str) -> bool:
-        return await self.send(Level.CRITICAL, title, body, force=True)
+    async def send_critical(self, title: str, body: str, category: Optional[str] = None, dedupe_id: Optional[str] = None) -> bool:
+        return await self.send(Level.CRITICAL, title, body, force=True, category=category, dedupe_id=dedupe_id)
 
-    async def send_warning(self, title: str, body: str) -> bool:
-        return await self.send(Level.WARNING, title, body)
+    async def send_warning(self, title: str, body: str, category: Optional[str] = None, dedupe_id: Optional[str] = None) -> bool:
+        return await self.send(Level.WARNING, title, body, category=category, dedupe_id=dedupe_id)
 
-    async def send_info(self, title: str, body: str) -> bool:
-        return await self.send(Level.INFO, title, body)
+    async def send_info(self, title: str, body: str, category: Optional[str] = None, dedupe_id: Optional[str] = None) -> bool:
+        return await self.send(Level.INFO, title, body, category=category, dedupe_id=dedupe_id)
+
+    @classmethod
+    def _infer_category(cls, title: str) -> str:
+        """category 를 넘기지 않은 호출 — 제목으로 확실한 것만 추정, 나머지는 unknown (항상 발송)."""
+        return {"vip": "vip", "kill_switch": "kill_switch", "execution": "execution"}.get(cls._infer_source(title), "unknown")
 
     @staticmethod
     def _infer_source(title: str) -> str:
