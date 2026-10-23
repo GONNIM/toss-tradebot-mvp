@@ -94,8 +94,10 @@ def _notify_model_change(prev: str, new: str) -> None:
     try:
         import asyncio
         from backend.services.notifier import TelegramNotifier
-        asyncio.run(TelegramNotifier().send_info(
-            category="biotech", title="biotech 요약 모델 변경", body=f"z.ai 요약 모델: {prev} → {new} (목록 최신 정식 모델 규칙)"))
+        from backend.services import alert_text as at
+
+        title, body = at.biotech_message("info", "요약 AI 모델 바뀜", [f"Z.ai 요약 모델: {at.esc(prev)} → {at.esc(new)}", "목록의 최신 정식 모델을 쓰는 규칙에 따른 변경입니다."])
+        asyncio.run(TelegramNotifier().send_info(category="biotech", title=title, body=body))
     except Exception as e:
         LOG.warning("모델 변경 알림 실패 · %s", e.__class__.__name__)
 

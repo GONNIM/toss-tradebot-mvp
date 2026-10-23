@@ -57,13 +57,42 @@ def kst(dt: Optional[datetime]) -> str:
     return dt.astimezone(KST).strftime("%m/%d %H:%M")
 
 
-def next_run(hour: int, minute: int, now: Optional[datetime] = None) -> str:
-    """한국 시각 기준 다음 `hour:minute` 을 `MM/DD HH:MM` 으로."""
+def next_run(hour: int, minute: int, now: Optional[datetime] = None, weekday: Optional[int] = None) -> str:
+    """한국 시각 기준 다음 `hour:minute` (weekday 를 주면 그 요일 · 월=0) 을 `MM/DD HH:MM` 으로."""
     now = (now or datetime.now(timezone.utc)).astimezone(KST)
     run = now.replace(hour=hour, minute=minute, second=0, microsecond=0)
-    if run <= now:
+    if weekday is not None:
+        run += timedelta(days=(weekday - run.weekday()) % 7)
+        if run <= now:
+            run += timedelta(days=7)
+    elif run <= now:
         run += timedelta(days=1)
     return run.strftime("%m/%d %H:%M")
+
+
+_WEEKDAYS = {"mon": 0, "tue": 1, "wed": 2, "thu": 3, "fri": 4, "sat": 5, "sun": 6}
+
+
+def next_run_spec(spec: str, now: Optional[datetime] = None) -> str:
+    """`"07:00"` (매일) 또는 `"mon 06:00"` (매주) → 다음 실행 `MM/DD HH:MM`."""
+    parts = spec.split()
+    weekday = _WEEKDAYS[parts[0].lower()] if len(parts) == 2 else None
+    hour, minute = (int(x) for x in parts[-1].split(":"))
+    return next_run(hour, minute, now=now, weekday=weekday)
+
+
+LEVEL_ICON = {"critical": "🚨", "warning": "⚠️", "info": "🧬"}
+
+
+def biotech_message(level: str, fact: str, lines: list[str], next_spec: Optional[str] = None,
+                    now: Optional[datetime] = None) -> tuple[str, str]:
+    """바이오 알림 (제목, 본문) · lines 는 이미 escape 된 줄 · 다음 실행과 링크를 붙인다."""
+    head = title("biotech", fact, LEVEL_ICON.get(level, "🧬"))
+    body = list(lines)
+    if next_spec:
+        body.append(f"다음 실행: {next_run_spec(next_spec, now=now)}")
+    body.append(link("biotech"))
+    return head, "\n".join(body)
 
 
 def stock(name: Optional[str], code: str) -> str:
@@ -195,4 +224,5 @@ BIOTECH_STEP = {
     "confirm": "확인",
     "report": "보고서",
     "radar": "레이더",
+    "status_gen": "상태 파일 만들기",
 }

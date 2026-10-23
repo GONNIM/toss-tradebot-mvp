@@ -39,29 +39,65 @@ _JOB_ICONS: dict[str, str] = {
     "benchmark": "🌐",
 }
 
+# 작업별 실행 시각 (KST) — add_job 과 실패 알림 「다음 실행」 이 같은 값을 쓴다
+_JOB_SCHEDULE: dict[str, tuple[int, int]] = {
+    "crawler": (6, 0),
+    "extractor": (7, 0),
+    "scorer": (8, 0),
+    "backtest": (1, 0),
+    "benchmark": (0, 30),
+    "price_snapshot": (9, 30),
+    "zai_cost_audit": (8, 15),
+}
+
+# 결과 키 → 한국어 (모르는 키는 그대로 · 관리용 키는 뺀다)
+_RESULT_TEXT = {
+    "inserted": "새로 저장", "skipped": "건너뜀", "invalid": "형식 오류", "total_archive": "전체 보관",
+    "tweets": "읽은 글", "signals_inserted": "새 신호", "failed": "실패", "pending": "대기",
+    "computed": "계산 끝", "delisting": "상장 폐지", "scored": "점수 매김", "snapshots": "가격 기록",
+}
+_RESULT_HIDDEN = {"submodule_sha"}
+
+
+def _fmt_value(v) -> str:
+    return f"{v:,}" if isinstance(v, int) and not isinstance(v, bool) else str(v)
+
+
+def _result_lines(result: dict) -> list[str]:
+    from backend.services import alert_text as at
+
+    known = [f"{_RESULT_TEXT[k]} {_fmt_value(v)}" for k, v in result.items() if k in _RESULT_TEXT]
+    other = [f"{at.esc(k)} {at.esc(_fmt_value(v))}" for k, v in result.items()
+             if k not in _RESULT_TEXT and k not in _RESULT_HIDDEN][:3]
+    lines = []
+    for i in range(0, len(known), 3):
+        lines.append(" · ".join(known[i:i + 3]))
+    return lines[:3] + other
+
 
 async def _notify_job_result(job: str, result: dict | None = None, error: str | None = None) -> None:
-    """크론 완료 결과 Telegram 발송 · profile 필터 존중.
+    """크론 완료 결과 Telegram 발송 · profile 필터 존중 (문구 1023-05).
 
     result 예: {"pending": 500, "computed": 412, "failed": 88, "delisting": 0}
-    error 시 · WARNING 레벨 발송.
+    error 시 · WARNING 레벨 발송 · 다음 실행 시각 포함.
     """
     try:
+        from backend.services import alert_text as at
         from backend.services.notifier import TelegramNotifier
         notifier = TelegramNotifier()
-        icon = _JOB_ICONS.get(job, "🔧")
+        name = at.SERENITY_JOB.get(job, at.esc(job))
         if error:
-            title = f"{icon} Serenity {job} 실패"
-            body = f"<code>{error}</code>"
-            await notifier.send_warning(title, body, category="serenity")
+            title = at.title("serenity", f"{name} 실패", "⚠️")
+            lines = [f"원인: {at.esc(error)}"]
+            if job in _JOB_SCHEDULE:
+                lines.append(f"다음 실행: {at.next_run(*_JOB_SCHEDULE[job])}")
+            lines.append(at.link("serenity"))
+            await notifier.send_warning(title, "\n".join(lines), category="serenity")
         else:
-            title = f"{icon} Serenity {job}"
-            if result:
-                lines = [f"<b>{k}:</b> {v}" for k, v in result.items()]
-                body = "\n".join(lines)
-            else:
-                body = "완료"
-            await notifier.send_info(title, body, category="serenity")
+            title = at.title("serenity", f"{name} 끝", _JOB_ICONS.get(job, "🔧"))
+            lines = _result_lines(result) if result else []
+            lines.append(at.link("serenity"))
+            await notifier.send_info(title, "\n".join(lines), category="serenity")
     except Exception as exc:  # noqa: BLE001
         logger.warning("[serenity] notifier 실패 · %s · %s", job, exc)
 
@@ -122,9 +158,8 @@ async def _job_zai_cost_audit() -> None:
         if count_24h > ZAI_DAILY_SIGNAL_THRESHOLD:
             await _notify_job_result(
                 "zai_cost_audit",
-                error=(f"24h signals_inserted={count_24h} > "
-                       f"threshold={ZAI_DAILY_SIGNAL_THRESHOLD} · "
-                       "수동 트리거 or 크론 이중 실행 의심"),
+                error=(f"최근 24시간 새 신호 {count_24h}건 · 기준 {ZAI_DAILY_SIGNAL_THRESHOLD}건 넘음 · "
+                       "수동 실행이나 중복 실행일 수 있음"),
             )
     except Exception as exc:  # noqa: BLE001
         logger.exception("[serenity] cron zai_cost_audit 실패")
@@ -188,7 +223,7 @@ def register_serenity_jobs(scheduler: AsyncIOScheduler) -> None:
 
     scheduler.add_job(
         _job_crawler,
-        trigger=CronTrigger(hour=6, minute=0, timezone="Asia/Seoul"),
+        trigger=CronTrigger(hour=_JOB_SCHEDULE["crawler"][0], minute=_JOB_SCHEDULE["crawler"][1], timezone="Asia/Seoul"),
         id="serenity_crawler_daily",
         name="매일 06:00 KST · Serenity 트윗 아카이브 sync",
         replace_existing=True,
@@ -200,7 +235,7 @@ def register_serenity_jobs(scheduler: AsyncIOScheduler) -> None:
     if _is_enabled("SERENITY_EXTRACTOR_CRON", default=False):
         scheduler.add_job(
             _job_extractor,
-            trigger=CronTrigger(hour=7, minute=0, timezone="Asia/Seoul"),
+            trigger=CronTrigger(hour=_JOB_SCHEDULE["extractor"][0], minute=_JOB_SCHEDULE["extractor"][1], timezone="Asia/Seoul"),
             id="serenity_extractor_daily",
             name="매일 07:00 KST · Serenity z.ai signal 추출 (비용 발생)",
             replace_existing=True,
@@ -216,7 +251,7 @@ def register_serenity_jobs(scheduler: AsyncIOScheduler) -> None:
 
     scheduler.add_job(
         _job_scorer,
-        trigger=CronTrigger(hour=8, minute=0, timezone="Asia/Seoul"),
+        trigger=CronTrigger(hour=_JOB_SCHEDULE["scorer"][0], minute=_JOB_SCHEDULE["scorer"][1], timezone="Asia/Seoul"),
         id="serenity_scorer_daily",
         name="매일 08:00 KST · Serenity 15원칙 스코어 재계산",
         replace_existing=True,
@@ -229,7 +264,7 @@ def register_serenity_jobs(scheduler: AsyncIOScheduler) -> None:
     # (주 1회 × 200건 vs signals 4194건 = 21주 소요 → 매일 500건)
     scheduler.add_job(
         _job_backtest,
-        trigger=CronTrigger(hour=1, minute=0, timezone="Asia/Seoul"),
+        trigger=CronTrigger(hour=_JOB_SCHEDULE["backtest"][0], minute=_JOB_SCHEDULE["backtest"][1], timezone="Asia/Seoul"),
         id="serenity_backtest_daily",
         name="매일 01:00 KST · Serenity yfinance 백테스트 (v6 · 배치 500)",
         replace_existing=True,
@@ -241,7 +276,7 @@ def register_serenity_jobs(scheduler: AsyncIOScheduler) -> None:
     # Phase L14 · 매일 00:30 KST · IWM + SPY 400일 종가 캐시 (초과수익 산출용)
     scheduler.add_job(
         _job_benchmark,
-        trigger=CronTrigger(hour=0, minute=30, timezone="Asia/Seoul"),
+        trigger=CronTrigger(hour=_JOB_SCHEDULE["benchmark"][0], minute=_JOB_SCHEDULE["benchmark"][1], timezone="Asia/Seoul"),
         id="serenity_benchmark_daily",
         name="매일 00:30 KST · Serenity IWM/SPY 벤치마크 종가 캐시",
         replace_existing=True,
@@ -253,7 +288,7 @@ def register_serenity_jobs(scheduler: AsyncIOScheduler) -> None:
     # 티커 종가 스냅샷 (매일 09:30 KST · US 종가 이후 · vs prior close UX)
     scheduler.add_job(
         _job_price_snapshot,
-        trigger=CronTrigger(hour=9, minute=30, timezone="Asia/Seoul"),
+        trigger=CronTrigger(hour=_JOB_SCHEDULE["price_snapshot"][0], minute=_JOB_SCHEDULE["price_snapshot"][1], timezone="Asia/Seoul"),
         id="serenity_price_snapshot_daily",
         name="매일 09:30 KST · Serenity 언급 티커 종가 스냅샷 (yfinance)",
         replace_existing=True,
@@ -266,7 +301,7 @@ def register_serenity_jobs(scheduler: AsyncIOScheduler) -> None:
     # 매일 08:15 KST · 24h 롤링 signals 카운트 · threshold 초과 시 Telegram alert
     scheduler.add_job(
         _job_zai_cost_audit,
-        trigger=CronTrigger(hour=8, minute=15, timezone="Asia/Seoul"),
+        trigger=CronTrigger(hour=_JOB_SCHEDULE["zai_cost_audit"][0], minute=_JOB_SCHEDULE["zai_cost_audit"][1], timezone="Asia/Seoul"),
         id="serenity_zai_cost_audit_daily",
         name="매일 08:15 KST · Serenity z.ai 24h 신호 카운트 감시",
         replace_existing=True,
