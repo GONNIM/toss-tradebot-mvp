@@ -310,6 +310,7 @@ async def run_crazy_picks_job():
         )
     finally:
         await _exit_clients(clients)
+        await _report_llm_usage("Crazy Picks", clients.get("llm"))
 
     # close_price=0 인 pick 에 한해 별도 Yahoo fetch (factor 단계 Yahoo timeout 회복)
     picks = await _fill_missing_prices(picks)
@@ -371,6 +372,7 @@ async def run_moonshot_picks_job():
         )
     finally:
         await _exit_clients(clients)
+        await _report_llm_usage("Moonshot Picks", clients.get("llm"))
 
     # close_price=0 fallback fetch
     picks = await _fill_missing_prices(picks)
@@ -470,6 +472,41 @@ async def _alert_job_failure(job_name: str, exc: BaseException) -> None:
             _failure_alerted[job_name] = today
     except Exception as notify_exc:  # noqa: BLE001
         logger.error(f"[cron] 실패 알림 전송 실패 ({job_name}): {notify_exc}")
+
+
+# LLM 대체 warning dedupe — 마지막으로 알린 KST 날짜 (cron 프로세스 하루 1회 · 재시작 시 초기화)
+_llm_fallback_alerted: dict[str, str] = {}
+
+
+async def _report_llm_usage(job_name: str, llm) -> None:
+    """FallbackLLM 이면 잡 끝 요약 로그 · 키·인증·잔액 문제나 전부 대체면 하루 1회 warning.
+
+    알림 자체의 실패는 삼킨다 (잡을 깨뜨리지 않음).
+    """
+    from backend.services.llm import FallbackLLM
+
+    if not isinstance(llm, FallbackLLM):
+        return
+    summary = llm.summary()
+    logger.info(f"[llm] {job_name} · {summary}")
+    if not llm.needs_alert():
+        return
+    from zoneinfo import ZoneInfo
+
+    today = datetime.now(ZoneInfo("Asia/Seoul")).strftime("%Y-%m-%d")
+    if _llm_fallback_alerted.get("llm") == today:
+        return
+    try:
+        import html
+
+        from backend.services.notifier import TelegramNotifier
+
+        detail = html.escape(f"{job_name} · {summary}")
+        sent = await TelegramNotifier().send_warning("LLM 대체 동작 (Anthropic → Z.ai)", detail)
+        if sent:
+            _llm_fallback_alerted["llm"] = today
+    except Exception as notify_exc:  # noqa: BLE001
+        logger.error(f"[cron] LLM 대체 알림 전송 실패 ({job_name}): {notify_exc}")
 
 
 async def job_universe_refresh():
