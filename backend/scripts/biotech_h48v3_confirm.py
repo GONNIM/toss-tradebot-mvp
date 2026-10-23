@@ -358,8 +358,14 @@ def _notify_reddit_blocked(day: str, status: dict) -> None:
     try:
         import asyncio
         from backend.services.notifier import TelegramNotifier
-        asyncio.run(TelegramNotifier().send_warning(
-            category="biotech", title="biotech 레딧 입력 없음", body=f"4곳 묶음 · 재시도 · biotechplays 단독 모두 실패 · 시도 {status.get('attempts')}"))
+        from backend.services import alert_text as at
+
+        tries = ", ".join(str(a) for a in (status.get("attempts") or []))
+        title, body = at.biotech_message("warning", "레딧 입력 없음", [
+            "레딧 4곳 묶음 · 다시 시도 · biotechplays 단독 모두 실패했습니다.",
+            f"시도: {at.esc(tries or '—')}",
+        ], next_spec="07:00")
+        asyncio.run(TelegramNotifier().send_warning(category="biotech", title=title, body=body))
     except Exception as e:  # noqa: BLE001
         LOG.warning("notifier 실패 · %s", e.__class__.__name__)
 

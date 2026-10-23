@@ -261,7 +261,7 @@ async def test_report_llm_usage_alert_once_per_day(monkeypatch):
     await cron._report_llm_usage("Crazy Picks", fb)
     await cron._report_llm_usage("Moonshot Picks", fb)
     assert len(sent) == 1
-    assert "Anthropic" in sent[0][0]
+    assert "Z.ai" in sent[0][0] and "Anthropic" in sent[0][1]
 
     # FallbackLLM 이 아니면 아무것도 안 함
     await cron._report_llm_usage("Crazy Picks", object())

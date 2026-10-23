@@ -44,6 +44,22 @@ class ExitResult:
     trigger_reason: Optional[str] = None       # trailing · hard_sl · force_close
 
 
+
+def _exit_message(ticker: str, name, entry_price, exit_price, qty: int, pnl_pct, reason: str, order_uuid: str) -> tuple[str, str]:
+    """실주문 청산 알림 (제목, 본문) · 1023-05."""
+    from backend.services import alert_text as at
+
+    pnl = f" {pnl_pct * 100:+.2f}%" if pnl_pct is not None else ""
+    fact, keep = at.stock_fact(name, ticker)
+    title = at.title("execution", fact, "🏁", keep=f"{keep} 팔림{pnl}")
+    body = "\n".join([
+        f"산 값 {at.won(entry_price)} → 판 값 {at.won(exit_price)} · {qty}주",
+        f"이유: {at.EXIT_REASON.get(reason, at.esc(reason))}",
+        f"주문 번호 {at.esc((order_uuid or '')[:12])}",
+        at.link("execution"),
+    ])
+    return title, body
+
 async def execute_exit(
     signal_id: int,
     order_manager: OrderManager,
@@ -154,14 +170,10 @@ async def execute_exit(
     try:
         from backend.services.notifier import TelegramNotifier
         notifier = TelegramNotifier()
-        pnl_str = f"{pnl_pct*100:+.2f}%" if pnl_pct is not None else "-"
-        title = f"🏁 SNIPER 청산 · {ticker} · {pnl_str}"
-        body = (
-            f"청산가 {exit_price:,.2f} · 수량 {result.filled_qty}주\n"
-            f"진입 {entry_price:,.2f} → 청산 {exit_price:,.2f}\n"
-            f"사유: {trigger_reason}\n"
-            f"order_uuid <code>{result.order_uuid[:12]}</code>"
-        )
+        from backend.services.stock_names import lookup_kr_name
+
+        name = await lookup_kr_name(ticker)
+        title, body = _exit_message(ticker, name, entry_price, exit_price, result.filled_qty, pnl_pct, trigger_reason, result.order_uuid)
         await notifier.send_info(title, body, category="execution")
     except Exception as exc:  # noqa: BLE001
         logger.debug("[sniper·exit] 텔레그램 실패 · %s", exc)

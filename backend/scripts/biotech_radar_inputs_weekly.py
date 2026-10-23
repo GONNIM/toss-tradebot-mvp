@@ -209,7 +209,9 @@ def run_13d(get: Callable[[str], Any] | None = None, today: date | None = None, 
     tmp.replace(out_p)
     if blocked:
         LOG.error("13D 주간 · %s · 즉시 중단 · 받은 것까지 반영", blocked)
-        (notify or _notify_warning)("biotech 13D 주간 단계 중단", f"{blocked} · 요청 {requests}")
+        from backend.services import alert_text as at
+
+        (notify or _notify_warning)(*at.biotech_message("warning", "13D 주간 자료 중단", [f"원인: {at.esc(blocked)} · 요청 {requests}회"], next_spec="tue 06:00"))
     LOG.info("13D 주간 · 활동가 %d · SEC 요청 %d (헤더 %d) · 새 13D/13G %d · 상한으로 미룸 헤더 %d · 등록부 %d · 전체 행 %d · %s",
              len(registry), requests, headers, added, deferred, deferred_registry, len(rows), out_p)
     return {"requests": requests, "headers": headers, "added": added, "deferred": deferred, "deferred_registry": deferred_registry,
@@ -287,7 +289,9 @@ def run_nlm(get: Callable[..., Any] | None = None, today: date | None = None, sl
         _P.out_flat(name).write_text(json.dumps(idx, ensure_ascii=False))
     if blocked:
         LOG.error("PubMed·Preprint 주간 · %s · 즉시 중단 · 캐시까지만 반영", blocked)
-        (notify or _notify_warning)("biotech PubMed·Preprint 주간 단계 중단", f"{blocked} · 요청 {requests}")
+        from backend.services import alert_text as at
+
+        (notify or _notify_warning)(*at.biotech_message("warning", "논문 주간 자료 중단", [f"PubMed·Preprint · 원인: {at.esc(blocked)} · 요청 {requests}회"], next_spec="wed 06:00"))
     LOG.info("PubMed·Preprint 주간 · 후보 %d · NLM 요청 %d · 오류 %d · 중단 %s · 캐시 %d", len(cands), requests, errors, blocked, len(cache))
     return {"requests": requests, "blocked": blocked, "errors": errors, "cache": len(cache)}
 
@@ -302,7 +306,10 @@ def main():
         res = run_13d() if args.step == "13d" else run_nlm()
     except Exception as e:  # noqa: BLE001 · 주간 잡은 계속
         LOG.error("레이더 입력 주간 단계 실패 · %s · %s", args.step, e.__class__.__name__)
-        _notify_warning(f"biotech 레이더 입력 주간 단계 실패 · {args.step}", e.__class__.__name__)
+        from backend.services import alert_text as at
+
+        when = "tue 06:00" if args.step == "13d" else "wed 06:00"
+        _notify_warning(*at.biotech_message("warning", f"레이더 주간 자료 실패 · {args.step}", [f"원인: 프로그램 오류 ({e.__class__.__name__})"], next_spec=when))
         res = {"error": e.__class__.__name__}
     print(json.dumps({"step": args.step, **res}, ensure_ascii=False))
 

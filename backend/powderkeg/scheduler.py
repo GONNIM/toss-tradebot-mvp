@@ -76,11 +76,18 @@ async def _notify_expiry(expired: list[dict]) -> None:
     try:
         from backend.services.notifier import TelegramNotifier
         notifier = TelegramNotifier()
-        title = "🕐 화약고 보유 재평가 (12개월 경과)"
-        lines = [
-            f"  · {e['ticker']} · {e['age_days']}일 경과 (ticket #{e['ticket_id']})"
-            for e in expired
-        ]
+        from backend.services import alert_text as at
+        from backend.services.stock_names import lookup_kr_name
+
+        title = at.title("powderkeg_reeval", f"{len(expired)}종목", "⚠️")
+        cache: dict = {}
+        lines = ["산 지 12개월이 지난 종목입니다."]
+        for e in expired[:5]:
+            name = await lookup_kr_name(e["ticker"], cache)
+            lines.append(f"· {at.stock(name, e['ticker'])} · {e['age_days']}일 (티켓 {e['ticket_id']})")
+        if len(expired) > 5:
+            lines.append(f"· 외 {len(expired) - 5}종목")
+        lines.append(at.link("powderkeg_reeval"))
         await notifier.send_warning(title, "\n".join(lines), category="powderkeg_reeval")
     except Exception as exc:  # noqa: BLE001
         logger.warning("[powderkeg.holding_expiry] Telegram 실패 · %s", exc)

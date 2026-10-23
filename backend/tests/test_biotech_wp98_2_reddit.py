@@ -70,7 +70,7 @@ def test_all_blocked_notifies_once(tmp_path, monkeypatch):
     assert st["subs_collected"] == 0
     cf._notify_reddit_blocked("20261002", st)
     cf._notify_reddit_blocked("20261002", st)
-    assert sent == ["biotech 레딧 입력 없음"]
+    assert sent == ["⚠️ 바이오 · 레딧 입력 없음"]
 
 
 def test_403_stops_further_requests():

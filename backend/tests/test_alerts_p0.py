@@ -60,8 +60,8 @@ def test_f2_overheat_item_entry_price_none_formats():
 
     it = _sector_item(entry_price=None, entry_gap_pct=None, entry_status="🔴 과열")
     title, body = format_sector_leaders_alert([it], "0.6")
-    assert "Sector Leaders" in title
-    assert "진입가: -  (🔴 과열)" in body
+    assert "섹터 리더" in title
+    assert "지정가 참고 —" in body and "과열" in body
     assert "None" not in body
 
 
@@ -69,18 +69,18 @@ def test_f2_normal_item_unchanged():
     from backend.services.notifier import format_sector_leaders_alert
 
     _, body = format_sector_leaders_alert([_sector_item()], "0.6")
-    assert "진입가: 9,500원" in body
-    assert "예측수익가: 12,000원  (+20.0%)" in body
+    assert "지정가 참고 9,500원" in body
+    assert "12,000원 (+20.0%)" in body
 
 
 # ─── F3 · A3 본문에 '<' 가 없다 / 400 본문 로그 ───
 def test_f3_a3_body_has_no_angle_bracket():
-    from backend.powderkeg.triggers import _body_for_direction
+    from backend.powderkeg.triggers import _direction_line
 
-    body = _body_for_direction("observed_negative", "기본")
+    body = _direction_line("observed_negative")
     assert "<" not in body
     assert ">" not in body
-    assert "미만" in body and "이상" in body
+    assert "아래" in body and "이상" in body
 
 
 @pytest.mark.real_notifier_send  # httpx.AsyncClient 를 아래에서 가짜로 바꾸므로 외부 발송 없음
@@ -176,8 +176,8 @@ def test_f5_alert_body_points_to_new_path():
 
     from backend.execution import kill_switch as ks
 
-    src = inspect.getsource(ks.KillSwitch._notify_urgent)
-    assert "/api/v1/sniper/kill-switch" in src
+    src = inspect.getsource(ks._kill_switch_message)
+    assert "/lab/execution" in src  # 화면의 「수동 해제」 (1023-05)
     assert "/execution/kill-switch" not in src
 
 
@@ -205,8 +205,8 @@ async def test_f6_failure_warning_once_per_day(monkeypatch):
     await cron.job_crazy_picks()
     assert len(calls) == 1
     title, body = calls[0]
-    assert title == "Crazy Picks 실패"
-    assert body.startswith("RuntimeError: ") and len(body) < 260
+    assert title == "⚠️ 시스템 경고 · Crazy 종목 실패"
+    assert "원인: 프로그램 오류 (RuntimeError)" in body
     assert body.count("x") == 200  # 메시지는 200자로 잘림
 
     # 다른 잡은 별도로 1회
@@ -235,7 +235,7 @@ async def test_f6_new_day_alerts_again(monkeypatch):
 
     monkeypatch.setattr(cron, "run_sector_leaders_alert_job", boom)
     await cron.job_sector_leaders_alert_0905()
-    assert calls == ["Sector Leaders 09:05 실패"]
+    assert calls == ["⚠️ 시스템 경고 · 섹터 리더 09:05 실패"]
 
 
 @pytest.mark.asyncio

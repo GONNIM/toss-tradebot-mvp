@@ -159,9 +159,13 @@ def check_inputs(sha: str, notify=None) -> list[str]:
     elif missing:
         if notify is None:
             marker.write_text(",".join(missing))
-        (notify or _notify_warning)(
-            "biotech 레이더 점수 입력 부족",
-            f"없는 입력 {len(missing)}개: {', '.join(missing)}\n전문가 채널·미반영 채널이 0 또는 중립으로 계산됩니다 (표시만 · 점수 규칙 무변경)")
+        from backend.services import alert_text as at
+
+        title, body = at.biotech_message("warning", f"레이더 입력 {len(missing)}개 빠짐", [
+            f"빠진 입력 (파일 이름): {at.esc(', '.join(missing))}",
+            "해당 채널은 0 또는 중립으로 계산됩니다 (점수 규칙은 그대로).",
+        ], next_spec="07:00")
+        (notify or _notify_warning)(title, body)
     return missing
 
 
@@ -183,7 +187,10 @@ def record_v3_full_start(inputs_missing: list[str], day: str, notify=None) -> st
             import asyncio
             from backend.services.notifier import TelegramNotifier
             if (os.environ.get("BIOTECH_NOTIFY_OFF") or "").strip() != "1":
-                asyncio.run(TelegramNotifier().send_info(category="biotech", title="biotech 레이더 v3-전체 시작", body=f"설계 입력이 모두 갖춰진 첫 실행일 {iso}"))
+                from backend.services import alert_text as at
+
+                title, body = at.biotech_message("info", "레이더 모든 입력 갖춤", [f"설계한 입력이 모두 들어온 첫 실행일: {iso}"])
+                asyncio.run(TelegramNotifier().send_info(category="biotech", title=title, body=body))
         else:
             notify(iso)
     except Exception as e:  # noqa: BLE001

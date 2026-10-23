@@ -1,21 +1,20 @@
 """Meme Watch Telegram 알림 (Phase 6).
 
-Intensity ≥ 8.0 (🌋 ERUPTING) 또는 Score ≥ 1.0 (🔥🔥 BLAZING) 진입 시
+Intensity ≥ 8.0 (급등 진행) 또는 Score ≥ 1.0 (급등 전 단계) 진입 시
 Telegram 알림 발송. 종목별 24시간 cooldown 으로 스팸 방지.
 
 MemeAlertHistory 테이블에 발송 기록 → 다음 turn cooldown 필터.
 """
 from __future__ import annotations
 
-import html
 import json
 import logging
-import re
 from datetime import datetime, timedelta
 from typing import Optional
 
 from sqlalchemy import select
 
+from backend.services import alert_text as at
 from backend.services.db import get_session
 from backend.services.models import MemeAlertHistory
 from backend.services.notifier import Level, TelegramNotifier
@@ -41,84 +40,33 @@ def _format_alert(
     volume,
     prev_score: Optional[float] = None,
     prev_intensity: Optional[float] = None,
-) -> str:
-    """Markdown 메시지 생성.
-
-    헤더에 두 지표 라벨 병기 (Score BLAZING + Intensity ERUPTING) — 두 개념
-    (폭등 가능성 예측 vs 현재 상승 강도 실측) 사용자 혼동 방지.
-    """
-    name = (meta.name if meta else "") or score.ticker
-    market = (meta.market if meta else "?") or "?"
-
-    # 헤더 라벨 — 두 조건 모두 만족 시 병기 + retrigger 표시
-    header_parts = []
-    if intensity is not None and intensity.intensity >= _ERUPTING_INTENSITY:
-        header_parts.append(f"{intensity.emoji} {intensity.label}")
-    if score.score >= _BLAZING_SCORE:
-        header_parts.append(f"{score.emoji} {score.label}")
-    if not header_parts:
-        header_parts.append(f"{score.emoji} {score.label}")
-
+) -> tuple[str, str]:
+    """(제목, 본문) — 한국어 · 사실만 · 실측(상승 강도)과 추정(급등 전 단계 점수)을 구분해 적는다 (1023-05)."""
+    erupting = alert_type == "ERUPTING"
+    category = "meme_erupting" if erupting else "meme_blazing"
+    name = meta.name if meta and meta.name else None
     is_retrigger = prev_score is not None or prev_intensity is not None
-    retrigger_tag = " 🔺 UP" if is_retrigger else ""
+    tail = " · 다시 오름" if is_retrigger else ""
+    if name:
+        title = at.title(category, name, "🌋" if erupting else "🔥", keep=f"({score.ticker}){tail}")
+    else:
+        title = at.title(category, "", "🌋" if erupting else "🔥", keep=f"{score.ticker}{tail}")
 
-    lines = [
-        f"{' · '.join(header_parts)}{retrigger_tag} — *{name}*",
-        f"`{score.ticker}` · {market}",
-        "─────────────",
-        f"Meme Score:  *{score.score:.3f}*  {score.emoji} {score.label}"
-        + (f"  _(이전 {prev_score:.3f}, +{score.score - prev_score:.2f})_"
-           if prev_score is not None and is_retrigger else ""),
-        "             _(폭등 가능성 예측)_",
-    ]
-    if intensity is not None:
-        intensity_line = (
-            f"Intensity:   *{intensity.intensity:.1f}/10*  "
-            f"{intensity.emoji} {intensity.label}"
-        )
-        if prev_intensity is not None and is_retrigger:
-            intensity_line += (
-                f"  _(이전 {prev_intensity:.1f}, +{intensity.intensity - prev_intensity:.1f})_"
-            )
-        lines.append(intensity_line)
-        lines.append("             _(현재 상승 강도 실측)_")
-    lines.append("─────────────")
-
+    market = (meta.market if meta else None) or ""
+    lines = []
     if volume is not None and volume.close is not None:
-        if market == "KRX":
-            price_str = f"{int(volume.close):,}원"
-        else:
-            price_str = f"${volume.close:.2f}"
-        price_line = f"현재가: *{price_str}*"
-        if volume.return_1d_pct is not None:
-            price_line += f"  ·  1D *{volume.return_1d_pct:+.1f}%*"
-        lines.append(price_line)
-
-    lines += [
-        "",
-        "https://optimus8.cafe24.com/meme-watch",
-    ]
-    return "\n".join(lines)
-
-
-_MD_MARKS = [
-    (re.compile(r"\*([^*\n]+)\*"), r"<b>\1</b>"),
-    (re.compile(r"`([^`\n]+)`"), r"<code>\1</code>"),
-    (re.compile(r"(?<![\w])_([^_\n]+)_(?![\w])"), r"<i>\1</i>"),
-]
-
-
-def _to_title_body(md_text: str) -> tuple[str, str]:
-    """_format_alert 의 Markdown 글 → TelegramNotifier(HTML) 용 (제목, 본문). 글자 내용은 그대로.
-
-    제목은 첫 줄을 기호 없이 escape (notifier 가 <b> 로 감쌈) · 본문은 escape 뒤 Markdown 기호를 HTML 태그로.
-    """
-    first, _, rest = md_text.partition("\n")
-    title = html.escape(re.sub(r"[*_`]", "", first))
-    body = html.escape(rest, quote=False)
-    for pattern, repl in _MD_MARKS:
-        body = pattern.sub(repl, body)
-    return title, body
+        price = f"{int(volume.close):,}원" if market == "KRX" else at.usd(volume.close)
+        day = f"오늘 {volume.return_1d_pct:+.1f}% · " if volume.return_1d_pct is not None else ""
+        lines.append(f"{day}지금 {price}")
+    if intensity is not None:
+        prev = f" · 직전 {prev_intensity:.1f}" if prev_intensity is not None else ""
+        lines.append(f"상승 강도 {intensity.intensity:.1f}/10 (실측{prev})")
+    prev = f" · 직전 {prev_score:.2f}" if prev_score is not None else ""
+    lines.append(f"급등 전 단계 점수 {score.score:.2f} (추정{prev} · 커뮤니티 언급·거래량 등 5가지 · 보장 아님)")
+    if market:
+        lines.append(f"시장: {at.esc(market)}")
+    lines.append(at.link(category))
+    return title, "\n".join(lines)
 
 
 # 처리됨으로 보는 발송 결과 — 이력에 남겨 cooldown 적용 (실패만 다음 회차 재시도)
@@ -216,7 +164,7 @@ async def check_and_send_alerts(top_n: int = _TOP_N_TO_CHECK) -> dict:
                     stats["skipped_cooldown"] += 1
                     continue
 
-            text = _format_alert(
+            title, body = _format_alert(
                 alert_type,
                 score,
                 intensity,
@@ -225,7 +173,6 @@ async def check_and_send_alerts(top_n: int = _TOP_N_TO_CHECK) -> dict:
                 prev_score=prev_score if is_retrigger else None,
                 prev_intensity=prev_intensity if is_retrigger else None,
             )
-            title, body = _to_title_body(text)
             category = "meme_erupting" if alert_type == "ERUPTING" else "meme_blazing"
             try:
                 # force=True — 예전 send_message 처럼 TELEGRAM_PROFILE 을 우회 (배포만으로 받는 알림이 바뀌지 않게)

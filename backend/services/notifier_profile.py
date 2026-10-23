@@ -123,6 +123,17 @@ def get_watch_queue() -> WatchQueue:
     return _queue
 
 
+_SOURCE_TEXT = {
+    "meme_stock": "밈",
+    "activist": "행동주의",
+    "vip": "VIP 감시",
+    "super_signal": "슈퍼 신호",
+    "kill_switch": "Kill Switch",
+    "execution": "실주문",
+    "unknown": "기타",
+}
+
+
 async def flush_watch_batch(send_async: Callable[[str, str], Awaitable[bool]]) -> dict:
     """30분 배치 · WATCH 큐 → 요약 메시지 1건 발송.
 
@@ -138,15 +149,19 @@ async def flush_watch_batch(send_async: Callable[[str, str], Awaitable[bool]]) -
     for item in items:
         by_source[item["source"]] = by_source.get(item["source"], 0) + 1
         if item.get("level", "").upper() in {"URGENT", "CRITICAL"}:
-            urgent_lines.append(f"  • {item['title']}")
+            urgent_lines.append(f"· {item['title']}")
 
-    title = f"📊 WATCH 요약 · {len(items)}건 (30분)"
-    lines = ["<b>소스별</b>"]
-    for src, cnt in sorted(by_source.items(), key=lambda x: -x[1]):
-        lines.append(f"  · {src}: {cnt}")
+    from backend.services import alert_text as at
+
+    title = at.title("system", f"30분 모음 {len(items)}건", "📊")
+    counts = " · ".join(
+        f"{_SOURCE_TEXT.get(src, at.esc(src))} {cnt}" for src, cnt in sorted(by_source.items(), key=lambda x: -x[1])
+    )
+    lines = [f"종류별: {counts}"]
     if urgent_lines:
-        lines.append("\n<b>URGENT</b>")
-        lines.extend(urgent_lines[:10])
+        lines.append("급한 알림:")
+        lines.extend(urgent_lines[:5])
+    lines.append(at.link("system"))
     body = "\n".join(lines)
 
     try:

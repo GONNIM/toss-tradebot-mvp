@@ -185,13 +185,17 @@ async def _notify_ticket_approved(ticket_id: int, ticker: str, approver: str) ->
     try:
         from backend.services.notifier import TelegramNotifier
         notifier = TelegramNotifier()
-        title = "🎯 화약고 티켓 승인 · VIP 감시 등록"
-        body = (
-            f"  · ticker: {ticker}\n"
-            f"  · ticket #{ticket_id}\n"
-            f"  · approver: {approver}\n"
-            f"  · 자동: VIP 감시 · 무효화 조건 실시간 모니터"
-        )
+        from backend.services import alert_text as at
+        from backend.services.stock_names import lookup_kr_name
+
+        name = await lookup_kr_name(ticker)
+        fact, keep = at.stock_fact(name, ticker)
+        title = at.title("powderkeg_ticket", fact, "✅", keep=keep)
+        body = "\n".join([
+            f"승인 번호 {ticket_id} · 승인한 사람 {at.esc(approver)}",
+            "이제 VIP 감시가 이 종목의 무효 조건을 실시간으로 지켜봅니다.",
+            at.link("powderkeg_ticket"),
+        ])
         await notifier.send_info(title, body, category="powderkeg_ticket")
     except Exception as exc:  # noqa: BLE001
         logger.warning("[powderkeg.ticket] Telegram 실패 · %s", exc)

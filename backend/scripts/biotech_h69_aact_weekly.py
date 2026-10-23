@@ -607,9 +607,11 @@ def _notify_warning_sync(step: str, detail: str) -> None:
     """텔레그램 warning (자동 분류 등 보조 단계 실패 · 주간 잡 중단 아님)."""
     try:
         from backend.services.notifier import TelegramNotifier
-        asyncio.run(TelegramNotifier().send_warning(
-            category="biotech", title=f"biotech AACT weekly 보조 단계 실패 · {step}",
-            body=f"단계: {step}\n상세: {detail}\n서버: optimus8\n스크립트: biotech_h69_aact_weekly"))
+        from backend.services import alert_text as at
+
+        title, body = at.biotech_message("warning", f"임상시험 주간 자료 보조 단계 실패 · {step}",
+                                         [f"원인: {at.esc(detail)}", "주간 자료 받기는 계속 진행했습니다."], next_spec="mon 06:00")
+        asyncio.run(TelegramNotifier().send_warning(category="biotech", title=title, body=body))
     except Exception as e:
         LOG.warning("notifier 실패 · %s", e.__class__.__name__)
 
@@ -618,11 +620,11 @@ def _notify_failure_sync(step: str, detail: str) -> None:
     """텔레그램 알림 · sync wrapper."""
     try:
         from backend.services.notifier import TelegramNotifier
-        n = TelegramNotifier()
-        asyncio.run(n.send_critical(
-            category="biotech", title=f"biotech AACT weekly 실패 · {step}",
-            body=f"단계: {step}\n상세: {detail}\n서버: optimus8\n스크립트: biotech_h69_aact_weekly",
-        ))
+        from backend.services import alert_text as at
+
+        title, body = at.biotech_message("critical", f"임상시험 주간 자료 실패 · {step}",
+                                         [f"원인: {at.esc(detail)}"], next_spec="mon 06:00")
+        asyncio.run(TelegramNotifier().send_critical(category="biotech", title=title, body=body))
     except Exception as e:
         LOG.warning("notifier 실패 · %s", e.__class__.__name__)
 

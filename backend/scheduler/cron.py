@@ -21,7 +21,7 @@ import json
 import logging
 import os
 import signal
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Optional
 
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
@@ -78,6 +78,8 @@ WATCHLIST = [
 CRAZY_TOP_N = int(os.environ.get("CRAZY_TOP_N", "10"))
 MOONSHOT_TOP_N = int(os.environ.get("MOONSHOT_TOP_N", "3"))
 SECTOR_LEADERS_TOP_N = int(os.environ.get("SECTOR_LEADERS_TOP_N", "3"))
+# 섹터 알림 두 시각 (KST) — add_job 과 실패 알림 「다음 실행」 이 같은 값을 쓴다
+SECTOR_SLOTS = ((9, 5), (17, 5))
 
 
 # ─────────────────────────────────────────────
@@ -447,9 +449,39 @@ async def run_moonshot_picks_job():
 _failure_alerted: dict[str, str] = {}
 
 
-async def _alert_job_failure(job_name: str, exc: BaseException) -> None:
+# 실패 알림 표시 이름 (dedupe 열쇠는 job_name 그대로)
+_JOB_DISPLAY = {
+    "Crazy Picks": "Crazy 종목",
+    "Moonshot Picks": "Moonshot 종목",
+    "Sector Leaders 09:05": "섹터 리더 09:05",
+    "Sector Leaders 17:05": "섹터 리더 17:05",
+}
+
+
+def _now_utc() -> datetime:
+    return datetime.now(timezone.utc)
+
+
+def _easy_cause(exc: BaseException) -> str:
+    """예외 → 쉬운 원인 한 줄 (원래 예외 이름은 괄호)."""
+    import httpx
+
+    name = type(exc).__name__
+    if isinstance(exc, (httpx.TimeoutException, asyncio.TimeoutError, TimeoutError)):
+        return f"외부 응답 시간 초과 ({name})"
+    if isinstance(exc, httpx.ConnectError):
+        return f"외부 연결 실패 ({name})"
+    if isinstance(exc, httpx.HTTPStatusError):
+        return f"외부 사이트 오류 응답 (HTTP {exc.response.status_code})"
+    return f"프로그램 오류 ({name})"
+
+
+async def _alert_job_failure(
+    job_name: str, exc: BaseException, hour: Optional[int] = None, minute: Optional[int] = None,
+) -> None:
     """잡이 처리되지 않은 예외로 실패하면 텔레그램 warning 1회 (같은 잡 · 같은 KST 날짜).
 
+    hour·minute 은 이 잡의 **다음** 실행 시각 (없으면 「다음 실행」 줄 생략).
     알림 자체의 실패는 삼킨다 (잡 wrapper 를 다시 깨뜨리지 않음).
     """
     from zoneinfo import ZoneInfo
@@ -458,15 +490,18 @@ async def _alert_job_failure(job_name: str, exc: BaseException) -> None:
     if _failure_alerted.get(job_name) == today:
         return
     try:
-        import html
-
+        from backend.services import alert_text as at
         from backend.services.logging_setup import _mask
         from backend.services.notifier import TelegramNotifier
 
         # 마스킹 → 자르기 → HTML 이스케이프 (notifier 는 HTML parse_mode)
         msg = _mask(str(exc))[:200]
-        detail = html.escape(f"{type(exc).__name__}: {msg}")
-        sent = await TelegramNotifier().send_warning(f"{job_name} 실패", detail, category="system")
+        title = at.title("system", f"{_JOB_DISPLAY.get(job_name, job_name)} 실패", "⚠️")
+        lines = [f"원인: {_easy_cause(exc)}", f"자세한 내용: {at.esc(msg)}"]
+        if hour is not None and minute is not None:
+            lines.append(f"다음 실행: {at.next_run(hour, minute, now=_now_utc())}")
+        lines.append(at.link("system"))
+        sent = await TelegramNotifier().send_warning(title, "\n".join(lines), category="system")
         # 발송 성공 때만 기록 — 실패하면 다음 실패 때 다시 시도
         if sent:
             _failure_alerted[job_name] = today
@@ -501,8 +536,15 @@ async def _report_llm_usage(job_name: str, llm) -> None:
 
         from backend.services.notifier import TelegramNotifier
 
-        detail = html.escape(f"{job_name} · {summary}")
-        sent = await TelegramNotifier().send_warning("LLM 대체 동작 (Anthropic → Z.ai)", detail, category="system")
+        from backend.services import alert_text as at
+
+        title = at.title("system", "AI 를 예비(Z.ai)로 바꿔 씀", "⚠️")
+        detail = "\n".join([
+            f"{html.escape(_JOB_DISPLAY.get(job_name, job_name))} 분석에서 Anthropic 대신 Z.ai 를 썼습니다.",
+            f"집계: {html.escape(summary)}",
+            at.link("system"),
+        ])
+        sent = await TelegramNotifier().send_warning(title, detail, category="system")
         if sent:
             _llm_fallback_alerted["llm"] = today
     except Exception as notify_exc:  # noqa: BLE001
@@ -517,7 +559,7 @@ async def job_notification_digest():
         await notification_digest.run_daily()
     except Exception as e:
         logger.error(f"[cron] notification digest failed: {e}", exc_info=True)
-        await _alert_job_failure("알림 하루 요약", e)
+        await _alert_job_failure("알림 하루 요약", e, 18, 0)
 
 
 async def job_universe_refresh():
@@ -532,7 +574,7 @@ async def job_crazy_picks():
         await run_crazy_picks_job()
     except Exception as e:
         logger.error(f"[cron] crazy picks failed: {e}", exc_info=True)
-        await _alert_job_failure("Crazy Picks", e)
+        await _alert_job_failure("Crazy Picks", e, 6, 30)
 
 
 async def job_moonshot_picks():
@@ -540,7 +582,7 @@ async def job_moonshot_picks():
         await run_moonshot_picks_job()
     except Exception as e:
         logger.error(f"[cron] moonshot picks failed: {e}", exc_info=True)
-        await _alert_job_failure("Moonshot Picks", e)
+        await _alert_job_failure("Moonshot Picks", e, 16, 50)
 
 
 # ─────────────────────────────────────────────
@@ -602,7 +644,7 @@ async def job_sector_leaders_alert_0905():
         await run_sector_leaders_alert_job(slot="09:05")
     except Exception as e:
         logger.error(f"[cron] sector_leaders 09:05 failed: {e}", exc_info=True)
-        await _alert_job_failure("Sector Leaders 09:05", e)
+        await _alert_job_failure("Sector Leaders 09:05", e, *SECTOR_SLOTS[1])
 
 
 async def job_sector_leaders_alert_1705():
@@ -610,7 +652,7 @@ async def job_sector_leaders_alert_1705():
         await run_sector_leaders_alert_job(slot="17:05")
     except Exception as e:
         logger.error(f"[cron] sector_leaders 17:05 failed: {e}", exc_info=True)
-        await _alert_job_failure("Sector Leaders 17:05", e)
+        await _alert_job_failure("Sector Leaders 17:05", e, *SECTOR_SLOTS[0])
 
 
 # ─────────────────────────────────────────────
@@ -761,11 +803,11 @@ def build_scheduler() -> AsyncIOScheduler:
                       id="crazy_picks", name="Crazy Picks 06:30 KST", replace_existing=True)
     scheduler.add_job(job_moonshot_picks, CronTrigger(hour=16, minute=50),
                       id="moonshot_picks", name="Moonshot Picks 16:50 KST", replace_existing=True)
-    scheduler.add_job(job_sector_leaders_alert_0905, CronTrigger(hour=9, minute=5),
+    scheduler.add_job(job_sector_leaders_alert_0905, CronTrigger(hour=SECTOR_SLOTS[0][0], minute=SECTOR_SLOTS[0][1]),
                       id="sector_leaders_alert_0905",
                       name="Sector Leaders Top — 09:05 KST (개장 안정)",
                       replace_existing=True)
-    scheduler.add_job(job_sector_leaders_alert_1705, CronTrigger(hour=17, minute=5),
+    scheduler.add_job(job_sector_leaders_alert_1705, CronTrigger(hour=SECTOR_SLOTS[1][0], minute=SECTOR_SLOTS[1][1]),
                       id="sector_leaders_alert_1705",
                       name="Sector Leaders Top — 17:05 KST (정규장 마감 후)",
                       replace_existing=True)

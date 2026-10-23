@@ -35,10 +35,9 @@ cd "$ROOT"
 _notify_failure() {
   local step="$1"
   local msg="$2"
-  $VENV -m backend.scripts.biotech_notify critical "biotech daily 실패 · $step" "step: $step
-detail: $msg
-서버: optimus8.cafe24.com
-로그: $BIOTECH_RUNTIME_DIR/logs/daily.log" || echo "notifier 호출 자체 실패 · step=$step"
+  local next="07:00" kind="매일"
+  [ "$step" = "aact_weekly" ] && next="mon 06:00" && kind="주간"
+  $VENV -m backend.scripts.biotech_notify critical "$kind 작업 실패 · {step}" "원인: {step} 단계가 오류로 멈춤 ($msg)" --step "$step" --next "$next" || echo "notifier 호출 자체 실패 · step=$step"
 }
 
 # 옵션: --aact-weekly-only (월요일 06:00 cron 용 · 주간 스냅샷만 실행 후 종료)

@@ -33,9 +33,11 @@ from typing import Any, Optional
 
 from sqlalchemy import delete, select
 
+from backend.services import alert_text as at
 from backend.services.db import get_session
 from backend.services.models import PowderKegBacktestReport, PowderKegEvent, PowderKegList
 from backend.services.notification_settings import powderkeg_category
+from backend.services.stock_names import lookup_kr_name
 
 from .llm_classifier import LLMClassification, classify_owner_event
 
@@ -78,28 +80,44 @@ async def _get_empirical_direction(event_type: str) -> str:
     return "observing"
 
 
-def _title_for_direction(direction: str, event_type: str, ticker: str, suffix: str = "") -> str:
-    """알림 title · 실증 방향성 반영."""
-    if direction == "buy_candidate":
-        prefix = "🎯 [매수 후보 · VALIDATED"
-    elif direction == "observed_negative":
-        prefix = "🔬 [관찰 후보 · 백테스트 음수"
-    else:
-        prefix = "📊 [관찰 후보"
-    return f"{prefix} · {event_type}{suffix}] {ticker}"
+_DIRECTION_ICON = {"buy_candidate": "📊", "observed_negative": "🔬"}
+_A4_LABEL = "화약고 후보 · 5% 보고"   # A4 는 설정 목록 밖 (unknown · 항상 발송)
 
 
-def _body_for_direction(direction: str, base_body: str) -> str:
-    """알림 body · 실증 방향성 캐비어트."""
+def _candidate_title(direction: str, event_type: str, name: Optional[str], ticker: str) -> str:
+    """후보 알림 제목 · `<아이콘> 화약고 후보 · <유형> · 이름(코드)` (1023-05 · 코드는 잘리지 않음)."""
+    category = powderkeg_category(event_type)
+    label = _A4_LABEL if category == "unknown" else None
+    fact, keep = at.stock_fact(name, ticker)
+    return at.title(category, fact, _DIRECTION_ICON.get(direction, "📊"), label=label, keep=keep)
+
+
+def _dnt_title(name: Optional[str], ticker: str, kind: str) -> str:
+    """거래 주의 제목 · 유형까지 넣어 같은 종목의 다른 공시가 재발송 간격에 묻히지 않게."""
+    fact, keep = at.stock_fact(name, ticker)
+    return at.title("powderkeg_dnt", fact, "🚨", keep=f"{keep} · {kind}")
+
+
+def _direction_line(direction: str) -> str:
+    """과거 성적 한 줄 · 추정은 통계·보장 아님으로 밝힌다."""
     if direction == "observed_negative":
-        return (
-            f"{base_body}\n\n"
-            f"⚠️ 실증 캐비어트 · 이 이벤트 타입은 백테스트 5년 표본에서 12M CAR 이 통계 유의 음수 "
-            f"(mean -5% 미만, n 50 이상). 매수 판단 시 화약고 10 조건 등 다른 필터와 조합 후 검토."
-        )
+        return (f"과거 5년 같은 공시 {_EMPIRICAL_MIN_SAMPLE}건 이상: 12개월 뒤 평균 "
+                f"{_EMPIRICAL_NEGATIVE_THRESHOLD * 100:.0f}% 아래 (통계 · 보장 아님)")
     if direction == "buy_candidate":
-        return f"{base_body}\n\n✅ 백테스트 게이트 통과 (validated · t>2 · 승률≥50%)."
-    return f"{base_body}\n\n📊 표본 부족 or 방향 불명확 · hypothesis."
+        return "과거 5년 같은 공시: 승률 50% 이상 · 통계적으로 의미 있음 (보장 아님)"
+    return "과거 자료가 적어 방향을 판단하기 어렵습니다."
+
+
+def _source_line(event: PowderKegEvent) -> list[str]:
+    return [f"공시 원문: {at.esc(event.url)}"] if event.url else []
+
+
+def _removed_line(removed: int) -> str:
+    return f"화약고 후보 목록에서 뺐습니다 ({removed}건)." if removed else "화약고 후보 목록에는 없던 종목입니다."
+
+
+def _page_link(event_type: str) -> str:
+    return at.link(powderkeg_category(event_type), page="/powderkeg")
 
 
 # ─── notifier 얇은 wrapper · 테스트 monkeypatch 편의 ─
@@ -163,11 +181,18 @@ async def _mark_event(event_id: int, action: str, llm: Optional[LLMClassificatio
             row.needs_human_review = llm.needs_human_review
 
 
-async def process_type_b(event: PowderKegEvent) -> ActionResult:
+async def process_type_b(event: PowderKegEvent, cache: Optional[dict] = None) -> ActionResult:
     """Type B · 리스트 제거 + 최우선 알림."""
+    name = await lookup_kr_name(event.ticker, cache)   # 목록에서 지우기 전에 (목록 이름도 원천)
     removed = await _remove_from_latest_list(event.ticker)
-    title = f"🚨 [DO NOT TOUCH] {event.ticker} · {event.event_type}"
-    body = f"{event.title}\n원문: {event.url or 'N/A'}\n리스트에서 즉시 제거 ({removed} rows)."
+    kind = at.POWDERKEG_TYPE.get(event.event_type, event.event_type)
+    title = _dnt_title(name, event.ticker, kind)
+    body = "\n".join([
+        f"{kind} 공시: {at.esc(event.title)}",
+        _removed_line(removed),
+        *_source_line(event),
+        at.link("powderkeg_dnt"),
+    ])
     sent = await _send_notification(title, body, urgent=True, category=powderkeg_category(event.event_type))
     await _mark_event(event.id, action="list_removed")
     return ActionResult(
@@ -176,16 +201,24 @@ async def process_type_b(event: PowderKegEvent) -> ActionResult:
     )
 
 
-async def process_type_a(event: PowderKegEvent) -> ActionResult:
+async def process_type_a(event: PowderKegEvent, cache: Optional[dict] = None) -> ActionResult:
     """Type A · 알림 + (A1 은 LLM 재판정)."""
     llm_result: Optional[LLMClassification] = None
+    name = await lookup_kr_name(event.ticker, cache)
     if event.event_type == "A1":
         llm_result = await classify_owner_event(event.title)
         # LLM 이 회사자금 관련이라 판정 → Type B 로 격상
         if llm_result.label == "company_related" and llm_result.confidence >= 0.8:
             removed = await _remove_from_latest_list(event.ticker)
-            title = f"🚨 [B 격상] {event.ticker} · A1 → 회사자금 판정"
-            body = f"{event.title}\nLLM: {llm_result.rationale} (confidence={llm_result.confidence:.2f})"
+            title = _dnt_title(name, event.ticker, "AI 판단 회사 자금")
+            body = "\n".join([
+                f"오너 사법 공시를 AI 가 회사 자금 문제로 판단 (확신 {llm_result.confidence:.0%})",
+                f"공시: {at.esc(event.title)}",
+                f"AI 판단 이유: {at.esc(llm_result.rationale)}",
+                _removed_line(removed),
+                *_source_line(event),
+                at.link("powderkeg_dnt"),
+            ])
             sent = await _send_notification(title, body, urgent=True, category="powderkeg_dnt")
             await _mark_event(event.id, action="list_removed", llm=llm_result)
             return ActionResult(
@@ -195,8 +228,15 @@ async def process_type_a(event: PowderKegEvent) -> ActionResult:
             )
         # needs_human_review 인 경우
         if llm_result.needs_human_review:
-            title = f"🟡 [사람 확인 필요] {event.ticker} · A1"
-            body = f"{event.title}\nLLM confidence={llm_result.confidence:.2f} · {llm_result.rationale}"
+            fact, keep = at.stock_fact(name, event.ticker)
+            title = at.title("powderkeg_a1", fact, "🔍", keep=keep)
+            body = "\n".join([
+                f"사람 확인 필요: AI 확신이 낮아 ({llm_result.confidence:.0%}) 자동 판단하지 않았습니다.",
+                f"공시: {at.esc(event.title)}",
+                f"AI 판단 이유: {at.esc(llm_result.rationale)}",
+                *_source_line(event),
+                at.link("powderkeg_a1"),
+            ])
             sent = await _send_notification(title, body, urgent=False, category="powderkeg_a1")
             await _mark_event(event.id, action="needs_human_review", llm=llm_result)
             return ActionResult(
@@ -205,8 +245,14 @@ async def process_type_a(event: PowderKegEvent) -> ActionResult:
             )
         # personal_only · 실증 방향성 반영 알림
         direction = await _get_empirical_direction("A1")
-        title = _title_for_direction(direction, "A1", event.ticker, " · 오너 개인 사법")
-        body = _body_for_direction(direction, f"{event.title}\nLLM: {llm_result.rationale}")
+        title = _candidate_title(direction, "A1", name, event.ticker)
+        body = "\n".join([
+            f"공시: {at.esc(event.title)}",
+            f"AI 판단: 오너 개인 문제 ({at.esc(llm_result.rationale)})",
+            _direction_line(direction),
+            *_source_line(event),
+            _page_link("A1"),
+        ])
         sent = await _send_notification(title, body, urgent=False, category="powderkeg_a1")
         action_label = "notified" if direction != "observed_negative" else "notified_negative"
         await _mark_event(event.id, action=action_label, llm=llm_result)
@@ -217,8 +263,13 @@ async def process_type_a(event: PowderKegEvent) -> ActionResult:
 
     # A2~A6 · 실증 방향성 반영 알림
     direction = await _get_empirical_direction(event.event_type)
-    title = _title_for_direction(direction, event.event_type, event.ticker)
-    body = _body_for_direction(direction, f"{event.title}\n원문: {event.url or 'N/A'}")
+    title = _candidate_title(direction, event.event_type, name, event.ticker)
+    body = "\n".join([
+        f"공시: {at.esc(event.title)}",
+        _direction_line(direction),
+        *_source_line(event),
+        _page_link(event.event_type),
+    ])
     sent = await _send_notification(title, body, urgent=False, category=powderkeg_category(event.event_type))
     action_label = "notified" if direction != "observed_negative" else "notified_negative"
     await _mark_event(event.id, action=action_label)
@@ -228,14 +279,14 @@ async def process_type_a(event: PowderKegEvent) -> ActionResult:
     )
 
 
-async def process_event(event: PowderKegEvent) -> ActionResult:
+async def process_event(event: PowderKegEvent, cache: Optional[dict] = None) -> ActionResult:
     """단일 이벤트 처리 · Type B 우선."""
     if event.action_taken:
         return ActionResult(event_id=event.id, action_taken="skip")
     if event.event_type.startswith("B"):
-        return await process_type_b(event)
+        return await process_type_b(event, cache)
     if event.event_type.startswith("A"):
-        return await process_type_a(event)
+        return await process_type_a(event, cache)
     return ActionResult(event_id=event.id, action_taken="skip")
 
 
@@ -252,8 +303,9 @@ async def process_pending_events(limit: int = 100) -> dict[str, Any]:
 
     stats = {"total": len(events), "notified": 0, "list_removed": 0,
              "needs_human_review": 0, "skip": 0}
+    names: dict = {}   # 이번 실행 안에서만 쓰는 종목명 캐시
     for e in events:
-        r = await process_event(e)
+        r = await process_event(e, names)
         stats[r.action_taken] = stats.get(r.action_taken, 0) + 1
     logger.info("[powderkeg.triggers] %s", stats)
     return stats
