@@ -13,6 +13,7 @@
 """
 from __future__ import annotations
 
+import asyncio
 import json
 import logging
 import os
@@ -22,8 +23,12 @@ from typing import Optional
 
 logger = logging.getLogger(__name__)
 
-_MODEL = os.environ.get("POWDERKEG_LLM_MODEL", "claude-haiku-4-5-20251001")
+_MODEL = os.environ.get("POWDERKEG_LLM_MODEL", "claude-sonnet-5-5")
 _CONFIDENCE_THRESHOLD = 0.8    # 지시서 §7-3 · < 0.8 이면 needs_human_review
+# api 요청 처리 중에 돌므로 짧게 끊는다 · 최악 30 + 60 = 90초 (SDK 기본 600초·재시도 2회 대신)
+_ANTHROPIC_TIMEOUT_SEC = 30.0
+_ZAI_TIMEOUT_SEC = 60.0
+_SYSTEM = "당신은 한국어로 응답하는 지배구조 분석가입니다. 반드시 JSON 만 출력하세요."
 
 
 @dataclass
@@ -35,8 +40,18 @@ class LLMClassification:
     used_llm: bool               # True = 실제 API 호출 · False = keyword fallback / no key
 
 
+def _key(name: str) -> str:
+    return os.environ.get(name, "").strip()
+
+
 def is_llm_configured() -> bool:
-    return bool(os.environ.get("ANTHROPIC_API_KEY", "").strip())
+    """LLM_PROVIDER=anthropic 일 때만 LLM 판정 (Anthropic → Z.ai → 키워드 · 2026-10-23 결정).
+
+    그 밖에는 키가 있어도 키워드 판정 — 설정 PR 전에는 A1 판정 규칙이 바뀌지 않게 묶는다.
+    """
+    if os.environ.get("LLM_PROVIDER", "").strip().lower() != "anthropic":
+        return False
+    return bool(_key("ANTHROPIC_API_KEY") or _key("ZAI_API_KEY"))
 
 
 _PROMPT_TEMPLATE = """당신은 한국 기업 지배구조 분석가입니다.
@@ -100,6 +115,96 @@ def _parse_json_response(text: str) -> Optional[dict]:
         return None
 
 
+async def _classify_anthropic(prompt: str) -> Optional[dict]:
+    """실패하면 None (Z.ai 로 넘어감)."""
+    try:
+        import anthropic
+    except ImportError:
+        return None
+    client = anthropic.AsyncAnthropic(
+        api_key=_key("ANTHROPIC_API_KEY"), timeout=_ANTHROPIC_TIMEOUT_SEC, max_retries=0,
+    )
+    try:
+        msg = await asyncio.wait_for(
+            client.messages.create(
+                model=_MODEL,
+                max_tokens=1500,
+                output_config={"effort": "low"},
+                system=_SYSTEM,
+                messages=[{"role": "user", "content": prompt}],
+            ),
+            timeout=_ANTHROPIC_TIMEOUT_SEC,
+        )
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("[llm_classify] anthropic 실패 · %s · zai 로 대체", exc)
+        return None
+    finally:
+        try:
+            await client.close()
+        except Exception:  # noqa: BLE001
+            pass
+    stop_reason = getattr(msg, "stop_reason", None)
+    if stop_reason in ("refusal", "max_tokens"):
+        details = getattr(msg, "stop_details", None)
+        logger.warning(
+            "[llm_classify] anthropic stop_reason=%s category=%s · zai 로 대체",
+            stop_reason, getattr(details, "category", None) if details is not None else None,
+        )
+        return None
+    # 블록 type 으로 읽는다 — thinking 블록이 먼저 올 수 있음
+    text = "".join(
+        b.text for b in (msg.content or []) if getattr(b, "type", "text") == "text" and hasattr(b, "text")
+    )
+    parsed = _parse_json_response(text)
+    if not parsed:
+        logger.warning("[llm_classify] anthropic JSON 파싱 실패 · %s", text[:100])
+        return None
+    logger.info("[llm_classify] provider=anthropic")
+    return parsed
+
+
+async def _classify_zai(prompt: str) -> Optional[dict]:
+    """실패하면 None (키워드 판정으로 넘어감)."""
+    try:
+        from openai import AsyncOpenAI
+    except ImportError:
+        return None
+    from backend.services.llm import DEFAULT_ZAI_BASE_URL, DEFAULT_ZAI_MODEL
+
+    client = AsyncOpenAI(
+        api_key=_key("ZAI_API_KEY"), base_url=DEFAULT_ZAI_BASE_URL,
+        timeout=_ZAI_TIMEOUT_SEC, max_retries=0,
+    )
+    try:
+        completion = await asyncio.wait_for(
+            client.chat.completions.create(
+                model=DEFAULT_ZAI_MODEL,
+                messages=[
+                    {"role": "system", "content": _SYSTEM},
+                    {"role": "user", "content": prompt},
+                ],
+                max_tokens=1500,
+                temperature=0.3,
+            ),
+            timeout=_ZAI_TIMEOUT_SEC,
+        )
+        text = (completion.choices[0].message.content or "").strip()
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("[llm_classify] zai 실패 · %s · keyword fallback", exc)
+        return None
+    finally:
+        try:
+            await client.close()
+        except Exception:  # noqa: BLE001
+            pass
+    parsed = _parse_json_response(text)
+    if not parsed:
+        logger.warning("[llm_classify] zai JSON 파싱 실패 · %s", text[:100])
+        return None
+    logger.info("[llm_classify] provider=zai")
+    return parsed
+
+
 async def classify_owner_event(
     title: str,
     description: Optional[str] = None,
@@ -107,36 +212,20 @@ async def classify_owner_event(
 ) -> LLMClassification:
     """A1 오너 사법 이벤트 · 회사자금 관련 여부 판별.
 
-    LLM 미설정 시 keyword fallback · confidence=0.5 · needs_human_review=True.
+    순서: Anthropic → Z.ai → keyword fallback (confidence=0.5 · needs_human_review=True).
     """
     if not is_llm_configured():
         return _keyword_fallback(title, description)
 
-    try:
-        import anthropic
-    except ImportError:
-        return _keyword_fallback(title, description)
-
-    api_key = os.environ["ANTHROPIC_API_KEY"]
-    client = anthropic.AsyncAnthropic(api_key=api_key)
     desc_block = f"본문 발췌: \"{description}\"" if description else ""
     prompt = _PROMPT_TEMPLATE.format(title=title, description_block=desc_block)
 
-    try:
-        msg = await client.messages.create(
-            model=_MODEL,
-            max_tokens=400,
-            system="당신은 한국어로 응답하는 지배구조 분석가입니다. 반드시 JSON 만 출력하세요.",
-            messages=[{"role": "user", "content": prompt}],
-        )
-        text = msg.content[0].text if msg.content else ""
-    except Exception as exc:  # noqa: BLE001
-        logger.warning("[llm_classify] API 실패 · %s · keyword fallback", exc)
-        return _keyword_fallback(title, description)
-
-    parsed = _parse_json_response(text)
-    if not parsed:
-        logger.warning("[llm_classify] JSON 파싱 실패 · %s", text[:100])
+    parsed = None
+    if _key("ANTHROPIC_API_KEY"):
+        parsed = await _classify_anthropic(prompt)
+    if parsed is None and _key("ZAI_API_KEY"):
+        parsed = await _classify_zai(prompt)
+    if parsed is None:
         return _keyword_fallback(title, description)
 
     label = parsed.get("label", "unclear")

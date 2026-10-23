@@ -4,6 +4,11 @@ import os
 os.environ["DATABASE_URL"] = "sqlite+aiosqlite:///:memory:"
 os.environ["TELEGRAM_BOT_TOKEN"] = ""
 os.environ["TELEGRAM_CHAT_ID"] = ""
+# 로컬 .env 의 실 LLM 키로 외부 호출이 나가지 않게 비운다 · 키가 필요한 테스트는 monkeypatch.setenv 로 가짜 키를 넣는다.
+os.environ["LLM_PROVIDER"] = "zai"
+os.environ["ANTHROPIC_API_KEY"] = ""
+os.environ["ZAI_API_KEY"] = ""
+os.environ["OPENAI_API_KEY"] = ""
 
 
 

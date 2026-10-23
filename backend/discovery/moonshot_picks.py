@@ -182,7 +182,8 @@ async def run_moonshot_picks(
                         news_headlines=news_headlines,
                         risk_level=info.risk_level,
                     ),
-                    timeout=120.0,
+                    # ZaiLLM 단독 120초 (glm-4.6 max 56.9s + 마진) · FallbackLLM 150초 (Anthropic 30s → Z.ai 90s)
+                    timeout=getattr(llm, "call_timeout", 120.0),
                 )
 
             thesis = None
