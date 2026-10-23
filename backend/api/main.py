@@ -36,6 +36,7 @@ from backend.api.routes import (
     judgments,
     logs,
     meme_watch,
+    notifications,
     positions,
     powderkeg,
     principles,
@@ -286,6 +287,7 @@ app.include_router(
 )
 # ── 관리
 app.include_router(settings.router, prefix="/api/v1/settings", tags=["settings"])
+app.include_router(notifications.router, prefix="/api/v1/notifications", tags=["notifications"])
 # ── 관리자 세션 (Phase D 주 7 · 2026-07-31 · httpOnly 쿠키 이관)
 app.include_router(session.router, prefix="/api/v1/admin/session", tags=["session"])
 # ── Webhooks (Phase D 주 8 · 2026-07-31 · 결제 훅 스텁)
