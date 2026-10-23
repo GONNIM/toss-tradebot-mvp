@@ -36,6 +36,9 @@ export default function SettingsPage() {
     <div className="space-y-6">
       <header>
         <h1 className="text-3xl font-bold">⚙️ 운영 파라미터</h1>
+        <p className="mt-2 text-sm">
+          <a href="/admin/notifications" className="text-teal-700 underline">🔔 알림 받는 방식 바꾸기 →</a>
+        </p>
         <p className="mt-1 text-sm text-muted-foreground">
           정적 설정 (Phase J 후 동적 편집 활성).
         </p>
