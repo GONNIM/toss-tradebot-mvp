@@ -1,8 +1,6 @@
 """meme 알림 → TelegramNotifier(HTML) 통합 (1022-09 Task 5)."""
 from __future__ import annotations
 
-import html
-import re
 from types import SimpleNamespace
 
 import pytest
@@ -10,6 +8,7 @@ import pytest_asyncio
 from sqlalchemy import delete, select
 
 from backend.discovery.meme_watch import alert as alert_mod
+from backend.tests.alert_rules import violations
 
 
 def _score(ticker, s):
@@ -24,26 +23,45 @@ def _meta(name, market="US"):
     return SimpleNamespace(name=name, market=market)
 
 
-def _plain_md(text: str) -> str:
-    return re.sub(r"[*_`]", "", text)
+def _volume(close, r1d=None):
+    return SimpleNamespace(close=close, return_1d_pct=r1d)
 
 
-def _plain_html(text: str) -> str:
-    return html.unescape(re.sub(r"<[^>]+>", "", text))
+def test_meme_erupting_wording():
+    title, body = alert_mod._format_alert(
+        "ERUPTING", _score("GME", 1.214), _intensity(8.7), _meta("GameStop", "NYSE"), _volume(31.4, 18.2),
+        prev_score=0.882, prev_intensity=5.1,
+    )
+    assert title == "🌋 밈 · 급등 진행 · GameStop(GME) · 다시 오름"
+    assert "오늘 +18.2% · 지금 $31.40" in body
+    assert "상승 강도 8.7/10 (실측 · 직전 5.1)" in body
+    assert "급등 전 단계 점수 1.21 (추정 · 직전 0.88" in body
+    assert violations(title, body) == []
 
 
-def test_html_escapes_name_and_keeps_text():
-    md = alert_mod._format_alert("BLAZING", _score("ABCD", 1.2), None, _meta("A&B <X> Corp"), None)
-    title, body = alert_mod._to_title_body(md)
+def test_meme_blazing_wording():
+    title, body = alert_mod._format_alert("BLAZING", _score("005930", 1.05), None, _meta("삼성전자", "KRX"), _volume(71000.0, 2.0))
+    assert title == "🔥 밈 · 급등 전 단계 · 삼성전자(005930)"
+    assert "커뮤니티 언급·거래량 등 5가지 · 보장 아님" in body
+    assert "지금 71,000원" in body
+    assert violations(title, body) == []
+
+
+def test_meme_without_previous():
+    title, body = alert_mod._format_alert("BLAZING", _score("ABCD", 1.2), None, None, None)
+    assert "직전" not in body and "None" not in body
+    assert "ABCD" in title
+    assert violations(title, body) == []
+
+
+def test_meme_link_real_path():
+    _, body = alert_mod._format_alert("BLAZING", _score("ABCD", 1.2), None, _meta("A&B <X> Corp"), None)
+    assert body.endswith("자세히: https://optimus8.cafe24.com/lab/meme-watch")
+
+
+def test_meme_html_escapes_name():
+    title, _ = alert_mod._format_alert("BLAZING", _score("ABCD", 1.2), None, _meta("A&B <X> Corp"), None)
     assert "A&amp;B &lt;X&gt;" in title
-    assert "<" not in title.replace("&lt;", "")  # 제목은 태그 없이 (notifier 가 <b> 로 감쌈)
-    # 변환 전후 글자 내용이 같음 (태그·Markdown 기호 제거 후)
-    assert _plain_md(md) == _plain_html(title + "\n" + body)
-
-
-def test_markdown_marks_become_html_tags():
-    _, body = alert_mod._to_title_body("제목\n*굵게* `CODE` _기울임_")
-    assert body == "<b>굵게</b> <code>CODE</code> <i>기울임</i>"
 
 
 @pytest_asyncio.fixture
