@@ -509,6 +509,17 @@ async def _report_llm_usage(job_name: str, llm) -> None:
         logger.error(f"[cron] LLM 대체 알림 전송 실패 ({job_name}): {notify_exc}")
 
 
+async def job_notification_digest():
+    """알림 하루 요약 18:00 KST (1022-09) — 요약 발송 · 오래된 기록 정리."""
+    try:
+        from backend.services import notification_digest
+
+        await notification_digest.run_daily()
+    except Exception as e:
+        logger.error(f"[cron] notification digest failed: {e}", exc_info=True)
+        await _alert_job_failure("알림 하루 요약", e)
+
+
 async def job_universe_refresh():
     try:
         await run_universe_refresh()
@@ -757,6 +768,10 @@ def build_scheduler() -> AsyncIOScheduler:
     scheduler.add_job(job_sector_leaders_alert_1705, CronTrigger(hour=17, minute=5),
                       id="sector_leaders_alert_1705",
                       name="Sector Leaders Top — 17:05 KST (정규장 마감 후)",
+                      replace_existing=True)
+    scheduler.add_job(job_notification_digest, CronTrigger(hour=18, minute=0),
+                      id="notification_digest_1800",
+                      name="알림 하루 요약 18:00 KST",
                       replace_existing=True)
     # VIP 감시 (env VIP_ENABLED=true 일 때만 실효 — tick 내부에서 skip)
     scheduler.add_job(
