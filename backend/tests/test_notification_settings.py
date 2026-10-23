@@ -127,3 +127,13 @@ def test_editable_fields():
     assert ns.editable_fields("execution") == set()
     assert ns.editable_fields("system") == {"mode"}
     assert ns.editable_fields("vip") == {"enabled", "mode", "resend_minutes", "min_level"}
+
+
+def test_labels_have_no_internal_codes():
+    """설정 화면 이름에 내부 코드(A2~A6 · B1~B3)를 쓰지 않는다 (1023-05)."""
+    import re
+
+    for key, meta in ns.CATEGORIES.items():
+        assert not re.search(r"\b[AB][1-6]\b", meta.label), (key, meta.label)
+    assert ns.CATEGORIES["powderkeg_a3"].label == "화약고 후보 · 담보 제공"
+    assert ns.CATEGORIES["meme_blazing"].label == "밈 · 급등 전 단계"
