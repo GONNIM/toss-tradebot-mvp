@@ -62,7 +62,7 @@ async def test_dnt_wording(sent):
     await _list("012345")
     await tr.process_type_b(await _event("012345", "B1", "횡령·배임혐의발생"))
     m = sent[0]
-    assert m["title"] == "🚨 화약고 거래 주의 · 가나다전자(012345)"
+    assert m["title"] == "🚨 화약고 거래 주의 · 가나다전자(012345) · 횡령·배임"
     assert "횡령·배임" in m["body"]
     assert "화약고 후보 목록에서 뺐습니다 (1건)." in m["body"]
     assert "공시 원문: https://dart.fss.or.kr/x" in m["body"]
@@ -148,3 +148,32 @@ async def test_ticket_and_reeval_wording(monkeypatch):
     assert t == "⚠️ 화약고 12개월 재평가 · 7종목"
     assert b.count("일") >= 5 and "외 2종목" in b
     assert violations(t, b) == []
+
+
+@pytest.mark.asyncio
+async def test_dnt_title_differs_by_type(sent):
+    """같은 종목 B1 · B2 는 제목이 달라야 재발송 간격에 서로 묻히지 않는다 (최종 검토 Important 1)."""
+    await _snapshot("012345", "가나다전자")
+    await tr.process_type_b(await _event("012345", "B1"))
+    async with get_session() as session:
+        e = PowderKegEvent(ticker="012345", event_type="B2", source="dart", source_id="B2x", title="감사의견")
+        session.add(e)
+        await session.flush()
+        eid = e.id
+    async with get_session() as session:
+        e2 = (await session.execute(select(PowderKegEvent).where(PowderKegEvent.id == eid))).scalar_one()
+    await tr.process_type_b(e2)
+    assert sent[0]["title"] != sent[1]["title"]
+    assert sent[0]["title"] == "🚨 화약고 거래 주의 · 가나다전자(012345) · 횡령·배임"
+
+
+@pytest.mark.asyncio
+async def test_candidate_long_name_keeps_code(sent, monkeypatch):
+    async def _obs(_t):
+        return "observing"
+
+    monkeypatch.setattr(tr, "_get_empirical_direction", _obs)
+    await _snapshot("034567", "아주아주긴회사이름홀딩스주식회사")
+    await tr.process_type_a(await _event("034567", "A5"))
+    assert sent[0]["title"].endswith("(034567)")
+    assert len(sent[0]["title"]) <= 40

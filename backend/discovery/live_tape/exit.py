@@ -50,7 +50,8 @@ def _exit_message(ticker: str, name, entry_price, exit_price, qty: int, pnl_pct,
     from backend.services import alert_text as at
 
     pnl = f" {pnl_pct * 100:+.2f}%" if pnl_pct is not None else ""
-    title = at.title("execution", f"{at.stock(name, ticker)} 팔림{pnl}", "🏁")
+    fact, keep = at.stock_fact(name, ticker)
+    title = at.title("execution", fact, "🏁", keep=f"{keep} 팔림{pnl}")
     body = "\n".join([
         f"산 값 {at.won(entry_price)} → 판 값 {at.won(exit_price)} · {qty}주",
         f"이유: {at.EXIT_REASON.get(reason, at.esc(reason))}",

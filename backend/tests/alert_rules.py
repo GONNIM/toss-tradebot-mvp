@@ -1,6 +1,7 @@
 """알림 문구 규칙 검사 도우미 (1023-05) — 테스트 전용."""
 from __future__ import annotations
 
+import html
 import unicodedata
 
 SITE = "https://optimus8.cafe24.com/"
@@ -17,8 +18,9 @@ def _icons(text: str) -> int:
 
 def violations(title: str, body: str) -> list[str]:
     out = []
-    if len(title) > 40:
-        out.append(f"제목 {len(title)}자")
+    shown = html.unescape(title)   # 길이는 화면에 보이는 글자 수
+    if len(shown) > 40:
+        out.append(f"제목 {len(shown)}자")
     lines = [l for l in body.split("\n") if l.strip()]
     if len(lines) > 10:
         out.append(f"본문 {len(lines)}줄")

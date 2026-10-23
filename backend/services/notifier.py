@@ -380,7 +380,7 @@ def format_sector_leaders_alert(
         body = "\n".join(["매력도 0.5 이상인 종목이 오늘은 없습니다.", at.link("discovery_sector")])
         return title, body
 
-    title = at.title("discovery_sector", f"오늘 상위 {len(items)}종목", "📊")
+    title = at.title("discovery_sector", f"오늘 상위 {len(items)}종목 ({bucket_label} 이상)", "📊")
     head = f"수출 자료로 고른 업종 대표 종목입니다 (매력도 {bucket_label} 이상"
     lines = [head + (" · 0.6 이상이 적어 넓힘)." if expanded else ").")]
     for it in items:

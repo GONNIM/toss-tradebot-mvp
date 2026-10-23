@@ -45,9 +45,12 @@ def _format_alert(
     erupting = alert_type == "ERUPTING"
     category = "meme_erupting" if erupting else "meme_blazing"
     name = meta.name if meta and meta.name else None
-    who = at.stock(name, score.ticker) if name else at.esc(score.ticker)
     is_retrigger = prev_score is not None or prev_intensity is not None
-    title = at.title(category, who + (" · 다시 오름" if is_retrigger else ""), "🌋" if erupting else "🔥")
+    tail = " · 다시 오름" if is_retrigger else ""
+    if name:
+        title = at.title(category, name, "🌋" if erupting else "🔥", keep=f"({score.ticker}){tail}")
+    else:
+        title = at.title(category, "", "🌋" if erupting else "🔥", keep=f"{score.ticker}{tail}")
 
     market = (meta.market if meta else None) or ""
     lines = []

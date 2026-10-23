@@ -23,7 +23,7 @@ def _item(rank=1, **kw):
 
 def test_sector_wording():
     title, body = nmod.format_sector_leaders_alert([_item(1), _item(2, name="B&C"), _item(3)], "0.5", expanded=True)
-    assert title == "📊 섹터 리더 · 오늘 상위 3종목"
+    assert title == "📊 섹터 리더 · 오늘 상위 3종목 (0.5 이상)"
     assert "1. 원익IPS 102,700원 · 지정가 참고 79,714원 · 통계 추정 6개월 뒤 118,400원 (+15.3%)" in body
     assert "B&amp;C" in body
     assert "참고선까지 22.4% 아래" in body
@@ -38,6 +38,12 @@ def test_sector_none_fields():
     assert "지정가 참고 —" in body
     assert "과열" in body
     assert violations(title, body) == []
+
+
+def test_sector_title_has_bucket():
+    t6, _ = nmod.format_sector_leaders_alert([_item(1)], "0.6")
+    t5, _ = nmod.format_sector_leaders_alert([_item(1)], "0.5", expanded=True)
+    assert t6 != t5
 
 
 def test_sector_empty():

@@ -609,7 +609,7 @@ def _notify_warning_sync(step: str, detail: str) -> None:
         from backend.services.notifier import TelegramNotifier
         from backend.services import alert_text as at
 
-        title, body = at.biotech_message("warning", f"임상시험 주간 자료 보조 단계 실패 · {at.esc(step)}",
+        title, body = at.biotech_message("warning", f"임상시험 주간 자료 보조 단계 실패 · {step}",
                                          [f"원인: {at.esc(detail)}", "주간 자료 받기는 계속 진행했습니다."], next_spec="mon 06:00")
         asyncio.run(TelegramNotifier().send_warning(category="biotech", title=title, body=body))
     except Exception as e:
@@ -622,7 +622,7 @@ def _notify_failure_sync(step: str, detail: str) -> None:
         from backend.services.notifier import TelegramNotifier
         from backend.services import alert_text as at
 
-        title, body = at.biotech_message("critical", f"임상시험 주간 자료 실패 · {at.esc(step)}",
+        title, body = at.biotech_message("critical", f"임상시험 주간 자료 실패 · {step}",
                                          [f"원인: {at.esc(detail)}"], next_spec="mon 06:00")
         asyncio.run(TelegramNotifier().send_critical(category="biotech", title=title, body=body))
     except Exception as e:

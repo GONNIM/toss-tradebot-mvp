@@ -34,7 +34,7 @@ def build_message(level: str, title: str, body: str, step: str | None = None,
         step_text = at.BIOTECH_STEP.get(step, step)
         title, body = title.replace("{step}", step_text), body.replace("{step}", step_text)
     lines = [at.esc(line) for line in body.split("\n") if line.strip()]
-    return at.biotech_message(level, at.esc(title), lines, next_spec=next_spec, now=now)
+    return at.biotech_message(level, title, lines, next_spec=next_spec, now=now)
 
 
 async def _send(level: str, title: str, body: str, category: str = "biotech") -> bool:

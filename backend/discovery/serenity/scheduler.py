@@ -85,7 +85,7 @@ async def _notify_job_result(job: str, result: dict | None = None, error: str | 
         from backend.services import alert_text as at
         from backend.services.notifier import TelegramNotifier
         notifier = TelegramNotifier()
-        name = at.SERENITY_JOB.get(job, at.esc(job))
+        name = at.SERENITY_JOB.get(job, job)
         if error:
             title = at.title("serenity", f"{name} 실패", "⚠️")
             lines = [f"원인: {at.esc(error)}"]

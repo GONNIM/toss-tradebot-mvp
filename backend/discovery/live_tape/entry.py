@@ -105,7 +105,8 @@ def _entry_message(ticker: str, name, entry_price: float, qty: int, candidate, o
     """실주문 진입 알림 (제목, 본문) · 1023-05."""
     from backend.services import alert_text as at
 
-    title = at.title("execution", f"{at.stock(name, ticker)} 삼", "🎯")
+    fact, keep = at.stock_fact(name, ticker)
+    title = at.title("execution", fact, "🎯", keep=f"{keep} 삼")
     body = "\n".join([
         f"{at.won(entry_price)} × {qty}주 (약 {at.won(entry_price * qty)})",
         f"거래 흐름 점수 {candidate.tape_score:.2f} · 오늘 {at.pct(candidate.return_pct or 0)}",

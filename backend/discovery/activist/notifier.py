@@ -55,8 +55,9 @@ async def send_event(
 
     icon = _INTENSITY_ICON.get(evt.intensity_label, "📣")
     category = activist_category(evt.intensity_label)
-    who = evt.target_ticker or _short(evt.target_desc or evt.filer_name, 14)
-    title = at.title(category, at.esc(f"{who} {evt.score}점"), icon)
+    # 운용사 이름까지 넣어 같은 종목·같은 점수의 다른 운용사 공시가 재발송 간격에 묻히지 않게
+    who = evt.target_ticker or _short(evt.target_desc or "대상 미상", 12)
+    title = at.title(category, evt.filer_name, icon, keep=f" → {who} {evt.score}점")
 
     lines = [
         f"{at.esc(_short(evt.filer_name, 40))} → {_target_text(evt.target_desc, evt.target_ticker)}",
@@ -146,7 +147,7 @@ async def send_wolf_pack(
 
     category = activist_category(group.intensity_label)
     kind = "형성" if is_new else "강화"
-    title = at.title(category, at.esc(f"{group.target_ticker} 여러 운용사 {kind}"), "🐺")
+    title = at.title(category, f"{group.target_ticker} 여러 운용사 {kind}", "🐺", keep=f" {group.intensity_score}점")
 
     first = group.entries[0] if group.entries else None
     last = group.entries[-1] if group.entries else None

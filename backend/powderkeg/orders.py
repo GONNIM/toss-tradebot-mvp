@@ -189,7 +189,8 @@ async def _notify_ticket_approved(ticket_id: int, ticker: str, approver: str) ->
         from backend.services.stock_names import lookup_kr_name
 
         name = await lookup_kr_name(ticker)
-        title = at.title("powderkeg_ticket", at.stock(name, ticker), "✅")
+        fact, keep = at.stock_fact(name, ticker)
+        title = at.title("powderkeg_ticket", fact, "✅", keep=keep)
         body = "\n".join([
             f"승인 번호 {ticket_id} · 승인한 사람 {at.esc(approver)}",
             "이제 VIP 감시가 이 종목의 무효 조건을 실시간으로 지켜봅니다.",

@@ -80,7 +80,7 @@ async def test_activist_13d_new_vs_amend():
     await an.send_event(n, _evt())
     await an.send_event(n, _evt(form="SC 13D/A", intensity_label="STRONG", score=70))
     new, amend = n.calls
-    assert new["title"] == "🌋 행동주의 · 강한 신호 · LUV 92점"
+    assert new["title"] == "🌋 행동주의 · 강한 신호 · Elliott Inve… → LUV 92점"
     assert "경영 참여 목적 5% 이상 보유 신규 보고 (13D)" in new["body"]
     assert "https://www.sec.gov/Archives/edgar/data/92380/000101143826000400/" in new["body"]
     assert "보유 변경 보고 (13D/A)" in amend["body"]
@@ -122,3 +122,32 @@ async def test_wolfpack_wording():
     assert "30일 안에 3곳 (상위 운용사 2곳)" in c["body"]
     assert "확률" not in c["body"]
     assert violations(c["title"], c["body"]) == []
+
+
+@pytest.mark.asyncio
+async def test_vip_long_company_keeps_event():
+    n = _N()
+    await vn.send_position_event(n, Event(name="STOP_APPROACH", pnl=-0.2777, current_price=6.32),
+                                 _cfg(company_name="Procter & Gamble Company Worldwide"))
+    t = n.calls[0]["title"]
+    assert t.endswith("손절선 아래 (-27.8%)")
+    assert "&amp;" in t and "&amp;amp;" not in t
+
+
+@pytest.mark.asyncio
+async def test_activist_title_differs_by_filer():
+    n = _N()
+    await an.send_event(n, _evt())
+    await an.send_event(n, _evt(filer_name="Starboard Value LP", filer_key="starboard"))
+    assert n.calls[0]["title"] != n.calls[1]["title"]
+    assert n.calls[0]["title"].endswith("LUV 92점")
+
+
+@pytest.mark.asyncio
+async def test_wolfpack_title_has_score():
+    entries = [WolfPackEntry("a", "A", 1, "SC 13D", "2026-10-01", 1.0, "a1", "CRITICAL"),
+               WolfPackEntry("b", "B", 1, "SC 13D", "2026-10-02", 2.0, "a2", "CRITICAL")]
+    g = WolfPackGroup(target_ticker="LUV", target_desc="X", target_cik=None, country="US", entries=entries)
+    n = _N()
+    await an.send_wolf_pack(n, g, is_new=False)
+    assert f"{g.intensity_score}점" in n.calls[0]["title"]

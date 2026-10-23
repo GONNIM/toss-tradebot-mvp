@@ -30,13 +30,24 @@ def _label(category: str, label: Optional[str]) -> str:
     return meta.label
 
 
-def title(category: str, fact: str, icon: str, label: Optional[str] = None) -> str:
-    """`<아이콘> <종류 이름> · <사실>` · 40자를 넘으면 사실 끝을 「…」로 자른다."""
+def title(category: str, fact: str, icon: str, label: Optional[str] = None, keep: str = "") -> str:
+    """`<아이콘> <종류 이름> · <사실><꼬리>` (escape 된 결과).
+
+    fact·keep 은 escape 전 원문으로 받는다. 40자(화면 글자 수)를 넘으면 fact 끝만 「…」로 자르고
+    keep (종목 코드·사건 이름처럼 잘리면 안 되는 꼬리) 은 그대로 둔다. 자른 뒤 escape 하므로 엔티티가 반쪽 나지 않는다.
+    """
     head = f"{icon} {_label(category, label)} · "
-    room = TITLE_MAX - len(head)
+    room = TITLE_MAX - len(head) - len(keep)
     if len(fact) > room:
         fact = fact[: max(room - 1, 0)] + "…"
-    return head + fact
+    return esc(head) + esc(fact) + esc(keep)
+
+
+def stock_fact(name: Optional[str], code: str) -> tuple[str, str]:
+    """제목용 (줄여도 되는 이름, 지킬 꼬리) — 이름이 없으면 코드가 꼬리."""
+    if not name:
+        return "", f"{code} (종목명 확인 안 됨)"
+    return name, f"({code})"
 
 
 def link(category: str, page: Optional[str] = None) -> str:
@@ -86,8 +97,8 @@ LEVEL_ICON = {"critical": "🚨", "warning": "⚠️", "info": "🧬"}
 
 def biotech_message(level: str, fact: str, lines: list[str], next_spec: Optional[str] = None,
                     now: Optional[datetime] = None) -> tuple[str, str]:
-    """바이오 알림 (제목, 본문) · lines 는 이미 escape 된 줄 · 다음 실행과 링크를 붙인다."""
-    head = title("biotech", fact, LEVEL_ICON.get(level, "🧬"))
+    """바이오 알림 (제목, 본문) · fact 는 원문 · lines 는 이미 escape 된 줄 · 다음 실행과 링크를 붙인다."""
+    head = title("biotech", fact, LEVEL_ICON.get(level, "🧬"))   # fact 는 원문
     body = list(lines)
     if next_spec:
         body.append(f"다음 실행: {next_run_spec(next_spec, now=now)}")
@@ -153,7 +164,7 @@ def entry_status_text(status: Optional[str]) -> str:
         return f"참고선까지 {m.group(1)}% 아래" if m else "참고선보다 위"
     if s.startswith("🔴"):
         m = re.search(r"\((.*)\)", s)
-        why = m.group(1).replace("52W ", "52주 최고가의 ").replace("MA200 ", "200일 평균 대비 ") if m else ""
+        why = m.group(1).replace("52W ", "1년 범위 위쪽 ").replace("MA200 ", "200일 평균 대비 ") if m else ""
         return f"과열 ({esc(why)})" if why else "과열"
     if "현재가 없음" in s:
         return "현재가 없음"

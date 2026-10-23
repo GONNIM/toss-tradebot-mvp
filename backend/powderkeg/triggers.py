@@ -84,11 +84,18 @@ _DIRECTION_ICON = {"buy_candidate": "📊", "observed_negative": "🔬"}
 _A4_LABEL = "화약고 후보 · 5% 보고"   # A4 는 설정 목록 밖 (unknown · 항상 발송)
 
 
-def _candidate_title(direction: str, event_type: str, stock_text: str) -> str:
-    """후보 알림 제목 · `<아이콘> 화약고 후보 · <유형> · 종목` (1023-05)."""
+def _candidate_title(direction: str, event_type: str, name: Optional[str], ticker: str) -> str:
+    """후보 알림 제목 · `<아이콘> 화약고 후보 · <유형> · 이름(코드)` (1023-05 · 코드는 잘리지 않음)."""
     category = powderkeg_category(event_type)
     label = _A4_LABEL if category == "unknown" else None
-    return at.title(category, stock_text, _DIRECTION_ICON.get(direction, "📊"), label=label)
+    fact, keep = at.stock_fact(name, ticker)
+    return at.title(category, fact, _DIRECTION_ICON.get(direction, "📊"), label=label, keep=keep)
+
+
+def _dnt_title(name: Optional[str], ticker: str, kind: str) -> str:
+    """거래 주의 제목 · 유형까지 넣어 같은 종목의 다른 공시가 재발송 간격에 묻히지 않게."""
+    fact, keep = at.stock_fact(name, ticker)
+    return at.title("powderkeg_dnt", fact, "🚨", keep=f"{keep} · {kind}")
 
 
 def _direction_line(direction: str) -> str:
@@ -179,7 +186,7 @@ async def process_type_b(event: PowderKegEvent, cache: Optional[dict] = None) ->
     name = await lookup_kr_name(event.ticker, cache)   # 목록에서 지우기 전에 (목록 이름도 원천)
     removed = await _remove_from_latest_list(event.ticker)
     kind = at.POWDERKEG_TYPE.get(event.event_type, event.event_type)
-    title = at.title("powderkeg_dnt", at.stock(name, event.ticker), "🚨")
+    title = _dnt_title(name, event.ticker, kind)
     body = "\n".join([
         f"{kind} 공시: {at.esc(event.title)}",
         _removed_line(removed),
@@ -198,13 +205,12 @@ async def process_type_a(event: PowderKegEvent, cache: Optional[dict] = None) ->
     """Type A · 알림 + (A1 은 LLM 재판정)."""
     llm_result: Optional[LLMClassification] = None
     name = await lookup_kr_name(event.ticker, cache)
-    stock_text = at.stock(name, event.ticker)
     if event.event_type == "A1":
         llm_result = await classify_owner_event(event.title)
         # LLM 이 회사자금 관련이라 판정 → Type B 로 격상
         if llm_result.label == "company_related" and llm_result.confidence >= 0.8:
             removed = await _remove_from_latest_list(event.ticker)
-            title = at.title("powderkeg_dnt", stock_text, "🚨")
+            title = _dnt_title(name, event.ticker, "AI 판단 회사 자금")
             body = "\n".join([
                 f"오너 사법 공시를 AI 가 회사 자금 문제로 판단 (확신 {llm_result.confidence:.0%})",
                 f"공시: {at.esc(event.title)}",
@@ -222,7 +228,8 @@ async def process_type_a(event: PowderKegEvent, cache: Optional[dict] = None) ->
             )
         # needs_human_review 인 경우
         if llm_result.needs_human_review:
-            title = at.title("powderkeg_a1", stock_text, "🔍")
+            fact, keep = at.stock_fact(name, event.ticker)
+            title = at.title("powderkeg_a1", fact, "🔍", keep=keep)
             body = "\n".join([
                 f"사람 확인 필요: AI 확신이 낮아 ({llm_result.confidence:.0%}) 자동 판단하지 않았습니다.",
                 f"공시: {at.esc(event.title)}",
@@ -238,7 +245,7 @@ async def process_type_a(event: PowderKegEvent, cache: Optional[dict] = None) ->
             )
         # personal_only · 실증 방향성 반영 알림
         direction = await _get_empirical_direction("A1")
-        title = _candidate_title(direction, "A1", stock_text)
+        title = _candidate_title(direction, "A1", name, event.ticker)
         body = "\n".join([
             f"공시: {at.esc(event.title)}",
             f"AI 판단: 오너 개인 문제 ({at.esc(llm_result.rationale)})",
@@ -256,7 +263,7 @@ async def process_type_a(event: PowderKegEvent, cache: Optional[dict] = None) ->
 
     # A2~A6 · 실증 방향성 반영 알림
     direction = await _get_empirical_direction(event.event_type)
-    title = _candidate_title(direction, event.event_type, stock_text)
+    title = _candidate_title(direction, event.event_type, name, event.ticker)
     body = "\n".join([
         f"공시: {at.esc(event.title)}",
         _direction_line(direction),

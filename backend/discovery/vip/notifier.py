@@ -21,10 +21,10 @@ async def send_position_event(
     cfg: VipConfig,
 ) -> bool:
     icon, name = at.VIP_EVENT.get(event.name, ("📣", at.esc(event.name)))
-    fact = f"{cfg.company_name} {name}"
+    keep = f" {name}"
     if event.name in ("STOP_APPROACH", "TRAIL_GIVEBACK"):
-        fact += f" ({at.pct(event.pnl)})"
-    title = at.title("vip", at.esc(fact), icon)
+        keep += f" ({at.pct(event.pnl)})"
+    title = at.title("vip", cfg.company_name, icon, keep=keep)
     lines = [f"산 값 {at.usd(cfg.avg_price)} → 지금 {at.usd(event.current_price)} ({at.pct(event.pnl)})"]
     if cfg.qty > 0:
         pnl_usd = (event.current_price - cfg.avg_price) * cfg.qty
@@ -44,7 +44,7 @@ async def send_activist_filing(
 
     icon, name = at.VIP_EVENT["ACTIVIST_FILING"]
     actor = cfg.activist_name or "행동주의 운용사"
-    title = at.title("vip", at.esc(f"{cfg.company_name} {name}"), icon)
+    title = at.title("vip", cfg.company_name, icon, keep=f" {name}")
     lines = [f"{at.esc(actor)} 의 {at.sec_form_text(filing.form)} · {at.md(filing.filing_date)}"]
     if filing.primary_desc:
         lines.append(f"내용: {at.esc(filing.primary_desc)}")

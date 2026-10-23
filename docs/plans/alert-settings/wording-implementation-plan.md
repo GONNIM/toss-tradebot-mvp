@@ -143,7 +143,7 @@
 
 **Files:** Modify `frontend/components/sector-leaders/Top10Modal.tsx:149-355` · `frontend/package.json` · `backend/api/main.py` (version) · `docs/plans/alert-settings/README.md` (상태 한 줄)
 
-- 이름: 진입가→「지정가 참고」 · 예측수익가→「통계 추정가」 (툴팁 「N개월 뒤 · 수출 자료와 과거 상관 · 보장 아님」) · Stop/Take→「손절 참고선」/「익절 참고선」 · 「지금 매수하면 물릴 위험 큼」「매수 검토」 류 지시 문장 → 사실 문장 (예: 「52주 최고가의 91% · 200일 평균보다 31% 높음」). 투자 권유 아님 문장은 유지.
+- 이름: 진입가→「지정가 참고」 · 예측수익가→「통계 추정가」 (툴팁 「N개월 뒤 · 수출 자료와 과거 상관 · 보장 아님」) · Stop/Take→「손절 참고선」/「익절 참고선」 · 「지금 매수하면 물릴 위험 큼」「매수 검토」 류 지시 문장 → 사실 문장 (예: 「1년 범위 위쪽 91% · 200일 평균보다 31% 높음」). 투자 권유 아님 문장은 유지.
 - [ ] Step 1: `cd frontend && npx tsc --noEmit` 통과 · `grep -n "예측수익가\|매수 검토\|물릴" frontend/components/sector-leaders/Top10Modal.tsx` 결과 0줄.
 - [ ] Step 2: 로컬 화면 확인 (playwright · /sector-leaders 모달 열기 · 표 머리 「지정가 참고」「통계 추정가」).
 - [ ] Step 3: 전체 확인 — `backend/venv/bin/pytest backend/tests -q` 결과를 main (f2310c4) 의 기존 실패 목록과 대조해 새 실패 0건 · `backend/venv/bin/python -m compileall -q backend` · `grep -rn "DO NOT TOUCH\|URGENT ·\|Picks —" backend --include=*.py | grep -v tests` 0줄.

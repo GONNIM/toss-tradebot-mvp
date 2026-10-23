@@ -54,6 +54,13 @@ def test_meme_without_previous():
     assert violations(title, body) == []
 
 
+def test_meme_long_name_keeps_code():
+    title, _ = alert_mod._format_alert("ERUPTING", _score("OPEN", 1.2), _intensity(9.0),
+                                       _meta("Opendoor Technologies Incorporated"), None, prev_score=1.0)
+    assert title.endswith("(OPEN) · 다시 오름")
+    assert len(title) <= 40
+
+
 def test_meme_link_real_path():
     _, body = alert_mod._format_alert("BLAZING", _score("ABCD", 1.2), None, _meta("A&B <X> Corp"), None)
     assert body.endswith("자세히: https://optimus8.cafe24.com/lab/meme-watch")

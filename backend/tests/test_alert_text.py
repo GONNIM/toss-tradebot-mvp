@@ -70,3 +70,29 @@ def test_glossary_tables():
     assert at.POWDERKEG_TYPE["A3"] == "담보 제공"
     assert at.EXIT_REASON["hard_sl"] == "손절선 도달"
     assert at.VIP_EVENT["STOP_APPROACH"][1] == "손절선 아래"
+
+
+def test_title_keeps_tail():
+    """잘려도 지킬 꼬리(코드·사건 이름)는 남는다 (최종 검토 Important 2)."""
+    t = at.title("meme_erupting", "Opendoor Technologies Incorporated Holdings", "🌋", keep="(OPEN) · 다시 오름")
+    assert t.endswith("…(OPEN) · 다시 오름")
+    assert len(t) <= 40
+
+
+def test_title_escapes_after_truncation():
+    """사실은 자른 뒤 escape — 엔티티가 반쪽으로 남지 않고 길이는 화면 글자 수 (Minor 1 과 같은 원인)."""
+    import html
+
+    t = at.title("vip", "A&B " * 15, "🎯")
+    assert "&am…" not in t and "&a…" not in t
+    assert len(html.unescape(t)) <= 40
+
+
+def test_stock_fact_keeps_code():
+    assert at.stock_fact("가나다전자", "012345") == ("가나다전자", "(012345)")
+    assert at.stock_fact(None, "012345") == ("", "012345 (종목명 확인 안 됨)")
+
+
+def test_sector_overheat_is_range_position():
+    """52W 는 1년 범위 안의 위치 (최종 검토 Important 3)."""
+    assert at.entry_status_text("🔴 과열 관망 (52W 91% · MA200 +31.2%)") == "과열 (1년 범위 위쪽 91% · 200일 평균 대비 +31.2%)"
