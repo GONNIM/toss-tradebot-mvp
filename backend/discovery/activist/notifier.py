@@ -1,11 +1,12 @@
 """Activist Radar Telegram 알림 포맷.
 
-프리픽스: [ACTIVIST-{country} · <filer_short> · <target>]
+제목: `<아이콘> 행동주의 · <강한/참고 신호> · <종목> <점수>점` (1023-05 · 풀이는 alert_text)
 """
 from __future__ import annotations
 
 import logging
 
+from backend.services import alert_text as at
 from backend.services.notification_settings import activist_category
 from backend.services.notifier import TelegramNotifier
 
@@ -25,6 +26,19 @@ _INTENSITY_ICON = {
 }
 
 
+def _filing_url(country: str, cik, accession: str) -> str:
+    if country == "KR":
+        return f"https://dart.fss.or.kr/dsaf001/main.do?rcpNo={accession}" if accession else ""
+    from .hints import sec_filing_detail_url
+
+    return sec_filing_detail_url(cik, accession)
+
+
+def _target_text(desc: str, ticker) -> str:
+    desc = _short(desc or "대상 회사 이름 없음", 40)
+    return f"{at.esc(desc)}({at.esc(ticker)})" if ticker else at.esc(desc)
+
+
 def _short(name: str, limit: int = 20) -> str:
     return name if len(name) <= limit else name[: limit - 1] + "…"
 
@@ -40,32 +54,21 @@ async def send_event(
         return False
 
     icon = _INTENSITY_ICON.get(evt.intensity_label, "📣")
-    p_icon = alert_priority.PRIORITY_ICON.get(priority, "")
-    tag = f"[ACTIVIST-{evt.country} · {_short(evt.filer_name, 18)} · {evt.form}]"
-    title = f"{p_icon}{icon} {tag} {evt.intensity_label} ({evt.score})"
+    category = activist_category(evt.intensity_label)
+    who = evt.target_ticker or _short(evt.target_desc or evt.filer_name, 14)
+    title = at.title(category, at.esc(f"{who} {evt.score}점"), icon)
 
     lines = [
-        f"Filer: {evt.filer_name}",
-        f"Form:  {evt.form}",
-        f"Filing date: {evt.filing_date}",
-        f"Accession:   {evt.accession}",
-        f"Target: {evt.target_desc or '(desc 없음 · 상세 확인 필요)'}",
+        f"{at.esc(_short(evt.filer_name, 40))} → {_target_text(evt.target_desc, evt.target_ticker)}",
+        f"{at.sec_form_text(evt.form)} · {at.md(evt.filing_date)}",
+        f"신호: {at.ACTIVIST_LEVEL.get(evt.intensity_label, at.esc(evt.intensity_label))} ({evt.score}점)",
     ]
-    if evt.target_ticker:
-        lines.append(f"Ticker: {evt.target_ticker}")
     if evt.wolf_pack:
-        lines.append(f"🐺 Wolf Pack (30d): {', '.join(evt.wolf_pack)}")
-
-    hint = {
-        "REGIME_CHANGE": "→ 🚨 passive → active 태세 전환 · 최상 신호 · 즉시 검토",
-        "INSIDER":       "→ 👤 activism 진입 종목의 임원 매매 · 동조/이탈 방향 상세 확인",
-        "CRITICAL":      "→ 즉시 검토 · Wolf Pack 또는 신규 SC 13D 강 신호",
-        "STRONG":        "→ 관심 · 지분 변동·수정본",
-        "WATCH":         "→ 참고 · passive 성 · 저강도",
-        "NOTE":          "→ 기록",
-    }.get(evt.intensity_label)
-    if hint:
-        lines.append(hint)
+        lines.append(f"30일 안 함께 들어온 운용사: {at.esc(', '.join(evt.wolf_pack))}")
+    url = _filing_url(evt.country, evt.target_cik, evt.accession)
+    if url:
+        lines.append(f"원문: {url}")
+    lines.append(at.link(category))
 
     body = "\n".join(lines)
     ok = await notifier.send_info(title, body, category=activist_category(evt.intensity_label))
@@ -141,44 +144,25 @@ async def send_wolf_pack(
     if not alert_priority.should_send(priority):
         return False
 
-    style_icon = {
-        "CRITICAL_PACK": "🐺🐺🌋",
-        "STRONG_PACK":   "🐺🔥",
-        "PACK":          "🐺",
-    }.get(group.intensity_label, "🐺")
-    p_icon = alert_priority.PRIORITY_ICON.get(priority, "")
-
+    category = activist_category(group.intensity_label)
     kind = "형성" if is_new else "강화"
-    title = (
-        f"{p_icon}{style_icon} [WOLF PACK · {group.country} · {group.target_ticker}] "
-        f"{group.intensity_label} ({group.intensity_score}) {kind}"
-    )
+    title = at.title(category, at.esc(f"{group.target_ticker} 여러 운용사 {kind}"), "🐺")
 
     first = group.entries[0] if group.entries else None
     last = group.entries[-1] if group.entries else None
 
     lines = [
-        f"🎯 {(group.target_desc or '')[:60]} ({group.target_ticker})",
-        f"👥 {group.activist_count}명 activist · Tier1 {group.tier1_count}명 · {group.days_span}일 span",
+        _target_text(group.target_desc, group.target_ticker),
+        f"30일 안에 {group.activist_count}곳 (상위 운용사 {group.tier1_count}곳) · {group.days_span}일 사이",
     ]
     if first:
-        lines.append(
-            f"🥇 최초: T{first.tier} {first.filer_name} · {first.form} · {first.filing_date}"
-        )
+        lines.append(f"처음: {at.esc(first.filer_name)} · {at.sec_form_text(first.form)} · {at.md(first.filing_date)}")
     if last and last.filer_key != (first.filer_key if first else ""):
-        lines.append(
-            f"⚡ 최신: T{last.tier} {last.filer_name} · {last.form} · {last.filing_date}"
-        )
+        lines.append(f"최근: {at.esc(last.filer_name)} · {at.sec_form_text(last.form)} · {at.md(last.filing_date)}")
     if new_filer_name and new_filer_name != (last.filer_name if last else ""):
-        lines.append(f"➕ 이번 추가: {new_filer_name}")
-
-    hint = {
-        "CRITICAL_PACK": "→ 🌋 Tier1 3명+ 동시 진입 · 매매 개시 확률 최상",
-        "STRONG_PACK":   "→ 🔥 다중 activist 동시 · 확신 강 신호",
-        "PACK":          "→ ⚠️ 관심 · 2명 이상 activist 동시 진입",
-    }.get(group.intensity_label)
-    if hint:
-        lines.append(hint)
+        lines.append(f"이번에 더해짐: {at.esc(new_filer_name)}")
+    lines.append(f"신호: {at.ACTIVIST_LEVEL.get(group.intensity_label, at.esc(group.intensity_label))} ({group.intensity_score}점)")
+    lines.append(at.link(category))
 
     body = "\n".join(lines)
     ok = await notifier.send_info(title, body, category=activist_category(group.intensity_label))

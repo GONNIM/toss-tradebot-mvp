@@ -83,6 +83,35 @@ def usd(v: Optional[float]) -> str:
     return f"${v:,.4f}" if abs(v) < 1 else f"${v:,.2f}"
 
 
+def signed_usd(v: Optional[float]) -> str:
+    return NONE if v is None else f"{'+' if v >= 0 else '-'}${abs(v):,.2f}"
+
+
+def md(date_str: Optional[str]) -> str:
+    """`YYYY-MM-DD` → `MM/DD` (모양이 다르면 그대로)."""
+    if date_str and len(date_str) >= 10 and date_str[4] == "-":
+        return f"{date_str[5:7]}/{date_str[8:10]}"
+    return esc(date_str or NONE)
+
+
+def sec_form_text(form: str) -> str:
+    """SEC 양식 → 쉬운 이름 (원문 괄호). 모르는 양식은 그대로."""
+    f = (form or "").upper().replace("SCHEDULE ", "SC ").strip()
+    table = (
+        ("SC 13D/A", "보유 변경 보고 (13D/A)"),
+        ("SC 13D", "경영 참여 목적 5% 이상 보유 신규 보고 (13D)"),
+        ("SC 13G/A", "단순 투자 보유 변경 보고 (13G/A)"),
+        ("SC 13G", "단순 투자 5% 이상 보유 보고 (13G)"),
+        ("13D/A", "보유 변경 보고 (13D/A)"),
+        ("13D", "경영 참여 목적 5% 이상 보유 신규 보고 (13D)"),
+        ("4", "임원·주요주주 매매 보고 (Form 4)"),
+    )
+    for key, text in table:
+        if f == key:
+            return text
+    return esc(form)
+
+
 def pct(v: Optional[float]) -> str:
     """비율 (0.153) → `+15.3%`."""
     return NONE if v is None else f"{v * 100:+.1f}%"

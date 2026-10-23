@@ -1,11 +1,12 @@
 """VIP 알림 포맷팅 — 기존 [[TelegramNotifier]] send_info 재활용.
 
-프리픽스: [VIP-{TAG} · <이벤트>]  (기존 밈주 봇 채널 공유)
+제목: `<아이콘> VIP 감시 · <회사> <사건>` (1023-05 · 사건 이름은 alert_text.VIP_EVENT)
 """
 from __future__ import annotations
 
 import logging
 
+from backend.services import alert_text as at
 from backend.services.notifier import TelegramNotifier
 
 from .activist_tracker import Filing
@@ -14,56 +15,24 @@ from .position import Event
 
 logger = logging.getLogger(__name__)
 
-_EVENT_ICON = {
-    "TP1": "🎯",
-    "TP2": "🎯🎯",
-    "STOP_APPROACH": "🛑",
-    "TRAIL_ARMED": "🔒",
-    "TRAIL_GIVEBACK": "📉",
-    "ACTIVIST_FILING": "🕵️",
-}
-
-_EVENT_HINT = {
-    "TP1": "1차 부분 익절 검토",
-    "TP2": "2차 익절 · trailing stop 상향",
-    "STOP_APPROACH": "손절 라인 접근",
-    "TRAIL_ARMED": "trailing stop 활성 — peak 추적 시작",
-    "TRAIL_GIVEBACK": "peak 대비 giveback 발생 · 잠금 검토",
-    "ACTIVIST_FILING": "액티비스트 신규 필링 감지",
-}
-
-
-def _fmt_price(v: float) -> str:
-    return f"{v:.2f}"
-
-
-def _fmt_pct(v: float) -> str:
-    sign = "+" if v >= 0 else ""
-    return f"{sign}{v * 100:.2f}%"
-
-
 async def send_position_event(
     notifier: TelegramNotifier,
     event: Event,
     cfg: VipConfig,
 ) -> bool:
-    icon = _EVENT_ICON.get(event.name, "📣")
-    title = (
-        f"{icon} [VIP-{cfg.tag} · {event.name}] {cfg.company_name} "
-        f"{_fmt_price(event.current_price)} USD ({_fmt_pct(event.pnl)})"
-    )
-    lines = [
-        f"진입 {_fmt_price(cfg.avg_price)} → 현재 {_fmt_price(event.current_price)}",
-        f"P&L {_fmt_pct(event.pnl)}",
-    ]
+    icon, name = at.VIP_EVENT.get(event.name, ("📣", at.esc(event.name)))
+    fact = f"{cfg.company_name} {name}"
+    if event.name in ("STOP_APPROACH", "TRAIL_GIVEBACK"):
+        fact += f" ({at.pct(event.pnl)})"
+    title = at.title("vip", at.esc(fact), icon)
+    lines = [f"산 값 {at.usd(cfg.avg_price)} → 지금 {at.usd(event.current_price)} ({at.pct(event.pnl)})"]
     if cfg.qty > 0:
         pnl_usd = (event.current_price - cfg.avg_price) * cfg.qty
-        lines.append(f"수량 {cfg.qty:g} · 손익 {pnl_usd:+.2f} USD")
-    hint = _EVENT_HINT.get(event.name)
-    if hint:
-        lines.append(f"→ {hint}")
-    body = "\n".join(lines)
-    return await notifier.send_info(title, body, category="vip", dedupe_id=f"{cfg.tag}:{event.name}")
+        lines.append(f"{cfg.qty:g}주 · 평가 손익 {at.signed_usd(pnl_usd)}")
+    if event.name == "STOP_APPROACH":
+        lines.append(f"손절 기준 {at.pct(cfg.stop_pct)} · 지금 {at.pct(event.pnl)}")
+    lines.append(at.link("vip"))
+    return await notifier.send_info(title, "\n".join(lines), category="vip", dedupe_id=f"{cfg.tag}:{event.name}")
 
 
 async def send_activist_filing(
@@ -71,19 +40,16 @@ async def send_activist_filing(
     filing: Filing,
     cfg: VipConfig,
 ) -> bool:
-    icon = _EVENT_ICON["ACTIVIST_FILING"]
-    actor = cfg.activist_name or "Activist"
-    title = (
-        f"{icon} [VIP-{cfg.tag} · ACTIVIST_FILING] {filing.form} · {filing.filing_date}"
-    )
-    body = "\n".join(
-        [
-            f"{actor} 신규 필링 감지 ({cfg.company_name} 관련)",
-            f"Form: {filing.form}",
-            f"Accession: {filing.accession}",
-            f"Doc: {filing.primary_doc}",
-            f"Desc: {filing.primary_desc}",
-            f"→ {_EVENT_HINT['ACTIVIST_FILING']}",
-        ]
-    )
-    return await notifier.send_info(title, body, category="vip", dedupe_id=f"{cfg.tag}:{filing.accession}")
+    from backend.discovery.activist.hints import sec_filing_detail_url
+
+    icon, name = at.VIP_EVENT["ACTIVIST_FILING"]
+    actor = cfg.activist_name or "행동주의 운용사"
+    title = at.title("vip", at.esc(f"{cfg.company_name} {name}"), icon)
+    lines = [f"{at.esc(actor)} 의 {at.sec_form_text(filing.form)} · {at.md(filing.filing_date)}"]
+    if filing.primary_desc:
+        lines.append(f"내용: {at.esc(filing.primary_desc)}")
+    url = sec_filing_detail_url(cfg.activist_cik, filing.accession)
+    if url:
+        lines.append(f"SEC 원문: {url}")
+    lines.append(at.link("vip"))
+    return await notifier.send_info(title, "\n".join(lines), category="vip", dedupe_id=f"{cfg.tag}:{filing.accession}")
