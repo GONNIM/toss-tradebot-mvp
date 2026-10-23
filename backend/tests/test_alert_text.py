@@ -46,8 +46,8 @@ def test_next_run_rolls_over():
 
 
 def test_stock_fallback():
-    assert at.stock(None, "012345") == "종목명 확인 안 됨 (012345)"
-    assert at.stock("", "012345") == "종목명 확인 안 됨 (012345)"
+    assert at.stock(None, "012345") == "012345 (종목명 확인 안 됨)"
+    assert at.stock("", "012345") == "012345 (종목명 확인 안 됨)"
     assert at.stock("가나다전자", "012345") == "가나다전자(012345)"
 
 

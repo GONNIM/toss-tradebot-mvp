@@ -83,7 +83,7 @@ async def test_process_type_b_removes_from_list(_stub_notifier):
 
     # 알림 · urgent
     assert _stub_notifier[0]["urgent"] is True
-    assert "DO NOT TOUCH" in _stub_notifier[0]["title"]
+    assert "화약고 거래 주의" in _stub_notifier[0]["title"]
 
     # 이벤트 action_taken 기록
     async with get_session() as session:
@@ -104,7 +104,7 @@ async def test_process_type_a_general_notifies(_stub_notifier):
     assert result.action_taken == "notified"
     assert result.notification_sent is True
     assert _stub_notifier[0]["urgent"] is False
-    assert "매수 후보" in _stub_notifier[0]["title"]
+    assert "화약고 후보 · 담보 제공" in _stub_notifier[0]["title"]
 
     # 리스트는 유지
     async with get_session() as session:
@@ -161,7 +161,7 @@ async def test_process_type_a1_company_related_escalates_to_b(monkeypatch, _stub
 
     # urgent 알림
     assert _stub_notifier[0]["urgent"] is True
-    assert "B 격상" in _stub_notifier[0]["title"]
+    assert "회사 자금 문제로 판단" in _stub_notifier[0]["body"]
 
 
 @pytest.mark.asyncio
@@ -181,7 +181,7 @@ async def test_process_type_a1_low_confidence_marks_review(monkeypatch, _stub_no
     result = await process_type_a(e)
     assert result.action_taken == "needs_human_review"
     assert result.notification_sent is True
-    assert "사람 확인 필요" in _stub_notifier[0]["title"]
+    assert "사람 확인 필요" in _stub_notifier[0]["body"]
 
     async with get_session() as session:
         e = (await session.execute(select(PowderKegEvent).where(PowderKegEvent.id == eid))).scalar_one()

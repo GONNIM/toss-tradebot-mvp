@@ -67,8 +67,9 @@ def next_run(hour: int, minute: int, now: Optional[datetime] = None) -> str:
 
 
 def stock(name: Optional[str], code: str) -> str:
+    """`이름(코드)` · 이름이 없으면 코드를 앞에 둔다 (제목이 잘려도 코드는 남게)."""
     if not name:
-        return f"종목명 확인 안 됨 ({esc(code)})"
+        return f"{esc(code)} (종목명 확인 안 됨)"
     return f"{esc(name)}({esc(code)})"
 
 
