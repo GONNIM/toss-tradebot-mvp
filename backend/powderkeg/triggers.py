@@ -35,6 +35,7 @@ from sqlalchemy import delete, select
 
 from backend.services.db import get_session
 from backend.services.models import PowderKegBacktestReport, PowderKegEvent, PowderKegList
+from backend.services.notification_settings import powderkeg_category
 
 from .llm_classifier import LLMClassification, classify_owner_event
 
@@ -102,15 +103,15 @@ def _body_for_direction(direction: str, base_body: str) -> str:
 
 
 # ─── notifier 얇은 wrapper · 테스트 monkeypatch 편의 ─
-async def _send_notification(title: str, body: str, urgent: bool = False) -> bool:
+async def _send_notification(title: str, body: str, urgent: bool = False, category: str = "unknown") -> bool:
     """알림 발송 · notifier 미설정 시 로그만."""
     try:
         from backend.services.notifier import TelegramNotifier
         notifier = TelegramNotifier()
         if urgent:
-            await notifier.send_critical(title, body)
+            await notifier.send_critical(title, body, category=category)
         else:
-            await notifier.send_info(title, body)
+            await notifier.send_info(title, body, category=category)
         return True
     except Exception as exc:  # noqa: BLE001
         logger.info("[powderkeg.notify] fallback log · %s · %s · %s", title, body[:120], exc)
@@ -167,7 +168,7 @@ async def process_type_b(event: PowderKegEvent) -> ActionResult:
     removed = await _remove_from_latest_list(event.ticker)
     title = f"🚨 [DO NOT TOUCH] {event.ticker} · {event.event_type}"
     body = f"{event.title}\n원문: {event.url or 'N/A'}\n리스트에서 즉시 제거 ({removed} rows)."
-    sent = await _send_notification(title, body, urgent=True)
+    sent = await _send_notification(title, body, urgent=True, category=powderkeg_category(event.event_type))
     await _mark_event(event.id, action="list_removed")
     return ActionResult(
         event_id=event.id, action_taken="list_removed",
@@ -185,7 +186,7 @@ async def process_type_a(event: PowderKegEvent) -> ActionResult:
             removed = await _remove_from_latest_list(event.ticker)
             title = f"🚨 [B 격상] {event.ticker} · A1 → 회사자금 판정"
             body = f"{event.title}\nLLM: {llm_result.rationale} (confidence={llm_result.confidence:.2f})"
-            sent = await _send_notification(title, body, urgent=True)
+            sent = await _send_notification(title, body, urgent=True, category="powderkeg_dnt")
             await _mark_event(event.id, action="list_removed", llm=llm_result)
             return ActionResult(
                 event_id=event.id, action_taken="list_removed",
@@ -196,7 +197,7 @@ async def process_type_a(event: PowderKegEvent) -> ActionResult:
         if llm_result.needs_human_review:
             title = f"🟡 [사람 확인 필요] {event.ticker} · A1"
             body = f"{event.title}\nLLM confidence={llm_result.confidence:.2f} · {llm_result.rationale}"
-            sent = await _send_notification(title, body, urgent=False)
+            sent = await _send_notification(title, body, urgent=False, category="powderkeg_a1")
             await _mark_event(event.id, action="needs_human_review", llm=llm_result)
             return ActionResult(
                 event_id=event.id, action_taken="needs_human_review",
@@ -206,7 +207,7 @@ async def process_type_a(event: PowderKegEvent) -> ActionResult:
         direction = await _get_empirical_direction("A1")
         title = _title_for_direction(direction, "A1", event.ticker, " · 오너 개인 사법")
         body = _body_for_direction(direction, f"{event.title}\nLLM: {llm_result.rationale}")
-        sent = await _send_notification(title, body, urgent=False)
+        sent = await _send_notification(title, body, urgent=False, category="powderkeg_a1")
         action_label = "notified" if direction != "observed_negative" else "notified_negative"
         await _mark_event(event.id, action=action_label, llm=llm_result)
         return ActionResult(
@@ -218,7 +219,7 @@ async def process_type_a(event: PowderKegEvent) -> ActionResult:
     direction = await _get_empirical_direction(event.event_type)
     title = _title_for_direction(direction, event.event_type, event.ticker)
     body = _body_for_direction(direction, f"{event.title}\n원문: {event.url or 'N/A'}")
-    sent = await _send_notification(title, body, urgent=False)
+    sent = await _send_notification(title, body, urgent=False, category=powderkeg_category(event.event_type))
     action_label = "notified" if direction != "observed_negative" else "notified_negative"
     await _mark_event(event.id, action=action_label)
     return ActionResult(

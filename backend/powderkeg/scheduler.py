@@ -81,7 +81,7 @@ async def _notify_expiry(expired: list[dict]) -> None:
             f"  · {e['ticker']} · {e['age_days']}일 경과 (ticket #{e['ticket_id']})"
             for e in expired
         ]
-        await notifier.send_warning(title, "\n".join(lines))
+        await notifier.send_warning(title, "\n".join(lines), category="powderkeg_reeval")
     except Exception as exc:  # noqa: BLE001
         logger.warning("[powderkeg.holding_expiry] Telegram 실패 · %s", exc)
 

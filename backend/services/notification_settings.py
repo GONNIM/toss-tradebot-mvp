@@ -154,3 +154,20 @@ async def apply_recommended() -> int:
             await save_setting(key, **meta.recommended)
             n += 1
     return n
+
+
+_ACTIVIST_STRONG = {"CRITICAL", "REGIME_CHANGE", "STRONG", "CRITICAL_PACK", "STRONG_PACK"}
+
+
+def powderkeg_category(event_type: str) -> str:
+    """화약고 이벤트 유형 → 종류. B* = 거래 주의 · A1·A2·A3·A5·A6 = 후보 · 그 밖은 unknown (항상 발송)."""
+    et = (event_type or "").upper()
+    if et.startswith("B"):
+        return "powderkeg_dnt"
+    key = f"powderkeg_{et.lower()}"
+    return key if key in CATEGORIES else "unknown"
+
+
+def activist_category(intensity_label: str) -> str:
+    """행동주의 강도 → 종류. STRONG 이상(무리 포함) = 강한 신호 · 그 밖 = 참고 신호."""
+    return "activist_strong" if (intensity_label or "").upper() in _ACTIVIST_STRONG else "activist_info"

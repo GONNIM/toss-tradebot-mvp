@@ -53,7 +53,7 @@ async def _notify_job_result(job: str, result: dict | None = None, error: str | 
         if error:
             title = f"{icon} Serenity {job} 실패"
             body = f"<code>{error}</code>"
-            await notifier.send_warning(title, body)
+            await notifier.send_warning(title, body, category="serenity")
         else:
             title = f"{icon} Serenity {job}"
             if result:
@@ -61,7 +61,7 @@ async def _notify_job_result(job: str, result: dict | None = None, error: str | 
                 body = "\n".join(lines)
             else:
                 body = "완료"
-            await notifier.send_info(title, body)
+            await notifier.send_info(title, body, category="serenity")
     except Exception as exc:  # noqa: BLE001
         logger.warning("[serenity] notifier 실패 · %s · %s", job, exc)
 

@@ -343,7 +343,7 @@ async def run_crazy_picks_job():
     if picks:
         title, body = format_crazy_alert(picks)
         notifier = TelegramNotifier()
-        await notifier.send_info(title, body)
+        await notifier.send_info(title, body, category="discovery_crazy")
     return len(picks)
 
 
@@ -434,7 +434,7 @@ async def run_moonshot_picks_job():
     if picks:
         title, body = format_moonshot_alert(picks)
         notifier = TelegramNotifier()
-        await notifier.send_info(title, body)
+        await notifier.send_info(title, body, category="discovery_moonshot")
     return len(picks)
 
 
@@ -466,7 +466,7 @@ async def _alert_job_failure(job_name: str, exc: BaseException) -> None:
         # 마스킹 → 자르기 → HTML 이스케이프 (notifier 는 HTML parse_mode)
         msg = _mask(str(exc))[:200]
         detail = html.escape(f"{type(exc).__name__}: {msg}")
-        sent = await TelegramNotifier().send_warning(f"{job_name} 실패", detail)
+        sent = await TelegramNotifier().send_warning(f"{job_name} 실패", detail, category="system")
         # 발송 성공 때만 기록 — 실패하면 다음 실패 때 다시 시도
         if sent:
             _failure_alerted[job_name] = today
@@ -502,7 +502,7 @@ async def _report_llm_usage(job_name: str, llm) -> None:
         from backend.services.notifier import TelegramNotifier
 
         detail = html.escape(f"{job_name} · {summary}")
-        sent = await TelegramNotifier().send_warning("LLM 대체 동작 (Anthropic → Z.ai)", detail)
+        sent = await TelegramNotifier().send_warning("LLM 대체 동작 (Anthropic → Z.ai)", detail, category="system")
         if sent:
             _llm_fallback_alerted["llm"] = today
     except Exception as notify_exc:  # noqa: BLE001
@@ -578,7 +578,7 @@ async def run_sector_leaders_alert_job(slot: str = "default") -> int:
 
     title, body = format_sector_leaders_alert(picks, bucket, expanded=expanded)
     notifier = TelegramNotifier()
-    await notifier.send_info(title, body)
+    await notifier.send_info(title, body, category="discovery_sector")
 
     logger.info(
         f"[sector_leaders_alert] slot={slot} sent={len(picks)} bucket={bucket}"

@@ -61,7 +61,7 @@ def _notify_warning(title: str, body: str) -> None:
     try:
         import asyncio
         from backend.services.notifier import TelegramNotifier
-        asyncio.run(TelegramNotifier().send_warning(title=title, body=body))
+        asyncio.run(TelegramNotifier().send_warning(category="biotech", title=title, body=body))
     except Exception as e:  # noqa: BLE001
         LOG.warning("notifier 실패 · %s", e.__class__.__name__)
 

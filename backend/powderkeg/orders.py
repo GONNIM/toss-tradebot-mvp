@@ -192,7 +192,7 @@ async def _notify_ticket_approved(ticket_id: int, ticker: str, approver: str) ->
             f"  · approver: {approver}\n"
             f"  · 자동: VIP 감시 · 무효화 조건 실시간 모니터"
         )
-        await notifier.send_info(title, body)
+        await notifier.send_info(title, body, category="powderkeg_ticket")
     except Exception as exc:  # noqa: BLE001
         logger.warning("[powderkeg.ticket] Telegram 실패 · %s", exc)
 

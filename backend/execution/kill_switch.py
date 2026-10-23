@@ -165,9 +165,9 @@ class KillSwitch:
             loop = None
         try:
             if loop is not None and loop.is_running():
-                loop.create_task(notifier.send_critical(title, body))
+                loop.create_task(notifier.send_critical(title, body, category="kill_switch"))
             else:
-                asyncio.run(notifier.send_critical(title, body))
+                asyncio.run(notifier.send_critical(title, body, category="kill_switch"))
         except Exception as exc:  # noqa: BLE001
             logger.warning("URGENT 알림 전송 실패 — %s", exc)
 

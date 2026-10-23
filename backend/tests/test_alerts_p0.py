@@ -190,7 +190,7 @@ async def test_f6_failure_warning_once_per_day(monkeypatch):
     calls = []
 
     class _FakeNotifier:
-        async def send_warning(self, title, body):
+        async def send_warning(self, title, body, **kw):
             calls.append((title, body))
             return True
 
@@ -223,7 +223,7 @@ async def test_f6_new_day_alerts_again(monkeypatch):
     calls = []
 
     class _FakeNotifier:
-        async def send_warning(self, title, body):
+        async def send_warning(self, title, body, **kw):
             calls.append(title)
             return True
 
@@ -244,7 +244,7 @@ async def test_f6_alert_failure_does_not_raise(monkeypatch):
     from backend.services import notifier as nmod
 
     class _Bad:
-        async def send_warning(self, title, body):
+        async def send_warning(self, title, body, **kw):
             raise RuntimeError("telegram down")
 
     monkeypatch.setattr(nmod, "TelegramNotifier", _Bad)
@@ -263,7 +263,7 @@ class _Rec:
         outer = self
 
         class _N:
-            async def send_warning(self, title, body):
+            async def send_warning(self, title, body, **kw):
                 outer.calls.append((title, body))
                 return outer._results.pop(0) if outer._results else True
 

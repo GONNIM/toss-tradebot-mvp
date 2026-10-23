@@ -608,7 +608,7 @@ def _notify_warning_sync(step: str, detail: str) -> None:
     try:
         from backend.services.notifier import TelegramNotifier
         asyncio.run(TelegramNotifier().send_warning(
-            title=f"biotech AACT weekly 보조 단계 실패 · {step}",
+            category="biotech", title=f"biotech AACT weekly 보조 단계 실패 · {step}",
             body=f"단계: {step}\n상세: {detail}\n서버: optimus8\n스크립트: biotech_h69_aact_weekly"))
     except Exception as e:
         LOG.warning("notifier 실패 · %s", e.__class__.__name__)
@@ -620,7 +620,7 @@ def _notify_failure_sync(step: str, detail: str) -> None:
         from backend.services.notifier import TelegramNotifier
         n = TelegramNotifier()
         asyncio.run(n.send_critical(
-            title=f"biotech AACT weekly 실패 · {step}",
+            category="biotech", title=f"biotech AACT weekly 실패 · {step}",
             body=f"단계: {step}\n상세: {detail}\n서버: optimus8\n스크립트: biotech_h69_aact_weekly",
         ))
     except Exception as e:

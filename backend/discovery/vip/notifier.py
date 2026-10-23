@@ -63,7 +63,7 @@ async def send_position_event(
     if hint:
         lines.append(f"→ {hint}")
     body = "\n".join(lines)
-    return await notifier.send_info(title, body)
+    return await notifier.send_info(title, body, category="vip", dedupe_id=f"{cfg.tag}:{event.name}")
 
 
 async def send_activist_filing(
@@ -86,4 +86,4 @@ async def send_activist_filing(
             f"→ {_EVENT_HINT['ACTIVIST_FILING']}",
         ]
     )
-    return await notifier.send_info(title, body)
+    return await notifier.send_info(title, body, category="vip", dedupe_id=f"{cfg.tag}:{filing.accession}")

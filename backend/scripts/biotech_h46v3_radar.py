@@ -141,7 +141,7 @@ def _notify_warning(title: str, body: str) -> None:
     try:
         import asyncio
         from backend.services.notifier import TelegramNotifier
-        asyncio.run(TelegramNotifier().send_warning(title=title, body=body))
+        asyncio.run(TelegramNotifier().send_warning(category="biotech", title=title, body=body))
     except Exception as e:  # noqa: BLE001
         LOG.warning("notifier 실패 · %s", e.__class__.__name__)
 
@@ -183,7 +183,7 @@ def record_v3_full_start(inputs_missing: list[str], day: str, notify=None) -> st
             import asyncio
             from backend.services.notifier import TelegramNotifier
             if (os.environ.get("BIOTECH_NOTIFY_OFF") or "").strip() != "1":
-                asyncio.run(TelegramNotifier().send_info(title="biotech 레이더 v3-전체 시작", body=f"설계 입력이 모두 갖춰진 첫 실행일 {iso}"))
+                asyncio.run(TelegramNotifier().send_info(category="biotech", title="biotech 레이더 v3-전체 시작", body=f"설계 입력이 모두 갖춰진 첫 실행일 {iso}"))
         else:
             notify(iso)
     except Exception as e:  # noqa: BLE001

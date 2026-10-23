@@ -249,7 +249,7 @@ async def test_report_llm_usage_alert_once_per_day(monkeypatch):
 
     sent: list[tuple[str, str]] = []
 
-    async def _send_warning(self, title, body):
+    async def _send_warning(self, title, body, **kw):
         sent.append((title, body))
         return True
 

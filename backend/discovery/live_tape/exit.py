@@ -162,7 +162,7 @@ async def execute_exit(
             f"사유: {trigger_reason}\n"
             f"order_uuid <code>{result.order_uuid[:12]}</code>"
         )
-        await notifier.send_info(title, body)
+        await notifier.send_info(title, body, category="execution")
     except Exception as exc:  # noqa: BLE001
         logger.debug("[sniper·exit] 텔레그램 실패 · %s", exc)
 

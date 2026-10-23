@@ -212,7 +212,7 @@ async def lifespan(app: FastAPI):
         async def _flush_watch():
             # WATCH 배치는 profile 필터 우회 · force=True 로 직접 발송
             return await flush_watch_batch(
-                lambda title, body: _watch_notifier.send(Level.INFO, title, body, force=True)
+                lambda title, body: _watch_notifier.send(Level.INFO, title, body, force=True, category="system", gate=False)
             )
 
         scheduler.add_job(
