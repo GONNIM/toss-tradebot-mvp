@@ -146,10 +146,10 @@ function Top10Table({ items, computedAt }: { items: Top10Item[]; computedAt: str
               <th className="px-2.5 py-2 w-10">#</th>
               <th className="px-2.5 py-2">종목 / 품목</th>
               <th className="px-2.5 py-2 text-right">현재가</th>
-              <th className="px-2.5 py-2 text-right">진입가</th>
-              <th className="px-2.5 py-2 text-right">예측수익가</th>
-              <th className="px-2.5 py-2 text-right">Stop</th>
-              <th className="px-2.5 py-2 text-right">Take</th>
+              <th className="px-2.5 py-2 text-right">지정가 참고</th>
+              <th className="px-2.5 py-2 text-right">통계 추정가</th>
+              <th className="px-2.5 py-2 text-right">손절 참고선</th>
+              <th className="px-2.5 py-2 text-right">익절 참고선</th>
               <th className="px-2.5 py-2 text-right">Conf · ★</th>
               <th className="px-2.5 py-2 text-right">매력도</th>
             </tr>
@@ -167,26 +167,26 @@ function Top10Table({ items, computedAt }: { items: Top10Item[]; computedAt: str
 
         {/* ── 1. 진입 상태 3분류 ── */}
         <div>
-          <div className="font-semibold text-cyan-200 mb-1">🎯 진입 상태 3분류 (진입가 컬럼)</div>
+          <div className="font-semibold text-cyan-200 mb-1">🎯 상태 3분류 (지정가 참고 칸)</div>
           <ul className="grid grid-cols-1 md:grid-cols-3 gap-2">
             <li className="rounded border border-rose-500/30 bg-rose-500/5 p-2">
-              <div className="font-semibold text-rose-300">🔴 과열 관망</div>
-              <div className="text-zinc-300 mt-0.5">이미 가격이 너무 높이 올라와 있음. <strong>지금 매수하면 물릴 위험 큼</strong> — 조정될 때까지 기다리는 게 안전</div>
+              <div className="font-semibold text-rose-300">🔴 과열</div>
+              <div className="text-zinc-300 mt-0.5">1년 범위 위쪽(52W 85% 넘음)이거나 <strong>200일 평균보다 25% 넘게 오른</strong> 상태. 지정가 참고선을 계산하지 않습니다</div>
             </li>
             <li className="rounded border border-amber-500/30 bg-amber-500/5 p-2">
-              <div className="font-semibold text-amber-300">🟡 조정 대기</div>
-              <div className="text-zinc-300 mt-0.5">지금 사기엔 조금 비쌈. <strong>표시된 진입가까지 내려오면 매수</strong> 검토. 몇 % 조정 대기인지도 함께 표시</div>
+              <div className="font-semibold text-amber-300">🟡 참고선 위</div>
+              <div className="text-zinc-300 mt-0.5">현재가가 지정가 참고선보다 위. <strong>참고선까지 몇 % 아래인지</strong> 함께 표시</div>
             </li>
             <li className="rounded border border-emerald-500/30 bg-emerald-500/5 p-2">
-              <div className="font-semibold text-emerald-300">🟢 지금 매수 가능</div>
-              <div className="text-zinc-300 mt-0.5">현재가가 이미 진입가 근처. <strong>바로 매수 검토 가능</strong>한 구간</div>
+              <div className="font-semibold text-emerald-300">🟢 참고선 근처</div>
+              <div className="text-zinc-300 mt-0.5">현재가가 이미 <strong>지정가 참고선 근처</strong>인 구간</div>
             </li>
           </ul>
         </div>
 
         {/* ── 2. 근거 배지 읽는 법 ── */}
         <div>
-          <div className="font-semibold text-cyan-200 mb-1">🔍 근거 배지 읽는 법 (진입가 아래 회색 작은 글씨)</div>
+          <div className="font-semibold text-cyan-200 mb-1">🔍 근거 배지 읽는 법 (지정가 참고 아래 회색 작은 글씨)</div>
           <ul className="space-y-1">
             <li>
               <strong className="text-cyan-100">52W xx%</strong> —{" "}
@@ -198,7 +198,7 @@ function Top10Table({ items, computedAt }: { items: Top10Item[]; computedAt: str
             </li>
             <li>
               <strong className="text-cyan-100">ATR xx,xxx원</strong> —{" "}
-              <span className="text-zinc-300">이 종목이 <strong>하루 평균 얼마씩 위아래로 흔들리는지</strong>. 종목 <strong>변동성 크기</strong>를 원 단위로 표시. 진입가는 &quot;현재가 − ATR&quot;로 계산 (하루 변동성만큼 아래에서 대기)</span>
+              <span className="text-zinc-300">이 종목이 <strong>하루 평균 얼마씩 위아래로 흔들리는지</strong>. 종목 <strong>변동성 크기</strong>를 원 단위로 표시. 지정가 참고는 &quot;현재가 − ATR&quot;로 계산 (하루 변동성만큼 아래)</span>
             </li>
           </ul>
         </div>
@@ -208,10 +208,10 @@ function Top10Table({ items, computedAt }: { items: Top10Item[]; computedAt: str
           <div className="font-semibold text-cyan-200 mb-1">📊 컬럼별 의미</div>
           <ul className="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-1 list-disc list-inside">
             <li><strong className="text-cyan-100">현재가</strong>: 지금 실시간 시장 가격</li>
-            <li><strong className="text-cyan-100">진입가</strong>: 매수 대기 가격 (변동성 조정 반영)</li>
-            <li><strong className="text-cyan-100">예측수익가</strong>: X개월 뒤 예상 가격 (수출 데이터 기반 통계 추정)</li>
-            <li><strong className="text-cyan-100">Stop</strong>: 손절선 — 이 밑으로 떨어지면 매도 검토</li>
-            <li><strong className="text-cyan-100">Take</strong>: 익절선 — 이 위로 올라가면 매도 검토</li>
+            <li><strong className="text-cyan-100">지정가 참고</strong>: 현재가에서 하루 변동폭(ATR)만큼 아래 가격</li>
+            <li><strong className="text-cyan-100">통계 추정가</strong>: N개월 뒤 추정 가격 (수출 자료와 과거 상관 · 보장 아님)</li>
+            <li><strong className="text-cyan-100">손절 참고선</strong>: 손실을 끊는 기준으로 쓰는 가격</li>
+            <li><strong className="text-cyan-100">익절 참고선</strong>: 이익을 확정하는 기준으로 쓰는 가격</li>
             <li><strong className="text-cyan-100">매력도</strong>: 종합 점수 0~1, <strong>0.6 이상이면 강한 시그널</strong></li>
           </ul>
         </div>
@@ -226,7 +226,7 @@ function Top10Table({ items, computedAt }: { items: Top10Item[]; computedAt: str
                 <li>• 52W 68% → 1년 범위 위쪽 68% 지점</li>
                 <li>• MA200 <strong className="text-rose-300">+119%</strong> → 10개월 평균의 2배 넘음</li>
                 <li>• ATR 225,786원 → 하루 평균 22.6만원씩 흔들림</li>
-                <li className="text-rose-300 pt-1">→ 🔴 과열 관망 (매수 자제 권장)</li>
+                <li className="text-rose-300 pt-1">→ 🔴 과열 (200일 평균의 2배 넘음)</li>
               </ul>
             </div>
             <div className="rounded border border-amber-500/30 bg-amber-500/5 p-2">
@@ -235,7 +235,7 @@ function Top10Table({ items, computedAt }: { items: Top10Item[]; computedAt: str
                 <li>• 52W 49% → 정확히 1년 범위 중간</li>
                 <li>• MA200 +13% → 정상 범위 안</li>
                 <li>• ATR 22,986원 → 하루 평균 2.3만원 흔들림</li>
-                <li className="text-amber-300 pt-1">→ 🟡 22.4% 조정 대기 (약 79,700원까지 내려오면 매수 검토)</li>
+                <li className="text-amber-300 pt-1">→ 🟡 참고선까지 22.4% 아래 (약 79,700원)</li>
               </ul>
             </div>
           </div>
@@ -264,9 +264,9 @@ function Row({ it }: { it: Top10Item }) {
   const isReady = !isOverheat && it.entry_status.startsWith("🟢");
   const entryPriceLabel = it.entry_price !== null ? formatKRW(it.entry_price) : "—";
   const entryStatusShort = isOverheat
-    ? "🔴 과열 관망"
+    ? "🔴 과열"
     : isReady
-      ? "🟢 지금"
+      ? "🟢 근처"
       : `🟡 ${it.entry_gap_pct !== null ? it.entry_gap_pct.toFixed(1) : "?"}%`;
   const entryStatusColor = isOverheat
     ? "text-rose-300"
@@ -296,7 +296,7 @@ function Row({ it }: { it: Top10Item }) {
   }
   if (!isOverheat) {
     tooltipParts.push(
-      `ATR ${formatKRW(it.atr14)}원: 하루 평균 이만큼 위아래로 흔들림 (변동성). 진입가 = 현재가 − ATR`
+      `ATR ${formatKRW(it.atr14)}원: 하루 평균 이만큼 위아래로 흔들림 (변동성). 지정가 참고 = 현재가 − ATR`
     );
   }
   const rationaleTooltip = tooltipParts.join("\n\n");
@@ -325,8 +325,8 @@ function Row({ it }: { it: Top10Item }) {
           className={`font-mono font-semibold leading-tight ${isOverheat ? "text-zinc-500" : "text-zinc-50"}`}
           title={
             isOverheat
-              ? "과열 종목은 진입가를 계산하지 않습니다 (지금 매수하면 물릴 위험이 큼)"
-              : `진입가 = 현재가 − ATR14 (하루 평균 변동성만큼 아래에서 매수 대기)\n\n현재 상태: ${it.entry_status}`
+              ? "과열 종목은 지정가 참고선을 계산하지 않습니다"
+              : `지정가 참고 = 현재가 − ATR14 (하루 평균 변동성만큼 아래)\n\n현재 상태: ${it.entry_status}`
           }
         >
           {entryPriceLabel}
@@ -347,12 +347,12 @@ function Row({ it }: { it: Top10Item }) {
       <td className="px-2.5 py-2 text-right">
         <div
           className="font-mono text-emerald-300 font-semibold leading-tight cursor-help"
-          title={`예측수익가 = ${it.horizon_months}개월 뒤 예상 가격\n\n산출: 산업통상부 수출 데이터와 이 종목의 과거 상관관계로 통계 추정\n예상 수익률: ${formatPct(it.point_pct, 1)}`}
+          title={`통계 추정가 = ${it.horizon_months}개월 뒤 추정 가격 (보장 아님)\n\n산출: 산업통상부 수출 데이터와 이 종목의 과거 상관관계로 통계 추정\n추정 수익률: ${formatPct(it.point_pct, 1)}`}
         >
           {formatKRW(it.point_price)}
         </div>
         <div className="text-xs text-zinc-400 leading-tight mt-0.5">
-          {formatPct(it.point_pct, 1)} · +{it.horizon_months}M
+          {formatPct(it.point_pct, 1)} · {it.horizon_months}개월 뒤
         </div>
       </td>
       <td className="px-2.5 py-2 text-right">

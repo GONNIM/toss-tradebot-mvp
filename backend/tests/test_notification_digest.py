@@ -130,7 +130,7 @@ async def test_job_wrapper_alerts_on_failure(monkeypatch):
 
     calls = []
 
-    async def _alert(job_name, exc):
+    async def _alert(job_name, exc, *when):
         calls.append(job_name)
 
     monkeypatch.setattr(nd, "run_daily", _boom)
