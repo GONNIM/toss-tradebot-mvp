@@ -35,8 +35,8 @@ async def _clean_db():
 async def _stub_notifier(monkeypatch):
     """모든 알림 stub · 실 telegram 호출 회피."""
     sent_log: list = []
-    async def _stub(title, body, urgent=False):
-        sent_log.append({"title": title, "body": body, "urgent": urgent})
+    async def _stub(title, body, urgent=False, category="unknown"):
+        sent_log.append({"title": title, "body": body, "urgent": urgent, "category": category})
         return True
     monkeypatch.setattr(tr_mod, "_send_notification", _stub)
     return sent_log

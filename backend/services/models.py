@@ -1899,3 +1899,48 @@ class PrinciplesDividendRaw(Base):
     fetched_at: Mapped[datetime] = mapped_column(
         DateTime, server_default=func.now(), onupdate=func.now()
     )
+
+
+# ─────────────────────────────────────────────────────────────────
+# 알림 설정 (1022-09 · 2026-10-23) — 종류별 켜기·모드·간격 · 발송 기록 · 하루 요약 대기
+# ─────────────────────────────────────────────────────────────────
+
+
+class NotificationSetting(Base):
+    """알림 종류별 설정. 행이 없으면 기본값 (켜짐·즉시·간격 0·최소 등급 info)."""
+
+    __tablename__ = "notification_setting"
+
+    category: Mapped[str] = mapped_column(String(40), primary_key=True)
+    enabled: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
+    mode: Mapped[str] = mapped_column(String(10), nullable=False, default="immediate")  # immediate | digest
+    resend_minutes: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    min_level: Mapped[str] = mapped_column(String(10), nullable=False, default="info")  # info | warning | critical
+    updated_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, server_default=func.now(), onupdate=func.now())
+
+
+class NotificationLog(Base):
+    """발송 시도 기록 (30일 보관). result: sent | failed | skipped | queued."""
+
+    __tablename__ = "notification_log"
+    __table_args__ = (Index("ix_notification_log_cat_key_time", "category", "dedupe_key", "created_at"),)
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    category: Mapped[str] = mapped_column(String(40), nullable=False)
+    dedupe_key: Mapped[str] = mapped_column(String(200), nullable=False)
+    title: Mapped[str] = mapped_column(String(300), nullable=False)
+    result: Mapped[str] = mapped_column(String(10), nullable=False)
+    error: Mapped[Optional[str]] = mapped_column(String(400), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, server_default=func.now(), index=True)
+
+
+class NotificationDigestItem(Base):
+    """하루 요약(18:00 KST) 대기 알림."""
+
+    __tablename__ = "notification_digest_queue"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    category: Mapped[str] = mapped_column(String(40), nullable=False, index=True)
+    title: Mapped[str] = mapped_column(String(300), nullable=False)
+    body: Mapped[str] = mapped_column(Text, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, server_default=func.now())

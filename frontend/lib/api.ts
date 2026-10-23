@@ -308,6 +308,40 @@ export interface Setting {
   description: string | null;
 }
 
+// ─── 알림 설정 (1022-09 · /admin/notifications) ───────────────
+export type NotificationMode = "immediate" | "digest";
+export type NotificationLevel = "info" | "warning" | "critical";
+
+export interface NotificationSettingRow {
+  category: string;
+  label: string;
+  group: string;
+  page: string;
+  locked: boolean;
+  configurable: boolean;
+  editable: ("enabled" | "mode" | "resend_minutes" | "min_level")[];
+  recommended: Partial<Pick<NotificationSettingRow, "enabled" | "mode" | "resend_minutes" | "min_level">>;
+  reason: string;
+  enabled: boolean;
+  mode: NotificationMode;
+  resend_minutes: number;
+  min_level: NotificationLevel;
+  last_sent_at: string | null;
+  last_failed_at: string | null;
+  last_error: string | null;
+  skipped_today: number;
+}
+
+export type NotificationSettingPatch = Partial<Pick<NotificationSettingRow, "enabled" | "mode" | "resend_minutes" | "min_level">>;
+
+export interface NotificationLogItem {
+  category: string;
+  title: string;
+  result: "sent" | "failed" | "skipped" | "queued";
+  error: string | null;
+  created_at: string | null;
+}
+
 // ─── Sector Leaders (B-2e) ────────────────────────────────────
 
 export type Confidence = "strong" | "medium" | "weak";
@@ -632,6 +666,14 @@ export const api = {
   },
   settings: {
     list: () => get<Setting[]>(`/settings`),
+  },
+  notifications: {
+    list: () => getWithSession<NotificationSettingRow[]>(`/notifications/settings`),
+    update: (category: string, patch: NotificationSettingPatch) =>
+      putWithToken<NotificationSettingRow>(`/notifications/settings/${encodeURIComponent(category)}`, "", patch),
+    applyRecommended: () => postWithToken<{ applied: number }>(`/notifications/settings/apply-recommended`, ""),
+    log: (category: string, limit = 10) =>
+      getWithSession<NotificationLogItem[]>(`/notifications/log?category=${encodeURIComponent(category)}&limit=${limit}`),
   },
   logs: {
     list: (limit = 50, hours = 24, module?: string) => {

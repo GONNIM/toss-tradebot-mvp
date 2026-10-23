@@ -25,14 +25,14 @@ import sys
 LOG = logging.getLogger("biotech_notify")
 
 
-async def _send(level: str, title: str, body: str) -> bool:
+async def _send(level: str, title: str, body: str, category: str = "biotech") -> bool:
     from backend.services.notifier import TelegramNotifier
     n = TelegramNotifier()
     if level == "critical":
-        return await n.send_critical(title=title, body=body)
+        return await n.send_critical(title=title, body=body, category=category)
     if level == "warning":
-        return await n.send_warning(title=title, body=body)
-    return await n.send_info(title=title, body=body)
+        return await n.send_warning(title=title, body=body, category=category)
+    return await n.send_info(title=title, body=body, category=category)
 
 
 def main() -> int:
@@ -43,6 +43,7 @@ def main() -> int:
     p.add_argument("level", choices=["critical", "warning", "info"])
     p.add_argument("title")
     p.add_argument("body")
+    p.add_argument("--category", default="biotech", help="알림 종류 (알림 설정 화면 · 기본 biotech)")
     args = p.parse_args()
 
     # 값 노출 없이 존재 여부만 로깅
@@ -54,7 +55,7 @@ def main() -> int:
         return 2
 
     try:
-        ok = asyncio.run(_send(args.level, args.title, args.body))
+        ok = asyncio.run(_send(args.level, args.title, args.body, args.category))
     except Exception as e:
         LOG.error("발송 예외 · %s", e.__class__.__name__)
         return 3

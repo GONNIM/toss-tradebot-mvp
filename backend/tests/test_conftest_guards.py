@@ -14,10 +14,11 @@ def test_telegram_env_blank():
 
 
 def test_telegram_send_paths_stubbed():
-    # _no_real_telegram 이 세 발송 경로를 모두 막았는지 (이름이 바뀌면 여기서 드러남)
+    # _no_real_telegram 이 발송 경로를 모두 막았는지 (이름이 바뀌면 여기서 드러남)
+    # meme 알림은 2026-10-23 부터 TelegramNotifier 를 거침 (1022-09 Task 5)
     from backend.discovery.meme_watch import alert
     from backend.services import notifier, telegram_notifier
 
     assert notifier.TelegramNotifier.send.__name__ == "_false"
-    assert alert.send_message.__name__ == "_false"
+    assert alert.TelegramNotifier is notifier.TelegramNotifier
     assert telegram_notifier.send_message.__name__ == "_false"

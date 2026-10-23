@@ -36,6 +36,7 @@ from backend.api.routes import (
     judgments,
     logs,
     meme_watch,
+    notifications,
     positions,
     powderkeg,
     principles,
@@ -211,7 +212,7 @@ async def lifespan(app: FastAPI):
         async def _flush_watch():
             # WATCH 배치는 profile 필터 우회 · force=True 로 직접 발송
             return await flush_watch_batch(
-                lambda title, body: _watch_notifier.send(Level.INFO, title, body, force=True)
+                lambda title, body: _watch_notifier.send(Level.INFO, title, body, force=True, category="system", gate=False)
             )
 
         scheduler.add_job(
@@ -236,7 +237,7 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(
     title="Toss Tradebot MVP API",
-    version="0.1.3",
+    version="0.2.0",
     description="자동매매 + Crazy + Moonshot Discovery API",
     lifespan=lifespan,
 )
@@ -286,6 +287,7 @@ app.include_router(
 )
 # ── 관리
 app.include_router(settings.router, prefix="/api/v1/settings", tags=["settings"])
+app.include_router(notifications.router, prefix="/api/v1/notifications", tags=["notifications"])
 # ── 관리자 세션 (Phase D 주 7 · 2026-07-31 · httpOnly 쿠키 이관)
 app.include_router(session.router, prefix="/api/v1/admin/session", tags=["session"])
 # ── Webhooks (Phase D 주 8 · 2026-07-31 · 결제 훅 스텁)

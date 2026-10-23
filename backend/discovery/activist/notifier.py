@@ -6,6 +6,7 @@ from __future__ import annotations
 
 import logging
 
+from backend.services.notification_settings import activist_category
 from backend.services.notifier import TelegramNotifier
 
 from . import alerts as alert_priority
@@ -67,7 +68,7 @@ async def send_event(
         lines.append(hint)
 
     body = "\n".join(lines)
-    ok = await notifier.send_info(title, body)
+    ok = await notifier.send_info(title, body, category=activist_category(evt.intensity_label))
 
     # ─── Execution Layer 라우팅 (v2 트랙 C · Phase 1) ───
     # CRITICAL/REGIME_CHANGE/STRONG 만 매수 시그널 · WATCH/NOTE 는 정보성
@@ -180,7 +181,7 @@ async def send_wolf_pack(
         lines.append(hint)
 
     body = "\n".join(lines)
-    ok = await notifier.send_info(title, body)
+    ok = await notifier.send_info(title, body, category=activist_category(group.intensity_label))
 
     # ─── Execution Layer 라우팅 (v2 트랙 C · Phase 1) ───
     # Wolf Pack 형성/강화 시 매수 시그널 · CRITICAL_PACK 이 최고 강도

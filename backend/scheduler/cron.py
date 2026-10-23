@@ -343,7 +343,7 @@ async def run_crazy_picks_job():
     if picks:
         title, body = format_crazy_alert(picks)
         notifier = TelegramNotifier()
-        await notifier.send_info(title, body)
+        await notifier.send_info(title, body, category="discovery_crazy")
     return len(picks)
 
 
@@ -434,7 +434,7 @@ async def run_moonshot_picks_job():
     if picks:
         title, body = format_moonshot_alert(picks)
         notifier = TelegramNotifier()
-        await notifier.send_info(title, body)
+        await notifier.send_info(title, body, category="discovery_moonshot")
     return len(picks)
 
 
@@ -466,7 +466,7 @@ async def _alert_job_failure(job_name: str, exc: BaseException) -> None:
         # 마스킹 → 자르기 → HTML 이스케이프 (notifier 는 HTML parse_mode)
         msg = _mask(str(exc))[:200]
         detail = html.escape(f"{type(exc).__name__}: {msg}")
-        sent = await TelegramNotifier().send_warning(f"{job_name} 실패", detail)
+        sent = await TelegramNotifier().send_warning(f"{job_name} 실패", detail, category="system")
         # 발송 성공 때만 기록 — 실패하면 다음 실패 때 다시 시도
         if sent:
             _failure_alerted[job_name] = today
@@ -502,11 +502,22 @@ async def _report_llm_usage(job_name: str, llm) -> None:
         from backend.services.notifier import TelegramNotifier
 
         detail = html.escape(f"{job_name} · {summary}")
-        sent = await TelegramNotifier().send_warning("LLM 대체 동작 (Anthropic → Z.ai)", detail)
+        sent = await TelegramNotifier().send_warning("LLM 대체 동작 (Anthropic → Z.ai)", detail, category="system")
         if sent:
             _llm_fallback_alerted["llm"] = today
     except Exception as notify_exc:  # noqa: BLE001
         logger.error(f"[cron] LLM 대체 알림 전송 실패 ({job_name}): {notify_exc}")
+
+
+async def job_notification_digest():
+    """알림 하루 요약 18:00 KST (1022-09) — 요약 발송 · 오래된 기록 정리."""
+    try:
+        from backend.services import notification_digest
+
+        await notification_digest.run_daily()
+    except Exception as e:
+        logger.error(f"[cron] notification digest failed: {e}", exc_info=True)
+        await _alert_job_failure("알림 하루 요약", e)
 
 
 async def job_universe_refresh():
@@ -578,7 +589,7 @@ async def run_sector_leaders_alert_job(slot: str = "default") -> int:
 
     title, body = format_sector_leaders_alert(picks, bucket, expanded=expanded)
     notifier = TelegramNotifier()
-    await notifier.send_info(title, body)
+    await notifier.send_info(title, body, category="discovery_sector")
 
     logger.info(
         f"[sector_leaders_alert] slot={slot} sent={len(picks)} bucket={bucket}"
@@ -757,6 +768,10 @@ def build_scheduler() -> AsyncIOScheduler:
     scheduler.add_job(job_sector_leaders_alert_1705, CronTrigger(hour=17, minute=5),
                       id="sector_leaders_alert_1705",
                       name="Sector Leaders Top — 17:05 KST (정규장 마감 후)",
+                      replace_existing=True)
+    scheduler.add_job(job_notification_digest, CronTrigger(hour=18, minute=0),
+                      id="notification_digest_1800",
+                      name="알림 하루 요약 18:00 KST",
                       replace_existing=True)
     # VIP 감시 (env VIP_ENABLED=true 일 때만 실효 — tick 내부에서 skip)
     scheduler.add_job(

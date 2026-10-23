@@ -60,7 +60,7 @@ def test_all_blocked_notifies_once(tmp_path, monkeypatch):
     sent = []
 
     class _N:
-        async def send_warning(self, title, body):
+        async def send_warning(self, title, body, **kw):
             sent.append(title)
             return True
 

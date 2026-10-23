@@ -7,8 +7,10 @@ MemeAlertHistory 테이블에 발송 기록 → 다음 turn cooldown 필터.
 """
 from __future__ import annotations
 
+import html
 import json
 import logging
+import re
 from datetime import datetime, timedelta
 from typing import Optional
 
@@ -16,7 +18,7 @@ from sqlalchemy import select
 
 from backend.services.db import get_session
 from backend.services.models import MemeAlertHistory
-from backend.services.telegram_notifier import is_configured, send_message
+from backend.services.notifier import Level, TelegramNotifier
 
 logger = logging.getLogger(__name__)
 
@@ -99,6 +101,30 @@ def _format_alert(
     return "\n".join(lines)
 
 
+_MD_MARKS = [
+    (re.compile(r"\*([^*\n]+)\*"), r"<b>\1</b>"),
+    (re.compile(r"`([^`\n]+)`"), r"<code>\1</code>"),
+    (re.compile(r"(?<![\w])_([^_\n]+)_(?![\w])"), r"<i>\1</i>"),
+]
+
+
+def _to_title_body(md_text: str) -> tuple[str, str]:
+    """_format_alert 의 Markdown 글 → TelegramNotifier(HTML) 용 (제목, 본문). 글자 내용은 그대로.
+
+    제목은 첫 줄을 기호 없이 escape (notifier 가 <b> 로 감쌈) · 본문은 escape 뒤 Markdown 기호를 HTML 태그로.
+    """
+    first, _, rest = md_text.partition("\n")
+    title = html.escape(re.sub(r"[*_`]", "", first))
+    body = html.escape(rest, quote=False)
+    for pattern, repl in _MD_MARKS:
+        body = pattern.sub(repl, body)
+    return title, body
+
+
+# 처리됨으로 보는 발송 결과 — 이력에 남겨 cooldown 적용 (실패만 다음 회차 재시도)
+_HANDLED = {"sent", "queued", "skipped"}
+
+
 async def check_and_send_alerts(top_n: int = _TOP_N_TO_CHECK) -> dict:
     """Top N 종목에서 ERUPTING/BLAZING 감지 → Telegram 발송 + 이력 저장.
 
@@ -114,7 +140,8 @@ async def check_and_send_alerts(top_n: int = _TOP_N_TO_CHECK) -> dict:
         "skipped_below_threshold": 0,
         "errors": 0,
     }
-    if not is_configured():
+    notifier = TelegramNotifier()
+    if not notifier.config.bot_token or not notifier.config.chat_id:
         logger.info("[meme_alert] TELEGRAM_* env 미설정 — skip")
         return stats
 
@@ -198,14 +225,18 @@ async def check_and_send_alerts(top_n: int = _TOP_N_TO_CHECK) -> dict:
                 prev_score=prev_score if is_retrigger else None,
                 prev_intensity=prev_intensity if is_retrigger else None,
             )
+            title, body = _to_title_body(text)
+            category = "meme_erupting" if alert_type == "ERUPTING" else "meme_blazing"
             try:
-                sent = await send_message(text)
+                # force=True — 예전 send_message 처럼 TELEGRAM_PROFILE 을 우회 (배포만으로 받는 알림이 바뀌지 않게)
+                # 알림 설정(켜기·하루 요약)은 gate 로 그대로 적용
+                await notifier.send(Level.INFO, title, body, force=True, category=category, dedupe_id=score.ticker)
             except Exception as e:
                 logger.exception(f"[meme_alert] {score.ticker} send failed: {e}")
                 stats["errors"] += 1
                 continue
 
-            if sent:
+            if notifier.last_result in _HANDLED:
                 session.add(
                     MemeAlertHistory(
                         ticker=score.ticker,
