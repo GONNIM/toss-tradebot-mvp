@@ -112,6 +112,25 @@ def sec_form_text(form: str) -> str:
     return esc(form)
 
 
+def entry_status_text(status: Optional[str]) -> str:
+    """섹터 진입 상태 코드 문자열 (🟢/🟡/🔴 머리 · 화면 판정용 그대로 둠) → 알림용 사실 문장."""
+    import re
+
+    s = status or ""
+    if s.startswith("🟢"):
+        return "현재가가 지정가 참고선 근처"
+    if s.startswith("🟡"):
+        m = re.search(r"([\d.]+)%", s)
+        return f"참고선까지 {m.group(1)}% 아래" if m else "참고선보다 위"
+    if s.startswith("🔴"):
+        m = re.search(r"\((.*)\)", s)
+        why = m.group(1).replace("52W ", "52주 최고가의 ").replace("MA200 ", "200일 평균 대비 ") if m else ""
+        return f"과열 ({esc(why)})" if why else "과열"
+    if "현재가 없음" in s:
+        return "현재가 없음"
+    return esc(s) if s else NONE
+
+
 def pct(v: Optional[float]) -> str:
     """비율 (0.153) → `+15.3%`."""
     return NONE if v is None else f"{v * 100:+.1f}%"

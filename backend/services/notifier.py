@@ -20,6 +20,7 @@ import logging
 import os
 import time
 from dataclasses import dataclass
+from datetime import datetime, timezone
 from enum import Enum
 from typing import Optional
 
@@ -307,39 +308,56 @@ def _fmt_pct(v: Optional[float]) -> str:
     return "-" if v is None else f"{v:+.1f}%"
 
 
+_RISK_TEXT = {"HIGH": "높음", "MED": "보통", "LOW": "낮음"}
+
+
+def _today_md() -> str:
+    from backend.services import alert_text as at
+
+    return at.kst(datetime.now(timezone.utc))[:5]
+
+
 def format_moonshot_alert(picks: list) -> tuple[str, str]:
-    """Moonshot Top N → Telegram 메시지 (title, body)."""
-    title = f"🚀 Moonshot Picks — Top {len(picks)}"
+    """Moonshot 상위 N → Telegram (title, body) · 종목당 3줄 (1023-05)."""
+    from backend.services import alert_text as at
+
+    title = at.title("discovery_moonshot", f"{_today_md()} 상위 {len(picks)}", "🚀")
     lines = []
     for p in picks:
-        risk_icon = {"HIGH": "🔴", "MED": "🟡", "LOW": "🟢"}.get(p.risk_level, "⚪")
-        lines.append(
-            f"\n<b>#{p.rank} {p.ticker}</b> {risk_icon} ${p.current_price:.4f}\n"
-            f"점수: {p.total_score:.1f}/100  ·  조작위험: {p.manipulation_risk}/5\n"
-            f"💡 {p.thesis[:200]}{'...' if len(p.thesis) > 200 else ''}\n"
-            f"💰 매수가: ${p.buy_price_market:.4f} / -3%: ${p.buy_price_limit_3pct:.4f} / -7%: ${p.buy_price_limit_7pct:.4f}\n"
-        )
-        if p.risk_warning:
-            lines.append(f"⚠️ {p.risk_warning}\n")
-    return title, "".join(lines)
+        risk = _RISK_TEXT.get(p.risk_level, at.esc(p.risk_level or "—"))
+        lines.append(f"{p.rank}. {at.esc(p.ticker)} {at.usd(p.current_price)} · {int(p.total_score + 0.5)}점 · 조작 위험 {p.manipulation_risk}/5 ({risk})")
+        lines.append(f"   지정가 참고: 지금 {at.usd(p.buy_price_market)} · 3% 아래 {at.usd(p.buy_price_limit_3pct)} · 7% 아래 {at.usd(p.buy_price_limit_7pct)}")
+        note = f" · 주의: {at.esc(p.risk_warning)}" if p.risk_warning else ""
+        lines.append(f"   분석: {at.esc(_cut(p.thesis, 40))}{note}")
+    lines.append(at.link("discovery_moonshot"))
+    return title, "\n".join(lines)
+
+
+def _cut(text: Optional[str], n: int) -> str:
+    text = (text or "").strip().replace("\n", " ")
+    return text if len(text) <= n else text[: n - 1] + "…"
+
+
+CRAZY_ALERT_TOP = 5   # 사용자 결정 10/23 — 나머지는 화면에서
 
 
 def format_crazy_alert(picks: list) -> tuple[str, str]:
-    """Crazy Top 10 → Telegram 메시지."""
-    title = f"🎯 Crazy Picks — Top {len(picks)}"
-    lines = []
-    for p in picks[:10]:
-        lines.append(
-            f"\n<b>#{p.rank} {p.ticker}</b> ${p.current_price:.2f} "
-            f"({(p.market_cap_usd or 0)/1_000_000_000:.1f}B)\n"
-            f"점수: {p.total_score:.1f}/100\n"
-            f"💡 {p.thesis[:150]}{'...' if len(p.thesis) > 150 else ''}\n"
-        )
-    return title, "".join(lines)
+    """Crazy 상위 5 → Telegram · 종목당 1줄 (1023-05)."""
+    from backend.services import alert_text as at
+
+    shown = picks[:CRAZY_ALERT_TOP]
+    title = at.title("discovery_crazy", f"{_today_md()} 상위 {len(shown)}", "🎯")
+    lines = ["커뮤니티 언급·공매도·내부자 매매·뉴스 등으로 점수를 매긴 미국 종목입니다."]
+    for p in shown:
+        lines.append(f"{p.rank}. {at.esc(p.ticker)} {at.usd(p.current_price)} · {int(p.total_score + 0.5)}점 · {at.esc(_cut(p.thesis, 30))}")
+    rest = len(picks) - len(shown)
+    lines.append(f"나머지 {rest}종목과 분석 전문은 화면에서" if rest > 0 else "분석 전문은 화면에서")
+    lines.append(at.link("discovery_crazy"))
+    return title, "\n".join(lines)
 
 
 # ─────────────────────────────────────────────
-# Sector Leaders Top — 매력도 임계 알림 (KRX)
+# 섹터 리더 — 매력도 임계 알림 (KRX)
 # ─────────────────────────────────────────────
 
 
@@ -348,38 +366,34 @@ def format_sector_leaders_alert(
     bucket_label: str,
     expanded: bool = False,
 ) -> tuple[str, str]:
-    """Sector Leaders 매력도 임계 통과 종목 → Telegram (title, body).
+    """섹터 리더 매력도 임계 통과 종목 → Telegram (title, body) · 종목당 1줄 (1023-05).
 
     Args:
         items: list[Top10Item] — 발송 대상 (이미 상위 N 컷·rank 재계산된 상태).
         bucket_label: "0.6" / "0.5" / "empty".
         expanded: 0.6 이상이 5개 이하라 0.5 이상까지 확장된 경우 True.
     """
+    from backend.services import alert_text as at
+
     if not items or bucket_label == "empty":
-        title = "📊 Sector Leaders — 오늘 매수 후보 없음"
-        body = (
-            "매력도 0.5 이상 종목이 없습니다.\n"
-            "<i>모든 시그널이 약하거나 음의 영역에 있는 상황입니다.</i>"
-        )
+        title = at.title("discovery_sector", "오늘 기준을 넘은 종목 없음", "📊")
+        body = "\n".join(["매력도 0.5 이상인 종목이 오늘은 없습니다.", at.link("discovery_sector")])
         return title, body
 
-    title = f"📊 Sector Leaders Top {len(items)} — 매력도 {bucket_label}+"
-
-    lines = []
-    if expanded:
-        lines.append(
-            "<i>※ 0.6 이상이 5개 이하라 0.5 이상까지 확장한 결과입니다.</i>\n"
-        )
-
+    title = at.title("discovery_sector", f"오늘 상위 {len(items)}종목", "📊")
+    head = f"수출 자료로 고른 업종 대표 종목입니다 (매력도 {bucket_label} 이상"
+    lines = [head + (" · 0.6 이상이 적어 넓힘)." if expanded else ").")]
     for it in items:
-        price_tag = "" if it.price_source == "live" else " <i>(전일종가)</i>"
+        price_tag = "" if it.price_source == "live" else " (전일 종가)"
+        months = getattr(it, "horizon_months", None)
+        horizon = f"{months}개월 뒤 " if months else ""
+        pct_text = at.NONE if it.point_pct is None else _fmt_pct(it.point_pct)
         lines.append(
-            f"\n<b>#{it.rank} {it.name} ({it.ticker})</b>"
-            f"  매력도 <b>{it.attractiveness:.3f}</b>\n"
-            f"품목: {it.item}\n"
-            f"현재가: {_fmt_won(it.current_price)}{price_tag}\n"
-            f"진입가: {_fmt_won(it.entry_price)}  ({it.entry_status})\n"
-            f"예측수익가: {_fmt_won(it.point_price)}  ({_fmt_pct(it.point_pct)})\n"
+            f"{it.rank}. {at.esc(it.name)} {at.won(it.current_price)}{price_tag}"
+            f" · 지정가 참고 {at.won(it.entry_price)}"
+            f" · 통계 추정 {horizon}{at.won(it.point_price)} ({pct_text})"
+            f" · {at.entry_status_text(it.entry_status)}"
         )
-
-    return title, "".join(lines)
+    lines.append("추정은 수출 자료와 과거 상관으로 계산 · 보장 아님")
+    lines.append(at.link("discovery_sector"))
+    return title, "\n".join(lines)
