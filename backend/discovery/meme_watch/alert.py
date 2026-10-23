@@ -18,7 +18,7 @@ from sqlalchemy import select
 
 from backend.services.db import get_session
 from backend.services.models import MemeAlertHistory
-from backend.services.notifier import TelegramNotifier
+from backend.services.notifier import Level, TelegramNotifier
 
 logger = logging.getLogger(__name__)
 
@@ -228,7 +228,9 @@ async def check_and_send_alerts(top_n: int = _TOP_N_TO_CHECK) -> dict:
             title, body = _to_title_body(text)
             category = "meme_erupting" if alert_type == "ERUPTING" else "meme_blazing"
             try:
-                await notifier.send_info(title, body, category=category, dedupe_id=score.ticker)
+                # force=True — 예전 send_message 처럼 TELEGRAM_PROFILE 을 우회 (배포만으로 받는 알림이 바뀌지 않게)
+                # 알림 설정(켜기·하루 요약)은 gate 로 그대로 적용
+                await notifier.send(Level.INFO, title, body, force=True, category=category, dedupe_id=score.ticker)
             except Exception as e:
                 logger.exception(f"[meme_alert] {score.ticker} send failed: {e}")
                 stats["errors"] += 1

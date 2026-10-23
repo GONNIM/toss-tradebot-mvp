@@ -137,3 +137,28 @@ async def test_job_wrapper_alerts_on_failure(monkeypatch):
     monkeypatch.setattr(cron, "_alert_job_failure", _alert)
     await cron.job_notification_digest()
     assert calls == ["알림 하루 요약"]
+
+
+@pytest.mark.asyncio
+async def test_digest_body_fits_telegram_limit(db):
+    for i in range(25):
+        await nl.enqueue_digest("meme_blazing", f"{i} " + "가" * 290, "b")
+    n = _FakeNotifier()
+    await nd.send_daily_digest(n)
+    assert len(n.calls[0]["body"]) < 3500  # 텔레그램 4096자 (제목·아이콘 여유)
+
+
+@pytest.mark.asyncio
+async def test_one_category_error_does_not_block_others(db, monkeypatch):
+    await nl.enqueue_digest("meme_blazing", "밈", "b")
+    await nl.enqueue_digest("serenity", "S", "b")
+
+    class _Boom(_FakeNotifier):
+        async def send(self, level, title, body, **kw):
+            if kw.get("category") == "meme_blazing":
+                raise RuntimeError("network")
+            return await super().send(level, title, body, **kw)
+
+    n = _Boom()
+    assert await nd.send_daily_digest(n) == 1
+    assert [i.category for i in await _queue()] == ["meme_blazing"]

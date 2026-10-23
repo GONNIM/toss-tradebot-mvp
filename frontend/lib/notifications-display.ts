@@ -53,6 +53,11 @@ export function whenText(iso: string | null): string {
   return `${p(kst.getUTCMonth() + 1)}/${p(kst.getUTCDate())} ${p(kst.getUTCHours())}:${p(kst.getUTCMinutes())}`;
 }
 
+/** 서버가 허락한 칸인지 (Kill Switch·실주문은 없음 · 시스템 경고는 받는 방식만). */
+export function canEdit(row: NotificationSettingRow, field: NotificationSettingRow["editable"][number]): boolean {
+  return row.editable.includes(field);
+}
+
 /** 지금 설정이 권고값과 같은지. */
 export function isRecommended(row: NotificationSettingRow): boolean {
   const target = { enabled: true, ...row.recommended };

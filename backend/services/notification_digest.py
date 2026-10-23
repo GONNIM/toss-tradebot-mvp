@@ -18,6 +18,7 @@ from backend.services.notification_log import utcnow
 logger = logging.getLogger(__name__)
 
 MAX_TITLES = 20
+TITLE_CHARS = 80      # 줄당 제목 길이 · 20줄이어도 텔레그램 4096자 안
 QUEUE_KEEP_DAYS = 7
 LOG_KEEP_DAYS = 30
 
@@ -27,7 +28,7 @@ def _digest_message(category: str, titles: list[str]) -> tuple[str, str]:
     label = meta.label if meta else category
     title = f"📬 하루 요약 · {label} {len(titles)}건"
     lines = [f"오늘 하루 모아 둔 {label} 알림입니다."]
-    lines += [f"· {html.escape(t)}" for t in titles[:MAX_TITLES]]
+    lines += [f"· {html.escape(t if len(t) <= TITLE_CHARS else t[:TITLE_CHARS - 1] + '…')}" for t in titles[:MAX_TITLES]]
     if len(titles) > MAX_TITLES:
         lines.append(f"· 외 {len(titles) - MAX_TITLES}건")
     if meta:
@@ -54,13 +55,20 @@ async def send_daily_digest(notifier=None) -> int:
     sent = 0
     for category, rows in groups.items():
         title, body = _digest_message(category, [r.title for r in rows])
-        ok = await notifier.send(Level.INFO, title, body, force=True, category=category, gate=False)
+        try:
+            ok = await notifier.send(Level.INFO, title, body, force=True, category=category, gate=False)
+        except Exception as exc:  # noqa: BLE001 — 한 종류의 오류가 다른 종류 요약을 막지 않게
+            logger.warning(f"[digest] {category} 요약 발송 오류 · 대기열 유지: {exc.__class__.__name__}")
+            continue
         if not ok:
             logger.warning(f"[digest] {category} 요약 발송 실패 · 대기열 유지")
             continue
-        async with get_session() as session:
-            await session.execute(delete(NotificationDigestItem).where(NotificationDigestItem.id.in_([r.id for r in rows])))
         sent += 1
+        try:
+            async with get_session() as session:
+                await session.execute(delete(NotificationDigestItem).where(NotificationDigestItem.id.in_([r.id for r in rows])))
+        except Exception as exc:  # noqa: BLE001
+            logger.error(f"[digest] {category} 보낸 요약을 대기열에서 지우지 못함 (다음 날 중복 가능): {exc.__class__.__name__}")
     return sent
 
 

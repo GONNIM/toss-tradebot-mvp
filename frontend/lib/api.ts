@@ -319,6 +319,7 @@ export interface NotificationSettingRow {
   page: string;
   locked: boolean;
   configurable: boolean;
+  editable: ("enabled" | "mode" | "resend_minutes" | "min_level")[];
   recommended: Partial<Pick<NotificationSettingRow, "enabled" | "mode" | "resend_minutes" | "min_level">>;
   reason: string;
   enabled: boolean;

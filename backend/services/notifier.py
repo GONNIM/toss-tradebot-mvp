@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import asyncio
 import hashlib
+import html
 import logging
 import os
 import time
@@ -108,13 +109,20 @@ class TelegramNotifier:
         if category not in ns.CATEGORIES:
             return None  # 모르는 종류는 항상 발송 (기록만)
         setting = await ns.get_setting(category)
-        if not setting.enabled and category not in ns.LOCKED:
+        editable = ns.editable_fields(category)
+        if not editable:
+            return None  # Kill Switch·실주문은 DB 값과 상관없이 즉시 발송
+        if "enabled" in editable and not setting.enabled:
             await nl.record(category, dedupe_key, title, "skipped", "설정: 꺼짐")
             return False
-        if ns.LEVELS.index(level.value) < ns.LEVELS.index(setting.min_level):
+        try:
+            below = ns.LEVELS.index(level.value) < ns.LEVELS.index(setting.min_level)
+        except ValueError:  # 알 수 없는 등급 값 = 설정 못 읽음 = 발송
+            below = False
+        if "min_level" in editable and below:
             await nl.record(category, dedupe_key, title, "skipped", f"설정: 최소 등급 {setting.min_level}")
             return False
-        if setting.resend_minutes > 0:
+        if "resend_minutes" in editable and setting.resend_minutes > 0:
             try:
                 last = await nl.last_activity_at(category, dedupe_key)
             except Exception:  # noqa: BLE001 — 읽기 실패 = 발송
@@ -160,9 +168,11 @@ class TelegramNotifier:
             return False
 
         category = category or self._infer_category(title)
-        dedupe_key = dedupe_id or title
+        # 기록·대기열은 원문 제목 (호출 측이 HTML escape 한 제목도 하루 요약에서 다시 escape 되므로)
+        plain_title = html.unescape(title)
+        dedupe_key = dedupe_id or plain_title
         if gate:
-            stop = await self._gate(level, title, body, category, dedupe_key)
+            stop = await self._gate(level, plain_title, body, category, dedupe_key)
             if stop is not None:
                 return stop
 
@@ -187,7 +197,7 @@ class TelegramNotifier:
                         logger.debug(f"[Notifier] WATCH 큐잉: {title}")
                     else:
                         logger.debug(f"[Notifier] 프로파일 필터 skip: {title}")
-                    await nl.record(category, dedupe_key, title, "skipped", f"프로필 {current_profile()}")
+                    await nl.record(category, dedupe_key, plain_title, "skipped", f"프로필 {current_profile()}")
                     return False
             except ImportError:
                 pass  # profile 모듈 없으면 기본 동작
@@ -213,14 +223,14 @@ class TelegramNotifier:
                 resp = await client.post(url, json=payload)
                 resp.raise_for_status()
             logger.info(f"[Notifier] sent [{level.value}] {title}")
-            await nl.record(category, dedupe_key, title, "sent")
+            await nl.record(category, dedupe_key, plain_title, "sent")
             self.last_result = "sent"
             return True
         except httpx.HTTPStatusError as e:
             # 토큰이 든 URL 은 남기지 않고 상태 코드와 응답 본문 앞 200자만 기록
             error = self._scrub(f"HTTP {e.response.status_code} body={e.response.text[:200]!r}")
             logger.error(f"[Notifier] send failed: {error}")
-            await nl.record(category, dedupe_key, title, "failed", error)
+            await nl.record(category, dedupe_key, plain_title, "failed", error)
             self.last_result = "failed"
             return False
         except Exception as e:
@@ -228,7 +238,7 @@ class TelegramNotifier:
 
             error = self._scrub(f"{type(e).__name__}: {_mask(str(e))[:200]}")
             logger.error(f"[Notifier] send failed: {error}")
-            await nl.record(category, dedupe_key, title, "failed", error)
+            await nl.record(category, dedupe_key, plain_title, "failed", error)
             self.last_result = "failed"
             return False
 

@@ -1,12 +1,12 @@
 // 1022-09 · 알림 설정 화면 표시 함수 확인 (backend/tests/test_notifications_display.py 가 tsx 로 실행)
 import assert from "node:assert/strict";
-import { groupRows, recommendedText, modeText, intervalText, whenText, isRecommended } from "./notifications-display";
+import { groupRows, recommendedText, modeText, intervalText, whenText, isRecommended, canEdit } from "./notifications-display";
 import type { NotificationSettingRow } from "./api";
 
 const base: NotificationSettingRow = {
   category: "vip", label: "VIP 감시", group: "⑤ VIP", page: "/vip", locked: false, configurable: true,
   recommended: { resend_minutes: 10080 }, reason: "같은 종목은 7일에 한 번", enabled: true, mode: "immediate",
-  resend_minutes: 0, min_level: "info", last_sent_at: null, last_failed_at: null, last_error: null, skipped_today: 0,
+  resend_minutes: 0, min_level: "info", editable: ["enabled", "mode", "resend_minutes", "min_level"], last_sent_at: null, last_failed_at: null, last_error: null, skipped_today: 0,
 };
 
 // 묶음 순서 유지 · 같은 묶음끼리
@@ -37,4 +37,8 @@ assert.equal(isRecommended(base), false);
 assert.equal(isRecommended({ ...base, resend_minutes: 10080 }), true);
 // 권고에 끄기가 없는데 꺼 두었으면 권고와 다름
 assert.equal(isRecommended({ ...base, resend_minutes: 10080, enabled: false }), false);
+// 바꿀 수 있는 칸 (서버 editable 기준)
+assert.equal(canEdit({ ...base, editable: ["mode"] }, "mode"), true);
+assert.equal(canEdit({ ...base, editable: ["mode"] }, "min_level"), false);
+assert.equal(canEdit({ ...base, editable: [] }, "enabled"), false);
 console.log("notifications-display ok");

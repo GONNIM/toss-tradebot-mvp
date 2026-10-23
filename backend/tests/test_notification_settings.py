@@ -101,3 +101,29 @@ def test_every_category_page_exists_in_frontend():
         if meta.page == "/admin/notifications":
             continue  # Task 6 에서 만듦
         assert (app / meta.page.strip("/") / "page.tsx").exists(), (key, meta.page)
+
+
+# ── 최종 검토 반영 (Important 1) · 끌 수 없는 종류는 받는 방식·등급·간격도 고정 ──
+
+
+@pytest.mark.asyncio
+async def test_safety_categories_fully_fixed(clean_db):
+    for cat in ("kill_switch", "execution"):
+        for patch in ({"mode": "digest"}, {"min_level": "critical"}, {"resend_minutes": 60}):
+            with pytest.raises(ValueError):
+                await ns.save_setting(cat, **patch)
+
+
+@pytest.mark.asyncio
+async def test_system_only_mode_changeable(clean_db):
+    await ns.save_setting("system", mode="digest")
+    for patch in ({"min_level": "warning"}, {"resend_minutes": 60}):
+        with pytest.raises(ValueError):
+            await ns.save_setting("system", **patch)
+
+
+def test_editable_fields():
+    assert ns.editable_fields("kill_switch") == set()
+    assert ns.editable_fields("execution") == set()
+    assert ns.editable_fields("system") == {"mode"}
+    assert ns.editable_fields("vip") == {"enabled", "mode", "resend_minutes", "min_level"}

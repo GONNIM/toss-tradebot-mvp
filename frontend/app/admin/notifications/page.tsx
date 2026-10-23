@@ -10,8 +10,8 @@ import { useEffect, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { AdminSessionBar } from "@/components/admin/AdminSessionBar";
 import { api } from "@/lib/api";
-import type { NotificationLogItem, NotificationMode, NotificationSettingPatch, NotificationSettingRow } from "@/lib/api";
-import { groupRows, intervalText, isRecommended, modeText, recommendedText, whenText } from "@/lib/notifications-display";
+import type { NotificationLevel, NotificationLogItem, NotificationMode, NotificationSettingPatch, NotificationSettingRow } from "@/lib/api";
+import { canEdit, groupRows, intervalText, isRecommended, levelText, modeText, recommendedText, whenText } from "@/lib/notifications-display";
 
 type Banner = { kind: "ok" | "error"; text: string } | null;
 
@@ -170,11 +170,7 @@ function SettingRow({
 
         {row.configurable ? (
           <div className="flex flex-wrap items-center gap-2">
-            {row.locked ? (
-              <span className="rounded-full border border-border px-3 py-2 text-sm" title="안전을 위해 끌 수 없습니다">
-                끌 수 없음
-              </span>
-            ) : (
+            {canEdit(row, "enabled") ? (
               <label className="flex min-h-[44px] items-center gap-2 text-sm">
                 <input
                   type="checkbox"
@@ -185,30 +181,53 @@ function SettingRow({
                 />
                 {row.enabled ? "받기" : "끔"}
               </label>
+            ) : (
+              <span className="rounded-full border border-border px-3 py-2 text-sm" title="안전을 위해 끌 수 없습니다">
+                {row.editable.length ? "끌 수 없음" : "끌 수 없음 · 항상 바로 받기"}
+              </span>
             )}
-            <select
-              value={row.mode}
-              onChange={(e) => onSave(row, { mode: e.target.value as NotificationMode }, modeText(e.target.value as NotificationMode))}
-              disabled={!row.enabled && !row.locked}
-              className="min-h-[44px] rounded-lg border border-border bg-background px-2 text-base"
-              aria-label={`${row.label} 받는 방식`}
-            >
-              <option value="immediate">{modeText("immediate")}</option>
-              <option value="digest">{modeText("digest")}</option>
-            </select>
-            <select
-              value={row.resend_minutes}
-              onChange={(e) => onSave(row, { resend_minutes: Number(e.target.value) }, `재발송 간격 ${intervalText(Number(e.target.value))}`)}
-              disabled={!row.enabled && !row.locked}
-              className="min-h-[44px] rounded-lg border border-border bg-background px-2 text-base"
-              aria-label={`${row.label} 같은 알림 다시 받는 간격`}
-            >
-              {Array.from(new Set([...INTERVALS, row.resend_minutes])).map((m) => (
-                <option key={m} value={m}>
-                  다시 받기: {intervalText(m)}
-                </option>
-              ))}
-            </select>
+            {canEdit(row, "mode") && (
+              <select
+                value={row.mode}
+                onChange={(e) => onSave(row, { mode: e.target.value as NotificationMode }, modeText(e.target.value as NotificationMode))}
+                disabled={canEdit(row, "enabled") && !row.enabled}
+                className="min-h-[44px] rounded-lg border border-border bg-background px-2 text-base"
+                aria-label={`${row.label} 받는 방식`}
+              >
+                <option value="immediate">{modeText("immediate")}</option>
+                <option value="digest">{modeText("digest")}</option>
+              </select>
+            )}
+            {canEdit(row, "min_level") && (
+              <select
+                value={row.min_level}
+                onChange={(e) => onSave(row, { min_level: e.target.value as NotificationLevel }, `받을 등급 ${levelText(e.target.value as NotificationLevel)}`)}
+                disabled={!row.enabled}
+                className="min-h-[44px] rounded-lg border border-border bg-background px-2 text-base"
+                aria-label={`${row.label} 받을 등급`}
+              >
+                {(["info", "warning", "critical"] as NotificationLevel[]).map((lv) => (
+                  <option key={lv} value={lv}>
+                    등급: {levelText(lv)}
+                  </option>
+                ))}
+              </select>
+            )}
+            {canEdit(row, "resend_minutes") && (
+              <select
+                value={row.resend_minutes}
+                onChange={(e) => onSave(row, { resend_minutes: Number(e.target.value) }, `재발송 간격 ${intervalText(Number(e.target.value))}`)}
+                disabled={!row.enabled}
+                className="min-h-[44px] rounded-lg border border-border bg-background px-2 text-base"
+                aria-label={`${row.label} 같은 알림 다시 받는 간격`}
+              >
+                {Array.from(new Set([...INTERVALS, row.resend_minutes])).map((m) => (
+                  <option key={m} value={m}>
+                    다시 받기: {intervalText(m)}
+                  </option>
+                ))}
+              </select>
+            )}
           </div>
         ) : (
           <span className="rounded-full border border-border px-3 py-2 text-sm">설정 대상 아님 · {row.reason}</span>

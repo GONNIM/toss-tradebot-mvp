@@ -107,3 +107,24 @@ async def test_log_by_category(client):
     items = r.json()
     assert [i["title"] for i in items] == ["VIP 2", "VIP 1"]
     assert all(i["category"] == "vip" for i in items)
+
+
+def test_today_start_is_kst_midnight():
+    from datetime import datetime
+
+    from backend.api.routes import notifications as r
+
+    # UTC 10/23 14:00 = KST 10/23 23:00 → 오늘 시작은 KST 10/23 00:00 = UTC 10/22 15:00
+    assert r._kst_today_start_utc(datetime(2026, 10, 23, 14, 0)) == datetime(2026, 10, 22, 15, 0)
+    # UTC 10/23 16:00 = KST 10/24 01:00 → UTC 10/23 15:00
+    assert r._kst_today_start_utc(datetime(2026, 10, 23, 16, 0)) == datetime(2026, 10, 23, 15, 0)
+
+
+@pytest.mark.asyncio
+async def test_list_exposes_editable_fields(client):
+    rows = {row["category"]: row for row in (await client.get("/api/v1/notifications/settings", headers=H)).json()}
+    assert rows["kill_switch"]["editable"] == []
+    assert rows["system"]["editable"] == ["mode"]
+    assert sorted(rows["vip"]["editable"]) == ["enabled", "min_level", "mode", "resend_minutes"]
+    r = await client.put("/api/v1/notifications/settings/kill_switch", headers=H, json={"mode": "digest"})
+    assert r.status_code == 422

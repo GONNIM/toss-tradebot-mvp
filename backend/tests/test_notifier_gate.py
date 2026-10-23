@@ -253,3 +253,45 @@ async def test_last_result_reports_outcome(env):
     _FakeClient.status = 400
     await env.send_info("t2", "b", category="vip")
     assert env.last_result == "failed"
+
+
+# ── 최종 검토 반영 ──
+
+
+@pytest.mark.asyncio
+async def test_locked_ignores_mode_level_interval_in_db(env, monkeypatch):
+    """DB 에 어떤 값이 있어도 Kill Switch·실주문은 즉시 발송."""
+    async def _bad(category):
+        return ns.SettingView(enabled=False, mode="digest", resend_minutes=10080, min_level="critical")
+
+    monkeypatch.setattr(ns, "_load_row", _bad)
+    assert await env.send_info("실주문 진입", "b", category="execution") is True
+    assert await env.send_critical("Kill Switch", "b", category="kill_switch") is True
+    assert await env.send_critical("Kill Switch", "b2", category="kill_switch") is True
+    assert await _queue() == []
+
+
+@pytest.mark.asyncio
+async def test_system_digest_still_allowed(env):
+    await ns.save_setting("system", mode="digest")
+    assert await env.send_warning("잡 실패", "b", category="system") is False
+    assert len(await _queue()) == 1
+
+
+@pytest.mark.asyncio
+async def test_record_and_queue_store_plain_title(env):
+    """HTML escape 된 제목도 기록·대기열에는 원문으로 (하루 요약에서 이중 escape 방지)."""
+    await env.send_info("AT&amp;T 급등", "b", category="vip")
+    assert (await _logs())[-1].title == "AT&T 급등"
+    await ns.save_setting("meme_blazing", mode="digest")
+    await env.send_info("A&amp;B", "b", category="meme_blazing")
+    assert (await _queue())[0].title == "A&B"
+
+
+@pytest.mark.asyncio
+async def test_bad_min_level_in_db_still_sends(env, monkeypatch):
+    async def _bad(category):
+        return ns.SettingView(min_level="weird")
+
+    monkeypatch.setattr(ns, "_load_row", _bad)
+    assert await env.send_info("t", "b", category="vip") is True

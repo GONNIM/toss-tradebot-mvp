@@ -53,7 +53,7 @@ CATEGORIES: dict[str, CategoryMeta] = {
     "powderkeg_a6": CategoryMeta("화약고 후보 · A6", _G3, "/powderkeg", {}, "유지"),
     "powderkeg_ticket": CategoryMeta("화약고 티켓 승인", _G4, "/powderkeg", {"enabled": False}, "2주 0건 · 직접 승인한 일이라 알림 불필요"),
     "powderkeg_reeval": CategoryMeta("화약고 12개월 재평가", _G4, "/powderkeg", {}, "유지"),
-    "vip": CategoryMeta("VIP 감시", _G5, "/vip", {"resend_minutes": 10080}, "같은 종목은 7일에 한 번"),
+    "vip": CategoryMeta("VIP 감시", _G5, "/vip", {"resend_minutes": 10080}, "같은 종목·같은 사건은 7일에 한 번"),
     "activist_strong": CategoryMeta("행동주의 · 강한 신호", _G6, "/activist-radar", {}, "STRONG 이상 · 유지"),
     "activist_info": CategoryMeta("행동주의 · 참고 신호", _G6, "/activist-radar", {"enabled": False}, "WATCH·NOTE 는 화면에서 확인"),
     "discovery_sector": CategoryMeta("섹터 리더", _G7, "/sector-leaders", {}, "유지"),
@@ -68,6 +68,16 @@ CATEGORIES: dict[str, CategoryMeta] = {
 }
 
 LOCKED = {k for k, m in CATEGORIES.items() if m.locked}
+ALL_FIELDS = {"enabled", "mode", "resend_minutes", "min_level"}
+
+
+def editable_fields(category: str) -> set[str]:
+    """화면·API 에서 바꿀 수 있는 칸. Kill Switch·실주문은 전부 고정 · 시스템 경고는 받는 방식(하루 요약)만."""
+    if category == "system":
+        return {"mode"}
+    if category in LOCKED:
+        return set()
+    return set(ALL_FIELDS)
 
 # 화면에만 보이는 행 (설정 대상 아님)
 DISPLAY_ONLY = {"deploy": CategoryMeta("배포 알림", "⑪ 배포", "/admin/notifications", {}, "GitHub Actions 가 보냄 · 설정 대상 아님")}
@@ -119,8 +129,10 @@ async def save_setting(
 
     if category not in CATEGORIES:
         raise KeyError(category)
-    if enabled is False and category in LOCKED:
-        raise ValueError(f"{category} 는 끌 수 없습니다")
+    requested = {k for k, v in (("enabled", enabled), ("mode", mode), ("resend_minutes", resend_minutes), ("min_level", min_level)) if v is not None}
+    blocked = requested - editable_fields(category)
+    if blocked:
+        raise ValueError(f"{CATEGORIES[category].label} 은(는) 안전을 위해 {', '.join(sorted(blocked))} 를 바꿀 수 없습니다")
     if mode is not None and mode not in MODES:
         raise ValueError(f"mode: {mode}")
     if min_level is not None and min_level not in LEVELS:

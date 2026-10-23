@@ -4,7 +4,7 @@
 """
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query
@@ -25,6 +25,12 @@ class SettingUpdate(BaseModel):
     min_level: Optional[str] = None
 
 
+def _kst_today_start_utc(now_utc: datetime) -> datetime:
+    """한국 시각 오늘 0시를 UTC naive 로 ("오늘 건너뜀" 집계 기준)."""
+    kst = now_utc + timedelta(hours=9)
+    return kst.replace(hour=0, minute=0, second=0, microsecond=0) - timedelta(hours=9)
+
+
 def _iso(v: Optional[datetime]) -> Optional[str]:
     # UTC naive 로 저장 · 화면이 시간대를 붙여 보여 줌
     return v.isoformat() + "Z" if v else None
@@ -36,7 +42,7 @@ async def _status() -> dict[str, dict]:
     from backend.services.models import NotificationLog as L
 
     out: dict[str, dict] = {}
-    today = utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
+    today = _kst_today_start_utc(utcnow())
     async with get_session() as session:
         for result, key in (("sent", "last_sent_at"), ("failed", "last_failed_at")):
             rows = await session.execute(select(L.category, func.max(L.created_at)).where(L.result == result).group_by(L.category))
@@ -65,6 +71,7 @@ def _row(category: str, meta: ns.CategoryMeta, view: Optional[ns.SettingView], s
         "page": meta.page,
         "locked": meta.locked,
         "configurable": view is not None,
+        "editable": sorted(ns.editable_fields(category)) if view is not None else [],
         "recommended": meta.recommended,
         "reason": meta.reason,
         "enabled": view.enabled if view else True,

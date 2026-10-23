@@ -63,8 +63,8 @@ async def meme_env(monkeypatch):
             self.config = SimpleNamespace(bot_token="t", chat_id="c")
             self.last_result = None
 
-        async def send_info(self, title, body, category=None, dedupe_id=None):
-            sent.append({"title": title, "body": body, "category": category, "dedupe_id": dedupe_id})
+        async def send(self, level, title, body, force=False, category=None, dedupe_id=None, gate=True):
+            sent.append({"title": title, "body": body, "category": category, "dedupe_id": dedupe_id, "force": force})
             self.last_result = results_box["result"]
             return self.last_result == "sent"
 
@@ -91,6 +91,8 @@ async def test_categories_by_alert_type(monkeypatch, meme_env):
     ])
     assert [s["category"] for s in sent] == ["meme_erupting", "meme_blazing"]
     assert [s["dedupe_id"] for s in sent] == ["GME", "AMC"]
+    # 예전처럼 TELEGRAM_PROFILE 을 우회 (배포만으로 받는 알림이 바뀌지 않게) · 알림 설정 거름은 그대로
+    assert all(s["force"] is True for s in sent)
     assert stats["sent_new"] == 2
 
 
