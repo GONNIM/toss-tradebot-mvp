@@ -27,12 +27,24 @@ from backend.services.config import database_url
 # (Phase D 주 8 · 2026-07-31 · Postgres 전환 시 진입점 단일화).
 DATABASE_URL = database_url()
 
+
+
+def _connect_args_for(url: str) -> dict:
+    """SQLite 는 api·cron·biotech 세 프로세스가 같은 파일을 쓰므로 잠금 대기 5초 (Postgres 는 없음)."""
+    return {"timeout": 5} if url.startswith("sqlite") else {}
+
+
+def _connect_args() -> dict:
+    return _connect_args_for(DATABASE_URL)
+
+
 # Engine + Session factory (모듈 레벨, 프로세스 lifetime)
 engine: AsyncEngine = create_async_engine(
     DATABASE_URL,
     echo=False,  # DEBUG 시 True
     future=True,
     pool_pre_ping=True,
+    connect_args=_connect_args(),
 )
 
 AsyncSessionLocal = async_sessionmaker(
