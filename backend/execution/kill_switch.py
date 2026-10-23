@@ -25,6 +25,47 @@ _PROJECT_ROOT = Path(__file__).resolve().parents[2]
 _DEFAULT_STATE_PATH = _PROJECT_ROOT / "backend" / "data" / "kill_switch.json"
 
 
+def _actor_text(actor: str) -> str:
+    from backend.services import alert_text as at
+
+    if actor == "auto:sniper":
+        return "자동 (스나이퍼)"
+    if actor.startswith("auto:"):
+        return f"자동 ({at.esc(actor[5:])})"
+    if actor in ("user:manual", "user", ""):
+        return "직접"
+    if actor.startswith("user:"):
+        return f"직접 ({at.esc(actor[5:])})"
+    return at.esc(actor)
+
+
+def _reason_text(reason: str) -> str:
+    import re
+
+    from backend.services import alert_text as at
+
+    m = re.fullmatch(r"daily_loss_limit_reached\((.*)\)", reason or "")
+    if m:
+        return f"오늘 손실 한도 도달 ({at.esc(m.group(1))})"
+    return at.esc(reason or "—")
+
+
+def _kill_switch_message(state) -> tuple[str, str]:
+    """Kill Switch 발동 알림 (제목, 본문) · 풀기는 화면 주소 (1023-05)."""
+    from backend.services import alert_text as at
+    from backend.services.notification_settings import SITE_BASE_URL
+
+    title = at.title("kill_switch", "새 주문 모두 멈춤", "🚨")
+    body = "\n".join([
+        f"이유: {_reason_text(state.reason)}",
+        f"누가: {_actor_text(state.activated_by or '')}",
+        f"시각: {at.kst(state.activated_at)}",
+        "직접 풀기 전까지 새 주문은 나가지 않습니다.",
+        f"풀기: {SITE_BASE_URL}/lab/execution 의 「수동 해제」 (관리자 로그인)",
+    ])
+    return title, body
+
+
 @dataclass(frozen=True)
 class KillSwitchState:
     active: bool
@@ -150,14 +191,7 @@ class KillSwitch:
             logger.warning("텔레그램 알림 인스턴스 생성 실패 — %s", exc)
             return
 
-        title = "🚨 URGENT · Kill Switch 발동"
-        body = (
-            f"<b>Reason</b>: {state.reason}\n"
-            f"<b>Actor</b>: {state.activated_by}\n"
-            f"<b>발동 시각</b>: {state.activated_at.isoformat() if state.activated_at else '-'}\n\n"
-            "모든 신규 주문 차단됨. 수동 해제 시까지 유지.\n"
-            "해제: <code>DELETE /api/v1/sniper/kill-switch</code> (관리자 로그인 필요)"
-        )
+        title, body = _kill_switch_message(state)
 
         try:
             loop = asyncio.get_running_loop()

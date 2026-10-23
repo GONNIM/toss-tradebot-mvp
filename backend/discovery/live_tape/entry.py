@@ -101,6 +101,20 @@ async def _seed_remaining_krw(order_manager: OrderManager, seed_cap_krw: float) 
         return 0.0
 
 
+def _entry_message(ticker: str, name, entry_price: float, qty: int, candidate, order_uuid: str) -> tuple[str, str]:
+    """실주문 진입 알림 (제목, 본문) · 1023-05."""
+    from backend.services import alert_text as at
+
+    title = at.title("execution", f"{at.stock(name, ticker)} 삼", "🎯")
+    body = "\n".join([
+        f"{at.won(entry_price)} × {qty}주 (약 {at.won(entry_price * qty)})",
+        f"거래 흐름 점수 {candidate.tape_score:.2f} · 오늘 {at.pct(candidate.return_pct or 0)}",
+        f"주문 번호 {at.esc(order_uuid[:12])}",
+        at.link("execution"),
+    ])
+    return title, body
+
+
 async def _already_entered_today(ticker: str) -> bool:
     """오늘 KST 기준 · 해당 티커로 이미 진입한 이력 있는지."""
     now_kst = datetime.now(tz=_KST)
@@ -250,14 +264,10 @@ async def execute_entry(
     try:
         from backend.services.notifier import TelegramNotifier
         notifier = TelegramNotifier()
-        title = f"🎯 SNIPER 진입 · {candidate.ticker}"
-        body = (
-            f"진입가 {entry_price:,.2f} · 수량 {qty}주 (약 {entry_price*qty:,.0f}원)\n"
-            f"tape_score {candidate.tape_score:.2f} (rank {candidate.rank_velocity_score:.1f} · "
-            f"trades {candidate.trades_intensity_score:.1f} · book {candidate.orderbook_score:.1f})\n"
-            f"return {(candidate.return_pct or 0)*100:+.2f}%\n"
-            f"order_uuid <code>{result.order_uuid[:12]}</code>"
-        )
+        from backend.services.stock_names import lookup_kr_name
+
+        name = await lookup_kr_name(candidate.ticker)
+        title, body = _entry_message(candidate.ticker, name, entry_price, qty, candidate, result.order_uuid)
         await notifier.send_info(title, body, category="execution")
     except Exception as exc:  # noqa: BLE001
         logger.debug("[sniper·entry] 텔레그램 실패 · %s", exc)
