@@ -31,6 +31,9 @@ async def send_position_event(
         lines.append(f"{cfg.qty:g}주 · 평가 손익 {at.signed_usd(pnl_usd)}")
     if event.name == "STOP_APPROACH":
         lines.append(f"손절 기준 {at.pct(cfg.stop_pct)} · 지금 {at.pct(event.pnl)}")
+    elif event.name in ("TP1", "TP2"):
+        base = cfg.tp1_pct if event.name == "TP1" else cfg.tp2_pct
+        lines.append(f"설정 기준 {at.pct(base)} · 지금 {at.pct(event.pnl)}")
     lines.append(at.link("vip"))
     return await notifier.send_info(title, "\n".join(lines), category="vip", dedupe_id=f"{cfg.tag}:{event.name}")
 

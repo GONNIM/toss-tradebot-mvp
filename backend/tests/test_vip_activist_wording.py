@@ -24,7 +24,7 @@ class _N:
 
 
 def _cfg(**kw):
-    base = dict(tag="WEN", company_name="Wendy's", avg_price=10.0, qty=300, stop_pct=-0.05,
+    base = dict(tag="WEN", company_name="Wendy's", avg_price=10.0, qty=300, stop_pct=-0.05, tp1_pct=0.07, tp2_pct=0.15,
                 activist_name="Trian", activist_cik="1345471")
     base.update(kw)
     return SimpleNamespace(**base)
@@ -35,7 +35,8 @@ async def test_vip_tp1():
     n = _N()
     await vn.send_position_event(n, Event(name="TP1", pnl=0.142, current_price=11.42), _cfg())
     c = n.calls[0]
-    assert c["title"] == "🎯 VIP 감시 · Wendy's 1차 목표가 도달"
+    assert c["title"] == "🎯 VIP 감시 · Wendy's 설정한 1차 기준 도달"
+    assert "설정 기준 +7.0% · 지금 +14.2%" in c["body"]
     assert "산 값 $10.00 → 지금 $11.42 (+14.2%)" in c["body"]
     assert "300주 · 평가 손익 +$426.00" in c["body"]
     assert c["dedupe_id"] == "WEN:TP1"

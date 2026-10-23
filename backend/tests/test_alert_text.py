@@ -11,7 +11,7 @@ KST = timezone(timedelta(hours=9))
 
 
 def test_title_format():
-    assert at.title("vip", "Wendy's 1차 목표가 도달", "🎯") == "🎯 VIP 감시 · Wendy's 1차 목표가 도달"
+    assert at.title("vip", "Wendy's 설정한 1차 기준 도달", "🎯") == "🎯 VIP 감시 · Wendy's 설정한 1차 기준 도달"
 
 
 def test_title_truncates_fact_only():
