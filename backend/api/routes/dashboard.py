@@ -166,6 +166,11 @@ async def get_toss_account():
             price_source=price_source,
         )
 
+    # 1025-08 · 미국 종목 원화 = 토스 참고 환율 (실패 시 마지막 성공 값 · 없으면 1330 고정 · 출처를 응답에 밝힘)
+    from backend.services import fx
+    quote = fx.usd_krw(client)
+    usd_krw = quote.rate
+
     # 상위 집계 (원본 우선 · Fable 5 broker-api-source-of-truth)
     total_purchase = holdings_dict.get("totalPurchaseAmount") or {}
     market_value_agg = holdings_dict.get("marketValue") or {}
@@ -222,14 +227,13 @@ async def get_toss_account():
         if cost_native > 0 and pnl_native is not None:
             pnl_pct = round(pnl_native / cost_native * 100, 2)
 
-        # KRW 환산 (US 종목 총계·표시용 · 상위 marketValue.krw 있으면 그거 · 없으면 하드코드 환율)
+        # KRW 환산 (US 종목 총계·표시용 · 상위 marketValue.krw 있으면 그거 · 없으면 토스 참고 환율)
         mv_krw = _to_float(item_mv_obj.get("krw"))
         if mv_krw is None:
             if currency == "KRW":
                 mv_krw = mv_native
             elif mv_native is not None:
-                # constants USDKRW 대신 상위 집계 값에서 역산 or 하드코드 fallback
-                mv_krw = round(mv_native * 1330, 0)
+                mv_krw = round(mv_native * usd_krw, 0)
 
         holding = TossHolding(
             symbol=sym,
@@ -255,7 +259,7 @@ async def get_toss_account():
             if mv_krw is not None:
                 us_mv_krw_sum += mv_krw
             # US cost KRW 환산 (검산용)
-            us_cost_krw_sum += round(cost_native * 1330, 0)
+            us_cost_krw_sum += round(cost_native * usd_krw, 0)
 
     # 층 3 · 섹션 소계 (자체 합산 · KR/US 별도)
     kr_market_value = round(kr_mv_sum, 0) if kr_holdings else None
@@ -276,7 +280,7 @@ async def get_toss_account():
             investment_pnl_source = "computed"
 
     # 층 2A · 주문 가능
-    cash_usd_krw = round((cash_usd or 0) * 1330, 0) if cash_usd else 0
+    cash_usd_krw = round((cash_usd or 0) * usd_krw, 0) if cash_usd else 0
     order_available_krw = round((cash_krw or 0) + cash_usd_krw, 0) if (cash_krw or cash_usd) else None
 
     # 층 1 · 총 자산 = 주문 가능 + 내 투자
@@ -343,4 +347,6 @@ async def get_toss_account():
         identity_asset_diff=identity_asset_diff,
         identity_investment_ok=identity_investment_ok,
         identity_investment_diff=identity_investment_diff,
+        fx_rate=usd_krw,
+        fx_source=quote.source,
     )
