@@ -171,6 +171,42 @@ async def test_f5_status_and_deactivate_with_token(client):
     assert body["active"] is False and body["deactivated_by"] == "user:tester"
 
 
+@pytest.mark.asyncio
+async def test_f5_activate_requires_auth(client):
+    """1022-06 · 수동 발동도 인증 필수."""
+    r = await client.post("/api/v1/sniper/kill-switch", json={"reason": "x"})
+    assert r.status_code in (401, 403)
+    assert client.switch.status().active is False
+
+
+@pytest.mark.asyncio
+async def test_f5_activate_with_token(client):
+    h = {"X-API-Token": TOKEN}
+    r = await client.post("/api/v1/sniper/kill-switch", json={"reason": "시장 급락 대응", "actor": "user:tester"}, headers=h)
+    assert r.status_code == 200
+    assert r.json() == {"active": True, "reason": "시장 급락 대응", "activated_by": "user:tester"}
+    r = await client.get("/api/v1/sniper/kill-switch/status", headers=h)
+    assert r.json()["active"] is True and r.json()["activated_by"] == "user:tester"
+
+
+@pytest.mark.asyncio
+async def test_f5_activate_when_active_is_noop(client):
+    h = {"X-API-Token": TOKEN}
+    client.switch.activate(reason="first", actor="auto:sniper")
+    r = await client.post("/api/v1/sniper/kill-switch", json={"reason": "second"}, headers=h)
+    assert r.status_code == 200
+    assert r.json() == {"active": True, "reason": "first", "activated_by": "auto:sniper"}
+
+
+@pytest.mark.asyncio
+async def test_f5_activate_validates_reason_and_actor(client):
+    h = {"X-API-Token": TOKEN}
+    for body in ({"reason": ""}, {"reason": "x" * 201}, {"reason": "ok", "actor": "bad actor!"}):
+        r = await client.post("/api/v1/sniper/kill-switch", json=body, headers=h)
+        assert r.status_code == 422, body
+    assert client.switch.status().active is False
+
+
 def test_f5_alert_body_points_to_new_path():
     import inspect
 

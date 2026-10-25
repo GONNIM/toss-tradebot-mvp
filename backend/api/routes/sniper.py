@@ -271,6 +271,17 @@ async def kill_switch_status():
     }
 
 
+@router.post("/kill-switch", dependencies=[Depends(require_sniper_token)])
+async def kill_switch_activate(
+    reason: str = Body(..., embed=True, min_length=1, max_length=200),
+    actor: str = Body("user:manual", embed=True, pattern=r"^[\w:.\-]{1,64}$"),
+):
+    """Kill Switch 수동 발동 · 인증 필수 · 이미 발동 중이면 그대로 (1022-06)."""
+    s = get_kill_switch().activate(reason=reason, actor=actor)
+    logger.warning("kill switch 발동 요청 · active=%s · actor=%s", s.active, actor)
+    return {"active": s.active, "reason": s.reason, "activated_by": s.activated_by}
+
+
 @router.delete("/kill-switch", dependencies=[Depends(require_sniper_token)])
 async def kill_switch_deactivate(actor: str = Query("user:manual", pattern=r"^[\w:.\-]{1,64}$")):
     """Kill Switch 수동 해제 · 인증 필수 · actor 기록."""

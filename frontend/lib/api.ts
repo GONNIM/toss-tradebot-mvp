@@ -754,9 +754,11 @@ export const api = {
     status: () => get<ExecutionStatus>(`/execution/status`),
     killSwitch: {
       status: () => getWithSession<KillSwitchStatus>(`/sniper/kill-switch/status`),
+      // 인증 라우트 · 쿠키를 보내는 헬퍼 (1022-06 · /execution/* 은 미등록이라 404)
       activate: (reason: string, actor = "user:manual") =>
-        post<{ active: boolean; reason: string; activated_by: string }>(
-          `/execution/kill-switch`,
+        postWithToken<{ active: boolean; reason: string; activated_by: string }>(
+          `/sniper/kill-switch`,
+          "",
           { reason, actor },
         ),
       deactivate: (actor = "user:manual") =>
