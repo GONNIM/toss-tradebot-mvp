@@ -334,21 +334,6 @@ class TossAdapter(OrderManager):
 
         self._fx_usd_krw = fx.usd_krw(self._toss).rate
         return self._fx_usd_krw
-        try:
-            data = self._toss.get("/api/v1/exchange-rate", use_account_header=False)
-            # 실측 스키마 미정 · 안전 파싱
-            if isinstance(data, dict):
-                usd = data.get("USD") or data.get("usd") or data.get("KRW") or data.get("krw")
-                if isinstance(usd, (int, float)):
-                    self._fx_usd_krw = float(usd)
-                elif isinstance(usd, dict):
-                    v = usd.get("rate") or usd.get("value")
-                    if isinstance(v, (int, float)):
-                        self._fx_usd_krw = float(v)
-        except Exception as exc:  # noqa: BLE001
-            logger.debug("환율 조회 실패 · 캐시 유지 · %s", exc)
-        self._fx_fetched_at = now
-        return self._fx_usd_krw
 
     def _fetch_and_map(self, order_id: str, order_uuid: str) -> OrderResult:
         env = self._toss.get_order(order_id)

@@ -1,14 +1,16 @@
 "use client";
 
 // 1025-06 · 「내 계좌」 — 내 증권 계좌로 가는 길 · 토스 실계좌 요약 · 실주문 안전 한 줄 · 미국 종목 토스 주소 확인.
+// 1025-08 · 토스 실계좌 보유 종목 표 (보유 일수 · 최고가 대비 · 청산 계획 · 토스증권으로 가기) — 사실만.
 // 사이트는 주문을 넣지 않는다 (정체성 원칙 1). 주문은 토스증권 화면에서 직접 한다.
 
 import { useState } from "react";
 import Link from "next/link";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { api, SniperStatus, TossAccountSnapshot, TossStockCodeRow } from "@/lib/api";
+import { AccountHolding, AccountHoldingsResponse, api, SniperStatus, TossAccountSnapshot, TossStockCodeRow } from "@/lib/api";
 import { AdminSessionBar } from "@/components/admin/AdminSessionBar";
-import { TOSS_ACCOUNT, TOSS_HOME, friendlyError } from "@/lib/broker-link";
+import { BROKER_LABEL, SEARCH_LABEL, TOSS_ACCOUNT, TOSS_HOME, friendlyError } from "@/lib/broker-link";
+import { fxLabel, heldLabel, peakLabel, pctText, pnlTone, priceText, wonText } from "@/lib/holdings-display";
 import { safetyConclusion } from "@/lib/sniper-safety";
 import { fmtKstDateTime } from "@/lib/time";
 
@@ -64,9 +66,92 @@ function TossSummary({ isAdmin }: { isAdmin: boolean }) {
         <div><dt className="text-xs text-muted-foreground">내 투자 평가</dt><dd className="font-semibold">{won(d.investment_market_value_krw)}</dd></div>
       </dl>
       <p className="text-xs text-muted-foreground">
-        토스 응답 기준 · {d.price_source === "realtime" ? "실시간 가격" : "전일 종가"} · {fmtKstDateTime(d.fetched_at)} · 자세한 보유 종목은{" "}
-        <Link href="/dashboard" className="underline">/dashboard</Link>
+        토스 응답 기준 · {d.price_source === "realtime" ? "실시간 가격" : "전일 종가"} · {fmtKstDateTime(d.fetched_at)}
       </p>
+    </div>
+  );
+}
+
+const TONE_CLASS = { up: "text-red-600 dark:text-red-400", down: "text-blue-600 dark:text-blue-400", flat: "text-muted-foreground" } as const;
+
+function HoldingRow({ h }: { h: AccountHolding }) {
+  const tone = TONE_CLASS[pnlTone(h.pnl)];
+  return (
+    <tr className="border-b border-border align-top last:border-0">
+      <td className="p-2">
+        <div className="font-medium">{h.name ?? h.symbol}</div>
+        <div className="font-mono text-xs text-muted-foreground">{h.symbol} · {h.market === "KR" ? "국내" : "미국"}</div>
+      </td>
+      <td className="p-2 text-right">{h.qty.toLocaleString("ko-KR")}</td>
+      <td className="p-2 text-right">
+        <div>{priceText(h.current_price, h.currency)}</div>
+        <div className="text-xs text-muted-foreground">평단 {priceText(h.avg_price, h.currency)}</div>
+      </td>
+      <td className={`p-2 text-right ${tone}`}>
+        <div className="font-semibold">{pctText(h.pnl_pct)}</div>
+        <div className="text-xs">{wonText(h.pnl_krw)}</div>
+      </td>
+      <td className="p-2 text-right">{wonText(h.market_value_krw)}</td>
+      <td className="p-2">{peakLabel(h)}</td>
+      <td className="p-2">{heldLabel(h)}</td>
+      <td className="p-2">
+        {h.has_exit_plan ? (
+          "✓ 있음"
+        ) : (
+          <Link href="/positions" className="text-red-600 underline dark:text-red-400">✗ 없음</Link>
+        )}
+      </td>
+      <td className="p-2">
+        <a href={h.link.url} target="_blank" rel="noopener noreferrer" className="whitespace-nowrap text-xs underline">
+          {h.link.kind === "order" ? BROKER_LABEL : SEARCH_LABEL}
+        </a>
+      </td>
+    </tr>
+  );
+}
+
+function HoldingsTable({ isAdmin }: { isAdmin: boolean }) {
+  const q = useQuery<AccountHoldingsResponse>({
+    queryKey: ["account", "holdings"],
+    queryFn: api.account.holdings,
+    enabled: isAdmin,
+    retry: false,
+  });
+  if (!isAdmin) return null;
+  if (q.isLoading) return <p className="text-sm text-muted-foreground">보유 종목 불러오는 중…</p>;
+  if (q.error || !q.data) return <p className="text-sm text-muted-foreground">보유 종목을 불러오지 못했습니다.</p>;
+  const d = q.data;
+  if (!d.ok) return <p className="text-sm text-muted-foreground">보유 종목을 불러오지 못했습니다 ({d.error_reason ?? "이유 없음"}).</p>;
+  if (d.holdings.length === 0) return <p className="text-sm text-muted-foreground">토스 실계좌에 보유 종목이 없습니다.</p>;
+  return (
+    <div className="space-y-2">
+      <h3 className="text-sm font-semibold">보유 종목 {d.holdings.length}개</h3>
+      <div className="overflow-x-auto">
+        <table className="w-full min-w-[56rem] text-sm">
+          <thead>
+            <tr className="border-b border-border text-left text-xs text-muted-foreground">
+              <th className="p-2">종목</th>
+              <th className="p-2 text-right">수량</th>
+              <th className="p-2 text-right">현재가</th>
+              <th className="p-2 text-right">손익</th>
+              <th className="p-2 text-right">평가 (원)</th>
+              <th className="p-2">최고가 대비</th>
+              <th className="p-2">보유 일수</th>
+              <th className="p-2">청산 계획</th>
+              <th className="p-2">토스증권</th>
+            </tr>
+          </thead>
+          <tbody>{d.holdings.map((h) => <HoldingRow key={`${h.market}-${h.symbol}`} h={h} />)}</tbody>
+        </table>
+      </div>
+      <ul className="space-y-0.5 text-xs text-muted-foreground">
+        <li>{fxLabel(d.fx_rate, d.fx_source)}</li>
+        <li>최고가 대비 = 보유 기준일 뒤 가장 높은 종가와 지금 가격의 차이입니다 (토스 일봉 · 매일 국내 15:50 · 미국 07:10 기록).</li>
+        <li>보유 일수 기준일은 첫 저널 판단일, 없으면 이 사이트가 보유를 처음 기록한 날입니다. 실제 매수일과 다를 수 있습니다.</li>
+        <li>
+          청산 계획은 <Link href="/positions" className="underline">/positions</Link> 에서 적고 고칩니다 · {fmtKstDateTime(d.fetched_at)} 토스 응답 기준
+        </li>
+      </ul>
     </div>
   );
 }
@@ -169,6 +254,7 @@ export default function AccountPage() {
           </a>
         </div>
         <TossSummary isAdmin={isAdmin} />
+        <HoldingsTable isAdmin={isAdmin} />
       </Card>
       <Card title="카카오페이증권">
         <p className="text-sm">휴대폰 카카오페이 앱 → 증권에서 ISA 계좌와 ETF 를 확인하세요. 카카오페이증권은 PC 웹 거래 화면이 없습니다.</p>

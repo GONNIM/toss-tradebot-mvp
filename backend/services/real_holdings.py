@@ -202,7 +202,9 @@ async def holding_facts(session, row: HoldingRow, today: date) -> dict:
 
     jq = select(func.min(UserJudgment.ts)).where(UserJudgment.ticker == row.symbol)
     if last_sold is not None:
-        jq = jq.where(UserJudgment.ts > datetime.combine(last_sold, datetime.max.time()))
+        # 팔린 날 (KST) 다음 날 자정을 UTC naive 로 — DB 시각은 UTC
+        next_kst = datetime.combine(last_sold + timedelta(days=1), datetime.min.time(), tzinfo=KST)
+        jq = jq.where(UserJudgment.ts >= next_kst.astimezone(timezone.utc).replace(tzinfo=None))
     first_j = (await session.execute(jq)).scalar_one_or_none()
 
     if first_j is not None:
