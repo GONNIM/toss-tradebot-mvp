@@ -562,6 +562,17 @@ async def job_notification_digest():
         await _alert_job_failure("알림 하루 요약", e, 18, 0)
 
 
+async def job_toss_stock_codes():
+    """토스증권 미국 종목 코드 07:40 KST (1025-06) — 바이오 레이더 티커의 상장일로 코드 후보 · 서버에서만 토스 API."""
+    try:
+        from backend.services import broker_links
+
+        await broker_links.refresh_toss_stock_codes()
+    except Exception as e:
+        logger.error(f"[cron] toss stock codes failed: {e}", exc_info=True)
+        await _alert_job_failure("토스증권 종목 코드", e, 7, 40)
+
+
 async def job_universe_refresh():
     try:
         await run_universe_refresh()
@@ -810,6 +821,10 @@ def build_scheduler() -> AsyncIOScheduler:
     scheduler.add_job(job_sector_leaders_alert_1705, CronTrigger(hour=SECTOR_SLOTS[1][0], minute=SECTOR_SLOTS[1][1]),
                       id="sector_leaders_alert_1705",
                       name="Sector Leaders Top — 17:05 KST (정규장 마감 후)",
+                      replace_existing=True)
+    scheduler.add_job(job_toss_stock_codes, CronTrigger(hour=7, minute=40),
+                      id="toss_stock_codes_daily",
+                      name="토스증권 미국 종목 코드 07:40 KST",
                       replace_existing=True)
     scheduler.add_job(job_notification_digest, CronTrigger(hour=18, minute=0),
                       id="notification_digest_1800",

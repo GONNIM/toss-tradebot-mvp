@@ -42,3 +42,108 @@ def test_lowercase_and_junk():
     for bad in ("A;B", "", "A" * 13, "가나"):
         with pytest.raises(ValueError):
             bl.normalize_symbol(bad)
+
+
+# ─── Task 6 · 하루 1회 배치 ───
+from datetime import datetime, timedelta  # noqa: E402
+
+from sqlalchemy import delete, select  # noqa: E402
+
+
+class _FakeToss:
+    def __init__(self, data: dict[str, str | None]):
+        self.data = data
+        self.calls: list[list[str]] = []
+
+    def stocks(self, symbols):
+        self.calls.append(list(symbols))
+        return [{"symbol": s, "listDate": self.data[s]} for s in symbols if s in self.data]
+
+
+async def _rows():
+    from backend.services.db import get_session
+
+    async with get_session() as s:
+        return {r.symbol: r for r in (await s.execute(select(TossStockCode))).scalars().all()}
+
+
+@pytest.fixture
+async def empty_table():
+    from backend.services.db import get_session, init_db
+
+    await init_db()
+    async with get_session() as s:
+        await s.execute(delete(TossStockCode))
+    yield
+
+
+@pytest.mark.asyncio
+async def test_refresh_creates_rows(empty_table):
+    fake = _FakeToss({"WEN": "1981-05-27"})
+    out = await bl.refresh_toss_stock_codes(client=fake, symbols=["WEN", "005930"])
+    rows = await _rows()
+    assert rows["WEN"].toss_code == "US19810527001" and rows["WEN"].list_date == "1981-05-27"
+    assert rows["WEN"].source == "api" and rows["WEN"].verified is False
+    assert "005930" not in rows  # 국내는 표가 필요 없음
+    assert out == {"asked": 1, "found": 1, "missing": 0, "skipped_manual": 0}
+
+
+@pytest.mark.asyncio
+async def test_refresh_keeps_manual(empty_table):
+    from backend.services.db import get_session
+
+    async with get_session() as s:
+        s.add(TossStockCode(symbol="WEN", toss_code="US19810527002", source="manual", verified=True))
+    fake = _FakeToss({"WEN": "1981-05-27"})
+    out = await bl.refresh_toss_stock_codes(client=fake, symbols=["WEN"])
+    row = (await _rows())["WEN"]
+    assert row.toss_code == "US19810527002" and row.verified is True and row.source == "manual"
+    assert fake.calls == [] and out["skipped_manual"] == 1
+
+
+@pytest.mark.asyncio
+async def test_refresh_missing_saved_null_and_not_reasked(empty_table):
+    fake = _FakeToss({})
+    out = await bl.refresh_toss_stock_codes(client=fake, symbols=["ZZZZ"])
+    assert (await _rows())["ZZZZ"].toss_code is None and out["missing"] == 1
+    again = await bl.refresh_toss_stock_codes(client=fake, symbols=["ZZZZ"])
+    assert len(fake.calls) == 1 and again["asked"] == 0  # 7일 안에는 다시 묻지 않음
+
+
+@pytest.mark.asyncio
+async def test_refresh_reasks_after_7_days(empty_table):
+    from backend.services.db import get_session
+
+    async with get_session() as s:
+        s.add(TossStockCode(symbol="OLD", toss_code=None, source="api", verified=False,
+                            updated_at=datetime.utcnow() - timedelta(days=8)))
+    fake = _FakeToss({"OLD": "2001-02-03"})
+    await bl.refresh_toss_stock_codes(client=fake, symbols=["OLD"])
+    assert (await _rows())["OLD"].toss_code == "US20010203001"
+
+
+@pytest.mark.asyncio
+async def test_refresh_batches_200(empty_table):
+    syms = [f"T{i:03d}" for i in range(450)]
+    fake = _FakeToss({s: "2020-01-01" for s in syms})
+    out = await bl.refresh_toss_stock_codes(client=fake, symbols=syms)
+    assert [len(c) for c in fake.calls] == [200, 200, 50] and out["found"] == 450
+
+
+def test_radar_symbols_reads_ticker_column(tmp_path, monkeypatch):
+    csv = tmp_path / "radar_v1_3_20261025.csv"
+    csv.write_text("ticker,name\nLRMR,Larimar\n005930,삼성\nlrmr,dup\n,빈칸\n", encoding="utf-8")
+    from backend.api.routes import biotech
+
+    monkeypatch.setattr(biotech, "_latest_radar_csv", lambda: csv)
+    assert bl.radar_symbols() == ["LRMR"]
+
+
+def test_cron_registers_daily_0740():
+    import inspect
+
+    from backend.scheduler import cron
+
+    src = inspect.getsource(cron.build_scheduler)
+    assert 'CronTrigger(hour=7, minute=40)' in src and 'id="toss_stock_codes_daily"' in src
+    assert inspect.iscoroutinefunction(cron.job_toss_stock_codes)
