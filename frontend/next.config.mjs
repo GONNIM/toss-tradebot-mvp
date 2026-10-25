@@ -50,8 +50,11 @@ const nextConfig = {
       { source: "/super-signals/:path*", destination: "/lab/super-signals/:path*", permanent: true },
       { source: "/backtest", destination: "/lab/backtest", permanent: true },
       { source: "/backtest/:path*", destination: "/lab/backtest/:path*", permanent: true },
-      { source: "/execution", destination: "/lab/execution", permanent: true },
-      { source: "/execution/:path*", destination: "/lab/execution/:path*", permanent: true },
+      // 1025-01 · 옛 실행 화면 퇴역 → 안전 상황판 (한 번에 이동)
+      { source: "/execution", destination: "/sniper", permanent: true },
+      { source: "/execution/:path*", destination: "/sniper", permanent: true },
+      { source: "/lab/execution", destination: "/sniper", permanent: true },
+      { source: "/lab/execution/:path*", destination: "/sniper", permanent: true },
       // 관리자 이관 → /admin/*
       { source: "/settings", destination: "/admin/settings", permanent: true },
       { source: "/settings/:path*", destination: "/admin/settings/:path*", permanent: true },

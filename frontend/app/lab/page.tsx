@@ -60,12 +60,12 @@ const ITEMS: LabItem[] = [
     reason: "임의 sources 조합 = datamining bias (리뷰 A) · 전체 조합 강제 실행 UI 미개편",
   },
   {
-    href: "/lab/execution",
-    name: "Execution",
-    desc: "kill-switch · paper · threshold 편집 UI (896 lines)",
-    lastReviewed: "2026-07-30",
+    href: "/sniper",
+    name: "Execution → Sniper 안전 상황판",
+    desc: "Kill Switch 발동·해제와 실주문 상태는 /sniper 「실주문 안전 상황판」 으로 옮겼습니다 (2026-10-25)",
+    lastReviewed: "2026-10-25",
     live: false,
-    reason: "Stage 1 '자동매매 절대 금지' 원칙과 정면 충돌 (리뷰 A) · 존재만으로 유혹 · Stage 3까지 관리자 숨김",
+    reason: "옛 실행 화면 퇴역 · 서버에 연결되지 않은 카드 정리 · 원칙 1 (자동매매 연결 금지) 과 맞춤",
   },
 ];
 
