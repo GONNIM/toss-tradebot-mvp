@@ -1944,3 +1944,20 @@ class NotificationDigestItem(Base):
     title: Mapped[str] = mapped_column(String(300), nullable=False)
     body: Mapped[str] = mapped_column(Text, nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, server_default=func.now())
+
+
+class TossStockCode(Base):
+    """토스증권 웹 종목 코드 (1025-06 · 「토스증권에서 열기」).
+
+    미국 종목은 티커가 아니라 토스 자체 코드 (US + 상장일 + 순번) 를 쓴다. 배치가 공식 Open API 상장일로
+    후보를 만들고 (source=api), 사람이 고치거나 확인한 값 (source=manual · verified) 은 배치가 덮지 않는다.
+    """
+
+    __tablename__ = "toss_stock_code"
+
+    symbol: Mapped[str] = mapped_column(String(16), primary_key=True)
+    toss_code: Mapped[Optional[str]] = mapped_column(String(20), nullable=True)
+    list_date: Mapped[Optional[str]] = mapped_column(String(10), nullable=True)
+    source: Mapped[str] = mapped_column(String(8), nullable=False, default="api")  # api | manual
+    verified: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, server_default=func.now(), onupdate=func.now())
