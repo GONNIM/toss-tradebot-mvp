@@ -112,20 +112,20 @@ async def test_request_params_default_model_and_effort():
     await _run(fb, primary, client)
     kw = client.calls[0]
     assert kw["model"] == llm_mod.DEFAULT_ANTHROPIC_MODEL
-    assert kw["output_config"] == {"effort": "low"}
+    assert kw["output_config"] == {"effort": "medium"}
     assert kw["max_tokens"] == 4000
     assert "temperature" not in kw
     assert "thinking" not in kw
 
 
-def test_default_model_is_sonnet_5_5():
+def test_default_model_is_opus_5_5():
     # ANTHROPIC_MODEL 을 넣지 않으면 코드 기본값 (모듈을 다시 읽으면 다른 테스트의 클래스 비교가 깨져 소스로 확인)
     import inspect
 
     from backend.powderkeg import llm_classifier
 
-    assert 'os.environ.get("ANTHROPIC_MODEL", "claude-sonnet-5-5")' in inspect.getsource(llm_mod)
-    assert 'os.environ.get("POWDERKEG_LLM_MODEL", "claude-sonnet-5-5")' in inspect.getsource(llm_classifier)
+    assert 'os.environ.get("ANTHROPIC_MODEL", "claude-opus-5-5")' in inspect.getsource(llm_mod)
+    assert 'os.environ.get("POWDERKEG_LLM_MODEL", "claude-opus-5-5")' in inspect.getsource(llm_classifier)
 
 
 @pytest.mark.asyncio

@@ -284,12 +284,12 @@ async def test_classify_both_fail_keyword(monkeypatch):
 
 @pytest.mark.asyncio
 async def test_classify_anthropic_request_params(monkeypatch):
-    """기본 모델 Sonnet 5.5 · effort low · temperature 미전송."""
+    """기본 모델 Opus 5.5 · effort medium · temperature 미전송."""
     monkeypatch.setenv("LLM_PROVIDER", "anthropic")
     monkeypatch.setenv("ANTHROPIC_API_KEY", "test_key")
     calls: list = []
     _fake_anthropic(monkeypatch, content=[_Block("text", text='{"label": "unclear", "confidence": 0.1, "rationale": "x"}')], calls=calls)
     await classify_owner_event("제목")
     assert calls[0]["model"] == lc._MODEL
-    assert calls[0]["output_config"] == {"effort": "low"}
+    assert calls[0]["output_config"] == {"effort": "medium"}
     assert "temperature" not in calls[0]
