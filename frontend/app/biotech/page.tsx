@@ -509,11 +509,12 @@ export default function BiotechPage() {
                         subline={cardText(r.trial, r.phase, r.event_date, r.days_to, r.theme_rank).theme}
                         sourceUrl={ctgovUrl(r.nct_id)}
                       />
+                      {/* 1025-06 · 펼치지 않아도 바로 토스증권으로 (카드 펼침과 따로) */}
+                      <div className="mt-1 flex justify-end" onClick={(e) => e.stopPropagation()} onKeyDown={(e) => e.stopPropagation()}>
+                        <BrokerLink symbol={r.ticker} links={brokerLinks} />
+                      </div>
                       {open && (
                         <div className="mt-1 rounded-lg border border-slate-200 bg-slate-50 p-3 text-xs dark:border-slate-700 dark:bg-slate-900/60">
-                          <div className="mb-2" onClick={(e) => e.stopPropagation()}>
-                            <BrokerLink symbol={r.ticker} links={brokerLinks} />
-                          </div>
                           {rr ? (
                             <>
                               <div className="mb-1 font-semibold">점수 {rr.score.toFixed(3)} · 5가지 요소</div>

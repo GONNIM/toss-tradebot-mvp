@@ -14,6 +14,7 @@ const NAV_L1 = [
   { href: "/watchlist", label: "🌙 Watchlist" },
   { href: "/sniper", label: "🚀 Sniper" },
   { href: "/positions", label: "💼 Positions" },
+  { href: "/account", label: "🏦 내 계좌" },
   { href: "/influencer", label: "🎯 Influencer" },
   { href: "/dashboard", label: "📊 Dashboard" },
   { href: "/logs", label: "📜 Logs" },
