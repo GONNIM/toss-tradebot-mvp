@@ -31,6 +31,7 @@ export default function SniperPage() {
   // Phase D 주 7 (2026-07-31) · localStorage 토큰 → httpOnly 쿠키 세션.
   // AdminSessionBar 가 whoami 로 실제 role 을 확증 · 여기서는 캐시본만 유지.
   const [isAdmin, setIsAdmin] = useState<boolean>(false);
+  const qc = useQueryClient();
 
   return (
     <div className="space-y-6">
@@ -43,7 +44,11 @@ export default function SniperPage() {
       <SetupGuide isAdmin={isAdmin} />
       <AdminSessionBar
         scope="sniper"
-        onSessionChange={(info) => setIsAdmin(info.role === "admin")}
+        onSessionChange={(info) => {
+          setIsAdmin(info.role === "admin");
+          // 로그인·로그아웃 때 Kill Switch 상태를 다시 불러 지난 관리자 데이터가 남지 않게 (1025-01 리뷰)
+          qc.invalidateQueries({ queryKey: ["sniper", "kill-switch"] });
+        }}
       />
       <SafetyPanel />
       <StatusPanel />

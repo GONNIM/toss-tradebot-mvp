@@ -7,12 +7,13 @@ import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api, KillSwitchStatus, SniperParams, SniperStatus } from "@/lib/api";
 import { fmtKstHm } from "@/lib/time";
-import { lossLimitLabel, orderTargetLabel, safetyConclusion } from "@/lib/sniper-safety";
+import { lossLimitLabel, manualEntryLabel, orderTargetLabel, safetyConclusion } from "@/lib/sniper-safety";
 
 const TONE = {
   stop: "border-red-300 bg-red-50 text-red-800 dark:border-red-800 dark:bg-red-950/40 dark:text-red-200",
   off: "border-slate-300 bg-slate-50 text-slate-800 dark:border-slate-700 dark:bg-slate-900/40 dark:text-slate-200",
   on: "border-amber-300 bg-amber-50 text-amber-900 dark:border-amber-700 dark:bg-amber-950/40 dark:text-amber-200",
+  live: "border-red-400 bg-red-100 text-red-900 dark:border-red-700 dark:bg-red-950/60 dark:text-red-100",
 } as const;
 
 function statusOf(e: unknown): number | undefined {
@@ -40,26 +41,36 @@ export function SafetyPanel() {
   });
   const deactivate = useMutation({ mutationFn: () => api.sniper.killSwitch.deactivate(), onSuccess: refresh });
 
-  if (!st.data) return null;
   const s = st.data;
-  const c = safetyConclusion({
-    live_enabled: s.live_enabled,
-    sniper_enabled: s.sniper_enabled,
-    watchlist_enabled: s.watchlist_execute?.enabled ?? false,
-    kill_switch_active: s.kill_switch_active,
-    order_target: s.order_target,
-  });
+  const c = s
+    ? safetyConclusion({
+        live_enabled: s.live_enabled,
+        sniper_enabled: s.sniper_enabled,
+        watchlist_enabled: s.watchlist_execute?.enabled ?? false,
+        kill_switch_active: s.kill_switch_active,
+        order_target: s.order_target,
+      })
+    : null;
   const needLogin = statusOf(ks.error) === 401;
-  const active = ks.data?.active === true;
+  // 조회 오류 (로그아웃 직후 401 포함) 가 있으면 지난 데이터로 버튼을 보이지 않는다
+  const ksData = ks.error ? undefined : ks.data;
+  const active = ksData?.active === true;
 
   return (
     <section className="space-y-3 rounded-lg border border-border bg-card p-4">
       <h2 className="text-sm font-semibold">🛡 실주문 안전 상황판</h2>
-      <p className={`rounded-md border px-3 py-2 text-base font-semibold ${TONE[c.tone]}`}>{c.text}</p>
+      {c ? (
+        <p className={`rounded-md border px-3 py-2 text-base font-semibold ${TONE[c.tone]}`}>{c.text}</p>
+      ) : (
+        <p className="rounded-md border border-border px-3 py-2 text-sm text-muted-foreground">
+          {st.error ? "실주문 상태를 불러오지 못했습니다 — Kill Switch 는 아래에서 쓸 수 있습니다" : "실주문 상태 확인 중…"}
+        </p>
+      )}
       <dl className="grid grid-cols-1 gap-2 text-sm sm:grid-cols-3">
         <div>
           <dt className="text-xs text-muted-foreground">주문 대상</dt>
-          <dd className="font-semibold">{orderTargetLabel(s.order_target)}</dd>
+          <dd className="font-semibold">{s ? orderTargetLabel(s.order_target) : "—"}</dd>
+          {s && <dd className="text-xs text-muted-foreground">{manualEntryLabel(s.live_enabled)}</dd>}
         </div>
         <div>
           <dt className="text-xs text-muted-foreground">하루 손실 한도</dt>
@@ -71,15 +82,15 @@ export function SafetyPanel() {
           <dd className="font-semibold">
             {needLogin ? "관리자 로그인이 필요합니다" : ks.error ? "조회 실패" : ks.isLoading ? "확인 중…" : active ? "🚨 발동 중" : "대기"}
           </dd>
-          {ks.data?.reason && (
+          {active && ksData?.reason && (
             <dd className="text-xs text-muted-foreground">
-              사유: {ks.data.reason} · 누가: {ks.data.activated_by ?? "—"}
-              {ks.data.activated_at ? ` · ${fmtKstHm(ks.data.activated_at)}` : ""}
+              사유: {ksData.reason} · 누가: {ksData.activated_by ?? "—"}
+              {ksData.activated_at ? ` · ${fmtKstHm(ksData.activated_at)}` : ""}
             </dd>
           )}
         </div>
       </dl>
-      {ks.data && (
+      {ksData && (
         active ? (
           <button
             type="button"
