@@ -67,6 +67,8 @@ class JudgmentOut(BaseModel):
     entry_price: Optional[float] = None
     result_at_horizon: Optional[float]
     result_computed_at: Optional[datetime]
+    result_base_price: Optional[float] = None   # 1025-05 · 자동 계산 기준가
+    result_base_source: Optional[str] = None    # entry | t0_close
     invalidation_hit_ts: Optional[datetime] = None
     invalidation_hit_low: Optional[float] = None
     git_sha: Optional[str]
@@ -274,6 +276,12 @@ async def patch_judgment(judgment_id: int, payload: JudgmentPatch):
 
         if not entry["after"]:
             raise HTTPException(status_code=400, detail="변경 사항 없음")
+        # 1025-05 · 기간을 바꾸면 결과를 비우고 다음 08:10 계산에서 새 기간으로 다시 계산 (기준가는 유지)
+        if "horizon_days" in entry["after"]:
+            row.result_at_horizon = None
+            row.result_computed_at = None
+            row.invalidation_hit_ts = None
+            row.invalidation_hit_low = None
 
         history.append(entry)
         row.updated_history = _json.dumps(history, ensure_ascii=False)

@@ -603,6 +603,17 @@ async def job_holdings_snapshot_us():
         await _alert_job_failure("토스 보유 기록 (미국)", e, 7, 10)
 
 
+async def job_outcomes():
+    """판정·후보 결과 계산 08:10 KST (1025-05) — 토스 일봉 · 만기가 된 것만 · 서버에서만."""
+    try:
+        from backend.services import outcomes
+
+        await outcomes.run_outcomes()
+    except Exception as e:
+        logger.error(f"[cron] outcomes failed: {e}", exc_info=True)
+        await _alert_job_failure("판정·후보 결과 계산", e, 8, 10)
+
+
 async def job_universe_refresh():
     try:
         await run_universe_refresh()
@@ -864,6 +875,10 @@ def build_scheduler() -> AsyncIOScheduler:
                       id="holdings_snapshot_us",
                       name="토스 보유 기록 미국 07:10 KST",
                       replace_existing=True)
+    scheduler.add_job(job_outcomes, CronTrigger(hour=8, minute=10),
+                      id="outcomes_daily",
+                      name="판정·후보 결과 계산 08:10 KST",
+                      replace_existing=True)
     scheduler.add_job(job_notification_digest, CronTrigger(hour=18, minute=0),
                       id="notification_digest_1800",
                       name="알림 하루 요약 18:00 KST",
@@ -1001,6 +1016,10 @@ async def main_once(target: str):
 
         result = await get_status()
         print(f"✅ activist status: universe={result.get('universe_size')}, events={result.get('events_total')}, buckets={ {k: len(v) for k,v in result['buckets'].items()} }")
+    elif target == "outcomes":
+        from backend.services import outcomes
+
+        print(f"✅ outcomes: {await outcomes.run_outcomes()}")
     elif target in ("holdings_kr", "holdings_us"):
         result = await run_holdings_snapshot(target[-2:].upper())
         print(f"✅ holdings snapshot: {result}")
@@ -1020,7 +1039,7 @@ if __name__ == "__main__":
             "universe", "crazy", "moonshot", "sector_leaders",
             "vip_price", "vip_activist", "vip_status", "vip_config",
             "activist_us", "activist_kr", "activist_us_form4", "activist_status",
-            "holdings_kr", "holdings_us",
+            "holdings_kr", "holdings_us", "outcomes",
         ],
         help="1회 즉시 실행 (수동 검증). 미지정 시 데몬 모드.",
     )
