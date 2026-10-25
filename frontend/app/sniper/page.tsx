@@ -24,6 +24,7 @@ import {
   fmtShares,
 } from "@/lib/time";
 import { AdminSessionBar } from "@/components/admin/AdminSessionBar";
+import { SafetyPanel } from "@/components/sniper/SafetyPanel";
 import { JudgmentDialog } from "@/components/journal/JudgmentDialog";
 
 export default function SniperPage() {
@@ -44,6 +45,7 @@ export default function SniperPage() {
         scope="sniper"
         onSessionChange={(info) => setIsAdmin(info.role === "admin")}
       />
+      <SafetyPanel />
       <StatusPanel />
       <CandidatesPanel />
       <SignalsPanel />

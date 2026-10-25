@@ -831,6 +831,14 @@ export const api = {
   },
   sniper: {
     status: () => get<SniperStatus>(`/sniper/status`),
+    // 1025-01 · /lab/execution 에서 옮김 · 인증 라우트라 쿠키를 보내는 헬퍼
+    killSwitch: {
+      status: () => getWithSession<KillSwitchStatus>(`/sniper/kill-switch/status`),
+      activate: (reason: string, actor = "user:manual") =>
+        postWithToken<{ active: boolean; reason: string; activated_by: string }>(`/sniper/kill-switch`, "", { reason, actor }),
+      deactivate: (actor = "user:manual") =>
+        delWithToken<{ active: boolean; deactivated_by: string }>(`/sniper/kill-switch?actor=${encodeURIComponent(actor)}`, ""),
+    },
     params: () => get<SniperParams>(`/sniper/params`),
     universe: (opts?: { squeeze_only?: boolean; limit?: number }) => {
       const q = new URLSearchParams();
@@ -1208,6 +1216,7 @@ export interface SniperStatus {
   live_enabled: boolean;
   sniper_enabled: boolean;
   kill_switch_active: boolean;
+  order_target?: "paper" | "toss";
   universe_size: number;
   seed_cap_krw: number;
   per_order_krw: number;
