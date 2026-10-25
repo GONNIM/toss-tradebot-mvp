@@ -1,6 +1,6 @@
 // 1025-06 · 「토스증권에서 열기」 화면 규칙 (backend/tests/test_broker_link_display.py 가 tsx 로 실행)
 import assert from "node:assert/strict";
-import { BROKER_LABEL, SEARCH_LABEL, isKrCode, krOrderUrl, TOSS_HOME, TOSS_ACCOUNT, uniqueSymbols, usSymbolChunks } from "./broker-link";
+import { BROKER_LABEL, SEARCH_LABEL, isKrCode, krOrderUrl, TOSS_HOME, TOSS_ACCOUNT, uniqueSymbols, usSymbolChunks, friendlyError } from "./broker-link";
 
 assert.equal(krOrderUrl("005930"), "https://www.tossinvest.com/stocks/A005930/order");
 assert.equal(krOrderUrl("0101N0"), "https://www.tossinvest.com/stocks/A0101N0/order");
@@ -21,4 +21,9 @@ const chunks = usSymbolChunks(many);
 assert.deepEqual(chunks.map((c) => c.length), [50, 50, 20]);
 assert.equal(chunks.flat().length, 120);
 assert.deepEqual(usSymbolChunks(["005930"]), []);
+// 1025-07 · /account 오류를 쉬운 말로 (서버 detail 만 · 401 은 다시 로그인)
+assert.equal(friendlyError(new Error('API PUT /broker-links/WEN failed: 422 · {"detail":"토스증권 종목 주소가 아닙니다"}')), "토스증권 종목 주소가 아닙니다");
+assert.equal(friendlyError(new Error("API PUT /broker-links/WEN failed: 401 · {}")), "로그인이 풀렸습니다 · 다시 로그인하십시오");
+assert.equal(friendlyError(new Error("API PUT /x failed: 500 · <html>")), "저장하지 못했습니다 (서버 오류 500)");
+assert.equal(friendlyError("이상한 값"), "저장하지 못했습니다");
 console.log("broker-link ok");

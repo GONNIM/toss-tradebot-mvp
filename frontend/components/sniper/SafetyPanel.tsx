@@ -7,7 +7,7 @@ import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api, KillSwitchStatus, SniperParams, SniperStatus } from "@/lib/api";
 import { fmtKstHm } from "@/lib/time";
-import { lossLimitLabel, manualEntryLabel, orderTargetLabel, safetyConclusion } from "@/lib/sniper-safety";
+import { activePathsLabel, actorLabel, lossLimitLabel, manualEntryLabel, orderTargetLabel, safetyConclusion } from "@/lib/sniper-safety";
 
 const TONE = {
   stop: "border-red-300 bg-red-50 text-red-800 dark:border-red-800 dark:bg-red-950/40 dark:text-red-200",
@@ -42,15 +42,17 @@ export function SafetyPanel() {
   const deactivate = useMutation({ mutationFn: () => api.sniper.killSwitch.deactivate(), onSuccess: refresh });
 
   const s = st.data;
-  const c = s
-    ? safetyConclusion({
+  const safetyIn = s
+    ? {
         live_enabled: s.live_enabled,
         sniper_enabled: s.sniper_enabled,
         watchlist_enabled: s.watchlist_execute?.enabled ?? false,
+        router_enabled: s.signal_router_enabled,
         kill_switch_active: s.kill_switch_active,
         order_target: s.order_target,
-      })
+      }
     : null;
+  const c = safetyIn ? safetyConclusion(safetyIn) : null;
   const needLogin = statusOf(ks.error) === 401;
   // 조회 오류 (로그아웃 직후 401 포함) 가 있으면 지난 데이터로 버튼을 보이지 않는다
   const ksData = ks.error ? undefined : ks.data;
@@ -65,6 +67,12 @@ export function SafetyPanel() {
         <p className="rounded-md border border-border px-3 py-2 text-sm text-muted-foreground">
           {st.error ? "실주문 상태를 불러오지 못했습니다 — Kill Switch 는 아래에서 쓸 수 있습니다" : "실주문 상태 확인 중…"}
         </p>
+      )}
+      {safetyIn && (
+        <div className="space-y-0.5 text-xs text-muted-foreground">
+          <p>{activePathsLabel(safetyIn)}</p>
+          <p>스나이퍼 스캔을 끄면 이미 산 종목의 손절·추적 매도도 자동으로 돌지 않습니다.</p>
+        </div>
       )}
       <dl className="grid grid-cols-1 gap-2 text-sm sm:grid-cols-3">
         <div>
@@ -84,7 +92,7 @@ export function SafetyPanel() {
           </dd>
           {active && ksData?.reason && (
             <dd className="text-xs text-muted-foreground">
-              사유: {ksData.reason} · 누가: {ksData.activated_by ?? "—"}
+              사유: {ksData.reason} · 누가: {actorLabel(ksData.activated_by)}
               {ksData.activated_at ? ` · ${fmtKstHm(ksData.activated_at)}` : ""}
             </dd>
           )}

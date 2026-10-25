@@ -41,7 +41,7 @@ export function BrokerLink({ symbol, links, className = "" }: { symbol: string; 
       onClick={() => {
         if (search) navigator.clipboard?.writeText(l.symbol).catch(() => undefined);
       }}
-      title={search ? `${l.symbol} 를 복사했습니다 · 토스증권 검색창에 붙여 넣으십시오` : `${l.symbol} 토스증권 주문 화면`}
+      title={search ? `누르면 ${l.symbol} 를 복사합니다 · 토스증권 검색창에 붙여 넣으십시오` : `${l.symbol} 토스증권 주문 화면`}
       className={`inline-flex items-center rounded-md border border-border px-2 py-1 text-xs font-medium hover:bg-muted ${className}`}
     >
       {search ? SEARCH_LABEL : BROKER_LABEL}

@@ -8,7 +8,7 @@ import Link from "next/link";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api, SniperStatus, TossAccountSnapshot, TossStockCodeRow } from "@/lib/api";
 import { AdminSessionBar } from "@/components/admin/AdminSessionBar";
-import { TOSS_ACCOUNT, TOSS_HOME } from "@/lib/broker-link";
+import { TOSS_ACCOUNT, TOSS_HOME, friendlyError } from "@/lib/broker-link";
 import { safetyConclusion } from "@/lib/sniper-safety";
 import { fmtKstDateTime } from "@/lib/time";
 
@@ -33,6 +33,7 @@ function SafetyLine() {
     live_enabled: s.live_enabled,
     sniper_enabled: s.sniper_enabled,
     watchlist_enabled: s.watchlist_execute?.enabled ?? false,
+    router_enabled: s.signal_router_enabled,
     kill_switch_active: s.kill_switch_active,
     order_target: s.order_target,
   });
@@ -113,7 +114,7 @@ function CodeRow({ row }: { row: TossStockCodeRow }) {
             {save.isPending ? "저장 중…" : "확인함"}
           </button>
         </div>
-        {save.error && <p className="mt-1 text-xs text-red-600">{(save.error as Error).message}</p>}
+        {save.error && <p className="mt-1 text-xs text-red-600">{friendlyError(save.error)}</p>}
       </td>
     </tr>
   );

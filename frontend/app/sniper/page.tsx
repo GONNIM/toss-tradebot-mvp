@@ -25,6 +25,7 @@ import {
 } from "@/lib/time";
 import { AdminSessionBar } from "@/components/admin/AdminSessionBar";
 import { SafetyPanel } from "@/components/sniper/SafetyPanel";
+import { scanBadge } from "@/lib/sniper-safety";
 import { JudgmentDialog } from "@/components/journal/JudgmentDialog";
 
 export default function SniperPage() {
@@ -79,7 +80,8 @@ function SetupGuide({ isAdmin }: { isAdmin: boolean }) {
   });
   const s = q.data;
 
-  const step1Done = !!s?.live_enabled;   // env 완료?
+  // 1025-07 · 실주문 허용은 꺼 두는 것이 완료 (10/25 결정 · PR #115) · 켜져 있으면 경고
+  const step1Done = s ? !s.live_enabled : false;
   const step2Done = isAdmin;             // 관리자 세션 활성?
   const step3Done = !!s?.sniper_enabled; // enabled On?
 
@@ -106,7 +108,7 @@ function SetupGuide({ isAdmin }: { isAdmin: boolean }) {
             📖 시작하기 — 3단계 준비
           </h2>
           <p className="mt-0.5 text-xs text-sky-800 dark:text-sky-200">
-            자동매매를 시작하기 전에 아래 3단계를 완료해야 합니다.
+            실주문 안전과 스나이퍼 사용을 위해 아래 3단계를 확인합니다.
           </p>
         </div>
         <button
@@ -125,29 +127,23 @@ function SetupGuide({ isAdmin }: { isAdmin: boolean }) {
         <GuideStep
           num={1}
           done={step1Done}
-          title="서버 env 준비 (SNIPER_LIVE_ENABLED + SNIPER_API_TOKEN)"
+          title="실주문 허용은 꺼 둡니다 (10/25 결정)"
           summary={
-            step1Done
-              ? "✅ 완료 — LIVE_ENABLED=true 감지"
-              : "⛔ 대기 — SOPS 편집 후 백엔드 재기동 필요"
+            !s
+              ? "확인 중…"
+              : step1Done
+              ? "✅ 꺼 둠 — 주문은 종목 옆 「토스증권에서 열기」 로 직접 합니다"
+              : "⚠️ 실주문 허용이 켜져 있습니다 — 10/25 결정과 다릅니다"
           }
         >
-          <p className="mb-1">터미널에서 실행:</p>
-          <pre className="rounded bg-slate-900 p-2 text-[10px] text-slate-100">
-            {`# 32자 랜덤 토큰 생성
-openssl rand -base64 32
-
-# SOPS 암호화 env 편집 (프로젝트 루트에서)
-sops edit backend/.env.sops.yaml
-
-# 다음 두 줄 추가/수정 후 저장
-#   SNIPER_LIVE_ENABLED: "true"
-#   SNIPER_API_TOKEN: "<위에서 생성한 토큰>"
-
-# 백엔드 재기동 (사용자에게 승인 요청)`}
-          </pre>
-          <p className="mt-1 text-[10px] text-muted-foreground">
-            상세 절차·토큰 회전·트러블슈팅: <code className="rounded bg-slate-200 px-1 dark:bg-slate-800">docs/operations/sniper-setup.md</code>
+          <p>
+            실주문 허용을 꺼 두면 수동 실주문 버튼이 잠깁니다. 자동 진입이 실계좌로 나가는지는 위 「실주문 안전 상황판」 결론을 보십시오.
+            직접 주문은 바이오·화약고 화면의 「토스증권에서 열기 ↗」 또는{" "}
+            <a href="/account" className="underline">내 계좌</a> 에서 토스증권 화면으로 가서 합니다.
+          </p>
+          <p className="mt-1 text-[11px] text-muted-foreground">
+            관리자 로그인 토큰은 서버 암호화 설정에 있습니다. 만들기·바꾸기 절차:{" "}
+            <code className="rounded bg-slate-200 px-1 dark:bg-slate-800">docs/operations/sniper-setup.md</code>
           </p>
         </GuideStep>
 
@@ -157,7 +153,7 @@ sops edit backend/.env.sops.yaml
           title="관리자 로그인 (httpOnly 쿠키)"
           summary={step2Done ? "✅ 완료 — 관리자 세션 활성" : "⛔ 대기 — 아래 🔐 카드에서 로그인"}
         >
-          <p>Step 1에서 생성한 토큰을 아래 🔐 관리자 세션 입력창에 붙여넣고 "로그인" 클릭.</p>
+          <p>관리자 토큰을 아래 🔐 관리자 세션 입력창에 붙여넣고 "로그인" 클릭.</p>
           <p className="mt-1 text-xs text-muted-foreground">
             서버가 httpOnly 쿠키(sniper_session)로 응답 · JS 접근 불가 (XSS 방어). 세션 12시간 유지 후 재로그인 필요.
           </p>
@@ -172,6 +168,9 @@ sops edit backend/.env.sops.yaml
           <p>
             <strong>⚙️ 하드 파라미터 편집기</strong> 최상단 <code>Sniper 활성 (enabled)</code> 토글을 On →
             💾 저장. 정규장 시간(10:00~15:00 KST)에 자동 스캔 시작.
+          </p>
+          <p className="mt-1 text-xs">
+            켜도 주문 대상이 모의 계좌면 실계좌 주문은 나가지 않습니다 (지금 주문 대상: {s?.order_target === "toss" ? "실계좌" : "모의"}).
           </p>
           <p className="mt-1 text-xs text-red-600">
             ⚠️ 시드 100만원 100% 손실 가능. 안전장치(Kill Switch -3% · 종목당 상한 · 정규장 게이팅)는
@@ -245,8 +244,9 @@ function StatusPanel() {
   });
   if (q.isLoading || !q.data) return null;
   const s = q.data;
-  // 종합 활성 여부: LIVE_ENABLED AND sniper_enabled AND NOT kill_switch
-  const isRunning = s.live_enabled && s.sniper_enabled && !s.kill_switch_active;
+  // 스캔이 도는지 = sniper_enabled AND NOT kill_switch (실주문 허용 값은 자동 진입을 막지 않음 · 1025-07)
+  const badge = scanBadge(s);
+  const isRunning = badge.running;
   return (
     <section className="rounded border border-border bg-card p-4">
       <div className="mb-3 flex items-center justify-between">
@@ -266,7 +266,7 @@ function StatusPanel() {
                 isRunning ? "animate-pulse bg-emerald-500" : "bg-slate-400"
               }`}
             />
-            {isRunning ? "실행 중" : s.kill_switch_active ? "Kill Switch 발동" : "대기 중"}
+            {badge.label}
           </span>
         </div>
       </div>
@@ -275,7 +275,7 @@ function StatusPanel() {
           label="LIVE_ENABLED (env)"
           value={s.live_enabled ? "✅ 켜짐" : "⛔ 꺼짐"}
           tone={s.live_enabled ? "good" : "muted"}
-          hint="서버 env SNIPER_LIVE_ENABLED · 실주문/편집 라우트 전역 스위치"
+          hint="수동 실주문 버튼 하나만 막습니다 · 자동 진입은 주문 대상 (모의/실계좌) 을 따릅니다"
         />
         <Stat
           label="Sniper enabled (params)"

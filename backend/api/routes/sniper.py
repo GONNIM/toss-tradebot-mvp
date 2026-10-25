@@ -46,6 +46,7 @@ from backend.discovery.live_tape.universe import (
 )
 from backend.execution.brokers.paper_adapter import PaperAdapter
 from backend.execution.kill_switch import get_kill_switch
+from backend.execution.signal_router import SignalRouter
 from backend.services.db import get_session
 from backend.services.models import SniperSignal
 
@@ -72,6 +73,8 @@ async def sniper_status():
         "kill_switch_active": ks.active,
         # 어댑터 종류 표시 (주문이 실제로 나가는지는 live_enabled 등이 정함 · signal_router 와 같은 규칙 · 1025-01)
         "order_target": _order_target(),
+        # 셋째 자동 주문 경로 (VIP·행동주의·밈·슈퍼시그널 신호 연결) · API 프로세스 env 기준 · cron 데몬도 같은 .env (1025-07)
+        "signal_router_enabled": SignalRouter.enabled(),
         "universe_size": size,
         "seed_cap_krw": params.seed_cap_krw,
         "per_order_krw": params.per_order_krw,
