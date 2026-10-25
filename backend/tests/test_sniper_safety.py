@@ -42,3 +42,27 @@ def test_kill_switch_setting_page_is_sniper():
     from backend.services import notification_settings as ns
 
     assert ns.CATEGORIES["kill_switch"].page == "/sniper"
+
+
+# ─── 1025-07 · 셋째 자동 주문 경로 (signal_router · EXECUTION_ENABLED) ───
+@pytest.mark.asyncio
+async def test_status_signal_router_default_off(client, monkeypatch):
+    monkeypatch.delenv("EXECUTION_ENABLED", raising=False)
+    r = await client.get("/api/v1/sniper/status")
+    assert r.json()["signal_router_enabled"] is False
+
+
+@pytest.mark.asyncio
+async def test_status_signal_router_on(client, monkeypatch):
+    monkeypatch.setenv("EXECUTION_ENABLED", "true")
+    r = await client.get("/api/v1/sniper/status")
+    assert r.json()["signal_router_enabled"] is True
+
+
+def test_status_uses_signal_router_enabled():
+    """같은 값을 따로 해석하지 않는다 (Fable 1025-07 조건)."""
+    import inspect
+
+    from backend.api.routes import sniper
+
+    assert "SignalRouter.enabled()" in inspect.getsource(sniper.sniper_status)

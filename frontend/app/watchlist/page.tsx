@@ -208,9 +208,10 @@ function ExecuteStatusPanel() {
           </div>
         </div>
       )}
-      {we?.enabled && !s?.live_enabled ? (
+      {/* 1025-07 · 관심 종목 자동 진입은 실주문 허용 값을 보지 않고 주문 대상 (EXECUTION_BROKER) 만 본다 */}
+      {we?.enabled ? (
         <div className="mt-2 rounded border border-amber-300 bg-amber-100 px-2 py-1 text-amber-900 dark:bg-amber-900 dark:text-amber-100">
-          ⚠️ watchlist_execute.enabled=ON 이지만 SNIPER_LIVE_ENABLED=false · 실주문 시도해도 auth 차단됨.
+          ⚠️ 관심 종목 자동 진입이 켜져 있습니다 · 주문 대상: {s?.order_target === "toss" ? "실계좌 (실제 돈)" : "모의 계좌 (실계좌 주문 없음)"}
         </div>
       ) : null}
     </section>

@@ -41,3 +41,19 @@ export function usSymbolChunks(raw: (string | null | undefined)[]): string[][] {
   for (let i = 0; i < us.length; i += LINKS_PER_REQUEST) out.push(us.slice(i, i + LINKS_PER_REQUEST));
   return out;
 }
+
+/** API 헬퍼 오류 (`API PUT … failed: 422 · {"detail":"…"}`) → 쉬운 말 한 줄 (1025-07). */
+export function friendlyError(e: unknown): string {
+  const msg = e instanceof Error ? e.message : "";
+  const m = /failed: (\d{3}) · ([\s\S]*)$/.exec(msg);
+  if (!m) return "저장하지 못했습니다";
+  const status = Number(m[1]);
+  if (status === 401 || status === 403) return "로그인이 풀렸습니다 · 다시 로그인하십시오";
+  try {
+    const detail = JSON.parse(m[2])?.detail;
+    if (typeof detail === "string" && detail) return detail;
+  } catch {
+    // 본문이 JSON 이 아니면 상태 번호만
+  }
+  return `저장하지 못했습니다 (서버 오류 ${status})`;
+}

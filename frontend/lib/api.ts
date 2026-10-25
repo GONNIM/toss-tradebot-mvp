@@ -1180,6 +1180,7 @@ export interface SniperStatus {
   sniper_enabled: boolean;
   kill_switch_active: boolean;
   order_target?: "paper" | "toss";
+  signal_router_enabled?: boolean; // 1025-07 · 셋째 자동 경로 (EXECUTION_ENABLED)
   universe_size: number;
   seed_cap_krw: number;
   per_order_krw: number;
