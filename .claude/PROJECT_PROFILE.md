@@ -94,8 +94,7 @@ Claude Code 는 **현재 프로필의** 프로젝트 메모리만 자동으로 �
 ### 지금 남은 일 (10/25 17시대)
 | # | 우선순위 | 진행 여부 | 할 일 | 누가 | 언제 | 보실 곳·끝 기준 |
 |---|---|---|---|---|---|---|
-| 1025-04 | 1 (영향) | 진행 중 (PR #115 · Fable 병합 승인 대기) | 서버 실주문 허용 끄기 | Claude·사용자 | 지금 | 병합 승인 뒤 병합·배포 · 공개 상태 live_enabled 거짓 확인. |
-| 1025-06 | 2 (답 필요) | 미착수 (10/25 등록 · 기획부터) | 증권사 내 계정 이동 화면 | Claude | 1025-04 뒤 | 기획 요약을 올리면 승인해 주십시오. |
+| 1025-06 | 2 (답 필요) | 미착수 (10/25 등록 · 기획부터) | 증권사 내 계정 이동 화면 | Claude | 지금 | 기획 요약을 올리면 승인해 주십시오. |
 | 1025-01 | 2 (답 필요) | 미착수 (방안 A2) | 실주문 안전 상황판 | Claude | 1025-06 과 함께 | 기획 요약을 올리면 승인해 주십시오. |
 | 1022-06 | 2 (답 필요) | 진행 중 (#114 배포 끝 · 확인 위치 /sniper 로 이동 예정) | 발동 버튼 수리 확인 | 사용자 | 1025-01 뒤 | /sniper 에서 발동→해제를 한 번 눌러 주십시오. |
 | 1025-02 | 2 (답 필요) | 미착수 (방안 A1 · WP92) | 손실 자동 정지 수리 | Claude | 1025-01 뒤 | 실주문 허용을 다시 켜기 전 필수 (지금 자동 진입은 모의). |
@@ -112,6 +111,7 @@ Claude Code 는 **현재 프로필의** 프로젝트 메모리만 자동으로 �
 | 1022-08 | 3 (기다림) | 예정 (11/1 07:00 뒤) | FR-6c 재판정 대조 | Claude | 11/1 07:00 뒤 | — |
 | 1022-07 | — | 완료 (10/25 · 운영 system → 하루 요약 · 전 값 immediate) | 시스템 경고 받는 방식 | Claude | 끝남 | 더 하실 일 없습니다 |
 | 1022-11 | — | 완료 (10/25 · 브랜치 2 · 사본 삭제 · 로컬 백업) | 옛 브랜치·PRD 사본 | Claude | 끝남 | 더 하실 일 없습니다 |
+| 1025-04 | — | 완료 (10/25 · #115 배포 · live_enabled 거짓 확인) | 서버 실주문 허용 끄기 | Claude·사용자 | 끝남 | 더 하실 일 없습니다 |
 | 1022-01 | — | 완료 (10/23 · 서버 관측 정상) | 서버 관측 | Claude | 끝남 | 더 하실 일 없습니다 |
 | 1022-03 | — | 완료 (10/23 · #107 병합) | PR #107 병합 | 사용자 | 끝남 | 더 하실 일 없습니다 |
 | 1022-04 | — | 완료 (10/23 · 배포 확인) | #107 배포 뒤 확인 | Claude | 끝남 | 더 하실 일 없습니다 |
@@ -133,9 +133,9 @@ Claude Code 는 **현재 프로필의** 프로젝트 메모리만 자동으로 �
 - 1023-06: 완료 (10/25 · 사용자 승인 · Fable 2회 질의 → 진행). `.claude/agents/fable.md:23` 을 「추정 숫자는 같은 카드·알림 본문 안에 근거와 「추정 · 보장 아님」이 있으면 허용 · 권유·시기 지시는 NO-GO · 봉인 설계 금지(FR-6c 표)는 설계 우선」으로 교체 (확률 포함 · 사용자 승인). 그대로 둔 곳: `biotech_llm.py:49` FORBIDDEN_RE (AI 권유·전망 문장 거르기 · 바꾸면 WP92) · `biotech-fr6c.check.ts:38` (봉인 fr6c_design_v1.md 1·4절) · `backend/tests/alert_rules.py:8` (지시형·영어 이름 금지) · 미추적 `docs/plans/PRD/biotech/` (1022-11 · 보관 뒤 삭제 10/25).
 - 1022-02: PENDING 2026-10-21 Fable 판정 항목. P4-2 `var/biotech/fr6c/cells_202610.json` 첫 판정 (표시 행 68 · 긍정 43 기대) · P4-4 readout_text 첫 실행 · SEC 장부 합계 ≤ 300 · 배지 표시 수 · 화면 빌드 해시 · /biotech 과거 기록 · 새 8-K 확인 섹션 스크린샷 → `scripts/fable_bundle.py` 번들 zip 으로 fable 역할에 보고.
 - 1022-07: 이제 `/admin/notifications` 의 「시스템 경고」 받는 방식 (바로/하루 요약) 으로 사용자가 직접 정한다.
-- 1022-11: 완료 10/25 — `feature/biotech-aact-weekly` (같은 수정이 main 에 있음) 로컬·원격 삭제 · `wip/local-docs` (main 에 없는 SCRIPTS.md·remote.sh·H6 zip) 는 `docs/plans/biotech/fable-bundles/backup-wip-local-docs-20261025.bundle` (verify ok) 보관 뒤 로컬 삭제 · `docs/plans/PRD/biotech/` 는 `backup-prd-biotech-copy-20261025.tgz` 보관 뒤 삭제. 범위 밖으로 원격 `hotfix/aact-zipfile-testzip` (b4abe77) 이 남아 있음 (사용자 보고만).
+- 1022-11: 완료 10/25 — `feature/biotech-aact-weekly` (같은 수정이 main 에 있음) 로컬·원격 삭제 · `wip/local-docs` (main 에 없는 SCRIPTS.md·remote.sh·H6 zip) 는 `docs/plans/biotech/fable-bundles/backup-wip-local-docs-20261025.bundle` (verify ok) 보관 뒤 로컬 삭제 · `docs/plans/PRD/biotech/` 는 `backup-prd-biotech-copy-20261025.tgz` 보관 뒤 삭제. 원격 `hotfix/aact-zipfile-testzip` (b4abe77 · PENDING 60줄 옛 세션 상태) 도 사용자 지시로 `backup-hotfix-aact-20261025.bundle` 보관 뒤 삭제 (10/25).
 - 1022-07: 완료 10/25 — 운영 `PUT /api/v1/notifications/settings/system` mode digest (전 값 immediate · 다른 행 변화 없음 확인).
-- 1025-04: PR #115 (`SNIPER_LIVE_ENABLED` 한 키 false · WP92). 확인: 자동 진입 (sniper·watchlist) 은 `EXECUTION_BROKER` 미설정 = paper. 실돈 경로는 `POST /sniper/entry` broker=toss 하나 (require_sniper_live_token).
+- 1025-04: 완료 — PR #115 (병합 17d48cb · 배포 run 40175706246 성공 17:17 · Fable 「병합 승인됨 · PR #115」 · `SNIPER_LIVE_ENABLED` 한 키 false). 공개 /sniper/status live_enabled 거짓 · /admin/session live_enabled 거짓 확인. 확인: 자동 진입 (sniper·watchlist) 은 `EXECUTION_BROKER` 미설정 = paper. 실돈 경로는 `POST /sniper/entry` broker=toss 하나 (require_sniper_live_token).
 - 1025-02 · 03 · 05 · 06: `docs/plans/site-roadmap/README.md` A1 · B1 · B0 · §5.
 - 1023-04: #110 (rss.py httpx 피드당 4초 · 인스턴스 캐시 · Lock). 16:49 뒤 빈 오류 실패 0건 · Moonshot 16:52 · Sector 17:05 발송 확인. 남은 것: Crazy 10/24 06:30 발송 · 그때 `notification_log` 첫 기록과 18:00 하루 요약 실행 로그도 함께 본다.
 - 1023-02: Z.ai glm-5.2 thesis 가 Crazy 전 종목에서 시간 초과. Anthropic 키 (1022-14·16) 로 해결 예정.
