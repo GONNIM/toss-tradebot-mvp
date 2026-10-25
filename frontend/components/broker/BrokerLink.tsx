@@ -3,22 +3,24 @@
 // 1025-06 · 종목 옆 「토스증권에서 열기 ↗」 — 새 탭으로 토스증권 웹 주문 화면. 사이트는 주문을 넣지 않는다.
 // 미국 종목 중 서버가 확인하지 않은 것은 토스증권 첫 화면을 열고 티커를 복사해 둔다 (다른 종목이 열리지 않게).
 
-import { useQuery } from "@tanstack/react-query";
+import { keepPreviousData, useQueries } from "@tanstack/react-query";
 import { api } from "@/lib/api";
-import { BROKER_LABEL, BrokerLinkInfo, SEARCH_LABEL, TOSS_HOME, isKrCode, krOrderUrl, uniqueSymbols } from "@/lib/broker-link";
+import { BROKER_LABEL, BrokerLinkInfo, SEARCH_LABEL, TOSS_HOME, isKrCode, krOrderUrl, usSymbolChunks } from "@/lib/broker-link";
 
-/** 한 화면의 종목들을 한 번에 묻는다 (국내는 묻지 않음 · 최대 50 씩). */
+/** 한 화면의 미국 종목을 50개씩 묶어 묻는다 (국내는 묻지 않음). 다시 묻는 동안 지난 결과를 유지해 글자가 깜빡이지 않게. */
 export function useBrokerLinks(symbols: (string | null | undefined)[]): Record<string, BrokerLinkInfo> {
-  const us = uniqueSymbols(symbols).filter((s) => !isKrCode(s)).slice(0, 50);
-  const q = useQuery({
-    queryKey: ["broker-links", us.join(",")],
-    queryFn: () => api.brokerLinks.get(us),
-    enabled: us.length > 0,
-    staleTime: 60 * 60 * 1000,
-    retry: 1,
+  const chunks = usSymbolChunks(symbols);
+  const results = useQueries({
+    queries: chunks.map((chunk) => ({
+      queryKey: ["broker-links", chunk.join(",")],
+      queryFn: () => api.brokerLinks.get(chunk),
+      staleTime: 60 * 60 * 1000,
+      retry: 1,
+      placeholderData: keepPreviousData,
+    })),
   });
   const out: Record<string, BrokerLinkInfo> = {};
-  for (const l of q.data?.links ?? []) out[l.symbol] = l;
+  for (const r of results) for (const l of r.data?.links ?? []) out[l.symbol] = l;
   return out;
 }
 
