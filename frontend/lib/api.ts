@@ -235,6 +235,48 @@ export interface TossAccountSnapshot {
   identity_asset_diff: number | null;
   identity_investment_ok: boolean;
   identity_investment_diff: number | null;
+
+  // 1025-08 · 토스 참고 환율 (서버 0.3.6 부터)
+  fx_rate?: number | null;
+  fx_source?: "toss" | "cached" | "fallback" | null;
+}
+
+// ─── 1025-08 · 「내 계좌」 토스 실계좌 보유 (/account/holdings · 관리자) ───────
+export interface AccountHolding {
+  symbol: string;
+  name: string | null;
+  market: "KR" | "US";
+  currency: string;
+  qty: number;
+  avg_price: number;
+  current_price: number | null;
+  market_value: number | null;
+  purchase_amount: number;
+  pnl: number | null;
+  pnl_pct: number | null;
+  pnl_source: "api" | "computed";
+  market_value_krw: number | null;
+  pnl_krw: number | null;
+  basis_date: string | null;
+  basis_source: "journal" | "record" | null;
+  days_held: number | null;
+  peak_close: number | null;
+  peak_date: string | null;
+  from_peak_pct: number | null;
+  peak_complete: boolean;
+  record_started: string | null;
+  has_exit_plan: boolean;
+  link: BrokerLinkInfo;
+}
+
+export interface AccountHoldingsResponse {
+  ok: boolean;
+  error_reason: string | null;
+  fetched_at: string;
+  fx_rate: number | null;
+  fx_source: "toss" | "cached" | "fallback" | null;
+  fx_valid_from: string | null;
+  holdings: AccountHolding[];
 }
 
 // ─── 보유 작전실 (2026-08-14 · Fable 5) ───────────────────────────────
@@ -774,6 +816,10 @@ export const api = {
       take_profit_pct?: number;
       stop_loss_pct?: number;
     }) => post<BacktestReport>(`/backtest/run`, opts),
+  },
+  // 1025-08 · 토스 실계좌 보유 + 보유 일수 · 최고가 대비 (관리자 · 쿠키)
+  account: {
+    holdings: () => getWithSession<AccountHoldingsResponse>(`/account/holdings`),
   },
   // 1025-06 · 토스증권 이동 주소 (공개 읽기 · 관리자 수정)
   brokerLinks: {
