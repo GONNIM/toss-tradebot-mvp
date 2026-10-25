@@ -29,7 +29,7 @@
 - 화면 공용 부품 `BrokerLink` (종목 코드·시장 → 새 탭 링크 · `rel="noopener noreferrer"` · 글자 「토스증권에서 열기 ↗」 · 권유 문구 없음).
 - 국내: 코드에서 바로 주소. 미국: verified=true 인 토스 코드만 /order 직접 링크. 그 밖에는 「토스증권 검색에서 찾기」 (토스증권 웹 첫 화면 + 티커 복사).
 - 미국 검증 관문: ① 사용자 예 US19810527001 의 종목 listDate 대조 (날짜 기준 확인) ② 바이오 상위 5종목 대조 ③ 둘 다 맞을 때만 규칙 사용 · 그래도 종목마다 사람이 확인한 뒤 verified=true.
-- 서버 `GET /api/v1/broker-links?symbols=…` (공개 · 종목→토스 주소만 · 계좌 정보 없음 · 표만 읽고 외부 호출 없음 · symbols 수 상한·명세 패턴 검사): 하루 1회 배치가 사이트 목록 종목만 토스 Open API 200건 묶음으로 조회해 `listDate` 로 `US{YYYYMMDD}001` 후보를 만들어 표 `toss_stock_codes` (symbol · toss_code · source[api·manual] · verified · updated_at) 에 저장. 같은 상장일 충돌 대비로 「내 계좌」 화면에서 관리자가 주소를 붙여 고칠 수 있음 (source=manual 우선 · 수정·verified 변경 API 는 X-API-Token 필수 · 못 찾은 종목은 null 저장해 반복 호출 막음).
+- 서버 `GET /api/v1/broker-links?symbols=…` (공개 · 종목→토스 주소만 · 계좌 정보 없음 · 표만 읽고 외부 호출 없음 · symbols 수 상한·명세 패턴 검사): 하루 1회 배치가 사이트 목록 종목만 토스 Open API 200건 묶음으로 조회해 `listDate` 로 `US{YYYYMMDD}001` 후보를 만들어 표 `toss_stock_code` (symbol · toss_code · source[api·manual] · verified · updated_at) 에 저장. 같은 상장일 충돌 대비로 「내 계좌」 화면에서 관리자가 주소를 붙여 고칠 수 있음 (source=manual 우선 · 수정·verified 변경 API 는 X-API-Token 필수 · 못 찾은 종목은 null 저장해 반복 호출 막음).
 - 붙일 자리 1차: /biotech (레이더·소문 표 · 종목 상세) · /powderkeg (Tier 1 표 · 티켓). 2차: /sector-leaders Top10 · /vip · /watchlist · /sniper 후보 · 텔레그램 알림 「토스증권: <절대 링크>」 줄 (사실만 · 미국은 verified=true 일 때만 · 1023-05 문구 규칙).
 ### 4.2 「내 계좌」 화면 `/account` (새 · 메뉴 「보유」 쪽)
 - 토스증권: 계좌·주문 내역 바로 가기 (새 탭) · 이 사이트의 토스 실계좌 보유 요약 (기존 /dashboard 의 Toss 보유 미러 재사용 · 로그인).

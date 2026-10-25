@@ -24,6 +24,10 @@ import {
 import { fmtKstDateTime } from "@/lib/time";
 import { AdminSessionBar } from "@/components/admin/AdminSessionBar";
 import { JudgmentDialog } from "@/components/journal/JudgmentDialog";
+import { BrokerLink } from "@/components/broker/BrokerLink";
+import type { BrokerLinkInfo } from "@/lib/broker-link";
+
+const NO_LINKS: Record<string, BrokerLinkInfo> = {};
 
 type Tab = "list" | "events" | "report";
 
@@ -451,7 +455,11 @@ function ListTab({ isAdmin, guideNonce = 0 }: { isAdmin: boolean; guideNonce?: n
                         ) : null}
                       </div>
                     ) : null}
-                    <div className="text-[10px] text-muted-foreground">{it.ticker}</div>
+                    <div className="flex flex-wrap items-center gap-1 text-[10px] text-muted-foreground">
+                      {it.ticker}
+                      {/* 1025-06 · 국내 종목은 코드로 바로 토스증권 주문 화면 (서버 조회 없음) */}
+                      <BrokerLink symbol={it.ticker} links={NO_LINKS} />
+                    </div>
                     <NoteInput
                       item={it}
                       onSave={(note) => saveNote.mutate({ id: it.id, note })}

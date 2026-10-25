@@ -16,6 +16,8 @@ import { CatalystTimeline } from "@/components/biotech/CatalystTimeline";
 import { StatBox } from "@/components/ui/stat-box";
 import { SectionCard } from "@/components/ui/section-card";
 import { BiotechTable, BiotechTableColumn } from "@/components/biotech/BiotechTable";
+import { BrokerLink, useBrokerLinks } from "@/components/broker/BrokerLink";
+import type { BrokerLinkInfo } from "@/lib/broker-link";
 import { RumorCard } from "@/components/biotech/RumorCard";
 import { Fr6cTable } from "@/components/biotech/Fr6cTable";
 import { ReadoutCards } from "@/components/biotech/ReadoutCards";
@@ -107,9 +109,18 @@ async function apiFetch<T>(path: string): Promise<T> {
 }
 
 // ── 순위표 (섹션 5) 컬럼 ────────────────────────────────
-const RADAR_COLUMNS: BiotechTableColumn<RadarRow>[] = [
+const radarColumns = (links: Record<string, BrokerLinkInfo>): BiotechTableColumn<RadarRow>[] => [
   { key: "rank", label: "#", align: "right", render: (r) => r.rank },
-  { key: "ticker", label: "티커", render: (r) => r.ticker },
+  {
+    key: "ticker",
+    label: "티커",
+    render: (r) => (
+      <span className="inline-flex flex-wrap items-center gap-1">
+        {r.ticker}
+        <BrokerLink symbol={r.ticker} links={links} />
+      </span>
+    ),
+  },
   { key: "name", label: "회사", render: (r) => <span className="text-muted-foreground">{shortName(r.name)}</span> },
   { key: "mcap_bucket", label: "시총", render: (r) => mcapBadge(r.mcap_bucket, r.mcap_asof) ?? "" },
   { key: "state", label: "상태" },
@@ -150,7 +161,7 @@ function KpiButton({ onClick, children, label }: { onClick: () => void; children
 }
 
 // ── WP77 · 급등 브리핑 카드 (펼침) ─────────────────────────
-function AlertBriefCard({ b, defaultOpen = false }: { b: AlertBrief; defaultOpen?: boolean }) {
+function AlertBriefCard({ b, defaultOpen = false, links }: { b: AlertBrief; defaultOpen?: boolean; links: Record<string, BrokerLinkInfo> }) {
   const [open, setOpen] = useState(defaultOpen); // WP85 · 첫 경보는 펼친 채로 (접혀 있어 요약이 안 보이던 문제)
   const m = b.mentions;
   return (
@@ -162,6 +173,7 @@ function AlertBriefCard({ b, defaultOpen = false }: { b: AlertBrief; defaultOpen
       </button>
       {open && (
         <div className="space-y-2 border-t border-rose-100 p-3 dark:border-rose-900">
+          <BrokerLink symbol={b.ticker} links={links} />
           <div className="rounded border-l-4 border-amber-500 bg-amber-50 p-2 dark:border-amber-600 dark:bg-amber-950/40">⚠️ {b.note}</div>
           {summaryStatus(b.summary) && (
             <div className="rounded border border-slate-300 bg-slate-50 p-2 text-muted-foreground dark:border-slate-700 dark:bg-slate-900">
@@ -354,6 +366,12 @@ export default function BiotechPage() {
   const radarByTicker = new Map((radar?.rows ?? []).map((r) => [r.ticker, r]));
   const baseCards = aMode && !quietOnly ? aAll : t1;
   const cards = sortFilterCards(baseCards, { sort: sortBy, phase3Only, within7 }, (tk) => radarByTicker.get(tk)?.score);
+  // 1025-06 · 화면에 보이는 미국 종목의 토스증권 주소를 한 번에 (확인 전 종목은 검색 대체)
+  const brokerLinks = useBrokerLinks([
+    ...(radar?.rows ?? []).map((x) => x.ticker),
+    ...cards.map((x) => x.ticker),
+    ...(kpi?.alert_briefs ?? []).map((x) => x.ticker),
+  ]);
   const checkedAt = radar ? checkedAtLabel(radar.generated) : "";
 
   function flash(id: string) {
@@ -491,6 +509,10 @@ export default function BiotechPage() {
                         subline={cardText(r.trial, r.phase, r.event_date, r.days_to, r.theme_rank).theme}
                         sourceUrl={ctgovUrl(r.nct_id)}
                       />
+                      {/* 1025-06 · 펼치지 않아도 바로 토스증권으로 (카드 펼침과 따로) */}
+                      <div className="mt-1 flex justify-end" onClick={(e) => e.stopPropagation()} onKeyDown={(e) => e.stopPropagation()}>
+                        <BrokerLink symbol={r.ticker} links={brokerLinks} />
+                      </div>
                       {open && (
                         <div className="mt-1 rounded-lg border border-slate-200 bg-slate-50 p-3 text-xs dark:border-slate-700 dark:bg-slate-900/60">
                           {rr ? (
@@ -581,7 +603,7 @@ export default function BiotechPage() {
                   <span className="text-muted-foreground">{alertCriteria(kpi.reddit_baseline_days)}</span>
                 </div>
                 {(kpi.alert_briefs ?? []).map((b, i) => (
-                  <AlertBriefCard key={b.ticker} b={b} defaultOpen={i === 0} />
+                  <AlertBriefCard key={b.ticker} b={b} defaultOpen={i === 0} links={brokerLinks} />
                 ))}
               </div>
             )}
@@ -640,7 +662,7 @@ export default function BiotechPage() {
               </ul>
             </details>
           )}
-          <BiotechTable columns={RADAR_COLUMNS} rows={radar.rows} caption="레이더 상위 30" />
+          <BiotechTable columns={radarColumns(brokerLinks)} rows={radar.rows} caption="레이더 상위 30" />
         </SectionCard>
         </div>
       )}
