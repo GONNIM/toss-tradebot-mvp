@@ -1,7 +1,7 @@
 """Pydantic v2 응답 스키마."""
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import date, datetime
 from typing import Optional
 
 from pydantic import BaseModel, ConfigDict
@@ -174,6 +174,10 @@ class TossAccountSnapshot(BaseModel):
     identity_asset_diff: Optional[float] = None          # 위반 시 차액 (KRW)
     identity_investment_ok: bool = True                  # 국내 + 해외 == 내투자
     identity_investment_diff: Optional[float] = None
+
+    # 환율 (1025-08 · 토스 참고 환율 · toss | cached | fallback=1330 고정)
+    fx_rate: Optional[float] = None
+    fx_source: Optional[str] = None
 
 
 # ─── 보유 작전실 (Fable 5 · 2026-08-14 · 청산 계획 강제) ───────────────
@@ -639,3 +643,51 @@ class MemeWatchTopResponse(BaseModel):
     total: int
     computed_at: str
     sources_status: dict[str, str]   # {"apewisdom":"ok","stocktwits":"blocked",...}
+
+
+# ─── 1025-08 · 토스 실계좌 보유 (/account) ─────────────────────────────
+
+
+class BrokerLinkOut(BaseModel):
+    symbol: str
+    kind: str  # order | search
+    url: str
+    verified: bool
+
+
+class AccountHolding(BaseModel):
+    """보유 1종목 · 사실만 (권유·예상 없음)."""
+    symbol: str
+    name: Optional[str] = None
+    market: str                                   # KR | US
+    currency: str
+    qty: float
+    avg_price: float
+    current_price: Optional[float] = None
+    market_value: Optional[float] = None          # 거래 통화
+    purchase_amount: float
+    pnl: Optional[float] = None
+    pnl_pct: Optional[float] = None               # 원금 기준 %
+    pnl_source: str = "computed"                  # api | computed
+    market_value_krw: Optional[float] = None
+    pnl_krw: Optional[float] = None
+    basis_date: Optional[date] = None             # 보유 일수 기준일
+    basis_source: Optional[str] = None            # journal (첫 저널 판정일) | record (기록이 처음 잡힌 날)
+    days_held: Optional[int] = None               # 달력일
+    peak_close: Optional[float] = None            # 기준일 뒤 최고 종가 (오늘 현재가 포함)
+    peak_date: Optional[date] = None
+    from_peak_pct: Optional[float] = None
+    peak_complete: bool = False                   # 일봉이 기준일부터 다 있으면 참
+    record_started: Optional[date] = None
+    has_exit_plan: bool = False
+    link: BrokerLinkOut
+
+
+class AccountHoldingsResponse(BaseModel):
+    ok: bool
+    error_reason: Optional[str] = None
+    fetched_at: datetime
+    fx_rate: Optional[float] = None
+    fx_source: Optional[str] = None
+    fx_valid_from: Optional[str] = None
+    holdings: list[AccountHolding] = []

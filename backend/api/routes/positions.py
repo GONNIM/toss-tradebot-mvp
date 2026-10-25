@@ -187,6 +187,10 @@ async def get_positions_plan():
 
     items = holdings_dict.get("items") or []
 
+    # 1025-08 · 미국 종목 원화 = 토스 참고 환율 (dashboard 와 같은 함수)
+    from backend.services import fx
+    usd_krw = fx.usd_krw(client).rate
+
     # Activist universe 조회 (심볼 매치용 · 실패해도 계속)
     activist_symbols: set[str] = set()
     try:
@@ -218,7 +222,7 @@ async def get_positions_plan():
             if currency == "KRW":
                 mv_krw = mv
             else:
-                mv_krw = round((mv or 0) * 1330, 0) if mv is not None else None
+                mv_krw = round((mv or 0) * usd_krw, 0) if mv is not None else None
 
             judgment = await _latest_judgment(session, sym)
             exit_plan = _build_exit_plan(judgment, cur)

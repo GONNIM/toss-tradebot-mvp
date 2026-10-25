@@ -292,6 +292,14 @@ class TossClient:
             use_account_header=False,
         ) or []
 
+    def candles(self, symbol: str, count: int = 200) -> Any:
+        """GET /api/v1/candles · 일봉 (최신순 · 최대 200) · account 헤더 불필요 (1025-08)."""
+        return self.get(
+            "/api/v1/candles",
+            params={"symbol": symbol, "interval": "1d", "count": max(1, min(count, 200))},
+            use_account_header=False,
+        )
+
     def accounts(self) -> list[dict]:
         return self.get("/api/v1/accounts", use_account_header=False) or []
 

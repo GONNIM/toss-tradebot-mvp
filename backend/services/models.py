@@ -9,10 +9,10 @@ JSON 컬럼은 Text (SQLite) 으로 저장, 코드에서 json.dumps/loads.
 """
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import date, datetime
 from typing import Optional
 
-from sqlalchemy import Boolean, Date, DateTime, Float, Index, Integer, String, Text, func
+from sqlalchemy import Boolean, Date, DateTime, Float, Index, Integer, String, Text, UniqueConstraint, func
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
 
@@ -1961,3 +1961,30 @@ class TossStockCode(Base):
     source: Mapped[str] = mapped_column(String(8), nullable=False, default="api")  # api | manual
     verified: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     updated_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, server_default=func.now(), onupdate=func.now())
+
+
+class HoldingSnapshot(Base):
+    """토스 실계좌 보유 기록 (1025-08 · 매도 판단 재료).
+
+    키 = (종목 · 시장 · 거래일 · 종류). 종류 holding = 그날 보유 (qty 0 = 팔림 표시) · candle = 토스 일봉 종가.
+    거래일은 토스 일봉 최신 봉 날짜 · 15:50 KST 는 국내만 · 07:10 KST 는 미국만 저장. 계좌번호는 넣지 않는다.
+    """
+
+    __tablename__ = "holding_snapshot"
+    __table_args__ = (UniqueConstraint("symbol", "market", "trade_date", "kind", name="uq_holding_snapshot_key"),)
+
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    symbol: Mapped[str] = mapped_column(String(16), index=True)
+    market: Mapped[str] = mapped_column(String(2))  # KR | US
+    trade_date: Mapped[date] = mapped_column(Date, index=True)
+    kind: Mapped[str] = mapped_column(String(8))  # holding | candle
+    name: Mapped[Optional[str]] = mapped_column(String(100), default=None)
+    currency: Mapped[Optional[str]] = mapped_column(String(3), default=None)
+    qty: Mapped[Optional[float]] = mapped_column(Float, default=None)
+    avg_price: Mapped[Optional[float]] = mapped_column(Float, default=None)
+    close: Mapped[Optional[float]] = mapped_column(Float, default=None)  # 종가 · holding 은 저장 때 현재가
+    market_value: Mapped[Optional[float]] = mapped_column(Float, default=None)
+    purchase_amount: Mapped[Optional[float]] = mapped_column(Float, default=None)
+    fx_rate: Mapped[Optional[float]] = mapped_column(Float, default=None)
+    fx_source: Mapped[Optional[str]] = mapped_column(String(8), default=None)
+    saved_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())

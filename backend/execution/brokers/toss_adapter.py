@@ -112,8 +112,7 @@ class TossAdapter(OrderManager):
         # order_uuid → orderId 매핑 (idempotency 캐시 · 서버 재기동 시 audit 재구성)
         self._uuid_to_order_id: dict[str, str] = {}
         # FX 캐시 (환율 조회 최소화)
-        self._fx_usd_krw: float = 1370.0
-        self._fx_fetched_at: float = 0.0
+        self._fx_usd_krw: float = 1330.0  # 마지막으로 쓴 값 (get_balance 표시용)
 
     # ═══════════════════════════════════════════════════════════════
     # OrderManager 구현
@@ -326,12 +325,15 @@ class TossAdapter(OrderManager):
             base *= self._current_fx()
         return base
 
-    def _current_fx(self, max_age_sec: float = 300.0) -> float:
-        import time as _t
+    def _current_fx(self) -> float:
+        """USD→KRW · 토스 참고 환율 (backend/services/fx.py · 5분 캐시 · 실패 시 마지막 성공 값 → 1330).
 
-        now = _t.time()
-        if now - self._fx_fetched_at < max_age_sec:
-            return self._fx_usd_krw
+        1025-08: 예전 호출은 필수 baseCurrency·quoteCurrency 를 빼서 늘 실패하고 기본값에 머물렀다.
+        """
+        from backend.services import fx
+
+        self._fx_usd_krw = fx.usd_krw(self._toss).rate
+        return self._fx_usd_krw
         try:
             data = self._toss.get("/api/v1/exchange-rate", use_account_header=False)
             # 실측 스키마 미정 · 안전 파싱

@@ -573,6 +573,36 @@ async def job_toss_stock_codes():
         await _alert_job_failure("토스증권 종목 코드", e, 7, 40)
 
 
+async def run_holdings_snapshot(market: str) -> dict:
+    """토스 실계좌 보유 기록 (1025-08) — 토큰 오류는 1회 다시 시도 (토큰 1개 규칙 · 다른 프로세스가 재발급했을 수 있음)."""
+    from backend.execution.exceptions import BrokerCommunicationError
+    from backend.services import real_holdings
+
+    try:
+        return await real_holdings.snapshot_market(market)
+    except BrokerCommunicationError as e:
+        logger.warning(f"[cron] holdings snapshot {market} 토스 통신 오류 · 1회 재시도: {type(e).__name__}")
+        return await real_holdings.snapshot_market(market)
+
+
+async def job_holdings_snapshot_kr():
+    """국내 보유 기록 15:50 KST 평일 (국내 장 마감 뒤)."""
+    try:
+        await run_holdings_snapshot("KR")
+    except Exception as e:
+        logger.error(f"[cron] holdings snapshot KR failed: {e}", exc_info=True)
+        await _alert_job_failure("토스 보유 기록 (국내)", e, 15, 50)
+
+
+async def job_holdings_snapshot_us():
+    """미국 보유 기록 07:10 KST 화~토 (미국 정규장 마감 뒤 · 05:55–06:45 피함)."""
+    try:
+        await run_holdings_snapshot("US")
+    except Exception as e:
+        logger.error(f"[cron] holdings snapshot US failed: {e}", exc_info=True)
+        await _alert_job_failure("토스 보유 기록 (미국)", e, 7, 10)
+
+
 async def job_universe_refresh():
     try:
         await run_universe_refresh()
@@ -826,6 +856,14 @@ def build_scheduler() -> AsyncIOScheduler:
                       id="toss_stock_codes_daily",
                       name="토스증권 미국 종목 코드 07:40 KST",
                       replace_existing=True)
+    scheduler.add_job(job_holdings_snapshot_kr, CronTrigger(day_of_week="mon-fri", hour=15, minute=50),
+                      id="holdings_snapshot_kr",
+                      name="토스 보유 기록 국내 15:50 KST",
+                      replace_existing=True)
+    scheduler.add_job(job_holdings_snapshot_us, CronTrigger(day_of_week="tue-sat", hour=7, minute=10),
+                      id="holdings_snapshot_us",
+                      name="토스 보유 기록 미국 07:10 KST",
+                      replace_existing=True)
     scheduler.add_job(job_notification_digest, CronTrigger(hour=18, minute=0),
                       id="notification_digest_1800",
                       name="알림 하루 요약 18:00 KST",
@@ -963,6 +1001,9 @@ async def main_once(target: str):
 
         result = await get_status()
         print(f"✅ activist status: universe={result.get('universe_size')}, events={result.get('events_total')}, buckets={ {k: len(v) for k,v in result['buckets'].items()} }")
+    elif target in ("holdings_kr", "holdings_us"):
+        result = await run_holdings_snapshot(target[-2:].upper())
+        print(f"✅ holdings snapshot: {result}")
     else:
         print(f"❌ unknown target: {target}")
 
@@ -979,6 +1020,7 @@ if __name__ == "__main__":
             "universe", "crazy", "moonshot", "sector_leaders",
             "vip_price", "vip_activist", "vip_status", "vip_config",
             "activist_us", "activist_kr", "activist_us_form4", "activist_status",
+            "holdings_kr", "holdings_us",
         ],
         help="1회 즉시 실행 (수동 검증). 미지정 시 데몬 모드.",
     )
