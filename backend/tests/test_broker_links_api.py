@@ -89,3 +89,11 @@ async def test_put_bad_url_422(client):
     assert r.status_code == 422
     r = await client.put("/api/v1/broker-links/NEW", headers=h, json={"toss_url": None, "verified": True})
     assert r.status_code == 422  # 코드가 없는 종목을 확인함으로 바꿀 수 없음
+
+
+@pytest.mark.asyncio
+async def test_put_kr_symbol_422(client):
+    h = {"X-API-Token": TOKEN}
+    r = await client.put("/api/v1/broker-links/005930", headers=h,
+                         json={"toss_url": "https://www.tossinvest.com/stocks/US19810527001/order", "verified": True})
+    assert r.status_code == 422

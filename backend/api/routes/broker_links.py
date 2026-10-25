@@ -59,7 +59,7 @@ async def list_codes() -> dict:
 
     async with get_session() as session:
         rows = (await session.execute(select(TossStockCode).order_by(TossStockCode.verified, TossStockCode.symbol))).scalars().all()
-    return {"codes": [_row_view(r) for r in rows]}
+    return {"codes": [_row_view(r) for r in rows if not bl.is_kr_code(r.symbol)]}
 
 
 class CodeUpdate(BaseModel):
@@ -75,6 +75,8 @@ async def update_code(symbol: str, body: CodeUpdate) -> dict:
         sym = bl.normalize_symbol(symbol)
     except ValueError as e:
         raise HTTPException(status_code=422, detail=str(e)) from e
+    if bl.is_kr_code(sym):
+        raise HTTPException(status_code=422, detail="국내 종목은 코드로 바로 연결되므로 고칠 것이 없습니다")
     code: Optional[str] = None
     if body.toss_url:
         m = _URL_RE.match(body.toss_url.strip())

@@ -147,3 +147,56 @@ def test_cron_registers_daily_0740():
     src = inspect.getsource(cron.build_scheduler)
     assert 'CronTrigger(hour=7, minute=40)' in src and 'id="toss_stock_codes_daily"' in src
     assert inspect.iscoroutinefunction(cron.job_toss_stock_codes)
+
+
+# ─── 최종 검토 (PR 2a) ───
+@pytest.mark.asyncio
+async def test_refresh_does_not_overwrite_manual_set_during_call(empty_table):
+    """토스 응답을 기다리는 사이 관리자가 확인함으로 바꾼 값은 배치가 덮지 않는다."""
+    from backend.services.db import get_session
+
+    import asyncio
+
+    loop = asyncio.get_running_loop()
+
+    async def _admin_put():
+        async with get_session() as sess:
+            sess.add(TossStockCode(symbol="WEN", toss_code="US19810527009", source="manual", verified=True))
+
+    class _SlowToss(_FakeToss):
+        def stocks(self, symbols):  # 배치는 이 함수를 다른 스레드에서 부른다 · 그사이 관리자 PUT 이 들어옴
+            asyncio.run_coroutine_threadsafe(_admin_put(), loop).result(timeout=5)
+            return super().stocks(symbols)
+
+    out = await bl.refresh_toss_stock_codes(client=_SlowToss({"WEN": "1981-05-27"}), symbols=["WEN"])
+    row = (await _rows())["WEN"]
+    assert row.source == "manual" and row.verified is True and row.toss_code == "US19810527009"
+    assert out["found"] == 0
+
+
+@pytest.mark.asyncio
+async def test_refresh_bad_ticker_in_chunk_falls_back_one_by_one(empty_table):
+    from backend.execution.exceptions import OrderRejected
+
+    class _Strict(_FakeToss):
+        def stocks(self, symbols):
+            self.calls.append(list(symbols))
+            if "BAD" in symbols:
+                raise OrderRejected("stock-not-found", "없는 종목")
+            return [{"symbol": s, "listDate": self.data[s]} for s in symbols if s in self.data]
+
+    fake = _Strict({"WEN": "1981-05-27", "AAPL": "1980-12-12"})
+    out = await bl.refresh_toss_stock_codes(client=fake, symbols=["WEN", "BAD", "AAPL"])
+    rows = await _rows()
+    assert rows["WEN"].toss_code == "US19810527001" and rows["AAPL"].toss_code == "US19801212001"
+    assert rows["BAD"].toss_code is None and out == {"asked": 3, "found": 2, "missing": 1, "skipped_manual": 0}
+
+
+@pytest.mark.asyncio
+async def test_refresh_dict_response_is_ignored(empty_table):
+    class _Dict(_FakeToss):
+        def stocks(self, symbols):
+            return {"unexpected": True}
+
+    out = await bl.refresh_toss_stock_codes(client=_Dict({}), symbols=["WEN"])
+    assert out["missing"] == 1

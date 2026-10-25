@@ -105,20 +105,38 @@ async def refresh_toss_stock_codes(client=None, symbols: Optional[list[str]] = N
 
         client = get_toss_client()
     dates: dict[str, Optional[str]] = {}
-    for i in range(0, len(ask), BATCH):
-        chunk = ask[i:i + BATCH]
-        for item in await asyncio.to_thread(client.stocks, chunk) or []:
-            sym = str(item.get("symbol") or "").upper()
+
+    async def _ask(chunk: list[str]) -> None:
+        res = await asyncio.to_thread(client.stocks, chunk)
+        for item in res if isinstance(res, list) else []:
+            sym = str(item.get("symbol") or "").upper() if isinstance(item, dict) else ""
             if sym:
                 dates[sym] = item.get("listDate")
+
+    from backend.execution.exceptions import OrderNotFound, OrderRejected
+
+    for i in range(0, len(ask), BATCH):
+        chunk = ask[i:i + BATCH]
+        try:
+            await _ask(chunk)
+        except (OrderRejected, OrderNotFound) as exc:
+            # 모르는 티커 하나로 묶음 전체가 거절될 수 있다 → 하나씩 다시 (거절된 것은 못 찾음으로 저장)
+            logger.warning(f"[broker-links] 묶음 거절 · 하나씩 다시: {exc}")
+            for sym in chunk:
+                try:
+                    await _ask([sym])
+                except (OrderRejected, OrderNotFound):
+                    continue
 
     found = 0
     async with get_session() as session:
         for s in ask:
+            row = await session.get(TossStockCode, s)
+            if row is not None and row.source == "manual":
+                continue  # 토스 응답을 기다리는 사이 관리자가 고친 값 (다시 확인 · 최종 검토)
             ld = dates.get(s)
             code = toss_code_from_list_date(ld)
             found += code is not None
-            row = await session.get(TossStockCode, s)
             if row is None:
                 session.add(TossStockCode(symbol=s, toss_code=code, list_date=ld, source="api", verified=False, updated_at=now))
             else:
