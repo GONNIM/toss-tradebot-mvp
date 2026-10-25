@@ -94,8 +94,8 @@ Claude Code 는 **현재 프로필의** 프로젝트 메모리만 자동으로 �
 ### 지금 남은 일 (10/25 17시대)
 | # | 우선순위 | 진행 여부 | 할 일 | 누가 | 언제 | 보실 곳·끝 기준 |
 |---|---|---|---|---|---|---|
-| 1025-06 | 2 (답 필요) | 미착수 (10/25 등록 · 기획부터) | 증권사 내 계정 이동 화면 | Claude | 지금 | 기획 요약을 올리면 승인해 주십시오. |
-| 1025-01 | 2 (답 필요) | 미착수 (방안 A2) | 실주문 안전 상황판 | Claude | 1025-06 과 함께 | 기획 요약을 올리면 승인해 주십시오. |
+| 1025-06 | 2 (하는 중) | 진행 중 (기획 승인 10/25 · 구현 계획) | 증권사 내 계정 이동 화면 | Claude | 지금 | 구현 계획 요약을 올리면 승인해 주십시오. |
+| 1025-01 | 2 (하는 중) | 진행 중 (기획 승인 10/25 · 구현 계획) | 실주문 안전 상황판 | Claude | 지금 | 구현 계획 요약을 올리면 승인해 주십시오. |
 | 1022-06 | 2 (답 필요) | 진행 중 (#114 배포 끝 · 확인 위치 /sniper 로 이동 예정) | 발동 버튼 수리 확인 | 사용자 | 1025-01 뒤 | /sniper 에서 발동→해제를 한 번 눌러 주십시오. |
 | 1025-02 | 2 (답 필요) | 미착수 (방안 A1 · WP92) | 손실 자동 정지 수리 | Claude | 1025-01 뒤 | 실주문 허용을 다시 켜기 전 필수 (지금 자동 진입은 모의). |
 | 1025-05 | 2 (답 필요) | 미착수 (방안 B0 · WP92) | 판정·후보 결과 자동 계산 | Claude | 1025-02 뒤 | 설계 요약 (가격 소스·요청 수·계산식) 을 승인해 주십시오. |
@@ -136,7 +136,7 @@ Claude Code 는 **현재 프로필의** 프로젝트 메모리만 자동으로 �
 - 1022-11: 완료 10/25 — `feature/biotech-aact-weekly` (같은 수정이 main 에 있음) 로컬·원격 삭제 · `wip/local-docs` (main 에 없는 SCRIPTS.md·remote.sh·H6 zip) 는 `docs/plans/biotech/fable-bundles/backup-wip-local-docs-20261025.bundle` (verify ok) 보관 뒤 로컬 삭제 · `docs/plans/PRD/biotech/` 는 `backup-prd-biotech-copy-20261025.tgz` 보관 뒤 삭제. 원격 `hotfix/aact-zipfile-testzip` (b4abe77 · PENDING 60줄 옛 세션 상태) 도 사용자 지시로 `backup-hotfix-aact-20261025.bundle` 보관 뒤 삭제 (10/25).
 - 1022-07: 완료 10/25 — 운영 `PUT /api/v1/notifications/settings/system` mode digest (전 값 immediate · 다른 행 변화 없음 확인).
 - 1025-04: 완료 — PR #115 (병합 17d48cb · 배포 run 40175706246 성공 17:17 · Fable 「병합 승인됨 · PR #115」 · `SNIPER_LIVE_ENABLED` 한 키 false). 공개 /sniper/status live_enabled 거짓 · /admin/session live_enabled 거짓 확인. 확인: 자동 진입 (sniper·watchlist) 은 `EXECUTION_BROKER` 미설정 = paper. 실돈 경로는 `POST /sniper/entry` broker=toss 하나 (require_sniper_live_token).
-- 1025-02 · 03 · 05 · 06: `docs/plans/site-roadmap/README.md` A1 · B1 · B0 · §5.
+- 1025-02 · 03 · 05 · 06: `docs/plans/site-roadmap/README.md` A1 · B1 · B0 · §5. 1025-06·01 기획 `docs/plans/site-roadmap/broker-link.md` (승인 10/25 · 배포 2a·2b 먼저 · WEN 대조 · 토큰 1개 규칙).
 - 1023-04: #110 (rss.py httpx 피드당 4초 · 인스턴스 캐시 · Lock). 16:49 뒤 빈 오류 실패 0건 · Moonshot 16:52 · Sector 17:05 발송 확인. 남은 것: Crazy 10/24 06:30 발송 · 그때 `notification_log` 첫 기록과 18:00 하루 요약 실행 로그도 함께 본다.
 - 1023-02: Z.ai glm-5.2 thesis 가 Crazy 전 종목에서 시간 초과. Anthropic 키 (1022-14·16) 로 해결 예정.
 - 1022-10: 2 홈 "오늘" · 3 메뉴 15→5 · 4 로그인 하나 · 5 문구 · 6 시각 통일 · 7 모바일 · 8 정리. `docs/plans/ui-ux-optimization/README.md`.
