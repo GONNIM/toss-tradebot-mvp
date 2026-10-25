@@ -1,3 +1,5 @@
+import type { BrokerLinkInfo } from "@/lib/broker-link";
+export type { BrokerLinkInfo } from "@/lib/broker-link";
 /**
  * API 클라이언트 (FastAPI 백엔드).
  * next.config.ts rewrites 로 /api/v1/* → http://localhost:8000/api/v1/* 프록시.
@@ -773,6 +775,14 @@ export const api = {
       stop_loss_pct?: number;
     }) => post<BacktestReport>(`/backtest/run`, opts),
   },
+  // 1025-06 · 토스증권 이동 주소 (공개 읽기 · 관리자 수정)
+  brokerLinks: {
+    get: (symbols: string[]) =>
+      get<{ links: BrokerLinkInfo[] }>(`/broker-links?symbols=${encodeURIComponent(symbols.join(","))}`),
+    codes: () => getWithSession<{ codes: TossStockCodeRow[] }>(`/broker-links/codes`),
+    put: (symbol: string, body: { toss_url: string | null; verified: boolean }) =>
+      putWithToken<TossStockCodeRow>(`/broker-links/${encodeURIComponent(symbol)}`, "", body),
+  },
   sniper: {
     status: () => get<SniperStatus>(`/sniper/status`),
     // 1025-01 · /lab/execution 에서 옮김 · 인증 라우트라 쿠키를 보내는 헬퍼
@@ -1154,6 +1164,15 @@ export interface SniperParams {
   poll_orderbook_sec: number;
   poll_trailing_price_sec: number;
   enabled: boolean;
+}
+
+export interface TossStockCodeRow {
+  symbol: string;
+  toss_code: string | null;
+  list_date: string | null;
+  source: "api" | "manual";
+  verified: boolean;
+  updated_at: string | null;
 }
 
 export interface SniperStatus {
