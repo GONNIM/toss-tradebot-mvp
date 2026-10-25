@@ -213,7 +213,7 @@ def test_f5_alert_body_points_to_new_path():
     from backend.execution import kill_switch as ks
 
     src = inspect.getsource(ks._kill_switch_message)
-    assert "/lab/execution" in src  # 화면의 「수동 해제」 (1023-05)
+    assert "/sniper" in src and "/lab/execution" not in src  # 안전 상황판의 「수동 해제」 (1025-01)
     assert "/execution/kill-switch" not in src
 
 

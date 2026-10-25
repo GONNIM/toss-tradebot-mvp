@@ -750,62 +750,6 @@ export const api = {
       },
     },
   },
-  execution: {
-    status: () => get<ExecutionStatus>(`/execution/status`),
-    killSwitch: {
-      status: () => getWithSession<KillSwitchStatus>(`/sniper/kill-switch/status`),
-      // 인증 라우트 · 쿠키를 보내는 헬퍼 (1022-06 · /execution/* 은 미등록이라 404)
-      activate: (reason: string, actor = "user:manual") =>
-        postWithToken<{ active: boolean; reason: string; activated_by: string }>(
-          `/sniper/kill-switch`,
-          "",
-          { reason, actor },
-        ),
-      deactivate: (actor = "user:manual") =>
-        delWithToken<{ active: boolean; deactivated_by: string }>(
-          `/sniper/kill-switch?actor=${encodeURIComponent(actor)}`,
-          "",
-        ),
-    },
-    params: {
-      get: () => get<ExecutionParams>(`/execution/params`),
-      put: (body: ExecutionParams) =>
-        put<{ ok: boolean; saved: boolean }>(`/execution/params`, body),
-    },
-    paper: {
-      state: () => get<PaperState>(`/execution/paper/state`),
-      resync: () =>
-        post<{ ok: boolean; synced_from: string; synced_at: string }>(
-          `/execution/paper/resync`,
-        ),
-      reset: (cash_krw?: number) =>
-        post<{ ok: boolean; cash_krw: number; synced_from: string }>(
-          `/execution/paper/reset`,
-          cash_krw !== undefined ? { cash_krw } : {},
-        ),
-    },
-    audit: (opts?: { ticker?: string; broker?: string; signal_source?: string; limit?: number }) => {
-      const q = new URLSearchParams();
-      if (opts?.ticker) q.set("ticker", opts.ticker);
-      if (opts?.broker) q.set("broker", opts.broker);
-      if (opts?.signal_source) q.set("signal_source", opts.signal_source);
-      if (opts?.limit) q.set("limit", String(opts.limit));
-      const qs = q.toString();
-      return get<OrderAuditRow[]>(`/execution/audit${qs ? `?${qs}` : ""}`);
-    },
-    market: {
-      status: () => get<MarketStatus>(`/execution/market/status`),
-    },
-    orders: {
-      pending: () => get<{ orders: unknown[]; request_id: string | null }>(
-        `/execution/orders/pending`,
-      ),
-      cancel: (orderId: string) =>
-        post<{ ok: boolean; result: unknown; request_id: string | null }>(
-          `/execution/orders/${encodeURIComponent(orderId)}/cancel`,
-        ),
-    },
-  },
   superSignals: {
     list: (limit = 30) => get<SuperSignalRow[]>(`/super-signals?limit=${limit}`),
     hits: (opts?: { ticker?: string; days?: number; limit?: number }) => {
@@ -831,6 +775,14 @@ export const api = {
   },
   sniper: {
     status: () => get<SniperStatus>(`/sniper/status`),
+    // 1025-01 · /lab/execution 에서 옮김 · 인증 라우트라 쿠키를 보내는 헬퍼
+    killSwitch: {
+      status: () => getWithSession<KillSwitchStatus>(`/sniper/kill-switch/status`),
+      activate: (reason: string, actor = "user:manual") =>
+        postWithToken<{ active: boolean; reason: string; activated_by: string }>(`/sniper/kill-switch`, "", { reason, actor }),
+      deactivate: (actor = "user:manual") =>
+        delWithToken<{ active: boolean; deactivated_by: string }>(`/sniper/kill-switch?actor=${encodeURIComponent(actor)}`, ""),
+    },
     params: () => get<SniperParams>(`/sniper/params`),
     universe: (opts?: { squeeze_only?: boolean; limit?: number }) => {
       const q = new URLSearchParams();
@@ -1208,6 +1160,7 @@ export interface SniperStatus {
   live_enabled: boolean;
   sniper_enabled: boolean;
   kill_switch_active: boolean;
+  order_target?: "paper" | "toss";
   universe_size: number;
   seed_cap_krw: number;
   per_order_krw: number;

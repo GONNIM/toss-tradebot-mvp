@@ -44,7 +44,7 @@ def test_kill_switch_wording():
     assert "누가: 자동 (스나이퍼)" in body
     assert "시각: 10/23 10:42" in body
     assert "DELETE" not in body
-    assert "풀기: https://optimus8.cafe24.com/lab/execution 의 「수동 해제」 (관리자 로그인)" in body
+    assert "풀기: https://optimus8.cafe24.com/sniper 의 「수동 해제」 (관리자 로그인)" in body
     assert violations(title, body) == []
 
 

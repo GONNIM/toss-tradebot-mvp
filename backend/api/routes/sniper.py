@@ -19,6 +19,7 @@
 from __future__ import annotations
 
 import logging
+import os
 from dataclasses import asdict
 from datetime import datetime, timedelta, timezone
 from typing import Optional
@@ -55,6 +56,10 @@ router = APIRouter()
 # ═══════════════════════════════════════════════════════════════
 # 조회 (인증 없음)
 # ═══════════════════════════════════════════════════════════════
+def _order_target() -> str:
+    return "toss" if os.environ.get("EXECUTION_BROKER", "paper").strip().lower() == "toss" else "paper"
+
+
 @router.get("/status")
 async def sniper_status():
     """전역 상태 · UI 상단 표시용."""
@@ -65,6 +70,8 @@ async def sniper_status():
         "live_enabled": is_sniper_live_enabled(),
         "sniper_enabled": params.enabled,
         "kill_switch_active": ks.active,
+        # 어댑터 종류 표시 (주문이 실제로 나가는지는 live_enabled 등이 정함 · signal_router 와 같은 규칙 · 1025-01)
+        "order_target": _order_target(),
         "universe_size": size,
         "seed_cap_krw": params.seed_cap_krw,
         "per_order_krw": params.per_order_krw,
