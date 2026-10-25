@@ -263,3 +263,15 @@ def test_jobs_registered_on_market_days():
     kr, us = str(jobs["holdings_snapshot_kr"].trigger), str(jobs["holdings_snapshot_us"].trigger)
     assert "hour='15'" in kr and "minute='50'" in kr and "day_of_week='mon-fri'" in kr
     assert "hour='7'" in us and "minute='10'" in us and "day_of_week='tue-sat'" in us
+
+
+@pytest.mark.asyncio
+async def test_facts_journal_after_sold_uses_kst_day_boundary(clean):
+    # 10/2 팔림 · 판정 10/2 20:00 UTC = 10/3 05:00 KST → 팔린 날 뒤 판정이므로 기준일로 쓴다
+    await _add(_snap(date(2026, 10, 1)), _snap(date(2026, 10, 2), qty=0.0), _snap(date(2026, 10, 10)),
+               _judg(datetime(2026, 10, 2, 20)), _judg(datetime(2026, 10, 2, 10)))  # 둘째 = 10/2 19:00 KST → 뺌
+    from backend.services.db import get_session
+
+    async with get_session() as s:
+        f = await rh.holding_facts(s, _row(), today=date(2026, 10, 26))
+    assert f["basis_date"] == date(2026, 10, 3) and f["basis_source"] == "journal"
