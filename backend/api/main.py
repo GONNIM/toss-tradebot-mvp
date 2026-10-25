@@ -237,7 +237,7 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(
     title="Toss Tradebot MVP API",
-    version="0.3.3",
+    version="0.3.4",
     description="자동매매 + Crazy + Moonshot Discovery API",
     lifespan=lifespan,
 )
@@ -288,6 +288,8 @@ app.include_router(
 # ── 관리
 app.include_router(settings.router, prefix="/api/v1/settings", tags=["settings"])
 app.include_router(notifications.router, prefix="/api/v1/notifications", tags=["notifications"])
+from backend.api.routes import broker_links as _broker_links  # noqa: E402 · 1025-06
+app.include_router(_broker_links.router, prefix="/api/v1/broker-links", tags=["broker-links"])
 # ── 관리자 세션 (Phase D 주 7 · 2026-07-31 · httpOnly 쿠키 이관)
 app.include_router(session.router, prefix="/api/v1/admin/session", tags=["session"])
 # ── Webhooks (Phase D 주 8 · 2026-07-31 · 결제 훅 스텁)
