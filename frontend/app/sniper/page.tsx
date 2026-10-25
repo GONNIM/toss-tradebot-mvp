@@ -25,6 +25,7 @@ import {
 } from "@/lib/time";
 import { AdminSessionBar } from "@/components/admin/AdminSessionBar";
 import { SafetyPanel } from "@/components/sniper/SafetyPanel";
+import { scanBadge } from "@/lib/sniper-safety";
 import { JudgmentDialog } from "@/components/journal/JudgmentDialog";
 
 export default function SniperPage() {
@@ -136,8 +137,9 @@ function SetupGuide({ isAdmin }: { isAdmin: boolean }) {
           }
         >
           <p>
-            이 사이트는 실계좌 주문을 넣지 않습니다. 주문은 바이오·화약고 화면의 「토스증권에서 열기 ↗」 또는{" "}
-            <a href="/account" className="underline">내 계좌</a> 에서 토스증권 화면으로 가서 직접 합니다.
+            실주문 허용을 꺼 두면 수동 실주문 버튼이 잠깁니다. 자동 진입이 실계좌로 나가는지는 위 「실주문 안전 상황판」 결론을 보십시오.
+            직접 주문은 바이오·화약고 화면의 「토스증권에서 열기 ↗」 또는{" "}
+            <a href="/account" className="underline">내 계좌</a> 에서 토스증권 화면으로 가서 합니다.
           </p>
           <p className="mt-1 text-[11px] text-muted-foreground">
             관리자 로그인 토큰은 서버 암호화 설정에 있습니다. 만들기·바꾸기 절차:{" "}
@@ -242,8 +244,9 @@ function StatusPanel() {
   });
   if (q.isLoading || !q.data) return null;
   const s = q.data;
-  // 종합 활성 여부: LIVE_ENABLED AND sniper_enabled AND NOT kill_switch
-  const isRunning = s.live_enabled && s.sniper_enabled && !s.kill_switch_active;
+  // 스캔이 도는지 = sniper_enabled AND NOT kill_switch (실주문 허용 값은 자동 진입을 막지 않음 · 1025-07)
+  const badge = scanBadge(s);
+  const isRunning = badge.running;
   return (
     <section className="rounded border border-border bg-card p-4">
       <div className="mb-3 flex items-center justify-between">
@@ -263,7 +266,7 @@ function StatusPanel() {
                 isRunning ? "animate-pulse bg-emerald-500" : "bg-slate-400"
               }`}
             />
-            {isRunning ? "실행 중" : s.kill_switch_active ? "Kill Switch 발동" : "대기 중"}
+            {badge.label}
           </span>
         </div>
       </div>
@@ -272,7 +275,7 @@ function StatusPanel() {
           label="LIVE_ENABLED (env)"
           value={s.live_enabled ? "✅ 켜짐" : "⛔ 꺼짐"}
           tone={s.live_enabled ? "good" : "muted"}
-          hint="서버 env SNIPER_LIVE_ENABLED · 실주문/편집 라우트 전역 스위치"
+          hint="수동 실주문 버튼 하나만 막습니다 · 자동 진입은 주문 대상 (모의/실계좌) 을 따릅니다"
         />
         <Stat
           label="Sniper enabled (params)"

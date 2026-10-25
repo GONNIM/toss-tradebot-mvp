@@ -58,3 +58,9 @@ export function lossLimitLabel(v: number | null | undefined): string {
   if (v === null || v === undefined || Number.isNaN(v)) return "—";
   return `${(v * 100).toFixed(1)}%`;
 }
+
+/** 「전역 상태」 배지 — 스나이퍼 스캔이 도는지 (실주문 허용 값과 무관 · 1025-07 최종 검토). */
+export function scanBadge(s: { sniper_enabled: boolean; kill_switch_active: boolean }): { running: boolean; label: string } {
+  if (s.kill_switch_active) return { running: false, label: "Kill Switch 발동" };
+  return s.sniper_enabled ? { running: true, label: "스캔 중" } : { running: false, label: "꺼짐" };
+}
