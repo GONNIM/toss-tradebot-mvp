@@ -186,7 +186,8 @@ class TossClient:
         if resp.status_code == 429:
             retry_after = float(resp.headers.get("Retry-After", "1"))
             raise RateLimitExceeded(retry_after=retry_after, message=message or code)
-        if resp.status_code in {401} and code in {"invalid-token", "expired-token"}:
+        # token-revoked: client 당 토큰 1개 · 다른 곳에서 재발급하면 이전 토큰이 즉시 무효 (토스 명세 · 1025-06)
+        if resp.status_code in {401} and code in {"invalid-token", "expired-token", "token-revoked"}:
             # 자동 재발급 후 재시도는 상위 로직에서 (일단 예외)
             self._token_cache_path.unlink(missing_ok=True)
             raise BrokerCommunicationError(
@@ -278,6 +279,18 @@ class TossClient:
             params={"symbols": ",".join(symbols)},
             use_account_header=False,
         )
+
+    def stocks(self, symbols: list[str]) -> list[dict]:
+        """GET /api/v1/stocks · 종목 정보 (상장일 listDate 등) · 최대 200건 · account 헤더 불필요 (1025-06)."""
+        if not symbols:
+            return []
+        if len(symbols) > 200:
+            raise ValueError("symbols 는 최대 200건")
+        return self.get(
+            "/api/v1/stocks",
+            params={"symbols": ",".join(symbols)},
+            use_account_header=False,
+        ) or []
 
     def accounts(self) -> list[dict]:
         return self.get("/api/v1/accounts", use_account_header=False) or []
