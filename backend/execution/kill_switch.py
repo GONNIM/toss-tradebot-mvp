@@ -61,7 +61,7 @@ def _kill_switch_message(state) -> tuple[str, str]:
         f"누가: {_actor_text(state.activated_by or '')}",
         f"시각: {at.kst(state.activated_at)}",
         "직접 풀기 전까지 새 주문은 나가지 않습니다.",
-        f"풀기: {SITE_BASE_URL}/lab/execution 의 「수동 해제」 (관리자 로그인)",
+        f"풀기: {SITE_BASE_URL}/sniper 의 「수동 해제」 (관리자 로그인)",
     ])
     return title, body
 

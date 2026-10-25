@@ -62,7 +62,7 @@ CATEGORIES: dict[str, CategoryMeta] = {
     "meme_erupting": CategoryMeta("밈 · 급등 진행", _G8, "/lab/meme-watch", {}, "즉시 · 같은 종목 재발송은 기존 규칙"),
     "meme_blazing": CategoryMeta("밈 · 급등 전 단계", _G8, "/lab/meme-watch", {"mode": "digest"}, "2주 562건 중 대부분 · 하루 요약으로"),
     "execution": CategoryMeta("실주문", _G9, "/sniper", {}, "끌 수 없음", locked=True),
-    "kill_switch": CategoryMeta("Kill Switch", _G9, "/lab/execution", {}, "끌 수 없음", locked=True),
+    "kill_switch": CategoryMeta("Kill Switch", _G9, "/sniper", {}, "끌 수 없음", locked=True),
     "biotech": CategoryMeta("바이오", _G10, "/biotech", {}, "유지"),
     "system": CategoryMeta("시스템 경고", _GX, "/admin/notifications", {}, "끌 수 없음 · 하루 요약은 가능", locked=True),
 }
