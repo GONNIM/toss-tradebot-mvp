@@ -23,7 +23,7 @@ from typing import Optional
 
 logger = logging.getLogger(__name__)
 
-_MODEL = os.environ.get("POWDERKEG_LLM_MODEL", "claude-sonnet-5-5")
+_MODEL = os.environ.get("POWDERKEG_LLM_MODEL", "claude-opus-5-5")  # 정확도 우선 · 2026-10-25 사용자 결정
 _CONFIDENCE_THRESHOLD = 0.8    # 지시서 §7-3 · < 0.8 이면 needs_human_review
 # api 요청 처리 중에 돌므로 짧게 끊는다 · 최악 30 + 60 = 90초 (SDK 기본 600초·재시도 2회 대신)
 _ANTHROPIC_TIMEOUT_SEC = 30.0
@@ -129,7 +129,7 @@ async def _classify_anthropic(prompt: str) -> Optional[dict]:
             client.messages.create(
                 model=_MODEL,
                 max_tokens=1500,
-                output_config={"effort": "low"},
+                output_config={"effort": "medium"},  # 실측 2.8초 (10/25)
                 system=_SYSTEM,
                 messages=[{"role": "user", "content": prompt}],
             ),

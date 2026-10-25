@@ -3,7 +3,7 @@
 번갈아 사용 가능 (메모리: keep-alternatives-alongside). `LLM_PROVIDER` 환경변수로 전환:
   - LLM_PROVIDER=zai         (기본) — glm-4.5-flash 무료 / glm-4.6 paid
   - LLM_PROVIDER=openai      — gpt-5-mini
-  - LLM_PROVIDER=anthropic   — claude-sonnet-5-5 1순위 · 키 없음/오류 시 Z.ai 로 대체 (FallbackLLM · 2026-10-23 결정)
+  - LLM_PROVIDER=anthropic   — claude-opus-5-5 1순위 · 키 없음/오류 시 Z.ai 로 대체 (FallbackLLM · 2026-10-23 결정)
 
 공통 인터페이스:
     async with get_llm_client() as llm:
@@ -32,7 +32,7 @@ logger = logging.getLogger(__name__)
 DEFAULT_ZAI_MODEL = os.environ.get("ZAI_MODEL", "glm-4.5-flash")  # 무료 tier
 DEFAULT_ZAI_BASE_URL = os.environ.get("ZAI_BASE_URL", "https://api.z.ai/api/paas/v4/")
 DEFAULT_OPENAI_MODEL = os.environ.get("OPENAI_MODEL", "gpt-5-mini")
-DEFAULT_ANTHROPIC_MODEL = os.environ.get("ANTHROPIC_MODEL", "claude-sonnet-5-5")
+DEFAULT_ANTHROPIC_MODEL = os.environ.get("ANTHROPIC_MODEL", "claude-opus-5-5")  # 정확도 우선 · 2026-10-25 사용자 결정
 # Anthropic 은 짧게 끊고 남은 시간을 Z.ai 대체에 쓴다 (호출 측 wait_for 150초 안: 30 + Z.ai 90)
 ANTHROPIC_TIMEOUT_SEC = 30.0
 
@@ -381,7 +381,7 @@ def _classify_anthropic_error(exc: Exception) -> str:
 
 
 class ClaudeLLM:
-    """Anthropic Claude (기본 Sonnet 5.5) — LLM_PROVIDER=anthropic 일 때 FallbackLLM 의 1순위."""
+    """Anthropic Claude (기본 Opus 5.5) — LLM_PROVIDER=anthropic 일 때 FallbackLLM 의 1순위."""
 
     def __init__(self, api_key: Optional[str] = None, model: Optional[str] = None) -> None:
         self.api_key = api_key or os.environ.get("ANTHROPIC_API_KEY", "")
@@ -414,11 +414,11 @@ class ClaudeLLM:
         if self._client is None:
             raise RuntimeError("ClaudeLLM 컨텍스트 미진입 — `async with` 사용")
         try:
-            # effort low — 문서 권장 경로 · thinking 을 끄는 between_tools 는 다른 모델에서 400
+            # effort medium (Opus 5.5 기본값) — 실측 13.8초 · 출력 1.2천 토큰 (10/25) · thinking 은 끌 수 없어 보내지 않음
             message = await self._client.messages.create(
                 model=self.model,
                 max_tokens=4000,
-                output_config={"effort": "low"},
+                output_config={"effort": "medium"},
                 system="당신은 한국어로 응답하는 금융 분석가다. 반드시 유효한 JSON 만 출력한다.",
                 messages=[{"role": "user", "content": prompt}],
             )
