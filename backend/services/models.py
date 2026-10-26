@@ -1269,6 +1269,10 @@ class UserJudgment(Base):
     # 자동 outcome (T+N 실현 수익률 · 크론 자동 계산)
     result_at_horizon: Mapped[Optional[float]] = mapped_column(default=None)
     result_computed_at: Mapped[Optional[datetime]] = mapped_column(DateTime, default=None)
+    # 1025-05 · 자동 계산 기준가 (entry_price 를 덮지 않음) · entry | t0_close · 토스 일봉
+    #   기존 표에는 db.ensure_columns 가 앱 시작 때 추가 (create_all 은 열을 넣지 않음)
+    result_base_price: Mapped[Optional[float]] = mapped_column(default=None)
+    result_base_source: Mapped[Optional[str]] = mapped_column(String(10), default=None)
 
     # 물타기 감지 (Rulebook Phase 1-B · 2026-08-02 · 존마 원칙 3)
     # 판정 후 T+horizon_days 기간 내 저가가 invalidation_price 이하 이탈했으면 기록.

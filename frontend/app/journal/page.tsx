@@ -10,6 +10,7 @@
 import { useEffect, useState } from "react";
 import { AdminSessionBar } from "@/components/admin/AdminSessionBar";
 import type { SessionInfo } from "@/lib/auth";
+import { baseNote, outcomeText } from "@/lib/outcome-display";
 
 type Judgment = {
   id: number;
@@ -26,6 +27,8 @@ type Judgment = {
   market_regime: string;
   result_at_horizon: number | null;
   result_computed_at: string | null;
+  result_base_price?: number | null;
+  result_base_source?: string | null;
   git_sha: string | null;
   superseded_by_id: number | null;
   superseded_at: string | null;
@@ -563,10 +566,13 @@ function JudgmentCard({
                   j.result_at_horizon > 0 ? "text-green-400" : "text-red-400"
                 }`}
               >
-                outcome: {(j.result_at_horizon * 100).toFixed(2)}%
+                {outcomeText(j.result_at_horizon, j.horizon_days)}
               </span>
             ) : (
-              <span className="italic text-muted-foreground/70">outcome 계산 대기</span>
+              <span className="italic text-muted-foreground/70">{outcomeText(null, j.horizon_days)}</span>
+            )}
+            {baseNote(j.result_base_price, j.result_base_source) && (
+              <span className="text-muted-foreground">{baseNote(j.result_base_price, j.result_base_source)}</span>
             )}
           </div>
           {j.supersede_reason && (

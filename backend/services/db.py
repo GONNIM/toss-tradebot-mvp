@@ -11,6 +11,7 @@ ORM 추상화로 DATABASE_URL 만 변경하면 DB 전환 가능.
 """
 from __future__ import annotations
 
+import logging
 from contextlib import asynccontextmanager
 from typing import AsyncIterator
 
@@ -77,6 +78,30 @@ async def init_db() -> None:
 
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
+    await ensure_columns()
+
+
+logger = logging.getLogger(__name__)
+
+# 기존 표에 나중에 붙인 열 (create_all 은 있는 표에 열을 넣지 않는다) · (표, 열, SQL 타입)
+_ADDED_COLUMNS = [
+    ("user_judgments", "result_base_price", "FLOAT"),        # 1025-05
+    ("user_judgments", "result_base_source", "VARCHAR(10)"),  # 1025-05
+]
+
+
+async def ensure_columns() -> None:
+    """빠진 열만 ALTER TABLE ADD COLUMN (멱등 · SQLite)."""
+    from sqlalchemy import text
+
+    if engine.dialect.name != "sqlite":
+        return  # Postgres 전환 때는 마이그레이션 도구로
+    async with engine.begin() as conn:
+        for table, col, typ in _ADDED_COLUMNS:
+            rows = (await conn.execute(text(f"PRAGMA table_info({table})"))).all()
+            if rows and col not in {r[1] for r in rows}:
+                await conn.execute(text(f"ALTER TABLE {table} ADD COLUMN {col} {typ}"))
+                logger.warning("[db] 열 추가 %s.%s", table, col)
 
 
 async def drop_db() -> None:
