@@ -146,10 +146,10 @@ function HoldingsTable({ isAdmin }: { isAdmin: boolean }) {
       </div>
       <ul className="space-y-0.5 text-xs text-muted-foreground">
         <li>{fxLabel(d.fx_rate, d.fx_source)}</li>
-        <li>최고가 대비 = 보유 기준일 뒤 가장 높은 종가와 지금 가격의 차이입니다 (토스 일봉 · 매일 국내 15:50 · 미국 07:10 기록).</li>
+        <li>최고가 대비 = 보유 기준일 뒤 가장 높은 종가와 지금 가격의 차이입니다 (토스 일봉 · 장 열린 날 국내 15:50 · 미국 07:10 기록).</li>
         <li>보유 일수 기준일은 첫 저널 판단일, 없으면 이 사이트가 보유를 처음 기록한 날입니다. 실제 매수일과 다를 수 있습니다.</li>
         <li>
-          청산 계획은 <Link href="/positions" className="underline">/positions</Link> 에서 적고 고칩니다 · {fmtKstDateTime(d.fetched_at)} 토스 응답 기준
+          청산 계획 「있음」 = 최근 저널 판단에 손절가나 목표가가 적혀 있을 때입니다 · 적고 고치는 곳은 <Link href="/positions" className="underline">/positions</Link> · {fmtKstDateTime(d.fetched_at)} 토스 응답 기준
         </li>
       </ul>
     </div>
@@ -211,7 +211,7 @@ function CodeTable({ isAdmin }: { isAdmin: boolean }) {
   const rows = q.data?.codes ?? [];
   if (q.isLoading) return <p className="text-sm text-muted-foreground">불러오는 중…</p>;
   if (q.error) return <p className="text-sm text-muted-foreground">목록을 불러오지 못했습니다.</p>;
-  if (rows.length === 0) return <p className="text-sm text-muted-foreground">아직 목록이 없습니다. 매일 07:40 에 바이오 레이더 종목으로 채워집니다.</p>;
+  if (rows.length === 0) return <p className="text-sm text-muted-foreground">아직 목록이 없습니다. 매일 07:40 에 바이오 레이더 종목과 미국 보유 종목으로 채워집니다.</p>;
   return (
     <div className="overflow-x-auto">
       <table className="w-full text-sm">

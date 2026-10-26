@@ -563,7 +563,7 @@ async def job_notification_digest():
 
 
 async def job_toss_stock_codes():
-    """토스증권 미국 종목 코드 07:40 KST (1025-06) — 바이오 레이더 티커의 상장일로 코드 후보 · 서버에서만 토스 API."""
+    """토스증권 미국 종목 코드 07:40 KST (1025-06) — 바이오 레이더 티커 + 미국 보유 종목의 상장일로 코드 후보 · 서버에서만 토스 API."""
     try:
         from backend.services import broker_links
 

@@ -32,7 +32,12 @@ assert.equal(
 );
 assert.equal(
   peakLabel({ from_peak_pct: 0, peak_close: 12, peak_date: "2026-10-26", peak_complete: false, currency: "USD" }),
-  "0.00% (기록된 기간 최고 $12.00 · 10/26)",
+  "0.00% (현재가가 기록된 기간 최고 $12.00)",
+);
+// 1026-01 · 오늘 현재가가 가장 높으면 「종가」 라고 하지 않는다 (Fable #121 권고)
+assert.equal(
+  peakLabel({ from_peak_pct: 0, peak_close: 70000, peak_date: "2026-10-26", peak_complete: true, currency: "KRW" }),
+  "0.00% (현재가가 보유 뒤 최고 70,000원)",
 );
 assert.equal(peakLabel({ from_peak_pct: null, peak_close: null, peak_date: null, peak_complete: false, currency: "KRW" }), "—");
 

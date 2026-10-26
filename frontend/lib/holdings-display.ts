@@ -49,6 +49,11 @@ export function peakLabel(h: {
   currency: string;
 }): string {
   if (h.from_peak_pct === null || h.peak_close === null || !h.peak_date) return "—";
+  // 1026-01 · 현재가가 가장 높으면 그날은 종가가 아니다 → 「현재가가 … 최고」 (날짜 없음 · 오늘)
+  if (h.from_peak_pct >= 0) {
+    const span = h.peak_complete ? "보유 뒤 최고" : "기록된 기간 최고";
+    return `${pctText(h.from_peak_pct)} (현재가가 ${span} ${priceText(h.peak_close, h.currency)})`;
+  }
   const what = h.peak_complete ? "최고 종가" : "기록된 기간 최고";
   return `${pctText(h.from_peak_pct)} (${what} ${priceText(h.peak_close, h.currency)} · ${mmdd(h.peak_date)})`;
 }

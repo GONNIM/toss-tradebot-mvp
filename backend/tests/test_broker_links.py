@@ -200,3 +200,30 @@ async def test_refresh_dict_response_is_ignored(empty_table):
 
     out = await bl.refresh_toss_stock_codes(client=_Dict({}), symbols=["WEN"])
     assert out["missing"] == 1
+
+
+# ─── 1026-01 · 미국 보유 종목도 07:40 배치에 (사용자 승인 10/26 · WEN 대조) ───
+@pytest.mark.asyncio
+async def test_default_symbols_include_us_holdings(empty_table, monkeypatch):
+    from datetime import date
+
+    from backend.services.db import get_session
+    from backend.services.models import HoldingSnapshot
+
+    async with get_session() as s:
+        await s.execute(delete(HoldingSnapshot))
+        s.add_all([
+            HoldingSnapshot(symbol="WEN", market="US", trade_date=date(2026, 10, 26), kind="holding", qty=5),
+            HoldingSnapshot(symbol="TTD", market="US", trade_date=date(2026, 10, 26), kind="holding", qty=0),  # 팔림
+            HoldingSnapshot(symbol="TTD", market="US", trade_date=date(2026, 10, 23), kind="holding", qty=3),
+            HoldingSnapshot(symbol="ZZZ", market="US", trade_date=date(2026, 10, 26), kind="candle", close=1.0),
+            HoldingSnapshot(symbol="005930", market="KR", trade_date=date(2026, 10, 26), kind="holding", qty=1),
+        ])
+    monkeypatch.setattr(bl, "radar_symbols", lambda: ["MRNA"])
+    fake = _FakeToss({"WEN": "1981-05-27", "MRNA": "2018-12-07"})
+    out = await bl.refresh_toss_stock_codes(client=fake)
+    asked = sorted(s for c in fake.calls for s in c)
+    assert asked == ["MRNA", "WEN"]  # 팔린 TTD · 일봉 행 · 국내 제외
+    assert out["found"] == 2
+    async with get_session() as s:
+        await s.execute(delete(HoldingSnapshot))

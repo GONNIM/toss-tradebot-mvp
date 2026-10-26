@@ -4,6 +4,7 @@
 """
 from __future__ import annotations
 
+import asyncio
 import logging
 from datetime import datetime, timedelta, timezone
 from typing import Optional
@@ -189,7 +190,7 @@ async def get_positions_plan():
 
     # 1025-08 · 미국 종목 원화 = 토스 참고 환율 (dashboard 와 같은 함수)
     from backend.services import fx
-    usd_krw = fx.usd_krw(client).rate
+    usd_krw = (await asyncio.to_thread(fx.usd_krw, client)).rate
 
     # Activist universe 조회 (심볼 매치용 · 실패해도 계속)
     activist_symbols: set[str] = set()
