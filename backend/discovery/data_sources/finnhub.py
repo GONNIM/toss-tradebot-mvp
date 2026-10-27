@@ -18,6 +18,10 @@ from backend.discovery.data_sources.base import DataSourceClient, DataSourceErro
 logger = logging.getLogger(__name__)
 
 
+class FinnhubKeyError(DataSourceError):
+    """키 없음·무효 (401·403) — base 는 4xx 를 올리지 않아 「profile not found」 로 묻혔음 (1023-03)."""
+
+
 @dataclass(frozen=True)
 class EarningsEvent:
     """어닝 발표 일정."""
@@ -78,6 +82,12 @@ class FinnhubClient(DataSourceClient):
             headers={"X-Finnhub-Token": key} if key else {},
         )
         self.api_key = key
+
+    async def get(self, path: str, **kwargs):
+        response = await super().get(path, **kwargs)
+        if response.status_code in (401, 403):
+            raise FinnhubKeyError(f"Finnhub 키 없음·무효 ({response.status_code})")
+        return response
 
     async def get_earnings_calendar(
         self,

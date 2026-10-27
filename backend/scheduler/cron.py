@@ -186,6 +186,7 @@ async def run_universe_refresh():
     )
     from backend.services.db import get_session
     from backend.services.models import TickerUniverse
+    from backend.discovery.data_sources.finnhub import FinnhubKeyError
 
     logger.info(f"[universe] start — {len(WATCHLIST)} tickers")
     clients = await _enter_clients(_build_clients())
@@ -225,6 +226,11 @@ async def run_universe_refresh():
                     await session.commit()
 
                 updated += 1
+            except FinnhubKeyError as e:
+                # 키 문제면 남은 종목도 전부 같은 401 → 멈추고 하루 1회 알림 (1023-03)
+                logger.error(f"[universe] {e} · 남은 종목 건너뜀")
+                await _alert_finnhub_key(e)
+                break
             except Exception as e:
                 logger.warning(f"[universe] {ticker} enrich fail: {e}")
     finally:
@@ -509,7 +515,7 @@ async def _alert_job_failure(
         logger.error(f"[cron] 실패 알림 전송 실패 ({job_name}): {notify_exc}")
 
 
-# LLM 대체 warning dedupe — 마지막으로 알린 KST 날짜 (cron 프로세스 하루 1회 · 재시작 시 초기화)
+# LLM 대체 · Finnhub 키 warning dedupe (키 llm · finnhub) — 마지막으로 알린 KST 날짜 (cron 프로세스 하루 1회 · 재시작 시 초기화)
 _llm_fallback_alerted: dict[str, str] = {}
 
 
@@ -549,6 +555,32 @@ async def _report_llm_usage(job_name: str, llm) -> None:
             _llm_fallback_alerted["llm"] = today
     except Exception as notify_exc:  # noqa: BLE001
         logger.error(f"[cron] LLM 대체 알림 전송 실패 ({job_name}): {notify_exc}")
+
+
+async def _alert_finnhub_key(exc: Exception) -> None:
+    """Finnhub 키 없음·무효 하루 1회 warning (1023-03 · LLM 대체 알림과 같은 dedupe). 알림 실패는 삼킨다."""
+    from zoneinfo import ZoneInfo
+
+    today = datetime.now(ZoneInfo("Asia/Seoul")).strftime("%Y-%m-%d")
+    if _llm_fallback_alerted.get("finnhub") == today:
+        return
+    try:
+        import html
+
+        from backend.services import alert_text as at
+        from backend.services.notifier import TelegramNotifier
+
+        title = at.title("system", "Finnhub 키 없음·무효", "⚠️")
+        detail = "\n".join([
+            f"종목 정보·실적 발표 일정을 못 받았습니다 ({html.escape(str(exc))}).",
+            "Crazy 종목의 회사명·섹터·시총과 실적 임박 점수가 빠집니다. 서버 FINNHUB_API_KEY 를 확인해 주십시오.",
+            at.link("system"),
+        ])
+        sent = await TelegramNotifier().send_warning(title, detail, category="system")
+        if sent:
+            _llm_fallback_alerted["finnhub"] = today
+    except Exception as notify_exc:  # noqa: BLE001
+        logger.error(f"[cron] Finnhub 키 알림 전송 실패: {notify_exc}")
 
 
 async def job_notification_digest():
