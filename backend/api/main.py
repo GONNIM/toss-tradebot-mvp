@@ -18,7 +18,7 @@
     /health                    — 헬스체크
 
 이월 dead 라우트 (파일 유지 · include 제외):
-    crazy · moonshot · super_signals · backtest · execution
+    super_signals · backtest · execution (crazy · moonshot 은 1025-03 에 다시 등록 · 로그인 필수)
     UI 는 /lab 인덱스로 재편 (프론트 layout.tsx 참조).
     admin/read prefix 이원화는 Stage 2 Judgment Journal 신설 시 함께.
 """
@@ -31,11 +31,13 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from backend.api.routes import (
+    crazy,
     dashboard,
     insights,
     judgments,
     logs,
     meme_watch,
+    moonshot,
     notifications,
     positions,
     powderkeg,
@@ -123,8 +125,8 @@ async def lifespan(app: FastAPI):
         )
         logger.info("[FastAPI] Execution reconciler 30초 주기 · Toss 미체결 주문 폴링")
 
-    # Super Signal — 5분 주기 승격 + OCO 실행 (Phase 3)
-    if _os.environ.get("SUPER_SIGNAL_ENABLED", "true").lower() in {"1", "true", "yes", "on"}:
+    # Super Signal — 5분 주기 승격 + OCO 실행 (Phase 3) · 기본 끔 (1025-03 ③ · 켜려면 env true)
+    if _os.environ.get("SUPER_SIGNAL_ENABLED", "false").lower() in {"1", "true", "yes", "on"}:
         from backend.discovery.super_signal import promote_and_execute
 
         scheduler.add_job(
@@ -237,7 +239,7 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(
     title="Toss Tradebot MVP API",
-    version="0.3.10",
+    version="0.3.11",
     description="자동매매 + Crazy + Moonshot Discovery API",
     lifespan=lifespan,
 )
@@ -280,6 +282,8 @@ app.include_router(serenity.router, prefix="/api/v1/serenity", tags=["serenity"]
 # ── Serenity Hunter (Phase L14 v6 · 2026-08-04 · Step A: /verification + /health · Step C: /hunter)
 app.include_router(serenity_hunter.router, prefix="/api/v1/serenity", tags=["serenity-hunter"])
 # ── L3 실험장 (UI 는 /lab 이관 · API 는 데이터 유지)
+app.include_router(crazy.router, prefix="/api/v1/crazy", tags=["crazy"])
+app.include_router(moonshot.router, prefix="/api/v1/moonshot", tags=["moonshot"])
 app.include_router(
     meme_watch.router,
     prefix="/api/v1/meme-watch",

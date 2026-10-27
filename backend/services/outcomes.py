@@ -15,6 +15,7 @@ from __future__ import annotations
 import asyncio
 import logging
 from dataclasses import dataclass
+from statistics import median
 from datetime import date, datetime, time, timedelta, timezone
 from typing import Optional
 from zoneinfo import ZoneInfo
@@ -234,3 +235,15 @@ async def run_outcomes(client=None, now: Optional[datetime] = None) -> dict:
     summary["missing_symbols"] = len(missing)
     logger.info("[outcomes] %s", summary)
     return summary
+
+
+MIN_N_FOR_MEDIAN = 20  # 20건 미만이면 숫자 없이 건수만 (1025-03 · FR-6c 와 같은 기준)
+
+
+def summarize(rows, attrs: dict[str, str]) -> dict[str, dict]:
+    """과거 실현 결과 요약 · {라벨: {n, median}} · n < 20 이면 median None."""
+    out: dict[str, dict] = {}
+    for label, attr in attrs.items():
+        vals = [v for v in (getattr(r, attr) for r in rows) if v is not None]
+        out[label] = {"n": len(vals), "median": median(vals) if len(vals) >= MIN_N_FOR_MEDIAN else None}
+    return out

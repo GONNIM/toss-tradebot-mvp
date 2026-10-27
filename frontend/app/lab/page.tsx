@@ -22,18 +22,18 @@ const ITEMS: LabItem[] = [
   {
     href: "/lab/crazy",
     name: "Crazy Picks",
-    desc: "US 시총 ≥ $1B universe · 5인자 가중 · Claude Haiku thesis",
-    lastReviewed: "2026-07-30",
-    live: false,
-    reason: "한국 주식 전환으로 무의미 · outcome UI 노출 미완 (stage1-optimization §2-1)",
+    desc: "US 시총 ≥ $1B universe · 5인자 가중 · 분석 글은 Claude (실패 시 Z.ai)",
+    lastReviewed: "2026-10-27",
+    live: true,
+    reason: "06:30 알림과 이어짐 · 1주·1달 과거 실현 결과 표시 · 로그인 필요 (1025-03)",
   },
   {
     href: "/lab/moonshot",
     name: "Moonshot Picks",
-    desc: "16:50 KST US 장 · Top 3 · 100만원 카지노 자금 워딩",
-    lastReviewed: "2026-07-30",
-    live: false,
-    reason: "'카지노' 워딩 감정 매매 유도 · 정체성 부적합 (리뷰 A) · 리네임 or 폐기 판정 대기",
+    desc: "16:50 KST US 장 · Top 3 · 100만원 고위험 시드",
+    lastReviewed: "2026-10-27",
+    live: true,
+    reason: "16:50 알림과 이어짐 · 1·3·5일 과거 실현 결과 표시 · 로그인 필요 (1025-03)",
   },
   {
     href: "/lab/meme-watch",
@@ -41,23 +41,23 @@ const ITEMS: LabItem[] = [
     desc: "5요소 confluence Meme Score · 5분 batch · LAGGING",
     lastReviewed: "2026-07-30",
     live: true,
-    reason: "정체성 상징이라 유지 · L1 아님 (사후 반응 시그널 · disclaimer '카지노 머니로만')",
+    reason: "정체성 상징이라 유지 · L1 아님 (사후 반응 시그널 · 안내 '잃어도 되는 고위험 시드로만')",
   },
   {
     href: "/lab/super-signals",
     name: "Super Signals",
     desc: "meme + vip + activist 병합 (2+ 소스 승격)",
-    lastReviewed: "2026-07-30",
+    lastReviewed: "2026-10-27",
     live: false,
-    reason: "세 원천 모두 lagging/reflex · 병합이 공통 시점 편향 증폭 (리뷰 A) · powderkeg validated 게이트 이식 후 재승인",
+    reason: "쉬는 기능 · 5분 자동 승격·매수 잡을 껐습니다 (1025-03) · 세 원천 모두 사후 반응이라 병합이 편향을 키움 (리뷰 A)",
   },
   {
     href: "/lab/backtest",
     name: "Backtest",
     desc: "다중 sources 백테스트 (조합 grid)",
-    lastReviewed: "2026-07-30",
-    live: true,
-    reason: "임의 sources 조합 = datamining bias (리뷰 A) · 전체 조합 강제 실행 UI 미개편",
+    lastReviewed: "2026-10-27",
+    live: false,
+    reason: "쉬는 기능 · 화면 퇴역 (1025-03) · 임의 조합 백테스트는 데이터 마이닝 편향 (리뷰 A)",
   },
   {
     href: "/sniper",
@@ -104,7 +104,7 @@ export default function LabIndex() {
                   {item.live ? (
                     <span className="rounded bg-green-500/20 px-2 py-0.5 text-xs text-green-400">live</span>
                   ) : (
-                    <span className="rounded bg-red-500/20 px-2 py-0.5 text-xs text-red-400">dormant</span>
+                    <span className="whitespace-nowrap rounded bg-red-500/20 px-2 py-0.5 text-xs text-red-400">쉬는 기능</span>
                   )}
                 </td>
                 <td className="p-3 text-xs text-muted-foreground">{item.lastReviewed}</td>

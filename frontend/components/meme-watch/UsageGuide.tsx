@@ -98,7 +98,7 @@ export function UsageGuide() {
 
           {/* disclaimer */}
           <div className="text-xs text-rose-600 dark:text-rose-400 font-semibold">
-            ⚠️ 밈주는 단시간 -50% 이상 손실 가능 — 투자 권유 아님, 카지노 머니로만 운영 권장.
+            ⚠️ 밈주는 단시간 -50% 이상 손실 가능 — 투자 권유 아님, 잃어도 되는 고위험 시드로만 운영 권장.
           </div>
         </div>
       )}

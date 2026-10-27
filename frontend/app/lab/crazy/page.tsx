@@ -7,6 +7,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { api, type CrazyPick } from "@/lib/api";
 import { formatMarketCap, formatUSD } from "@/lib/utils";
+import { isUnauthorized, LoginNotice, OutcomeSummary, PicksSessionBar } from "@/components/lab/PickResults";
 
 function parseJsonArray(s: string | null): string[] {
   if (!s) return [];
@@ -21,6 +22,11 @@ function parseJsonArray(s: string | null): string[] {
 export default function CrazyPage() {
   const [tab, setTab] = useState<"today" | "history">("today");
   const [days, setDays] = useState(7);
+  const { data: summary } = useQuery({
+    queryKey: ["crazy", "summary"],
+    queryFn: () => api.crazy.summary(),
+    retry: false,
+  });
 
   return (
     <div className="space-y-6">
@@ -75,6 +81,10 @@ export default function CrazyPage() {
         </div>
       </header>
 
+      <PicksSessionBar queryRoot="crazy" />
+
+      <OutcomeSummary summary={summary} labels={{ "1w": "1주 뒤", "1m": "1달 뒤" }} />
+
       {tab === "today" ? <TodayTable /> : <HistoryTable days={days} />}
     </div>
   );
@@ -84,9 +94,11 @@ function TodayTable() {
   const { data, isLoading, error } = useQuery({
     queryKey: ["crazy", "top"],
     queryFn: () => api.crazy.list(10),
+    retry: false,
   });
 
   if (isLoading) return <Loading />;
+  if (isUnauthorized(error)) return <LoginNotice />;
   if (error) return <ErrBox />;
   if (!data || data.length === 0) return <Empty msg="저장된 Crazy Pick 없음. cron 활성 후 채워집니다." />;
 
@@ -97,9 +109,11 @@ function HistoryTable({ days }: { days: number }) {
   const { data, isLoading, error } = useQuery({
     queryKey: ["crazy", "history", days],
     queryFn: () => api.crazy.history(days),
+    retry: false,
   });
 
   if (isLoading) return <Loading />;
+  if (isUnauthorized(error)) return <LoginNotice />;
   if (error) return <ErrBox />;
   if (!data || data.length === 0) return <Empty msg={`최근 ${days}일 Pick 없음.`} />;
 
