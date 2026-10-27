@@ -1,6 +1,6 @@
 {
   "name": "toss-tradebot-frontend",
-  "version": "0.3.7",
+  "version": "0.3.8",
   "private": true,
   "description": "Toss Tradebot MVP — Frontend (Next.js 14 + Tailwind + shadcn/ui)",
   "scripts": {

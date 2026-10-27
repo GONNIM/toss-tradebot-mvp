@@ -227,3 +227,46 @@ async def test_outcomes_job_alerts_on_failure(monkeypatch):
     monkeypatch.setattr(cron, "_alert_job_failure", fake_alert)
     await cron.job_outcomes()
     assert alerts == [("판정·후보 결과 계산", 8, 10)]
+
+
+# ─── 1026-02 ───
+@pytest.mark.asyncio
+async def test_long_horizon_uses_stored_base_when_base_bar_out_of_window(clean):
+    # 기준 봉 (2025-10-01) 은 창 밖 · 기준가는 앞선 실행에서 저장됨 · 만기 = 10/1 + 365 = 2026-10-01 이후 첫 봉
+    bars = _bars(date(2026, 9, 28), [20, 21, 22, 23, 24, 25])
+    await _add(_j(ts=datetime(2025, 10, 1, 21, 0), horizon_days=365, result_base_price=10.0,
+                  result_base_source="t0_close", invalidation_price=5.0))
+    out = await oc.run_outcomes(client=_FakeToss({"WEN": bars}), now=NOW)
+    (j,) = await _all(UserJudgment)
+    end = next(b for b in bars if b.d >= date(2026, 10, 1))
+    assert j.result_at_horizon == pytest.approx(end.close / 10.0 - 1)
+    assert j.invalidation_hit_ts is None  # 기준 봉부터 봉이 없어 판단하지 않음
+    assert out["judgments"] == {"computed": 1, "pending": 0, "unavailable": 0}
+
+
+@pytest.mark.asyncio
+async def test_long_horizon_weekend_base_and_window_guard(clean):
+    # 일요일 작성 → 기준일 금요일 · 만기가 아직이면 대기 · 만기 날짜가 창보다 앞이면 계산 불가 (첫 봉으로 잘못 채우지 않음)
+    bars = _bars(date(2026, 9, 28), [20, 21, 22])
+    await _add(
+        _j(ts=datetime(2025, 10, 26, 21, 0), horizon_days=400, result_base_price=10.0, result_base_source="t0_close"),
+        _j(ts=datetime(2024, 10, 1, 21, 0), horizon_days=300, result_base_price=10.0, result_base_source="t0_close"),
+    )
+    out = await oc.run_outcomes(client=_FakeToss({"WEN": bars}), now=NOW)
+    a, b = await _all(UserJudgment)
+    assert a.result_at_horizon is None and b.result_at_horizon is None
+    assert out["judgments"] == {"computed": 0, "pending": 1, "unavailable": 1}
+    assert oc._weekday_on_or_before(date(2026, 10, 25)) == date(2026, 10, 23)
+
+
+@pytest.mark.asyncio
+async def test_all_symbols_missing_raises(clean):
+    await _add(_j(ticker="NOPE"), _j(ticker="GONE"))
+    with pytest.raises(RuntimeError):
+        await oc.run_outcomes(client=_FakeToss({}, missing={"NOPE", "GONE"}), now=NOW)
+
+
+@pytest.mark.asyncio
+async def test_no_symbols_does_not_raise(clean):
+    out = await oc.run_outcomes(client=_FakeToss({}), now=NOW)
+    assert out["symbols"] == 0
