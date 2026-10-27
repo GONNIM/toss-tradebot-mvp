@@ -40,7 +40,7 @@ dependencies = [
     "openai>=2.0.0",                # GPT-5-mini (현재 기본)
     "anthropic>=0.111.0",            # Claude Sonnet 5.5 (LLM_PROVIDER=anthropic 1순위 · 실패 시 Z.ai)
     "praw>=7.8.0",                  # Reddit (deprecated 활성 — ApeWisdom 우선)
-    "feedparser>=6.0.0",            # RSS (PRNewswire / GlobeNewswire)
+    "feedparser>=6.0.0",            # RSS (PRNewswire 공식 피드 · 1023-07)
 
     # CLI
     "click>=8.1.0",
