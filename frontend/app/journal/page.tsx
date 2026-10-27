@@ -10,7 +10,7 @@
 import { useEffect, useState } from "react";
 import { AdminSessionBar } from "@/components/admin/AdminSessionBar";
 import type { SessionInfo } from "@/lib/auth";
-import { baseNote, outcomeText } from "@/lib/outcome-display";
+import { baseNote, notScoredText, outcomeText } from "@/lib/outcome-display";
 
 type Judgment = {
   id: number;
@@ -569,7 +569,9 @@ function JudgmentCard({
                 {outcomeText(j.result_at_horizon, j.horizon_days)}
               </span>
             ) : (
-              <span className="italic text-muted-foreground/70">{outcomeText(null, j.horizon_days)}</span>
+              <span className="italic text-muted-foreground/70">
+                {notScoredText(superseded, j.page_source) || outcomeText(null, j.horizon_days)}
+              </span>
             )}
             {baseNote(j.result_base_price, j.result_base_source) && (
               <span className="text-muted-foreground">{baseNote(j.result_base_price, j.result_base_source)}</span>

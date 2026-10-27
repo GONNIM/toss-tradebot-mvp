@@ -146,7 +146,7 @@ function HoldingsTable({ isAdmin }: { isAdmin: boolean }) {
       </div>
       <ul className="space-y-0.5 text-xs text-muted-foreground">
         <li>{fxLabel(d.fx_rate, d.fx_source)}</li>
-        <li>최고가 대비 = 보유 기준일 뒤 가장 높은 종가와 지금 가격의 차이입니다 (토스 일봉 · 장 열린 날 국내 15:50 · 미국 07:10 기록).</li>
+        <li>최고가 대비 = 보유 기준일 뒤 가장 높은 종가와 현재 가격의 차이입니다 (토스 일봉 · 장 열린 날 국내 15:50 · 미국 07:10 기록).</li>
         <li>보유 일수 기준일은 첫 저널 판단일, 없으면 이 사이트가 보유를 처음 기록한 날입니다. 실제 매수일과 다를 수 있습니다.</li>
         <li>
           청산 계획 「있음」 = 최근 저널 판단에 손절가나 목표가가 적혀 있을 때입니다 · 적고 고치는 곳은 <Link href="/positions" className="underline">/positions</Link> · {fmtKstDateTime(d.fetched_at)} 토스 응답 기준

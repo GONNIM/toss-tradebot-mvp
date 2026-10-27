@@ -7,6 +7,8 @@
 - Crazy: perf_1w · perf_1m (기준 봉 + 7·30 달력일과 같거나 뒤인 첫 봉).
 - Moonshot: perf_1d·3d·5d (기준 봉 뒤 1·3·5번째 봉) · max_price_after (그 5봉 고가 최대).
 이미 값이 있는 칸은 건드리지 않는다 (수동 PATCH 보존). 토스 호출은 서버 cron 에서만 · 종목당 1회.
+1026-02: 긴 판정 (기준 봉이 최근 200봉 밖) 은 저장된 기준가와 기준일 (주말은 금요일로) 로 만기 봉을 찾는다 ·
+  그때 손절 도달은 기준 봉부터의 봉이 없어 판단하지 않는다. 조회한 종목이 모두 실패하면 RuntimeError (cron 실패 알림).
 """
 from __future__ import annotations
 
@@ -112,6 +114,12 @@ def invalidation_hit(bars: list[Bar], base_bar: Bar, end: date, *, base_price: f
     return None
 
 
+def _weekday_on_or_before(d: date) -> date:
+    while d.weekday() >= 5:
+        d -= timedelta(days=1)
+    return d
+
+
 def _utcnow() -> datetime:
     return datetime.now(timezone.utc).replace(tzinfo=None)
 
@@ -148,7 +156,16 @@ def _score_judgment(j: UserJudgment, bars: list[Bar], now: datetime) -> str:
             j.result_base_price, j.result_base_source = b0.close, "t0_close"
     base_bar = bar_on_or_before(bars, base_date(j.ts, market_of(j.ticker)))
     if base_bar is None:
-        return "unavailable"
+        # 기준 봉이 200봉 창 밖 (긴 horizon) · 기준가는 앞선 실행에서 저장됨 → 기준일로 만기 봉만 찾는다
+        target = _weekday_on_or_before(base_date(j.ts, market_of(j.ticker))) + timedelta(days=j.horizon_days)
+        if not bars or bars[0].d > target:
+            return "unavailable"
+        end = _first_on_or_after(bars, target)
+        if end is None:
+            return "pending"
+        j.result_at_horizon = end.close / j.result_base_price - 1
+        j.result_computed_at = now
+        return "computed"
     end = _first_on_or_after(bars, base_bar.d + timedelta(days=j.horizon_days))
     if end is None:
         return "pending"
@@ -181,6 +198,8 @@ async def run_outcomes(client=None, now: Optional[datetime] = None) -> dict:
             | (MoonshotPick.max_price_after.is_(None))))).scalars().all()
         symbols = {j.ticker.upper() for j in judgments} | {p.ticker.upper() for p in crazy} | {p.ticker.upper() for p in moon}
         bars_by, missing = await _fetch(client, symbols)
+        if symbols and missing == symbols:
+            raise RuntimeError(f"토스 일봉 조회가 {len(symbols)}종목 모두 실패")
 
         for j in judgments:
             bars = bars_by.get(j.ticker.upper())
