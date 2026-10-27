@@ -37,11 +37,12 @@ class NewsItem:
 
 
 # 무료 RSS 피드 (회사 발표 위주)
+# 2026-10-27 · 1023-07: GlobeNewswire 2곳 · BusinessWire (HTML 포털 주소) 는 403 (AkamaiGHost · 원인 미확인 · 우회 안 함) → 빼고
+# PRNewswire 공식 피드 전체·건강을 더함. 피드끼리 같은 보도자료가 겹쳐 fetch_recent 가 link 로 중복을 지운다.
 DEFAULT_FEEDS = {
+    "PRNewswire (All)": "https://www.prnewswire.com/rss/news-releases-list.rss",
+    "PRNewswire (Health)": "https://www.prnewswire.com/rss/health-latest-news/health-latest-news-list.rss",
     "PRNewswire (Financial)": "https://www.prnewswire.com/rss/financial-services-latest-news/financial-services-latest-news-list.rss",
-    "GlobeNewswire (Public Co)": "https://www.globenewswire.com/RssFeed/orgclass/1/feedTitle/GlobeNewswire%20-%20Public%20Companies",
-    "GlobeNewswire (Health)": "https://www.globenewswire.com/RssFeed/subjectcode/1-Press-Releases/feedTitle/GlobeNewswire%20-%20All%20Press%20Releases",
-    "BusinessWire (Biotech)": "https://www.businesswire.com/portal/site/home/news/industries/?vnsId=31376",
 }
 
 CASHTAG_RE = re.compile(r"\$([A-Z]{1,5})\b")
@@ -49,7 +50,7 @@ PAREN_TICKER_RE = re.compile(r"\(\s*(?:NASDAQ|NYSE|AMEX|OTC)\s*:\s*([A-Z]{1,6})\
 
 
 _USER_AGENT = "Mozilla/5.0 (Macintosh; Intel Mac OS X) AppleWebKit/605.1 Safari/537 TossTradebot/1.0"
-# 피드당 4초 × 4개 = 16초 < 호출 측 wait_for 20초 (crazy_picks PER_STEP_TIMEOUT)
+# 피드당 4초 × 3개 = 12초 < 호출 측 wait_for 20초 (crazy_picks PER_STEP_TIMEOUT)
 FEED_TIMEOUT_SEC = 4.0
 
 
@@ -112,6 +113,7 @@ class RSSClient:
 
         cutoff = datetime.now(timezone.utc) - timedelta(hours=within_hours)
         items: list[NewsItem] = []
+        seen: set[str] = set()  # 피드끼리 겹친 보도자료는 한 번만 (1023-07)
 
         for source_name, entries in self._cached_entries().items():
             for entry in entries[:max_items_per_feed]:
@@ -128,6 +130,10 @@ class RSSClient:
                 title = entry.get("title", "")
                 summary = entry.get("summary", "") or entry.get("description", "")
                 link = entry.get("link", "")
+                key = link or entry.get("id", "") or title
+                if key in seen:
+                    continue
+                seen.add(key)
 
                 # ticker 추출 시도
                 text = title + " " + summary

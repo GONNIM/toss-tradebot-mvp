@@ -85,3 +85,23 @@ def test_total_worst_case_under_step_timeout():
     # PER_STEP_TIMEOUT 은 함수 안 지역 상수라 소스로 확인
     assert "PER_STEP_TIMEOUT = 20.0" in inspect.getsource(crazy_picks)
     assert FEED_TIMEOUT_SEC * len(rss_mod.DEFAULT_FEEDS) < 20.0
+
+
+def test_same_release_in_two_feeds_counted_once(monkeypatch):
+    """피드끼리 겹친 보도자료 (같은 link) 는 한 번만 센다 (1023-07)."""
+    pub = format_datetime(datetime.now(timezone.utc))
+
+    def _xml(link: str) -> str:
+        return f"""<?xml version="1.0"?><rss version="2.0"><channel><title>t</title>
+<item><title>Acme (NASDAQ: ACME) news</title><description>d</description><link>{link}</link><pubDate>{pub}</pubDate></item>
+</channel></rss>"""
+
+    bodies = {"https://all": _xml("https://x/1"), "https://health": _xml("https://x/1"), "https://fin": _xml("https://x/2")}
+    monkeypatch.setattr(rss_mod.httpx, "get", lambda url, **kw: _Resp(bodies[url]))
+    client = RSSClient(feeds={"All": "https://all", "Health": "https://health", "Fin": "https://fin"})
+    assert [i.link for i in client.fetch_for_ticker("ACME", 24)] == ["https://x/1", "https://x/2"]
+
+
+def test_default_feeds_are_prnewswire_only():
+    """403 (Akamai) 피드는 빼고 PRNewswire 공식 피드만 (1023-07)."""
+    assert all("prnewswire.com/rss/" in u for u in rss_mod.DEFAULT_FEEDS.values())
