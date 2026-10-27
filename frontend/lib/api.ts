@@ -92,6 +92,9 @@ async function del<T>(path: string): Promise<T> {
 
 export type RiskLevel = "HIGH" | "MED" | "LOW";
 
+// 과거 실현 결과 요약 · 20건 미만이면 median null (1025-03)
+export type PickSummary = Record<string, { n: number; median: number | null }>;
+
 export interface CrazyPick {
   id: number;
   pick_date: string;
@@ -687,18 +690,21 @@ export interface TickerForecast {
 
 export const api = {
   crazy: {
-    list: (limit = 10) => get<CrazyPick[]>(`/crazy?limit=${limit}`),
-    byTicker: (ticker: string) => get<CrazyPick>(`/crazy/${ticker}`),
-    history: (days = 7) => get<CrazyPick[]>(`/crazy/history?days=${days}`),
+    // 조회 전부 로그인 필수 (1025-03)
+    list: (limit = 10) => getWithSession<CrazyPick[]>(`/crazy?limit=${limit}`),
+    byTicker: (ticker: string) => getWithSession<CrazyPick>(`/crazy/${ticker}`),
+    history: (days = 7) => getWithSession<CrazyPick[]>(`/crazy/history?days=${days}`),
+    summary: () => getWithSession<PickSummary>(`/crazy/summary`),
   },
   moonshot: {
     list: (limit = 3, risk?: RiskLevel) => {
       const q = new URLSearchParams({ limit: String(limit) });
       if (risk) q.set("risk_level", risk);
-      return get<MoonshotPick[]>(`/moonshot?${q.toString()}`);
+      return getWithSession<MoonshotPick[]>(`/moonshot?${q.toString()}`);
     },
-    byTicker: (ticker: string) => get<MoonshotPick>(`/moonshot/${ticker}`),
-    history: (days = 7) => get<MoonshotPick[]>(`/moonshot/history?days=${days}`),
+    byTicker: (ticker: string) => getWithSession<MoonshotPick>(`/moonshot/${ticker}`),
+    history: (days = 7) => getWithSession<MoonshotPick[]>(`/moonshot/history?days=${days}`),
+    summary: () => getWithSession<PickSummary>(`/moonshot/summary`),
   },
   positions: {
     list: () => get<Position[]>(`/positions`),

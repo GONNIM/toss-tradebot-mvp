@@ -75,6 +75,8 @@ async def sniper_status():
         "order_target": _order_target(),
         # 셋째 자동 주문 경로 (VIP·행동주의·밈·슈퍼시그널 신호 연결) · API 프로세스 env 기준 · cron 데몬도 같은 .env (1025-07)
         "signal_router_enabled": SignalRouter.enabled(),
+        # Super Signal 5분 승격+매수 잡 · main.py 와 같은 규칙 · 기본 끔 (1025-03 ③)
+        "super_signal_enabled": os.environ.get("SUPER_SIGNAL_ENABLED", "false").lower() in {"1", "true", "yes", "on"},
         "universe_size": size,
         "seed_cap_krw": params.seed_cap_krw,
         "per_order_krw": params.per_order_krw,

@@ -137,7 +137,7 @@ def render_moonshot_pick(pick) -> Panel:
 def cli(ctx):
     """🚀 Moonshot Picks CLI — Toss Tradebot MVP
 
-    카지노 자금 100만원 Moonshot 운영 도구.
+    고위험 시드 100만원 Moonshot 운영 도구.
     매일 16:50 KST 한국시간 (미국 장 시작 10분 전) cron 실행.
     """
     if ctx.invoked_subcommand is None:

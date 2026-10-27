@@ -5,6 +5,7 @@
  */
 import { useQuery } from "@tanstack/react-query";
 import { api, type MoonshotPick } from "@/lib/api";
+import { isUnauthorized, LoginNotice, OutcomeSummary, PicksSessionBar } from "@/components/lab/PickResults";
 import {
   cn,
   formatMarketCap,
@@ -27,6 +28,12 @@ export default function MoonshotPage() {
   const { data, isLoading, error } = useQuery({
     queryKey: ["moonshot", "top"],
     queryFn: () => api.moonshot.list(3),
+    retry: false,
+  });
+  const { data: summary } = useQuery({
+    queryKey: ["moonshot", "summary"],
+    queryFn: () => api.moonshot.summary(),
+    retry: false,
   });
 
   return (
@@ -46,8 +53,13 @@ export default function MoonshotPage() {
         </p>
       </header>
 
+      <PicksSessionBar queryRoot="moonshot" />
+
+      <OutcomeSummary summary={summary} labels={{ "1d": "1일 뒤", "3d": "3일 뒤", "5d": "5일 뒤" }} />
+
       {isLoading && <div className="text-muted-foreground">로딩 중...</div>}
-      {error && (
+      {isUnauthorized(error) && <LoginNotice />}
+      {error && !isUnauthorized(error) && (
         <div className="rounded-lg border border-red-500/30 bg-red-500/10 p-4 text-sm text-red-400">
           API 호출 실패. 백엔드(uvicorn) 가동 확인 필요.
         </div>

@@ -94,7 +94,7 @@ export default function MemeWatchPage() {
       <div className="rounded-lg border border-amber-500/30 bg-amber-500/5 p-3 text-xs text-amber-700 dark:text-amber-300">
         ⚠️ Meme Score 는 보조 시그널입니다. 투자 권유 아님 — 본 점수는 과거
         패턴 통계이며 미래 수익을 보장하지 않습니다. 밈주는 단시간 -50% 이상
-        손실 가능 — Moonshot 모듈과 동일하게 "카지노 머니" 로만 운영 권장.
+        손실 가능 — Moonshot 과 같이 잃어도 되는 "고위험 시드" 로만 운영 권장.
       </div>
     </div>
   );
