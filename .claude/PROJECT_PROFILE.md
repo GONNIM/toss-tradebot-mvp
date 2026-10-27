@@ -89,12 +89,12 @@ Claude Code 는 **현재 프로필의** 프로젝트 메모리만 자동으로 �
 - 커밋 전 검사(스테이징 목록 + 명령 문자열 기준): `backend/` → compileall + biotech 테스트, `frontend/` → `tsc --noEmit`. venv·node_modules 가 없으면 경고 후 건너뜀.
 - 전체 pytest 는 기존 실패 21건이 정리될 때까지 걸지 않는다.
 
-## 다음 과제 (2026-10-27 13시대 갱신 · 순서 = `docs/plans/site-roadmap/README.md` 고도화 방안 · 새 세션은 여기와 `docs/plans/biotech/PENDING.md` 최상단부터 읽는다)
+## 다음 과제 (2026-10-27 16시대 갱신 · 순서 = `docs/plans/site-roadmap/README.md` 고도화 방안 · 새 세션은 여기와 `docs/plans/biotech/PENDING.md` 최상단부터 읽는다)
 
-### 지금 남은 일 (10/27 15시대)
+### 지금 남은 일 (10/27 16시대)
 | # | 우선순위 | 진행 여부 | 할 일 | 누가 | 언제 | 보실 곳·끝 기준 |
 |---|---|---|---|---|---|---|
-| 1025-03 | 3→2 (답 필요) | 시작 가능·사용자 신호 대기 (1026-02 병합 10/27) | 엔진–알림–화면 잇기 | Claude·사용자 | 아무 때나 | 「1025-03 진행」이라고 보내 주시면 기획 요약부터 올립니다. |
+| 1025-03 | 2 (답 필요) | 사용자 답 대기 (결정 ①~⑥ · Fable 10/27 조건부 GO 반영) | 엔진–알림–화면 잇기 | Claude·사용자 | 지금 | 결정 ①~⑥ 을 정해 주십시오 (「1025-03 권고대로」 가능). |
 | 1026-02 | 1→3 (기다림) | 진행 중 (10/27 #124 배포 · 예정 10/28 08:10) | 결과 계산 후속 확인 | Claude | 10/28 08:10 뒤 | 더 하실 일 없습니다 |
 | 1025-06 | 3 (기다림) | 예정 (10/28 07:40 첫 실행 · #123 배포) | 웬디스 코드 대조 | Claude | 10/28 07:40 뒤 | 더 하실 일 없습니다 |
 | 1022-16 | 3 (기다림) | 진행 중 (10/26 아침 확인 · 11/1 비용 대조) | Opus 전환 확인 | Claude | 11/1 뒤 | 더 하실 일 없습니다 |
@@ -112,7 +112,7 @@ Claude Code 는 **현재 프로필의** 프로젝트 메모리만 자동으로 �
 - 1025-06: 07:40 배치는 레이더 CSV 종목만 물어 WEN 이 대상에 없었음 (10/26 asked 79 · found 79 · toss_stock_code WEN 0행) → #123 으로 미국 보유 종목 추가 (사용자 승인 10/26 ①). 10/28 07:40 로그 `[broker-links] asked=… · WEN list_date=…` 로 US19810527001 = 1981-05-27 대조. verified 는 사람이 확인한 뒤에만 켠다 (Fable 10/27). 기획 `docs/plans/site-roadmap/broker-link.md`.
 - 1026-02: Fable #122 권고 — 긴 horizon (730일) 만기 계산 · 전 종목 조회 실패 시 알림 · /journal 대체·청산 행 「자동 계산 대상 아님」 · README 에 수동 실행 주의. 더해서 Fable 10/27 권고 `frontend/app/account/page.tsx:149` 「지금 가격」→「현재 가격」. 보류: ③ -0.0 반올림 표시 · ④ fx 캐시 잠금 없음 (Fable 10/27 · 고치지 않아도 됨). → PR #124 병합 140faf2 · run 40444966508 성공 · 운영 /account 「현재 가격」 · /journal 대체·청산 문구 확인 (10/27 공개 JS) · 서버 0.3.10 은 공개 경로에 버전이 없어 미확인 (d8a5836 · 서버 0.3.10 · 화면 0.3.8 · diff SHA-256 ace8e4aa… · Fable 10/27 GO · 범위 조건부 「병합 승인됨」 → #124 에 적용). 배포 뒤: 운영 /journal 대체·청산 행 문구 · /account 「현재 가격」 · 다음 08:10 `[outcomes]` 요약 확인 (렌더 확인을 이것으로 갈음 · Fable). 다음 outcomes 손질 권고: RuntimeError 메시지에 마지막 예외 이름 · 긴 판정 unavailable 종목 매일 재조회 → 건수 늘면 제외 목록.
 - 1022-16: PR #113 (병합 4dcc11a · run 40165890732 · 10/25). 기본 모델 claude-opus-5-5 · effort medium (사용자 10/25). 실측 분석 글 13.8초 · 판정 2.8초 · 비용 추정 월 ~$12 (콘솔 월 한도). 남은 것: 11/1 콘솔 사용량 대조 (2배 이상이면 모델·effort 재질의). 되돌리기 LLM_PROVIDER=zai PR.
-- 1025-03: `docs/plans/site-roadmap/README.md` B1. Fable 10/27 권고: /account 「청산 계획 있음」(손절가·목표가) 과 /positions/plan has_plan (판정만 있어도 참 · positions.py:115-118) 뜻을 이때 하나로 맞춘다.
+- 1025-03: `docs/plans/site-roadmap/README.md` B1. 10/27 조사 · 질의 `docs/plans/biotech/fable-bundles/2026-10-27-1025-03-01.md` (Fable 조건부 GO · 막음 3 반영 · 재질의 불필요). 권고안: ① Crazy·Moonshot 살림 (crazy.py·moonshot.py GET 등록 · 라벨 「과거 실현 결과 · 미래 수익 보장 아님 · n건」 · 20건 미만 숫자 없음) ② 조회 로그인 필수 (401 → 로그인 안내 · 텔레그램 링크로 오면 로그인 먼저) ③ Super Signal 5분 잡 (main.py:126-138 · SUPER_SIGNAL_ENABLED 기본 true · 승격+매수 진입) 끔 = 서버 동작 변경 WP92 · 서버 .env 명시 시 기본값만으론 안 꺼짐 → 배포 뒤 시작 로그 확인 ④ Backtest 화면 퇴역 ⑤ 「카지노」 문구 화면 세 곳 (settings.py:14 · lab/page.tsx Moonshot·Meme · meme-watch/page.tsx:97) · LLM 프롬프트 llm.py:118 그대로 ⑥ /account 「청산 계획 있음」 과 /positions/plan has_plan (positions.py:115-118) 뜻 통일은 다른 PR 로 보류. 함께: lab Crazy 설명 「Claude Haiku」 고침 · 라우트 인증 테스트 · /crazy?limit 307 확인 · 서버 0.3.11 · 화면 0.3.9. 운영 /sniper/status 10/27: signal_router_enabled false · paper · live false. 결정 뒤 기획 문서 `docs/plans/site-roadmap/b1-engine-links.md` 저장 → 한 PR → Fable 병합 승인.
 - 1023-03: Finnhub 가 59종목 모두 profile not found.
 - 1023-07: RSS 피드 4곳 중 3곳이 403.
 - 1022-12: serenity_extractor 2 · test_stooq 1 · powderkeg_models 1 (순서 의존). watchlist_execute 2 는 주말 실행 때만 실패 (execute.py:67-68 주말 차단). 10/27 전체 1600 통과 · 4 실패 그대로.
