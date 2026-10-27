@@ -57,3 +57,13 @@ def _no_real_telegram(monkeypatch, request):
                 monkeypatch.setattr(mod, attr, _false)
         except ImportError:
             pass
+
+
+@_pytest_wp98.fixture(autouse=True)
+def _fresh_fx_cache():
+    """1026-01 · 환율 5분 캐시가 앞 테스트에서 넘어오면 1330 고정값을 기대하는 대시보드 테스트가 순서에 따라 깨진다."""
+    from backend.services import fx
+
+    fx.reset_cache()
+    yield
+    fx.reset_cache()

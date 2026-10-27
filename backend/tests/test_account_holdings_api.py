@@ -110,3 +110,41 @@ async def test_positions_plan_uses_toss_fx(client, monkeypatch):
     b = (await client.get("/api/v1/positions/plan", headers={"X-API-Token": TOKEN})).json()
     wen = [p for p in b["positions"] if p["symbol"] == "WEN"][0]
     assert wen["market_value_krw"] == 84000
+
+
+# ─── 1026-01 · Fable #121 권고 ───
+@pytest.mark.asyncio
+async def test_exit_plan_needs_stop_or_target(client, monkeypatch):
+    """판정만 있고 손절가·목표가가 둘 다 없으면 「청산 계획 있음」 이 아니다."""
+    from backend.services.db import get_session
+    from backend.services.models import UserJudgment
+
+    async with get_session() as s:
+        s.add(UserJudgment(ts=datetime(2026, 9, 1, 1), ticker="005930", page_source="journal",
+                           hypothesis_id="h", thesis_md="t"))
+    monkeypatch.setattr("backend.execution.brokers.toss_client.get_toss_client", lambda: _FakeToss())
+    b = (await client.get("/api/v1/account/holdings", headers={"X-API-Token": TOKEN})).json()
+    h = {x["symbol"]: x for x in b["holdings"]}
+    assert h["005930"]["has_exit_plan"] is False and h["WEN"]["has_exit_plan"] is True
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("path", ["/api/v1/dashboard/toss-account", "/api/v1/positions/plan"])
+async def test_fx_runs_off_event_loop(client, monkeypatch, path):
+    """환율 조회 (토스 HTTP · 동기) 는 이벤트 루프 밖 스레드에서 돈다."""
+    import threading
+
+    from backend.services import fx
+
+    loop_thread = threading.get_ident()
+    seen: list[int] = []
+    real = fx.usd_krw
+
+    def spy(client=None, now=None):
+        seen.append(threading.get_ident())
+        return real(client, now)
+
+    monkeypatch.setattr(fx, "usd_krw", spy)
+    monkeypatch.setattr("backend.execution.brokers.toss_client.get_toss_client", lambda: _FakeToss())
+    assert (await client.get(path, headers={"X-API-Token": TOKEN})).status_code == 200
+    assert seen and all(t != loop_thread for t in seen)

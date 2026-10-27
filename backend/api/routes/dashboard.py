@@ -5,6 +5,7 @@
 """
 from __future__ import annotations
 
+import asyncio
 import logging
 from datetime import datetime, timezone
 from typing import Optional
@@ -168,7 +169,7 @@ async def get_toss_account():
 
     # 1025-08 · 미국 종목 원화 = 토스 참고 환율 (실패 시 마지막 성공 값 · 없으면 1330 고정 · 출처를 응답에 밝힘)
     from backend.services import fx
-    quote = fx.usd_krw(client)
+    quote = await asyncio.to_thread(fx.usd_krw, client)
     usd_krw = quote.rate
 
     # 상위 집계 (원본 우선 · Fable 5 broker-api-source-of-truth)

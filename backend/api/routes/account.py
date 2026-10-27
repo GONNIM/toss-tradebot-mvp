@@ -35,7 +35,7 @@ async def get_holdings():
     quote = await asyncio.to_thread(fx.usd_krw, client)
     today = fetched_at.astimezone(real_holdings.KST).date()
 
-    from backend.api.routes.positions import _build_exit_plan, _latest_judgment
+    from backend.api.routes.positions import _latest_judgment
 
     out: list[AccountHolding] = []
     async with get_session() as session:
@@ -52,7 +52,9 @@ async def get_holdings():
                 purchase_amount=r.purchase_amount, pnl=r.pnl, pnl_pct=r.pnl_pct, pnl_source=r.pnl_source,
                 market_value_krw=round(r.market_value * rate, 0) if r.market_value is not None else None,
                 pnl_krw=round(r.pnl * rate, 0) if r.pnl is not None else None,
-                has_exit_plan=_build_exit_plan(judgment, r.last_price).has_plan,
+                # 1026-01 · 판정만 있고 손절가·목표가가 없으면 「있음」 이 아니다 (Fable #121 권고)
+                has_exit_plan=judgment is not None and (judgment.invalidation_price is not None
+                                                        or judgment.target_price is not None),
                 link=BrokerLinkOut(**broker_links.broker_link(r.symbol, codes.get(r.symbol))),
                 **facts,
             ))

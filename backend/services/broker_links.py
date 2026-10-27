@@ -77,6 +77,23 @@ def radar_symbols() -> list[str]:
     return out
 
 
+async def us_holding_symbols() -> list[str]:
+    """지금 들고 있는 미국 종목 (종목마다 가장 최근 holding 행의 수량 > 0) · 1026-01 · 07:10 기록 뒤 07:40 배치."""
+    from sqlalchemy import func, select
+
+    from backend.services.db import get_session
+    from backend.services.models import HoldingSnapshot
+
+    latest = (select(HoldingSnapshot.symbol, func.max(HoldingSnapshot.trade_date).label("d"))
+              .where(HoldingSnapshot.market == "US", HoldingSnapshot.kind == "holding")
+              .group_by(HoldingSnapshot.symbol).subquery())
+    async with get_session() as session:
+        rows = (await session.execute(select(HoldingSnapshot.symbol, HoldingSnapshot.qty).join(
+            latest, (HoldingSnapshot.symbol == latest.c.symbol) & (HoldingSnapshot.trade_date == latest.c.d))
+            .where(HoldingSnapshot.market == "US", HoldingSnapshot.kind == "holding"))).all()
+    return sorted({s for s, q in rows if (q or 0) > 0})
+
+
 async def refresh_toss_stock_codes(client=None, symbols: Optional[list[str]] = None) -> dict:
     """미국 종목의 토스 코드 후보를 공식 Open API 상장일로 만든다 · source=manual 은 건드리지 않는다."""
     from sqlalchemy import select
@@ -84,7 +101,7 @@ async def refresh_toss_stock_codes(client=None, symbols: Optional[list[str]] = N
     from backend.services.db import get_session
 
     if symbols is None:
-        symbols = radar_symbols()
+        symbols = radar_symbols() + await us_holding_symbols()
     syms: list[str] = []
     for raw in symbols:
         try:
