@@ -89,13 +89,13 @@ Claude Code 는 **현재 프로필의** 프로젝트 메모리만 자동으로 �
 - 커밋 전 검사(스테이징 목록 + 명령 문자열 기준): `backend/` → compileall + biotech 테스트, `frontend/` → `tsc --noEmit`. venv·node_modules 가 없으면 경고 후 건너뜀.
 - 전체 pytest 는 기존 실패 21건이 정리될 때까지 걸지 않는다.
 
-## 다음 과제 (2026-10-27 10시대 갱신 · 순서 = `docs/plans/site-roadmap/README.md` 고도화 방안 · 새 세션은 여기와 `docs/plans/biotech/PENDING.md` 최상단부터 읽는다)
+## 다음 과제 (2026-10-27 12시대 갱신 · 순서 = `docs/plans/site-roadmap/README.md` 고도화 방안 · 새 세션은 여기와 `docs/plans/biotech/PENDING.md` 최상단부터 읽는다)
 
-### 지금 남은 일 (10/27 10시대)
+### 지금 남은 일 (10/27 12시대)
 | # | 우선순위 | 진행 여부 | 할 일 | 누가 | 언제 | 보실 곳·끝 기준 |
 |---|---|---|---|---|---|---|
+| 1026-02 | 1 (영향) | 사용자 답 대기 (PR #124 · Fable 병합 승인) | 결과 계산 후속 PR 병합 | 사용자 | 지금 (16:40 전 권고) | `! gh pr merge 124 --merge` 로 병합해 주십시오. 배포 확인은 Claude 가 합니다. |
 | 1025-06 | 3 (기다림) | 예정 (10/28 07:40 첫 실행 · #123 배포) | 웬디스 코드 대조 | Claude | 10/28 07:40 뒤 | 더 하실 일 없습니다 |
-| 1026-02 | 3 (기다림) | 시작 가능·사용자 신호 대기 (1026-01 끝남) | 결과 계산 후속 PR | Claude | 1026-01 뒤 | 「1026-02 시작」이라고 보내 주십시오. |
 | 1022-16 | 3 (기다림) | 진행 중 (10/26 아침 확인 · 11/1 비용 대조) | Opus 전환 확인 | Claude | 11/1 뒤 | 더 하실 일 없습니다 |
 | 1022-08 | 3 (기다림) | 예정 (11/1 07:00 뒤) | FR-6c 재판정 대조 | Claude | 11/1 07:00 뒤 | — |
 | 1025-03 | 3 (기다림) | 미착수 (방안 B1) | 엔진–알림–화면 잇기 | Claude·사용자 | 1026-02 뒤 | 화면마다 살림·알림만·끔을 골라 주십시오. |
@@ -110,7 +110,7 @@ Claude Code 는 **현재 프로필의** 프로젝트 메모리만 자동으로 �
 
 자세히 (표와 같은 번호 · 번호마다 한 줄)
 - 1025-06: 07:40 배치는 레이더 CSV 종목만 물어 WEN 이 대상에 없었음 (10/26 asked 79 · found 79 · toss_stock_code WEN 0행) → #123 으로 미국 보유 종목 추가 (사용자 승인 10/26 ①). 10/28 07:40 로그 `[broker-links] asked=… · WEN list_date=…` 로 US19810527001 = 1981-05-27 대조. verified 는 사람이 확인한 뒤에만 켠다 (Fable 10/27). 기획 `docs/plans/site-roadmap/broker-link.md`.
-- 1026-02: Fable #122 권고 — 긴 horizon (730일) 만기 계산 · 전 종목 조회 실패 시 알림 · /journal 대체·청산 행 「자동 계산 대상 아님」 · README 에 수동 실행 주의. 더해서 Fable 10/27 권고 `frontend/app/account/page.tsx:149` 「지금 가격」→「현재 가격」. 보류: ③ -0.0 반올림 표시 · ④ fx 캐시 잠금 없음 (Fable 10/27 · 고치지 않아도 됨).
+- 1026-02: Fable #122 권고 — 긴 horizon (730일) 만기 계산 · 전 종목 조회 실패 시 알림 · /journal 대체·청산 행 「자동 계산 대상 아님」 · README 에 수동 실행 주의. 더해서 Fable 10/27 권고 `frontend/app/account/page.tsx:149` 「지금 가격」→「현재 가격」. 보류: ③ -0.0 반올림 표시 · ④ fx 캐시 잠금 없음 (Fable 10/27 · 고치지 않아도 됨). → PR #124 (d8a5836 · 서버 0.3.10 · 화면 0.3.8 · diff SHA-256 ace8e4aa… · Fable 10/27 GO · 범위 조건부 「병합 승인됨」 → #124 에 적용). 배포 뒤: 운영 /journal 대체·청산 행 문구 · /account 「현재 가격」 · 다음 08:10 `[outcomes]` 요약 확인 (렌더 확인을 이것으로 갈음 · Fable). 다음 outcomes 손질 권고: RuntimeError 메시지에 마지막 예외 이름 · 긴 판정 unavailable 종목 매일 재조회 → 건수 늘면 제외 목록.
 - 1022-16: PR #113 (병합 4dcc11a · run 40165890732 · 10/25). 기본 모델 claude-opus-5-5 · effort medium (사용자 10/25). 실측 분석 글 13.8초 · 판정 2.8초 · 비용 추정 월 ~$12 (콘솔 월 한도). 남은 것: 11/1 콘솔 사용량 대조 (2배 이상이면 모델·effort 재질의). 되돌리기 LLM_PROVIDER=zai PR.
 - 1025-03: `docs/plans/site-roadmap/README.md` B1. Fable 10/27 권고: /account 「청산 계획 있음」(손절가·목표가) 과 /positions/plan has_plan (판정만 있어도 참 · positions.py:115-118) 뜻을 이때 하나로 맞춘다.
 - 1023-03: Finnhub 가 59종목 모두 profile not found.
