@@ -100,7 +100,7 @@ Claude Code 는 **현재 프로필의** 프로젝트 메모리만 자동으로 �
 | 1022-16 | 3 (기다림) | 진행 중 (10/26 아침 확인 · 11/1 비용 대조) | Opus 전환 확인 | Claude | 11/1 뒤 | 더 하실 일 없습니다 |
 | 1022-08 | 3 (기다림) | 예정 (11/1 07:00 뒤 · 번들 항목 PENDING 10/27 줄) | FR-6c 재판정 대조 | Claude | 11/1 07:00 뒤 | — |
 | 1023-03 | 3 (기다림) | 진행 중 (10/27 #126 배포 · 서버 키 확인 · 예정 10/28 06:00) | Finnhub 종목 정보 실패 | Claude | 10/28 06:30 뒤 | 06:30 뒤 /lab/crazy 회사명·섹터를 한 번 봐 주시면 좋습니다. |
-| 1023-07 | 2 (답 필요) | 시작 가능·사용자 신호 대기 (1023-03 배포 · 방안 B2) | 뉴스 피드 3곳 403 | Claude | 지금 | 「1023-07 진행」 이라고 하시면 시작합니다. |
+| 1023-07 | 2 (답 필요) | 사용자 답 대기 (10/27 조사 · Fable 조건부 GO 반영) | 뉴스 피드 3곳 403 | 사용자·Claude | 지금 | 피드 교체 방식을 정해 주십시오 (「1023-07 권고대로」 가능). |
 | 1022-12 | 3 (기다림) | 미착수 (방안 C 전) | 남은 실패 테스트 4건 | Claude | 1023-07 뒤 | — |
 | 1022-10 | 3 (기다림) | 미착수 (방안 C·D) | 홈 「오늘」 · UI/UX 2~8 | Claude | 1022-12 뒤 | 순위마다 기획 요약을 승인해 주십시오. |
 | 1027-01 | 3 (기다림) | 미착수 (1023-07 뒤 · 결정 ⑥ 보류) | 청산 계획 뜻 통일 | Claude | 1023-07 뒤 | — |
@@ -117,7 +117,7 @@ Claude Code 는 **현재 프로필의** 프로젝트 메모리만 자동으로 �
 - 1027-02: AdminSessionBar.tsx:49-56 첫 로드 whoami 에도 onSessionChange → PicksSessionBar 가 첫 조회 1회 중복 (Fable 10/27 권고 · 동작 결함 아님).
 - 1023-03: 원인 확정 10/27 — backend/.env.sops.yaml:33 `FINNHUB_API_KEY: ""` (평문 빈 값) · deploy.yml:123-147 이 배포마다 서버 .env 를 SOPS 로 교체 → 서버 키 없음 → 401 인데 base.py:93-97 이 4xx 를 올리지 않아 「profile not found」 로 기록. 영향: ticker_universe 회사명·섹터·시총 빈칸 · Crazy catalyst(0.30) 어닝 D-day 없음. 질의 `2026-10-27-1023-03-01.md` (Fable 조건부 GO · M1·M2 반영). 권고 A: 사용자 무료 키 발급 → 다른 터미널 `sops backend/.env.sops.yaml` → Claude PR (4xx → 「키 없음·무효」 로그 · 하루 1회 운영 알림) + SOPS 커밋 → Fable 병합 승인 · PENDING 에 반영일 한 줄. → 10/27 사용자 키 발급·sops 입력 · 무료 플랜 profile2·earnings 200 확인 · PR #126 (c30a0aa · 서버 0.3.12 · 코드 diff SHA-256 2ad54439… · 질의 `-02.md` Fable GO · 「병합 승인됨 · PR #126」 조건: 코드 커밋 뒤 추가 커밋 없음). 배포 뒤: 사용자 ! 로 서버 .env 키 길이만 · 06:00 `[universe] refresh complete — N/59` · 키 오류 알림 없음 · 06:30 Crazy 회사명·섹터 · PENDING 한 줄 (배포일 KST 06:00 부터 Finnhub 입력 반영). → 병합 34292c6 · run 40485572163 성공 (10/27 19:04) · 사용자 ! 확인: 서버 .env 키 8자 이상 줄 1 · 서버 0.3.12. 남은 것: 10/28 06:00 `[universe] refresh complete — N/59` · 키 오류 알림 없음 · 06:30 Crazy 회사명·섹터 → 확인 뒤 PENDING 영구 규칙 한 줄 「2026-10-28 06:00 universe 실행부터 Crazy 입력에 Finnhub 회사 정보·어닝 D-day 반영 · 그 전은 Finnhub 입력 0」 (Fable R3). 서버 로그는 사용자 ! 실행.
 - 1027-03: cron.py:274-276 이 is_crazy·is_moonshot 을 강제 True (시총 ≥$1B 필터 꺼짐) · current_price=None 이라 그냥 켜면 전부 탈락 (universe.py:58-59) · 후보 집합 변경 = WP92 승인 필요.
-- 1023-07: RSS 피드 4곳 중 3곳이 403.
+- 1023-07: RSS 피드 4곳 중 3곳이 403. 10/27 조사: GlobeNewswire 2 · BusinessWire (HTML 포털 주소) 403 AkamaiGHost · 원인 미확인 · 브라우저 UA 우회 시험은 자동 모드가 막음 (우회 안 함). PRNewswire 공식 피드 (전체·건강·금융) 200. 질의 `2026-10-27-1023-07-01.md` Fable 조건부 GO (M1 중복 제거 · M2 반영). 권고 A: 막힌 3곳 빼고 PRNewswire 전체·건강 추가 + link 기준 중복 제거 · 기대 효과 작음 · 오탐 위험. 다음 후보: Finnhub company-news · SEC 8-K.
 - 1022-12: serenity_extractor 2 · test_stooq 1 · powderkeg_models 1 (순서 의존). watchlist_execute 2 는 주말 실행 때만 실패 (execute.py:67-68 주말 차단). 10/27 전체 1600 통과 · 4 실패 그대로.
 - 1022-10: 2 홈 "오늘" · 3 메뉴 15→5 · 4 로그인 하나 · 5 문구 · 6 시각 통일 · 7 모바일 · 8 정리. `docs/plans/ui-ux-optimization/README.md`.
 - 1025-02: `docs/plans/site-roadmap/README.md` A1.
