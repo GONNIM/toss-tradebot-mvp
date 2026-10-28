@@ -15,6 +15,7 @@ import {
   WolfPackGroup,
 } from "@/lib/api";
 import { StatBox } from "@/components/ui/stat-box";
+import { AdminSessionBar } from "@/components/admin/AdminSessionBar";
 
 // ─────────────────────────────────────────────
 // helpers
@@ -871,6 +872,9 @@ export default function ActivistRadarPage() {
           Wolf Pack 감지 (30일 window)
         </p>
       </header>
+
+      {/* 1028-03 · 감시 대상 편집은 관리자 로그인 필요 */}
+      <AdminSessionBar scope="activist" />
 
       {statusQ.isLoading && (
         <div className="rounded border border-border bg-card p-4 text-sm text-muted-foreground">

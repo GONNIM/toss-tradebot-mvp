@@ -10,9 +10,10 @@ from __future__ import annotations
 import json
 from typing import Optional
 
-from fastapi import APIRouter, Body, HTTPException, Query
+from fastapi import APIRouter, Body, Depends, HTTPException, Query
 from sqlalchemy import desc, select
 
+from backend.api.auth import require_sniper_token
 from backend.principles.charter import load_charter
 from backend.services.db import get_session
 from backend.services.models import (
@@ -229,7 +230,7 @@ async def list_pending_verifications() -> dict:
         return {"run_id": latest_run.id, "pending": pending}
 
 
-@router.post("/verification/confirm")
+@router.post("/verification/confirm", dependencies=[Depends(require_sniper_token)])  # 1028-03 · 관리자 로그인 필수
 async def confirm_verification(
     body: dict = Body(...),
 ) -> dict:
