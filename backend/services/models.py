@@ -383,6 +383,7 @@ class TickerUniverse(Base):
     sector: Mapped[Optional[str]] = mapped_column(String(50))
     company_name: Mapped[Optional[str]] = mapped_column(String(200))
     market_cap: Mapped[Optional[float]]
+    current_price: Mapped[Optional[float]]  # 1027-03 · universe 잡의 최근 종가 (USD) · Crazy 가격 ≥ $1 조건
     active: Mapped[bool] = mapped_column(default=True)
     notes: Mapped[Optional[str]] = mapped_column(Text)
     created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
