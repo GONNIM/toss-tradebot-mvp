@@ -145,8 +145,9 @@ def _build_exit_plan(judgment: Optional[UserJudgment], current_price: Optional[f
             trigger_hit = True
             trigger_reason = "target_reached"
 
+    # 1027-01 · 「있음」 = 손절가나 목표가가 적혀 있을 때 (/account 와 같은 뜻) · 판단만 있으면 내용은 보이되 「없음」
     return PositionExitPlan(
-        has_plan=True,
+        has_plan=inv is not None or tgt is not None,
         invalidation_price=inv,
         target_price=tgt,
         price_condition=price_cond,
