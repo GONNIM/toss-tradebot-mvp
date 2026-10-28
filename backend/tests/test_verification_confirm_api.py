@@ -25,8 +25,12 @@ from backend.services.models import (
 )
 
 
+_TOKEN = "verification_test_token_32chars_0000"  # 1028-03 · confirm 은 관리자 토큰 필수
+
+
 @pytest.fixture(autouse=True)
-async def _setup_db():
+async def _setup_db(monkeypatch):
+    monkeypatch.setenv("SNIPER_API_TOKEN", _TOKEN)
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
     yield
@@ -61,7 +65,9 @@ async def _seed_pass_with_tags(ticker: str, tags: list[str]) -> int:
 
 async def _client() -> AsyncClient:
     from backend.api.main import app
-    return AsyncClient(transport=ASGITransport(app=app), base_url="http://test")
+    return AsyncClient(
+        transport=ASGITransport(app=app), base_url="http://test", headers={"X-API-Token": _TOKEN},
+    )
 
 
 @pytest.mark.asyncio

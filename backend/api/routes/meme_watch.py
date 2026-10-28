@@ -8,10 +8,11 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Optional
 
-from fastapi import APIRouter, Query
+from fastapi import APIRouter, Depends, Query
 from pydantic import BaseModel
 from sqlalchemy import desc, select
 
+from backend.api.auth import require_sniper_token
 from backend.api.schemas import (
     MemeIntensityResponse,
     MemeScoreHistoryPoint,
@@ -203,7 +204,8 @@ class _VipConfigPatch(BaseModel):
     activist: Optional[_VipActivistPatch] = None
 
 
-@router.patch("/vip/config")
+# 1028-03 · 쓰기 API 는 관리자 로그인 필수 (공개 사이트에서 누구나 바꿀 수 있었음)
+@router.patch("/vip/config", dependencies=[Depends(require_sniper_token)])
 def patch_vip_config(patch: _VipConfigPatch):
     """activist 설정 override — data/vip_overrides.json 에 저장. 재시작 없이 반영.
 
@@ -256,7 +258,7 @@ class _ActivistUpsert(BaseModel):
     enabled: Optional[bool] = None
 
 
-@router.patch("/activist/universe")
+@router.patch("/activist/universe", dependencies=[Depends(require_sniper_token)])  # 1028-03
 def patch_activist_universe(entry: _ActivistUpsert):
     """Universe upsert — key 기준. seed 항목은 override 되고 신규는 추가."""
     from backend.discovery.activist.radar import patch_universe
@@ -264,7 +266,7 @@ def patch_activist_universe(entry: _ActivistUpsert):
     return patch_universe(entry.model_dump(exclude_none=True))
 
 
-@router.delete("/activist/universe/{key}")
+@router.delete("/activist/universe/{key}", dependencies=[Depends(require_sniper_token)])  # 1028-03
 def delete_activist_universe(key: str):
     """Universe 에서 완전 제거 (disabled_keys 등재)."""
     from backend.discovery.activist.radar import delete_universe
@@ -272,7 +274,7 @@ def delete_activist_universe(key: str):
     return delete_universe(key)
 
 
-@router.post("/activist/recompute-wolf-pack")
+@router.post("/activist/recompute-wolf-pack", dependencies=[Depends(require_sniper_token)])  # 1028-03
 def recompute_activist_wolf_pack():
     """v1.53 · P2-5 · 저장된 이벤트 wolf_pack 재계산 (target_ticker 축 통일).
 

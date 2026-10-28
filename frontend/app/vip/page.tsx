@@ -11,6 +11,7 @@ import {
   VipMarketStats,
   VipQuote,
 } from "@/lib/api";
+import { AdminSessionBar } from "@/components/admin/AdminSessionBar";
 
 // ─────────────────────────────────────────────
 // Format helpers
@@ -1115,6 +1116,9 @@ export default function VipPage() {
         </div>
         {s && <StatusBadge active={s.active} />}
       </header>
+
+      {/* 1028-03 · 설정 변경은 관리자 로그인 필요 */}
+      <AdminSessionBar scope="vip" />
 
       {statusQ.isLoading && (
         <div className="rounded border border-border bg-card p-4 text-sm text-muted-foreground">

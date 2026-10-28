@@ -5,6 +5,7 @@
 // 확인 스코프 = (ticker, tags_hash) 이중키 · 태그 구성 동일 시 확인 유지
 
 import { useEffect, useState } from "react";
+import { AdminSessionBar } from "@/components/admin/AdminSessionBar";
 
 interface Pending {
   ticker: string;
@@ -53,6 +54,7 @@ export default function VerificationPage() {
           confirmed_by: "web-ui",
         }),
       });
+      if (res.status === 401) throw new Error("관리자 로그인이 필요합니다. 위 칸에서 로그인한 뒤 다시 누르십시오.");
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       load();
     } catch (e) {
@@ -80,6 +82,8 @@ export default function VerificationPage() {
   return (
     <main style={{ padding: 20, maxWidth: 1000, margin: "0 auto" }}>
       <h1>실체 검증 · 확인 대기</h1>
+      {/* 1028-03 · 확인 저장은 관리자 로그인 필요 */}
+      <AdminSessionBar scope="verification" />
       <p style={{ color: "#666" }}>
         최신 run: {data.run_id ?? "N/A"} · 확인 대기 종목:{" "}
         <strong>{data.pending.length}</strong> 건
