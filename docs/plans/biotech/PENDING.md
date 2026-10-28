@@ -29,6 +29,7 @@
 - **날짜 항목 (WP92)**: 날짜가 정해진 항목은 이 파일에만 두고, 보고에 "그날 한다" 를 반복하지 않는다.
 - **보고는 한 번에 (WP92)**: 한 지시의 결과는 단계별로 나누지 않고 한 번에 보고한다.
 - **Crazy 입력 Finnhub (1023-03 · Fable R3)**: 2026-10-28 06:00 universe 실행부터 Crazy 입력에 Finnhub 회사 정보·어닝 D-day 반영 · 그 전은 Finnhub 입력 0 (서버 키 없음 · 10/28 첫 실행 53/59 · 화면 회사명·섹터 사용자 확인).
+- **뉴스 건수 = 명시 표기만 (1027-04 · WP92 사용자 A 승인 · Fable GO)**: 2026-10-28 PR #130 (324c02e · run 40657682029) 부터 Crazy news_count_24h·LLM 제목은 cashtag 또는 (NASDAQ|NYSE|AMEX|OTC: X) 표기 기사만 (거래소 이름 대소문자 무시 · 표기 전부) · 그 전은 단어 경계 매치 (V·BREA 오탐). 참고: (NYSE American: X)·(OTCQB: X) 변형은 못 잡음 · 지금 안 함.
 - **서버 레이더 입력 0 (WP94)**: 서버 레이더 점수는 2026-09-22 시작 (daily.log 첫 실행 `=== 2026-09-21T22:00:01Z biotech daily start (server · KST 07:00) ===`) 부터 전문가 채널 입력 0 상태였음 (v2-부분 · 10회 모두 "prices tickers: 0" · "pub_idx: 0 · pre_idx: 0"). 11/15 채점표는 서버 실제 판정 기준으로 하되 이 사실을 머리에 적는다.
 - **11/15 채점표 3구간 (WP95 · 복구일 2026-10-02)**: 2026-09-22~10-01 = v2-부분 (서버 전문가·미반영 입력 0) · 10-02 07:00 실행 = v3-부분 (같은 날 10:41 수동 실행이 그날 산출을 v3-전체로 덮어씀) · 2026-10-02~ = v3-전체 (inputs_missing 이 빈 첫 실행일 · 자동 기록 `backend/data/h_radar_params.json` v3_full_start · 아래 줄). 구간마다 나누어 적는다.
 - **레이더 v3-전체 시작일 (WP95 · 자동 기록)**: **2026-10-02 (수동 실행 · WP98-2 · `--step=radar` 10:41 KST)** · 서버 `/root/toss-tradebot-mvp/var/biotech/radar_v3_full_start.json` · `backend/data/h_radar_params.json` v3_full_start
