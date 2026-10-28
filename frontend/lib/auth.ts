@@ -17,6 +17,14 @@ const BASE = "/api/v1/admin/session";
 
 export type Role = "admin" | "subscriber" | "anon";
 
+// 1028-04 · 편집 API 가 401 이면 영어 일반 문구 대신 로그인 안내
+export const LOGIN_REQUIRED_MESSAGE =
+  "관리자 로그인이 필요합니다. 위 칸에서 로그인한 뒤 다시 누르십시오.";
+
+export function editErrorMessage(err: Error): string {
+  return /failed: 401\b/.test(err.message) ? LOGIN_REQUIRED_MESSAGE : err.message;
+}
+
 export interface SessionInfo {
   role: Role;
   live_enabled: boolean;

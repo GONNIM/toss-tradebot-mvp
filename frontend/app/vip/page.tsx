@@ -12,6 +12,7 @@ import {
   VipQuote,
 } from "@/lib/api";
 import { AdminSessionBar } from "@/components/admin/AdminSessionBar";
+import { editErrorMessage } from "@/lib/auth";
 
 // ─────────────────────────────────────────────
 // Format helpers
@@ -953,7 +954,7 @@ function ActivistEditor({
       onSaved();
     },
     onError: (err: Error) => {
-      setSaveError(err.message);
+      setSaveError(editErrorMessage(err));
     },
   });
 
