@@ -105,3 +105,41 @@ def test_same_release_in_two_feeds_counted_once(monkeypatch):
 def test_default_feeds_are_prnewswire_only():
     """403 (Akamai) 피드는 빼고 PRNewswire 공식 피드만 (1023-07)."""
     assert all("prnewswire.com/rss/" in u for u in rss_mod.DEFAULT_FEEDS.values())
+
+
+def _feed_one(title: str, summary: str) -> str:
+    pub = format_datetime(datetime.now(timezone.utc))
+    return f"""<?xml version="1.0"?><rss version="2.0"><channel><title>t</title>
+<item><title>{title}</title><description>{summary}</description><link>https://x/1</link><pubDate>{pub}</pubDate></item>
+</channel></rss>"""
+
+
+def test_mixed_case_exchange_matched(monkeypatch):
+    """「(Nasdaq: X)」 처럼 거래소 이름이 대소문자 섞여도 잡는다 (1027-04)."""
+    monkeypatch.setattr(rss_mod.httpx, "get", lambda url, **kw: _Resp(_feed_one("Acme (Nasdaq: ACME) results", "d")))
+    client = RSSClient(feeds={"A": "https://a"})
+    assert [i.ticker for i in client.fetch_for_ticker("ACME", 24)] == ["ACME"]
+
+
+def test_two_companies_in_one_release(monkeypatch):
+    """한 보도자료에 두 회사가 표기되면 둘 다 센다 (1027-04)."""
+    monkeypatch.setattr(
+        rss_mod.httpx, "get",
+        lambda url, **kw: _Resp(_feed_one("Acme (NYSE: ACME) to acquire Beta", "Beta (NASDAQ: BETA) holders get $10")),
+    )
+    client = RSSClient(feeds={"A": "https://a"})
+    assert len(client.fetch_for_ticker("ACME", 24)) == 1
+    assert len(client.fetch_for_ticker("BETA", 24)) == 1
+    assert client.fetch_recent(24)[0].tickers == ("ACME", "BETA")
+
+
+def test_plain_word_not_counted(monkeypatch):
+    """표기 없이 같은 철자의 낱말만 있으면 세지 않는다 · 지명 BREA · 회사 형태 C.V. (1027-04)."""
+    monkeypatch.setattr(
+        rss_mod.httpx, "get",
+        lambda url, **kw: _Resp(_feed_one("BREA, Calif. -- Envista (NYSE: NVST) news", "Grupo S.A. de C.V. update")),
+    )
+    client = RSSClient(feeds={"A": "https://a"})
+    assert client.fetch_for_ticker("BREA", 24) == []
+    assert client.fetch_for_ticker("V", 24) == []
+    assert len(client.fetch_for_ticker("NVST", 24)) == 1
