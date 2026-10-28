@@ -143,3 +143,19 @@ def test_plain_word_not_counted(monkeypatch):
     assert client.fetch_for_ticker("BREA", 24) == []
     assert client.fetch_for_ticker("V", 24) == []
     assert len(client.fetch_for_ticker("NVST", 24)) == 1
+
+
+def test_fetch_logged_once_per_feed(monkeypatch, caplog):
+    """info 줄은 피드를 실제로 받을 때만 · 여러 종목·스레드가 불러도 피드별 1번 (1028-01)."""
+    import logging
+
+    monkeypatch.setattr(rss_mod.httpx, "get", lambda url, **kw: _Resp(_feed_xml("$TSLA news")))
+    client = RSSClient(feeds={"A": "https://a", "B": "https://b"})
+    with caplog.at_level(logging.INFO, logger=rss_mod.logger.name):
+        threads = [threading.Thread(target=client.fetch_for_ticker, args=(t, 24)) for t in ("TSLA", "AAPL", "MSFT")]
+        for t in threads:
+            t.start()
+        for t in threads:
+            t.join()
+    infos = [r.getMessage() for r in caplog.records if r.levelno == logging.INFO]
+    assert sorted(infos) == ["[RSS] A fetched 1 entries", "[RSS] B fetched 1 entries"]

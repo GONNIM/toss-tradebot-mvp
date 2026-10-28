@@ -1,6 +1,6 @@
 """RSS 뉴스 피드 클라이언트 — PR/뉴스 카탈리스트.
 
-- PRNewswire, GlobeNewswire, BiopharmaWatch 등 무료 RSS
+- PRNewswire 공식 피드 (전체·건강·금융 · 1023-07 · 403 피드는 뺐음)
 - 학술 검증 (moonshot-factor-research.md §1.1):
   - PEAD: 단순 PR 노출만으로 알파 약함, 어닝 surprise 결합 필수
 - F2 (catalyst 30%) 인자 입력의 일부 — 임박 이벤트·신제품·M&A 등
@@ -33,7 +33,7 @@ class NewsItem:
     summary: str
     link: str
     published: str          # ISO8601
-    source: str             # PRNewswire / GlobeNewswire / etc.
+    source: str             # DEFAULT_FEEDS 키 (예: "PRNewswire (All)")
     tickers: tuple[str, ...] = ()  # 명시 표기 전부 (1027-04 · 한 보도자료에 회사가 여럿)
 
 
@@ -88,6 +88,8 @@ class RSSClient:
         except Exception as e:
             logger.warning(f"[RSS] {source_name} fetch failed: {e.__class__.__name__}: {e}")
             return []
+        # 1028-01 · 피드를 실제로 받을 때만 info (잡마다 피드별 1번 · 잠금 안에서 불림)
+        logger.info(f"[RSS] {source_name} fetched {len(parsed.entries)} entries")
         return list(parsed.entries)
 
     def _cached_entries(self) -> dict[str, list]:
@@ -153,7 +155,8 @@ class RSSClient:
                     )
                 )
 
-        logger.info(f"[RSS] collected {len(items)} items from {len(self.feeds)} feeds")
+        # 1028-01 · 캐시 재해석은 종목마다 불려 debug (실제 받기 줄은 _fetch_entries)
+        logger.debug(f"[RSS] collected {len(items)} items from {len(self.feeds)} feeds")
         return items
 
     @staticmethod

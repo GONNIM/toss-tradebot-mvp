@@ -126,7 +126,7 @@ class FinnhubClient(DataSourceClient):
                 )
             )
 
-        logger.info(f"[Finnhub] earnings {from_date}~{to_date}: {len(events)} events")
+        logger.debug(f"[Finnhub] earnings {from_date}~{to_date}: {len(events)} events")  # 1028-01 · Crazy 가 종목마다 부름
         return events
 
     async def get_company_profile(self, ticker: str) -> CompanyProfile:
