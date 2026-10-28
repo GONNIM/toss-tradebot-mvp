@@ -87,6 +87,7 @@ logger = logging.getLogger(__name__)
 _ADDED_COLUMNS = [
     ("user_judgments", "result_base_price", "FLOAT"),        # 1025-05
     ("user_judgments", "result_base_source", "VARCHAR(10)"),  # 1025-05
+    ("ticker_universe", "current_price", "FLOAT"),            # 1027-03
 ]
 
 

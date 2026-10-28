@@ -216,6 +216,7 @@ async def run_universe_refresh():
                             sector=profile.sector,
                             company_name=profile.name,
                             market_cap=mcap_usd if mcap_usd > 0 else None,
+                            current_price=latest.close,
                         )
                         session.add(row)
                     else:
@@ -223,6 +224,7 @@ async def run_universe_refresh():
                         row.sector = profile.sector or row.sector
                         row.company_name = profile.name or row.company_name
                         row.market_cap = mcap_usd if mcap_usd > 0 else row.market_cap
+                        row.current_price = latest.close
                     await session.commit()
 
                 updated += 1
@@ -241,7 +243,14 @@ async def run_universe_refresh():
 
 
 async def _load_dry_run_universe():
-    """WATCHLIST 기반 TickerInfo 리스트 — DB enrich 데이터 반영."""
+    """WATCHLIST 기반 TickerInfo 리스트 — DB enrich 데이터 반영.
+
+    1027-03 (사용자 B 승인 · WP92): Crazy 는 passes_crazy_filter (시총 ≥ $1B · 가격 ≥ $1) 를 켠다.
+    시총·가격은 06:00 universe 잡이 저장한 값 · DB 행이 없거나 값이 비면 Crazy 제외.
+    Moonshot (소형주 대상) 은 그대로 전부 통과.
+    """
+    from dataclasses import replace
+
     from sqlalchemy import select
     from backend.discovery.scoring import classify_risk
     from backend.discovery.universe import (
@@ -265,7 +274,7 @@ async def _load_dry_run_universe():
                     ticker=ticker, name="", exchange="UNKNOWN", sector=None,
                     market_cap_usd=None, avg_daily_volume_20d=None,
                     current_price=None, listing_date=None,
-                    risk_level="MED", is_crazy=True, is_moonshot=True,
+                    risk_level="MED", is_crazy=False, is_moonshot=True,
                 ))
                 continue
             risk = classify_risk(row.market_cap, 0)  # 가격 0 → MED 기본
@@ -274,14 +283,12 @@ async def _load_dry_run_universe():
                 exchange=row.market, sector=row.sector,
                 market_cap_usd=row.market_cap,
                 avg_daily_volume_20d=None,
-                current_price=None,
+                current_price=row.current_price,
                 listing_date=None,
                 risk_level=risk,
-                # dry-run watchlist 전체 강제 통과 — 데모·디버그 목적.
-                # 운영 universe 확장 시 passes_*_filter 활성화 필요.
-                is_crazy=True, is_moonshot=True,
+                is_crazy=False, is_moonshot=True,  # Moonshot 은 watchlist 전체 통과 (거래량·상장일 자료 없음)
             )
-            universe.append(info)
+            universe.append(replace(info, is_crazy=passes_crazy_filter(info)))
     return universe
 
 
@@ -310,6 +317,8 @@ async def run_crazy_picks_job():
     if limit:
         universe = universe[:limit]
         logger.info(f"[crazy] universe truncated to {len(universe)}")
+    # 1027-03 · 시총·가격 조건으로 빠진 수가 로그에 보이게
+    logger.info(f"[crazy] Crazy 대상 {sum(1 for i in universe if i.is_crazy)}/{len(universe)} (시총 ≥ $1B · 가격 ≥ $1)")
     clients = await _enter_clients(_build_clients())
 
     try:
