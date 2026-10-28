@@ -102,11 +102,13 @@ async def test_stooq_returns_calculation():
         async with StooqClient() as client:
             returns = await client.get_returns("AAPL", periods=(2, 4))
 
-    # 2일 전 close=$201.20 → 현재 $204.80 → +1.79%
-    # 4일 전 close=$200.50 → 현재 $204.80 → +2.14%
-    assert "2d" not in returns  # period 21·63·126 만 매핑됨
-    # period (2, 4) 는 default 매핑 없으므로 dict key 는 "2d"·"4d" 가 아닌 "21·63·126" default 매핑 외에 fallback
-    # 본 테스트는 인자 받아들이는지만 검증
+    # 1022-12 · 이름표가 없는 기간은 "<N>d" 로 돌려준다 (stooq.py get_returns · labels.get(n, f"{n}d"))
+    # 2거래일 전 close=$202.80 → 현재 $204.80 → +0.99%
+    # 4거래일 전 close=$200.50 → 현재 $204.80 → +2.14%
+    assert returns == {
+        "2d": pytest.approx(204.80 / 202.80 - 1),
+        "4d": pytest.approx(204.80 / 200.50 - 1),
+    }
 
 
 @pytest.mark.asyncio

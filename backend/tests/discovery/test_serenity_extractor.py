@@ -162,14 +162,10 @@ def test_extract_signals_filters_bad_entries():
 @pytest.mark.asyncio
 async def test_load_pending_tweets_excludes_processed():
     async with get_session() as session:
-        session.add_all([
-            _make_tweet(1, "processed"),
-            _make_tweet(2, "pending"),
-        ])
-        session.add(SerenitySignal(
-            id=str(uuid.uuid4()),
-            tweet_id=1, ticker="X", sentiment="bullish", confidence=0.5,
-        ))
+        # 1022-12 · 처리 여부는 signal 유무가 아니라 processed_at 으로 판단 (extractor.py load_pending_tweets · 2026-08-13 사고 대응)
+        done = _make_tweet(1, "processed")
+        done.processed_at = datetime.now(timezone.utc).replace(tzinfo=None)
+        session.add_all([done, _make_tweet(2, "pending")])
         await session.commit()
 
     pending = await load_pending_tweets(limit=10)
@@ -241,7 +237,13 @@ async def test_process_pending_tweets_dup_signal_dedup():
         ))
         await session.commit()
 
-    # tweet 300 은 이미 signal 있어 load_pending 에서 제외 · process 는 0 반환
+    # 1022-12 · tweet 300 은 processed_at 이 비어 다시 처리되지만 같은 (tweet_id, ticker) signal 은 새로 넣지 않음
     client = _fake_client({"signals": [{"ticker": "NBIS", "sentiment": "bullish"}]})
     result = await process_pending_tweets(batch_size=10, concurrency=1, client=client)
-    assert result["tweets"] == 0
+    assert result["tweets"] == 1
+    assert result["signals_inserted"] == 0
+    assert result["pending_after"] == 0
+
+    async with get_session() as session:
+        n = (await session.execute(select(func.count(SerenitySignal.id)))).scalar_one()
+    assert n == 1
