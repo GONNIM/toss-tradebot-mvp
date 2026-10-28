@@ -184,7 +184,7 @@ class TossAccountSnapshot(BaseModel):
 
 class PositionExitPlan(BaseModel):
     """청산 계획 3칸 · 저널 (UserJudgment) 에서 읽음."""
-    has_plan: bool                                       # False = ⚠ 청산 계획 없음 (적색)
+    has_plan: bool                                       # True = 손절가나 목표가 있음 (1027-01) · False = ⚠ 청산 계획 없음 (적색)
     # 가격 조건 · raw 값 (frontend 에서 currency 기반 fmt · 2026-08-14)
     invalidation_price: Optional[float] = None
     target_price: Optional[float] = None

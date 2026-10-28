@@ -318,7 +318,8 @@ function ExitPlanBlock({
   symbol: string;
   currency: "KRW" | "USD";
 }) {
-  if (!plan.has_plan) {
+  // 판단 기록이 전혀 없을 때만 빈 안내 · 판단은 있고 가격이 없으면 아래에서 내용과 함께 경고 (1027-01)
+  if (!plan.has_plan && plan.judgment_id === null) {
     return (
       <div className="rounded border border-red-500/40 bg-red-500/5 p-3">
         <div className="text-sm font-semibold text-red-500">⚠ 청산 계획 없음</div>
@@ -348,6 +349,14 @@ function ExitPlanBlock({
 
   return (
     <div className="space-y-2 rounded bg-background/40 p-2 text-[11px]">
+      {!plan.has_plan && (
+        <div className="rounded border border-red-500/40 bg-red-500/5 p-2">
+          <div className="text-xs font-semibold text-red-500">⚠ 청산 계획 없음 — 손절가·목표가가 비어 있습니다</div>
+          <p className="mt-0.5 text-[11px] text-muted-foreground">
+            판단은 적혀 있지만 언제 팔지 정하는 가격이 없습니다 · 저널에서 손절가나 목표가를 적으면 「있음」이 됩니다.
+          </p>
+        </div>
+      )}
       <div>
         <div className="text-[10px] uppercase tracking-wide text-muted-foreground">가격 조건</div>
         <div className="font-mono">
