@@ -34,6 +34,7 @@ SQL
 ```
 - 코드 배포 전에 반드시 마이그레이션. 순서 뒤바꾸면 재평가 시 `OperationalError`.
 - 멱등 스크립트는 `backend/scripts/migrations/YYYY-MM-DD-<subject>.py`로 커밋 · 서버에서 재실행 가능.
+- 열 추가를 `backend/services/db.py` `_ADDED_COLUMNS` 에 넣었으면 이 수동 ALTER 는 생략한다 — API 시작 때 `ensure_columns` 가 멱등으로 넣는다 (1025-05 · 1027-03). 배포 뒤 API 로그 `[db] 열 추가 <표>.<열>` 또는 `PRAGMA table_info(<표>)` 로 확인.
 
 ### 3단계 · 커밋·push (GitHub Actions 자동 배포)
 ```
