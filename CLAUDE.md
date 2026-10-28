@@ -181,6 +181,7 @@ grep -l "push:\|workflow_dispatch:" .github/workflows/*.yml  # 트리거 파악
 - (2026-10-23) 예상 수익률·목표가 표시 금지 규칙은 폐지한다 — 사용자 결정. 숫자는 「통계 추정가…보장 아님」처럼 추정임을 밝혀 보여 준다. 남은 문서 정리는 PROJECT_PROFILE 1023-06.
 - (2026-10-23) LLM 은 Anthropic 이 1순위, 키가 없거나 오류면 Z.ai 로 넘어간다 (모델은 코드 기본값 · env 에 적지 않음) — 사용자 결정 · PR #109.
 - (2026-10-25) Anthropic 기본 모델은 Claude Opus 5.5 · effort medium — Z.ai 보다 정확한 핵심 판단이 우선 (사용자 결정 · PR #113). 비용은 콘솔 월 한도로 막는다.
+- (2026-10-28) 로컬에서 API 서버를 띄울 때는 `BIOTECH_API_ONLY=1 TELEGRAM_BOT_TOKEN=` 로만 띄운다 — 로컬 `backend/.env` 에 실거래 스위치·실 토스 키가 있어 그냥 띄우면 예약 작업(보유 관리·진입 검사)이 같이 돈다 (1028-03 화면 확인 중 토스 토큰 발급 18회 · 주문·알림 0).
 
 ---
 
