@@ -23,6 +23,12 @@ from backend.services.models import (
 async def test_powderkeg_tables_create_and_ping():
     """전 6 테이블 create_all + 단건 insert/select."""
     await init_db()
+    # 1022-12 · 메모리 DB 를 다른 테스트 (powderkeg screener 등) 와 같이 써서 같은 (ticker, 날짜) 가 남아 있으면 UNIQUE 충돌 → 먼저 비움
+    from sqlalchemy import delete
+    async with get_session() as session:
+        for model in (FinancialSnapshot, KrxMarketSnapshot, BigBusinessGroup, MajorShareholder,
+                      PowderKegList, PowderKegEvent, PowderKegOrderTicket):
+            await session.execute(delete(model))
     async with get_session() as session:
         session.add(FinancialSnapshot(
             ticker="005930", corp_code="00126380",
