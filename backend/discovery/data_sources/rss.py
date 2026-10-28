@@ -28,12 +28,13 @@ logger = logging.getLogger(__name__)
 class NewsItem:
     """RSS 뉴스 단일 항목."""
 
-    ticker: Optional[str]   # cashtag 발견 시 채워짐
+    ticker: Optional[str]   # cashtag 발견 시 채워짐 (첫 표기)
     title: str
     summary: str
     link: str
     published: str          # ISO8601
     source: str             # PRNewswire / GlobeNewswire / etc.
+    tickers: tuple[str, ...] = ()  # 명시 표기 전부 (1027-04 · 한 보도자료에 회사가 여럿)
 
 
 # 무료 RSS 피드 (회사 발표 위주)
@@ -46,7 +47,8 @@ DEFAULT_FEEDS = {
 }
 
 CASHTAG_RE = re.compile(r"\$([A-Z]{1,5})\b")
-PAREN_TICKER_RE = re.compile(r"\(\s*(?:NASDAQ|NYSE|AMEX|OTC)\s*:\s*([A-Z]{1,6})\s*\)")
+# 1027-04 · 거래소 이름은 대소문자 무시 (「(Nasdaq: X)」) · 티커는 대문자만
+PAREN_TICKER_RE = re.compile(r"\(\s*(?i:NASDAQ|NYSE|AMEX|OTC)\s*:\s*([A-Z]{1,6})\s*\)")
 
 
 _USER_AGENT = "Mozilla/5.0 (Macintosh; Intel Mac OS X) AppleWebKit/605.1 Safari/537 TossTradebot/1.0"
@@ -137,16 +139,17 @@ class RSSClient:
 
                 # ticker 추출 시도
                 text = title + " " + summary
-                ticker = self._extract_ticker(text)
+                tickers = self._extract_tickers(text)
 
                 items.append(
                     NewsItem(
-                        ticker=ticker,
+                        ticker=tickers[0] if tickers else None,
                         title=title,
                         summary=summary[:500],
                         link=link,
                         published=pub_iso,
                         source=source_name,
+                        tickers=tickers,
                     )
                 )
 
@@ -154,27 +157,22 @@ class RSSClient:
         return items
 
     @staticmethod
-    def _extract_ticker(text: str) -> Optional[str]:
-        """제목/본문에서 ticker 추출. cashtag 또는 (NASDAQ:XXX) 형식."""
-        m = CASHTAG_RE.search(text)
-        if m:
-            return m.group(1).upper()
-        m = PAREN_TICKER_RE.search(text)
-        if m:
-            return m.group(1).upper()
-        return None
+    def _extract_tickers(text: str) -> tuple[str, ...]:
+        """제목/본문의 명시 표기 전부. cashtag 또는 (NASDAQ:XXX) 형식 · 나온 순서 · 중복 제거."""
+        found = [m.group(1).upper() for m in CASHTAG_RE.finditer(text)]
+        found += [m.group(1).upper() for m in PAREN_TICKER_RE.finditer(text)]
+        return tuple(dict.fromkeys(found))
 
     def fetch_for_ticker(
         self,
         ticker: str,
         within_hours: int = 48,
     ) -> list[NewsItem]:
-        """특정 ticker 멘션 아이템만 필터."""
+        """특정 ticker 를 명시 표기한 아이템만 필터.
+
+        1027-04 (사용자 A 승인 · WP92): 단어 경계 매치는 뺐다 — 「S.A. de C.V.」 의 V,
+        「BREA, Calif.」 같은 낱말이 뉴스 건수·LLM 제목으로 들어갔다. 표기 없는 기사는 놓친다.
+        """
         all_items = self.fetch_recent(within_hours=within_hours)
         ticker_upper = ticker.upper()
-        # ticker 명시 OR title/summary 에 단어 경계로 매치
-        word_re = re.compile(rf"\b{re.escape(ticker_upper)}\b")
-        return [
-            item for item in all_items
-            if item.ticker == ticker_upper or word_re.search(item.title + " " + item.summary)
-        ]
+        return [item for item in all_items if ticker_upper in item.tickers]
