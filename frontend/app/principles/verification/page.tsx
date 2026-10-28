@@ -6,6 +6,7 @@
 
 import { useEffect, useState } from "react";
 import { AdminSessionBar } from "@/components/admin/AdminSessionBar";
+import { LOGIN_REQUIRED_MESSAGE } from "@/lib/auth";
 
 interface Pending {
   ticker: string;
@@ -54,7 +55,7 @@ export default function VerificationPage() {
           confirmed_by: "web-ui",
         }),
       });
-      if (res.status === 401) throw new Error("관리자 로그인이 필요합니다. 위 칸에서 로그인한 뒤 다시 누르십시오.");
+      if (res.status === 401) throw new Error(LOGIN_REQUIRED_MESSAGE);
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       load();
     } catch (e) {

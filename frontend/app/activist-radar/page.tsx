@@ -16,6 +16,7 @@ import {
 } from "@/lib/api";
 import { StatBox } from "@/components/ui/stat-box";
 import { AdminSessionBar } from "@/components/admin/AdminSessionBar";
+import { editErrorMessage } from "@/lib/auth";
 
 // ─────────────────────────────────────────────
 // helpers
@@ -638,7 +639,7 @@ function UniverseEditor({
     onSuccess: () => {
       onSaved();
     },
-    onError: (err: Error) => setSaveError(err.message),
+    onError: (err: Error) => setSaveError(editErrorMessage(err)),
   });
 
   const submit = () => {
@@ -836,6 +837,7 @@ export default function ActivistRadarPage() {
       qc.invalidateQueries({ queryKey: ["activist", "universe"] });
       qc.invalidateQueries({ queryKey: ["activist", "status"] });
     },
+    onError: (err: Error) => alert(`삭제 실패: ${editErrorMessage(err)}`),
   });
 
   const openEdit = (a: ActivistEntry) => {
