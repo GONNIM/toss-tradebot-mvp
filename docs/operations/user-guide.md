@@ -20,7 +20,7 @@
 | 아침 진입 | Home 상단 **판정 축적 진행률** 확인 (30건 목표) | `/` |
 | ~09:00 | 오늘 확정된 top 30 검토 · 편입 시 **수동 add** → 판정 팝업 자동 | `/watchlist` |
 | 09:00~09:30 | 갭업 진입 조건 튜닝 · 필요 시 `enabled=true` 저장 → 판정 팝업 자동 | `/sniper` |
-| 장중 | Kill Switch·포지션 모니터 | `/positions` `/dashboard` |
+| 장중 | Kill Switch·포지션 모니터 | `/account` (보유 · 청산 계획) `/sniper` |
 | 마감 후 | 오늘 판정 리뷰 · T+7 도래 판정의 outcome 재확인 | `/journal` |
 
 **주말 리서치**: `/powderkeg` tier 이동 리스트 → 🔒 **lock** → 판정 팝업 자동. `/activist-radar` `/vip` `/sector-leaders` 보조.
