@@ -6,6 +6,7 @@
  */
 
 import { useEffect, useState } from "react";
+import { StockLink } from "@/components/stock/StockLink";
 
 type BlueChipItem = {
   ticker: string;
@@ -225,7 +226,7 @@ export function BlueChipList({ isAdmin = false }: { isAdmin?: boolean }) {
                     }`}
                     title={it.reject_reasons || "5단계 모두 통과"}
                   >
-                    <td className="py-1.5 font-mono font-bold">{it.ticker}</td>
+                    <td className="py-1.5 font-mono font-bold"><StockLink ticker={it.ticker}>{it.ticker}</StockLink></td>
                     <td className="py-1.5">
                       <div>{it.name ?? "—"}</div>
                       <div className="text-[10px] text-muted-foreground">

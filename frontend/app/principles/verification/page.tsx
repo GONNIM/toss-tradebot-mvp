@@ -5,6 +5,7 @@
 // 확인 스코프 = (ticker, tags_hash) 이중키 · 태그 구성 동일 시 확인 유지
 
 import { useEffect, useState } from "react";
+import { StockLink } from "@/components/stock/StockLink";
 import { AdminSessionBar } from "@/components/admin/AdminSessionBar";
 import { LOGIN_REQUIRED_MESSAGE } from "@/lib/auth";
 
@@ -118,7 +119,7 @@ export default function VerificationPage() {
             {data.pending.map((p) => (
               <tr key={p.ticker + p.tags_hash} style={{ borderBottom: "1px solid #eee" }}>
                 <td style={cell}>
-                  <code>{p.ticker}</code>
+                  <code><StockLink ticker={p.ticker}>{p.ticker}</StockLink></code>
                 </td>
                 <td style={cell}>{p.name ?? "-"}</td>
                 <td style={cell}>{p.per_ttm?.toFixed(2) ?? "-"}</td>

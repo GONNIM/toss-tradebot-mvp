@@ -11,6 +11,7 @@
  *   (e) 최근 시그널 카드 — 직전 발표 + lag 기반 윈도우
  */
 import { useMemo, useState } from "react";
+import { StockLink } from "@/components/stock/StockLink";
 import { useQuery } from "@tanstack/react-query";
 import {
   CartesianGrid,
@@ -183,7 +184,7 @@ function PanelHeader({ data }: { data: TickerAnalysis }) {
         <h3 className="text-lg font-bold">
           📊 {l.name}{" "}
           <span className="text-sm font-normal text-muted-foreground">
-            ({l.ticker}) · {l.item} rank #{l.rank}
+            (<StockLink ticker={l.ticker}>{l.ticker}</StockLink>) · {l.item} rank #{l.rank}
           </span>
         </h3>
         <p className="text-xs text-muted-foreground mt-0.5">

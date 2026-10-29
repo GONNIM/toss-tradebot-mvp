@@ -4,6 +4,7 @@
  * Crazy Picks 페이지 — Top 10 테이블 + History 토글 + Thesis expand.
  */
 import { useQuery } from "@tanstack/react-query";
+import { StockLink } from "@/components/stock/StockLink";
 import { useState } from "react";
 import { api, type CrazyPick } from "@/lib/api";
 import { formatMarketCap, formatUSD } from "@/lib/utils";
@@ -167,7 +168,7 @@ function PicksTable({ picks, showDate = false }: { picks: CrazyPick[]; showDate?
                   <td className="px-4 py-3 text-muted-foreground">#{p.rank}</td>
                   <td className="px-4 py-3 font-bold">
                     {isOpen ? "▾ " : "▸ "}
-                    {p.ticker}
+                    <StockLink ticker={p.ticker}>{p.ticker}</StockLink>
                   </td>
                   <td className="px-4 py-3 max-w-[180px] truncate">{p.company_name || "—"}</td>
                   <td className="px-4 py-3 text-muted-foreground">{p.sector || "—"}</td>

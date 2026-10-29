@@ -691,3 +691,51 @@ class AccountHoldingsResponse(BaseModel):
     fx_source: Optional[str] = None
     fx_valid_from: Optional[str] = None
     holdings: list[AccountHolding] = []
+
+
+# ─── 종목 한 장 (1022-10 3단계 · GET /api/v1/stock/{ticker}) ───────────────
+
+class StockSignal(BaseModel):
+    """출처 한 곳의 한 줄 요약 · 관리자 전용 출처를 비로그인이 부르면 locked=True (내용·유무 모두 숨김)."""
+    source: str
+    label: str
+    as_of: Optional[str] = None
+    summary: str
+    link: str
+    locked: bool = False
+
+
+class StockHolding(BaseModel):
+    """holding_snapshot kind=holding 이 종목의 최신 행 · 관리자 전용 (qty 0 이면 sold)."""
+    qty: Optional[float] = None
+    avg_price: Optional[float] = None
+    currency: Optional[str] = None
+    as_of: str
+    sold: bool
+
+
+class StockJudgment(BaseModel):
+    """user_judgments 의 실제 열만 · 관리자 전용."""
+    id: int
+    ts: Optional[str] = None
+    page_source: str
+    strategy: Optional[str] = None
+    thesis_md: str
+    entry_price: Optional[float] = None
+    invalidation_price: Optional[float] = None
+    target_price: Optional[float] = None
+    horizon_days: int
+    qty: Optional[float] = None
+    result_at_horizon: Optional[float] = None
+
+
+class StockOverview(BaseModel):
+    ticker: str
+    market: str  # "KR" | "US"
+    name: Optional[str] = None
+    is_admin: bool
+    fetched_at: str
+    broker_link: dict
+    holding: Optional[StockHolding] = None
+    judgments: Optional[list[StockJudgment]] = None
+    signals: list[StockSignal]

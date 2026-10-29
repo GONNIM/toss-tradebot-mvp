@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { StockLink } from "@/components/stock/StockLink";
 import {
   useMutation,
   useQuery,
@@ -396,7 +397,7 @@ function WatchlistTable({ tradeDate, isAdmin }: { tradeDate: string; isAdmin: bo
                   <td className="p-2 font-bold">{it.rank}</td>
                   <td className="p-2">
                     <div className="font-medium">{it.name || "-"}</div>
-                    <div className="text-[10px] text-muted-foreground">{it.ticker}</div>
+                    <div className="text-[10px] text-muted-foreground"><StockLink ticker={it.ticker}>{it.ticker}</StockLink></div>
                   </td>
                   <td className="p-2 text-right font-bold text-sky-700">
                     {it.composite_score.toFixed(3)}
@@ -613,7 +614,7 @@ function SignalsInspector({ tradeDate }: { tradeDate: string }) {
           <ul className="space-y-0.5 p-2 text-[10px]">
             {sigs.slice(0, 30).map((s) => (
               <li key={s.id} className="flex gap-2">
-                <span className="font-mono text-muted-foreground">{s.ticker}</span>
+                <span className="font-mono text-muted-foreground"><StockLink ticker={s.ticker}>{s.ticker}</StockLink></span>
                 <span>{s.signal_type}</span>
                 <span className="text-sky-700">int={s.intensity.toFixed(2)}</span>
                 <span className="ml-auto text-muted-foreground">

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
+import { StockLink } from "@/components/stock/StockLink";
 
 import type { MemeScoreItem } from "@/lib/api";
 import { cn } from "@/lib/utils";
@@ -113,7 +114,7 @@ export function MemeDetailModal({
             <div>
               <div className="flex items-center gap-2 flex-wrap">
                 <span className="font-mono font-bold text-zinc-900 dark:text-zinc-50 text-base">
-                  {item.ticker}
+                  <StockLink ticker={item.ticker}>{item.ticker}</StockLink>
                 </span>
                 <span className="text-zinc-800 dark:text-zinc-100 font-semibold">
                   {item.name || "—"}

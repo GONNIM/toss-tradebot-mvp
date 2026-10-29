@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { StockLink } from "@/components/stock/StockLink";
 import {
   useMutation,
   useQuery,
@@ -386,7 +387,7 @@ function CandidatesPanel() {
             <tbody>
               {q.data.map((r) => (
                 <tr key={r.ticker} className="border-b border-border/60">
-                  <td className="py-1 font-mono">{r.ticker}</td>
+                  <td className="py-1 font-mono"><StockLink ticker={r.ticker}>{r.ticker}</StockLink></td>
                   <td className="py-1">{r.name}</td>
                   <td className="py-1 text-right">{r.tape_score.toFixed(2)}</td>
                   <td className="py-1 text-right">{r.rank_velocity_score.toFixed(1)}</td>
@@ -462,7 +463,7 @@ function SignalsPanel() {
               {q.data.map((r) => (
                 <tr key={r.id} className="border-b border-border/60">
                   <td className="py-1 font-mono">{fmtKstDateTime(r.detected_at)}</td>
-                  <td className="py-1 font-semibold">{r.ticker}</td>
+                  <td className="py-1 font-semibold"><StockLink ticker={r.ticker}>{r.ticker}</StockLink></td>
                   <td className="py-1 text-right">{r.tape_score?.toFixed(2) ?? "—"}</td>
                   <td className="py-1 text-right">{fmtPriceForTicker(r.ticker, r.entry_price)}</td>
                   <td className="py-1 text-right">{fmtPriceForTicker(r.ticker, r.peak_price)}</td>
@@ -571,7 +572,7 @@ function UniversePanel({ isAdmin }: { isAdmin: boolean }) {
               <tbody>
                 {q.data.items.map((r: SniperUniverseItem) => (
                   <tr key={r.ticker} className="border-b border-border/60">
-                    <td className="py-1 font-mono">{r.ticker}</td>
+                    <td className="py-1 font-mono"><StockLink ticker={r.ticker}>{r.ticker}</StockLink></td>
                     <td className="py-1">{r.name}</td>
                     <td className="py-1 text-right">{fmtKrw(r.market_cap_krw)}</td>
                     <td className="py-1 text-right font-semibold">{fmtKrwPrice(r.close_price)}</td>

@@ -688,7 +688,52 @@ export interface TickerForecast {
 // 메소드
 // ─────────────────────────────────────────────
 
+// 1022-10 3단계 · 종목 하나 보기 (/stock/[ticker]) · 계약은 서버 routes/stock.py 와 같다
+export interface StockHolding {
+  qty: number;
+  avg_price: number | null;
+  currency: string | null;
+  as_of: string | null;
+  sold: boolean;
+}
+// user_judgments 의 실제 열 (backend/api/schemas.py StockJudgment)
+export interface StockJudgment {
+  id: number;
+  ts: string | null;
+  page_source: string;
+  strategy: string | null;
+  thesis_md: string;
+  entry_price: number | null;
+  invalidation_price: number | null;
+  target_price: number | null;
+  horizon_days: number;
+  qty: number | null;
+  result_at_horizon: number | null;
+}
+export interface StockSignal {
+  source: string;
+  label: string;
+  as_of: string | null;
+  summary: string;
+  link: string;
+  locked: boolean;
+}
+export interface StockOverview {
+  ticker: string;
+  market: "KR" | "US";
+  name: string | null;
+  is_admin: boolean;
+  fetched_at: string;
+  broker_link: BrokerLinkInfo | null;
+  holding: StockHolding | null;
+  judgments: StockJudgment[] | null;
+  signals: StockSignal[];
+}
+
 export const api = {
+  stock: {
+    overview: (ticker: string) => getWithSession<StockOverview>(`/stock/${encodeURIComponent(ticker)}`),
+  },
   crazy: {
     // 조회 전부 로그인 필수 (1025-03)
     list: (limit = 10) => getWithSession<CrazyPick[]>(`/crazy?limit=${limit}`),

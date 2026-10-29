@@ -7,6 +7,7 @@
 //   옛 주소는 next.config redirect (307) · 보유 종목 표는 이 화면의 표 하나.
 
 import { useState } from "react";
+import { StockLink } from "@/components/stock/StockLink";
 import Link from "next/link";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { AccountHolding, AccountHoldingsResponse, api, SniperStatus, TossStockCodeRow } from "@/lib/api";
@@ -54,7 +55,7 @@ function HoldingRow({ h }: { h: AccountHolding }) {
     <tr className="border-b border-border align-top last:border-0">
       <td className="p-2">
         <div className="font-medium">{h.name ?? h.symbol}</div>
-        <div className="font-mono text-xs text-muted-foreground">{h.symbol} · {h.market === "KR" ? "국내" : "미국"}</div>
+        <div className="font-mono text-xs text-muted-foreground"><StockLink ticker={h.symbol}>{h.symbol}</StockLink> · {h.market === "KR" ? "국내" : "미국"}</div>
       </td>
       <td className="p-2 text-right">{h.qty.toLocaleString("ko-KR")}</td>
       <td className="p-2 text-right">
@@ -144,7 +145,7 @@ function CodeRow({ row }: { row: TossStockCodeRow }) {
   const tryUrl = row.toss_code ? `${TOSS_HOME}stocks/${row.toss_code}/order` : null;
   return (
     <tr className="border-b border-border align-top last:border-0">
-      <td className="p-2 font-mono">{row.symbol}</td>
+      <td className="p-2 font-mono"><StockLink ticker={row.symbol}>{row.symbol}</StockLink></td>
       <td className="p-2">
         {row.verified ? "확인함" : "확인 전"}
         {tryUrl && (

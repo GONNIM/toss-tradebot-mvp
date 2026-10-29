@@ -7,6 +7,7 @@
  * 트리거 도달 시 카드 border 적색 · Activist 심볼은 배지.
  */
 import Link from "next/link";
+import { StockLink } from "@/components/stock/StockLink";
 import { useEffect, useRef } from "react";
 import { useIsFetching, useQuery } from "@tanstack/react-query";
 import { api, type PositionCard, type PositionExitPlan } from "@/lib/api";
@@ -141,7 +142,7 @@ function PositionCardView({ card }: { card: PositionCard }) {
     <article className={"rounded-xl border p-4 " + borderClass}>
       <header className="mb-3 border-b border-border/40 pb-2">
         <div className="flex flex-wrap items-baseline gap-2">
-          <span className="font-mono text-lg font-bold">{card.symbol}</span>
+          <span className="font-mono text-lg font-bold"><StockLink ticker={card.symbol}>{card.symbol}</StockLink></span>
           {card.name && (
             <span className="text-sm text-muted-foreground">{card.name}</span>
           )}

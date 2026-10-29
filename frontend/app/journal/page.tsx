@@ -7,7 +7,9 @@
 
 "use client";
 
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { StockLink } from "@/components/stock/StockLink";
 import { AdminSessionBar } from "@/components/admin/AdminSessionBar";
 import type { SessionInfo } from "@/lib/auth";
 import { baseNote, notScoredText, outcomeText } from "@/lib/outcome-display";
@@ -103,6 +105,20 @@ async function loadPriceMap(): Promise<Record<string, number>> {
 }
 
 export default function JournalPage() {
+  // useSearchParams 는 Suspense 안에서만 (Next 14 빌드 규칙)
+  return (
+    <Suspense fallback={<div className="text-xs text-muted-foreground">로딩...</div>}>
+      <JournalPageInner />
+    </Suspense>
+  );
+}
+
+function JournalPageInner() {
+  // 1022-10 3단계 · /journal?ticker=T → 그 종목 판단만 (종목 하나 보기에서 넘어옴)
+  const router = useRouter();
+  const sp = useSearchParams();
+  const rawTicker = (sp.get("ticker") ?? "").trim().toUpperCase();
+  const tickerFilter = /^[A-Z0-9.\-]{1,12}$/.test(rawTicker) ? rawTicker : "";
   const [judgments, setJudgments] = useState<Judgment[]>([]);
   const [baseline, setBaseline] = useState<Baseline | null>(null);
   const [priceMap, setPriceMap] = useState<Record<string, number>>({});
@@ -110,12 +126,12 @@ export default function JournalPage() {
   const [error, setError] = useState<string | null>(null);
   const [days, setDays] = useState(30);
 
-  const load = async (d: number) => {
+  const load = async (d: number, t: string = tickerFilter) => {
     setLoading(true);
     setError(null);
     try {
       const [j, b, pm] = await Promise.all([
-        fetch(`/api/v1/judgments?days=${d}&limit=100`, { credentials: "include" }).then((r) => {
+        fetch(`/api/v1/judgments?days=${d}&limit=100${t ? `&ticker=${encodeURIComponent(t)}` : ""}`, { credentials: "include" }).then((r) => {
           if (!r.ok) throw new Error(`judgments ${r.status}`);
           return r.json();
         }),
@@ -136,8 +152,9 @@ export default function JournalPage() {
   };
 
   useEffect(() => {
-    load(days);
-  }, [days]);
+    load(days, tickerFilter);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [days, tickerFilter]);
 
   return (
     <div className="space-y-8">
@@ -164,6 +181,7 @@ export default function JournalPage() {
         onCreated={() => load(days)}
         judgments={judgments}
         priceMap={priceMap}
+        initialTicker={tickerFilter}
       />
 
       {/* Phase E · Stage 2 진입 KPI 진행률 (roadmap-12week.md §0) */}
@@ -249,6 +267,20 @@ export default function JournalPage() {
           </div>
         </div>
 
+        {tickerFilter && (
+          <div className="mb-3 flex flex-wrap items-center gap-2 text-sm">
+            <span className="rounded-full border border-border bg-muted/30 px-3 py-1">
+              <span className="font-mono">{tickerFilter}</span> 만 보는 중
+            </span>
+            <button
+              type="button"
+              onClick={() => router.push("/journal")}
+              className="min-h-[44px] px-2 text-sm text-primary underline"
+            >
+              전체 보기
+            </button>
+          </div>
+        )}
         {loading && <div className="text-xs text-muted-foreground">로딩...</div>}
         {error && <div className="rounded border border-red-500/40 bg-red-500/10 p-3 text-xs text-red-400">에러: {error}</div>}
 
@@ -478,7 +510,7 @@ function JudgmentCard({
       {/* 헤더 · 배지 */}
       <div className="flex flex-wrap items-center gap-2">
         <span className={"font-mono text-sm font-bold " + (superseded ? "line-through" : "")}>
-          {j.ticker}
+          <StockLink ticker={j.ticker}>{j.ticker}</StockLink>
         </span>
         <span className={`rounded px-2 py-0.5 text-[10px] ${pageBadge(j.page_source)}`}>
           {j.page_source}
@@ -1401,13 +1433,15 @@ function NewJudgmentForm({
   onCreated,
   judgments,
   priceMap,
+  initialTicker = "",
 }: {
   onCreated: () => void;
   judgments: Judgment[];
   priceMap: Record<string, number>;
+  initialTicker?: string;
 }) {
-  const [open, setOpen] = useState(false);
-  const [ticker, setTicker] = useState("");
+  const [open, setOpen] = useState(!!initialTicker);
+  const [ticker, setTicker] = useState(initialTicker);
   const [strategy, setStrategy] = useState<Strategy | null>(null);
   const [qty, setQty] = useState("");
   const [thesis, setThesis] = useState("");

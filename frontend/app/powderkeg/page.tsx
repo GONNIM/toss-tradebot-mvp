@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { StockLink } from "@/components/stock/StockLink";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Bar,
@@ -762,7 +763,7 @@ function EventRow({ event }: { event: PowderKegEventItem }) {
       </div>
       {/* 종목명 + 이벤트 타입 */}
       <div className="mb-2 flex flex-wrap items-center gap-2">
-        <span className="text-lg font-bold">{event.ticker}</span>
+        <span className="text-lg font-bold"><StockLink ticker={event.ticker}>{event.ticker}</StockLink></span>
         <span className={`rounded px-2 py-0.5 text-xs font-bold ${isTypeB ? "bg-red-600 text-white" : "bg-orange-500 text-white"}`}>
           {info?.icon} {info?.short || event.event_type}
         </span>
@@ -1057,7 +1058,7 @@ function RunDiffSummaryCard({ data }: { data: PowderKegRunDiffSummaryResponse | 
         <div className="mt-2 max-h-48 space-y-0.5 overflow-y-auto text-[11px]">
           {data.items.slice(0, 40).map((it) => (
             <div key={it.ticker} className="flex items-center gap-2 rounded px-1 py-0.5 hover:bg-white/60 dark:hover:bg-slate-800/40">
-              <span className="font-mono text-[10px] text-slate-600 dark:text-slate-300">{it.ticker}</span>
+              <span className="font-mono text-[10px] text-slate-600 dark:text-slate-300"><StockLink ticker={it.ticker}>{it.ticker}</StockLink></span>
               {it.tier_moved ? (
                 <span className="rounded bg-fuchsia-200 px-1 text-[9px] font-bold text-fuchsia-900 dark:bg-fuchsia-800 dark:text-fuchsia-100">
                   ⇄ {it.prev_tier || "-"} → {it.curr_tier || "-"}
@@ -1546,7 +1547,7 @@ function LowPbrDiscoveryCard({ isAdmin }: { isAdmin: boolean }) {
                   <div className="grid grid-cols-3 gap-1 font-mono">
                     {candidates.data.items.slice(0, 30).map((c) => (
                       <div key={c.ticker} className="truncate rounded bg-emerald-50 px-1 py-0.5 dark:bg-emerald-900">
-                        {c.ticker} <span className="text-muted-foreground">PBR {c.pbr}</span>
+                        <StockLink ticker={c.ticker}>{c.ticker}</StockLink> <span className="text-muted-foreground">PBR {c.pbr}</span>
                       </div>
                     ))}
                   </div>
