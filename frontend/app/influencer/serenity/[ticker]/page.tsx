@@ -31,7 +31,7 @@ export default function TickerDetailPage({ params }: PageProps) {
 
   if (err) {
     return (
-      <div className="mx-auto max-w-4xl">
+      <div>
         <Link href="/influencer/serenity" className="text-xs text-sky-500 hover:underline">
           ← Serenity 랜딩
         </Link>
@@ -44,7 +44,7 @@ export default function TickerDetailPage({ params }: PageProps) {
 
   if (!data) {
     return (
-      <div className="mx-auto max-w-4xl">
+      <div>
         <div className="text-xs text-muted-foreground">로딩...</div>
       </div>
     );
@@ -53,7 +53,7 @@ export default function TickerDetailPage({ params }: PageProps) {
   const s = data.score;
 
   return (
-    <div className="mx-auto max-w-4xl space-y-6">
+    <div className="space-y-6">
       <Link href="/influencer/serenity" className="text-xs text-sky-500 hover:underline">
         ← Serenity 랜딩
       </Link>

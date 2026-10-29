@@ -23,7 +23,7 @@ export default function BacktestReportPage() {
   }, [days]);
 
   return (
-    <div className="mx-auto max-w-5xl space-y-6">
+    <div className="space-y-6">
       <Link href="/influencer/serenity" className="text-xs text-sky-500 hover:underline">
         ← Serenity 랜딩
       </Link>
