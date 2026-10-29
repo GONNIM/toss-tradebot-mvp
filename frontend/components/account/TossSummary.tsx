@@ -233,9 +233,10 @@ function OrderAvailableCard({ data }: { data: TossAccountSnapshot }) {
             <div className="text-muted-foreground">달러</div>
             <div className="font-mono font-bold">
               {_usd(data.cash_usd)}
-              {data.cash_usd !== null && (
+              {/* 1029-01 · 고정 1330 → 이 응답의 토스 참고 환율 (없으면 환산 안 함) */}
+              {data.cash_usd !== null && data.fx_rate != null && (
                 <span className="ml-1 text-[10px] text-muted-foreground">
-                  (≈{_krw((data.cash_usd ?? 0) * 1330)})
+                  (≈{_krw(data.cash_usd * data.fx_rate)} · 환율 {data.fx_rate.toLocaleString("ko-KR")}원 추정)
                 </span>
               )}
             </div>

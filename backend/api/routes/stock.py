@@ -163,9 +163,10 @@ async def _blue_chip(t: str, kr: bool) -> Optional[StockSignal]:
                              .order_by(desc(BlueChipCandidate.created_at), desc(BlueChipCandidate.id)).limit(1))).scalar_one_or_none()
     if r is None:
         return None
-    tier = {"premium": "프리미엄", "entry": "진입"}.get(r.tier, "해당 없음")
+    # tier 는 1단계 시총 구간 (models.py BlueChipCandidate.tier) · 우량주 등급이 아님 (1029-01)
+    cap = {"premium": "시총 10조 이상", "entry": "시총 5조 이상"}.get(r.tier, "시총 5조 미만")
     return StockSignal(source="blue_chip", label="우량주 후보", as_of=_d(r.created_at), link="/rulebook",
-                       summary=f"5단계 중 {r.pass_count}단계 통과 · 등급 {tier}")
+                       summary=f"5단계 중 {r.pass_count}단계 통과 · {cap}")
 
 
 async def _principles(t: str, kr: bool) -> Optional[StockSignal]:
