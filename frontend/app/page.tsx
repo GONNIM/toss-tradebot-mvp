@@ -12,8 +12,8 @@ const L1 = [
   { href: "/journal", emoji: "📓", title: "Judgment Journal", desc: "판정→결과 폐루프 · rejection criteria 강제 · Phase B 신설 예정" },
   { href: "/watchlist", emoji: "🌙", title: "Watchlist", desc: "마감후 예측 · 다음날 top 30" },
   { href: "/sniper", emoji: "🚀", title: "Sniper", desc: "개장 진입 · tape_score · Kill Switch" },
-  { href: "/positions", emoji: "💼", title: "Positions", desc: "보유 관찰 · Phase K 후 실 데이터" },
-  { href: "/dashboard", emoji: "📊", title: "Dashboard", desc: "성과 · Phase K 후 실 데이터" },
+  { href: "/account#plan", emoji: "💼", title: "Positions", desc: "보유 관찰 · Phase K 후 실 데이터" },
+  { href: "/account", emoji: "📊", title: "Dashboard", desc: "성과 · Phase K 후 실 데이터" },
   { href: "/logs", emoji: "📜", title: "Logs", desc: "감사 로그" },
 ];
 

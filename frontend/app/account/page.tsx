@@ -3,20 +3,20 @@
 // 1025-06 · 「내 계좌」 — 내 증권 계좌로 가는 길 · 토스 실계좌 요약 · 실주문 안전 한 줄 · 미국 종목 토스 주소 확인.
 // 1025-08 · 토스 실계좌 보유 종목 표 (보유 일수 · 최고가 대비 · 청산 계획 · 토스증권으로 가기) — 사실만.
 // 사이트는 주문을 넣지 않는다 (정체성 원칙 1). 주문은 토스증권 화면에서 직접 한다.
+// 1022-10 2단계 (2026-10-29) · 옛 /dashboard (요약) · /positions (청산 계획 카드 #plan) 를 이 화면으로 합침.
+//   옛 주소는 next.config redirect (307) · 보유 종목 표는 이 화면의 표 하나.
 
 import { useState } from "react";
 import Link from "next/link";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { AccountHolding, AccountHoldingsResponse, api, SniperStatus, TossAccountSnapshot, TossStockCodeRow } from "@/lib/api";
+import { AccountHolding, AccountHoldingsResponse, api, SniperStatus, TossStockCodeRow } from "@/lib/api";
 import { AdminSessionBar } from "@/components/admin/AdminSessionBar";
+import { PositionPlans } from "@/components/account/PositionPlans";
+import { TossSummary } from "@/components/account/TossSummary";
 import { BROKER_LABEL, SEARCH_LABEL, TOSS_ACCOUNT, TOSS_HOME, friendlyError } from "@/lib/broker-link";
 import { fxLabel, heldLabel, peakLabel, pctText, pnlTone, priceText, wonText } from "@/lib/holdings-display";
 import { safetyConclusion } from "@/lib/sniper-safety";
 import { fmtKstDateTime } from "@/lib/time";
-
-function won(v: number | null | undefined): string {
-  return v === null || v === undefined ? "—" : `${Math.round(v).toLocaleString("ko-KR")}원`;
-}
 
 function Card({ title, children }: { title: string; children: React.ReactNode }) {
   return (
@@ -46,32 +46,6 @@ function SafetyLine() {
   );
 }
 
-function TossSummary({ isAdmin }: { isAdmin: boolean }) {
-  const q = useQuery<TossAccountSnapshot>({
-    queryKey: ["account", "toss"],
-    queryFn: api.dashboard.tossAccount,
-    enabled: isAdmin,
-    retry: false,
-  });
-  if (!isAdmin) return <p className="text-sm text-muted-foreground">로그인하면 이 사이트가 읽은 토스 실계좌 요약이 보입니다.</p>;
-  if (q.isLoading) return <p className="text-sm text-muted-foreground">불러오는 중…</p>;
-  if (q.error || !q.data) return <p className="text-sm text-muted-foreground">토스 계좌 요약을 불러오지 못했습니다.</p>;
-  const d = q.data;
-  if (!d.ok) return <p className="text-sm text-muted-foreground">토스 계좌 요약을 불러오지 못했습니다 ({d.error_reason ?? "이유 없음"}).</p>;
-  return (
-    <div className="space-y-1">
-      <dl className="grid grid-cols-1 gap-2 text-sm sm:grid-cols-3">
-        <div><dt className="text-xs text-muted-foreground">총 자산</dt><dd className="font-semibold">{won(d.total_asset_krw)}</dd></div>
-        <div><dt className="text-xs text-muted-foreground">주문 가능</dt><dd className="font-semibold">{won(d.order_available_krw)}</dd></div>
-        <div><dt className="text-xs text-muted-foreground">내 투자 평가</dt><dd className="font-semibold">{won(d.investment_market_value_krw)}</dd></div>
-      </dl>
-      <p className="text-xs text-muted-foreground">
-        토스 응답 기준 · {d.price_source === "realtime" ? "실시간 가격" : "전일 종가"} · {fmtKstDateTime(d.fetched_at)}
-      </p>
-    </div>
-  );
-}
-
 const TONE_CLASS = { up: "text-red-600 dark:text-red-400", down: "text-blue-600 dark:text-blue-400", flat: "text-muted-foreground" } as const;
 
 function HoldingRow({ h }: { h: AccountHolding }) {
@@ -98,7 +72,7 @@ function HoldingRow({ h }: { h: AccountHolding }) {
         {h.has_exit_plan ? (
           "✓ 있음"
         ) : (
-          <Link href="/positions" className="text-red-600 underline dark:text-red-400">✗ 없음</Link>
+          <a href="#plan" className="text-red-600 underline dark:text-red-400">✗ 없음</a>
         )}
       </td>
       <td className="p-2">
@@ -149,7 +123,7 @@ function HoldingsTable({ isAdmin }: { isAdmin: boolean }) {
         <li>최고가 대비 = 보유 기준일 뒤 가장 높은 종가와 현재 가격의 차이입니다 (토스 일봉 · 장 열린 날 국내 15:50 · 미국 07:10 기록).</li>
         <li>보유 일수 기준일은 첫 저널 판단일, 없으면 이 사이트가 보유를 처음 기록한 날입니다. 실제 매수일과 다를 수 있습니다.</li>
         <li>
-          청산 계획 「있음」 = 최근 저널 판단에 손절가나 목표가가 적혀 있을 때입니다 · 적고 고치는 곳은 <Link href="/positions" className="underline">/positions</Link> · {fmtKstDateTime(d.fetched_at)} 토스 응답 기준
+          청산 계획 「있음」 = 최근 저널 판단에 손절가나 목표가가 적혀 있을 때입니다 · 종목별 내용은 아래 <a href="#plan" className="underline">「종목별 청산 계획」</a> · {fmtKstDateTime(d.fetched_at)} 토스 응답 기준
         </li>
       </ul>
     </div>
@@ -256,6 +230,7 @@ export default function AccountPage() {
         <TossSummary isAdmin={isAdmin} />
         <HoldingsTable isAdmin={isAdmin} />
       </Card>
+      <PositionPlans isAdmin={isAdmin} />
       <Card title="카카오페이증권">
         <p className="text-sm">휴대폰 카카오페이 앱 → 증권에서 ISA 계좌와 ETF 를 확인하세요. 카카오페이증권은 PC 웹 거래 화면이 없습니다.</p>
       </Card>
