@@ -49,11 +49,10 @@ const GROUPS: Group[] = [
   {
     key: "account",
     label: "내 계좌",
-    href: "/positions",
+    href: "/account",
+    // 2단계 (10/29) · 옛 /dashboard·/positions 는 /account 로 합침 (next.config redirect)
     tabs: [
-      { href: "/positions", label: "보유" },
       { href: "/account", label: "계좌" },
-      { href: "/dashboard", label: "대시보드" },
       { href: "/vip", label: "VIP 감시" },
     ],
   },

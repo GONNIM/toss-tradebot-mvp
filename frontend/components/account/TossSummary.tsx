@@ -1,21 +1,13 @@
 "use client";
 
 /**
- * 대시보드 · 토스 '내 계좌' 미러링 (2026-08-13 · Fable 5).
- * 정보 배치·위계는 복제 · 디자인 자산은 자체 (상표·저작권 방어).
- * 색상: 이익 red · 손실 blue (한국 관례).
- * 원장 = 토스 API · 대시보드 = 사본 (broker-api-source-of-truth).
+ * 토스 계좌 요약 (옛 /dashboard · 2026-08-13 Fable 5 → 1022-10 2단계 2026-10-29 /account 로 합침).
+ * 총자산 · 주문 가능 · 내 투자 · 국내/미국 소계. 종목 표는 /account 보유 표 하나로 합쳐 여기서 뺐다.
+ * 색상: 이익 red · 손실 blue (한국 관례). 원장 = 토스 API · 이 화면 = 사본 (broker-api-source-of-truth).
  */
 import { useState, type ReactNode } from "react";
-import { useQueryClient, useQuery } from "@tanstack/react-query";
-import { AdminSessionBar } from "@/components/admin/AdminSessionBar";
-import { api, type TossAccountSnapshot, type TossHolding } from "@/lib/api";
-import type { SessionInfo } from "@/lib/auth";
-
-function isAuthError(err: unknown): boolean {
-  const s = (err as { status?: number } | null)?.status;
-  return s === 401 || s === 403;
-}
+import { useQuery } from "@tanstack/react-query";
+import { api, type TossAccountSnapshot } from "@/lib/api";
 
 // 한국 관례: 이익 red · 손실 blue
 function pnlClass(v: number | null): string {
@@ -41,57 +33,19 @@ function _usd(v: number | null | undefined, digits = 2): string {
   return `$${v.toFixed(digits)}`;
 }
 
-function _qty(v: number): string {
-  return v % 1 === 0 ? String(v) : v.toFixed(3);
-}
-
-export default function DashboardPage() {
-  const queryClient = useQueryClient();
-
-  const tossQ = useQuery({
-    queryKey: ["dashboard-toss-account"],
+/** 「토스증권」 칸의 요약 · 로그인 전에는 안내만 · 60초 다시 읽기 (옛 /dashboard 와 같음). */
+export function TossSummary({ isAdmin }: { isAdmin: boolean }) {
+  const q = useQuery({
+    queryKey: ["account", "toss"],
     queryFn: () => api.dashboard.tossAccount(),
+    enabled: isAdmin,
     refetchInterval: 60_000,
     retry: false,
   });
-
-  const authRequired = isAuthError(tossQ.error);
-
-  const handleSessionChange = (info: SessionInfo) => {
-    if (info.role === "admin") {
-      queryClient.invalidateQueries({ queryKey: ["dashboard-toss-account"] });
-    }
-  };
-
-  return (
-    <div className="space-y-6">
-      <header>
-        <h1 className="text-3xl font-bold">📊 내 계좌</h1>
-        <p className="mt-1 text-xs text-muted-foreground">
-          토스증권 · 실시간 · 원본 = 토스 앱 · 대시보드는 사본
-        </p>
-      </header>
-
-      <AdminSessionBar onSessionChange={handleSessionChange} scope="sniper" />
-
-      {authRequired && (
-        <div className="rounded border border-red-500/40 bg-red-500/10 px-4 py-3 text-sm">
-          <span className="font-semibold text-red-500">🔒 인증 필요</span>{" "}
-          <span className="text-muted-foreground">
-            · 오른쪽 위 「관리자 로그인」 에서 로그인하면 자동 갱신됩니다.
-          </span>
-        </div>
-      )}
-
-      {!authRequired && (
-        <TossAccountView
-          data={tossQ.data}
-          isLoading={tossQ.isLoading}
-          error={tossQ.error}
-        />
-      )}
-    </div>
-  );
+  if (!isAdmin) {
+    return <p className="text-sm text-muted-foreground">로그인하면 이 사이트가 읽은 토스 실계좌 요약이 보입니다.</p>;
+  }
+  return <TossAccountView data={q.data} isLoading={q.isLoading} error={q.error} />;
 }
 
 // ─── 토스 '내 계좌' 미러링 ────────────────────────────────────────────
@@ -166,13 +120,21 @@ function TossAccountView({
             <InvestmentCard data={data} />
           </div>
 
-          {/* 층 3 · 국내 + 해외 (내 투자 하위 · 시각 종속 · 좌측 들여쓰기) */}
-          <div className="ml-4 space-y-4 border-l-2 border-border/40 pl-4">
-            <div className="text-[10px] uppercase tracking-wide text-muted-foreground">
-              내 투자 · 종목 상세
+          {/* 층 3 · 국내 / 해외 소계 (종목은 아래 보유 표) */}
+          <div className="space-y-1 rounded-lg border border-border bg-card/60 p-3">
+            <div className="flex flex-wrap items-baseline justify-between gap-2">
+              <span className="text-sm font-semibold">국내주식 {data.kr_holdings.length}종목</span>
+              <SectionSubtotal subtotal={data.kr_market_value} pnl={data.kr_pnl} pnlPct={data.kr_pnl_pct} />
             </div>
-            <KrSection holdings={data.kr_holdings} subtotal={data.kr_market_value} pnl={data.kr_pnl} pnlPct={data.kr_pnl_pct} />
-            <UsSection holdings={data.us_holdings} subtotalKrw={data.us_market_value_krw} pnlKrw={data.us_pnl_krw} pnlPct={data.us_pnl_pct} priceSource={data.price_source} />
+            <div className="flex flex-wrap items-baseline justify-between gap-2">
+              <span className="text-sm font-semibold">
+                해외주식 {data.us_holdings.length}종목
+                {data.price_source === "prior_close" && (
+                  <span className="ml-2 rounded bg-muted px-1.5 py-0.5 text-[10px] text-muted-foreground">전일 종가</span>
+                )}
+              </span>
+              <SectionSubtotal subtotal={data.us_market_value_krw} pnl={data.us_pnl_krw} pnlPct={data.us_pnl_pct} />
+            </div>
           </div>
 
           <footer className="mt-2 text-[10px] text-muted-foreground">
@@ -356,160 +318,6 @@ function SectionSubtotal({
       <span className={"inline-block min-w-[5rem] text-right text-xs " + pnlClass(pnlPct)}>
         {pnlPct !== null ? `(${_pct(pnlPct)})` : ""}
       </span>
-    </div>
-  );
-}
-
-// ─── 층 3A · 국내주식 (내 투자 하위) ──────────────────────────────────
-
-function KrSection({
-  holdings,
-  subtotal,
-  pnl,
-  pnlPct,
-}: {
-  holdings: TossHolding[];
-  subtotal: number | null;
-  pnl: number | null;
-  pnlPct: number | null;
-}) {
-  return (
-    <section className="rounded-lg border border-border bg-card/60 p-4">
-      <header className="mb-3 flex flex-wrap items-baseline justify-between gap-2 border-b border-border/40 pb-2">
-        <h2 className="text-sm font-semibold">🇰🇷 국내주식</h2>
-        <SectionSubtotal subtotal={subtotal} pnl={pnl} pnlPct={pnlPct} />
-      </header>
-      {holdings.length === 0 ? (
-        <div className="text-xs text-muted-foreground">보유 없음</div>
-      ) : (
-        <HoldingsTable holdings={holdings} />
-      )}
-    </section>
-  );
-}
-
-// ─── 층 3B · 해외주식 (내 투자 하위) ──────────────────────────────────
-
-function UsSection({
-  holdings,
-  subtotalKrw,
-  pnlKrw,
-  pnlPct,
-  priceSource,
-}: {
-  holdings: TossHolding[];
-  subtotalKrw: number | null;
-  pnlKrw: number | null;
-  pnlPct: number | null;
-  priceSource: "realtime" | "prior_close";
-}) {
-  return (
-    <section className="rounded-lg border border-border bg-card/60 p-4">
-      <header className="mb-3 flex flex-wrap items-baseline justify-between gap-2 border-b border-border/40 pb-2">
-        <h2 className="text-sm font-semibold">
-          🇺🇸 해외주식
-          {priceSource === "prior_close" && (
-            <span className="ml-2 rounded bg-muted px-1.5 py-0.5 text-[10px] text-muted-foreground">
-              전일 종가
-            </span>
-          )}
-        </h2>
-        <div className="text-sm">
-          <SectionSubtotal subtotal={subtotalKrw} pnl={pnlKrw} pnlPct={pnlPct} />
-        </div>
-      </header>
-      {holdings.length === 0 ? (
-        <div className="text-xs text-muted-foreground">보유 없음</div>
-      ) : (
-        <HoldingsTable holdings={holdings} />
-      )}
-    </section>
-  );
-}
-
-// ─── 공통 보유종목 테이블 (통화 자동 감지) ────────────────────────────
-
-function HoldingsTable({ holdings }: { holdings: TossHolding[] }) {
-  return (
-    <div className="overflow-x-auto">
-      <table className="w-full table-fixed text-xs">
-        {/* KR/US 섹션 컬럼 너비 통일 (요구: 2026-08-13) */}
-        <colgroup>
-          <col className="w-[18%]" />   {/* 종목 */}
-          <col className="w-[9%]" />    {/* 수량 */}
-          <col className="w-[13%]" />   {/* 평균단가 */}
-          <col className="w-[13%]" />   {/* 현재가 */}
-          <col className="w-[16%]" />   {/* 평가금액 (KRW 환산 2줄 감안) */}
-          <col className="w-[13%]" />   {/* 손익 */}
-          <col className="w-[9%]" />    {/* % */}
-          <col className="w-[9%]" />    {/* 📓 */}
-        </colgroup>
-        <thead className="border-b border-border text-left text-[10px] uppercase tracking-wide text-muted-foreground">
-          <tr>
-            <th className="pb-2">종목</th>
-            <th className="pb-2 text-right">수량</th>
-            <th className="pb-2 text-right">평균단가</th>
-            <th className="pb-2 text-right">현재가</th>
-            <th className="pb-2 text-right">평가금액</th>
-            <th className="pb-2 text-right">손익</th>
-            <th className="pb-2 text-right">%</th>
-            <th className="pb-2 text-center">📓</th>
-          </tr>
-        </thead>
-        <tbody>
-          {holdings.map((h) => {
-            const fmt = h.currency === "KRW" ? _krw : (v: number | null) => _usd(v, 2);
-            return (
-              <tr key={h.symbol} className="border-b border-border/40 last:border-0">
-                <td className="py-2 pr-2">
-                  <div className="truncate font-bold" title={h.name || h.symbol}>
-                    {h.name || h.symbol}
-                  </div>
-                  {h.name && (
-                    <div className="truncate text-[10px] font-mono text-muted-foreground">
-                      {h.symbol}
-                    </div>
-                  )}
-                </td>
-                <td className="py-2 text-right font-mono">{_qty(h.qty)}</td>
-                <td className="py-2 text-right font-mono text-muted-foreground">{fmt(h.avg_price)}</td>
-                <td className="py-2 text-right font-mono">{fmt(h.current_price)}</td>
-                <td className="py-2 text-right font-mono">
-                  <div>{fmt(h.market_value)}</div>
-                  {h.currency === "USD" && h.market_value_krw !== null && (
-                    <div className="text-[10px] text-muted-foreground">≈{_krw(h.market_value_krw)}</div>
-                  )}
-                </td>
-                <td className={"py-2 text-right font-mono " + pnlClass(h.unrealized_pnl)}>
-                  {h.unrealized_pnl !== null
-                    ? `${h.unrealized_pnl > 0 ? "+" : ""}${fmt(h.unrealized_pnl)}`
-                    : "—"}
-                </td>
-                <td className={"py-2 text-right font-mono " + pnlClass(h.unrealized_pnl_pct)}>
-                  {_pct(h.unrealized_pnl_pct)}
-                </td>
-                <td className="py-2 text-center">
-                  {h.journal_recorded ? (
-                    <span
-                      className="rounded bg-emerald-500/20 px-1.5 py-0.5 text-[10px] font-semibold text-emerald-500"
-                      title="저널 판정 기록 있음"
-                    >
-                      ✓
-                    </span>
-                  ) : (
-                    <span
-                      className="rounded bg-amber-500/20 px-1.5 py-0.5 text-[10px] font-semibold text-amber-500"
-                      title="저널 판정 미기록 · 30건 캠페인 대상"
-                    >
-                      ⚠ 미기록
-                    </span>
-                  )}
-                </td>
-              </tr>
-            );
-          })}
-        </tbody>
-      </table>
     </div>
   );
 }

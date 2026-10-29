@@ -1,21 +1,15 @@
 "use client";
 
 /**
- * 보유 작전실 (2026-08-14 · Fable 5).
+ * 종목별 청산 계획 (옛 /positions 보유 작전실 · 2026-08-14 Fable 5 → 1022-10 2단계 2026-10-29 /account#plan).
  * 청산 계획 없이 걸린 사활 = 감정에 넘긴 결정.
  * 각 카드 = 종목당 1장 · 3칸 (가격/사건/시한) · 미기록 시 적색.
  * 트리거 도달 시 카드 border 적색 · Activist 심볼은 배지.
  */
 import Link from "next/link";
-import { useQueryClient, useQuery } from "@tanstack/react-query";
-import { AdminSessionBar } from "@/components/admin/AdminSessionBar";
+import { useEffect, useRef } from "react";
+import { useIsFetching, useQuery } from "@tanstack/react-query";
 import { api, type PositionCard, type PositionExitPlan } from "@/lib/api";
-import type { SessionInfo } from "@/lib/auth";
-
-function isAuthError(err: unknown): boolean {
-  const s = (err as { status?: number } | null)?.status;
-  return s === 401 || s === 403;
-}
 
 function pnlClass(v: number | null | undefined): string {
   if (v === null || v === undefined) return "text-muted-foreground";
@@ -40,59 +34,51 @@ function _pct(v: number | null | undefined): string {
   return `${sign}${v.toFixed(2)}%`;
 }
 
-// KRW compact 표기 · US 종목 평가금액 KRW 환산 인라인 병기용
-// 1,224,135원 → 122만원 · 8,241,516원 → 824만원 (한 줄 정렬 유지)
-function _krwCompact(v: number | null | undefined): string {
-  if (v === null || v === undefined) return "—";
-  const abs = Math.abs(v);
-  if (abs >= 1_000_000) return `${(v / 10_000).toFixed(0)}만원`;
-  if (abs >= 10_000) return `${(v / 10_000).toFixed(1)}만원`;
-  return `${Math.round(v).toLocaleString("ko-KR")}원`;
-}
-
 function _qty(v: number): string {
   return v % 1 === 0 ? String(v) : v.toFixed(3);
 }
 
-export default function PositionsPage() {
-  const queryClient = useQueryClient();
-  const { data, isLoading, error } = useQuery({
-    queryKey: ["positions-plan"],
+export function PositionPlans({ isAdmin }: { isAdmin: boolean }) {
+  const { data, isLoading } = useQuery({
+    queryKey: ["account", "plan"],
     queryFn: () => api.positions.plan(),
+    enabled: isAdmin,
     refetchInterval: 60_000,
     retry: false,
   });
-  const authRequired = isAuthError(error);
 
-  const handleSessionChange = (info: SessionInfo) => {
-    if (info.role === "admin") {
-      queryClient.invalidateQueries({ queryKey: ["positions-plan"] });
-    }
-  };
+  // 옛 /positions 는 /account#plan 으로 온다 · 카드와 위쪽 요약·보유 표는 로그인·조회 뒤에 그려지므로
+  // 이 화면 조회가 모두 끝난 다음 한 번만 이 칸으로 내린다 (Fable 1022-10-05 답 4 ·
+  // 카드만 기다리면 늦게 그려진 위쪽 표에 밀려 칸이 화면 아래로 내려감)
+  const accountFetching = useIsFetching({ queryKey: ["account"] });
+  const sectionRef = useRef<HTMLElement>(null);
+  const scrolled = useRef(false);
+  useEffect(() => {
+    if (scrolled.current || !data || accountFetching > 0) return;
+    // 첫 조회가 끝났을 때 한 번만 판단 · 뒤에 #plan 링크를 눌러도 60초 다시 읽기 때 튀지 않게 (Fable 1022-10-06 답 2)
+    scrolled.current = true;
+    if (window.location.hash !== "#plan") return;
+    sectionRef.current?.scrollIntoView({ block: "start" });
+  }, [data, accountFetching]);
 
   return (
-    <div className="space-y-6">
-      <header>
-        <h1 className="text-3xl font-bold">🎯 보유 작전실</h1>
-        <p className="mt-1 text-xs text-muted-foreground">
+    <section id="plan" ref={sectionRef} className="scroll-mt-4 space-y-3 rounded-lg border border-border bg-card p-4">
+      <header className="space-y-1">
+        <h2 className="text-base font-semibold">종목별 청산 계획</h2>
+        <p className="text-xs text-muted-foreground">
           청산 계획 없이 걸린 사활 = 감정에 넘긴 결정. 오늘 밤 3줄 (보유 이유 · 청산 조건 · 지금 기분).
         </p>
       </header>
 
-      <AdminSessionBar onSessionChange={handleSessionChange} scope="sniper" />
-
-      {authRequired && (
-        <div className="rounded border border-red-500/40 bg-red-500/10 px-4 py-3 text-sm">
-          <span className="font-semibold text-red-500">🔒 인증 필요</span>{" "}
-          <span className="text-muted-foreground">· 오른쪽 위 「관리자 로그인」 에서 로그인</span>
-        </div>
+      {!isAdmin && (
+        <p className="text-sm text-muted-foreground">로그인하면 보유 종목별 손절가 · 목표가 · 시한이 보입니다.</p>
       )}
 
-      {!authRequired && isLoading && (
-        <div className="text-sm text-muted-foreground">로딩...</div>
+      {isAdmin && isLoading && (
+        <div className="text-sm text-muted-foreground">불러오는 중…</div>
       )}
 
-      {!authRequired && data && !data.ok && (
+      {isAdmin && data && !data.ok && (
         <div className="rounded border border-red-500/40 bg-red-500/10 p-3 text-xs">
           <div className="font-semibold text-red-500">
             🚨 토스 연결 실패 · {data.error_reason ?? "unknown"}
@@ -100,7 +86,7 @@ export default function PositionsPage() {
         </div>
       )}
 
-      {!authRequired && data && data.ok && (
+      {isAdmin && data && data.ok && (
         <>
           {/* Fable 5 캠페인 카운터 · 미기록 종목 강조 */}
           {data.total_missing_plans > 0 && (
@@ -131,7 +117,7 @@ export default function PositionsPage() {
           </footer>
         </>
       )}
-    </div>
+    </section>
   );
 }
 

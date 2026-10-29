@@ -58,6 +58,9 @@ const nextConfig = {
       // 관리자 이관 → /admin/*
       { source: "/settings", destination: "/admin/settings", permanent: true },
       { source: "/settings/:path*", destination: "/admin/settings/:path*", permanent: true },
+      // 1022-10 2단계 (2026-10-29) · 내 계좌 합침 → /account · 3·4단계에서 다시 옮길 수 있어 임시 (307)
+      { source: "/dashboard", destination: "/account", permanent: false },
+      { source: "/positions", destination: "/account#plan", permanent: false },
     ];
   },
 
