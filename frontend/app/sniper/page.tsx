@@ -151,9 +151,9 @@ function SetupGuide({ isAdmin }: { isAdmin: boolean }) {
           num={2}
           done={step2Done}
           title="관리자 로그인 (httpOnly 쿠키)"
-          summary={step2Done ? "✅ 완료 — 관리자 세션 활성" : "⛔ 대기 — 아래 🔐 카드에서 로그인"}
+          summary={step2Done ? "✅ 완료 — 관리자 세션 활성" : "⛔ 대기 — 오른쪽 위 「관리자 로그인」"}
         >
-          <p>관리자 토큰을 아래 🔐 관리자 세션 입력창에 붙여넣고 "로그인" 클릭.</p>
+          <p>오른쪽 위 「관리자 로그인」 을 누르고 관리자 토큰을 붙여넣은 뒤 "로그인" 클릭.</p>
           <p className="mt-1 text-xs text-muted-foreground">
             서버가 httpOnly 쿠키(sniper_session)로 응답 · JS 접근 불가 (XSS 방어). 세션 12시간 유지 후 재로그인 필요.
           </p>

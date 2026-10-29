@@ -10,8 +10,10 @@
  *   GET    /api/v1/admin/session                → SessionInfo (whoami · 예외 없음)
  *
  * 사용:
- *   import { login, logout, whoami, useSession } from "@/lib/auth";
+ *   import { login, logout, whoami, emitSessionChange, useSessionListener } from "@/lib/auth";
  */
+
+import { useEffect, useRef } from "react";
 
 const BASE = "/api/v1/admin/session";
 
@@ -19,7 +21,7 @@ export type Role = "admin" | "subscriber" | "anon";
 
 // 1028-04 · 편집 API 가 401 이면 영어 일반 문구 대신 로그인 안내
 export const LOGIN_REQUIRED_MESSAGE =
-  "관리자 로그인이 필요합니다. 위 칸에서 로그인한 뒤 다시 누르십시오.";
+  "관리자 로그인이 필요합니다. 오른쪽 위 「관리자 로그인」 에서 로그인한 뒤 다시 누르십시오.";
 
 export function editErrorMessage(err: Error): string {
   return /failed: 401\b/.test(err.message) ? LOGIN_REQUIRED_MESSAGE : err.message;
@@ -96,4 +98,55 @@ export async function migrateLegacyToken(): Promise<void> {
   } finally {
     window.localStorage.removeItem(LEGACY_TOKEN_KEY);
   }
+}
+
+// ─────────────────────────────────────────────
+// 1022-10 1단계 · 헤더 로그인 하나 → 화면에 알림
+// ─────────────────────────────────────────────
+
+const SESSION_EVENT = "admin-session-change";
+
+/** 헤더 로그인·로그아웃·포커스 재확인 때 호출 · 화면의 useSessionListener 가 받는다. */
+export function emitSessionChange(info: SessionInfo): void {
+  if (typeof window === "undefined") return;
+  window.dispatchEvent(new CustomEvent<SessionInfo>(SESSION_EVENT, { detail: info }));
+}
+
+/**
+ * 화면 쪽 세션 구독. 마운트 때 whoami() 로 지금 상태를 한 번 넘기고 (헤더는 layout 에
+ * 한 번만 마운트되어 이미 지나간 이벤트를 화면이 못 받기 때문), 그 뒤 헤더 이벤트를 받는다.
+ * 이벤트가 먼저 오면 늦게 도착한 마운트 whoami 결과는 버린다 (Fable 1022-10-02 권고).
+ */
+export function useSessionListener(onChange?: (info: SessionInfo) => void): void {
+  const cb = useRef(onChange);
+  useEffect(() => {
+    cb.current = onChange;
+  }, [onChange]);
+
+  useEffect(() => {
+    let cancelled = false;
+    let gotEvent = false;
+    // 1022-10-03 M1 · 하드 로드 중복: 헤더 첫 whoami 이벤트가 화면 마운트 whoami 와 같은 값이면 건너뛴다
+    let last: string | null = null;
+    const deliver = (info: SessionInfo) => {
+      const key = `${info.role}:${info.live_enabled}`;
+      if (key === last) return;
+      last = key;
+      cb.current?.(info);
+    };
+    const handler = (e: Event) => {
+      gotEvent = true;
+      deliver((e as CustomEvent<SessionInfo>).detail);
+    };
+    window.addEventListener(SESSION_EVENT, handler);
+    (async () => {
+      const info = await whoami();
+      if (cancelled || gotEvent) return;
+      deliver(info);
+    })();
+    return () => {
+      cancelled = true;
+      window.removeEventListener(SESSION_EVENT, handler);
+    };
+  }, []);
 }

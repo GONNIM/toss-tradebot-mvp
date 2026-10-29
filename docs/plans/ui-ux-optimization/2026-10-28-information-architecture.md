@@ -31,13 +31,13 @@
 | 단계 | 내용 | 서버 변경 |
 |---|---|---|
 | 0 | 보안: 인증 없는 쓰기 API 4곳 (1028-03 · 별도 일) | 있음 (보호 추가) |
-| 1 | 메뉴 5 · 헤더 로그인 하나 · 옛 주소 redirect · 화면 내용 그대로 | 없음 |
+| 1 | 메뉴 묶음 4 + ⚙ (종목은 3단계) · 헤더 로그인 하나 · **주소는 옮기지 않음** (10/29 사용자 「권고대로」 · 질의 `2026-10-29-1022-10-02.md`) · 화면 내용 그대로 | 없음 |
 | 2 | 내 계좌 합치기 (보유 3벌 → 1) | 없음 |
 | 3 | 종목 화면 | 읽기 전용 모음 API 1개 (WP92 승인) |
 | 4 | 오늘 홈 (README 순위 2 · `docs/plans/toss-tradebot-tobe/identity.md` 개정 여부 함께) | 읽기 전용 API 1개 (WP92 승인) |
 | 5 | 문구·색·글자 통일 (`docs/design-rules.md` 를 DESIGN.md 기준으로 개정) · 모바일 | 없음 |
 
 ## 지킬 것 (Fable 10/28)
-- 텔레그램 알림 링크 11곳 (`backend/services/notification_settings.py:47-66` 10경로 · `kill_switch.py:64`) 은 옛 주소 redirect 로 같은 내용에 닿아야 한다 · 단계마다 검증. 탭 주소만으로 바꾸지 않는다.
+- 텔레그램 알림 링크 11곳 (`backend/services/notification_settings.py:47-67` · digest :39 · `execution/kill_switch.py:64`) 은 같은 내용에 닿아야 한다 · 단계마다 검증. 1단계는 주소를 옮기지 않아 그대로 닿는다 (10/29 개정). 뒤 단계에서 화면을 합쳐 주소가 바뀌면 옛 주소 redirect 로 살린다. 탭 주소만으로 바꾸지 않는다.
 - 「후보」 로 올리는 것은 운영 기능 (Crazy·Moonshot·밈) 만 · 쉬는 실험 (backtest·super-signals) 은 설정 아래 실험장에 남김 (README 순위 8 경계를 앞당김).
 - 단계별 배포는 README 10/22 사용자 결정 · 단계마다 그 자체로 완결 (옛 주소 동작 · 콘솔 오류 0 · chrome-devtools 데스크톱·모바일) 을 보고에 적는다.

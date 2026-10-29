@@ -98,7 +98,7 @@ export default function NotificationsPage() {
       {isLoading && <p className="text-sm text-muted-foreground">알림 설정을 불러오는 중입니다…</p>}
       {unauthorized && (
         <p className="rounded-lg border border-border px-4 py-3 text-sm">
-          관리자 로그인이 필요합니다. 위 칸에 관리자 토큰을 넣고 로그인하면 설정이 보입니다.
+          관리자 로그인이 필요합니다. 오른쪽 위 「관리자 로그인」 에서 로그인하면 설정이 보입니다.
         </p>
       )}
       {error && !unauthorized && (

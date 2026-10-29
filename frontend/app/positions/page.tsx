@@ -84,7 +84,7 @@ export default function PositionsPage() {
       {authRequired && (
         <div className="rounded border border-red-500/40 bg-red-500/10 px-4 py-3 text-sm">
           <span className="font-semibold text-red-500">🔒 인증 필요</span>{" "}
-          <span className="text-muted-foreground">· 위 관리자 세션에 토큰 입력</span>
+          <span className="text-muted-foreground">· 오른쪽 위 「관리자 로그인」 에서 로그인</span>
         </div>
       )}
 

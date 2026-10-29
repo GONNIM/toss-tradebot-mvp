@@ -38,7 +38,7 @@ export function PicksSessionBar({ queryRoot }: { queryRoot: "crazy" | "moonshot"
 export function LoginNotice() {
   return (
     <div className="rounded-lg border border-amber-500/30 bg-amber-500/5 p-4 text-sm text-amber-700 dark:text-amber-300">
-      🔒 관리자 로그인이 필요합니다. 위 칸에 관리자 토큰을 넣고 로그인하면 목록이 보입니다.
+      🔒 관리자 로그인이 필요합니다. 오른쪽 위 「관리자 로그인」 에서 로그인하면 목록이 보입니다.
     </div>
   );
 }

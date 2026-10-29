@@ -78,7 +78,7 @@ export default function DashboardPage() {
         <div className="rounded border border-red-500/40 bg-red-500/10 px-4 py-3 text-sm">
           <span className="font-semibold text-red-500">🔒 인증 필요</span>{" "}
           <span className="text-muted-foreground">
-            · 위 관리자 세션에 SNIPER_API_TOKEN 입력 후 자동 갱신됩니다.
+            · 오른쪽 위 「관리자 로그인」 에서 로그인하면 자동 갱신됩니다.
           </span>
         </div>
       )}
