@@ -40,6 +40,9 @@ _RANKING_TYPES = (
     "MARKET_TRADING_VOLUME",   # KR 거래량 상위 (저가주·회전율 활발)
 )
 
+# 토스 명세: TOP_GAINERS·TOP_LOSERS 는 duration=realtime 미지원 (400 unsupported-ranking-duration) · 1029-03
+_DURATION_BY_TYPE = {"TOP_GAINERS": "1d"}
+
 
 async def poll_rankings(toss_client: Optional[TossClient] = None) -> dict:
     """단일 폴 · 3개 rankings 타입 조회 · 유니버스 교차 · DB 저장.
@@ -67,7 +70,7 @@ async def poll_rankings(toss_client: Optional[TossClient] = None) -> dict:
     best: dict[str, dict] = {}   # ticker → {rank, volume_amount, price, return_pct}
     for rtype in _RANKING_TYPES:
         try:
-            env = client.rankings(type=rtype, count=100)
+            env = client.rankings(type=rtype, duration=_DURATION_BY_TYPE.get(rtype, "realtime"), count=100)
         except Exception as exc:  # noqa: BLE001
             logger.warning("rankings(%s) 실패 · %s", rtype, exc)
             per_type[rtype] = 0
