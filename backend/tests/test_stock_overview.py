@@ -22,7 +22,8 @@ async def client(monkeypatch, tmp_path):
     monkeypatch.setattr(activist_state, "_STATE_PATH", tmp_path / "activist_state.json")  # 파일 없음 상태가 기본
     await init_db()
     async with get_session() as s:
-        for tbl in (m.CrazyPick, m.MoonshotPick, m.HoldingSnapshot, m.UserJudgment, m.Watchlist, m.TossStockCode):
+        for tbl in (m.CrazyPick, m.MoonshotPick, m.HoldingSnapshot, m.UserJudgment, m.Watchlist, m.TossStockCode,
+                    m.BlueChipCandidate):
             await s.execute(delete(tbl))
         s.add(m.CrazyPick(pick_date="2026-10-29", rank=3, ticker="ZZCR", composite_score=72.4))
         s.add(m.MoonshotPick(pick_date="2026-10-29", rank=1, ticker="ZZCR", composite_score=55.0))
@@ -33,6 +34,7 @@ async def client(monkeypatch, tmp_path):
         s.add(m.UserJudgment(ticker="zzcr", page_source="test", hypothesis_id="h1", thesis_md="소문자로 저장된 판정",
                              invalidation_price=9.0, target_price=20.0))
         s.add(m.Watchlist(trade_date="2026-10-29", ticker="005930", rank=2, composite_score=61.2))
+        s.add(m.BlueChipCandidate(run_id="r1", ticker="005930", tier="premium", pass_count=2))
     from backend.api.main import app
 
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
@@ -115,6 +117,8 @@ async def test_kr_ticker_uses_kr_sources(client):
     assert "crazy" not in sig and "moonshot" not in sig
     assert sig["watchlist"]["summary"] == "10/29 2위 · 점수 61.2" and sig["watchlist"]["link"] == "/watchlist"
     assert b["broker_link"]["url"].endswith("/stocks/A005930/order")
+    # 1029-01 · tier 는 시총 구간 · 「등급 프리미엄」 으로 읽히지 않게
+    assert sig["blue_chip"]["summary"] == "5단계 중 2단계 통과 · 시총 10조 이상"
 
 
 @pytest.mark.asyncio
