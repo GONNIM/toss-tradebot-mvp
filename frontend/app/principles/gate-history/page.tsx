@@ -4,6 +4,7 @@
 // 최근 차단 로그 표 + 지난 24h 사유별 카운트
 
 import { useEffect, useState } from "react";
+import { StockLink } from "@/components/stock/StockLink";
 
 interface BlockLog {
   id: number;
@@ -99,7 +100,7 @@ export default function GateHistoryPage() {
               <tr key={r.id} style={{ borderBottom: "1px solid #eee" }}>
                 <td style={cellStyle}>{r.created_at?.slice(0, 19) ?? "-"}</td>
                 <td style={cellStyle}>
-                  <code>{r.ticker}</code>
+                  <code><StockLink ticker={r.ticker}>{r.ticker}</StockLink></code>
                 </td>
                 <td style={cellStyle}>{r.source ?? "-"}</td>
                 <td style={cellStyle}>

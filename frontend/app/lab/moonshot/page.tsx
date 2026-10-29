@@ -4,6 +4,7 @@
  * Moonshot Picks 페이지 — Top 3 카드.
  */
 import { useQuery } from "@tanstack/react-query";
+import { StockLink } from "@/components/stock/StockLink";
 import { api, type MoonshotPick } from "@/lib/api";
 import { isUnauthorized, LoginNotice, OutcomeSummary, PicksSessionBar } from "@/components/lab/PickResults";
 import {
@@ -86,7 +87,7 @@ function PickCard({ pick }: { pick: MoonshotPick }) {
       <div className="flex items-start justify-between">
         <div>
           <div className="text-xs text-muted-foreground">#{pick.rank}</div>
-          <h2 className="text-2xl font-bold">{pick.ticker}</h2>
+          <h2 className="text-2xl font-bold"><StockLink ticker={pick.ticker}>{pick.ticker}</StockLink></h2>
           <p className="text-sm text-muted-foreground">
             {pick.company_name || "—"} · {pick.sector || "—"}
           </p>

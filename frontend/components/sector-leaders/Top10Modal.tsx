@@ -9,6 +9,7 @@
  *   - 정상: 현재가 − 1.0 × ATR14 → 🟢 지금 or 🟡 조정 대기
  */
 import { useEffect } from "react";
+import { StockLink } from "@/components/stock/StockLink";
 import { useQuery } from "@tanstack/react-query";
 
 import { api, type Top10Item } from "@/lib/api";
@@ -307,7 +308,7 @@ function Row({ it }: { it: Top10Item }) {
       <td className="px-2.5 py-2">
         <div className="font-semibold text-zinc-50 leading-tight">{it.name}</div>
         <div className="text-xs text-zinc-400 font-mono leading-tight mt-0.5">
-          {it.ticker} · {it.item}
+          <StockLink ticker={it.ticker}>{it.ticker}</StockLink> · {it.item}
         </div>
       </td>
       <td className="px-2.5 py-2 text-right whitespace-nowrap">

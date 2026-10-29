@@ -4,6 +4,7 @@
 // 최신 배치 요약 + 3탭 (PASS/FAIL/INSUFFICIENT_DATA) + 종목별 지표·근거
 
 import { useEffect, useState } from "react";
+import { StockLink } from "@/components/stock/StockLink";
 
 interface Reason {
   code: string;
@@ -191,7 +192,7 @@ export default function ScreenerPage() {
                       onClick={() => setOpenTicker(openTicker === r.ticker ? null : r.ticker)}
                     >
                       <td className="py-1 pr-3 font-mono">
-                        {r.ticker}
+                        <StockLink ticker={r.ticker}>{r.ticker}</StockLink>
                         {r.verification_tags && r.verification_tags.length > 0 && (
                           <span
                             title={`실체 검증 필요 · ${r.verification_tags.join(", ")}`}

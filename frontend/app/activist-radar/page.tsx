@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { StockLink } from "@/components/stock/StockLink";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import {
@@ -947,7 +948,7 @@ export default function ActivistRadarPage() {
                 {s.insider_watchlist_us!.map((w) => (
                   <div key={w.cik} className="flex gap-2 items-baseline">
                     <span className="rounded bg-sky-100 px-2 py-0.5 font-mono font-semibold text-sky-800 dark:bg-sky-900/40 dark:text-sky-200">
-                      {w.ticker}
+                      <StockLink ticker={w.ticker}>{w.ticker}</StockLink>
                     </span>
                     <span className="text-muted-foreground truncate">{w.name}</span>
                     <span className="ml-auto font-mono text-[10px] text-muted-foreground">

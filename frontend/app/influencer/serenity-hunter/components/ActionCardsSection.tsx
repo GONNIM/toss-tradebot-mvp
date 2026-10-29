@@ -4,6 +4,7 @@
 // 필터 통과 종목만 · 매수/손절/TP 자동 계산 · 저널 프리필 버튼
 
 import Link from "next/link";
+import { StockLink } from "@/components/stock/StockLink";
 import { useState } from "react";
 import { JudgmentDialog } from "@/components/journal/JudgmentDialog";
 import type { ActionCard, ActionCardsResponse } from "@/lib/serenity-hunter/types";
@@ -106,7 +107,7 @@ export function ActionCardsSection({ data }: { data: ActionCardsResponse }) {
             <div className="mt-2 space-y-1">
               {data.excluded.map((e, i) => (
                 <div key={i} className="flex justify-between gap-2">
-                  <span className="font-mono">{e.ticker}</span>
+                  <span className="font-mono"><StockLink ticker={e.ticker}>{e.ticker}</StockLink></span>
                   <span className="text-muted-foreground">{e.reason}</span>
                 </div>
               ))}
@@ -151,7 +152,7 @@ function ActionCardItem({
   return (
     <article className="rounded-lg border border-border bg-card p-3 text-xs">
       <header className="flex flex-wrap items-baseline gap-2">
-        <span className="font-mono text-lg font-bold">{card.ticker}</span>
+        <span className="font-mono text-lg font-bold"><StockLink ticker={card.ticker}>{card.ticker}</StockLink></span>
         {card.tier && (
           <span className="rounded bg-primary/20 px-1.5 py-0.5 text-[10px] font-semibold text-primary">
             {card.tier}

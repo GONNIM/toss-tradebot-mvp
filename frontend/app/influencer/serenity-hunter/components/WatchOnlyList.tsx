@@ -4,6 +4,7 @@
 // 별도 접힘 리스트 · 매매 불가 명시
 
 import { useState } from "react";
+import { StockLink } from "@/components/stock/StockLink";
 import type { WatchOnlyItem } from "@/lib/serenity-hunter/types";
 
 export function WatchOnlyList({ items }: { items: WatchOnlyItem[] }) {
@@ -22,7 +23,7 @@ export function WatchOnlyList({ items }: { items: WatchOnlyItem[] }) {
         <div className="mt-2 space-y-1">
           {items.map((w) => (
             <div key={w.ticker} className="flex flex-wrap items-baseline gap-2 text-xs">
-              <span className="font-mono font-bold">{w.ticker}</span>
+              <span className="font-mono font-bold"><StockLink ticker={w.ticker}>{w.ticker}</StockLink></span>
               {w.industry && (
                 <span className="text-[10px] text-muted-foreground">{w.industry}</span>
               )}

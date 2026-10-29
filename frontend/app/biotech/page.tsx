@@ -10,6 +10,7 @@
 "use client";
 
 import Link from "next/link";
+import { StockLink } from "@/components/stock/StockLink";
 import { useCallback, useEffect, useState } from "react";
 import { BiotechSessionControl } from "@/components/biotech/BiotechSessionControl";
 import { CatalystTimeline } from "@/components/biotech/CatalystTimeline";
@@ -116,7 +117,7 @@ const radarColumns = (links: Record<string, BrokerLinkInfo>): BiotechTableColumn
     label: "티커",
     render: (r) => (
       <span className="inline-flex flex-wrap items-center gap-1">
-        {r.ticker}
+        <StockLink ticker={r.ticker} />
         <BrokerLink symbol={r.ticker} links={links} />
       </span>
     ),
@@ -260,7 +261,7 @@ function CompactList({ rows, emptyLabel, kind, alertTickers = [] }: { rows: Rumo
       {rows.map((r, i) => (
         <li key={i} className="flex items-baseline gap-2 flex-wrap">
           <span className="rounded bg-slate-100 px-1.5 py-0.5 font-mono font-bold text-slate-700 dark:bg-slate-800 dark:text-slate-200">
-            {r.ticker}
+            <StockLink ticker={r.ticker}>{r.ticker}</StockLink>
           </span>
           <span className="text-muted-foreground">{shortName(r.name)}</span>
           {mcapBadge(r.mcap_bucket, r.mcap_asof) && (

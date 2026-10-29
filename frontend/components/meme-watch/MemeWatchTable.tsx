@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { StockLink } from "@/components/stock/StockLink";
 
 import type { MemeScoreItem } from "@/lib/api";
 import { cn } from "@/lib/utils";
@@ -91,7 +92,7 @@ export function MemeWatchTable({ items }: { items: MemeScoreItem[] }) {
                   </td>
                   <td className="px-3 py-2.5">
                     <div className="font-mono font-semibold text-foreground">
-                      {it.ticker}
+                      <StockLink ticker={it.ticker}>{it.ticker}</StockLink>
                     </div>
                     <div className="text-xs text-muted-foreground">
                       {it.name || "—"}
