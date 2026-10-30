@@ -90,9 +90,10 @@ class SniperParams:
     watchlist_execute_end_kst: str = "09:30"       # 초반 30분만
     watchlist_gap_min_pct: float = 0.005           # 갭업 최소 +0.5%
     watchlist_gap_max_pct: float = 0.05            # 갭업 최대 +5% (상투 회피)
-    watchlist_min_composite_score: float = 1.0     # composite_score >= 1.0 만
+    watchlist_min_composite_score: float = 0.5     # composite_score >= 0.5 만 (1030-04 · 점수 v2 가 0~1 이라 1.0 → 0.5)
     watchlist_use_rankings_confirm: bool = False   # rankings 매치 확인 (v1 off · v2 on)
     watchlist_execute_poll_sec: int = 30           # 30초마다 스캔
+    watchlist_chase_max_change_pct: float = 10.0   # 순위 신호 추격 제외 · 당일 등락률(%)이 이 값을 넘으면 새 진입이어도 신호 안 줌 (1030-04)
 
 
 class SniperParamsStore:

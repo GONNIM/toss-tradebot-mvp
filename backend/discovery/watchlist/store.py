@@ -16,6 +16,8 @@ from sqlalchemy import and_, select
 from backend.services.db import get_session
 from backend.services.models import WatchlistSignal
 
+from .source_groups import NEWS_SOURCES
+
 logger = logging.getLogger(__name__)
 
 
@@ -61,6 +63,7 @@ async def upsert_signal(
 
     dedup_url 을 주면 최근 3일 안에 같은 (ticker, source) 의 같은 URL 이 있어도 skip
     (발행시각을 못 읽던 피드가 같은 기사를 5분마다 다시 저장했다 · 1030-02).
+    뉴스 출처는 출처 무관: 같은 언론의 두 피드가 같은 기사를 올려도 한 번만 센다 (1030-04).
 
     Returns: 삽입된 row id · 중복이면 None.
     """
@@ -84,10 +87,15 @@ async def upsert_signal(
         if exists is not None:
             return None
         if dedup_url:
+            # 뉴스 출처 안에서만 출처를 가로질러 본다 (공시·순위 등은 자기 출처 안에서만)
+            same_source = (
+                WatchlistSignal.source.in_(NEWS_SOURCES) if source in NEWS_SOURCES
+                else WatchlistSignal.source == source
+            )
             url_stmt = select(WatchlistSignal.id).where(
                 and_(
                     WatchlistSignal.ticker == ticker,
-                    WatchlistSignal.source == source,
+                    same_source,
                     WatchlistSignal.detected_at >= datetime.now(tz=timezone.utc) - timedelta(days=_DEDUP_URL_DAYS),
                     WatchlistSignal.payload_json.contains(json.dumps(dedup_url, ensure_ascii=False), autoescape=True),
                 )

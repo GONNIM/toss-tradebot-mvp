@@ -17,10 +17,13 @@ from sqlalchemy import delete, select
 
 from backend.discovery.live_tape.universe import list_universe
 from backend.services.db import get_session
-from backend.services.models import Watchlist
+from backend.services.models import DartCorpCodeMap, Watchlist
 
+from . import evidence as ev
+from .collecting import collecting_categories
+from .dart_names import dart_names
 from .matcher import get_matcher
-from .scoring import score_signals
+from .scoring import SCORE_VERSION, normalized_weights, score_signals
 from .store import next_trade_date, signals_for_date
 
 logger = logging.getLogger(__name__)
@@ -50,7 +53,13 @@ async def finalize_watchlist(
 
     # 시그널 조회 (당일 trade_date 배정된 것 · store.next_trade_date 로직으로 저녁~새벽 감지 결과)
     signals = await signals_for_date(trade_date)
-    ticker_scores = score_signals(signals)
+    # 수집 여부는 /watchlist/sources 와 같은 함수 · 수집하지 않는 칸은 빼고 가중을 다시 맞춘다 (1030-04)
+    collecting = collecting_categories()
+    ticker_scores = score_signals(signals, collecting)
+    weights_used = normalized_weights(collecting)
+    by_ticker: dict[str, list[dict[str, Any]]] = {}
+    for s in signals:
+        by_ticker.setdefault(s["ticker"], []).append(s)
 
     # name 매핑 · matcher (KOSDAQ + KOSPI 350종목) 우선 · 유니버스 fallback
     matcher = get_matcher()
@@ -58,6 +67,21 @@ async def finalize_watchlist(
     universe_names: dict[str, str] = {e.ticker: e.name for e in matcher.entries()}
     for u in await list_universe(limit=1000):
         universe_names.setdefault(u["ticker"], u["name"])
+    # 마지막 단계: DART 상장사 이름으로 빈칸만 (matcher 사전에는 넣지 않음 · dart_names.py)
+    # 화약고가 받아 둔 DB 표 우선 · 없으면 저장소 사본 파일
+    try:
+        async with get_session() as session:
+            rows = (await session.execute(
+                select(DartCorpCodeMap.stock_code, DartCorpCodeMap.corp_name)
+                .where(DartCorpCodeMap.stock_code.is_not(None))
+            )).all()
+        for code, corp_name in rows:
+            if code and corp_name:
+                universe_names.setdefault(code.strip(), corp_name)
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("[finalize] DART 이름 DB 조회 실패 · %s", exc)
+    for code, corp_name in dart_names().items():
+        universe_names.setdefault(code, corp_name)
 
     # 기존 locked=True 항목 유지 (사용자 수동 lock)
     async with get_session() as session:
@@ -91,6 +115,9 @@ async def finalize_watchlist(
         for score in ticker_scores:
             if score.ticker in locked_tickers:
                 continue
+            # 점수 0 = 주의 공시만 있거나 점수 칸이 없는 종목 · 목록 자리를 채우지 않는다 (1030-04)
+            if score.composite_score <= 0:
+                continue
             if len(auto_picks) >= remaining_slots:
                 break
             auto_picks.append({
@@ -102,7 +129,12 @@ async def finalize_watchlist(
                 "youtube_score": score.youtube_score,
                 "event_score": score.event_score,
                 "prev_day_score": score.prev_day_score,
-                "source_breakdown": json.dumps(score.source_breakdown, ensure_ascii=False),
+                # 감사용 합계 + 공식 버전·가중(`_meta`) + 화면 근거(`_evidence`) · `_` 키는 응답에서 따로 꺼낸다
+                "source_breakdown": json.dumps({
+                    **score.source_breakdown,
+                    "_meta": {"score_version": SCORE_VERSION, "weights": weights_used},
+                    "_evidence": ev.build_evidence(by_ticker.get(score.ticker, [])),
+                }, ensure_ascii=False),
                 "added_by": "auto",
                 "locked": False,
             })
@@ -165,6 +197,10 @@ async def list_watchlist(trade_date: Optional[str] = None) -> list[dict[str, Any
 
 
 def _serialize(r: Watchlist) -> dict[str, Any]:
+    raw = json.loads(r.source_breakdown) if r.source_breakdown else None
+    meta = raw.get("_meta") if isinstance(raw, dict) else None
+    evidence = raw.get("_evidence") if isinstance(raw, dict) else None
+    breakdown = {k: v for k, v in raw.items() if not k.startswith("_")} if isinstance(raw, dict) else None
     return {
         "id": r.id,
         "trade_date": r.trade_date,
@@ -177,7 +213,9 @@ def _serialize(r: Watchlist) -> dict[str, Any]:
         "youtube_score": r.youtube_score,
         "event_score": r.event_score,
         "prev_day_score": r.prev_day_score,
-        "source_breakdown": json.loads(r.source_breakdown) if r.source_breakdown else None,
+        "source_breakdown": breakdown,
+        "score_version": (meta or {}).get("score_version"),
+        "evidence": evidence,
         "locked": r.locked,
         "added_by": r.added_by,
         "created_at": r.created_at.isoformat() if r.created_at else None,

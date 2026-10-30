@@ -1,13 +1,18 @@
 """News RSS Crawler · Sprint 2 T54.
 
-5개 언론 RSS 5분 폴링 · matcher 로 종목 매칭 · watchlist_signal 저장.
+언론 RSS 9개 5분 폴링 · matcher.match_news 로 종목 매칭 · watchlist_signal 저장.
 
-RSS URL 실측 (2026-07-13):
-  · 연합인포맥스 · news.einfomax.co.kr/rss/S1N2.xml       (200)
-  · 이데일리     · rss.edaily.co.kr/stock_news.xml         (200)
-  · 파이낸셜뉴스 · fnnews.com/rss/r20/fn_realnews_stock.xml (200)
-  · 한국경제     · hankyung.com/feed/finance               (200)
-  · 연합뉴스     · yna.co.kr/rss/economy.xml               (200)
+RSS URL (2026-07-13 실측 5곳 + 1030-04 추가 5곳 · 이데일리는 TLS 1.0 · 10/28 피드 멈춤으로 제거):
+  · 연합인포맥스 증권 · news.einfomax.co.kr/rss/S1N2.xml
+  · 연합인포맥스 전체 · news.einfomax.co.kr/rss/allArticle.xml
+  · 파이낸셜뉴스      · fnnews.com/rss/r20/fn_realnews_stock.xml
+  · 한국경제          · hankyung.com/feed/finance
+  · 연합뉴스 경제     · yna.co.kr/rss/economy.xml
+  · 연합뉴스 마켓     · yna.co.kr/rss/market.xml
+  · 매일경제 증권     · mk.co.kr/rss/50200011/
+  · 서울경제 금융     · sedaily.com/rss/finance
+  · 이투데이 금융     · rss.etoday.co.kr/eto/finance_news.xml
+같은 언론의 두 피드가 같은 기사를 올려도 URL 중복 제거(store)가 출처 무관으로 한 번만 센다.
 
 계획서: docs/plans/sniper/03-sprint2-week1-tasks.md T54
 """
@@ -31,10 +36,14 @@ logger = logging.getLogger(__name__)
 
 RSS_SOURCES: dict[str, str] = {
     "news_yhap": "https://news.einfomax.co.kr/rss/S1N2.xml",
-    "news_edaily": "https://rss.edaily.co.kr/stock_news.xml",
     "news_fnnews": "https://www.fnnews.com/rss/r20/fn_realnews_stock.xml",
     "news_hankyung": "https://www.hankyung.com/feed/finance",
     "news_yonhap": "https://www.yna.co.kr/rss/economy.xml",
+    "news_mk": "https://www.mk.co.kr/rss/50200011/",
+    "news_sedaily": "https://www.sedaily.com/rss/finance",
+    "news_yna_market": "https://www.yna.co.kr/rss/market.xml",
+    "news_etoday": "https://rss.etoday.co.kr/eto/finance_news.xml",
+    "news_einfomax_all": "https://news.einfomax.co.kr/rss/allArticle.xml",
 }
 
 _USER_AGENT = "Mozilla/5.0 (Macintosh; Intel Mac OS X) AppleWebKit/605.1 Safari/537 TossTradebot/1.0"
@@ -70,10 +79,13 @@ def _parse_pub_str(raw: str) -> Optional[datetime]:
 
     · fnnews 는 「Fri,30 Oct 2026 06:00:00 +0900」 처럼 쉼표 뒤 공백이 없어 feedparser 가 못 읽는다
     · 연합인포맥스는 「2026-10-30 10:18:00」 처럼 시간대가 없다 → 국내 피드라 KST 로 본다
+    · 「Fri, 30 Oct 2026 17:46:01 +09:00」 은 콜론을 빼 읽는다 (1030-04)
     """
     raw = (raw or "").strip()
     if not raw:
         return None
+    # 「+09:00」(콜론 오프셋) 은 parsedate_to_datetime 이 시간대를 못 읽고 UTC 로 둔다 → 「+0900」 으로 (1030-04)
+    raw = re.sub(r"\s([+-])(\d{2}):(\d{2})$", r" \1\2\3", raw)
     try:
         dt = parsedate_to_datetime(re.sub(r",(?=\S)", ", ", raw))
         if dt.tzinfo is None:  # RFC 822 「-0000」 = UTC
@@ -129,17 +141,17 @@ async def _process_source(
         title = str(entry.get("title") or "")
         summary = str(entry.get("summary") or entry.get("description") or "")
         link = str(entry.get("link") or "")
-        text = f"{title} {summary}"
-        tickers = matcher.match_text(text)
-        if not tickers:
+        # 뉴스 전용 매칭 (오탐 규칙 · 별칭 · 다종목 분산) · intensity = 가중 (1030-04)
+        weighted = matcher.match_news(title, summary)
+        if not weighted:
             continue
         matched += 1
-        for ticker in tickers:
+        for ticker, weight in weighted:
             row_id = await upsert_signal(
                 ticker=ticker,
                 source=source,
                 signal_type="headline",
-                intensity=1.0,
+                intensity=weight,
                 payload={"title": title[:200], "url": link, "published": pub.isoformat() if pub else None},
                 detected_at=pub or datetime.now(tz=timezone.utc),
                 dedup_url=link or None,
@@ -153,7 +165,7 @@ async def _process_source(
 
 
 async def poll_news_rss() -> dict[str, Any]:
-    """5개 소스 병렬 폴링 · 매칭 · 저장.
+    """RSS 소스 병렬 폴링 · 매칭 · 저장.
 
     Returns:
         {"per_source": {source: stats}, "total_inserted": N, "elapsed_sec": T}
