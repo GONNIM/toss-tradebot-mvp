@@ -11,6 +11,7 @@ import {
   api,
   SniperStatus,
   WatchlistItem,
+  WatchlistSourceStatus,
   WatchlistReport,
   WatchlistSignal,
 } from "@/lib/api";
@@ -330,6 +331,16 @@ function WatchlistTable({ tradeDate, isAdmin }: { tradeDate: string; isAdmin: bo
     onSuccess: () => qc.invalidateQueries({ queryKey: ["watchlist"] }),
   });
 
+  const src = useQuery<{ sources: WatchlistSourceStatus[] }>({
+    queryKey: ["watchlist", "sources"],
+    queryFn: () => api.watchlist.sources(),
+    refetchInterval: 300_000,
+  });
+  const off = new Set((src.data?.sources ?? []).filter((s) => !s.collecting).map((s) => s.key));
+  // 수집하지 않는 칸의 0 은 「점수 0」이 아니라 「자료 없음」 · 1030-02
+  const scoreCell = (key: WatchlistSourceStatus["key"], v: number | null | undefined) =>
+    off.has(key) && !v ? <span className="text-[10px] text-muted-foreground">수집 안 함</span> : fmt3(v);
+
   const items = q.data?.items ?? [];
   const showTradeDate = q.data?.trade_date ?? tradeDate;
 
@@ -368,6 +379,8 @@ function WatchlistTable({ tradeDate, isAdmin }: { tradeDate: string; isAdmin: bo
         </div>
       )}
 
+      {src.data && <SourceStatusLine sources={src.data.sources} />}
+
       {q.isLoading ? (
         <div className="text-xs text-muted-foreground">불러오는 중...</div>
       ) : items.length === 0 ? (
@@ -402,10 +415,10 @@ function WatchlistTable({ tradeDate, isAdmin }: { tradeDate: string; isAdmin: bo
                   <td className="p-2 text-right font-bold text-sky-700">
                     {it.composite_score.toFixed(3)}
                   </td>
-                  <td className="p-2 text-right">{fmt3(it.news_score)}</td>
-                  <td className="p-2 text-right">{fmt3(it.board_score)}</td>
-                  <td className="p-2 text-right">{fmt3(it.youtube_score)}</td>
-                  <td className="p-2 text-right">{fmt3(it.event_score)}</td>
+                  <td className="p-2 text-right">{scoreCell("news", it.news_score)}</td>
+                  <td className="p-2 text-right">{scoreCell("board", it.board_score)}</td>
+                  <td className="p-2 text-right">{scoreCell("youtube", it.youtube_score)}</td>
+                  <td className="p-2 text-right">{scoreCell("event", it.event_score)}</td>
                   <td className="p-2 text-center">
                     <SourceBadges breakdown={it.source_breakdown} />
                   </td>
@@ -454,6 +467,27 @@ function WatchlistTable({ tradeDate, isAdmin }: { tradeDate: string; isAdmin: bo
         </div>
       )}
     </section>
+  );
+}
+
+function SourceStatusLine({ sources }: { sources: WatchlistSourceStatus[] }) {
+  return (
+    <div className="mb-2 rounded border border-border p-2 text-xs">
+      <span className="font-semibold">수집 상태</span>
+      <ul className="mt-1 space-y-0.5">
+        {sources.map((s) => (
+          <li key={s.key} className="flex flex-wrap gap-x-2">
+            <span className="font-medium">{s.label}</span>
+            {s.collecting ? (
+              <span>수집 중 · 마지막 신호 {s.last_signal_at ? fmtKstDateTime(s.last_signal_at) : "최근 7일 없음"}</span>
+            ) : (
+              <span className="text-red-600 dark:text-red-400">수집 안 함</span>
+            )}
+            {s.note && <span className="text-muted-foreground">{s.note}</span>}
+          </li>
+        ))}
+      </ul>
+    </div>
   );
 }
 

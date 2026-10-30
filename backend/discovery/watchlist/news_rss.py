@@ -15,7 +15,9 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import re
 from datetime import datetime, timedelta, timezone
+from email.utils import parsedate_to_datetime
 from typing import Any, Optional
 
 import feedparser
@@ -60,7 +62,42 @@ def _parse_entries(source: str, xml: str) -> list[dict[str, Any]]:
     return list(parsed.entries)
 
 
+_KST = timezone(timedelta(hours=9))
+
+
+def _parse_pub_str(raw: str) -> Optional[datetime]:
+    """피드 원문 발행시각 → UTC (1030-02).
+
+    · fnnews 는 「Fri,30 Oct 2026 06:00:00 +0900」 처럼 쉼표 뒤 공백이 없어 feedparser 가 못 읽는다
+    · 연합인포맥스는 「2026-10-30 10:18:00」 처럼 시간대가 없다 → 국내 피드라 KST 로 본다
+    """
+    raw = (raw or "").strip()
+    if not raw:
+        return None
+    try:
+        dt = parsedate_to_datetime(re.sub(r",(?=\S)", ", ", raw))
+        if dt.tzinfo is None:  # RFC 822 「-0000」 = UTC
+            dt = dt.replace(tzinfo=timezone.utc)
+        return dt.astimezone(timezone.utc)
+    except (TypeError, ValueError, IndexError):
+        pass
+    try:
+        dt = datetime.fromisoformat(raw)
+    except ValueError:
+        return None
+    if dt.tzinfo is None:
+        dt = dt.replace(tzinfo=_KST)
+    return dt.astimezone(timezone.utc)
+
+
 def _entry_time(entry: dict[str, Any]) -> Optional[datetime]:
+    # 원문 문자열 우선 · feedparser *_parsed 는 시간대 없는 값을 UTC 로 읽어 9시간 어긋난다
+    for key in ("published", "updated"):
+        val = entry.get(key)
+        if isinstance(val, str):
+            dt = _parse_pub_str(val)
+            if dt is not None:
+                return dt
     for key in ("published_parsed", "updated_parsed"):
         val = entry.get(key)
         if val is not None:
@@ -105,6 +142,7 @@ async def _process_source(
                 intensity=1.0,
                 payload={"title": title[:200], "url": link, "published": pub.isoformat() if pub else None},
                 detected_at=pub or datetime.now(tz=timezone.utc),
+                dedup_url=link or None,
             )
             if row_id is not None:
                 inserted += 1

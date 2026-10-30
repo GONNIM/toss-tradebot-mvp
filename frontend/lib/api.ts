@@ -1011,6 +1011,7 @@ export const api = {
       );
     },
     dates: () => get<string[]>(`/watchlist/dates`),
+    sources: () => get<{ sources: WatchlistSourceStatus[] }>(`/watchlist/sources`),
     finalize: (token: string, opts: { trade_date?: string; top_n?: number } = {}) =>
       postWithToken<{
         trade_date: string;
@@ -1849,6 +1850,15 @@ export interface WatchlistItem {
   added_by: string;        // "auto" | "user"
   created_at: string | null;
   updated_at: string | null;
+}
+
+// 1030-02 · 칸별 수집 상태 (키·주소 값은 오지 않음)
+export interface WatchlistSourceStatus {
+  key: "news" | "board" | "youtube" | "event";
+  label: string;
+  collecting: boolean;
+  note: string;
+  last_signal_at: string | null;
 }
 
 export interface WatchlistSignal {
