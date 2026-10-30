@@ -7,7 +7,7 @@ import { HeaderSession } from "@/components/layout/HeaderSession";
 
 export const metadata: Metadata = {
   title: "Toss Tradebot",
-  description: "개인 전문 정보 창구 · 2026-1억-Sprint 서브루틴 · Stage 1 개인 판단 도구",
+  description: "주식 급등 후보와 보유 종목 상태를 쉽게 보여 주는 개인 판단 도구",
 };
 
 // 1022-10 1단계 · 2026-10-29 · 메뉴 묶음 4 + 설정 · 헤더 로그인 하나

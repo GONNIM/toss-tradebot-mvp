@@ -31,7 +31,7 @@ export default function WatchlistPage() {
       <header className="space-y-1">
         <h1 className="text-2xl font-bold">🌙 Watchlist · 마감후 예측</h1>
         <p className="text-sm text-muted-foreground">
-          야간 축적 신호(뉴스·개인 관심·유튜브·공시·전일 순위) → 08:30 KST 확정 → 개장 즉시 급등 전 매수 후보
+          야간 축적 신호(뉴스·개인 관심·유튜브·공시·전일 순위) → 08:30 KST 확정 → 봇 자동 진입 창 (09:00~09:30) 의 대상 종목
         </p>
       </header>
 
@@ -65,7 +65,7 @@ function DoDReportPanel() {
     <section className="rounded border p-4">
       <div className="mb-3 flex items-center justify-between">
         <h2 className="text-base font-bold">
-          📈 Sprint 2 DoD Report
+          📈 예측 성적표
           {r ? (
             <span
               className={`ml-3 rounded px-2 py-0.5 text-xs ${
@@ -170,7 +170,7 @@ function ExecuteStatusPanel() {
     <section className="rounded border-2 border-sky-200 bg-sky-50 p-3 text-xs dark:border-sky-900 dark:bg-sky-950">
       <div className="mb-2 flex items-center justify-between">
         <div className="font-bold text-sky-900 dark:text-sky-100">
-          ⚡ 개장 실행 설정 (Week 3 T64~T66)
+          ⚡ 자동 진입 창 설정
         </div>
         <a href="/sniper" className="text-sky-600 hover:underline">
           ⚙️ 파라미터 편집 →
@@ -234,7 +234,7 @@ function PrincipleBanner() {
       <ul className="mt-1 space-y-0.5 text-xs text-amber-800 dark:text-amber-200">
         <li>1. 마감 후 예측 결정 (15:30 KST~ · 뉴스·소셜·이벤트 야간 축적)</li>
         <li>2. 개장 전 최종 Watchlist (08:30 KST · Top 30 확정 · 수동 편집 가능)</li>
-        <li>3. 급등 전 매수 (09:00~09:30 KST · Watchlist 종목만 시가 근처 진입)</li>
+        <li>3. 자동 진입 창 (09:00~09:30 KST · 봇이 Watchlist 종목만 시가 근처에서 진입 · 실행 스위치가 켜졌을 때만)</li>
       </ul>
     </section>
   );

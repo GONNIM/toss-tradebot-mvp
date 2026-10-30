@@ -47,7 +47,7 @@ export function ScoreHistoryChart({
   if (!data || data.points.length === 0) {
     return (
       <div className="text-xs text-zinc-500 dark:text-zinc-400 py-4 text-center">
-        최근 {hours}시간 이력 없음. Phase 4 이력 저장은 5분마다 누적됩니다.
+        최근 {hours}시간 기록이 없습니다. 점수 기록은 5분마다 쌓입니다.
       </div>
     );
   }
