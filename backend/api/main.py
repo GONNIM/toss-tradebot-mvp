@@ -239,7 +239,7 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(
     title="Toss Tradebot MVP API",
-    version="0.3.21",
+    version="0.3.22",
     description="자동매매 + Crazy + Moonshot Discovery API",
     lifespan=lifespan,
 )
@@ -299,6 +299,8 @@ app.include_router(_account.router, prefix="/api/v1/account", tags=["account"])
 # ── 관리자 세션 (Phase D 주 7 · 2026-07-31 · httpOnly 쿠키 이관)
 from backend.api.routes import stock as _stock  # noqa: E402 · 1022-10 3단계
 app.include_router(_stock.router, prefix="/api/v1/stock", tags=["stock"])  # 1022-10 3단계 · 종목 한 장 (읽기 전용)
+from backend.api.routes import today as _today  # noqa: E402 · 1022-10 4단계
+app.include_router(_today.router, prefix="/api/v1/today", tags=["today"])  # 1022-10 4단계 · 오늘 홈 (읽기 전용)
 app.include_router(session.router, prefix="/api/v1/admin/session", tags=["session"])
 # ── Webhooks (Phase D 주 8 · 2026-07-31 · 결제 훅 스텁)
 app.include_router(webhooks.router, prefix="/api/v1/webhooks", tags=["webhooks"])

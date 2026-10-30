@@ -730,7 +730,67 @@ export interface StockOverview {
   signals: StockSignal[];
 }
 
+// 1022-10 4단계 · 오늘 (홈) · 계약은 서버 routes/today.py 와 같다
+export interface TodaySafety {
+  live_enabled: boolean;
+  sniper_enabled: boolean;
+  kill_switch_active: boolean;
+  order_target: string;
+}
+export interface TodayFailure {
+  title: string;
+  category: string;
+  at: string;
+  count: number;
+}
+export interface TodayJudgmentDue {
+  id: number;
+  ticker: string;
+  strategy: string | null;
+  ts: string | null;
+  due_date: string;
+  overdue: boolean;
+}
+export interface TodayHoldingAlert {
+  symbol: string;
+  market: string;
+  kind: "stop_hit" | "stop_near" | "deadline";
+  price: number | null;
+  price_date: string | null;
+  price_source: "candle" | "holding";
+  invalidation_price: number | null;
+  gap_pct: number | null;
+  deadline: string | null;
+  currency: string | null;
+}
+export interface TodayCandidateItem {
+  ticker: string | null;
+  name: string | null;
+  note: string | null;
+}
+export interface TodayCandidateBlock {
+  source: string;
+  label: string;
+  as_of: string | null;
+  link: string;
+  locked: boolean;
+  items: TodayCandidateItem[];
+}
+export interface TodayResponse {
+  is_admin: boolean;
+  fetched_at: string;
+  today_kst: string;
+  safety: TodaySafety | null;
+  failures: TodayFailure[] | null;
+  failures_scope: string | null;
+  judgments_due: TodayJudgmentDue[] | null;
+  holding_alerts: TodayHoldingAlert[] | null;
+  near_stop_pct: number;
+  candidates: TodayCandidateBlock[];
+}
+
 export const api = {
+  today: () => getWithSession<TodayResponse>(`/today`),
   stock: {
     overview: (ticker: string) => getWithSession<StockOverview>(`/stock/${encodeURIComponent(ticker)}`),
   },

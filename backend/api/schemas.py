@@ -739,3 +739,61 @@ class StockOverview(BaseModel):
     holding: Optional[StockHolding] = None
     judgments: Optional[list[StockJudgment]] = None
     signals: list[StockSignal]
+
+
+# ─── 오늘 홈 (1022-10 4단계) · GET /api/v1/today ───────────────────────────
+class TodayFailure(BaseModel):
+    title: str
+    category: str
+    at: str  # ISO UTC (같은 dedupe_key 중 가장 최근)
+    count: int
+
+
+class TodayJudgmentDue(BaseModel):
+    id: int
+    ticker: str
+    strategy: Optional[str] = None
+    ts: Optional[str] = None
+    due_date: str  # YYYY-MM-DD
+    overdue: bool
+
+
+class TodayHoldingAlert(BaseModel):
+    symbol: str
+    market: str
+    kind: str  # stop_hit | stop_near | deadline
+    price: Optional[float] = None
+    price_date: Optional[str] = None
+    price_source: str  # candle | holding
+    invalidation_price: Optional[float] = None
+    gap_pct: Optional[float] = None
+    deadline: Optional[str] = None
+    currency: Optional[str] = None
+
+
+class TodayCandidateItem(BaseModel):
+    ticker: Optional[str] = None
+    name: Optional[str] = None
+    note: Optional[str] = None
+
+
+class TodayCandidateSection(BaseModel):
+    source: str
+    label: str
+    as_of: Optional[str] = None
+    link: str
+    locked: bool = False
+    items: list[TodayCandidateItem] = []
+
+
+class TodayResponse(BaseModel):
+    is_admin: bool
+    fetched_at: str
+    today_kst: str
+    safety: Optional[dict] = None
+    failures: Optional[list[TodayFailure]] = None
+    failures_scope: str
+    judgments_due: Optional[list[TodayJudgmentDue]] = None
+    holding_alerts: Optional[list[TodayHoldingAlert]] = None
+    near_stop_pct: float
+    candidates: list[TodayCandidateSection]

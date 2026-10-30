@@ -331,8 +331,11 @@ async def get_stock(ticker: str, response: Response, role: str = Depends(get_cur
             signals.append(_locked("moonshot", "Moonshot 후보", "/lab/moonshot"))
         await add(_serenity)
     await add(_meme)
-    if not kr and admin:  # 바이오 레이더 화면이 관리자 전용
-        await add(_biotech)
+    if not kr:  # 바이오 레이더 화면이 관리자 전용 · 비로그인은 잠금 행 (1022-10 4단계 사용자 결정 · 홈과 같게)
+        if admin:
+            await add(_biotech)
+        else:
+            signals.append(_locked("biotech", "바이오 레이더", "/biotech"))
     await add(_activist)
     if kr:
         for fn in (_powderkeg, _blue_chip, _principles, _sector_leaders, _watchlist, _sniper):
