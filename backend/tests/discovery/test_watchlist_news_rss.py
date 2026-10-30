@@ -98,13 +98,13 @@ def _mock_httpx_client(xml_by_url: dict[str, str], monkeypatch):
 
 @pytest.mark.asyncio
 async def test_poll_news_rss_matches_and_stores(stub_matcher, monkeypatch):
-    """5소스 stub · 매칭·저장 검증."""
+    """소스 stub · 매칭·저장 검증."""
     xml_map = {
         rss_mod.RSS_SOURCES["news_yhap"]: _build_mock_xml([
             ("삼성전자 실적 호조 · 반도체 강세", "2분기 영업이익 급증"),
             ("SK하이닉스 신제품 발표", "HBM3E 양산 개시"),
         ]),
-        rss_mod.RSS_SOURCES["news_edaily"]: _build_mock_xml([
+        rss_mod.RSS_SOURCES["news_mk"]: _build_mock_xml([
             ("LG에너지솔루션 수주 대박", "GM 신규 계약"),
         ]),
         rss_mod.RSS_SOURCES["news_fnnews"]: _build_mock_xml([
@@ -154,7 +154,7 @@ async def test_poll_news_rss_isolates_source_failure(stub_matcher, monkeypatch):
     assert result["total_inserted"] >= 1
     assert result["per_source"]["news_yhap"]["inserted"] == 1
     # 다른 소스는 error=1 또는 fetched=0
-    for source in ("news_edaily", "news_fnnews", "news_hankyung", "news_yonhap"):
+    for source in ("news_mk", "news_fnnews", "news_hankyung", "news_yonhap"):
         stats = result["per_source"][source]
         assert stats.get("inserted", 0) == 0
 

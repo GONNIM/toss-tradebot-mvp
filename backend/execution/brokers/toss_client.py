@@ -426,6 +426,19 @@ class TossClient:
             use_account_header=False,
         )
 
+    def investor_trading_rankings(self, *, count: int = 100) -> TossEnvelope:
+        """GET /api/v1/rankings/investor-trading — 외국인·기관·개인 순매수·순매도 상위 (RANKING 5/s · 1030-04).
+
+        개인은 정규장 종료 후 제공 · 20시경까지 값이 바뀔 수 있다 · rankedAt 으로 기준 시각 확인.
+        시세(등락률)는 응답에 없다.
+        """
+        return self.request_envelope(
+            "GET",
+            "/api/v1/rankings/investor-trading",
+            params={"count": count},
+            use_account_header=False,
+        )
+
     def orderbook(self, symbol: str) -> TossEnvelope:
         """GET /api/v1/orderbook?symbol=... (MARKET_DATA 10/s)."""
         return self.request_envelope(

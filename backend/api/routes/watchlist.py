@@ -4,7 +4,8 @@
     GET /watchlist           — trade_date 별 · rank 순 Top N
     GET /watchlist/signals   — 원본 signal (source 별) · 디버그·breakdown 조회
     GET /watchlist/dates     — 최근 Watchlist 존재 거래일 리스트
-    GET /watchlist/sources   — 칸별 수집 상태 (키 유무 참/거짓 · 마지막 신호 시각 · 1030-02)
+    GET /watchlist/sources   — 칸별 수집 상태 (키 유무 참/거짓 · 마지막 신호·저장 시각 · 1030-02·04)
+    GET /watchlist          — items[].evidence · score_version (칸별 근거 · 1030-04)
 
 편집·실행 (X-API-Token · SNIPER_LIVE_ENABLED 미요구):
     POST   /watchlist/finalize     — 수동 finalize 트리거 (즉시 재계산)
@@ -29,7 +30,9 @@ from backend.discovery.watchlist.finalize import (
     finalize_watchlist,
     list_watchlist,
 )
-from backend.discovery.watchlist import assembly, gov_press, scoring, youtube
+from backend.discovery.watchlist import (
+    assembly, collecting, gov_press, news_rss, scoring, source_groups,
+)
 from backend.discovery.watchlist.metrics import Trade, compute_metrics, evaluate_dod
 from backend.discovery.watchlist.store import next_trade_date, recent_signals, signals_for_date
 from backend.services.db import get_session
@@ -130,32 +133,54 @@ async def get_dates(limit: int = Query(30, ge=1, le=100)) -> list[str]:
     return [r for r in rows if r]
 
 
-# 점수 계산과 같은 출처 분류
-_CATEGORY_SOURCES = {
-    "news": scoring._NEWS_SOURCES,
-    "board": scoring._BOARD_SOURCES,
-    "youtube": scoring._YOUTUBE_SOURCES,
-    "event": scoring._EVENT_SOURCES,
-}
+# 점수 계산과 같은 출처 분류 (source_groups) · 화면 키는 board 를 유지한다 (옛 종토방 컬럼 = 개인 관심 · 화면 호환)
+_KEY_OF_CATEGORY = {"news": "news", "interest": "board", "youtube": "youtube", "event": "event", "prev_day": "prev_day"}
 
 
 def _category(source: str) -> Optional[str]:
-    for key, names in _CATEGORY_SOURCES.items():
-        if source in names:
-            return key
-    return None
+    cat = source_groups.category_of(source)
+    return _KEY_OF_CATEGORY.get(cat) if cat else None
+
+
+def _rank_state_note(kinds: list[str], status: dict[str, Any]) -> tuple[str, Optional[str]]:
+    """순위 칸의 상태 문구 · (note, 마지막 저장 시각 iso).
+
+    20:30 저장 상태(rank_status.json)와 장중 누적을 합쳐 「저장함 / 집계 없음 / 아직 안 돌았음」을 말한다.
+    """
+    daily = (status.get("daily") or {})
+    states = [(daily.get("kinds") or {}).get(k, {}) for k in kinds]
+    saved = [s for s in states if s.get("state") == "saved"]
+    if not daily:
+        return "아직 저장 전 · 매일 20:30 에 저장", None
+    last = daily.get("run_at")
+    if saved:
+        missing = [k for k, s in zip(kinds, states) if s.get("state") != "saved"]
+        note = f"{daily.get('date', '')} 저장"
+        if missing:
+            note += " · 일부 종류는 집계 없음"
+        return note, last
+    rt = status.get("realtime") or {}
+    if rt.get("date") == daily.get("date") and rt.get("changed"):
+        return f"{daily.get('date', '')} 집계 없음 · 장중 순위로 대신함", last
+    return f"{daily.get('date', '')} 집계 없음", last
 
 
 @router.get("/sources")
 async def get_sources() -> dict[str, Any]:
-    """칸별 수집 상태 · 수집하지 않는 칸은 화면에 0 대신 「수집 안 함」 (1030-02).
+    """칸별 수집 상태 · 수집하지 않는 칸은 화면에 0 대신 「수집 안 함」 (1030-02·1030-04).
 
-    키·주소 값은 내보내지 않고 설정 여부만 내보낸다.
+    키·주소 값은 내보내지 않고 설정 여부(참/거짓)만 내보낸다.
+    수집 여부는 점수 계산(finalize)과 같은 collecting.collecting_categories() 한 곳에서 판정한다.
     """
-    yt_key = youtube._api_key() is not None
+    from backend.discovery.watchlist import rank_signals
+
+    col = collecting.collecting_categories()
     asm_key = assembly._api_key() is not None
+    dart_key = collecting.dart_configured()
     gov = gov_press.configured_sources()
     event_notes = []
+    if not dart_key:
+        event_notes.append("DART 키 없음")
     if not asm_key:
         event_notes.append("국회 의안 키 없음")
     if not gov:
@@ -168,7 +193,7 @@ async def get_sources() -> dict[str, Any]:
             .where(WatchlistSignal.detected_at >= since)
             .group_by(WatchlistSignal.source)
         )).all()
-    last: dict[str, Optional[datetime]] = {"news": None, "board": None, "youtube": None, "event": None}
+    last: dict[str, Optional[datetime]] = {k: None for k in ("news", "board", "youtube", "event", "prev_day")}
     for source, at in rows:
         key = _category(source or "")
         if key and at is not None and (last[key] is None or at > last[key]):
@@ -179,16 +204,28 @@ async def get_sources() -> dict[str, Any]:
             return None
         return (v if v.tzinfo else v.replace(tzinfo=timezone.utc)).isoformat()
 
+    status = rank_signals.read_status()
+    interest_note, interest_saved = _rank_state_note(
+        [rank_signals.KIND_INDIVIDUAL, "toss_amount", "toss_volume"], status)
+    prev_note, prev_saved = _rank_state_note(["market_amount", "market_volume"], status)
+    toss_note = "" if col["interest"] else "토스 키 없음"
+
     sources = [
-        {"key": "news", "label": "뉴스", "collecting": True, "note": "언론 RSS 5곳"},
-        {"key": "board", "label": "종토방", "collecting": True,
-         "note": "코스닥 종목만 · 30분 글 수가 평소보다 크게 많을 때만 점수"},
-        {"key": "youtube", "label": "유튜브", "collecting": yt_key, "note": "" if yt_key else "키 없음"},
-        {"key": "event", "label": "이벤트", "collecting": asm_key or bool(gov), "note": " · ".join(event_notes)},
+        {"key": "news", "label": "뉴스", "collecting": col["news"],
+         "note": f"언론 RSS {len(news_rss.RSS_SOURCES)}곳 · 같은 언론의 피드는 한 곳으로 셈"},
+        {"key": "board", "label": "개인 관심", "collecting": col["interest"],
+         "note": toss_note or f"토스 순위(개인 순매수·토스증권 체결) 100위 새 진입 · {interest_note}",
+         "last_saved_at": interest_saved},
+        {"key": "youtube", "label": "유튜브", "collecting": col["youtube"],
+         "note": "" if col["youtube"] else "키 없음"},
+        {"key": "event", "label": "이벤트", "collecting": col["event"], "note": " · ".join(event_notes)},
+        {"key": "prev_day", "label": "전일", "collecting": col["prev_day"],
+         "note": toss_note or f"시장 거래대금·거래량 100위 새 진입 · {prev_note}",
+         "last_saved_at": prev_saved},
     ]
     for s_ in sources:
         s_["last_signal_at"] = _iso(last[s_["key"]])
-    return {"sources": sources}
+    return {"sources": sources, "score_version": scoring.SCORE_VERSION}
 
 
 # ═══════════════════════════════════════════════════════════════

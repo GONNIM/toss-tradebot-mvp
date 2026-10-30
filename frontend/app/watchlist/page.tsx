@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { Fragment, useEffect, useMemo, useState } from "react";
 import { StockLink } from "@/components/stock/StockLink";
 import {
   useMutation,
@@ -11,6 +11,8 @@ import {
   api,
   SniperStatus,
   WatchlistItem,
+  WatchlistEvidence,
+  WatchlistRankEvidence,
   WatchlistSourceStatus,
   WatchlistReport,
   WatchlistSignal,
@@ -29,7 +31,7 @@ export default function WatchlistPage() {
       <header className="space-y-1">
         <h1 className="text-2xl font-bold">🌙 Watchlist · 마감후 예측</h1>
         <p className="text-sm text-muted-foreground">
-          야간 축적 신호(뉴스·종토방·유튜브·국회·정부) → 08:30 KST 확정 → 개장 즉시 급등 전 매수 후보
+          야간 축적 신호(뉴스·개인 관심·유튜브·공시·전일 순위) → 08:30 KST 확정 → 개장 즉시 급등 전 매수 후보
         </p>
       </header>
 
@@ -331,7 +333,7 @@ function WatchlistTable({ tradeDate, isAdmin }: { tradeDate: string; isAdmin: bo
     onSuccess: () => qc.invalidateQueries({ queryKey: ["watchlist"] }),
   });
 
-  const src = useQuery<{ sources: WatchlistSourceStatus[] }>({
+  const src = useQuery<{ sources: WatchlistSourceStatus[]; score_version?: string | null }>({
     queryKey: ["watchlist", "sources"],
     queryFn: () => api.watchlist.sources(),
     refetchInterval: 300_000,
@@ -341,6 +343,14 @@ function WatchlistTable({ tradeDate, isAdmin }: { tradeDate: string; isAdmin: bo
   const scoreCell = (key: WatchlistSourceStatus["key"], v: number | null | undefined) =>
     off.has(key) && !v ? <span className="text-[10px] text-muted-foreground">수집 안 함</span> : fmt3(v);
 
+  const [open, setOpen] = useState<Set<number>>(new Set());
+  const toggleOpen = (id: number) =>
+    setOpen((prev) => {
+      const n = new Set(prev);
+      if (n.has(id)) n.delete(id);
+      else n.add(id);
+      return n;
+    });
   const items = q.data?.items ?? [];
   const showTradeDate = q.data?.trade_date ?? tradeDate;
 
@@ -379,6 +389,9 @@ function WatchlistTable({ tradeDate, isAdmin }: { tradeDate: string; isAdmin: bo
         </div>
       )}
 
+      <p className="mb-2 text-xs text-muted-foreground">
+        점수 공식 {src.data?.score_version ?? "-"} · 점수는 0~1 · 수집 안 하는 칸은 빼고 계산합니다.
+      </p>
       {src.data && <SourceStatusLine sources={src.data.sources} />}
 
       {q.isLoading ? (
@@ -393,12 +406,14 @@ function WatchlistTable({ tradeDate, isAdmin }: { tradeDate: string; isAdmin: bo
             <thead>
               <tr className="border-b bg-slate-50 dark:bg-slate-900">
                 <th className="p-2 text-left">순위</th>
+                <th className="p-2 text-left">근거</th>
                 <th className="p-2 text-left">종목</th>
                 <th className="p-2 text-right">종합 점수</th>
                 <th className="p-2 text-right">뉴스</th>
-                <th className="p-2 text-right">종토방</th>
+                <th className="p-2 text-right">개인 관심</th>
                 <th className="p-2 text-right">유튜브</th>
                 <th className="p-2 text-right">이벤트</th>
+                <th className="p-2 text-right">전일</th>
                 <th className="p-2 text-center">소스</th>
                 <th className="p-2 text-center">상태</th>
                 <th className="p-2 text-center">액션</th>
@@ -406,19 +421,34 @@ function WatchlistTable({ tradeDate, isAdmin }: { tradeDate: string; isAdmin: bo
             </thead>
             <tbody>
               {items.map((it) => (
-                <tr key={it.id} className="border-b hover:bg-sky-50/30">
+                <Fragment key={it.id}>
+                <tr className="border-b hover:bg-sky-50/30">
                   <td className="p-2 font-bold">{it.rank}</td>
+                  <td className="p-2">
+                    <button
+                      type="button"
+                      onClick={() => toggleOpen(it.id)}
+                      aria-expanded={open.has(it.id)}
+                      className="min-h-[44px] min-w-[44px] rounded border px-2 text-xs hover:bg-sky-50"
+                    >
+                      {open.has(it.id) ? "접기" : "근거"}
+                    </button>
+                  </td>
                   <td className="p-2">
                     <div className="font-medium">{it.name || "-"}</div>
                     <div className="text-[10px] text-muted-foreground"><StockLink ticker={it.ticker}>{it.ticker}</StockLink></div>
                   </td>
                   <td className="p-2 text-right font-bold text-sky-700">
                     {it.composite_score.toFixed(3)}
+                    {it.evidence?.caution?.length ? (
+                      <div className="mt-0.5 text-[10px] font-bold text-orange-700 dark:text-orange-300">⚠ 주의 공시</div>
+                    ) : null}
                   </td>
                   <td className="p-2 text-right">{scoreCell("news", it.news_score)}</td>
                   <td className="p-2 text-right">{scoreCell("board", it.board_score)}</td>
                   <td className="p-2 text-right">{scoreCell("youtube", it.youtube_score)}</td>
                   <td className="p-2 text-right">{scoreCell("event", it.event_score)}</td>
+                  <td className="p-2 text-right">{scoreCell("prev_day", it.prev_day_score)}</td>
                   <td className="p-2 text-center">
                     <SourceBadges breakdown={it.source_breakdown} />
                   </td>
@@ -461,12 +491,110 @@ function WatchlistTable({ tradeDate, isAdmin }: { tradeDate: string; isAdmin: bo
                     </div>
                   </td>
                 </tr>
+                {open.has(it.id) && (
+                  <tr className="border-b bg-slate-50/60 dark:bg-slate-900/60">
+                    <td colSpan={12} className="p-3">
+                      <EvidenceBlock ev={it.evidence ?? null} version={it.score_version ?? null} />
+                    </td>
+                  </tr>
+                )}
+                </Fragment>
               ))}
             </tbody>
           </table>
         </div>
       )}
     </section>
+  );
+}
+
+function rankSentence(r: WatchlistRankEvidence) {
+  const rank = r.rank != null ? `${r.rank}위` : "순위 미상";
+  let tail = "";
+  if (r.is_new) tail = " (새로 진입)";
+  else if (r.prev_rank != null && r.rank != null) tail = ` (${r.prev_rank}위→${r.rank}위)`;
+  const rate = r.change_rate_pct != null ? ` · 등락률 ${r.change_rate_pct > 0 ? "+" : ""}${r.change_rate_pct}%` : "";
+  return `${r.label} ${rank}${tail}${rate}`;
+}
+
+function EvidenceBlock({ ev, version }: { ev: WatchlistEvidence | null; version: string | null }) {
+  if (!ev) {
+    return (
+      <div className="text-xs text-muted-foreground">
+        근거 자료 없음 (직접 추가한 종목은 점수 근거를 저장하지 않습니다).
+      </div>
+    );
+  }
+  const none = (
+    <li className="text-muted-foreground">없음</li>
+  );
+  const ranks = [...ev.interest, ...ev.prev_day];
+  return (
+    <div className="sticky left-0 max-w-[calc(100vw-5rem)] space-y-3 break-words text-xs md:max-w-none">
+      {ev.caution.length > 0 && (
+        <div className="rounded border-2 border-orange-400 bg-orange-50 p-2 text-orange-900 dark:bg-orange-950 dark:text-orange-100">
+          <div className="font-bold">⚠ 주의 공시 (점수에 넣지 않음)</div>
+          <ul className="mt-1 list-disc pl-4">
+            {ev.caution.map((c, i) => (
+              <li key={i}>{c.title}</li>
+            ))}
+          </ul>
+        </div>
+      )}
+      <div>
+        <div className="font-semibold">
+          뉴스 · 기사 {ev.news.count}건 · 언론사 {ev.news.publishers}곳
+        </div>
+        <ul className="mt-1 list-disc space-y-0.5 pl-4">
+          {ev.news.articles.length === 0
+            ? none
+            : ev.news.articles.map((a, i) => (
+                <li key={i}>
+                  {a.url ? (
+                    <a href={a.url} target="_blank" rel="noopener noreferrer" className="text-sky-700 underline dark:text-sky-300">
+                      {a.title}
+                    </a>
+                  ) : (
+                    a.title
+                  )}
+                  <span className="ml-1 text-muted-foreground">
+                    {shortSource(a.source)}
+                    {a.published ? ` · ${fmtKstDateTime(a.published)}` : ""}
+                  </span>
+                </li>
+              ))}
+        </ul>
+      </div>
+      <div>
+        <div className="font-semibold">순위</div>
+        <ul className="mt-1 list-disc space-y-0.5 pl-4">
+          {ranks.length === 0 ? none : ranks.map((r, i) => <li key={i}>{rankSentence(r)}</li>)}
+        </ul>
+      </div>
+      <div>
+        <div className="font-semibold">유튜브 · 영상 {ev.youtube.count}건</div>
+        {ev.youtube.videos.length > 0 && (
+          <ul className="mt-1 list-disc space-y-0.5 pl-4">
+            {ev.youtube.videos.map((v, i) => (
+              <li key={i}>{v.title}</li>
+            ))}
+          </ul>
+        )}
+      </div>
+      <div>
+        <div className="font-semibold">공시·이벤트</div>
+        <ul className="mt-1 list-disc space-y-0.5 pl-4">
+          {ev.event.length === 0
+            ? none
+            : ev.event.map((e, i) => (
+                <li key={i}>
+                  {e.title} <span className="text-muted-foreground">{shortSource(e.source)}</span>
+                </li>
+              ))}
+        </ul>
+      </div>
+      {version && <div className="text-[10px] text-muted-foreground">점수 공식 {version}</div>}
+    </div>
   );
 }
 
@@ -479,7 +607,10 @@ function SourceStatusLine({ sources }: { sources: WatchlistSourceStatus[] }) {
           <li key={s.key} className="flex flex-wrap gap-x-2">
             <span className="font-medium">{s.label}</span>
             {s.collecting ? (
-              <span>수집 중 · 마지막 신호 {s.last_signal_at ? fmtKstDateTime(s.last_signal_at) : "최근 7일 없음"}</span>
+              <span>
+                수집 중 · 마지막 신호 {s.last_signal_at ? fmtKstDateTime(s.last_signal_at) : "최근 7일 없음"}
+                {s.last_saved_at ? ` · 마지막 저장 ${fmtKstDateTime(s.last_saved_at)}` : ""}
+              </span>
             ) : (
               <span className="text-red-600 dark:text-red-400">수집 안 함</span>
             )}
@@ -517,9 +648,26 @@ function SourceBadges({
   );
 }
 
+// 언론사 한글 이름 (뉴스 출처 키 · backend news_rss.RSS_SOURCES 와 같은 이름)
+const NEWS_NAMES: Record<string, string> = {
+  news_yhap: "연합인포맥스",
+  news_einfomax_all: "연합인포맥스",
+  news_fnnews: "파이낸셜뉴스",
+  news_hankyung: "한국경제",
+  news_yonhap: "연합뉴스",
+  news_yna_market: "연합뉴스",
+  news_mk: "매일경제",
+  news_sedaily: "서울경제",
+  news_etoday: "이투데이",
+  news_edaily: "이데일리",
+};
+
+const OTHER_NAMES: Record<string, string> = { rank_individual_netbuy: "개인 순매수", rank_toss_amount: "토스증권 체결 거래대금", rank_toss_volume: "토스증권 체결 거래량", rank_market_amount: "시장 거래대금", rank_market_volume: "시장 거래량", dart_disclosure: "공시", dart_caution: "주의 공시" };
 function shortSource(s: string) {
+  if (NEWS_NAMES[s]) return NEWS_NAMES[s];
   if (s.startsWith("news_")) return s.replace("news_", "");
   if (s.startsWith("youtube_")) return "yt·" + s.replace("youtube_", "");
+  if (OTHER_NAMES[s]) return OTHER_NAMES[s];
   if (s === "board_naver") return "종토방";
   if (s === "assembly") return "국회";
   if (s.endsWith("_rss")) return s.replace("_rss", "");
@@ -637,13 +785,13 @@ function SignalsInspector({ tradeDate }: { tradeDate: string }) {
       )}
       {!q.isLoading && items.length === 0 && (
         <div className="rounded border-2 border-dashed p-4 text-center text-xs text-muted-foreground">
-          신호 없음. 뉴스 5m · 종토방 30m · 유튜브 1h · 국회 06:00 KST 잡 대기.
+          신호 없음. 뉴스 5분 · 유튜브 1시간 · 공시 08:20·20:40 · 순위 20:30 (KST) 수집 대기.
         </div>
       )}
       {Object.entries(bySource).map(([source, sigs]) => (
         <details key={source} className="mb-2 rounded border bg-slate-50 dark:bg-slate-900">
           <summary className="cursor-pointer p-2 text-xs font-medium">
-            {source} · {sigs.length}건
+            {shortSource(source)} · {sigs.length}건
           </summary>
           <ul className="space-y-0.5 p-2 text-[10px]">
             {sigs.slice(0, 30).map((s) => (

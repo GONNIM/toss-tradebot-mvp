@@ -790,8 +790,11 @@ class WatchlistSignal(Base):
     """마감 후 야간 축적 신호. 다음날 Watchlist 승격의 원천 데이터.
 
     source 별 예시:
-      · news_yhap · news_edaily · news_fnnews · news_herald · news_sedaily
-      · board_naver
+      · news_yhap · news_einfomax_all · news_fnnews · news_hankyung · news_yonhap · news_yna_market
+        · news_mk · news_sedaily · news_etoday   (1030-04 · news_edaily 는 폐지)
+      · board_naver (1030-04 수집 중단 · 과거 행만 남음)
+      · rank_individual_netbuy · rank_toss_amount · rank_toss_volume · rank_market_amount · rank_market_volume
+      · dart_disclosure · dart_caution   (1030-04 · MemeCatalystEvent(source=dart) 재사용)
       · youtube_hantoo · youtube_shuka · youtube_jungpro · youtube_sampro
       · assembly · motie_rss · msit_rss · moef_rss · molit_rss
       · prev_day_derivative
@@ -801,7 +804,7 @@ class WatchlistSignal(Base):
 
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
     ticker: Mapped[str] = mapped_column(String(10), index=True)
-    source: Mapped[str] = mapped_column(String(20), index=True)
+    source: Mapped[str] = mapped_column(String(30), index=True)   # 1030-04 20→30 (rank_individual_netbuy 22자)
     signal_type: Mapped[str] = mapped_column(String(30))
     intensity: Mapped[float]
     payload_json: Mapped[Optional[str]] = mapped_column(Text)
@@ -831,6 +834,7 @@ class Watchlist(Base):
     rank: Mapped[int]                                                  # 1 = top
     composite_score: Mapped[float]
     news_score: Mapped[float] = mapped_column(Float, default=0.0)
+    # board_score = 「개인 관심」 칸 (1030-04 · 옛 종토방 자리 · 컬럼 이름은 마이그레이션 최소화로 유지)
     board_score: Mapped[float] = mapped_column(Float, default=0.0)
     youtube_score: Mapped[float] = mapped_column(Float, default=0.0)
     event_score: Mapped[float] = mapped_column(Float, default=0.0)
@@ -845,6 +849,35 @@ class Watchlist(Base):
         # Stage 3 다중 사용자 대비 · trade_date + ticker + user_id unique
         Index("ix_watchlist_date_ticker_user", "trade_date", "ticker", "user_id", unique=True),
         Index("ix_watchlist_date_rank", "trade_date", "rank"),
+    )
+
+
+class WatchlistRankDaily(Base):
+    """토스 순위(개인 순매수·토스증권 체결·시장 거래대금/거래량)의 하루 1회 저장분 · 1030-04.
+
+    과거 날짜는 토스가 조회를 주지 않아 직접 쌓아야 「전 거래일에 없던 새 진입」을 알 수 있다.
+    LiveTapeRanking(스나이퍼 10초 폴링 · 6시간 청소)과 별개 표 — 스나이퍼에 영향 없음.
+
+    kind: individual_netbuy | toss_amount | toss_volume | market_amount | market_volume
+          (+ 접미사 _rt = 장중 매시 누적 대체분 · 그날 최고 순위만 · individual 은 없음)
+    trade_date: 순위 기준일 (rankedAt 의 KST 날짜)
+    """
+
+    __tablename__ = "watchlist_rank_daily"
+
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    trade_date: Mapped[str] = mapped_column(String(10))
+    kind: Mapped[str] = mapped_column(String(30))
+    ticker: Mapped[str] = mapped_column(String(10))
+    rank: Mapped[int]
+    amount: Mapped[Optional[float]]            # 거래대금·순매수 거래액 (원)
+    change_rate: Mapped[Optional[float]]       # 소수 비율 (0.0125 = 1.25%) · 전일 대비
+    ranked_at: Mapped[Optional[datetime]] = mapped_column(DateTime)   # 토스 rankedAt (UTC 로 저장)
+    captured_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
+
+    __table_args__ = (
+        Index("ix_wl_rank_daily_date_kind_ticker", "trade_date", "kind", "ticker", unique=True),
+        Index("ix_wl_rank_daily_kind_date", "kind", "trade_date"),
     )
 
 

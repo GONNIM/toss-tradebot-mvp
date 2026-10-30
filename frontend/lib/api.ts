@@ -1011,7 +1011,7 @@ export const api = {
       );
     },
     dates: () => get<string[]>(`/watchlist/dates`),
-    sources: () => get<{ sources: WatchlistSourceStatus[] }>(`/watchlist/sources`),
+    sources: () => get<{ sources: WatchlistSourceStatus[]; score_version?: string | null }>(`/watchlist/sources`),
     finalize: (token: string, opts: { trade_date?: string; top_n?: number } = {}) =>
       postWithToken<{
         trade_date: string;
@@ -1845,6 +1845,8 @@ export interface WatchlistItem {
   youtube_score: number;
   event_score: number;
   prev_day_score: number;
+  score_version?: string | null;       // 수동 lock 행은 null
+  evidence?: WatchlistEvidence | null; // 수동 lock 행은 null
   source_breakdown: Record<string, { count: number; intensity_sum: number }> | null;
   locked: boolean;
   added_by: string;        // "auto" | "user"
@@ -1852,13 +1854,36 @@ export interface WatchlistItem {
   updated_at: string | null;
 }
 
+// 1030-04 · 칸별 근거 (backend/discovery/watchlist/evidence.py)
+export interface WatchlistRankEvidence {
+  source: string;
+  label: string;
+  rank: number | null;
+  prev_rank: number | null;
+  is_new: boolean;
+  change_rate_pct: number | null;
+}
+export interface WatchlistEvidence {
+  news: {
+    count: number;
+    publishers: number;
+    articles: { title: string; source: string; url: string | null; published: string | null }[];
+  };
+  interest: WatchlistRankEvidence[];
+  youtube: { count: number; videos: { title: string; source: string }[] };
+  event: { source: string; title: string }[];
+  caution: { title: string }[];
+  prev_day: WatchlistRankEvidence[];
+}
+
 // 1030-02 · 칸별 수집 상태 (키·주소 값은 오지 않음)
 export interface WatchlistSourceStatus {
-  key: "news" | "board" | "youtube" | "event";
+  key: "news" | "board" | "youtube" | "event" | "prev_day";
   label: string;
   collecting: boolean;
   note: string;
   last_signal_at: string | null;
+  last_saved_at?: string | null;
 }
 
 export interface WatchlistSignal {

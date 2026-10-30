@@ -65,15 +65,15 @@ async def seed():
     sample_signals = [
         # ticker, source, signal_type, intensity, payload
         ("005930", "news_yhap", "headline", 1.0, {"title": "삼성전자 2Q 영업이익 서프라이즈", "url": "https://ex.com/1"}),
-        ("005930", "news_edaily", "headline", 1.0, {"title": "삼성전자 HBM3E 양산 개시", "url": "https://ex.com/2"}),
+        ("005930", "news_mk", "headline", 1.0, {"title": "삼성전자 HBM3E 양산 개시", "url": "https://ex.com/2"}),
         ("005930", "news_fnnews", "headline", 1.0, {"title": "반도체 슈퍼사이클 재진입 · 삼성전자 반등", "url": "https://ex.com/3"}),
-        ("005930", "board_naver", "board_post_velocity", 2.5, {"recent_count": 12}),
+        ("005930", "rank_individual_netbuy", "rank_new", 0.9, {"rank": 3, "prev_rank": None, "is_new": True}),
         ("005930", "youtube_shuka", "video_upload", 1.0, {"title": "삼성전자 지금이 매수 타이밍인가", "video_id": "abc"}),
 
-        ("373220", "news_edaily", "headline", 1.0, {"title": "LG에너지솔루션 GM 수주 대박", "url": "https://ex.com/4"}),
+        ("373220", "news_mk", "headline", 1.0, {"title": "LG에너지솔루션 GM 수주 대박", "url": "https://ex.com/4"}),
         ("373220", "news_hankyung", "headline", 1.0, {"title": "2차전지 세제 지원 확대 · LG엔솔 수혜", "url": "https://ex.com/5"}),
         ("373220", "moef_rss", "press_release", 0.5, {"title": "2차전지 산업 세제 지원안 발표"}),
-        ("373220", "board_naver", "board_post_velocity", 2.0, {"recent_count": 10}),
+        ("373220", "rank_toss_amount", "rank_new", 0.8, {"rank": 8, "prev_rank": None, "is_new": True}),
 
         ("000660", "news_yhap", "headline", 1.0, {"title": "SK하이닉스 HBM3E 엔비디아 공급 확대", "url": "https://ex.com/6"}),
         ("000660", "news_yonhap", "headline", 1.0, {"title": "SK하이닉스 실적 개선", "url": "https://ex.com/7"}),

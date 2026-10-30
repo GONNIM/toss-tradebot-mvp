@@ -155,6 +155,7 @@ async def test_sources_reports_missing_keys_without_values(client, monkeypatch):
     monkeypatch.delenv("YOUTUBE_API_KEY", raising=False)
     monkeypatch.delenv("ASSEMBLY_API_KEY", raising=False)
     monkeypatch.delenv("GOV_RSS_SOURCES", raising=False)
+    monkeypatch.delenv("DART_API_KEY", raising=False)
     await upsert_signal(ticker="005930", source="news_fnnews", signal_type="headline", intensity=1.0)
 
     resp = await client.get("/api/v1/watchlist/sources")
@@ -164,7 +165,9 @@ async def test_sources_reports_missing_keys_without_values(client, monkeypatch):
     assert by["youtube"]["collecting"] is False and by["youtube"]["note"] == "키 없음"
     assert by["event"]["collecting"] is False
     assert "국회 의안 키 없음" in by["event"]["note"] and "보도자료 주소 없음" in by["event"]["note"]
+    assert "DART 키 없음" in by["event"]["note"]
     assert by["board"]["last_signal_at"] is None
+    assert by["board"]["label"] == "개인 관심" and by["prev_day"]["label"] == "전일"
 
 
 @pytest.mark.asyncio
