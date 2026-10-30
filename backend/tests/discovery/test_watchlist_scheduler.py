@@ -26,6 +26,21 @@ def test_register_watchlist_jobs_adds_six_jobs():
     assert expected.issubset(ids), f"missing: {expected - ids}"
 
 
+@pytest.mark.parametrize("job_id,hour,minute", [
+    ("watchlist_finalize", "8", "30"),
+    ("watchlist_assembly", "6", "0"),
+])
+def test_cron_jobs_run_at_kst_hours(job_id, hour, minute):
+    """1030-02 · UTC 로 적은 시각이 KST 스케줄러에서 15:00 늦게 돌던 회귀 방지."""
+    scheduler = AsyncIOScheduler(timezone="UTC")  # 스케줄러 기본 시간대와 무관해야 함
+    register_watchlist_jobs(scheduler)
+    trig = scheduler.get_job(job_id).trigger
+    fields = {f.name: str(f) for f in trig.fields}
+    assert fields["hour"] == hour
+    assert fields["minute"] == minute
+    assert str(trig.timezone) == "Asia/Seoul"
+
+
 @pytest.mark.asyncio
 async def test_finalize_job_runs_successfully():
     """empty DB 에서도 error 없이 완료 · Week 2 T61 실체 wire-up."""

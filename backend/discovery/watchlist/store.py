@@ -44,6 +44,7 @@ def next_trade_date(now: Optional[datetime] = None) -> str:
 
 # ─── upsert · 중복 방지 ────────────────────────────────
 _DEDUP_WINDOW_SEC = 300  # 5m
+_DEDUP_URL_DAYS = 3      # 같은 기사 URL 은 3일 안에 한 번만 (1030-02)
 
 
 async def upsert_signal(
@@ -54,8 +55,12 @@ async def upsert_signal(
     payload: Optional[dict[str, Any]] = None,
     trade_date: Optional[str] = None,
     detected_at: Optional[datetime] = None,
+    dedup_url: Optional[str] = None,
 ) -> Optional[int]:
-    """단일 signal 저장 · 최근 5분 내 동일 (ticker, source, signal_type) 있으면 skip.
+    """단일 signal 저장 · detected_at 앞뒤 5분 안에 동일 (ticker, source, signal_type) 있으면 skip.
+
+    dedup_url 을 주면 최근 3일 안에 같은 (ticker, source) 의 같은 URL 이 있어도 skip
+    (발행시각을 못 읽던 피드가 같은 기사를 5분마다 다시 저장했다 · 1030-02).
 
     Returns: 삽입된 row id · 중복이면 None.
     """
@@ -71,11 +76,24 @@ async def upsert_signal(
                 WatchlistSignal.source == source,
                 WatchlistSignal.signal_type == signal_type,
                 WatchlistSignal.detected_at >= dedup_since,
+                # 위쪽도 막는다 · 발행시각을 쓰면 더 늦은 기사가 먼저 저장될 수 있다
+                WatchlistSignal.detected_at <= detected_at + timedelta(seconds=_DEDUP_WINDOW_SEC),
             )
         ).limit(1)
         exists = (await session.execute(exists_stmt)).scalar_one_or_none()
         if exists is not None:
             return None
+        if dedup_url:
+            url_stmt = select(WatchlistSignal.id).where(
+                and_(
+                    WatchlistSignal.ticker == ticker,
+                    WatchlistSignal.source == source,
+                    WatchlistSignal.detected_at >= datetime.now(tz=timezone.utc) - timedelta(days=_DEDUP_URL_DAYS),
+                    WatchlistSignal.payload_json.contains(json.dumps(dedup_url, ensure_ascii=False), autoescape=True),
+                )
+            ).limit(1)
+            if (await session.execute(url_stmt)).scalar_one_or_none() is not None:
+                return None
 
         row = WatchlistSignal(
             ticker=ticker,

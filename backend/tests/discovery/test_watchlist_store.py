@@ -121,3 +121,23 @@ def test_next_trade_date_after_close_returns_next_business_day():
     # 토요일 감지 → 월요일
     saturday = datetime(2026, 7, 18, 10, 0, 0, tzinfo=_KST).astimezone(timezone.utc)
     assert next_trade_date(saturday) == "2026-07-20"
+
+
+# ─── 1030-02 · 같은 기사 반복 저장 방지 ──────────────
+@pytest.mark.asyncio
+async def test_upsert_same_url_skipped_after_window():
+    now = datetime.now(tz=timezone.utc)
+    kw = dict(ticker="000660", source="news_fnnews", signal_type="headline", intensity=1.0,
+              payload={"url": "https://example.com/a?x=1_%"}, dedup_url="https://example.com/a?x=1_%")
+    assert await upsert_signal(detected_at=now - timedelta(minutes=30), **kw) is not None
+    # 30분 뒤 같은 기사 (예전엔 5분 창이 지나 다시 저장됨)
+    assert await upsert_signal(detected_at=now, **kw) is None
+
+
+@pytest.mark.asyncio
+async def test_upsert_older_article_after_newer_is_kept():
+    now = datetime.now(tz=timezone.utc)
+    base = dict(ticker="000660", source="news_fnnews", signal_type="headline", intensity=1.0)
+    assert await upsert_signal(detected_at=now, dedup_url="https://example.com/new", **base) is not None
+    # 피드는 최신순 · 30분 전 다른 기사가 나중에 와도 저장
+    assert await upsert_signal(detected_at=now - timedelta(minutes=30), dedup_url="https://example.com/old", **base) is not None

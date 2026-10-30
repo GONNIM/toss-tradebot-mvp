@@ -72,10 +72,11 @@ def register_watchlist_jobs(scheduler) -> None:
         id="watchlist_youtube", max_instances=1, coalesce=True,
     )
 
-    # 국회 의안 · 매일 06:00 KST (UTC 21:00 전일)
+    # 국회 의안 · 매일 06:00 KST
+    # 스케줄러가 Asia/Seoul 이라 시각은 KST 그대로 · timezone 도 명시 (1030-02 · 07-15 부터 UTC 로 적혀 15:00 늦게 돌았음)
     scheduler.add_job(
         poll_assembly_bills, "cron",
-        hour=21, minute=0,  # UTC · KST 06:00
+        hour=6, minute=0, timezone="Asia/Seoul",
         id="watchlist_assembly", max_instances=1,
     )
 
@@ -85,10 +86,10 @@ def register_watchlist_jobs(scheduler) -> None:
         id="watchlist_gov_press", max_instances=1, coalesce=True,
     )
 
-    # Watchlist 확정 · 매일 08:30 KST (UTC 23:30 전일)
+    # Watchlist 확정 · 매일 08:30 KST (finalize 는 「오늘 KST」 목록을 만든다 · 23:30 에 돌면 끝난 날을 다시 씀)
     scheduler.add_job(
         finalize_watchlist_job, "cron",
-        hour=23, minute=30,  # UTC · KST 08:30
+        hour=8, minute=30, timezone="Asia/Seoul",
         id="watchlist_finalize", max_instances=1,
     )
 

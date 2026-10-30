@@ -4,6 +4,7 @@
     GET /watchlist           — trade_date 별 · rank 순 Top N
     GET /watchlist/signals   — 원본 signal (source 별) · 디버그·breakdown 조회
     GET /watchlist/dates     — 최근 Watchlist 존재 거래일 리스트
+    GET /watchlist/sources   — 칸별 수집 상태 (키 유무 참/거짓 · 마지막 신호 시각 · 1030-02)
 
 편집·실행 (X-API-Token · SNIPER_LIVE_ENABLED 미요구):
     POST   /watchlist/finalize     — 수동 finalize 트리거 (즉시 재계산)
@@ -19,7 +20,7 @@ from datetime import datetime, timedelta, timezone
 from typing import Any, Optional
 
 from fastapi import APIRouter, Body, Depends, HTTPException, Query
-from sqlalchemy import distinct, select
+from sqlalchemy import distinct, func, select
 
 from backend.api.auth import require_sniper_token
 from backend.discovery.live_tape.universe import list_universe
@@ -28,10 +29,11 @@ from backend.discovery.watchlist.finalize import (
     finalize_watchlist,
     list_watchlist,
 )
+from backend.discovery.watchlist import assembly, gov_press, scoring, youtube
 from backend.discovery.watchlist.metrics import Trade, compute_metrics, evaluate_dod
 from backend.discovery.watchlist.store import next_trade_date, recent_signals, signals_for_date
 from backend.services.db import get_session
-from backend.services.models import SniperSignal, Watchlist
+from backend.services.models import SniperSignal, Watchlist, WatchlistSignal
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -126,6 +128,67 @@ async def get_dates(limit: int = Query(30, ge=1, le=100)) -> list[str]:
         )
         rows = (await session.execute(stmt)).scalars().all()
     return [r for r in rows if r]
+
+
+# 점수 계산과 같은 출처 분류
+_CATEGORY_SOURCES = {
+    "news": scoring._NEWS_SOURCES,
+    "board": scoring._BOARD_SOURCES,
+    "youtube": scoring._YOUTUBE_SOURCES,
+    "event": scoring._EVENT_SOURCES,
+}
+
+
+def _category(source: str) -> Optional[str]:
+    for key, names in _CATEGORY_SOURCES.items():
+        if source in names:
+            return key
+    return None
+
+
+@router.get("/sources")
+async def get_sources() -> dict[str, Any]:
+    """칸별 수집 상태 · 수집하지 않는 칸은 화면에 0 대신 「수집 안 함」 (1030-02).
+
+    키·주소 값은 내보내지 않고 설정 여부만 내보낸다.
+    """
+    yt_key = youtube._api_key() is not None
+    asm_key = assembly._api_key() is not None
+    gov = gov_press.configured_sources()
+    event_notes = []
+    if not asm_key:
+        event_notes.append("국회 의안 키 없음")
+    if not gov:
+        event_notes.append("보도자료 주소 없음")
+
+    since = datetime.now(tz=timezone.utc) - timedelta(days=7)
+    async with get_session() as session:
+        rows = (await session.execute(
+            select(WatchlistSignal.source, func.max(WatchlistSignal.detected_at))
+            .where(WatchlistSignal.detected_at >= since)
+            .group_by(WatchlistSignal.source)
+        )).all()
+    last: dict[str, Optional[datetime]] = {"news": None, "board": None, "youtube": None, "event": None}
+    for source, at in rows:
+        key = _category(source or "")
+        if key and at is not None and (last[key] is None or at > last[key]):
+            last[key] = at
+
+    def _iso(v: Optional[datetime]) -> Optional[str]:
+        if v is None:
+            return None
+        return (v if v.tzinfo else v.replace(tzinfo=timezone.utc)).isoformat()
+
+    sources = [
+        {"key": "news", "label": "뉴스", "collecting": True, "note": "언론 RSS 5곳"},
+        {"key": "board", "label": "종토방", "collecting": True,
+         "note": "코스닥 종목만 · 30분 글 수가 평소보다 크게 많을 때만 점수"},
+        {"key": "youtube", "label": "유튜브", "collecting": yt_key, "note": "" if yt_key else "키 없음"},
+        {"key": "event", "label": "이벤트", "collecting": asm_key or bool(gov), "note": " · ".join(event_notes)},
+    ]
+    for s_ in sources:
+        s_["last_signal_at"] = _iso(last[s_["key"]])
+    return {"sources": sources}
 
 
 # ═══════════════════════════════════════════════════════════════

@@ -2,6 +2,8 @@
 
 ⚠️ v1 제한: 산업부·과기부·국토부 RSS URL 실측 결과 대부분 404 또는 HTML 반환.
     유일 사용 가능 · 기획재정부 · https://www.moef.go.kr/rss/press.xml (2026-07-13 200 · 실제 XML 여부 재검증 필요)
+⚠️ 2026-10-30 (1030-02): 위 주소가 mofe.go.kr 로 넘어가 HTML 만 돌려줌 · 재정경제부 새 RSS 주소 못 찾음
+    (정책브리핑 korea.kr RSS 도 중단) → 기본 출처 없음 · 주소를 찾으면 env GOV_RSS_SOURCES 로 켠다.
 
 v1 방침:
   1. `feedparser` 로 시도 · 파싱 실패 시 소스 skip
@@ -29,8 +31,7 @@ logger = logging.getLogger(__name__)
 
 
 _DEFAULT_SOURCES: dict[str, str] = {
-    "moef_rss": "https://www.moef.go.kr/rss/press.xml",
-    # 산업부·과기부·국토부 · TBD (URL 실측 실패 · Week 2 재조사)
+    # moef_rss 끔 (1030-02 · 주소 죽음) · 산업부·과기부·국토부 · TBD (URL 실측 실패)
 }
 
 _USER_AGENT = "Mozilla/5.0 TossTradebot/1.0"
@@ -105,9 +106,15 @@ async def _process(
     return {"fetched": len(entries), "matched": matched, "inserted": inserted, "error": 0}
 
 
+def configured_sources() -> list[str]:
+    """켜진 출처 이름 (화면 「수집 안 함」 표시용 · 주소는 내보내지 않음)."""
+    return sorted(_resolve_sources())
+
+
 async def poll_gov_press() -> dict[str, Any]:
     sources = _resolve_sources()
     if not sources:
+        logger.info("[gov_press] 켜진 출처 없음 · skip")
         return {"error": "no_sources"}
 
     start = datetime.now(tz=timezone.utc)

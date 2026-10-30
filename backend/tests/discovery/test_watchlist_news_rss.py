@@ -171,3 +171,31 @@ async def test_poll_news_rss_empty_matcher(monkeypatch):
     result = await rss_mod.poll_news_rss()
 
     assert result.get("error") == "empty_matcher"
+
+
+# ─── 1030-02 · 발행시각 원문 해석 ─────────────────────
+@pytest.mark.parametrize("raw,expected", [
+    # fnnews · 쉼표 뒤 공백 없음 (feedparser 가 못 읽던 형식)
+    ("Fri,30 Oct 2026 06:00:00 +0900", datetime(2026, 10, 29, 21, 0, tzinfo=timezone.utc)),
+    # 연합인포맥스 · 시간대 없음 → KST
+    ("2026-10-30 10:18:00", datetime(2026, 10, 30, 1, 18, tzinfo=timezone.utc)),
+    # 한국경제·연합뉴스 · 정상 RFC 822
+    ("Fri, 30 Oct 2026 12:18:36 +0900", datetime(2026, 10, 30, 3, 18, 36, tzinfo=timezone.utc)),
+    ("2026-10-30T10:18:00+09:00", datetime(2026, 10, 30, 1, 18, tzinfo=timezone.utc)),
+    ("not a date", None),
+    ("", None),
+])
+def test_parse_pub_str(raw, expected):
+    assert rss_mod._parse_pub_str(raw) == expected
+
+
+def test_entry_time_prefers_raw_string_over_parsed():
+    # feedparser 는 시간대 없는 값을 UTC 로 읽어 (10,18) 을 준다 · 원문을 KST 로 다시 읽어야 한다
+    entry = {"published": "2026-10-30 10:18:00", "published_parsed": (2026, 10, 30, 10, 18, 0, 4, 303, 0)}
+    assert rss_mod._entry_time(entry) == datetime(2026, 10, 30, 1, 18, tzinfo=timezone.utc)
+
+
+def test_intraday_kst_article_stays_same_trade_date():
+    from backend.discovery.watchlist.store import next_trade_date
+    pub = rss_mod._parse_pub_str("2026-10-30 10:18:00")
+    assert next_trade_date(pub) == "2026-10-30"   # 예전: UTC 10:18 = KST 19:18 → 11-02

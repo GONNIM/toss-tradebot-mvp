@@ -147,3 +147,31 @@ async def test_get_dates(client):
     resp = await client.get("/api/v1/watchlist/dates")
     assert resp.status_code == 200
     assert TRADE_DATE in resp.json()
+
+
+# ─── 1030-02 · 칸별 수집 상태 ─────────────────────────
+@pytest.mark.asyncio
+async def test_sources_reports_missing_keys_without_values(client, monkeypatch):
+    monkeypatch.delenv("YOUTUBE_API_KEY", raising=False)
+    monkeypatch.delenv("ASSEMBLY_API_KEY", raising=False)
+    monkeypatch.delenv("GOV_RSS_SOURCES", raising=False)
+    await upsert_signal(ticker="005930", source="news_fnnews", signal_type="headline", intensity=1.0)
+
+    resp = await client.get("/api/v1/watchlist/sources")
+    assert resp.status_code == 200
+    by = {s["key"]: s for s in resp.json()["sources"]}
+    assert by["news"]["collecting"] is True and by["news"]["last_signal_at"]
+    assert by["youtube"]["collecting"] is False and by["youtube"]["note"] == "키 없음"
+    assert by["event"]["collecting"] is False
+    assert "국회 의안 키 없음" in by["event"]["note"] and "보도자료 주소 없음" in by["event"]["note"]
+    assert by["board"]["last_signal_at"] is None
+
+
+@pytest.mark.asyncio
+async def test_sources_never_exposes_key_value(client, monkeypatch):
+    monkeypatch.setenv("YOUTUBE_API_KEY", "dummy-not-a-real-key-123")
+    monkeypatch.setenv("ASSEMBLY_API_KEY", "dummy-not-a-real-key-456")
+    resp = await client.get("/api/v1/watchlist/sources")
+    assert "dummy-not-a-real-key" not in resp.text
+    by = {s["key"]: s for s in resp.json()["sources"]}
+    assert by["youtube"]["collecting"] is True and by["event"]["collecting"] is True
