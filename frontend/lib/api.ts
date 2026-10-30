@@ -1322,6 +1322,8 @@ export interface SniperParams {
   poll_orderbook_sec: number;
   poll_trailing_price_sec: number;
   enabled: boolean;
+  watchlist_min_composite_score: number;
+  watchlist_chase_max_change_pct: number;
 }
 
 export interface TossStockCodeRow {

@@ -813,6 +813,22 @@ function ParamsEditor({ isAdmin }: { isAdmin: boolean }) {
         />
       </div>
 
+      <h3 className="mb-2 text-xs font-semibold">📋 관심 종목 자동 진입</h3>
+      <div className="mb-4 grid grid-cols-4 gap-3">
+        <NumField
+          label="최소 종합 점수"
+          hint="관심 종목의 종합 점수(0~1)가 이 값 이상이어야 자동 진입 후보 · 기본 0.5"
+          v={merged.watchlist_min_composite_score}
+          on={(v) => setField("watchlist_min_composite_score", v)}
+        />
+        <NumField
+          label="추격 상한 (%)"
+          hint="당일 등락률이 이 % 를 넘은 종목은 순위 신호를 주지 않음 (이미 오른 종목 추격 방지) · 기본 10"
+          v={merged.watchlist_chase_max_change_pct}
+          on={(v) => setField("watchlist_chase_max_change_pct", v)}
+        />
+      </div>
+
       <h3 className="mb-2 text-xs font-semibold">폴링 주기 (초)</h3>
       <div className="grid grid-cols-4 gap-3">
         <NumField
