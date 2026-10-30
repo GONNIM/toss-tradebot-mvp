@@ -61,7 +61,7 @@ export default function BacktestReportPage() {
         <div className="rounded border border-dashed border-border p-6 text-center text-xs text-muted-foreground">
           백테스트 데이터 없음 · signals 있어야 backtest 실행 가능
           <br />
-          매주 월 00:00 KST 크론 자동 (Phase L8) · 수동:{" "}
+          매주 월요일 00:00 KST 자동 실행 · 직접 실행:{" "}
           <code>python -m backend.scripts.serenity_backtest --batch 100</code>
         </div>
       )}

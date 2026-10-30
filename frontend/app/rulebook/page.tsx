@@ -24,7 +24,7 @@ export default function RulebookPage() {
           5단계 우량주 필터 (핵심) + 손익비·물타기 감지 · 강의·서적·논문 원칙 통합 그릇.
         </p>
         <p className="mt-1 text-xs text-muted-foreground">
-          docs/operations/principles/ · Obsidian [[Rulebook]] 미러 동기.
+          원칙 원문은 운영 문서와 개인 노트에 같은 내용으로 보관합니다.
         </p>
       </header>
 

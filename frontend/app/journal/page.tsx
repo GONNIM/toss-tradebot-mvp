@@ -163,9 +163,6 @@ function JournalPageInner() {
         <p className="mt-1 text-sm text-muted-foreground">
           판정→결과 폐루프 · 모든 페이지 판정 병치 · self-page 편애 방지
         </p>
-        <p className="mt-1 text-xs text-muted-foreground">
-          docs/plans/toss-tradebot-tobe/stage1-optimization.md §1
-        </p>
       </header>
 
       {/* 관리자 인증 (2026-08-14 · POST/PATCH/supersede/baseline 전부 require_sniper_token) */}
@@ -362,7 +359,7 @@ function Stage2KpiProgress({
     <section className="rounded-lg border border-primary/40 bg-primary/5 p-4">
       <div className="flex items-center justify-between">
         <div>
-          <div className="text-sm font-semibold">🎯 Stage 2 진입 KPI (Phase E)</div>
+          <div className="text-sm font-semibold">🎯 다음 단계로 넘어갈 기준</div>
           <div className="mt-0.5 text-xs text-muted-foreground">
             판정 30건 · rejection criteria 100% · baseline 확정 · self-page 편중 감지
           </div>
@@ -421,7 +418,7 @@ function Stage2KpiProgress({
         />
         <KpiCheck
           label="관리자 인증"
-          detail="Phase D 배포 완료 (httpOnly 쿠키)"
+          detail="관리자 로그인 적용됨 (안전한 쿠키)"
           ok={true}
           value="배선 완료"
         />
@@ -430,7 +427,7 @@ function Stage2KpiProgress({
       <div className="mt-3 text-[10px] text-muted-foreground">
         수동 확인 필요: Obsidian sync 3경로 · 3계층 재편 완결 · T2 Cal.com 컨설팅 예약.
         <br />
-        기준: <code>docs/plans/toss-tradebot-tobe/roadmap-12week.md</code> §0
+        기준: 12주 로드맵 첫 단계 목표
       </div>
     </section>
   );

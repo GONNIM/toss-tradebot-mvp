@@ -1,9 +1,50 @@
-# 시각 디자인 기초 규칙 · Design Rules
+# 화면 디자인 규칙 · Design Rules
 
-**출처**: [Anthony Hobday · 28 rules of visual design](https://anthonyhobday.com/sideprojects/saferules/)
-**목적**: 프로젝트 전 페이지 UI 일관성 · 눈에 편한 디자인 · 이질감 방지
-**적용**: `frontend/app/**` 전 페이지 · 신규 페이지 추가 시 이 규칙 준수 필수
-**정체성 참조**: `docs/plans/powderkeg-screener/identity.md` v2.0 (투자 이익 창출 · 신뢰 우선)
+**기준 (v2 · 2026-10-31):** 저장소 루트 `DESIGN.md` (coinbase 판) + `CLAUDE.md` 「디자인 기준」 의 이 프로젝트 결정 (10/22 · 10/28). 두 곳이 다르면 CLAUDE.md 결정을 따른다.
+**적용:** `frontend/app/**` 전 화면 · 새 화면도 이 규칙을 따른다.
+**보조:** 아래 「28 Safe Rules」 (Anthony Hobday) 는 이 절과 부딪히지 않는 범위에서 참고로만 쓴다.
+
+---
+
+## 1. 색 (이름표로만 쓴다)
+
+| 이름표 (Tailwind) | 값 | 쓰는 곳 |
+|---|---|---|
+| `primary` | 틸 `175 77% 26%` (teal-700) · 흰 글자 대비 5.24:1 | 강조 하나: 기본 버튼 · 선택된 탭 · 링크 강조 · 초점 테두리 (`ring`) |
+| `up` | 빨강 `0 72% 51%` (red-600) · 흰 바탕 글자 4.83:1 | 상승 · 이익 (한국식) |
+| `down` | 파랑 `221 83% 53%` (blue-600) · 5.17:1 | 하락 · 손실 (한국식) |
+| `warn` | 주황 `26 90% 37%` (amber-700) · 5.02:1 | 경고 · 오류 · 주의 (상승 빨강과 헷갈리지 않게 빨강을 쓰지 않는다) |
+| `muted` · `muted-foreground` · `border` · `background` · `card` | shadcn 기본 | 흐린 글 · 테두리 · 바탕 |
+| `risk.high/med/low` | 그대로 | Moonshot 위험 수준 (결정 40) |
+
+- 강조색은 틸 하나다. coinbase 파랑 `#0052ff` 는 하락 파랑과 겹쳐 쓰지 않는다 (10/28).
+- 그 밖의 색 이름 (cyan · purple · fuchsia · indigo · orange 등) 은 새로 쓰지 않는다. 기존 사용처는 1022-10 5c 에서 이름표로 바꾼다.
+- 다크 모드는 켜는 기능이 없다 (`darkMode: class` · html 에 `dark` 없음). `dark:` 를 새로 쓰지 않는다. 기존 661곳 처리는 5c 에서 정한다.
+
+## 2. 글자
+
+| 용도 | 크기 |
+|---|---|
+| 본문 | 17px (한국어 가독 · CLAUDE.md) |
+| 보조 · 표 | 14px |
+| 가장 작은 글 (캡션) | 12px — 12px 미만은 쓰지 않는다 (DESIGN.md caption-strong) |
+
+- 숫자 칸은 `tabular-nums`.
+- 글꼴은 DESIGN.md 의 Coinbase Sans (유료 라이선스) 를 따라 쓰지 않는다. 크기 규칙만 따른다.
+
+## 3. 모양
+
+- 반경: 8px · 14px · 알약 (`rounded-full`) 셋만.
+- 그림자 없음 (10/22 · 마우스 올림 그림자도 쓰지 않음). 구분은 테두리로.
+- 손가락으로 누르는 곳 (버튼 · 링크 · 입력) 은 높이 44px 이상 (휴대폰).
+- 휴대폰 폭 390px 에서 화면 전체가 옆으로 밀리지 않게 한다. 넓은 표는 표 상자 안에서만 가로 스크롤.
+
+## 4. 문구
+
+- 내부 코드 (Phase · Sprint · Week · 작업 번호 · WP) 와 문서·코드 경로를 화면에 쓰지 않는다. 쉬운 말로 쓴다.
+- 상태 문구에는 다음에 할 일을 같이 쓴다 (예: 「관리자 로그인이 필요합니다」).
+- 추정 숫자는 추정임을 밝힌다 (「통계 추정가 · 보장 아님」 · 10/23 결정).
+- 봇이 하는 일과 사용자가 하는 일을 섞지 않는다 (예: 「매수 후보」 대신 「자동 진입 창의 대상 종목」).
 
 ---
 
@@ -26,7 +67,7 @@
 | 13 | If you use a horizontal grid, use 12 columns | 12열 그리드 | `md:grid-cols-12` |
 | 14 | Spacing should go between points of high contrast | 대비 지점 사이 간격 측정 | text-to-border · border-to-text |
 | 15 | Closer elements should be lighter | 앞쪽 요소 밝게 | 모달 > 카드 > 배경 |
-| 16 | Make drop shadow blur values double their distance values | 그림자 blur = distance × 2 | shadow-md (blur 6px · offset 3px) |
+| 16 | Make drop shadow blur values double their distance values | (이 프로젝트는 그림자 없음 · 1-3절) | — |
 | 17 | Put simple on complex or complex on simple | 복잡 vs 단순 조화 | 강한 색 배지 · 단순 배경 위 |
 | 18 | Keep container colours within brightness limits | 컨테이너 명도 한계 · 다크 12% · 라이트 7% 이내 | `bg-slate-50` on `bg-white` (~5%) |
 | 19 | Make outer padding the same or more than inner padding | 외부 패딩 ≥ 내부 패딩 | section p-6 > card p-4 |
@@ -42,26 +83,9 @@
 
 ---
 
-## 🎨 프로젝트 정체성 팔레트 (powderkeg 기준 · 정합 필수)
+## 🎨 옛 팔레트 (v1 · 2026-07-27 · 폐지)
 
-**Warm 계열 (강조 · Tier 1 · 매수 후보)**
-- amber-50/100/200 · bg
-- amber-500/700/900 · text/icon
-
-**Cool 계열 (관찰 · 정보)**
-- sky-50/100 · bg
-- sky-500/700 · text/icon
-- slate-50/100/200 · 중성 (bg)
-- slate-500/700/900 · 중성 (text)
-
-**성공/실패 (신중히 사용 · 임팩트 있는 곳만)**
-- emerald-100/500/700 · 통과 · 긍정
-- rose-100/500/700 · 실패 · 부정
-
-**금지 팔레트** (activist-radar 이질감 원인)
-- ❌ pink-500 · fuchsia-500 · cyan-500 · indigo-500 강한 채도
-- ❌ ring-2 ring-*-500 (하드 디바이드 · 그림자·border 혼용)
-- ❌ bg-*-950/30 (반투명 다크 · 라이트 UI에 부적합)
+amber·sky 짝 팔레트와 emerald 성공 · rose 실패 규칙은 v2 에서 1절 이름표로 바뀌었다. 기존 화면은 1022-10 5c 에서 옮긴다.
 
 ---
 
@@ -164,3 +188,4 @@ for elem in root.iter():
 | 날짜 | 버전 | 변경 |
 |---|---|---|
 | 2026-07-27 | v1.0 | 신규 · Anthony Hobday 28 rules 수집 · 프로젝트 팔레트/안티패턴 규약 · activist-radar 리팩터 근거 |
+| 2026-10-31 | v2.0 | DESIGN.md + CLAUDE.md 결정 기준으로 개정 (1022-10 5a): 강조 틸 하나 · 상승 빨강·하락 파랑·경고 주황 이름표 · 글자 12·14·17 · 반경 8·14·알약 · 그림자 없음 · 터치 44px · 문구 규칙 · 옛 팔레트 폐지 |

@@ -14,7 +14,7 @@ const PRINCIPLES = [
     fitBad: true,
     body:
       "시총 5조↑ · 업종 미래 · 매출·순이익 상승 · 연봉 턴어라운드 · 월봉 5MA 위 3개월+.",
-    adopt: "/lab/blue-chip-filter 벤치마크로만 도입 예정 (Phase 2).",
+    adopt: "/lab/blue-chip-filter 비교 기준으로만 쓸 예정입니다.",
   },
   {
     id: 2,

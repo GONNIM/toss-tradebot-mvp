@@ -19,8 +19,7 @@ export function HunterEmptyGate({
           IWM 벤치마크 대비 비용 차감 초과수익 (3d) ≤ 0 · 유효 이벤트 150+ 축적 후 판정.
         </p>
         <p className="mt-3 text-[11px] text-muted-foreground">
-          재개 조건 · <code>docs/plans/serenity-hunter/RISK-PRINCIPLES.md §11</code> 이력 append +
-          <code>backend/discovery/serenity/constants.py::DEPRECATION_OVERRIDE_TICKET</code> 변경 (2단계 마찰).
+          다시 켜려면 위험 원칙 문서에 재개 이유를 남기고, 코드의 재개 표시(상수)를 바꿔 다시 배포해야 합니다 (두 단계 확인).
         </p>
       </section>
     );
