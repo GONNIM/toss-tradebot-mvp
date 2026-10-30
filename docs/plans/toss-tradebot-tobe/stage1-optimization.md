@@ -107,6 +107,8 @@ Meme·VIP·Activist·Super-Signals: `outcome_at_horizon` 컬럼 신설 · 크론
   → 📜 Logs         (감사)
 ```
 
+> 2026-10-30 대체: 아래 홈 설계는 `docs/plans/ui-ux-optimization/2026-10-28-information-architecture.md` 「오늘 (/)」 로 바뀜 (1022-10 4단계 · 사용자 결정) · 본문은 기록으로 둠.
+
 **Home 재작성**: "오늘의 컨트롤 타워"
 - 실시간 배지 4개: `Watchlist 확정` · `Sniper enabled` · `Tier 1 lock 종목수` · `Kill Switch 상태`
 - Judgment Journal 최근 5건 요약

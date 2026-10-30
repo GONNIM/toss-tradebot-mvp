@@ -78,3 +78,4 @@ version: 1.0
 | 2026-07-13 | v2.0 | Strategic pivot · pre-market ([[../../memory/project_strategic_pivot_pre_market]]) |
 | 2026-07-24 | v2.0 (powderkeg 특화) | [[../powderkeg-screener/identity]] · "2026 하반기 한국주식 투자 이익 창출" |
 | 2026-07-29 | v3.0 | **"경제적 자유 실현 개인 전문 정보 창구"** · Sprint 서브루틴 자각 · Stage 로드맵 |
+| 2026-10-30 | v3.0 (홈만) | 홈 설계는 `docs/plans/ui-ux-optimization/2026-10-28-information-architecture.md` 「오늘 (/)」 로 대체 (1022-10 4단계 · 사용자 결정) · 정체성 본문은 그대로 |

@@ -55,7 +55,7 @@ async def test_anon_hides_admin_data_and_sets_cache_headers(client):
     assert b["ticker"] == "ZZCR" and b["market"] == "US" and b["is_admin"] is False
     assert b["holding"] is None and b["judgments"] is None
     sig = _by_source(b)
-    for k in ("crazy", "moonshot"):
+    for k in ("crazy", "moonshot", "biotech"):
         assert sig[k]["locked"] is True and sig[k]["as_of"] is None and sig[k]["summary"] == "로그인하면 보입니다"
     assert "72.4" not in r.text and "3위" not in r.text and "소문자" not in r.text
 
@@ -64,7 +64,7 @@ async def test_anon_hides_admin_data_and_sets_cache_headers(client):
 async def test_anon_locked_rows_even_without_data(client):
     b = (await client.get("/api/v1/stock/NODATA")).json()
     sig = _by_source(b)
-    assert sig["crazy"]["locked"] and sig["moonshot"]["locked"]
+    assert sig["crazy"]["locked"] and sig["moonshot"]["locked"] and sig["biotech"]["locked"]
 
 
 @pytest.mark.asyncio
