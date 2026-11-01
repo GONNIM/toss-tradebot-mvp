@@ -13,7 +13,7 @@ function _fmtPct(v: number | null | undefined, digits = 2): string {
 }
 
 function _cls(v: number | null | undefined): string {
-  return upDownText(v, "text-up");
+  return upDownText(v);
 }
 
 export function VerificationHero({ hero }: { hero: VerificationHero }) {
@@ -30,7 +30,7 @@ export function VerificationHero({ hero }: { hero: VerificationHero }) {
     );
   } else if (midWarn) {
     statusBadge = (
-      <span className="rounded-lg bg-amber-500/20 px-2 py-0.5 text-xs font-semibold text-amber-500">
+      <span className="rounded-lg bg-warn/20 px-2 py-0.5 text-xs font-semibold text-warn">
         ⚠ 중간 경고 · 초과수익 음수 (표본 축적 중)
       </span>
     );

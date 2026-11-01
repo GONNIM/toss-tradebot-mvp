@@ -45,7 +45,7 @@ const INTENSITY_META: Record<
   }
 > = {
   // v1.51 · P2-4 · design-rules.md 정합 · warm 축 통일 + 명도 위계 (규칙 3·9·10·25·26·27)
-  //   원 · pink/rose/amber/cyan/indigo 강채도 500 혼재 + ring-2 +  → 이질감 유발
+  //   원 · pink/rose/amber/cyan/indigo 강채도 500 혼재 + ring-2 + shadow → 이질감 유발
   //   개선 · rose/orange/amber/sky/slate 명도 위계 (라이트 우선 · dark: variant · border만)
   REGIME_CHANGE: {
     icon: "🚨",
@@ -59,25 +59,25 @@ const INTENSITY_META: Record<
     icon: "🌋",
     label: "CRITICAL",
     hint: "즉시 검토 · 신규 SC 13D 또는 Wolf Pack",
-    className: "border-2 border-orange-300 bg-orange-50",
-    badgeBg: "bg-orange-600 text-white",
-    countBg: "bg-orange-100 text-orange-800",
+    className: "border-2 border-warn/40 bg-warn/5",
+    badgeBg: "bg-warn text-white",
+    countBg: "bg-warn/10 text-warn",
   },
   STRONG: {
     icon: "🔥",
     label: "STRONG",
     hint: "관심 · 지분 변동·수정본",
-    className: "border-2 border-amber-300 bg-amber-50",
-    badgeBg: "bg-amber-500 text-slate-900",
-    countBg: "bg-amber-100 text-amber-800",
+    className: "border-2 border-warn/40 bg-warn/5",
+    badgeBg: "bg-warn text-slate-900",
+    countBg: "bg-warn/10 text-warn",
   },
   INSIDER: {
     icon: "👤",
     label: "INSIDER",
     hint: "임원 매매 · activism 진입 종목의 동조/이탈 방향",
-    className: "border-2 border-sky-300 bg-sky-50",
-    badgeBg: "bg-sky-600 text-white",
-    countBg: "bg-sky-100 text-sky-800",
+    className: "border-2 border-primary/40 bg-primary/5",
+    badgeBg: "bg-primary text-white",
+    countBg: "bg-primary/10 text-primary",
   },
   WATCH: {
     icon: "⚠️",
@@ -106,18 +106,18 @@ function EventRow({ e }: { e: ActivistEventItem }) {
     : `https://www.google.com/search?q=${encodeURIComponent(searchQuery + " SEC filing")}`;
 
   return (
-    // v1.51 · P2-4 · 라이트 우선 ·  제거 (규칙 26) · border 단독 (규칙 25·27)
+    // v1.51 · P2-4 · 라이트 우선 · shadow 제거 (규칙 26) · border 단독 (규칙 25·27)
     <div className="rounded-lg border border-slate-200 bg-white p-3 text-sm text-slate-800">
       {/* 헤더 · 폼 배지 + 힌트 + 점수 */}
       <div className="flex items-baseline gap-2 flex-wrap">
         <span
-          className="rounded-lg bg-amber-500 px-2 py-0.5 font-mono text-xs font-bold text-slate-900"
+          className="rounded-lg bg-warn px-2 py-0.5 font-mono text-xs font-bold text-slate-900"
           title={e.form_hint || undefined}
         >
           {e.form}
         </span>
         {e.form_hint && (
-          <span className="text-xs font-medium text-amber-700">
+          <span className="text-xs font-medium text-warn">
             {e.form_hint}
           </span>
         )}
@@ -135,7 +135,7 @@ function EventRow({ e }: { e: ActivistEventItem }) {
               (e.filer_tier === 1
                 ? "bg-primary text-white"
                 : e.filer_tier === 2
-                ? "bg-sky-500 text-white"
+                ? "bg-primary text-white"
                 : "bg-slate-400 text-white")
             }
           >
@@ -163,9 +163,9 @@ function EventRow({ e }: { e: ActivistEventItem }) {
       </div>
 
       {/* 대상 회사·종목 · warm 축 통일 (amber) · 단일 강조 · 사중 디바이드 해체 */}
-      <div className="mt-3 rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm">
+      <div className="mt-3 rounded-lg border border-warn/40 bg-warn/5 p-3 text-sm">
         <div className="mb-2 flex items-center gap-2">
-          <span className="text-xs font-bold uppercase tracking-wider text-amber-800">
+          <span className="text-xs font-bold uppercase tracking-wider text-warn">
             🎯 대상 종목
           </span>
           {e.details?.issuer_cik && (
@@ -178,7 +178,7 @@ function EventRow({ e }: { e: ActivistEventItem }) {
 
         <div className="flex items-baseline gap-2 flex-wrap">
           {e.target_ticker && (
-            <span className="rounded-lg bg-amber-600 px-2.5 py-1 font-mono text-sm font-bold text-white">
+            <span className="rounded-lg bg-warn px-2.5 py-1 font-mono text-sm font-bold text-white">
               {e.target_ticker}
             </span>
           )}
@@ -199,11 +199,11 @@ function EventRow({ e }: { e: ActivistEventItem }) {
           <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
             {e.details?.percent_of_class !== null &&
              e.details?.percent_of_class !== undefined && (
-              <div className="rounded-lg border border-amber-300 bg-white p-2">
-                <div className="text-xs font-semibold uppercase tracking-wide text-amber-700">
+              <div className="rounded-lg border border-warn/40 bg-white p-2">
+                <div className="text-xs font-semibold uppercase tracking-wide text-warn">
                   지분율
                 </div>
-                <div className="mt-0.5 text-3xl font-black leading-none text-amber-900">
+                <div className="mt-0.5 text-3xl font-black leading-none text-warn">
                   {e.details.percent_of_class.toFixed(1)}
                   <span className="text-xl">%</span>
                 </div>
@@ -253,7 +253,7 @@ function EventRow({ e }: { e: ActivistEventItem }) {
 
         {e.details?.transaction_purpose && (
           <details className="mt-3 rounded-lg border border-slate-200 bg-white">
-            <summary className="cursor-pointer px-2 py-1 text-xs font-semibold text-amber-700 hover:bg-slate-50">
+            <summary className="cursor-pointer px-2 py-1 text-xs font-semibold text-warn hover:bg-slate-50">
               📝 Item 4 — 거래 목적/사유 (원문 발췌 · 클릭 펼치기)
             </summary>
             <div className="whitespace-pre-wrap border-t border-slate-200 p-2 font-mono text-xs text-slate-800">
@@ -263,13 +263,13 @@ function EventRow({ e }: { e: ActivistEventItem }) {
         )}
       </div>
 
-      {/* 액션 힌트 · sky 계열 (프로젝트 팔레트) ·  제거 */}
+      {/* 액션 힌트 · sky 계열 (프로젝트 팔레트) · shadow 제거 */}
       {e.action_hint && (
-        <div className="mt-3 rounded-lg border border-sky-300 bg-sky-50 p-2 text-sm">
-          <span className="mr-1 text-xs font-bold uppercase tracking-wide text-sky-800">
+        <div className="mt-3 rounded-lg border border-primary/40 bg-primary/5 p-2 text-sm">
+          <span className="mr-1 text-xs font-bold uppercase tracking-wide text-primary">
             추천 액션
           </span>
-          <span className="text-sky-900 font-medium">{e.action_hint}</span>
+          <span className="text-primary font-medium">{e.action_hint}</span>
         </div>
       )}
 
@@ -334,12 +334,12 @@ const PACK_STYLE: Record<
   STRONG_PACK: {
     icon: "🐺",
     label: "STRONG PACK",
-    className: "border-2 border-orange-300 bg-orange-50",
+    className: "border-2 border-warn/40 bg-warn/5",
   },
   PACK: {
     icon: "🐺",
     label: "PACK",
-    className: "border border-amber-300 bg-amber-50",
+    className: "border border-warn/40 bg-warn/5",
   },
 };
 
@@ -349,7 +349,7 @@ function TierBadge({ tier }: { tier: number }) {
     tier === 1
       ? "bg-primary/10 text-primary"
       : tier === 2
-      ? "bg-sky-100 text-sky-800"
+      ? "bg-primary/10 text-primary"
       : "bg-slate-100 text-slate-600";
   return (
     <span className={`rounded-lg px-1.5 py-0.5 text-xs font-mono ${color}`}>
@@ -378,7 +378,7 @@ function WolfPackEntryRow({
         <div className="flex items-baseline gap-2 flex-wrap">
           <TierBadge tier={e.tier} />
           <span className="font-medium">{e.filer_name}</span>
-          <span className="rounded-lg bg-amber-100 px-2 py-0.5 text-xs font-mono text-amber-800">
+          <span className="rounded-lg bg-warn/10 px-2 py-0.5 text-xs font-mono text-warn">
             {e.form}
           </span>
           {isFirst && (
@@ -502,7 +502,7 @@ function BucketCard({
   const visible = showAll ? events : events.slice(0, 5);
   return (
     <div className={`overflow-hidden rounded-lg border ${meta.className}`}>
-      {/* v1.51 · 헤더 밴드 라이트 우선 ·  제거 (규칙 26) · 배경은 카드 톤 상속 */}
+      {/* v1.51 · 헤더 밴드 라이트 우선 · shadow 제거 (규칙 26) · 배경은 카드 톤 상속 */}
       <div className="flex items-center gap-2 flex-wrap bg-white/60 px-4 py-2.5 border-b border-slate-200">
         <span
           className={`inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-sm font-bold ${meta.badgeBg}`}
@@ -927,13 +927,13 @@ export default function ActivistRadarPage() {
           <BucketCard intensity="INSIDER" events={s.buckets.INSIDER || []} />
           <BucketCard intensity="WATCH" events={s.buckets.WATCH || []} />
           {(s.insider_watchlist_kr || []).length > 0 && (
-            <div className="rounded-lg border border-sky-300 bg-sky-50 p-3 text-sm">
-              <div className="mb-1 font-medium text-sky-800">
+            <div className="rounded-lg border border-primary/40 bg-primary/5 p-3 text-sm">
+              <div className="mb-1 font-medium text-primary">
                 👤 KR Insider Watchlist ({s.insider_watchlist_kr!.length} 종목 · 최근 90일 activism 진입 자동 추적)
               </div>
               <div className="flex flex-wrap gap-1 font-mono text-xs">
                 {s.insider_watchlist_kr!.map((code) => (
-                  <span key={code} className="rounded-lg bg-sky-100 px-2 py-0.5 text-sky-800">
+                  <span key={code} className="rounded-lg bg-primary/10 px-2 py-0.5 text-primary">
                     {code}
                   </span>
                 ))}
@@ -944,14 +944,14 @@ export default function ActivistRadarPage() {
             </div>
           )}
           {(s.insider_watchlist_us || []).length > 0 && (
-            <div className="rounded-lg border border-sky-300 bg-sky-50 p-3 text-sm">
-              <div className="mb-1 font-medium text-sky-800">
+            <div className="rounded-lg border border-primary/40 bg-primary/5 p-3 text-sm">
+              <div className="mb-1 font-medium text-primary">
                 👤 US Insider Watchlist ({s.insider_watchlist_us!.length} 회사 · 최근 90일 activism 진입 자동 추적)
               </div>
               <div className="flex flex-col gap-1 text-xs">
                 {s.insider_watchlist_us!.map((w) => (
                   <div key={w.cik} className="flex gap-2 items-baseline">
-                    <span className="rounded-lg bg-sky-100 px-2 py-0.5 font-mono font-semibold text-sky-800">
+                    <span className="rounded-lg bg-primary/10 px-2 py-0.5 font-mono font-semibold text-primary">
                       <StockLink ticker={w.ticker}>{w.ticker}</StockLink>
                     </span>
                     <span className="text-muted-foreground truncate">{w.name}</span>
@@ -970,7 +970,7 @@ export default function ActivistRadarPage() {
       )}
 
       {s && (s.events_total === 0) && (
-        <div className="rounded-lg border border-amber-500/50 bg-amber-500/10 p-4 text-sm text-amber-300">
+        <div className="rounded-lg border border-warn/50 bg-warn/10 p-4 text-sm text-warn">
           아직 감지된 신규 필링이 없습니다. 첫 tick 은 baseline (알림 없음), 다음 tick 부터 실 신규
           필링만 이벤트로 기록됩니다. 5분 간격 폴링이라 초기엔 이벤트가 없어도 정상입니다.
         </div>
@@ -1033,7 +1033,7 @@ export default function ActivistRadarPage() {
           <div>
             <strong>D001 · D002</strong> — 한국 DART · 대량보유(경영권) · 임원주주소유상황(insider)
           </div>
-          <div className="rounded-lg border border-amber-500/50 bg-amber-500/10 p-2 text-xs text-amber-400">
+          <div className="rounded-lg border border-warn/50 bg-warn/10 p-2 text-xs text-warn">
             ⚠️ 참고 신호이며 자동 매매 아님. 매매 결정은 사용자 판단.
           </div>
         </div>

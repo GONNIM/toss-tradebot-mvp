@@ -154,7 +154,7 @@ function KpiButton({ onClick, children, label }: { onClick: () => void; children
       type="button"
       onClick={onClick}
       aria-label={label}
-      className="block w-full rounded-lg text-left transition hover:ring-2 hover:ring-sky-400 focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-500"
+      className="block w-full rounded-lg text-left transition hover:ring-2 hover:ring-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
     >
       {children}
     </button>
@@ -175,15 +175,15 @@ function AlertBriefCard({ b, defaultOpen = false, links }: { b: AlertBrief; defa
       {open && (
         <div className="space-y-2 border-t border-warn/20 p-3">
           <BrokerLink symbol={b.ticker} links={links} />
-          <div className="rounded-lg border-l-4 border-amber-500 bg-amber-50 p-2">⚠️ {b.note}</div>
+          <div className="rounded-lg border-l-4 border-warn bg-warn/5 p-2">⚠️ {b.note}</div>
           {summaryStatus(b.summary) && (
             <div className="rounded-lg border border-slate-300 bg-slate-50 p-2 text-muted-foreground">
               {summaryStatus(b.summary)} · 아래 수집 자료는 그대로 보여 드립니다.
             </div>
           )}
           {b.summary?.ok && (b.summary.lines ?? []).length > 0 && (
-            <div className="rounded-lg border border-sky-300 bg-sky-50 p-2">
-              <div className="mb-1 text-xs font-bold uppercase tracking-wider text-sky-800">
+            <div className="rounded-lg border border-primary/40 bg-primary/5 p-2">
+              <div className="mb-1 text-xs font-bold uppercase tracking-wider text-primary">
                 자동 요약 · 진위 미검증{b.summary.model ? ` · ${b.summary.model}` : ""}
               </div>
               {(b.summary.lines ?? []).map((l, i) => <div key={i}>{l}</div>)}
@@ -208,7 +208,7 @@ function AlertBriefCard({ b, defaultOpen = false, links }: { b: AlertBrief; defa
             ) : (
               <ul className="list-disc pl-5">
                 {b.reddit.map((p, i) => (
-                  <li key={i}><a href={p.link} target="_blank" rel="noopener noreferrer" className="text-sky-700 hover:underline">{p.title}</a></li>
+                  <li key={i}><a href={p.link} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">{p.title}</a></li>
                 ))}
               </ul>
             )}
@@ -223,7 +223,7 @@ function AlertBriefCard({ b, defaultOpen = false, links }: { b: AlertBrief; defa
               <ul className="list-disc pl-5">
                 {b.sec_8k.map((f, i) => (
                   <li key={i}>
-                    <a href={f.url} target="_blank" rel="noopener noreferrer" className="text-sky-700 hover:underline">{f.filing_date} · 항목 {f.items || "-"}</a>
+                    <a href={f.url} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">{f.filing_date} · 항목 {f.items || "-"}</a>
                     {f.description && ` · ${f.description}`}
                     {exhibitLine(f) && ` · ${exhibitLine(f)}`}
                     {f.ex99_1_lead && (
@@ -380,9 +380,9 @@ export default function BiotechPage() {
     setHighlight(id);
     window.setTimeout(() => setHighlight((h) => (h === id ? null : h)), 2000);
   }
-  const ring = (id: string) => (highlight === id ? "rounded-lg ring-2 ring-offset-2 ring-sky-500 transition" : "transition");
+  const ring = (id: string) => (highlight === id ? "rounded-lg ring-2 ring-offset-2 ring-primary transition" : "transition");
   const chip = (on: boolean) =>
-    `rounded-full border px-2.5 py-0.5 text-xs ${on ? "border-sky-600 bg-sky-50 font-semibold text-sky-700" : "border-border text-muted-foreground hover:bg-muted"}`;
+    `rounded-full border px-2.5 py-0.5 text-xs ${on ? "border-primary bg-primary/5 font-semibold text-primary" : "border-border text-muted-foreground hover:bg-muted"}`;
 
   return (
     <div className="space-y-4">
@@ -397,7 +397,7 @@ export default function BiotechPage() {
         <BiotechSessionControl onSessionChange={setSession} />
       </header>
 
-      <div className="rounded-lg border-l-4 border-amber-500 bg-amber-50 p-3 text-sm">
+      <div className="rounded-lg border-l-4 border-warn bg-warn/5 p-3 text-sm">
         ⚠️ 이 화면은 관찰용입니다. 매수 추천이 아니며 자동으로 주문하지 않습니다. 투자하더라도 소액만 권합니다.
       </div>
 
@@ -547,7 +547,7 @@ export default function BiotechPage() {
                           <div className="mt-2">
                             근거 원문:{" "}
                             {ctgovUrl(r.nct_id) ? (
-                              <a href={ctgovUrl(r.nct_id)!} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} className="text-sky-700 hover:underline">
+                              <a href={ctgovUrl(r.nct_id)!} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} className="text-primary hover:underline">
                                 ClinicalTrials.gov {r.nct_id} ↗
                               </a>
                             ) : (
@@ -654,7 +654,7 @@ export default function BiotechPage() {
             📁 {radar.source_csv} · 생성 {radar.generated}
           </div>
           {inputsMissingLine(radar.inputs_missing) && (
-            <details className="mb-2 rounded-lg border border-amber-300 bg-amber-50 px-2 py-1 text-xs text-amber-900">
+            <details className="mb-2 rounded-lg border border-warn/40 bg-warn/5 px-2 py-1 text-xs text-warn">
               <summary className="cursor-pointer font-semibold">{inputsMissingLine(radar.inputs_missing)}</summary>
               <ul className="mt-1 list-disc pl-5">
                 {(radar.inputs_missing ?? []).map((n) => (
@@ -681,9 +681,9 @@ export default function BiotechPage() {
       {isAdmin && (
         <nav className="flex flex-wrap gap-4 border-t border-border pt-3 text-sm">
           <span className="text-muted-foreground">📄 문서</span>
-          <Link href="/biotech/docs?tab=status" className="text-sky-700 hover:underline">상태판</Link>
-          <Link href="/biotech/docs?tab=glossary" className="text-sky-700 hover:underline">용어집</Link>
-          <Link href="/biotech/docs?tab=final" className="text-sky-700 hover:underline">최종 리포트</Link>
+          <Link href="/biotech/docs?tab=status" className="text-primary hover:underline">상태판</Link>
+          <Link href="/biotech/docs?tab=glossary" className="text-primary hover:underline">용어집</Link>
+          <Link href="/biotech/docs?tab=final" className="text-primary hover:underline">최종 리포트</Link>
         </nav>
       )}
     </div>

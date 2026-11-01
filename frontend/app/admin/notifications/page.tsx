@@ -85,7 +85,7 @@ export default function NotificationsPage() {
         <div
           role={banner.kind === "ok" ? "status" : "alert"}
           className={`flex items-start justify-between gap-3 rounded-lg border px-4 py-3 text-sm ${
-            banner.kind === "ok" ? "border-teal-700/40 bg-teal-50 text-teal-900" : "border-warn/40 bg-warn/5 text-warn"
+            banner.kind === "ok" ? "border-primary/40 bg-primary/5 text-primary" : "border-warn/40 bg-warn/5 text-warn"
           }`}
         >
           <span>{banner.text}</span>
@@ -113,7 +113,7 @@ export default function NotificationsPage() {
             <button
               onClick={applyRecommended}
               disabled={busy}
-              className="min-h-[48px] rounded-lg bg-teal-700 px-4 text-sm font-semibold text-white disabled:opacity-60"
+              className="min-h-[48px] rounded-lg bg-primary px-4 text-sm font-semibold text-white disabled:opacity-60"
             >
               {busy ? "적용 중…" : "권고값 한 번에 적용"}
             </button>
@@ -176,7 +176,7 @@ function SettingRow({
                   type="checkbox"
                   checked={row.enabled}
                   onChange={(e) => onSave(row, { enabled: e.target.checked }, e.target.checked ? "켜기" : "끄기")}
-                  className="h-5 w-5 accent-teal-700"
+                  className="h-5 w-5 accent-primary"
                   aria-label={`${row.label} 받기`}
                 />
                 {row.enabled ? "받기" : "끔"}
@@ -236,10 +236,10 @@ function SettingRow({
 
       {row.configurable && (
         <div className="mt-2 flex flex-wrap gap-4 text-sm">
-          <button className="min-h-[44px] text-teal-700 underline" aria-expanded={open} onClick={() => setOpen((v) => !v)}>
+          <button className="min-h-[44px] text-primary underline" aria-expanded={open} onClick={() => setOpen((v) => !v)}>
             {open ? "최근 알림 접기" : "최근 알림 10건 보기"}
           </button>
-          <a className="flex min-h-[44px] items-center text-teal-700 underline" href={row.page}>
+          <a className="flex min-h-[44px] items-center text-primary underline" href={row.page}>
             관련 화면 열기
           </a>
         </div>

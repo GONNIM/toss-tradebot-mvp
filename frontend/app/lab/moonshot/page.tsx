@@ -50,7 +50,7 @@ export default function MoonshotPage() {
         <p className="mt-1 text-sm text-muted-foreground">
           매일 16:50 KST (미국 장 시작 10분 전) · 정보 전용 (수동 매수)
         </p>
-        <p className="mt-1 text-xs text-amber-400/80">
+        <p className="mt-1 text-xs text-warn/80">
           ⚠️ 모든 pick 의 outcome (T+1·T+3·T+5) 을 카드에 표시합니다. cherry-pick 금지 (리뷰 A 권고 2).
         </p>
       </header>
@@ -149,13 +149,13 @@ function PickCard({ pick }: { pick: MoonshotPick }) {
           </div>
           <div>
             <div className="text-muted-foreground">B -5% drop</div>
-            <div className="font-mono font-bold text-cyan-400">
+            <div className="font-mono font-bold text-primary">
               {pick.buy_price_b != null ? formatUSD(pick.buy_price_b, 4) : "—"}
             </div>
           </div>
           <div>
             <div className="text-muted-foreground">C +8% 돌파</div>
-            <div className="font-mono font-bold text-cyan-400">
+            <div className="font-mono font-bold text-primary">
               {pick.buy_price_c != null ? formatUSD(pick.buy_price_c, 4) : "—"}
             </div>
           </div>
@@ -189,7 +189,7 @@ function PickCard({ pick }: { pick: MoonshotPick }) {
       </div>
 
       {/* Phase B 주 4-1 · outcome (cherry-pick 방지 · 무조건 표시) */}
-      <div className="rounded-lg border border-amber-500/30 bg-amber-500/5 p-3 text-sm">
+      <div className="rounded-lg border border-warn/30 bg-warn/5 p-3 text-sm">
         <div className="font-semibold">📊 Outcome (실현 수익률 · 계산 대기 시 —)</div>
         <div className="mt-2 grid grid-cols-4 gap-2 text-center text-xs">
           <PerfBox label="T+1" value={pick.perf_1d} />

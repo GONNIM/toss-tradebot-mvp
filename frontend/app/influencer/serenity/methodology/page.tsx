@@ -21,7 +21,7 @@ export default function MethodologyPage() {
 
   return (
     <div className="space-y-4">
-      <Link href="/influencer/serenity" className="text-xs text-sky-500 hover:underline">
+      <Link href="/influencer/serenity" className="text-xs text-primary hover:underline">
         ← Serenity 랜딩
       </Link>
 

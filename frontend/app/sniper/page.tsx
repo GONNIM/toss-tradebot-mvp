@@ -95,7 +95,7 @@ function SetupGuide({ isAdmin }: { isAdmin: boolean }) {
           setDismissed(false);
           localStorage.removeItem(GUIDE_DISMISS_KEY);
         }}
-        className="text-xs text-sky-600 hover:underline"
+        className="text-xs text-primary hover:underline"
       >
         ↺ 시작 가이드 다시 보기
       </button>
@@ -103,13 +103,13 @@ function SetupGuide({ isAdmin }: { isAdmin: boolean }) {
   }
 
   return (
-    <section className="rounded-lg border-2 border-sky-200 bg-sky-50 p-4">
+    <section className="rounded-lg border-2 border-primary/30 bg-primary/5 p-4">
       <div className="mb-3 flex items-start justify-between">
         <div>
-          <h2 className="text-base font-bold text-sky-900">
+          <h2 className="text-base font-bold text-primary">
             📖 시작하기 — 3단계 준비
           </h2>
-          <p className="mt-0.5 text-xs text-sky-800">
+          <p className="mt-0.5 text-xs text-primary">
             실주문 안전과 스나이퍼 사용을 위해 아래 3단계를 확인합니다.
           </p>
         </div>
@@ -119,7 +119,7 @@ function SetupGuide({ isAdmin }: { isAdmin: boolean }) {
             setDismissed(true);
             localStorage.setItem(GUIDE_DISMISS_KEY, "1");
           }}
-          className="text-xs text-sky-700 hover:underline"
+          className="text-xs text-primary hover:underline"
         >
           닫기
         </button>
@@ -202,7 +202,7 @@ function GuideStep({
       className={`rounded-lg border ${
         done
           ? "border-primary/30 bg-white/50"
-          : "border-amber-300 bg-white"
+          : "border-warn/40 bg-white"
       } p-2`}
     >
       <button
@@ -215,14 +215,14 @@ function GuideStep({
             className={`flex h-6 w-6 items-center justify-center rounded-full text-xs font-bold ${
               done
                 ? "bg-primary text-white"
-                : "bg-amber-500 text-white"
+                : "bg-warn text-white"
             }`}
           >
             {done ? "✓" : num}
           </span>
           <div>
             <p className="text-sm font-semibold">{title}</p>
-            <p className={`text-xs ${done ? "text-primary" : "text-amber-700"}`}>
+            <p className={`text-xs ${done ? "text-primary" : "text-warn"}`}>
               {summary}
             </p>
           </div>
@@ -398,7 +398,7 @@ function CandidatesPanel() {
                   </td>
                   <td
                     className={`py-1 text-right ${
-                      upDownText(r.return_pct ?? 0, "text-up")
+                      upDownText(r.return_pct ?? 0)
                     }`}
                   >
                     {fmtPct(r.return_pct)}
@@ -470,7 +470,7 @@ function SignalsPanel() {
                   <td className="py-1 text-right">{fmtPriceForTicker(r.ticker, r.exit_price)}</td>
                   <td
                     className={`py-1 text-right font-semibold ${
-                      upDownText(r.pnl_pct ?? 0, "text-up")
+                      upDownText(r.pnl_pct ?? 0)
                     }`}
                   >
                     {fmtPct(r.pnl_pct)}
@@ -481,7 +481,7 @@ function SignalsPanel() {
                       className={`inline-flex items-center rounded-lg px-1.5 py-0.5 text-xs font-semibold ${
                         r.exit_order_uuid
                           ? "bg-slate-100 text-slate-700"
-                          : "bg-sky-100 text-sky-700"
+                          : "bg-primary/10 text-primary"
                       }`}
                     >
                       {r.exit_order_uuid ? "closed" : "open"}
@@ -525,7 +525,7 @@ function UniversePanel({ isAdmin }: { isAdmin: boolean }) {
           type="button"
           onClick={() => isAdmin && refresh.mutate()}
           disabled={!isAdmin || refresh.isPending}
-          className="rounded-lg bg-sky-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-sky-700 disabled:opacity-50"
+          className="rounded-lg bg-primary px-3 py-1.5 text-xs font-semibold text-white hover:bg-primary disabled:opacity-50"
           title={!isAdmin ? "관리자 로그인 필요" : ""}
         >
           {refresh.isPending ? "재싱크 중…" : "🔄 지금 재싱크 (관리자)"}
@@ -547,7 +547,7 @@ function UniversePanel({ isAdmin }: { isAdmin: boolean }) {
         </p>
       )}
       {size === 0 && !q.isLoading && (
-        <p className="mb-2 rounded-lg bg-amber-50 p-2 text-xs text-amber-700">
+        <p className="mb-2 rounded-lg bg-warn/5 p-2 text-xs text-warn">
           ⚠️ 유니버스 비어있음 · 위 "🔄 지금 재싱크" 버튼 눌러 초기 로드 필요 · 이후 매일 22:00 KST 자동 재싱크
         </p>
       )}
@@ -580,7 +580,7 @@ function UniversePanel({ isAdmin }: { isAdmin: boolean }) {
                     <td className="py-1 text-right">{fmtKrw(r.amount_today)}</td>
                     <td className="py-1">
                       {r.is_squeeze && (
-                        <span className="rounded-lg bg-amber-100 px-1.5 py-0.5 text-xs font-semibold text-amber-700">
+                        <span className="rounded-lg bg-warn/10 px-1.5 py-0.5 text-xs font-semibold text-warn">
                           🎯 squeeze
                         </span>
                       )}
@@ -644,7 +644,7 @@ function ParamsEditor({ isAdmin }: { isAdmin: boolean }) {
           </p>
         </div>
         <div className="flex items-center gap-2">
-          {dirty && <span className="text-xs text-amber-600">변경사항 있음</span>}
+          {dirty && <span className="text-xs text-warn">변경사항 있음</span>}
           <button
             type="button"
             onClick={() => isAdmin && save.mutate(draft)}

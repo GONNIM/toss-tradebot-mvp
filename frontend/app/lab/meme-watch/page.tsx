@@ -91,7 +91,7 @@ export default function MemeWatchPage() {
       )}
       {data && <MemeWatchTable items={data.items} />}
 
-      <div className="rounded-lg border border-amber-500/30 bg-amber-500/5 p-3 text-xs text-amber-700">
+      <div className="rounded-lg border border-warn/30 bg-warn/5 p-3 text-xs text-warn">
         ⚠️ Meme Score 는 보조 시그널입니다. 투자 권유 아님 — 본 점수는 과거
         패턴 통계이며 미래 수익을 보장하지 않습니다. 밈주는 단시간 -50% 이상
         손실 가능 — Moonshot 과 같이 잃어도 되는 "고위험 시드" 로만 운영 권장.
@@ -115,7 +115,7 @@ function MarketTab({
       className={cn(
         "px-4 py-2 text-sm font-medium transition-colors border-b-2 -mb-px",
         active
-          ? "border-cyan-500 text-cyan-700"
+          ? "border-primary text-primary"
           : "border-transparent text-muted-foreground hover:text-foreground",
       )}
     >

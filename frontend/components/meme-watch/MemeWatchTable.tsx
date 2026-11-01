@@ -11,17 +11,17 @@ import { upDownText } from "@/lib/updown";
 
 const LABEL_COLORS: Record<string, string> = {
   BLAZING: "text-warn",
-  HOT: "text-orange-600",
-  WATCH: "text-amber-600",
-  OBSERVE: "text-cyan-600",
+  HOT: "text-warn",
+  WATCH: "text-warn",
+  OBSERVE: "text-primary",
   SLEEP: "text-zinc-500",
 };
 
 const INTENSITY_COLORS: Record<string, string> = {
   ERUPTING: "text-warn font-bold",
-  SURGING: "text-orange-700 font-bold",
-  RISING: "text-amber-700",
-  STABILIZING: "text-cyan-700",
+  SURGING: "text-warn font-bold",
+  RISING: "text-warn",
+  STABILIZING: "text-primary",
   FLAT: "text-zinc-500",
 };
 
@@ -77,7 +77,7 @@ export function MemeWatchTable({ items }: { items: MemeScoreItem[] }) {
                 STRONGEST_LABELS[it.strongest_signal] || it.strongest_signal;
               const r1d = it.return_1d_pct;
               const r1dClass =
-                upDownText(r1d, "text-up");
+                upDownText(r1d);
               return (
                 <tr
                   key={`${it.ticker}-${i}`}
@@ -139,7 +139,7 @@ export function MemeWatchTable({ items }: { items: MemeScoreItem[] }) {
                     {strongestLabel}
                     {it.sample_warning && (
                       <span
-                        className="ml-1 text-amber-600"
+                        className="ml-1 text-warn"
                         title="시그널 부족 — 신뢰도 weak"
                       >
                         ⚠️

@@ -164,7 +164,7 @@ export function AppNav({ brand, session }: { brand: ReactNode; session: ReactNod
                 className={
                   "flex min-h-[44px] shrink-0 items-center whitespace-nowrap rounded-lg px-3 " +
                   (active
-                    ? "font-semibold text-teal-700 underline decoration-2 underline-offset-8"
+                    ? "font-semibold text-primary underline decoration-2 underline-offset-8"
                     : "text-muted-foreground hover:text-foreground")
                 }
               >

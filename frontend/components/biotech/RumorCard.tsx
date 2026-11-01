@@ -22,7 +22,7 @@ export function RumorCard({ ticker, name, mcap_bucket, days_hint, detail, score,
         {typeof order === "number" && (
           <span className="w-6 text-right font-mono text-xs text-muted-foreground">{order}</span>
         )}
-        <span className="rounded-lg bg-sky-600 px-2 py-0.5 font-mono text-xs font-bold text-white">
+        <span className="rounded-lg bg-primary px-2 py-0.5 font-mono text-xs font-bold text-white">
           {ticker}
         </span>
         {mcap_bucket && (
@@ -31,7 +31,7 @@ export function RumorCard({ ticker, name, mcap_bucket, days_hint, detail, score,
           </span>
         )}
         {!sentence && (
-          <span className="rounded-lg bg-amber-500 px-2 py-0.5 font-mono text-xs font-bold text-slate-900">
+          <span className="rounded-lg bg-warn px-2 py-0.5 font-mono text-xs font-bold text-slate-900">
             {days_hint}
           </span>
         )}
@@ -52,14 +52,14 @@ export function RumorCard({ ticker, name, mcap_bucket, days_hint, detail, score,
               target="_blank"
               rel="noopener noreferrer"
               onClick={(e) => e.stopPropagation()}
-              className="text-xs text-sky-700 hover:underline"
+              className="text-xs text-primary hover:underline"
             >
               임상 원문 보기 ↗
             </a>
           </>
         )}
       </div>
-      {subline && <div className="mt-1 text-xs text-sky-800">{subline}</div>}
+      {subline && <div className="mt-1 text-xs text-primary">{subline}</div>}
     </div>
   );
 }

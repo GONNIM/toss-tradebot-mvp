@@ -110,7 +110,7 @@ function PanelBody({
   return (
     <div className="space-y-4">
       {/* 종목 헤더 카드 — 5요소 위 (어느 종목인지 표시) */}
-      <div className="rounded-xl border border-cyan-500/30 bg-card p-4">
+      <div className="rounded-xl border border-primary/30 bg-card p-4">
         <PanelHeader data={data} />
       </div>
 
@@ -195,7 +195,7 @@ function PanelHeader({ data }: { data: TickerAnalysis }) {
             : "—"}{" "}
           · 표본 {l.sample_n ?? 0}M{" "}
           {data.correlation_sign < 0 && (
-            <span className="text-amber-400">· ⚠️ 음의 상관 (수출↑ 시 주가↓)</span>
+            <span className="text-warn">· ⚠️ 음의 상관 (수출↑ 시 주가↓)</span>
           )}
         </p>
       </div>
@@ -274,7 +274,7 @@ function AnalysisChart({ data }: { data: TickerAnalysis }) {
               x2={r.to}
               yAxisId="close"
               strokeOpacity={0}
-              fill={r.kind === "green" ? "#10b981" : "#ef4444"}
+              fill={r.kind === "green" ? "hsl(var(--up))" : "hsl(var(--down))"}
               fillOpacity={0.08}
             />
           ))}
@@ -495,7 +495,7 @@ function MonthlyJoinTable({ rows }: { rows: MonthlyJoinRow[] }) {
                         {displayVal !== null ? (
                           <span title={isInterimVal ? "관세청 전체 잠정치 (품목 세분 아님)" : undefined}>
                             {Math.round(displayVal).toLocaleString()}
-                            {isInterimVal && <span className="ml-1 text-xs text-sky-400">*</span>}
+                            {isInterimVal && <span className="ml-1 text-xs text-primary">*</span>}
                           </span>
                         ) : (
                           "—"
@@ -507,7 +507,7 @@ function MonthlyJoinTable({ rows }: { rows: MonthlyJoinRow[] }) {
                         {displayYoy !== null ? (
                           <span title={isInterimYoy ? "관세청 전체 잠정치 YoY (품목 세분 아님)" : undefined}>
                             {formatPct(displayYoy, 1)}
-                            {isInterimYoy && <span className="ml-1 text-xs text-sky-400">*</span>}
+                            {isInterimYoy && <span className="ml-1 text-xs text-primary">*</span>}
                           </span>
                         ) : (
                           "—"
@@ -529,7 +529,7 @@ function MonthlyJoinTable({ rows }: { rows: MonthlyJoinRow[] }) {
             </table>
             {rows.some((r) => r.interim_period !== null) && (
               <div className="pt-2 text-xs text-muted-foreground">
-                <span className="text-sky-400">*</span> 관세청 전체 잠정치 (품목 세분 아님) · motir 미발표 월 참고용
+                <span className="text-primary">*</span> 관세청 전체 잠정치 (품목 세분 아님) · motir 미발표 월 참고용
               </div>
             )}
           </div>
@@ -556,15 +556,15 @@ function retClass(r: number | null): string {
 
 function signalBadge(sig: JoinSignal): React.ReactNode {
   const map: Record<JoinSignal, { label: string; cls: string }> = {
-    agree_up: { label: "🟢 동행↑", cls: "text-primary" },
-    agree_down: { label: "🔴 동행↓", cls: "text-warn" },
-    disagree: { label: "⚪ 엇박자", cls: "text-amber-400" },
+    agree_up: { label: "▲ 동행↑", cls: "text-up" },
+    agree_down: { label: "▼ 동행↓", cls: "text-down" },
+    disagree: { label: "⚪ 엇박자", cls: "text-warn" },
     neutral: { label: "— 횡보", cls: "text-muted-foreground" },
     no_data: { label: "—", cls: "text-muted-foreground" },
     // 2026-08-15 · customs_interim 잠정치 사이클 라벨 (motir 미발표 월)
-    interim_01_10: { label: "🕒 10일 잠정치", cls: "text-sky-400" },
-    interim_01_20: { label: "🕒 20일 잠정치", cls: "text-sky-400" },
-    interim_01_31: { label: "🕒 말일 잠정치", cls: "text-sky-400" },
+    interim_01_10: { label: "🕒 10일 잠정치", cls: "text-primary" },
+    interim_01_20: { label: "🕒 20일 잠정치", cls: "text-primary" },
+    interim_01_31: { label: "🕒 말일 잠정치", cls: "text-primary" },
   };
   const v = map[sig] ?? { label: "—", cls: "text-muted-foreground" };
   return <span className={`text-xs ${v.cls}`}>{v.label}</span>;
@@ -590,7 +590,7 @@ function LatestSignalCard({
   };
   const arrow = hint.direction === "up" ? "📈" : "📉";
   return (
-    <div className="rounded-xl border border-cyan-500/40 bg-cyan-500/5 p-4">
+    <div className="rounded-xl border border-primary/40 bg-primary/5 p-4">
       <div className="flex items-baseline justify-between gap-2 mb-2 flex-wrap">
         <h4 className="text-sm font-semibold">
           📍 최근 시그널 ({hint.month} 발표)

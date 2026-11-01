@@ -95,7 +95,7 @@ export function InvalidationHitLog() {
                     className={`py-1.5 text-right font-semibold ${
                       h.result_at_horizon === null
                         ? "text-muted-foreground"
-                        : upDownText(h.result_at_horizon, "text-up")
+                        : upDownText(h.result_at_horizon)
                     }`}
                   >
                     {h.result_at_horizon !== null

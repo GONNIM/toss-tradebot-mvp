@@ -145,7 +145,7 @@ export default function PrinciplesPage() {
                 </p>
               )}
               {p.sector_exception && (
-                <p className="text-xs text-amber-600">
+                <p className="text-xs text-warn">
                   <strong>업종 예외:</strong> {p.sector_exception}
                 </p>
               )}
@@ -172,7 +172,7 @@ export default function PrinciplesPage() {
       <section className="space-y-3 rounded-lg border border-border bg-card p-4">
         <h2 className="text-lg font-semibold">🚧 매도 원칙</h2>
         <p className="text-sm">
-          <span className="rounded-lg bg-amber-100 px-2 py-0.5 text-xs font-semibold text-amber-800">
+          <span className="rounded-lg bg-warn/10 px-2 py-0.5 text-xs font-semibold text-warn">
             {charter.sell_principle.status}
           </span>{" "}
           {charter.sell_principle.note}
@@ -289,7 +289,7 @@ export default function PrinciplesPage() {
             >
               <div className="flex items-baseline justify-between gap-3">
                 <div>
-                  <span className="rounded-lg bg-sky-100 px-2 py-0.5 text-xs font-semibold text-sky-700">
+                  <span className="rounded-lg bg-primary/10 px-2 py-0.5 text-xs font-semibold text-primary">
                     v{r.version}
                   </span>
                   <span className="ml-2 text-xs text-muted-foreground">

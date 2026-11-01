@@ -73,9 +73,9 @@ function HeroCard({ s }: { s: VipStatus }) {
     if (s.is_us_regular_hours)
       return { text: "🟢 정규장", className: "bg-primary/20 text-primary" };
     if (q?.market_status === "OPEN")
-      return { text: "🟡 개장 중", className: "bg-amber-500/20 text-amber-400" };
+      return { text: "🟡 개장 중", className: "bg-warn/20 text-warn" };
     if (q?.over_market_ratio !== null && q?.over_market_ratio !== undefined)
-      return { text: "🌙 AH/PM", className: "bg-indigo-500/20 text-indigo-400" };
+      return { text: "🌙 AH/PM", className: "bg-primary/20 text-primary" };
     return { text: "📴 마감", className: "bg-muted text-muted-foreground" };
   };
   const badge = marketBadge();
@@ -335,7 +335,7 @@ function TriggerCard({ s }: { s: VipStatus }) {
                         발송됨
                       </span>
                     ) : t.reached ? (
-                      <span className="rounded-lg bg-amber-500/20 px-2 py-0.5 text-xs text-amber-400">
+                      <span className="rounded-lg bg-warn/20 px-2 py-0.5 text-xs text-warn">
                         도달
                       </span>
                     ) : (
@@ -421,7 +421,7 @@ function MarketCard({ s }: { s: VipStatus }) {
           </div>
           <div className="relative h-2 rounded-full bg-muted">
             <div
-              className="absolute top-0 h-2 w-1 rounded-full bg-primary "
+              className="absolute top-0 h-2 w-1 rounded-full bg-primary"
               style={{ left: `calc(${bandPct}% - 2px)` }}
             />
           </div>
@@ -502,7 +502,7 @@ function AlertsCard({ s }: { s: VipStatus }) {
                 </div>
                 <div className="mt-1 text-xs text-muted-foreground">{info.desc}</div>
                 {cooldownLeft > 0 ? (
-                  <div className="mt-1 text-xs text-amber-400">
+                  <div className="mt-1 text-xs text-warn">
                     다음 발송 가능: {fmtKst(nextAt)} ({Math.ceil(cooldownLeft / 3600)}h 남음)
                   </div>
                 ) : (
@@ -613,9 +613,9 @@ function ActivistCard({ s, onEdit }: { s: VipStatus; onEdit: () => void }) {
 
       {a.latest_target ? (
         // v1.52 · design-rules 정합 · activist-radar와 동일 리팩터 (warm 축 + 라이트 우선)
-        <div className="mt-4 rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm">
+        <div className="mt-4 rounded-lg border border-warn/40 bg-warn/5 p-3 text-sm">
           <div className="mb-2 flex items-baseline gap-2 flex-wrap">
-            <span className="text-xs font-bold uppercase tracking-wider text-amber-800">
+            <span className="text-xs font-bold uppercase tracking-wider text-warn">
               🎯 최신 대상 필링
             </span>
             <span className="ml-auto text-xs font-mono text-slate-500">
@@ -623,13 +623,13 @@ function ActivistCard({ s, onEdit }: { s: VipStatus; onEdit: () => void }) {
             </span>
           </div>
 
-          {/* 폼 배지 · 힌트 ·  제거 */}
+          {/* 폼 배지 · 힌트 · shadow 제거 */}
           <div className="flex items-baseline gap-2 flex-wrap">
-            <span className="rounded-lg bg-amber-500 px-2 py-0.5 font-mono text-xs font-bold text-slate-900">
+            <span className="rounded-lg bg-warn px-2 py-0.5 font-mono text-xs font-bold text-slate-900">
               {a.latest_target.form}
             </span>
             {a.latest_target.form_hint && (
-              <span className="text-xs font-medium text-amber-700">
+              <span className="text-xs font-medium text-warn">
                 {a.latest_target.form_hint}
               </span>
             )}
@@ -657,11 +657,11 @@ function ActivistCard({ s, onEdit }: { s: VipStatus; onEdit: () => void }) {
             a.latest_target.details.aggregate_amount_owned != null) && (
             <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
               {a.latest_target.details.percent_of_class != null && (
-                <div className="rounded-lg border border-amber-300 bg-white p-2">
-                  <div className="text-xs font-semibold uppercase tracking-wide text-amber-700">
+                <div className="rounded-lg border border-warn/40 bg-white p-2">
+                  <div className="text-xs font-semibold uppercase tracking-wide text-warn">
                     지분율
                   </div>
-                  <div className="mt-0.5 text-3xl font-black leading-none text-amber-900">
+                  <div className="mt-0.5 text-3xl font-black leading-none text-warn">
                     {a.latest_target.details.percent_of_class.toFixed(1)}
                     <span className="text-xl">%</span>
                   </div>
@@ -715,7 +715,7 @@ function ActivistCard({ s, onEdit }: { s: VipStatus; onEdit: () => void }) {
 
           {a.latest_target.details?.transaction_purpose && (
             <details className="mt-3 rounded-lg border border-slate-200 bg-white">
-              <summary className="cursor-pointer px-2 py-1 text-xs font-semibold text-amber-700 hover:bg-slate-50">
+              <summary className="cursor-pointer px-2 py-1 text-xs font-semibold text-warn hover:bg-slate-50">
                 📝 Item 4 — 거래 목적/사유 (원문 발췌 · 클릭 펼치기)
               </summary>
               <div className="whitespace-pre-wrap border-t border-slate-700 p-2 font-mono text-xs text-slate-100">
@@ -847,7 +847,7 @@ function GlossaryCard() {
             해석됩니다.
           </p>
         </div>
-        <div className="rounded-lg border border-amber-500/50 bg-amber-500/10 p-2 text-xs text-amber-400">
+        <div className="rounded-lg border border-warn/50 bg-warn/10 p-2 text-xs text-warn">
           ⚠️ 이 페이지는 <strong>참고 신호 알림</strong>이며 자동 매매를 수행하지 않습니다.
           모든 매매 결정은 사용자 본인의 판단입니다.
         </div>
@@ -1134,8 +1134,8 @@ export default function VipPage() {
       )}
 
       {s && !s.active && (
-        <div className="rounded-lg border border-amber-500/50 bg-amber-500/10 p-4 text-sm">
-          <div className="font-medium text-amber-400">감시 비활성</div>
+        <div className="rounded-lg border border-warn/50 bg-warn/10 p-4 text-sm">
+          <div className="font-medium text-warn">감시 비활성</div>
           <p className="mt-1 text-muted-foreground">
             서버 <code>backend/.env.sops.yaml</code> 에{" "}
             <code>VIP_ENABLED=true</code> 와 <code>VIP_AVG_PRICE</code> ({">"}0) 설정 후 커밋·push.

@@ -28,7 +28,7 @@ export function SourcesStatusBar({
               "rounded-full border px-2 py-0.5",
               ok
                 ? "border-primary/40 bg-primary/10 text-primary"
-                : "border-amber-500/40 bg-amber-500/10 text-amber-700",
+                : "border-warn/40 bg-warn/10 text-warn",
             )}
             title={
               ok

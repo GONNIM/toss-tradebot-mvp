@@ -68,7 +68,7 @@ export function RRStatsCard() {
               className={`rounded-lg border px-2 py-1.5 ${
                 rateOk
                   ? "border-primary/40 bg-primary/10"
-                  : "border-amber-500/40 bg-amber-500/10"
+                  : "border-warn/40 bg-warn/10"
               }`}
             >
               <div className="text-muted-foreground">
@@ -99,7 +99,7 @@ export function RRStatsCard() {
                   </div>
                   <div className="mt-0.5 h-1.5 overflow-hidden rounded-lg bg-muted">
                     <div
-                      className={`h-full ${good ? "bg-primary" : "bg-amber-500"}`}
+                      className={`h-full ${good ? "bg-primary" : "bg-warn"}`}
                       style={{ width: `${pct}%` }}
                     />
                   </div>

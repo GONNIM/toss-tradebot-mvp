@@ -55,7 +55,7 @@ export default function PowderKegPage() {
         <div className="space-y-1">
           <h1 className="flex items-center gap-2 text-2xl font-bold">
             🧨 화약고 스크리너
-            <span className="rounded-lg bg-blue-500/20 px-2 py-0.5 text-xs font-semibold text-blue-400" title="LEADING · 미래 잠재 (사전 예측)">
+            <span className="rounded-lg bg-primary/20 px-2 py-0.5 text-xs font-semibold text-primary" title="LEADING · 미래 잠재 (사전 예측)">
               LEADING
             </span>
           </h1>
@@ -68,7 +68,7 @@ export default function PowderKegPage() {
           <button
             type="button"
             onClick={resetGuides}
-            className="rounded-lg border border-purple-300 bg-purple-50 px-2 py-1 text-xs text-purple-800 hover:bg-purple-100"
+            className="rounded-lg border border-primary/40 bg-primary/5 px-2 py-1 text-xs text-primary hover:bg-primary/10"
             title="숨긴 가이드 카드 다시 보기"
           >
             📖 가이드 다시 보기
@@ -77,7 +77,7 @@ export default function PowderKegPage() {
             href="https://github.com/GONNIM/toss-tradebot-mvp/blob/main/docs/plans/powderkeg-screener/user-guide.md"
             target="_blank"
             rel="noopener noreferrer"
-            className="rounded-lg border border-sky-300 bg-sky-50 px-2 py-1 text-xs text-sky-800 hover:bg-sky-100"
+            className="rounded-lg border border-primary/40 bg-primary/5 px-2 py-1 text-xs text-primary hover:bg-primary/10"
             title="GitHub 에서 상세 가이드 문서 보기"
           >
             📄 상세 문서 →
@@ -111,12 +111,12 @@ function OnboardingBanner() {
   }, []);
   if (dismissed) return null;
   return (
-    <section className="rounded-lg border-2 border-sky-300 bg-sky-50 p-3 text-sm">
+    <section className="rounded-lg border-2 border-primary/40 bg-primary/5 p-3 text-sm">
       <div className="flex items-center justify-between">
         <button
           type="button"
           onClick={() => setOpen(!open)}
-          className="font-bold text-sky-900 hover:underline"
+          className="font-bold text-primary hover:underline"
         >
           {open ? "▼" : "▶"} 🧨 이 페이지는 무엇인가요?
         </button>
@@ -126,13 +126,13 @@ function OnboardingBanner() {
             localStorage.setItem(KEY, "1");
             setDismissed(true);
           }}
-          className="rounded-lg border border-sky-300 px-2 py-0.5 text-xs text-sky-700 hover:bg-sky-100"
+          className="rounded-lg border border-primary/40 px-2 py-0.5 text-xs text-primary hover:bg-primary/10"
         >
           다시 안 보기
         </button>
       </div>
       {open && (
-        <ul className="mt-2 space-y-1 text-xs text-sky-900">
+        <ul className="mt-2 space-y-1 text-xs text-primary">
           <li>· <b>화약고 종목</b> · 재무·공시 데이터로 자동 발굴한 매수 관찰 후보</li>
           <li>· <b>왜 화약고?</b> · 오너에게 현금이 급해질 신호 (담보제공·상속·경영권분쟁) 가 나타난 저평가 종목</li>
           <li>· <b>이 페이지의 역할</b> · <b>실전 매매 X</b> · 관찰 후보만 제공 · 최종 결정은 사용자</li>
@@ -154,13 +154,13 @@ function WorkflowFlowchart() {
     { n: "④", label: "종목 검토", desc: "종목명 클릭 → 상세 팝업 · 재무·조건·이벤트·외부링크 확인 후 판단" },
   ];
   return (
-    <section className="rounded-lg border-2 border-sky-300 bg-sky-50 p-2">
+    <section className="rounded-lg border-2 border-primary/40 bg-primary/5 p-2">
       <button type="button" onClick={() => setOpen(!open)} className="w-full text-left">
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-1 text-xs font-bold text-sky-900">
+          <div className="flex items-center gap-1 text-xs font-bold text-primary">
             🗺 사용법 · 자동 감지 → 알림 → 재평가 → 종목 검토
           </div>
-          <span className="text-xs text-sky-700">{open ? "▼ 접기" : "▶ 상세"}</span>
+          <span className="text-xs text-primary">{open ? "▼ 접기" : "▶ 상세"}</span>
         </div>
       </button>
       <div className="mt-2 flex flex-wrap items-center gap-1 text-xs">
@@ -168,11 +168,11 @@ function WorkflowFlowchart() {
           <div key={s.n} className="flex items-center gap-1">
             <div
               title={s.desc}
-              className="rounded-lg border border-sky-400 bg-white px-2 py-1 font-medium text-sky-900"
+              className="rounded-lg border border-primary/60 bg-white px-2 py-1 font-medium text-primary"
             >
               <b>{s.n}</b> {s.label}
             </div>
-            {i < steps.length - 1 ? <span className="text-sky-500">→</span> : null}
+            {i < steps.length - 1 ? <span className="text-primary">→</span> : null}
           </div>
         ))}
       </div>
@@ -180,10 +180,10 @@ function WorkflowFlowchart() {
         <div className="mt-2 space-y-1 rounded-lg border bg-white p-2 text-xs text-slate-700">
           {steps.map(s => (
             <div key={s.n}>
-              <b className="text-sky-800">{s.n} {s.label}</b> · {s.desc}
+              <b className="text-primary">{s.n} {s.label}</b> · {s.desc}
             </div>
           ))}
-          <div className="mt-2 rounded-lg bg-amber-50 p-1.5 text-xs text-amber-900">
+          <div className="mt-2 rounded-lg bg-warn/5 p-1.5 text-xs text-warn">
             ⚠️ 스크리너 자동 재평가 없음 (설계 원칙) · 새 재무·최대주주 반영은 사용자가 <b>③ 재평가</b> 트리거해야 함.
           </div>
         </div>
@@ -232,8 +232,8 @@ function Tabs({ tab, setTab }: { tab: Tab; setTab: (t: Tab) => void }) {
           onClick={() => setTab(it.key)}
           className={`px-3 py-1.5 text-sm ${
             tab === it.key
-              ? "border-b-2 border-sky-600 font-bold text-sky-700"
-              : "text-muted-foreground hover:text-sky-600"
+              ? "border-b-2 border-primary font-bold text-primary"
+              : "text-muted-foreground hover:text-primary"
           }`}
         >
           {it.label}
@@ -339,7 +339,7 @@ function ListTab({ isAdmin, guideNonce = 0 }: { isAdmin: boolean; guideNonce?: n
           </span>
           {q.data?.source_run_ids && q.data.source_run_ids.length > 1 ? (
             <span
-              className="ml-2 rounded-lg bg-indigo-100 px-2 py-0.5 text-xs text-indigo-900"
+              className="ml-2 rounded-lg bg-primary/10 px-2 py-0.5 text-xs text-primary"
               title={`v1.49 · P2-3 · 최근 ${q.data.source_run_ids.length}개 run 병합\n${q.data.source_run_ids.join('\n')}`}
             >
               🔀 최근 {q.data.source_run_ids.length} run 병합
@@ -398,13 +398,13 @@ function ListTab({ isAdmin, guideNonce = 0 }: { isAdmin: boolean; guideNonce?: n
             </thead>
             <tbody>
               {visibleItems.map((it) => (
-                <tr key={it.id} className={`border-b hover:bg-sky-50/30 ${it.locked ? "bg-amber-50/40" : ""}`}>
+                <tr key={it.id} className={`border-b hover:bg-primary/30 ${it.locked ? "bg-warn/40" : ""}`}>
                   <td className="p-2 min-w-64 align-top">   {/* v1.37 · 종목 컬럼 고정 폭 */}
                     <div className="flex items-center gap-1">
                       <button
                         type="button"
                         onClick={() => setDetailTicker(it.ticker)}
-                        className="font-medium text-left hover:underline hover:text-sky-700"
+                        className="font-medium text-left hover:underline hover:text-primary"
                         title="종목 상세 팝업 열기 (재무 3년·조건·이벤트·외부 링크)"
                       >
                         {it.name || "-"}
@@ -412,7 +412,7 @@ function ListTab({ isAdmin, guideNonce = 0 }: { isAdmin: boolean; guideNonce?: n
                       {it.locked ? (
                         <span
                           title={`🔒 lock · added_by=${it.added_by}`}
-                          className="rounded-lg bg-amber-200 px-1 py-0.5 text-xs text-amber-900"
+                          className="rounded-lg bg-warn/20 px-1 py-0.5 text-xs text-warn"
                         >
                           🔒
                         </span>
@@ -420,7 +420,7 @@ function ListTab({ isAdmin, guideNonce = 0 }: { isAdmin: boolean; guideNonce?: n
                       {it.added_by === "user" ? (
                         <span
                           title="사용자 수동 추가"
-                          className="rounded-lg bg-sky-100 px-1 py-0.5 text-xs text-sky-800"
+                          className="rounded-lg bg-primary/10 px-1 py-0.5 text-xs text-primary"
                         >
                           user
                         </span>
@@ -430,14 +430,14 @@ function ListTab({ isAdmin, guideNonce = 0 }: { isAdmin: boolean; guideNonce?: n
                       {tierMovedTickers.has(it.ticker) ? (
                         <span
                           title="최근 run에서 티어 이동 (P4-1)"
-                          className="rounded-lg bg-fuchsia-100 px-1 py-0.5 text-xs font-bold text-fuchsia-900"
+                          className="rounded-lg bg-primary/10 px-1 py-0.5 text-xs font-bold text-primary"
                         >
                           ⇄ 티어이동
                         </span>
                       ) : changedTickers.has(it.ticker) ? (
                         <span
                           title="최근 run에서 조건/값 변동 (P4-1)"
-                          className="rounded-lg bg-indigo-100 px-1 py-0.5 text-xs text-indigo-900"
+                          className="rounded-lg bg-primary/10 px-1 py-0.5 text-xs text-primary"
                         >
                           🆕 변동
                         </span>
@@ -451,7 +451,7 @@ function ListTab({ isAdmin, guideNonce = 0 }: { isAdmin: boolean; guideNonce?: n
                     {it.tier === "tier_2_near" || it.tier === "tier_2_needs_data" || it.tier === "tier_3_watch" ? (
                       <div className="mt-0.5 text-xs">
                         {(it.failed_conditions?.length ?? 0) > 0 ? (
-                          <span className="text-orange-700">
+                          <span className="text-warn">
                             📌 실패 · {(it.failed_conditions || []).map(f => CONDITION_LABEL_SHORT[f] || f).join(" · ")}
                           </span>
                         ) : null}
@@ -499,7 +499,7 @@ function ListTab({ isAdmin, guideNonce = 0 }: { isAdmin: boolean; guideNonce?: n
                         onClick={() =>
                           toggleLock.mutate({ id: it.id, locked: !it.locked })
                         }
-                        className="rounded-lg border px-1.5 py-0.5 text-xs hover:bg-amber-50 disabled:opacity-30"
+                        className="rounded-lg border px-1.5 py-0.5 text-xs hover:bg-warn/5 disabled:opacity-30"
                         title={
                           it.locked
                             ? "unlock (다음 screener run 시 재평가)"
@@ -573,7 +573,7 @@ function NoteInput({
           type="button"
           disabled={disabled}
           onClick={() => onSave(val)}
-          className="rounded-lg bg-sky-600 px-1.5 py-0.5 text-xs text-white disabled:opacity-30"
+          className="rounded-lg bg-primary px-1.5 py-0.5 text-xs text-white disabled:opacity-30"
         >
           저장
         </button>
@@ -600,8 +600,8 @@ function ManualAddForm({ isAdmin, runId }: { isAdmin: boolean; runId?: string })
     },
   });
   return (
-    <div className="rounded-lg border border-dashed border-sky-300 bg-sky-50 p-2 text-xs">
-      <div className="mb-1 font-bold text-sky-900">
+    <div className="rounded-lg border border-dashed border-primary/40 bg-primary/5 p-2 text-xs">
+      <div className="mb-1 font-bold text-primary">
         ➕ 수동 추가 (사용자 판단 · locked=True)
       </div>
       <div className="flex flex-wrap items-center gap-1">
@@ -646,7 +646,7 @@ function StatusBadge({ status }: { status: string }) {
   const map: Record<string, string> = {
     passed: "bg-primary/10 text-primary",
     rejected: "bg-warn/10 text-warn",
-    cash_suspect: "bg-amber-100 text-amber-800",
+    cash_suspect: "bg-warn/10 text-warn",
   };
   const cls = map[status] || "bg-slate-100 text-slate-700";
   return (
@@ -748,7 +748,7 @@ function EventRow({ event }: { event: PowderKegEventItem }) {
   const isTypeB = event.kind === "B";
   const bg = isTypeB
     ? "border-warn/40 bg-warn/5"
-    : "border-orange-300 bg-orange-50";
+    : "border-warn/40 bg-warn/5";
   return (
     <li className={`rounded-lg border-2 p-3 ${bg}`}>
       {/* 상단 · 판정 라벨 + 시각 */}
@@ -759,7 +759,7 @@ function EventRow({ event }: { event: PowderKegEventItem }) {
               🚫 DO NOT TOUCH · 매수 금지 · 자동 리스트 제거
             </div>
           ) : (
-            <div className="mb-1 rounded-lg bg-orange-500 px-2 py-1 text-sm font-bold text-white">
+            <div className="mb-1 rounded-lg bg-warn px-2 py-1 text-sm font-bold text-white">
               🎯 매수 후보 이벤트 · 검토 필요
             </div>
           )}
@@ -771,7 +771,7 @@ function EventRow({ event }: { event: PowderKegEventItem }) {
       {/* 종목명 + 이벤트 타입 */}
       <div className="mb-2 flex flex-wrap items-center gap-2">
         <span className="text-lg font-bold"><StockLink ticker={event.ticker}>{event.ticker}</StockLink></span>
-        <span className={`rounded-lg px-2 py-0.5 text-xs font-bold ${isTypeB ? "bg-warn text-white" : "bg-orange-500 text-white"}`}>
+        <span className={`rounded-lg px-2 py-0.5 text-xs font-bold ${isTypeB ? "bg-warn text-white" : "bg-warn text-white"}`}>
           {info?.icon} {info?.short || event.event_type}
         </span>
         {event.validated ? (
@@ -780,7 +780,7 @@ function EventRow({ event }: { event: PowderKegEventItem }) {
           </span>
         ) : null}
         {event.needs_human_review ? (
-          <span className="rounded-lg bg-amber-200 px-1.5 py-0.5 text-xs text-amber-900" title="LLM confidence < 0.8 · 사람 판단 필요">
+          <span className="rounded-lg bg-warn/20 px-1.5 py-0.5 text-xs text-warn" title="LLM confidence < 0.8 · 사람 판단 필요">
             🟡 사람 확인 필요
           </span>
         ) : null}
@@ -799,7 +799,7 @@ function EventRow({ event }: { event: PowderKegEventItem }) {
             href={event.url}
             target="_blank"
             rel="noopener noreferrer"
-            className="rounded-lg bg-white px-2 py-0.5 text-sky-700 hover:bg-sky-50"
+            className="rounded-lg bg-white px-2 py-0.5 text-primary hover:bg-primary/5"
           >
             📄 원문 공시 →
           </a>
@@ -839,12 +839,12 @@ function EventsOnboardingCard() {
   }, []);
   if (dismissed) return null;
   return (
-    <section className="rounded-lg border-2 border-purple-300 bg-gradient-to-r from-purple-50 to-pink-50 p-3 text-xs">
+    <section className="rounded-lg border-2 border-primary/40 bg-gradient-to-r from-primary/5 to-primary/5 p-3 text-xs">
       <div className="flex items-center justify-between">
         <button
           type="button"
           onClick={() => setOpen(!open)}
-          className="font-bold text-purple-900 hover:underline"
+          className="font-bold text-primary hover:underline"
         >
           {open ? "▼" : "▶"} 📖 이 피드가 뭐하는 건가요?
         </button>
@@ -854,13 +854,13 @@ function EventsOnboardingCard() {
             localStorage.setItem(KEY, "1");
             setDismissed(true);
           }}
-          className="rounded-lg border border-purple-300 px-2 py-0.5 text-xs text-purple-700 hover:bg-purple-100"
+          className="rounded-lg border border-primary/40 px-2 py-0.5 text-xs text-primary hover:bg-primary/10"
         >
           다시 안 보기
         </button>
       </div>
       {open && (
-        <div className="mt-2 space-y-2 text-xs text-purple-900">
+        <div className="mt-2 space-y-2 text-xs text-primary">
           <div className="rounded-lg border bg-white p-2">
             <div className="mb-1 font-bold">🔥 불꽃 (Fire) 이란?</div>
             <p>
@@ -869,8 +869,8 @@ function EventsOnboardingCard() {
             </p>
           </div>
           <div className="grid gap-2 md:grid-cols-2">
-            <div className="rounded-lg border-2 border-orange-300 bg-orange-50 p-2">
-              <div className="mb-1 font-bold text-orange-900">🟠 Type A · 매수 후보 이벤트</div>
+            <div className="rounded-lg border-2 border-warn/40 bg-warn/5 p-2">
+              <div className="mb-1 font-bold text-warn">🟠 Type A · 매수 후보 이벤트</div>
               <ul className="space-y-0.5 text-xs">
                 <li>· A1 ⚖️ 오너 사법 (구속·기소)</li>
                 <li>· A2 🕊 오너 상속 (별세)</li>
@@ -912,13 +912,13 @@ function EventsOnboardingCard() {
 function eventBg(kind: "A" | "B"): string {
   return kind === "B"
     ? "border-warn/40 bg-warn/5"
-    : "border-orange-300 bg-orange-50";
+    : "border-warn/40 bg-warn/5";
 }
 
 function EventTypeBadge({ event_type, kind }: { event_type: string; kind: "A" | "B" }) {
   const cls = kind === "B"
     ? "bg-warn text-white"
-    : "bg-orange-500 text-white";
+    : "bg-warn text-white";
   return (
     <span className={`rounded-lg px-1.5 py-0.5 text-xs font-mono ${cls}`}>
       {kind === "B" ? "🚨 " : ""}
@@ -941,12 +941,12 @@ function UsageGuideCard() {
   }, []);
   if (dismissed) return null;
   return (
-    <section className="rounded-lg border-2 border-purple-300 bg-gradient-to-r from-purple-50 to-pink-50 p-3 text-xs">
+    <section className="rounded-lg border-2 border-primary/40 bg-gradient-to-r from-primary/5 to-primary/5 p-3 text-xs">
       <div className="flex items-center justify-between">
         <button
           type="button"
           onClick={() => setOpen(!open)}
-          className="font-bold text-purple-900 hover:underline"
+          className="font-bold text-primary hover:underline"
         >
           {open ? "▼" : "▶"} 📖 이 리스트를 어떻게 활용하나요?
         </button>
@@ -956,7 +956,7 @@ function UsageGuideCard() {
             localStorage.setItem(KEY, "1");
             setDismissed(true);
           }}
-          className="rounded-lg border border-purple-300 px-2 py-0.5 text-xs text-purple-700 hover:bg-purple-100"
+          className="rounded-lg border border-primary/40 px-2 py-0.5 text-xs text-primary hover:bg-primary/10"
         >
           다시 안 보기
         </button>
@@ -967,7 +967,7 @@ function UsageGuideCard() {
             <div className="mb-1 font-bold">🎯 티어별 액션</div>
             <ul className="space-y-1">
               <li>
-                <b className="text-amber-900">🥇 Tier 1 (전체 조건 통과)</b> ·
+                <b className="text-warn">🥇 Tier 1 (전체 조건 통과)</b> ·
                 <b>최상위 관찰 대상</b>. 이벤트 발생 시 (담보제공 등) Telegram 알림 도착 · 알림 확인 후 개별 판단.
                 <span className="text-xs text-warn"> ⚠️ 자동매매 X · 사용자 최종 결정</span>
               </li>
@@ -976,11 +976,11 @@ function UsageGuideCard() {
                 <b>승격 후보 관찰</b>. 병목 조건 (예: F-Score) 개선 시 Tier 1 승격 가능. 다음 분기 사업보고서 공개 후 재평가 확인.
               </li>
               <li>
-                <b className="text-orange-800">🥉 Tier 3 (관찰 · 대부분 통과)</b> ·
+                <b className="text-warn">🥉 Tier 3 (관찰 · 대부분 통과)</b> ·
                 <b>지속 관찰</b>. 여러 조건 병목 · 개선 여지 낮음 · 참고용.
               </li>
               <li>
-                <b className="text-yellow-800">⚠️ 현금 의심</b> ·
+                <b className="text-warn">⚠️ 현금 의심</b> ·
                 <b>분식 의심 · 회피</b>. 이자수익 부족 · 재무 신뢰도 낮음.
               </li>
               <li>
@@ -1014,7 +1014,7 @@ function UsageGuideCard() {
               href="https://github.com/GONNIM/toss-tradebot-mvp/blob/main/docs/plans/powderkeg-screener/user-guide.md"
               target="_blank"
               rel="noopener noreferrer"
-              className="ml-1 text-sky-700 underline hover:text-sky-500"
+              className="ml-1 text-primary underline hover:text-primary"
             >
               📖 상세 사용법 문서 →
             </a>
@@ -1033,7 +1033,7 @@ function RunDiffSummaryCard({ data }: { data: PowderKegRunDiffSummaryResponse | 
   const hasChanges = (data.total_changed_tickers || 0) > 0;
   if (!hasChanges) return null;
   return (
-    <div className="rounded-lg border border-indigo-200 bg-indigo-50 p-2">
+    <div className="rounded-lg border border-primary/30 bg-primary/5 p-2">
       <button
         type="button"
         onClick={() => setOpen(!open)}
@@ -1042,10 +1042,10 @@ function RunDiffSummaryCard({ data }: { data: PowderKegRunDiffSummaryResponse | 
       >
         <span>
           <span className="mr-2 font-bold">🔄 최근 run 변동 요약</span>
-          <span className="text-indigo-900">
+          <span className="text-primary">
             총 <b>{data.total_changed_tickers}</b> 종목 변화
             {data.tier_moved_count > 0 ? (
-              <> · <b className="text-fuchsia-800">티어 이동 {data.tier_moved_count}</b></>
+              <> · <b className="text-primary">티어 이동 {data.tier_moved_count}</b></>
             ) : null}
           </span>
           {data.run_trigger ? (
@@ -1059,7 +1059,7 @@ function RunDiffSummaryCard({ data }: { data: PowderKegRunDiffSummaryResponse | 
             </span>
           ) : null}
         </span>
-        <span className="text-xs text-indigo-700">{open ? "▲ 접기" : "▼ 펼치기"}</span>
+        <span className="text-xs text-primary">{open ? "▲ 접기" : "▼ 펼치기"}</span>
       </button>
       {open ? (
         <div className="mt-2 max-h-48 space-y-0.5 overflow-y-auto text-xs">
@@ -1067,7 +1067,7 @@ function RunDiffSummaryCard({ data }: { data: PowderKegRunDiffSummaryResponse | 
             <div key={it.ticker} className="flex items-center gap-2 rounded-lg px-1 py-0.5 hover:bg-white/60">
               <span className="font-mono text-xs text-slate-600"><StockLink ticker={it.ticker}>{it.ticker}</StockLink></span>
               {it.tier_moved ? (
-                <span className="rounded-lg bg-fuchsia-200 px-1 text-xs font-bold text-fuchsia-900">
+                <span className="rounded-lg bg-primary/20 px-1 text-xs font-bold text-primary">
                   ⇄ {it.prev_tier || "-"} → {it.curr_tier || "-"}
                 </span>
               ) : null}
@@ -1156,10 +1156,10 @@ function ProvenanceAndDiffSection({ ticker }: { ticker: string }) {
             {diffs.map((d, idx) => {
               const tierMove = d.condition_key === "tier";
               return (
-                <div key={idx} className={`flex flex-wrap items-center gap-2 rounded-lg px-2 py-1 text-xs ${tierMove ? "bg-fuchsia-50" : "bg-indigo-50"}`}>
+                <div key={idx} className={`flex flex-wrap items-center gap-2 rounded-lg px-2 py-1 text-xs ${tierMove ? "bg-primary/5" : "bg-primary/5"}`}>
                   <span className="rounded-lg bg-white/60 px-1 font-mono text-xs text-slate-600">{(d.changed_at || "").slice(0, 10)}</span>
                   <span className="font-mono text-xs text-slate-600">{d.run_id}</span>
-                  <span className={`rounded-lg px-1 font-bold ${tierMove ? "bg-fuchsia-200 text-fuchsia-900" : "bg-indigo-200 text-indigo-900"}`}>
+                  <span className={`rounded-lg px-1 font-bold ${tierMove ? "bg-primary/20 text-primary" : "bg-primary/20 text-primary"}`}>
                     {d.condition_key}
                   </span>
                   <span className="text-slate-700">
@@ -1203,7 +1203,7 @@ function TickerDetailModal({ ticker, onClose }: { ticker: string; onClose: () =>
       aria-modal="true"
     >
       <div
-        className="max-h-[90vh] w-full max-w-4xl overflow-y-auto rounded-lg border-2 border-slate-300 bg-white "
+        className="max-h-[90vh] w-full max-w-4xl overflow-y-auto rounded-lg border-2 border-slate-300 bg-white"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="sticky top-0 flex items-center justify-between border-b bg-white px-4 py-3">
@@ -1211,7 +1211,7 @@ function TickerDetailModal({ ticker, onClose }: { ticker: string; onClose: () =>
             <span className="text-xl font-bold">{d?.name || ticker}</span>
             <span className="rounded-lg bg-slate-100 px-2 py-0.5 text-xs text-slate-700">{ticker}</span>
             {d?.market ? (
-              <span className="rounded-lg bg-sky-100 px-2 py-0.5 text-xs text-sky-800">{d.market.market}</span>
+              <span className="rounded-lg bg-primary/10 px-2 py-0.5 text-xs text-primary">{d.market.market}</span>
             ) : null}
           </div>
           <button
@@ -1230,7 +1230,7 @@ function TickerDetailModal({ ticker, onClose }: { ticker: string; onClose: () =>
         ) : (
           <div className="space-y-4 p-4">
             {/* 시장·리스트 요약 */}
-            <section className="grid grid-cols-2 gap-3 rounded-lg border bg-sky-50 p-3 md:grid-cols-4">
+            <section className="grid grid-cols-2 gap-3 rounded-lg border bg-primary/5 p-3 md:grid-cols-4">
               <div>
                 <div className="text-xs text-muted-foreground">현재가</div>
                 <div className="text-sm font-bold">{fmtInt(d.market?.close_price)}원</div>
@@ -1283,7 +1283,7 @@ function TickerDetailModal({ ticker, onClose }: { ticker: string; onClose: () =>
                   </div>
                 ) : null}
                 {d.list_item.user_note ? (
-                  <div className="mt-2 rounded-lg bg-amber-50 p-2 text-xs text-amber-900">
+                  <div className="mt-2 rounded-lg bg-warn/5 p-2 text-xs text-warn">
                     📝 {d.list_item.user_note}
                   </div>
                 ) : null}
@@ -1320,7 +1320,7 @@ function TickerDetailModal({ ticker, onClose }: { ticker: string; onClose: () =>
                           <td className="p-1 text-right">{fmtEok(f.contract_liabilities)}</td>
                           <td className="p-1 text-right">{fmtEok(f.total_equity)}</td>
                           <td className="p-1 text-right">{fmtEok(f.revenue)}</td>
-                          <td className={`p-1 text-right ${upDownText(f.operating_income || 0, "text-up")}`}>
+                          <td className={`p-1 text-right ${upDownText(f.operating_income || 0)}`}>
                             {fmtEok(f.operating_income)}
                           </td>
                           <td className="p-1 text-right">{fmtEok(f.net_income)}</td>
@@ -1353,7 +1353,7 @@ function TickerDetailModal({ ticker, onClose }: { ticker: string; onClose: () =>
               ) : (
                 <div className="max-h-48 space-y-1 overflow-y-auto">
                   {d.events.map((e) => (
-                    <div key={e.id} className={`flex items-center gap-2 rounded-lg px-2 py-1 text-xs ${e.kind === "A" ? "bg-orange-50" : "bg-warn/5"}`}>
+                    <div key={e.id} className={`flex items-center gap-2 rounded-lg px-2 py-1 text-xs ${e.kind === "A" ? "bg-warn/5" : "bg-warn/5"}`}>
                       <span className="rounded-lg bg-white/50 px-1 font-mono text-xs">{e.event_type}</span>
                       <span className="text-xs text-muted-foreground">{e.release_date?.slice(0, 10) || e.detected_at?.slice(0, 10)}</span>
                       {e.url ? (
@@ -1374,7 +1374,7 @@ function TickerDetailModal({ ticker, onClose }: { ticker: string; onClose: () =>
             <ProvenanceAndDiffSection ticker={ticker} />
 
             {/* 외부 링크 */}
-            <section className="rounded-lg border-2 border-dashed border-sky-300 p-3">
+            <section className="rounded-lg border-2 border-dashed border-primary/40 p-3">
               <div className="mb-2 text-sm font-bold">🔗 외부 참조 (예측 없음 · 사용자 직접 판단)</div>
               <div className="flex flex-wrap gap-2 text-xs">
                 <a href={d.external_links.krx_chart} target="_blank" rel="noreferrer" className="rounded-lg border px-2 py-1 hover:bg-slate-50">📊 KRX 차트</a>
@@ -1400,11 +1400,11 @@ function TickerDetailModal({ ticker, onClose }: { ticker: string; onClose: () =>
 function TierBadge({ tier, passed, total }: { tier?: string; passed?: number; total?: number }) {
   if (!tier) return null;
   const cfg: Record<string, { icon: string; label: string; cls: string }> = {
-    tier_1_passed:     { icon: "🥇", label: "Tier 1",              cls: "bg-amber-100 text-amber-900" },
+    tier_1_passed:     { icon: "🥇", label: "Tier 1",              cls: "bg-warn/10 text-warn" },
     tier_2_near:       { icon: "🥈", label: "Tier 2 · 경계",       cls: "bg-slate-200 text-slate-900" },
-    tier_2_needs_data: { icon: "🥈", label: "Tier 2 · 데이터부족", cls: "bg-sky-100 text-sky-900" },
-    tier_3_watch:      { icon: "🥉", label: "Tier 3",              cls: "bg-orange-100 text-orange-900" },
-    cash_suspect:      { icon: "⚠️", label: "현금 의심",           cls: "bg-yellow-100 text-yellow-900" },
+    tier_2_needs_data: { icon: "🥈", label: "Tier 2 · 데이터부족", cls: "bg-primary/10 text-primary" },
+    tier_3_watch:      { icon: "🥉", label: "Tier 3",              cls: "bg-warn/10 text-warn" },
+    cash_suspect:      { icon: "⚠️", label: "현금 의심",           cls: "bg-warn/10 text-warn" },
     rejected:          { icon: "❌", label: "탈락",                cls: "bg-slate-100 text-slate-600" },
   };
   const m = cfg[tier] || cfg.rejected;
@@ -1595,22 +1595,22 @@ function FunnelCard({ runId }: { runId: string | null }) {
   if (!runId || !d) return null;
   const maxPassed = Math.max(1, ...d.per_condition.map(c => c.passed));
   return (
-    <section className="rounded-lg border-2 border-amber-200 bg-amber-50 p-3">
+    <section className="rounded-lg border-2 border-warn/30 bg-warn/5 p-3">
       <button
         type="button"
         onClick={() => setOpen(!open)}
         className="flex w-full items-center justify-between text-left"
       >
-        <div className="text-sm font-bold text-amber-900">
+        <div className="text-sm font-bold text-warn">
           📊 퍼널 워터폴 · 왜 {d.final_passed}개인가?
         </div>
-        <div className="text-xs text-amber-700">{open ? "▼" : "▶"}</div>
+        <div className="text-xs text-warn">{open ? "▼" : "▶"}</div>
       </button>
       {open && (
         <div className="mt-2 space-y-1 text-xs">
-          <div className="rounded-lg border border-sky-300 bg-sky-50 p-1.5">
+          <div className="rounded-lg border border-primary/40 bg-primary/5 p-1.5">
             🎯 <b>이 런에서 스크리닝된 종목:</b> {d.universe_size} · 그 중 <b>{d.evaluable}개</b> 평가 가능 ·
-            <span className="ml-1 text-orange-700">
+            <span className="ml-1 text-warn">
               📊 데이터 결측 (미평가): {d.data_incomplete}개
             </span>
           </div>
@@ -1695,7 +1695,7 @@ function FunnelCard({ runId }: { runId: string | null }) {
               </div>
             ) : null}
           </div>
-          <div className="mt-1 text-xs text-amber-800">
+          <div className="mt-1 text-xs text-warn">
             💡 병목이 있는 조건 · 데이터 커버리지 or 임계 재검토 후보. {d.data_incomplete > 0
               ? `데이터 결측 ${d.data_incomplete}개 · 재무·시장·최대주주 미수집.` : ""}
           </div>
@@ -1749,16 +1749,16 @@ function ReScreenGuide({ isAdmin, runId, count }: { isAdmin: boolean; runId: str
     if (ok) runScreener.mutate();
   };
   return (
-    <section className="rounded-lg border-2 border-amber-200 bg-gradient-to-r from-amber-50 to-yellow-50 p-3 text-xs">
+    <section className="rounded-lg border-2 border-warn/30 bg-gradient-to-r from-warn/5 to-warn/5 p-3 text-xs">
       <div className="flex items-center justify-between gap-2">
         <div className="flex-1 space-y-0.5">
-          <div className="font-bold text-amber-900">
+          <div className="font-bold text-warn">
             🎯 관찰 종목 재평가 <span className="text-xs font-normal">(내 지정 티커만 · 카드 1 발굴 결과와 별개)</span>
           </div>
-          <div className="text-amber-800">
+          <div className="text-warn">
             마지막 갱신 · <b>{fmtRunIdKst(runId)}</b> · 현재 {count}개 종목 (병합 뷰)
           </div>
-          <div className="text-xs text-amber-700">
+          <div className="text-xs text-warn">
             💡 언제? · 사업보고서 공개 (5·8·11·2월) · 새 KRX 데이터 · lock 종목 재판정 필요 시
           </div>
         </div>
@@ -1775,7 +1775,7 @@ function ReScreenGuide({ isAdmin, runId, count }: { isAdmin: boolean; runId: str
             type="button"
             onClick={handleClick}
             disabled={disabled}
-            className="rounded-lg bg-amber-600 px-2 py-1 text-xs font-bold text-white hover:bg-amber-700 disabled:bg-amber-300"
+            className="rounded-lg bg-warn px-2 py-1 text-xs font-bold text-white hover:bg-warn disabled:bg-warn/30"
             title="입력 종목만 재평가 · 카드 1 발굴 결과와 별개 · X-API-Token 필요"
           >
             {runScreener.isPending ? "⏳ 계산 중..." : "🎯 관찰 종목만 재평가"}
@@ -1799,7 +1799,7 @@ function ReScreenGuide({ isAdmin, runId, count }: { isAdmin: boolean; runId: str
 /** DO NOT TOUCH 뱃지 · 지시서 §7-3-B1 do_not_touch 라벨 · B 타입 (즉시 제외) 전반 표기. */
 function DoNotTouchBadge() {
   return (
-    <span className="rounded-lg bg-warn px-1.5 py-0.5 text-xs font-bold text-white ">
+    <span className="rounded-lg bg-warn px-1.5 py-0.5 text-xs font-bold text-white">
       🚫 DO NOT TOUCH
     </span>
   );
@@ -1813,8 +1813,8 @@ function RobustnessBadge({ score, grade }: { score?: number | null; grade?: stri
   const pct = (score * 100).toFixed(1);
   const map: Record<string, { icon: string; cls: string; label: string }> = {
     strong:     { icon: "🟢", cls: "bg-primary/10 text-primary", label: "강건" },
-    moderate:   { icon: "🟡", cls: "bg-yellow-100 text-yellow-800", label: "보통" },
-    borderline: { icon: "🟠", cls: "bg-orange-100 text-orange-900", label: "경계선" },
+    moderate:   { icon: "🟡", cls: "bg-warn/10 text-warn", label: "보통" },
+    borderline: { icon: "🟠", cls: "bg-warn/10 text-warn", label: "경계선" },
     at_risk:    { icon: "🔴", cls: "bg-warn/10 text-warn", label: "위험" },
   };
   const m = map[grade] || { icon: "⚪", cls: "bg-slate-100 text-slate-800", label: grade };
@@ -1882,7 +1882,7 @@ function ReportTab({ isAdmin }: { isAdmin: boolean }) {
           type="button"
           onClick={() => runBacktest.mutate()}
           disabled={!isAdmin || runBacktest.isPending}
-          className="ml-auto rounded-lg border px-2 py-0.5 text-xs hover:bg-sky-50 disabled:opacity-30"
+          className="ml-auto rounded-lg border px-2 py-0.5 text-xs hover:bg-primary/5 disabled:opacity-30"
           title="백테스트 재실행 · 5년 표본 · 수 분 소요"
         >
           {runBacktest.isPending ? "⏳ 계산 중..." : "🔄 재계산"}
@@ -1895,7 +1895,7 @@ function ReportTab({ isAdmin }: { isAdmin: boolean }) {
         </div>
       )}
       {noCache ? (
-        <div className="rounded-lg border-2 border-dashed border-sky-300 bg-sky-50 p-3 text-xs">
+        <div className="rounded-lg border-2 border-dashed border-primary/40 bg-primary/5 p-3 text-xs">
           <div className="font-bold">📊 캐시 없음 · 백테스트 실행 필요</div>
           <div className="mt-1 text-muted-foreground">
             상단 재계산 버튼 클릭 · 5년 이벤트 표본으로 계산 (수 분 소요) · 결과 저장 후 자동 표시.
@@ -1915,7 +1915,7 @@ function ReportTab({ isAdmin }: { isAdmin: boolean }) {
             <button
               type="button"
               onClick={() => setExpandStats(!expandStats)}
-              className="mb-1 flex w-full items-center justify-between font-bold hover:text-sky-600"
+              className="mb-1 flex w-full items-center justify-between font-bold hover:text-primary"
             >
               <span>📉 상세 통계 (전문가용)</span>
               <span>{expandStats ? "▼" : "▶"}</span>
@@ -1939,7 +1939,7 @@ function ReportTab({ isAdmin }: { isAdmin: boolean }) {
                       <tr key={k} className="border-b">
                         <td className="p-2 font-mono">{k === "1d" ? "1일" : k.replace("m", "개월")}</td>
                         <td className="p-2 text-right font-mono">{w.n}</td>
-                        <td className={`p-2 text-right font-mono ${upDownText(w.mean_return, "text-up")}`}>
+                        <td className={`p-2 text-right font-mono ${upDownText(w.mean_return)}`}>
                           {(w.mean_return * 100).toFixed(2)}%
                         </td>
                         <td className="p-2 text-right font-mono">{(w.median_return * 100).toFixed(2)}%</td>
@@ -1999,7 +1999,7 @@ function VerdictCard({ type, report }: { type: string; report: PowderKegReport }
   } else if (window12m && window12m.mean_return < -0.05 && window12m.n >= 50) {
     icon = "🔬";
     title = "관찰 후보 · 백테스트 음수 · 단독 매수 금지";
-    color = "border-orange-300 bg-orange-50";
+    color = "border-warn/40 bg-warn/5";
     subtitle = "가설과 반대로 · 이 이벤트 발생 후 평균 손실. 다른 조건과 조합 필요.";
   }
 
@@ -2022,7 +2022,7 @@ function PlainSummary({ type, report }: { type: string; report: PowderKegReport 
   const wPrimary = w12 || w6 || w1;
   if (!wPrimary) {
     return (
-      <div className="rounded-lg border bg-yellow-50 p-2 text-xs">
+      <div className="rounded-lg border bg-warn/5 p-2 text-xs">
         📊 <b>표본 부족</b> · 이 이벤트는 5년 데이터로 계산할 수 있는 케이스가 부족합니다.
         (전체 {report.aggregate.total_events}건 · 유효 {report.aggregate.valid_events}건)
       </div>
@@ -2043,7 +2043,7 @@ function PlainSummary({ type, report }: { type: string; report: PowderKegReport 
         <ul className="space-y-1">
           <li>· <b>{info?.short}</b> · 5년간 발생 {report.aggregate.total_events}건</li>
           <li>· 이 중 가격 데이터 있는 케이스 · {report.aggregate.valid_events}건</li>
-          <li>· 이벤트 후 <b>{label12}</b> 평균 <b className={upDownText(wPrimary.mean_return || 0, "text-up")}>{meanPct}%</b> {direction}</li>
+          <li>· 이벤트 후 <b>{label12}</b> 평균 <b className={upDownText(wPrimary.mean_return || 0)}>{meanPct}%</b> {direction}</li>
           <li>· 100번 중 <b>{winPct}번</b> 이익 · {100 - Number(winPct)}번 손실</li>
           <li>· 통계 유의성 · <b>{significance}</b> (t = {tstat})</li>
         </ul>
@@ -2055,7 +2055,7 @@ function PlainSummary({ type, report }: { type: string; report: PowderKegReport 
           만약 매번 발생 후 다음 날 매수 · <b>{label12} 뒤 정리</b>했다면:
         </p>
         <p>
-          평균 <b className={upDownText(wPrimary.mean_return || 0, "text-up")}>{meanPct}%</b> {direction}을 봤을 것.
+          평균 <b className={upDownText(wPrimary.mean_return || 0)}>{meanPct}%</b> {direction}을 봤을 것.
           {Math.abs(wPrimary.t_stat || 0) > 2 ? (
             <> 이 결과는 <b>우연이 아닐 가능성 큼</b> (t = {tstat} · |t| &gt; 2).</>
           ) : (
@@ -2112,12 +2112,12 @@ function ReportOnboardingCard() {
   }, []);
   if (dismissed) return null;
   return (
-    <section className="rounded-lg border-2 border-purple-300 bg-gradient-to-r from-purple-50 to-pink-50 p-3 text-xs">
+    <section className="rounded-lg border-2 border-primary/40 bg-gradient-to-r from-primary/5 to-primary/5 p-3 text-xs">
       <div className="flex items-center justify-between">
         <button
           type="button"
           onClick={() => setOpen(!open)}
-          className="font-bold text-purple-900 hover:underline"
+          className="font-bold text-primary hover:underline"
         >
           {open ? "▼" : "▶"} 📖 이 리포트가 뭐하는 건가요?
         </button>
@@ -2127,13 +2127,13 @@ function ReportOnboardingCard() {
             localStorage.setItem(KEY, "1");
             setDismissed(true);
           }}
-          className="rounded-lg border border-purple-300 px-2 py-0.5 text-xs text-purple-700 hover:bg-purple-100"
+          className="rounded-lg border border-primary/40 px-2 py-0.5 text-xs text-primary hover:bg-primary/10"
         >
           다시 안 보기
         </button>
       </div>
       {open && (
-        <ul className="mt-2 space-y-1 text-xs text-purple-900">
+        <ul className="mt-2 space-y-1 text-xs text-primary">
           <li>
             · <b>목적</b> · 이 이벤트 (예: <b>담보제공</b>) 가 매수 신호로 쓸 만한지 · 지난 5년 데이터로 검증.
           </li>
@@ -2206,7 +2206,7 @@ function CarChart({ perWindow }: { perWindow: PowderKegReport["aggregate"]["per_
               {data.map((d, i) => (
                 <Cell
                   key={`c-${i}`}
-                  fill={d.mean_pct >= 0 ? "#10b981" : "#ef4444"}
+                  fill={d.mean_pct >= 0 ? "hsl(var(--up))" : "hsl(var(--down))"}
                 />
               ))}
             </Bar>

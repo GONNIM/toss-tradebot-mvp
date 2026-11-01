@@ -45,10 +45,10 @@ const STEP_LABELS = [
 
 function tierBadge(tier: string): { label: string; className: string } {
   if (tier === "premium") {
-    return { label: "🏆 10조+ Premium", className: "bg-purple-500/20 text-purple-400" };
+    return { label: "🏆 10조+ Premium", className: "bg-primary/20 text-primary" };
   }
   if (tier === "entry") {
-    return { label: "💎 5조+ Entry", className: "bg-blue-500/20 text-blue-400" };
+    return { label: "💎 5조+ Entry", className: "bg-primary/20 text-primary" };
   }
   return { label: "—", className: "bg-slate-500/20 text-slate-400" };
 }
@@ -175,7 +175,7 @@ export function BlueChipList({ isAdmin = false }: { isAdmin?: boolean }) {
           <span>run: {data.run_id ?? "—"}</span>
           <span>유니버스 {data.universe_size}</span>
           <span className="text-primary">전 통과 {data.passed_count}</span>
-          <span className="text-amber-500">부분 통과 {data.partial_count}</span>
+          <span className="text-warn">부분 통과 {data.partial_count}</span>
         </div>
       )}
 
@@ -253,7 +253,7 @@ export function BlueChipList({ isAdmin = false }: { isAdmin?: boolean }) {
                     ))}
                     <td
                       className={`py-1.5 text-right font-bold ${
-                        it.overall_pass ? "text-primary" : "text-amber-500"
+                        it.overall_pass ? "text-primary" : "text-warn"
                       }`}
                     >
                       {it.pass_count}/5

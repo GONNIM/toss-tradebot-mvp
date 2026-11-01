@@ -24,14 +24,14 @@ type Calc = {
 function color(rr: number | null): string {
   if (rr === null) return "text-slate-500";
   if (rr >= 2) return "text-primary";
-  if (rr >= 1) return "text-amber-500";
+  if (rr >= 1) return "text-warn";
   return "text-warn";
 }
 
 function bg(rr: number | null): string {
   if (rr === null) return "bg-slate-500/10 border-slate-500/40";
   if (rr >= 2) return "bg-primary/10 border-primary/40";
-  if (rr >= 1) return "bg-amber-500/10 border-amber-500/40";
+  if (rr >= 1) return "bg-warn/10 border-warn/40";
   return "bg-warn/10 border-warn/40";
 }
 

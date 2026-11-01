@@ -85,8 +85,8 @@ export function BacktestChart({ data, title, height = 220 }: Props) {
                     !d.hasData
                       ? "hsl(var(--muted))"
                       : d.return >= 0
-                      ? "#10b981"
-                      : "#ef4444"
+                      ? "hsl(var(--up))"
+                      : "hsl(var(--down))"
                   }
                 />
               ))}

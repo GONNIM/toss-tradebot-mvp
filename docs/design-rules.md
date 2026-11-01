@@ -18,8 +18,11 @@
 | `risk.high/med/low` | 그대로 | Moonshot 위험 수준 (결정 40) |
 
 - 강조색은 틸 하나다. coinbase 파랑 `#0052ff` 는 하락 파랑과 겹쳐 쓰지 않는다 (10/28).
-- 그 밖의 색 이름 (cyan · purple · fuchsia · indigo · orange 등) 은 새로 쓰지 않는다. 기존 사용처는 1022-10 5c 에서 이름표로 바꾼다.
-- 다크 모드는 켜는 기능이 없다 (`darkMode: class` · html 에 `dark` 없음). `dark:` 를 새로 쓰지 않는다. 기존 661곳 처리는 5c 에서 정한다.
+- 등락 색은 `frontend/lib/updown.ts` 의 `upDownText` 로만 고른다. 값이 0 이거나 없으면 흐림 (`muted-foreground`) 이다 (5c-2 · 11/01).
+- 차트 안 색은 CSS 값 `hsl(var(--up))` · `hsl(var(--down))` · `hsl(var(--warn))` 을 쓴다. 여러 선을 구분하는 차트 계열 색 (보라 · 청록 · 주황 hex) 은 등락·경고 뜻이 없을 때만 쓴다.
+- 🟢 · 🔴 이모지는 켜짐/위험 같은 상태 신호에만 쓴다. 상승·하락은 ▲ · ▼ 와 up · down 색으로 쓴다.
+- 그 밖의 색 이름 (sky · cyan · purple · fuchsia · indigo · orange · amber 등) 은 쓰지 않는다. 회색 계열 (slate · zinc · gray) 만 이름으로 쓴다 (5c-2 에서 정리 · 11/01).
+- 다크 모드는 켜는 기능이 없다. `dark:` 를 쓰지 않는다 (기존 661곳은 5c-1 에서 지움 · 사용자 결정 11/01).
 
 ## 2. 글자
 

@@ -47,7 +47,7 @@ export function PrincipleCards() {
           href="https://www.tiktok.com/@official_myohada/video/7667782611628051720"
           target="_blank"
           rel="noopener noreferrer"
-          className="text-xs text-sky-500 hover:underline"
+          className="text-xs text-primary hover:underline"
         >
           원본 →
         </a>

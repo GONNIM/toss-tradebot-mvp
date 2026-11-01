@@ -66,7 +66,7 @@ export function HeaderSession() {
   if (isAdmin) {
     return (
       <div className="flex items-center gap-2 text-sm">
-        <span className="inline-block h-2 w-2 rounded-full bg-teal-600" aria-hidden />
+        <span className="inline-block h-2 w-2 rounded-full bg-primary" aria-hidden />
         <span className="sr-only text-foreground md:not-sr-only">관리자</span>
         <button
           type="button"
@@ -111,7 +111,7 @@ export function HeaderSession() {
               type="button"
               onClick={() => run(() => login(draft.trim()))}
               disabled={busy || !draft.trim()}
-              className="rounded-lg bg-teal-600 px-3 text-sm font-semibold text-white disabled:opacity-50"
+              className="rounded-lg bg-primary px-3 text-sm font-semibold text-white disabled:opacity-50"
             >
               {busy ? "확인 중…" : "로그인"}
             </button>

@@ -47,7 +47,7 @@ function applyContractToHtml(html: string): string {
   out = out.replace(/<td(\s[^>]*)?>/gi, '<td class="border-b border-border p-1.5">');
   out = out.replace(/<code(\s[^>]*)?>/gi, '<code class="rounded-lg bg-slate-100 px-1 py-0.5 font-mono text-xs">');
   out = out.replace(/<pre(\s[^>]*)?>/gi, '<pre class="rounded-lg bg-slate-100 p-2 overflow-x-auto text-xs my-2">');
-  out = out.replace(/<a(\s[^>]*)?>/gi, '<a class="text-sky-700 hover:underline"$1>');
+  out = out.replace(/<a(\s[^>]*)?>/gi, '<a class="text-primary hover:underline"$1>');
   out = out.replace(/<ul(\s[^>]*)?>/gi, '<ul class="list-disc pl-5 my-1">');
   out = out.replace(/<ol(\s[^>]*)?>/gi, '<ol class="list-decimal pl-5 my-1">');
   return out;
@@ -91,7 +91,7 @@ export default function BiotechDocsPage() {
         <div>
           <h1 className="flex items-center gap-2 text-2xl font-bold">🧬 Biotech 문서</h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            <Link href="/biotech" className="text-sky-700 hover:underline">← 레이더로 돌아가기</Link>
+            <Link href="/biotech" className="text-primary hover:underline">← 레이더로 돌아가기</Link>
           </p>
         </div>
         <BiotechSessionControl onSessionChange={setSession} />
@@ -112,7 +112,7 @@ export default function BiotechDocsPage() {
                 onClick={() => select(t.key)}
                 className={
                   active === t.key
-                    ? "px-3 py-1.5 text-sm font-bold border-b-2 border-sky-600 text-sky-700"
+                    ? "px-3 py-1.5 text-sm font-bold border-b-2 border-primary text-primary"
                     : "px-3 py-1.5 text-sm text-muted-foreground hover:text-foreground"
                 }
               >
@@ -129,7 +129,7 @@ export default function BiotechDocsPage() {
               <div className="text-xs text-muted-foreground font-mono">
                 📁 {doc.path} · 생성 UTC {doc.generated_utc} · {doc.raw_md_size.toLocaleString()} B
                 {doc.render_mode === "plain_md_fallback" && (
-                  <span className="ml-2 rounded-lg bg-amber-500/20 px-1.5 py-0.5 text-xs font-semibold text-amber-700">
+                  <span className="ml-2 rounded-lg bg-warn/20 px-1.5 py-0.5 text-xs font-semibold text-warn">
                     fallback
                   </span>
                 )}

@@ -28,7 +28,7 @@ export function riskBadgeClass(level: string): string {
     case "HIGH":
       return "bg-warn/15 text-warn border-warn/30";
     case "MED":
-      return "bg-yellow-500/15 text-yellow-400 border-yellow-500/30";
+      return "bg-warn/15 text-warn border-warn/30";
     case "LOW":
       return "bg-primary/15 text-primary border-primary/30";
     default:
@@ -38,7 +38,7 @@ export function riskBadgeClass(level: string): string {
 
 export function manipulationBadgeClass(score: number): string {
   if (score >= 4) return "bg-warn/15 text-warn border-warn/30";
-  if (score === 3) return "bg-yellow-500/15 text-yellow-400 border-yellow-500/30";
+  if (score === 3) return "bg-warn/15 text-warn border-warn/30";
   return "bg-primary/15 text-primary border-primary/30";
 }
 
@@ -63,7 +63,7 @@ export function confidenceBadgeClass(c: string): string {
     case "strong":
       return "bg-primary/15 text-primary border-primary/30";
     case "medium":
-      return "bg-cyan-500/15 text-cyan-400 border-cyan-500/30";
+      return "bg-primary/15 text-primary border-primary/30";
     case "weak":
     default:
       return "bg-zinc-500/15 text-zinc-400 border-zinc-500/30";

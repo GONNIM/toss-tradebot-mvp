@@ -73,10 +73,10 @@ export function CatalystTimeline({ items, onSelect }: { items: TimelineItem[]; o
               onMouseLeave={() => setTip((t) => (t === item.ticker ? null : t))}
               onFocus={() => setTip(item.ticker)}
               onBlur={() => setTip((t) => (t === item.ticker ? null : t))}
-              className="group absolute flex h-6 w-6 -translate-x-1/2 items-center justify-center rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-500"
+              className="group absolute flex h-6 w-6 -translate-x-1/2 items-center justify-center rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
               style={{ left: `${pct}%`, top }}
             >
-              <span className="block h-2.5 w-2.5 rounded-full bg-sky-600 ring-2 ring-white group-hover:scale-125" />
+              <span className="block h-2.5 w-2.5 rounded-full bg-primary ring-2 ring-white group-hover:scale-125" />
               {tip === item.ticker && (
                 <span
                   role="tooltip"

@@ -8,9 +8,9 @@ export type SectionTone = "sky" | "emerald" | "amber" | "rose" | "slate";
 
 const TONE: Record<SectionTone, { border: string; badge: string; count: string }> = {
   sky: {
-    border: "border-2 border-sky-300 bg-sky-50",
-    badge: "bg-sky-600 text-white",
-    count: "bg-sky-100 text-sky-800",
+    border: "border-2 border-primary/40 bg-primary/5",
+    badge: "bg-primary text-white",
+    count: "bg-primary/10 text-primary",
   },
   emerald: {
     border: "border-2 border-primary/40 bg-primary/5",
@@ -18,9 +18,9 @@ const TONE: Record<SectionTone, { border: string; badge: string; count: string }
     count: "bg-primary/10 text-primary",
   },
   amber: {
-    border: "border-2 border-amber-300 bg-amber-50",
-    badge: "bg-amber-500 text-slate-900",
-    count: "bg-amber-100 text-amber-800",
+    border: "border-2 border-warn/40 bg-warn/5",
+    badge: "bg-warn text-slate-900",
+    count: "bg-warn/10 text-warn",
   },
   rose: {
     border: "border-2 border-warn/40 bg-warn/5",

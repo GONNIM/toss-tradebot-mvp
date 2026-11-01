@@ -37,7 +37,7 @@ export default function SettingsPage() {
       <header>
         <h1 className="text-3xl font-bold">⚙️ 운영 파라미터</h1>
         <p className="mt-2 text-sm">
-          <a href="/admin/notifications" className="text-teal-700 underline">🔔 알림 받는 방식 바꾸기 →</a>
+          <a href="/admin/notifications" className="text-primary underline">🔔 알림 받는 방식 바꾸기 →</a>
         </p>
         <p className="mt-1 text-sm text-muted-foreground">
           지금은 읽기만 가능합니다. 바꾸려면 서버 설정을 고쳐야 합니다.
@@ -64,7 +64,7 @@ export default function SettingsPage() {
                     key={s.key}
                     className="border-b border-border last:border-0 hover:bg-muted/30"
                   >
-                    <td className="px-4 py-3 font-mono text-cyan-700">
+                    <td className="px-4 py-3 font-mono text-primary">
                       {s.key}
                     </td>
                     <td className="px-4 py-3 text-right font-mono text-foreground font-semibold whitespace-nowrap">

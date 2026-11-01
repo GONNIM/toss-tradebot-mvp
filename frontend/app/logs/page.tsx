@@ -9,9 +9,9 @@ import { cn } from "@/lib/utils";
 const LEVEL_COLORS: Record<string, string> = {
   CRITICAL: "text-warn",
   ERROR: "text-warn",
-  WARNING: "text-amber-600",
-  WARN: "text-amber-600",
-  INFO: "text-cyan-700",
+  WARNING: "text-warn",
+  WARN: "text-warn",
+  INFO: "text-primary",
   DEBUG: "text-zinc-500",
 };
 
@@ -84,7 +84,7 @@ function TabButton({
       className={cn(
         "px-4 py-2 text-sm font-medium transition-colors border-b-2 -mb-px",
         active
-          ? "border-cyan-500 text-cyan-700"
+          ? "border-primary text-primary"
           : "border-transparent text-muted-foreground hover:text-foreground",
       )}
     >
@@ -169,7 +169,7 @@ function SchedulerTable({ hours }: { hours: number }) {
       </div>
       <div className="rounded-xl border border-border overflow-hidden bg-card">
         <table className="w-full text-sm">
-          <thead className="border-b border-cyan-500/40 bg-cyan-500/15 text-cyan-700 text-left font-semibold">
+          <thead className="border-b border-primary/40 bg-primary/15 text-primary text-left font-semibold">
             <tr>
               <th className="px-3 py-3">시각 (KST)</th>
               <th className="px-3 py-3">잡</th>
@@ -270,7 +270,7 @@ function renderStep(step: unknown): React.ReactNode {
     );
   if ("skipped" in obj)
     return (
-      <span className="text-amber-600" title={String(obj.skipped)}>
+      <span className="text-warn" title={String(obj.skipped)}>
         skip
       </span>
     );

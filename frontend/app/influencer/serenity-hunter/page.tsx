@@ -82,7 +82,7 @@ export default function SerenityHunterPage() {
           </div>
           <Link
             href="/influencer/serenity"
-            className="text-xs text-sky-500 hover:underline"
+            className="text-xs text-primary hover:underline"
           >
             → 기존 Serenity Stock Tracker (seed 검증 종목)
           </Link>

@@ -93,8 +93,8 @@ function TossAccountView({
         <>
           {/* 회계 항등식 위반 배지 (Fable 5 ±1원 · 근사 X) */}
           {(!data.identity_asset_ok || !data.identity_investment_ok) && (
-            <div className="rounded-lg border border-amber-500/40 bg-amber-500/10 p-3 text-xs">
-              <div className="font-semibold text-amber-500">⚠ 회계 항등식 위반</div>
+            <div className="rounded-lg border border-warn/40 bg-warn/10 p-3 text-xs">
+              <div className="font-semibold text-warn">⚠ 회계 항등식 위반</div>
               {!data.identity_asset_ok && (
                 <div className="mt-1 font-mono text-muted-foreground">
                   주문가능 + 내투자 ≠ 총자산 · 차액 {_krw(data.identity_asset_diff)}
