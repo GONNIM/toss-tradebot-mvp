@@ -245,11 +245,15 @@ function VerdictBanner({
     red: "border-down/50 bg-down/10 text-down",
   } as const;
   const iconMap = { green: "▲", amber: "■", red: "▼" } as const;
+  // 서버 red 는 「하락 시그널」 과 「신뢰 매우 낮음」 (경고) 두 뜻 (forecast.py verdict) · 하락이 아니면 경고로 보인다
+  const isWarning = v.color === "red" && !v.label.includes("하락");
+  const toneClass = isWarning ? colorMap.amber : colorMap[v.color];
+  const icon = isWarning ? "⚠" : iconMap[v.color];
   return (
-    <div className={`rounded-lg border ${colorMap[v.color]} p-3`}>
+    <div className={`rounded-lg border ${toneClass} p-3`}>
       <div className="flex items-baseline justify-between gap-2 flex-wrap">
         <span className="text-base font-bold">
-          {iconMap[v.color]} {v.label}
+          {icon} {v.label}
         </span>
         <span className="text-xs opacity-80">
           {targetMonth} 시점 종합 판정
