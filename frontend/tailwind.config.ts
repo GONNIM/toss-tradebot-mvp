@@ -37,6 +37,11 @@ const config: Config = {
         input: "hsl(var(--input))",
         ring: "hsl(var(--ring))",
 
+        // 등락·경고 (globals.css · docs/design-rules.md) · 상승 빨강 · 하락 파랑 · 경고 주황
+        up: "hsl(var(--up))",
+        down: "hsl(var(--down))",
+        warn: "hsl(var(--warn))",
+
         // Moonshot 위험 수준 (결정 40)
         risk: {
           high: "hsl(0 84% 60%)",     // 페니스톡 — 빨강

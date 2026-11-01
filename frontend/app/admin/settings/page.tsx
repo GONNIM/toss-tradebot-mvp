@@ -40,7 +40,7 @@ export default function SettingsPage() {
           <a href="/admin/notifications" className="text-teal-700 underline">🔔 알림 받는 방식 바꾸기 →</a>
         </p>
         <p className="mt-1 text-sm text-muted-foreground">
-          정적 설정 (Phase J 후 동적 편집 활성).
+          지금은 읽기만 가능합니다. 바꾸려면 서버 설정을 고쳐야 합니다.
         </p>
       </header>
 

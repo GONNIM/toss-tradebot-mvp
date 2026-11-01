@@ -143,8 +143,7 @@ function SetupGuide({ isAdmin }: { isAdmin: boolean }) {
             <a href="/account" className="underline">내 계좌</a> 에서 토스증권 화면으로 가서 합니다.
           </p>
           <p className="mt-1 text-[11px] text-muted-foreground">
-            관리자 로그인 토큰은 서버 암호화 설정에 있습니다. 만들기·바꾸기 절차:{" "}
-            <code className="rounded bg-slate-200 px-1 dark:bg-slate-800">docs/operations/sniper-setup.md</code>
+            관리자 로그인 토큰은 서버 암호화 설정에 있습니다. 만들거나 바꾸려면 운영 설정 안내 문서를 따르십시오.
           </p>
         </GuideStep>
 
@@ -635,7 +634,7 @@ function ParamsEditor({ isAdmin }: { isAdmin: boolean }) {
         <div>
           <h2 className="text-sm font-semibold">⚙️ 하드 파라미터 편집</h2>
           <p className="mt-0.5 text-[10px] text-muted-foreground">
-            33개 파라미터 UI 편집 · 관리자 세션 필요 · 저장 시 백엔드 hot reload · 다음 폴부터 즉시 반영
+            아래 값을 화면에서 바꿀 수 있습니다 · 관리자 로그인 필요 · 저장 시 백엔드 hot reload · 다음 폴부터 즉시 반영
             {!isAdmin && (
               <span className="ml-1 rounded bg-red-100 px-1.5 py-0.5 font-semibold text-red-700">
                 🔐 anon · 저장 불가
@@ -724,7 +723,7 @@ function ParamsEditor({ isAdmin }: { isAdmin: boolean }) {
         />
         <PctField
           label="Weekly loss limit"
-          hint="주간 누적 손실 캡 (Sprint 2 반영 예정)"
+          hint="주간 누적 손실 상한 · 아직 자동 정지에 쓰이지 않음"
           v={merged.weekly_loss_limit_pct}
           on={(v) => setField("weekly_loss_limit_pct", v)}
         />

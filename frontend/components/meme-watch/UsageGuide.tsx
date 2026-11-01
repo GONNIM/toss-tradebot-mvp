@@ -49,7 +49,7 @@ export function UsageGuide() {
               5요소 중 <strong>normalized ≥ 0.5</strong> 인 시그널 개수. 많을수록 신뢰도 ↑.
             </p>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-0.5 text-xs">
-              <div>① <strong>공매도</strong> — 유동주식 대비 short 비율 (Phase 4)</div>
+              <div>① <strong>공매도</strong> — 유동주식 대비 공매도 비율</div>
               <div>② <strong>소셜</strong> — Reddit(apewisdom) + Google Trends</div>
               <div>③ <strong>거래량</strong> — 20D 평균 대비 배수</div>
               <div>④ <strong>Momentum</strong> — RSI ≥ 70 + 1D ≥ +10%</div>

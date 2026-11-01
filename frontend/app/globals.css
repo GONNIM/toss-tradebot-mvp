@@ -3,7 +3,7 @@
 @tailwind utilities;
 
 @layer base {
-  /* shadcn/ui CSS 변수 — Phase H 에서 커스터마이즈 */
+  /* shadcn/ui CSS 변수 · 값 기준은 docs/design-rules.md */
   :root {
     --background: 0 0% 100%;
     --foreground: 240 10% 3.9%;
@@ -11,7 +11,8 @@
     --card-foreground: 240 10% 3.9%;
     --popover: 0 0% 100%;
     --popover-foreground: 240 10% 3.9%;
-    --primary: 240 5.9% 10%;
+    /* 강조색 틸 하나 (DESIGN.md · CLAUDE.md 디자인 기준 10/28) · teal-700 · 흰 글자 대비 5.24:1 */
+    --primary: 175 77% 26%;
     --primary-foreground: 0 0% 98%;
     --secondary: 240 4.8% 95.9%;
     --secondary-foreground: 240 5.9% 10%;
@@ -23,8 +24,12 @@
     --destructive-foreground: 0 0% 98%;
     --border: 240 5.9% 90%;
     --input: 240 5.9% 90%;
-    --ring: 240 5.9% 10%;
+    --ring: 175 77% 26%;
     --radius: 0.5rem;
+    /* 등락·경고 (한국식: 상승 빨강 · 하락 파랑 · 경고는 빨강과 겹치지 않게 주황) · 흰 바탕 글자 대비 4.8~5.2:1 */
+    --up: 0 72% 51%;
+    --down: 221 83% 53%;
+    --warn: 26 90% 37%;
   }
 
   .dark {

@@ -1010,7 +1010,7 @@ export default function ActivistRadarPage() {
             <strong>🔥 STRONG (60~79)</strong> — SC 13D/A 지분 변동·수정본 · Tier 1 activist.
           </div>
           <div>
-            <strong>👤 INSIDER (Phase E)</strong> — activism 진입 종목 (최근 90일 KR)의
+            <strong>👤 내부자 매매</strong> — activism 진입 종목 (최근 90일 KR)의
             임원·주요주주 매매(D002). 동조/이탈 방향 판단용.
           </div>
           <div>

@@ -75,7 +75,7 @@ export default function LabIndex() {
       <header>
         <h1 className="text-2xl font-bold">🧪 Lab (실험장)</h1>
         <p className="mt-2 text-sm text-muted-foreground">
-          L3 실험장 · nav 히든 · Phase A 주 2 재편 (2026-07-30) · docs/plans/toss-tradebot-tobe/stage1-optimization.md §3-3
+          아직 검증 중인 기능을 모아 둔 곳입니다. 메뉴에는 보이지 않으며, 결과를 실제 매매 판단에 쓰기 전에 검증이 필요합니다.
         </p>
         <p className="mt-1 text-xs text-muted-foreground">
           규율: 6개월 방치 라우트 자동 삭제 (예정) · 각 항목 정체성 정합성 명시
