@@ -182,6 +182,7 @@ grep -l "push:\|workflow_dispatch:" .github/workflows/*.yml  # 트리거 파악
 - (2026-10-23) LLM 은 Anthropic 이 1순위, 키가 없거나 오류면 Z.ai 로 넘어간다 (모델은 코드 기본값 · env 에 적지 않음) — 사용자 결정 · PR #109.
 - (2026-10-25) Anthropic 기본 모델은 Claude Opus 5.5 · effort medium — Z.ai 보다 정확한 핵심 판단이 우선 (사용자 결정 · PR #113). 비용은 콘솔 월 한도로 막는다.
 - (2026-10-28) 로컬에서 API 서버를 띄울 때는 `BIOTECH_API_ONLY=1 TELEGRAM_BOT_TOKEN=` 로만 띄운다 — 로컬 `backend/.env` 에 실거래 스위치·실 토스 키가 있어 그냥 띄우면 예약 작업(보유 관리·진입 검사)이 같이 돈다 (1028-03 화면 확인 중 토스 토큰 발급 18회 · 주문·알림 0).
+- (2026-11-01) Fable 질의·병합 승인에 적는 diff SHA-256 은 `git diff --full-index <기준>...<브랜치> -- <경로> | shasum -a 256` 으로 잰다 — 줄임 해시 길이가 저장소 정리(gc) 뒤 8→7 자리로 바뀌어 같은 내용인데 SHA 가 달라졌고, 병합 승인을 다시 물었다 (1022-10 PR #151 · 사용자 결정 1101-02).
 
 ---
 
