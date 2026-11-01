@@ -187,7 +187,7 @@ function JournalPageInner() {
       {/* Baseline · Stage 2 진입 KPI 근거 */}
       <section className="rounded-lg border border-border bg-card p-4">
         <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-          최근 90일 Baseline · Stage 2 진입 KPI 근거
+          최근 90일 판정 성적 · 다음 단계 기준의 근거
         </div>
         {baseline ? (
           <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-4">

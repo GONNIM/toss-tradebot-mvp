@@ -99,7 +99,7 @@ export default function BiotechDocsPage() {
 
       {!isAdmin && (
         <div className="rounded border border-rose-500/50 bg-rose-500/10 p-4 text-sm text-rose-700 dark:text-rose-300">
-          🔒 관리자 로그인이 필요합니다. 오른쪽 위 「관리자 로그인」 에서 로그인하십시오.
+          🔒 관리자 로그인이 필요합니다. 오른쪽 위 「로그인」 에서 로그인하십시오.
         </div>
       )}
 

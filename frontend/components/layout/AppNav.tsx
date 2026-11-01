@@ -4,11 +4,13 @@
 // - 윗줄: 묶음 4 (오늘 · 후보 · 내 계좌 · 기록) + 설정 · 「종목」 은 3단계 종목 화면과 함께
 // - 아랫줄: 지금 묶음의 화면 탭 · 주소는 옮기지 않음 (알림 링크 11곳 그대로)
 // - 메뉴에 없는 화면 (바이오 문서 · Serenity 종목 상세 등) 은 지금처럼 링크로만
+// - 5b (2026-11-01): 로고 · 윗줄 묶음 · 로그인을 한 줄에 (휴대폰 머리글 178→약 100px)
 // 참조: docs/plans/ui-ux-optimization/2026-10-28-information-architecture.md
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef } from "react";
+import type { ReactNode } from "react";
 
 interface Tab {
   href: string;
@@ -103,21 +105,30 @@ function activeTab(pathname: string): { group: Group; tab: Tab | null } {
   return { group: GROUPS[0], tab: null };
 }
 
-export function AppNav() {
+export function AppNav({ brand, session }: { brand: ReactNode; session: ReactNode }) {
   const pathname = usePathname();
   const { group: current, tab: currentTab } = activeTab(pathname);
+  const groupsRef = useRef<HTMLElement>(null);
   const tabsRef = useRef<HTMLElement>(null);
 
-  // 좁은 화면에서 지금 탭이 가로 스크롤 밖에 있으면 보이게 한다
+  // 좁은 화면에서 지금 묶음·탭이 가로 스크롤 밖에 있으면 보이게 한다
   useEffect(() => {
-    tabsRef.current
-      ?.querySelector<HTMLElement>('[aria-current="page"]')
-      ?.scrollIntoView({ block: "nearest", inline: "nearest" });
+    for (const ref of [groupsRef, tabsRef]) {
+      ref.current
+        ?.querySelector<HTMLElement>('[aria-current="page"]')
+        ?.scrollIntoView({ block: "nearest", inline: "nearest" });
+    }
   }, [pathname]);
 
   return (
     <>
-      <nav aria-label="주 메뉴" className="-mx-1 flex gap-1 overflow-x-auto text-base">
+      <div className="flex items-center gap-2">
+        {brand}
+        <nav
+          ref={groupsRef}
+          aria-label="주 메뉴"
+          className="flex min-w-0 flex-1 overflow-x-auto text-base md:gap-1"
+        >
         {GROUPS.map((g) => {
           const active = g.key === current.key;
           return (
@@ -126,7 +137,7 @@ export function AppNav() {
               href={g.href}
               aria-current={active ? "page" : undefined}
               className={
-                "flex min-h-[44px] shrink-0 items-center rounded-lg px-3 " +
+                "flex min-h-[44px] shrink-0 items-center rounded-lg px-2 md:px-3 " +
                 (active ? "font-semibold text-foreground" : "text-muted-foreground hover:text-foreground")
               }
             >
@@ -134,7 +145,9 @@ export function AppNav() {
             </Link>
           );
         })}
-      </nav>
+        </nav>
+        <div className="shrink-0">{session}</div>
+      </div>
       {current.tabs.length > 0 && (
         <nav
           ref={tabsRef}

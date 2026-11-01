@@ -126,7 +126,7 @@ function DoDReportPanel() {
             ))}
           </div>
           {r.metrics.reason_breakdown && Object.keys(r.metrics.reason_breakdown).length > 0 ? (
-            <div className="mt-2 flex flex-wrap gap-1 text-[10px]">
+            <div className="mt-2 flex flex-wrap gap-1 text-xs">
               {Object.entries(r.metrics.reason_breakdown).map(([k, v]) => (
                 <span
                   key={k}
@@ -179,7 +179,7 @@ function ExecuteStatusPanel() {
       {!we ? (
         <div className="text-muted-foreground">불러오는 중...</div>
       ) : (
-        <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-[11px] md:grid-cols-3">
+        <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs md:grid-cols-3">
           <div>
             <span className="text-muted-foreground">활성 </span>
             <span className={we.enabled ? "font-bold text-emerald-600" : "font-bold text-red-600"}>
@@ -290,7 +290,7 @@ function DateSelector({
               key={d}
               type="button"
               onClick={() => setTradeDate(d)}
-              className={`rounded px-2 py-0.5 text-[10px] ${
+              className={`rounded px-2 py-0.5 text-xs ${
                 d === tradeDate
                   ? "bg-sky-600 text-white"
                   : "border hover:bg-sky-50"
@@ -341,7 +341,7 @@ function WatchlistTable({ tradeDate, isAdmin }: { tradeDate: string; isAdmin: bo
   const off = new Set((src.data?.sources ?? []).filter((s) => !s.collecting).map((s) => s.key));
   // 수집하지 않는 칸의 0 은 「점수 0」이 아니라 「자료 없음」 · 1030-02
   const scoreCell = (key: WatchlistSourceStatus["key"], v: number | null | undefined) =>
-    off.has(key) && !v ? <span className="text-[10px] text-muted-foreground">수집 안 함</span> : fmt3(v);
+    off.has(key) && !v ? <span className="text-xs text-muted-foreground">수집 안 함</span> : fmt3(v);
 
   const [open, setOpen] = useState<Set<number>>(new Set());
   const toggleOpen = (id: number) =>
@@ -436,12 +436,12 @@ function WatchlistTable({ tradeDate, isAdmin }: { tradeDate: string; isAdmin: bo
                   </td>
                   <td className="p-2">
                     <div className="font-medium">{it.name || "-"}</div>
-                    <div className="text-[10px] text-muted-foreground"><StockLink ticker={it.ticker}>{it.ticker}</StockLink></div>
+                    <div className="text-xs text-muted-foreground"><StockLink ticker={it.ticker}>{it.ticker}</StockLink></div>
                   </td>
                   <td className="p-2 text-right font-bold text-sky-700">
                     {it.composite_score.toFixed(3)}
                     {it.evidence?.caution?.length ? (
-                      <div className="mt-0.5 text-[10px] font-bold text-orange-700 dark:text-orange-300">⚠ 주의 공시</div>
+                      <div className="mt-0.5 text-xs font-bold text-orange-700 dark:text-orange-300">⚠ 주의 공시</div>
                     ) : null}
                   </td>
                   <td className="p-2 text-right">{scoreCell("news", it.news_score)}</td>
@@ -456,12 +456,12 @@ function WatchlistTable({ tradeDate, isAdmin }: { tradeDate: string; isAdmin: bo
                     {it.locked ? (
                       <span
                         title="사용자 lock · finalize 실행 후에도 유지"
-                        className="rounded bg-amber-100 px-1.5 py-0.5 text-[10px] text-amber-800 dark:bg-amber-900 dark:text-amber-200"
+                        className="rounded bg-amber-100 px-1.5 py-0.5 text-xs text-amber-800 dark:bg-amber-900 dark:text-amber-200"
                       >
                         🔒 lock
                       </span>
                     ) : (
-                      <span className="text-[10px] text-muted-foreground">
+                      <span className="text-xs text-muted-foreground">
                         {it.added_by}
                       </span>
                     )}
@@ -472,7 +472,7 @@ function WatchlistTable({ tradeDate, isAdmin }: { tradeDate: string; isAdmin: bo
                         type="button"
                         disabled={!isAdmin || toggleLock.isPending}
                         onClick={() => toggleLock.mutate({ id: it.id, locked: !it.locked })}
-                        className="rounded border px-1.5 py-0.5 text-[10px] hover:bg-amber-50 disabled:opacity-30"
+                        className="rounded border px-1.5 py-0.5 text-xs hover:bg-amber-50 disabled:opacity-30"
                         title={it.locked ? "unlock (다음 finalize 시 재평가)" : "lock (다음 finalize 시 유지)"}
                       >
                         {it.locked ? "unlock" : "lock"}
@@ -483,7 +483,7 @@ function WatchlistTable({ tradeDate, isAdmin }: { tradeDate: string; isAdmin: bo
                         onClick={() => {
                           if (confirm(`삭제 · ${it.ticker} · id=${it.id}?`)) remove.mutate(it.id);
                         }}
-                        className="rounded border border-red-300 px-1.5 py-0.5 text-[10px] text-red-700 hover:bg-red-50 disabled:opacity-30"
+                        className="rounded border border-red-300 px-1.5 py-0.5 text-xs text-red-700 hover:bg-red-50 disabled:opacity-30"
                         title="이 거래일 Watchlist 에서 완전 삭제"
                       >
                         ×
@@ -593,7 +593,7 @@ function EvidenceBlock({ ev, version }: { ev: WatchlistEvidence | null; version:
               ))}
         </ul>
       </div>
-      {version && <div className="text-[10px] text-muted-foreground">점수 공식 {version}</div>}
+      {version && <div className="text-xs text-muted-foreground">점수 공식 {version}</div>}
     </div>
   );
 }
@@ -639,7 +639,7 @@ function SourceBadges({
         <span
           key={s}
           title={`${s} · count=${breakdown[s].count} · sum=${breakdown[s].intensity_sum}`}
-          className="rounded bg-slate-100 px-1 py-0.5 text-[9px] text-slate-700 dark:bg-slate-800 dark:text-slate-200"
+          className="rounded bg-slate-100 px-1 py-0.5 text-xs text-slate-700 dark:bg-slate-800 dark:text-slate-200"
         >
           {shortSource(s)}
         </span>
@@ -793,7 +793,7 @@ function SignalsInspector({ tradeDate }: { tradeDate: string }) {
           <summary className="cursor-pointer p-2 text-xs font-medium">
             {shortSource(source)} · {sigs.length}건
           </summary>
-          <ul className="space-y-0.5 p-2 text-[10px]">
+          <ul className="space-y-0.5 p-2 text-xs">
             {sigs.slice(0, 30).map((s) => (
               <li key={s.id} className="flex gap-2">
                 <span className="font-mono text-muted-foreground"><StockLink ticker={s.ticker}>{s.ticker}</StockLink></span>

@@ -19,6 +19,7 @@ import type {
 import { SignalFeedCard } from "@/components/serenity/SignalFeedCard";
 import { TickerCard } from "@/components/serenity/TickerCard";
 import { TickerTable } from "@/components/serenity/TickerTable";
+import { ShowMoreButton } from "@/components/ui/show-more";
 
 const SENTIMENT_OPTS: { value: string; label: string }[] = [
   { value: "", label: "전체" },
@@ -56,6 +57,7 @@ export default function SerenityLanding() {
   const [summary, setSummary] = useState<SerenitySummary | null>(null);
   const [signals, setSignals] = useState<SignalFeedItem[] | null>(null);
   const [tickers, setTickers] = useState<TickerCardItem[] | null>(null);
+  const [showAllUnranked, setShowAllUnranked] = useState(false);   // 5b · 미분류는 처음 12개만
   const [sentiment, setSentiment] = useState("");
   const [days, setDays] = useState(14);
   const [includeAvoid, setIncludeAvoid] = useState(true);
@@ -199,7 +201,7 @@ export default function SerenityLanding() {
             {momentum.map(({ t, r }) => (
               <div key={t.ticker} className="relative">
                 <TickerCard item={t} />
-                <span className="absolute right-2 top-2 rounded bg-purple-500/20 px-1.5 py-0.5 text-[10px] font-semibold text-purple-400">
+                <span className="absolute right-2 top-2 rounded bg-purple-500/20 px-1.5 py-0.5 text-xs font-semibold text-purple-400">
                   ×{r.toFixed(1)} momentum
                 </span>
               </div>
@@ -257,10 +259,15 @@ export default function SerenityLanding() {
                   미분류 (seed 없음 · Serenity 언급) · {byTier["?"].length}개
                 </h3>
                 <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-                  {byTier["?"].map((t) => (
+                  {(showAllUnranked ? byTier["?"] : byTier["?"].slice(0, 12)).map((t) => (
                     <TickerCard key={t.ticker} item={t} />
                   ))}
                 </div>
+                <ShowMoreButton
+                  total={byTier["?"].length}
+                  shown={showAllUnranked ? byTier["?"].length : Math.min(12, byTier["?"].length)}
+                  onShowAll={() => setShowAllUnranked(true)}
+                />
               </div>
             )}
           </div>
@@ -279,7 +286,7 @@ export default function SerenityLanding() {
               <div className="text-sm font-semibold text-red-500">
                 🚨 Avoid · {avoidTickers.length}개
               </div>
-              <div className="text-[10px] text-muted-foreground">
+              <div className="text-xs text-muted-foreground">
                 auto_avoid 또는 anti-pattern flag · 회피 대상
               </div>
             </div>
@@ -304,7 +311,7 @@ export default function SerenityLanding() {
         >
           <div>
             <div className="text-sm font-semibold">📡 Raw Signal Feed</div>
-            <div className="text-[10px] text-muted-foreground">
+            <div className="text-xs text-muted-foreground">
               트윗별 z.ai 추출 원문 · 감사·검증용 (판정에는 상단 aggregate 사용)
             </div>
           </div>
@@ -372,7 +379,7 @@ function SummaryStat({
     <div className="rounded border border-border bg-muted/20 px-3 py-2">
       <div className="text-xs text-muted-foreground">{label}</div>
       <div className="mt-1 text-lg font-bold">{value}</div>
-      {hint && <div className="text-[10px] text-muted-foreground">{hint}</div>}
+      {hint && <div className="text-xs text-muted-foreground">{hint}</div>}
     </div>
   );
 }

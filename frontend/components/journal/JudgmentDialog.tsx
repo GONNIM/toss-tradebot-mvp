@@ -262,7 +262,7 @@ export function JudgmentDialog({
                   className="sr-only"
                 />
                 <div>{m.label}</div>
-                <div className="text-[10px] text-muted-foreground">{m.hint}</div>
+                <div className="text-xs text-muted-foreground">{m.hint}</div>
               </label>
             ))}
           </div>
@@ -310,7 +310,7 @@ function RRHint({
   const t = parseFloat(target);
   if (!(e > 0 && i > 0 && t > 0)) {
     return (
-      <p className="text-[10px] text-muted-foreground">
+      <p className="text-xs text-muted-foreground">
         💡 Entry·Invalidation·Target 모두 입력하면 R:R 실시간 표시 (존마 강의 권장 ≥ 2).
       </p>
     );
@@ -326,7 +326,7 @@ function RRHint({
   }
   if (rr === null || !isFinite(rr)) {
     return (
-      <p className="rounded bg-red-500/10 px-2 py-1 text-[10px] text-red-500">
+      <p className="rounded bg-red-500/10 px-2 py-1 text-xs text-red-500">
         ⚠️ Entry·Invalidation·Target 관계가 Long/Short 어느 쪽도 아닙니다.
       </p>
     );

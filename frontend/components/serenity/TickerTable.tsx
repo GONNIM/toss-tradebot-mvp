@@ -150,7 +150,7 @@ export function TickerTable({ items }: { items: TickerCardItem[] }) {
         className={`cursor-pointer select-none px-2 py-2.5 text-xs font-semibold text-muted-foreground hover:text-foreground text-${align}`}
         title={`정렬 · 현재 ${active ? (sortDir === "desc" ? "내림차순" : "오름차순") : "비활성"} · 클릭 시 ${active ? "방향 반전" : "이 컬럼 기준 정렬"}`}
       >
-        {label} <span className={`text-[9px] ${iconCls}`}>{icon}</span>
+        {label} <span className={`text-xs ${iconCls}`}>{icon}</span>
       </th>
     );
   }
@@ -166,7 +166,7 @@ export function TickerTable({ items }: { items: TickerCardItem[] }) {
       >
         <div>
           <h2 className="text-sm font-semibold">📋 90일 언급 종목 리스트 (테이블)</h2>
-          <p className="text-[10px] text-muted-foreground">
+          <p className="text-xs text-muted-foreground">
             {items.length} 종목 · {open ? "상단 컨트롤로 Mentions 기간/방향 선택 · 각 컬럼 헤더 클릭으로도 정렬" : "펼쳐서 정렬·검색"}
           </p>
         </div>
@@ -179,7 +179,7 @@ export function TickerTable({ items }: { items: TickerCardItem[] }) {
         <div className="flex flex-wrap items-center gap-2">
           {/* Mentions 정렬 컨트롤 (사용자 요구 · L11) */}
           <div className="flex items-center gap-1 rounded border border-border bg-background px-2 py-1">
-            <span className="text-[10px] text-muted-foreground">Mentions</span>
+            <span className="text-xs text-muted-foreground">Mentions</span>
             <select
               value={mentionsPeriod}
               onChange={(e) => onMentionsPeriodChange(e.target.value as MentionsPeriod)}
@@ -197,7 +197,7 @@ export function TickerTable({ items }: { items: TickerCardItem[] }) {
                 if (!mentionsActive) setSortKey(MENTIONS_PERIOD_KEY[mentionsPeriod]);
                 setSortDir(sortDir === "desc" ? "asc" : "desc");
               }}
-              className="rounded border border-border px-1.5 text-[10px] font-semibold hover:bg-muted/40"
+              className="rounded border border-border px-1.5 text-xs font-semibold hover:bg-muted/40"
               title={`현재 ${mentionsActive ? (sortDir === "desc" ? "내림차순" : "오름차순") : "다른 컬럼 정렬 중"} · 클릭 시 반전`}
             >
               {mentionsActive ? (sortDir === "desc" ? "▼ desc" : "▲ asc") : "▼ desc"}
@@ -229,11 +229,11 @@ export function TickerTable({ items }: { items: TickerCardItem[] }) {
               >
                 Mentions{" "}
                 <span
-                  className={`text-[9px] ${mentionsActive ? "text-primary" : "text-muted-foreground/50"}`}
+                  className={`text-xs ${mentionsActive ? "text-primary" : "text-muted-foreground/50"}`}
                 >
                   {mentionsActive ? (sortDir === "desc" ? "▼" : "▲") : "⇅"}
                 </span>
-                <div className="text-[9px] font-normal opacity-70">{mentionsPeriod} (나머지 기간)</div>
+                <div className="text-xs font-normal opacity-70">{mentionsPeriod} (나머지 기간)</div>
               </th>
               <th className="px-2 py-2.5 text-right text-xs font-semibold text-emerald-500">Bull</th>
               <th className="px-2 py-2.5 text-right text-xs font-semibold text-red-500">Bear</th>
@@ -264,14 +264,14 @@ export function TickerTable({ items }: { items: TickerCardItem[] }) {
                       {t.ticker}
                     </Link>
                     {t.auto_avoid && (
-                      <span className="ml-1 text-[9px] font-semibold text-red-500">AVOID</span>
+                      <span className="ml-1 text-xs font-semibold text-red-500">AVOID</span>
                     )}
                   </td>
                   <td className="px-2 py-3 text-xs text-muted-foreground">{industry}</td>
-                  <td className="px-2 py-3 text-[11px] font-mono text-muted-foreground">
+                  <td className="px-2 py-3 text-xs font-mono text-muted-foreground">
                     {fmtKstDateTimeSec(t.first_mention_at)}
                   </td>
-                  <td className="px-2 py-3 text-[11px] font-mono text-muted-foreground">
+                  <td className="px-2 py-3 text-xs font-mono text-muted-foreground">
                     {fmtKstDateTimeSec(t.last_signal_at)}
                   </td>
                   <td
@@ -281,7 +281,7 @@ export function TickerTable({ items }: { items: TickerCardItem[] }) {
                     <span className="font-bold text-primary text-sm">
                       {_mentionsForKey(t, MENTIONS_PERIOD_KEY[mentionsPeriod])}
                     </span>
-                    <span className="text-[9px] text-muted-foreground ml-1">
+                    <span className="text-xs text-muted-foreground ml-1">
                       ({[
                         mentionsPeriod !== "today" ? `t:${t.mentions_today}` : null,
                         mentionsPeriod !== "7d" ? `7d:${t.mentions_7d}` : null,

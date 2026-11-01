@@ -17,6 +17,7 @@ import {
 } from "@/lib/api";
 import { StatBox } from "@/components/ui/stat-box";
 import { AdminSessionBar } from "@/components/admin/AdminSessionBar";
+import { ShowMoreButton } from "@/components/ui/show-more";
 import { editErrorMessage } from "@/lib/auth";
 
 // ─────────────────────────────────────────────
@@ -130,7 +131,7 @@ function EventRow({ e }: { e: ActivistEventItem }) {
         {e.filer_tier && (
           <span
             className={
-              "rounded px-1.5 py-0.5 text-[10px] font-mono font-bold " +
+              "rounded px-1.5 py-0.5 text-xs font-mono font-bold " +
               (e.filer_tier === 1
                 ? "bg-emerald-500 text-white"
                 : e.filer_tier === 2
@@ -141,12 +142,12 @@ function EventRow({ e }: { e: ActivistEventItem }) {
             T{e.filer_tier}
           </span>
         )}
-        <span className="rounded bg-slate-100 px-1.5 py-0.5 text-[10px] font-mono font-bold text-slate-700 dark:bg-slate-800 dark:text-slate-200">
+        <span className="rounded bg-slate-100 px-1.5 py-0.5 text-xs font-mono font-bold text-slate-700 dark:bg-slate-800 dark:text-slate-200">
           {e.country}
         </span>
         <span className="font-bold text-slate-900 dark:text-white">{e.filer_name}</span>
         {e.filer_cik && (
-          <span className="text-[10px] font-mono text-slate-500 dark:text-slate-400">
+          <span className="text-xs font-mono text-slate-500 dark:text-slate-400">
             CIK {e.filer_cik}
           </span>
         )}
@@ -168,7 +169,7 @@ function EventRow({ e }: { e: ActivistEventItem }) {
             🎯 대상 종목
           </span>
           {e.details?.issuer_cik && (
-            <span className="ml-auto text-[10px] font-mono text-slate-500 dark:text-slate-400">
+            <span className="ml-auto text-xs font-mono text-slate-500 dark:text-slate-400">
               issuer CIK {e.details.issuer_cik}
               {e.details.issuer_cusip && ` · CUSIP ${e.details.issuer_cusip}`}
             </span>
@@ -199,7 +200,7 @@ function EventRow({ e }: { e: ActivistEventItem }) {
             {e.details?.percent_of_class !== null &&
              e.details?.percent_of_class !== undefined && (
               <div className="rounded-md border border-amber-300 bg-white p-2 dark:border-amber-800 dark:bg-amber-950/30">
-                <div className="text-[10px] font-semibold uppercase tracking-wide text-amber-700 dark:text-amber-300">
+                <div className="text-xs font-semibold uppercase tracking-wide text-amber-700 dark:text-amber-300">
                   지분율
                 </div>
                 <div className="mt-0.5 text-3xl font-black leading-none text-amber-900 dark:text-amber-100">
@@ -211,7 +212,7 @@ function EventRow({ e }: { e: ActivistEventItem }) {
             {e.details?.aggregate_amount_owned !== null &&
              e.details?.aggregate_amount_owned !== undefined && (
               <div className="rounded-md border border-slate-200 bg-white p-2 dark:border-slate-700 dark:bg-slate-900/40">
-                <div className="text-[10px] font-semibold uppercase tracking-wide text-slate-600 dark:text-slate-300">
+                <div className="text-xs font-semibold uppercase tracking-wide text-slate-600 dark:text-slate-300">
                   보유 주식
                 </div>
                 <div className="mt-0.5 text-base font-bold font-mono text-slate-800 dark:text-slate-100">
@@ -222,7 +223,7 @@ function EventRow({ e }: { e: ActivistEventItem }) {
             {e.details?.amendment_no !== null &&
              e.details?.amendment_no !== undefined && (
               <div className="rounded-md border border-slate-200 bg-white p-2 dark:border-slate-700 dark:bg-slate-900/40">
-                <div className="text-[10px] font-semibold uppercase tracking-wide text-slate-600 dark:text-slate-300">
+                <div className="text-xs font-semibold uppercase tracking-wide text-slate-600 dark:text-slate-300">
                   수정 차수
                 </div>
                 <div className="mt-0.5 text-base font-bold text-slate-800 dark:text-slate-100">
@@ -232,7 +233,7 @@ function EventRow({ e }: { e: ActivistEventItem }) {
             )}
             {e.details?.date_of_event && (
               <div className="rounded-md border border-slate-200 bg-white p-2 dark:border-slate-700 dark:bg-slate-900/40">
-                <div className="text-[10px] font-semibold uppercase tracking-wide text-slate-600 dark:text-slate-300">
+                <div className="text-xs font-semibold uppercase tracking-wide text-slate-600 dark:text-slate-300">
                   이벤트 발생일
                 </div>
                 <div className="mt-0.5 text-base font-bold text-slate-800 dark:text-slate-100">
@@ -255,7 +256,7 @@ function EventRow({ e }: { e: ActivistEventItem }) {
             <summary className="cursor-pointer px-2 py-1 text-xs font-semibold text-amber-700 hover:bg-slate-50 dark:text-amber-300 dark:hover:bg-slate-800/50">
               📝 Item 4 — 거래 목적/사유 (원문 발췌 · 클릭 펼치기)
             </summary>
-            <div className="whitespace-pre-wrap border-t border-slate-200 p-2 font-mono text-[11px] text-slate-800 dark:border-slate-700 dark:text-slate-100">
+            <div className="whitespace-pre-wrap border-t border-slate-200 p-2 font-mono text-xs text-slate-800 dark:border-slate-700 dark:text-slate-100">
               {e.details.transaction_purpose}
             </div>
           </details>
@@ -351,7 +352,7 @@ function TierBadge({ tier }: { tier: number }) {
       ? "bg-sky-100 text-sky-800 dark:bg-sky-900/40 dark:text-sky-200"
       : "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300";
   return (
-    <span className={`rounded px-1.5 py-0.5 text-[10px] font-mono ${color}`}>
+    <span className={`rounded px-1.5 py-0.5 text-xs font-mono ${color}`}>
       T{tier}
     </span>
   );
@@ -496,7 +497,9 @@ function BucketCard({
   events: ActivistEventItem[];
 }) {
   const meta = INTENSITY_META[intensity];
+  const [showAll, setShowAll] = useState(false);   // 5b · 처음 5건만
   if (!events || events.length === 0) return null;
+  const visible = showAll ? events : events.slice(0, 5);
   return (
     <div className={`overflow-hidden rounded-lg border ${meta.className}`}>
       {/* v1.51 · 헤더 밴드 라이트 우선 · shadow 제거 (규칙 26) · 배경은 카드 톤 상속 */}
@@ -518,9 +521,10 @@ function BucketCard({
       </div>
       {/* 이벤트 리스트 */}
       <div className="space-y-2 p-3">
-        {events.map((e) => (
+        {visible.map((e) => (
           <EventRow key={e.id} e={e} />
         ))}
+        <ShowMoreButton total={events.length} shown={visible.length} onShowAll={() => setShowAll(true)} />
       </div>
     </div>
   );
@@ -582,11 +586,11 @@ function UniverseCard({
               a.enabled ? "" : "opacity-50"
             }`}
           >
-            <span className="rounded bg-muted px-1.5 py-0.5 text-[10px] font-mono">
+            <span className="rounded bg-muted px-1.5 py-0.5 text-xs font-mono">
               {a.country}·T{a.tier}
             </span>
             <span className="flex-1 truncate">{a.name}</span>
-            <span className="hidden sm:inline font-mono text-[10px] text-muted-foreground">
+            <span className="hidden sm:inline font-mono text-xs text-muted-foreground">
               {a.cik || a.corp_code || "—"}
             </span>
             <button
@@ -866,7 +870,7 @@ export default function ActivistRadarPage() {
       <header>
         <h1 className="flex items-center gap-2 text-3xl font-bold">
           🐺 Activist Radar
-          <span className="rounded bg-green-500/20 px-2 py-0.5 text-[10px] font-semibold text-green-400" title="COINCIDENT · 실시간 이벤트">
+          <span className="rounded bg-green-500/20 px-2 py-0.5 text-xs font-semibold text-green-400" title="COINCIDENT · 실시간 이벤트">
             COINCIDENT
           </span>
         </h1>
@@ -951,7 +955,7 @@ export default function ActivistRadarPage() {
                       <StockLink ticker={w.ticker}>{w.ticker}</StockLink>
                     </span>
                     <span className="text-muted-foreground truncate">{w.name}</span>
-                    <span className="ml-auto font-mono text-[10px] text-muted-foreground">
+                    <span className="ml-auto font-mono text-xs text-muted-foreground">
                       CIK {w.cik}
                     </span>
                   </div>

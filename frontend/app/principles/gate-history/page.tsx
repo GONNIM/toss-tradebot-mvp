@@ -78,6 +78,7 @@ export default function GateHistoryPage() {
 
       <section>
         <h2 style={{ fontSize: 18, marginBottom: 8 }}>최근 차단 (최대 50건)</h2>
+        <div style={{ overflowX: "auto" }}>
         <table
           style={{
             width: "100%",
@@ -121,6 +122,7 @@ export default function GateHistoryPage() {
             )}
           </tbody>
         </table>
+        </div>
       </section>
     </main>
   );
