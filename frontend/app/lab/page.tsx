@@ -102,9 +102,9 @@ export default function LabIndex() {
                 </td>
                 <td className="p-3">
                   {item.live ? (
-                    <span className="rounded bg-green-500/20 px-2 py-0.5 text-xs text-green-400">live</span>
+                    <span className="rounded-lg bg-primary/20 px-2 py-0.5 text-xs text-primary">live</span>
                   ) : (
-                    <span className="whitespace-nowrap rounded bg-red-500/20 px-2 py-0.5 text-xs text-red-400">쉬는 기능</span>
+                    <span className="whitespace-nowrap rounded-lg bg-warn/20 px-2 py-0.5 text-xs text-warn">쉬는 기능</span>
                   )}
                 </td>
                 <td className="p-3 text-xs text-muted-foreground">{item.lastReviewed}</td>

@@ -43,11 +43,11 @@ function applyContractToHtml(html: string): string {
   out = out.replace(/<li(\s[^>]*)?>/gi, '<li class="text-sm leading-5">');
   out = out.replace(/<blockquote(\s[^>]*)?>/gi, '<blockquote class="border-l-2 border-border pl-2 text-sm leading-5 text-muted-foreground my-1">');
   out = out.replace(/<table(\s[^>]*)?>/gi, '<table class="w-full border-collapse text-xs my-2">');
-  out = out.replace(/<th(\s[^>]*)?>/gi, '<th class="border-b border-border bg-slate-50 dark:bg-slate-900 p-1.5 text-left font-semibold">');
+  out = out.replace(/<th(\s[^>]*)?>/gi, '<th class="border-b border-border bg-slate-50 p-1.5 text-left font-semibold">');
   out = out.replace(/<td(\s[^>]*)?>/gi, '<td class="border-b border-border p-1.5">');
-  out = out.replace(/<code(\s[^>]*)?>/gi, '<code class="rounded bg-slate-100 dark:bg-slate-800 px-1 py-0.5 font-mono text-xs">');
-  out = out.replace(/<pre(\s[^>]*)?>/gi, '<pre class="rounded bg-slate-100 dark:bg-slate-800 p-2 overflow-x-auto text-xs my-2">');
-  out = out.replace(/<a(\s[^>]*)?>/gi, '<a class="text-sky-700 hover:underline dark:text-sky-300"$1>');
+  out = out.replace(/<code(\s[^>]*)?>/gi, '<code class="rounded-lg bg-slate-100 px-1 py-0.5 font-mono text-xs">');
+  out = out.replace(/<pre(\s[^>]*)?>/gi, '<pre class="rounded-lg bg-slate-100 p-2 overflow-x-auto text-xs my-2">');
+  out = out.replace(/<a(\s[^>]*)?>/gi, '<a class="text-sky-700 hover:underline"$1>');
   out = out.replace(/<ul(\s[^>]*)?>/gi, '<ul class="list-disc pl-5 my-1">');
   out = out.replace(/<ol(\s[^>]*)?>/gi, '<ol class="list-decimal pl-5 my-1">');
   return out;
@@ -91,14 +91,14 @@ export default function BiotechDocsPage() {
         <div>
           <h1 className="flex items-center gap-2 text-2xl font-bold">🧬 Biotech 문서</h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            <Link href="/biotech" className="text-sky-700 hover:underline dark:text-sky-300">← 레이더로 돌아가기</Link>
+            <Link href="/biotech" className="text-sky-700 hover:underline">← 레이더로 돌아가기</Link>
           </p>
         </div>
         <BiotechSessionControl onSessionChange={setSession} />
       </header>
 
       {!isAdmin && (
-        <div className="rounded border border-rose-500/50 bg-rose-500/10 p-4 text-sm text-rose-700 dark:text-rose-300">
+        <div className="rounded-lg border border-warn/50 bg-warn/10 p-4 text-sm text-warn">
           🔒 관리자 로그인이 필요합니다. 오른쪽 위 「로그인」 에서 로그인하십시오.
         </div>
       )}
@@ -112,7 +112,7 @@ export default function BiotechDocsPage() {
                 onClick={() => select(t.key)}
                 className={
                   active === t.key
-                    ? "px-3 py-1.5 text-sm font-bold border-b-2 border-sky-600 text-sky-700 dark:text-sky-300"
+                    ? "px-3 py-1.5 text-sm font-bold border-b-2 border-sky-600 text-sky-700"
                     : "px-3 py-1.5 text-sm text-muted-foreground hover:text-foreground"
                 }
               >
@@ -121,7 +121,7 @@ export default function BiotechDocsPage() {
             ))}
           </nav>
           {error && (
-            <div className="rounded border border-rose-500/50 bg-rose-500/10 p-4 text-sm text-rose-700 dark:text-rose-300">{error}</div>
+            <div className="rounded-lg border border-warn/50 bg-warn/10 p-4 text-sm text-warn">{error}</div>
           )}
           {!doc && !error && <div className="text-sm text-muted-foreground">불러오는 중…</div>}
           {doc && (
@@ -129,13 +129,13 @@ export default function BiotechDocsPage() {
               <div className="text-xs text-muted-foreground font-mono">
                 📁 {doc.path} · 생성 UTC {doc.generated_utc} · {doc.raw_md_size.toLocaleString()} B
                 {doc.render_mode === "plain_md_fallback" && (
-                  <span className="ml-2 rounded bg-amber-500/20 px-1.5 py-0.5 text-[10px] font-semibold text-amber-700 dark:text-amber-300">
+                  <span className="ml-2 rounded-lg bg-amber-500/20 px-1.5 py-0.5 text-xs font-semibold text-amber-700">
                     fallback
                   </span>
                 )}
               </div>
               <div
-                className="rounded border border-border bg-card p-4"
+                className="overflow-x-auto rounded-lg border border-border bg-card p-4"
                 dangerouslySetInnerHTML={{ __html: applyContractToHtml(doc.html) }}
               />
             </article>

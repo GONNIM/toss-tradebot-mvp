@@ -36,7 +36,7 @@ function JudgmentRow({ j }: { j: StockJudgment }) {
     <li className="space-y-1 border-b border-border py-2 last:border-0">
       <div className="flex flex-wrap items-center gap-2 text-sm">
         <span className="tabular-nums text-muted-foreground">{dateText(j.ts)}</span>
-        {j.strategy && <span className="rounded-md border border-border px-2 py-0.5 text-xs">{j.strategy}</span>}
+        {j.strategy && <span className="rounded-lg border border-border px-2 py-0.5 text-xs">{j.strategy}</span>}
       </div>
       {j.thesis_md && <p className="whitespace-pre-wrap text-sm">{j.thesis_md}</p>}
       <p className="text-xs tabular-nums text-muted-foreground">{parts.join(" · ")}</p>

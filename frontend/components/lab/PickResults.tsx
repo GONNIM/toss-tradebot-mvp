@@ -8,6 +8,7 @@ import { useRef } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { AdminSessionBar } from "@/components/admin/AdminSessionBar";
 import type { PickSummary } from "@/lib/api";
+import { upDownText } from "@/lib/updown";
 
 export function isUnauthorized(error: unknown): boolean {
   const status = (error as (Error & { status?: number }) | null)?.status;
@@ -37,7 +38,7 @@ export function PicksSessionBar({ queryRoot }: { queryRoot: "crazy" | "moonshot"
 
 export function LoginNotice() {
   return (
-    <div className="rounded-lg border border-amber-500/30 bg-amber-500/5 p-4 text-sm text-amber-700 dark:text-amber-300">
+    <div className="rounded-lg border border-amber-500/30 bg-amber-500/5 p-4 text-sm text-amber-700">
       🔒 관리자 로그인이 필요합니다. 오른쪽 위 「로그인」 에서 로그인하면 목록이 보입니다.
     </div>
   );
@@ -60,14 +61,14 @@ export function OutcomeSummary({
           if (!s) return null;
           const pct = s.median === null ? null : s.median * 100;
           const color =
-            pct === null ? "text-muted-foreground" : pct > 0 ? "text-green-400" : pct < 0 ? "text-red-400" : "text-muted-foreground";
+            upDownText(pct);
           return (
             <div key={key}>
               <div className="text-xs text-muted-foreground">{label}</div>
               <div className={`font-mono text-lg font-bold ${color}`}>
                 {pct === null ? "—" : `${pct >= 0 ? "+" : ""}${pct.toFixed(2)}%`}
               </div>
-              <div className="text-[11px] text-muted-foreground">
+              <div className="text-xs text-muted-foreground">
                 {s.n}건{s.median === null ? " · 20건부터 표시" : ""}
               </div>
             </div>

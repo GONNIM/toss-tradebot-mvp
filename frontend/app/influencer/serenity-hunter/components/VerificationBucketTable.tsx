@@ -4,6 +4,7 @@
 // n<30 회색 처리 (Fable 5 3차 (3a) · 판정 불가 명시)
 
 import type { BucketGroup, ConfidencePredictiveCheck } from "@/lib/serenity-hunter/types";
+import { upDownText } from "@/lib/updown";
 
 function _fmtPct(v: number | null | undefined, digits = 2): string {
   if (v === null || v === undefined) return "—";
@@ -12,8 +13,7 @@ function _fmtPct(v: number | null | undefined, digits = 2): string {
 }
 
 function _cls(v: number | null | undefined): string {
-  if (v === null || v === undefined) return "text-muted-foreground";
-  return v >= 0 ? "text-emerald-500" : "text-red-500";
+  return upDownText(v, "text-up");
 }
 
 const BUCKET_LABELS: Record<string, string> = {
@@ -33,7 +33,7 @@ export function VerificationBucketTable({
   return (
     <section className="rounded-lg border border-border bg-card p-4">
       <h2 className="text-sm font-semibold">📊 Bucket 분해 · 부분집합 알파 검증</h2>
-      <p className="mt-1 text-[10px] text-muted-foreground">
+      <p className="mt-1 text-xs text-muted-foreground">
         n &lt; 30 셀은 회색 "판정 불가" 처리 (Fable 5 · 통계적 신뢰 부족).
       </p>
 
@@ -81,9 +81,9 @@ export function VerificationBucketTable({
       </div>
 
       {/* Confidence 3분위 예측력 상태 (Fable 5 4차 D2) */}
-      <div className="mt-4 rounded border border-border/40 bg-background/40 px-3 py-2">
+      <div className="mt-4 rounded-lg border border-border/40 bg-background/40 px-3 py-2">
         <div className="text-xs font-semibold">Confidence 예측력 판정</div>
-        <div className="mt-1 text-[11px] text-muted-foreground">
+        <div className="mt-1 text-xs text-muted-foreground">
           top {predictiveCheck.top_hit_rate ?? "—"}% (n={predictiveCheck.top_n}) −
           bottom {predictiveCheck.bottom_hit_rate ?? "—"}% (n={predictiveCheck.bottom_n})
           {" = "}
@@ -101,20 +101,20 @@ export function VerificationBucketTable({
 function StatusBadge({ status }: { status: string }) {
   if (status === "pass") {
     return (
-      <span className="ml-1 rounded bg-emerald-500/20 px-1.5 py-0.5 text-[10px] font-semibold text-emerald-500">
+      <span className="ml-1 rounded-lg bg-primary/20 px-1.5 py-0.5 text-xs font-semibold text-primary">
         ✓ 예측력 확인
       </span>
     );
   }
   if (status === "fail") {
     return (
-      <span className="ml-1 rounded bg-red-500/20 px-1.5 py-0.5 text-[10px] font-semibold text-red-500">
+      <span className="ml-1 rounded-lg bg-warn/20 px-1.5 py-0.5 text-xs font-semibold text-warn">
         ⛔ 예측력 없음 · 컬럼 삭제 대상
       </span>
     );
   }
   return (
-    <span className="ml-1 rounded bg-slate-500/20 px-1.5 py-0.5 text-[10px] font-semibold text-slate-400">
+    <span className="ml-1 rounded-lg bg-slate-500/20 px-1.5 py-0.5 text-xs font-semibold text-slate-400">
       ⏳ 표본 부족 (n≥30 필요)
     </span>
   );

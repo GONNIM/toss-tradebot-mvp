@@ -12,8 +12,8 @@ import { api, type TossAccountSnapshot } from "@/lib/api";
 // 한국 관례: 이익 red · 손실 blue
 function pnlClass(v: number | null): string {
   if (v === null || v === undefined) return "text-muted-foreground";
-  if (v > 0) return "text-red-500";
-  if (v < 0) return "text-blue-500";
+  if (v > 0) return "text-up";
+  if (v < 0) return "text-down";
   return "text-muted-foreground";
 }
 
@@ -64,8 +64,8 @@ function TossAccountView({
   }
   if (!data) {
     return (
-      <div className="rounded border border-red-500/40 bg-red-500/10 p-4 text-sm">
-        <div className="font-semibold text-red-500">API 호출 실패</div>
+      <div className="rounded-lg border border-warn/40 bg-warn/10 p-4 text-sm">
+        <div className="font-semibold text-warn">API 호출 실패</div>
         <div className="mt-1 text-xs text-muted-foreground">
           {String((error as Error | null)?.message ?? "unknown")}
         </div>
@@ -77,8 +77,8 @@ function TossAccountView({
     <div className="space-y-4">
       {/* Fable 5 정직 UX · 실패 시 배너만 · 데이터 잔상 방지 */}
       {!data.ok && (
-        <div className="rounded border border-red-500/40 bg-red-500/10 p-3 text-xs">
-          <div className="font-semibold text-red-500">
+        <div className="rounded-lg border border-warn/40 bg-warn/10 p-3 text-xs">
+          <div className="font-semibold text-warn">
             🚨 토스 연결 실패 · {data.error_reason ?? "unknown"}
           </div>
           <div className="mt-1 text-muted-foreground">
@@ -93,7 +93,7 @@ function TossAccountView({
         <>
           {/* 회계 항등식 위반 배지 (Fable 5 ±1원 · 근사 X) */}
           {(!data.identity_asset_ok || !data.identity_investment_ok) && (
-            <div className="rounded border border-amber-500/40 bg-amber-500/10 p-3 text-xs">
+            <div className="rounded-lg border border-amber-500/40 bg-amber-500/10 p-3 text-xs">
               <div className="font-semibold text-amber-500">⚠ 회계 항등식 위반</div>
               {!data.identity_asset_ok && (
                 <div className="mt-1 font-mono text-muted-foreground">
@@ -105,7 +105,7 @@ function TossAccountView({
                   국내 + 해외 ≠ 내투자 · 차액 {_krw(data.identity_investment_diff)}
                 </div>
               )}
-              <div className="mt-1 text-[10px] text-muted-foreground">
+              <div className="mt-1 text-xs text-muted-foreground">
                 → 원본 응답 로그 확인 필요 (API 필드 miss or 환율 계산 miss)
               </div>
             </div>
@@ -130,19 +130,19 @@ function TossAccountView({
               <span className="text-sm font-semibold">
                 해외주식 {data.us_holdings.length}종목
                 {data.price_source === "prior_close" && (
-                  <span className="ml-2 rounded bg-muted px-1.5 py-0.5 text-[10px] text-muted-foreground">전일 종가</span>
+                  <span className="ml-2 rounded-lg bg-muted px-1.5 py-0.5 text-xs text-muted-foreground">전일 종가</span>
                 )}
               </span>
               <SectionSubtotal subtotal={data.us_market_value_krw} pnl={data.us_pnl_krw} pnlPct={data.us_pnl_pct} />
             </div>
           </div>
 
-          <footer className="mt-2 text-[10px] text-muted-foreground">
+          <footer className="mt-2 text-xs text-muted-foreground">
             <span
               className={
                 data.market_open
-                  ? "rounded bg-emerald-500/20 px-2 py-0.5 font-semibold text-emerald-500"
-                  : "rounded bg-muted px-2 py-0.5 font-semibold"
+                  ? "rounded-lg bg-primary/20 px-2 py-0.5 font-semibold text-primary"
+                  : "rounded-lg bg-muted px-2 py-0.5 font-semibold"
               }
             >
               {data.market_open ? "🟢 US 장중 · 실시간" : "⚪ US 장 마감 · 전일 종가"}
@@ -203,7 +203,7 @@ function TotalAssetHeader({ data }: { data: TossAccountSnapshot }) {
         onToggle={() => setOpen(!open)}
       />
       {open && (
-        <div className="mt-3 border-t border-border/40 pt-3 text-[10px] text-muted-foreground">
+        <div className="mt-3 border-t border-border/40 pt-3 text-xs text-muted-foreground">
           = 주문 가능 + 내 투자 · 총자산에는 수익률을 붙이지 않습니다 (수익률은 아래 '내 투자' 참조)
         </div>
       )}
@@ -235,7 +235,7 @@ function OrderAvailableCard({ data }: { data: TossAccountSnapshot }) {
               {_usd(data.cash_usd)}
               {/* 1029-01 · 고정 1330 → 이 응답의 토스 참고 환율 (없으면 환산 안 함) */}
               {data.cash_usd !== null && data.fx_rate != null && (
-                <span className="ml-1 text-[10px] text-muted-foreground">
+                <span className="ml-1 text-xs text-muted-foreground">
                   (≈{_krw(data.cash_usd * data.fx_rate)} · 환율 {data.fx_rate.toLocaleString("ko-KR")}원 추정)
                 </span>
               )}
@@ -269,7 +269,7 @@ function InvestmentCard({ data }: { data: TossAccountSnapshot }) {
         </span>
         {data.investment_pnl_source === "computed" && (
           <span
-            className="rounded bg-muted px-1.5 py-0.5 text-[10px] text-muted-foreground"
+            className="rounded-lg bg-muted px-1.5 py-0.5 text-xs text-muted-foreground"
             title="API 원본 없음 · KR+US 자체 합산 · 오차 가능"
           >
             computed
@@ -287,7 +287,7 @@ function InvestmentCard({ data }: { data: TossAccountSnapshot }) {
         extra={badge}
       />
       {open && cost !== null && (
-        <div className="mt-3 border-t border-border/40 pt-3 text-[10px] text-muted-foreground">
+        <div className="mt-3 border-t border-border/40 pt-3 text-xs text-muted-foreground">
           투자 원금 {_krw(cost)} · 수익률은 원금 대비 (총자산 아님)
         </div>
       )}

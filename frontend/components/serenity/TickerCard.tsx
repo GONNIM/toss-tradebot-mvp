@@ -10,19 +10,20 @@
 
 import Link from "next/link";
 import type { TickerCardItem } from "@/lib/serenity/types";
+import { upDownText } from "@/lib/updown";
 
 const TIER_STYLE: Record<string, string> = {
   S: "bg-purple-500/20 text-purple-400 border-purple-500/40",
   A: "bg-blue-500/20 text-blue-400 border-blue-500/40",
-  B: "bg-emerald-500/20 text-emerald-500 border-emerald-500/40",
+  B: "bg-primary/20 text-primary border-primary/40",
   C: "bg-amber-500/20 text-amber-500 border-amber-500/40",
   D: "bg-orange-500/20 text-orange-500 border-orange-500/40",
-  F: "bg-red-500/20 text-red-500 border-red-500/40",
+  F: "bg-warn/20 text-warn border-warn/40",
 };
 
 const STANCE_META: Record<string, { label: string; icon: string; cls: string }> = {
-  bullish: { label: "bullish", icon: "▲", cls: "text-emerald-500" },
-  bearish: { label: "bearish", icon: "▼", cls: "text-red-500" },
+  bullish: { label: "bullish", icon: "▲", cls: "text-up" },
+  bearish: { label: "bearish", icon: "▼", cls: "text-down" },
   neutral: { label: "neutral", icon: "●", cls: "text-slate-400" },
   calibration: { label: "cal", icon: "◆", cls: "text-amber-500" },
   mixed: { label: "mixed", icon: "◆", cls: "text-amber-500" },
@@ -31,7 +32,7 @@ const STANCE_META: Record<string, { label: string; icon: string; cls: string }> 
 function _fmtSignedPct(v: number | null): { txt: string; cls: string } {
   if (v === null || v === undefined) return { txt: "—", cls: "text-muted-foreground" };
   const sign = v >= 0 ? "+" : "";
-  const cls = v >= 0 ? "text-emerald-500" : "text-red-500";
+  const cls = upDownText(v, "text-up");
   return { txt: `${sign}${v.toFixed(1)}%`, cls };
 }
 
@@ -59,7 +60,7 @@ function trendBadge(m7: number, m28: number): { icon: string; ratio: number; cls
   const rate7 = m7 / 7;
   const rate28 = m28 / 28;
   const ratio = rate7 / rate28;
-  if (ratio >= 1.5) return { icon: "🔥", ratio, cls: "text-red-500" };
+  if (ratio >= 1.5) return { icon: "🔥", ratio, cls: "text-warn" };
   if (ratio <= 0.5) return { icon: "❄", ratio, cls: "text-sky-400" };
   return { icon: "→", ratio, cls: "text-muted-foreground" };
 }
@@ -77,7 +78,7 @@ export function TickerCard({ item }: { item: TickerCardItem }) {
     <Link
       href={`/influencer/serenity/${item.ticker}`}
       className={`block rounded-lg border p-3 transition hover:border-primary/60 ${
-        item.auto_avoid ? "border-red-500/40 bg-red-500/5" : "border-border bg-card"
+        item.auto_avoid ? "border-warn/40 bg-warn/5" : "border-border bg-card"
       }`}
     >
       {/* 1행 · 정체성: 티커 + tier + Bull%(90d) */}
@@ -85,7 +86,7 @@ export function TickerCard({ item }: { item: TickerCardItem }) {
         <span className="font-mono text-lg font-bold">{item.ticker}</span>
         {financing && (
           <span
-            className={`rounded border px-1.5 py-0.5 text-xs font-semibold ${
+            className={`rounded-lg border px-1.5 py-0.5 text-xs font-semibold ${
               TIER_STYLE[financing] ?? "border-slate-500/40 bg-slate-500/20 text-slate-400"
             }`}
             title={`Financing tier ${financing}`}
@@ -95,7 +96,7 @@ export function TickerCard({ item }: { item: TickerCardItem }) {
         )}
         {serenity && (
           <span
-            className={`rounded border px-1.5 py-0.5 text-xs font-semibold ${
+            className={`rounded-lg border px-1.5 py-0.5 text-xs font-semibold ${
               TIER_STYLE[serenity] ?? "border-slate-500/40 bg-slate-500/20 text-slate-400"
             }`}
             title={`Serenity conviction tier ${serenity}`}
@@ -104,7 +105,7 @@ export function TickerCard({ item }: { item: TickerCardItem }) {
           </span>
         )}
         <span className="ml-auto flex items-baseline gap-1 text-xs">
-          <span className="text-emerald-500">▲</span>
+          <span className="text-up">▲</span>
           <span className="font-semibold">{item.bullish_pct_90d.toFixed(0)}%</span>
           <span className="text-muted-foreground">bullish (90d)</span>
         </span>
@@ -156,7 +157,7 @@ export function TickerCard({ item }: { item: TickerCardItem }) {
           </span>
         ) : (
           <span
-            className="rounded bg-slate-500/20 px-1.5 py-0.5 font-semibold text-slate-300"
+            className="rounded-lg bg-slate-500/20 px-1.5 py-0.5 font-semibold text-slate-300"
             title="가격 피드 없음 · 매매 불가"
           >
             👁 관찰 전용
@@ -165,7 +166,7 @@ export function TickerCard({ item }: { item: TickerCardItem }) {
         {item.domain_tags.slice(0, 3).map((tag) => (
           <span
             key={tag}
-            className="rounded bg-slate-500/20 px-1.5 py-0.5 text-slate-300"
+            className="rounded-lg bg-slate-500/20 px-1.5 py-0.5 text-slate-300"
           >
             {tag}
           </span>
@@ -173,12 +174,12 @@ export function TickerCard({ item }: { item: TickerCardItem }) {
         {item.anti_pattern_flags.map((flag) => (
           <span
             key={flag}
-            className="rounded bg-red-500/20 px-1.5 py-0.5 text-red-400"
+            className="rounded-lg bg-warn/20 px-1.5 py-0.5 text-warn"
           >
             ⚠ {flag}
           </span>
         ))}
-        {item.auto_avoid && <span className="ml-auto font-semibold text-red-500">AVOID</span>}
+        {item.auto_avoid && <span className="ml-auto font-semibold text-warn">AVOID</span>}
       </div>
     </Link>
   );

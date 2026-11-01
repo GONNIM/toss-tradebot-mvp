@@ -7,6 +7,7 @@ import Link from "next/link";
 import { useMemo, useState } from "react";
 import { fmtKstDateTimeSec } from "@/lib/time";
 import type { HunterRow } from "@/lib/serenity-hunter/types";
+import { upDownText } from "@/lib/updown";
 
 type SortKey =
   | "first_mention_at"
@@ -22,8 +23,8 @@ type SortKey =
 type SortDir = "desc" | "asc";
 
 const STANCE_META: Record<string, { icon: string; cls: string }> = {
-  bullish: { icon: "▲", cls: "text-emerald-500" },
-  bearish: { icon: "▼", cls: "text-red-500" },
+  bullish: { icon: "▲", cls: "text-up" },
+  bearish: { icon: "▼", cls: "text-down" },
   mixed: { icon: "◆", cls: "text-amber-500" },
   neutral: { icon: "●", cls: "text-slate-400" },
 };
@@ -35,8 +36,7 @@ function _fmtPct(v: number | null | undefined, digits = 2): string {
 }
 
 function _cls(v: number | null | undefined): string {
-  if (v === null || v === undefined) return "text-muted-foreground";
-  return v >= 0 ? "text-emerald-500" : "text-red-500";
+  return upDownText(v, "text-up");
 }
 
 function _fmtMcap(v: number | null | undefined): string {
@@ -116,7 +116,7 @@ export function HunterTable({ rows }: { rows: HunterRow[] }) {
         onClick={() => toggleSort(k)}
         className={`cursor-pointer select-none px-2 py-2.5 text-xs font-semibold text-muted-foreground hover:text-foreground text-${align}`}
       >
-        {label} <span className={`text-[9px] ${iconCls}`}>{icon}</span>
+        {label} <span className={`text-xs ${iconCls}`}>{icon}</span>
       </th>
     );
   }
@@ -126,7 +126,7 @@ export function HunterTable({ rows }: { rows: HunterRow[] }) {
       <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border px-3 py-2">
         <div>
           <h2 className="text-sm font-semibold">🎯 발굴 리스트 (Hunter)</h2>
-          <p className="text-[10px] text-muted-foreground">
+          <p className="text-xs text-muted-foreground">
             {rows.length} 종목 · 기본 정렬 · 최초 언급 최신순 · 헤더 클릭 시 정렬 반전
           </p>
         </div>
@@ -135,7 +135,7 @@ export function HunterTable({ rows }: { rows: HunterRow[] }) {
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           placeholder="티커·산업·섹터 검색"
-          className="rounded border border-border bg-background px-2 py-1 text-xs w-56"
+          className="rounded-lg border border-border bg-background px-2 py-1 text-xs w-56"
         />
       </div>
 
@@ -166,7 +166,7 @@ export function HunterTable({ rows }: { rows: HunterRow[] }) {
                 <tr
                   key={r.ticker}
                   className={`border-b border-border/40 hover:bg-muted/20 ${
-                    r.is_avoid_new ? "bg-red-500/5" : ""
+                    r.is_avoid_new ? "bg-warn/5" : ""
                   } ${liquidityGray ? "opacity-60" : ""}`}
                   title={liquidityGray ? "유동성 필터 미통과 (ADV<$2M or 주문>0.5%)" : ""}
                 >
@@ -175,28 +175,28 @@ export function HunterTable({ rows }: { rows: HunterRow[] }) {
                       {r.ticker}
                     </Link>
                     {r.is_avoid_new && (
-                      <span className="ml-1 text-[9px] font-semibold text-red-500" title="인플루언서 경고 신규">
+                      <span className="ml-1 text-xs font-semibold text-warn" title="인플루언서 경고 신규">
                         ⚠경고신규
                       </span>
                     )}
                     {!r.is_avoid_new && r.is_new && (
-                      <span className="ml-1 text-[9px] font-semibold text-emerald-500">NEW</span>
+                      <span className="ml-1 text-xs font-semibold text-primary">NEW</span>
                     )}
                   </td>
                   <td className="px-2 py-3 text-xs text-muted-foreground">
                     {r.industry ?? r.sector ?? "—"}
                   </td>
-                  <td className="px-2 py-3 text-[11px] font-mono text-muted-foreground">
+                  <td className="px-2 py-3 text-xs font-mono text-muted-foreground">
                     {fmtKstDateTimeSec(r.first_mention_at)}
                   </td>
-                  <td className="px-2 py-3 text-[11px] font-mono text-muted-foreground">
+                  <td className="px-2 py-3 text-xs font-mono text-muted-foreground">
                     {fmtKstDateTimeSec(r.latest_signal_at)}
                   </td>
                   <td className={`px-2 py-3 text-right font-mono font-bold ${r.mentions_today > 0 ? "text-primary" : ""}`}>
                     {r.mentions_today}
                   </td>
                   <td className="px-2 py-3 text-right font-mono font-bold">{r.mentions_90d}</td>
-                  <td className="px-2 py-3 text-[11px] text-muted-foreground">
+                  <td className="px-2 py-3 text-xs text-muted-foreground">
                     {r.latest_thesis ?? "—"}
                   </td>
                   <td className="px-2 py-3 text-right font-mono font-bold">
@@ -204,11 +204,11 @@ export function HunterTable({ rows }: { rows: HunterRow[] }) {
                   </td>
                   <td className="px-2 py-3 text-right font-mono">
                     {_fmtMcap(r.market_cap)}
-                    <div className="text-[9px] text-muted-foreground">{r.market_cap_tier}</div>
+                    <div className="text-xs text-muted-foreground">{r.market_cap_tier}</div>
                   </td>
                   <td className="px-2 py-3 text-right font-mono">
                     {r.avg_dollar_volume_20d === null ? "—" : `$${_fmtMcap(r.avg_dollar_volume_20d)}`}
-                    <div className="text-[9px] text-muted-foreground">
+                    <div className="text-xs text-muted-foreground">
                       order {r.order_pct_of_adv_1M === null ? "—" : `${r.order_pct_of_adv_1M.toFixed(3)}%`}
                     </div>
                   </td>

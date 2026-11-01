@@ -10,10 +10,10 @@ import { fmtKstHm } from "@/lib/time";
 import { activePathsLabel, actorLabel, lossLimitLabel, manualEntryLabel, orderTargetLabel, safetyConclusion } from "@/lib/sniper-safety";
 
 const TONE = {
-  stop: "border-red-300 bg-red-50 text-red-800 dark:border-red-800 dark:bg-red-950/40 dark:text-red-200",
-  off: "border-slate-300 bg-slate-50 text-slate-800 dark:border-slate-700 dark:bg-slate-900/40 dark:text-slate-200",
-  on: "border-amber-300 bg-amber-50 text-amber-900 dark:border-amber-700 dark:bg-amber-950/40 dark:text-amber-200",
-  live: "border-red-400 bg-red-100 text-red-900 dark:border-red-700 dark:bg-red-950/60 dark:text-red-100",
+  stop: "border-warn/40 bg-warn/5 text-warn",
+  off: "border-slate-300 bg-slate-50 text-slate-800",
+  on: "border-amber-300 bg-amber-50 text-amber-900",
+  live: "border-warn/60 bg-warn/10 text-warn",
 } as const;
 
 function statusOf(e: unknown): number | undefined {
@@ -62,9 +62,9 @@ export function SafetyPanel() {
     <section className="space-y-3 rounded-lg border border-border bg-card p-4">
       <h2 className="text-sm font-semibold">🛡 실주문 안전 상황판</h2>
       {c ? (
-        <p className={`rounded-md border px-3 py-2 text-base font-semibold ${TONE[c.tone]}`}>{c.text}</p>
+        <p className={`rounded-lg border px-3 py-2 text-base font-semibold ${TONE[c.tone]}`}>{c.text}</p>
       ) : (
-        <p className="rounded-md border border-border px-3 py-2 text-sm text-muted-foreground">
+        <p className="rounded-lg border border-border px-3 py-2 text-sm text-muted-foreground">
           {st.error ? "실주문 상태를 불러오지 못했습니다 — Kill Switch 는 아래에서 쓸 수 있습니다" : "실주문 상태 확인 중…"}
         </p>
       )}
@@ -104,7 +104,7 @@ export function SafetyPanel() {
             type="button"
             onClick={() => deactivate.mutate()}
             disabled={deactivate.isPending}
-            className="rounded-md bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-700 disabled:opacity-50"
+            className="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white hover:bg-primary disabled:opacity-50"
           >
             {deactivate.isPending ? "해제 중…" : "수동 해제"}
           </button>
@@ -116,13 +116,13 @@ export function SafetyPanel() {
               onChange={(e) => setReason(e.target.value)}
               placeholder="발동 사유 (예: 시장 급락 대응)"
               maxLength={200}
-              className="flex-1 rounded-md border border-border bg-background px-3 py-2 text-sm"
+              className="flex-1 rounded-lg border border-border bg-background px-3 py-2 text-sm"
             />
             <button
               type="button"
               onClick={() => reason.trim() && activate.mutate(reason.trim())}
               disabled={activate.isPending || !reason.trim()}
-              className="rounded-md bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-700 disabled:opacity-50"
+              className="rounded-lg bg-warn px-4 py-2 text-sm font-semibold text-white hover:bg-warn disabled:opacity-50"
             >
               {activate.isPending ? "발동 중…" : "수동 발동"}
             </button>
@@ -130,7 +130,7 @@ export function SafetyPanel() {
         )
       )}
       {(activate.error || deactivate.error) && (
-        <p className="text-xs text-red-600">요청 실패: {((activate.error || deactivate.error) as Error).message}</p>
+        <p className="text-xs text-warn">요청 실패: {((activate.error || deactivate.error) as Error).message}</p>
       )}
     </section>
   );

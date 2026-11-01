@@ -59,7 +59,7 @@ export default function SerenityHunterPage() {
   if (err) {
     return (
       <div className="space-y-4">
-        <div className="rounded border border-red-500/40 bg-red-500/10 p-4 text-sm text-red-500">
+        <div className="rounded-lg border border-warn/40 bg-warn/10 p-4 text-sm text-warn">
           API 오류: {err}
         </div>
       </div>
@@ -101,7 +101,7 @@ export default function SerenityHunterPage() {
       <WatchOnlyList items={actionCards.watch_only} />
 
       {/* ── 기존 섹션 · 기본 접힘 (사용자 지시서 §3) ─────────── */}
-      <details className="rounded border border-border/40 bg-background/40 px-3 py-2">
+      <details className="rounded-lg border border-border/40 bg-background/40 px-3 py-2">
         <summary className="cursor-pointer text-sm font-semibold text-muted-foreground">
           🔬 알파 검증 상세 (Hero · Bucket · confidence)
         </summary>
@@ -118,7 +118,7 @@ export default function SerenityHunterPage() {
         </div>
       </details>
 
-      <details className="rounded border border-border/40 bg-background/40 px-3 py-2">
+      <details className="rounded-lg border border-border/40 bg-background/40 px-3 py-2">
         <summary className="cursor-pointer text-sm font-semibold text-muted-foreground">
           🎯 Hunter 전체 리스트 (레거시 · 폐기 상태에선 소멸)
         </summary>

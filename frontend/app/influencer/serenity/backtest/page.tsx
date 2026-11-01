@@ -7,6 +7,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { serenityApi } from "@/lib/serenity/api";
 import type { BacktestBucket, BacktestSummary } from "@/lib/serenity/types";
+import { upDownText } from "@/lib/updown";
 
 export default function BacktestReportPage() {
   const [data, setData] = useState<BacktestSummary | null>(null);
@@ -38,7 +39,7 @@ export default function BacktestReportPage() {
         <select
           value={days}
           onChange={(e) => setDays(Number(e.target.value))}
-          className="rounded border border-border bg-background px-2 py-1 text-xs"
+          className="rounded-lg border border-border bg-background px-2 py-1 text-xs"
         >
           <option value={30}>최근 30일</option>
           <option value={90}>최근 90일</option>
@@ -48,7 +49,7 @@ export default function BacktestReportPage() {
       </header>
 
       {err && (
-        <div className="rounded border border-red-500/40 bg-red-500/10 p-3 text-xs text-red-500">
+        <div className="rounded-lg border border-warn/40 bg-warn/10 p-3 text-xs text-warn">
           에러: {err}
         </div>
       )}
@@ -58,7 +59,7 @@ export default function BacktestReportPage() {
       )}
 
       {data && data.total_backtests === 0 && (
-        <div className="rounded border border-dashed border-border p-6 text-center text-xs text-muted-foreground">
+        <div className="rounded-lg border border-dashed border-border p-6 text-center text-xs text-muted-foreground">
           백테스트 데이터 없음 · signals 있어야 backtest 실행 가능
           <br />
           매주 월요일 00:00 KST 자동 실행 · 직접 실행:{" "}
@@ -83,7 +84,7 @@ function BucketBlock({ title, buckets }: { title: string; buckets: BacktestBucke
     return (
       <section>
         <h2 className="mb-2 text-sm font-semibold">{title}</h2>
-        <div className="rounded border border-dashed border-border p-3 text-center text-xs text-muted-foreground">
+        <div className="rounded-lg border border-dashed border-border p-3 text-center text-xs text-muted-foreground">
           데이터 없음
         </div>
       </section>
@@ -115,9 +116,7 @@ function BucketBlock({ title, buckets }: { title: string; buckets: BacktestBucke
                   const cls =
                     v === null
                       ? "text-muted-foreground"
-                      : v >= 0
-                      ? "text-emerald-500"
-                      : "text-red-500";
+                      : upDownText(v, "text-up");
                   return (
                     <td key={f} className={`py-1.5 text-right font-mono ${cls}`}>
                       {v !== null ? `${v.toFixed(2)}%` : "—"}

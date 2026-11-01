@@ -34,6 +34,7 @@ import {
   formatPct,
   lagDescription,
 } from "@/lib/utils";
+import { upDownText } from "@/lib/updown";
 
 export default function SectorLeadersPage() {
   const [selectedItem, setSelectedItem] = useState<string | null>(null);
@@ -59,7 +60,7 @@ export default function SectorLeadersPage() {
         <div className="space-y-1">
           <h1 className="flex items-center gap-2 text-3xl font-bold">
             🇰🇷 섹터별 주도주 Top 3
-            <span className="rounded bg-gray-500/20 px-2 py-0.5 text-[10px] font-semibold text-gray-400" title="LAGGING · 매크로 지표 · 참고">
+            <span className="rounded-lg bg-gray-500/20 px-2 py-0.5 text-xs font-semibold text-gray-400" title="LAGGING · 매크로 지표 · 참고">
               LAGGING
             </span>
           </h1>
@@ -70,7 +71,7 @@ export default function SectorLeadersPage() {
         </div>
         <button
           onClick={() => setTop10Open(true)}
-          className="rounded-lg border border-sky-300 bg-sky-50 px-4 py-2 text-sm font-semibold text-sky-800 hover:bg-sky-100 dark:border-sky-800 dark:bg-sky-950/40 dark:text-sky-200 dark:hover:bg-sky-900/40 transition"
+          className="rounded-lg border border-sky-300 bg-sky-50 px-4 py-2 text-sm font-semibold text-sky-800 hover:bg-sky-100 transition"
         >
           🏆 투자 종목 Top 10
         </button>
@@ -126,18 +127,14 @@ function ItemList({
         const active = it.item === activeItem;
         const yoy = it.latest_yoy_pct ?? 0;
         const yoyColor =
-          yoy > 0
-            ? "text-emerald-400"
-            : yoy < 0
-              ? "text-rose-400"
-              : "text-muted-foreground";
+          upDownText(yoy);
         return (
           <button
             key={it.item}
             onClick={() => onSelect(it.item)}
             className={`w-full text-left px-3 py-2.5 text-sm transition ${
               active
-                ? "bg-sky-50 border-l-2 border-sky-500 dark:bg-sky-950/40 dark:border-sky-400"
+                ? "bg-sky-50 border-l-2 border-sky-500"
                 : "hover:bg-muted/30 border-l-2 border-transparent"
             }`}
           >
@@ -256,19 +253,19 @@ function ExportChart({
       <ResponsiveContainer width="100%" height="100%">
         <ComposedChart data={chartData} margin={{ top: 5, right: 20, bottom: 5, left: 0 }}>
           <CartesianGrid stroke="hsl(var(--border))" strokeDasharray="3 3" />
-          <XAxis dataKey="month" stroke="hsl(var(--muted-foreground))" fontSize={11} />
+          <XAxis dataKey="month" stroke="hsl(var(--muted-foreground))" fontSize={12} />
           <YAxis
             yAxisId="value"
             orientation="left"
             stroke="hsl(var(--muted-foreground))"
-            fontSize={11}
+            fontSize={12}
             tickFormatter={(v) => `${(v / 1000).toFixed(0)}억$`}
           />
           <YAxis
             yAxisId="yoy"
             orientation="right"
             stroke="hsl(var(--muted-foreground))"
-            fontSize={11}
+            fontSize={12}
             tickFormatter={(v) => `${v}%`}
           />
           <Tooltip
@@ -317,7 +314,7 @@ function LeaderCard({
       onClick={onSelect}
       className={`text-left rounded-lg border bg-background p-3 transition ${
         active
-          ? "border-2 border-sky-400 bg-sky-50 dark:border-sky-700 dark:bg-sky-950/40"
+          ? "border-2 border-sky-400 bg-sky-50"
           : "border-border hover:border-muted-foreground/40"
       }`}
     >
@@ -380,7 +377,7 @@ function Loading() {
 
 function ErrBox() {
   return (
-    <div className="rounded-lg border border-red-500/30 bg-red-500/10 p-4 text-sm text-red-400">
+    <div className="rounded-lg border border-warn/30 bg-warn/10 p-4 text-sm text-warn">
       API 호출 실패. backend (포트 4001) 가동 여부를 확인하세요.
     </div>
   );

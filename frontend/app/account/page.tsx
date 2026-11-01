@@ -47,7 +47,7 @@ function SafetyLine() {
   );
 }
 
-const TONE_CLASS = { up: "text-red-600 dark:text-red-400", down: "text-blue-600 dark:text-blue-400", flat: "text-muted-foreground" } as const;
+const TONE_CLASS = { up: "text-up", down: "text-down", flat: "text-muted-foreground" } as const;
 
 function HoldingRow({ h }: { h: AccountHolding }) {
   const tone = TONE_CLASS[pnlTone(h.pnl)];
@@ -73,7 +73,7 @@ function HoldingRow({ h }: { h: AccountHolding }) {
         {h.has_exit_plan ? (
           "✓ 있음"
         ) : (
-          <a href="#plan" className="text-red-600 underline dark:text-red-400">✗ 없음</a>
+          <a href="#plan" className="text-warn underline">✗ 없음</a>
         )}
       </td>
       <td className="p-2">
@@ -163,18 +163,18 @@ function CodeRow({ row }: { row: TossStockCodeRow }) {
             value={url}
             onChange={(e) => setUrl(e.target.value)}
             placeholder="토스증권 종목 주소 (비우면 후보 그대로 확인)"
-            className="min-w-0 flex-1 rounded-md border border-border bg-background px-2 py-1.5 text-sm"
+            className="min-w-0 flex-1 rounded-lg border border-border bg-background px-2 py-1.5 text-sm"
           />
           <button
             type="button"
             onClick={() => save.mutate()}
             disabled={save.isPending || (!url.trim() && !row.toss_code)}
-            className="rounded-md bg-slate-800 px-3 py-1.5 text-sm text-white hover:bg-slate-700 disabled:opacity-50 dark:bg-slate-200 dark:text-slate-900"
+            className="rounded-lg bg-slate-800 px-3 py-1.5 text-sm text-white hover:bg-slate-700 disabled:opacity-50"
           >
             {save.isPending ? "저장 중…" : "확인함"}
           </button>
         </div>
-        {save.error && <p className="mt-1 text-xs text-red-600">{friendlyError(save.error)}</p>}
+        {save.error && <p className="mt-1 text-xs text-warn">{friendlyError(save.error)}</p>}
       </td>
     </tr>
   );
@@ -221,10 +221,10 @@ export default function AccountPage() {
       />
       <Card title="토스증권">
         <div className="flex flex-wrap gap-2">
-          <a href={TOSS_ACCOUNT} target="_blank" rel="noopener noreferrer" className="rounded-md border border-border px-3 py-2 text-sm font-medium hover:bg-muted">
+          <a href={TOSS_ACCOUNT} target="_blank" rel="noopener noreferrer" className="rounded-lg border border-border px-3 py-2 text-sm font-medium hover:bg-muted">
             토스증권 내 계좌 열기 ↗
           </a>
-          <a href={TOSS_HOME} target="_blank" rel="noopener noreferrer" className="rounded-md border border-border px-3 py-2 text-sm font-medium hover:bg-muted">
+          <a href={TOSS_HOME} target="_blank" rel="noopener noreferrer" className="rounded-lg border border-border px-3 py-2 text-sm font-medium hover:bg-muted">
             토스증권 첫 화면 ↗
           </a>
         </div>

@@ -41,7 +41,7 @@ export function JournalKpiBadge() {
       href="/journal"
       className={`block rounded-lg border p-4 transition ${
         passed
-          ? "border-emerald-500/40 bg-emerald-500/10 hover:border-emerald-500"
+          ? "border-primary/40 bg-primary/10 hover:border-primary"
           : "border-primary/40 bg-primary/5 hover:border-primary"
       }`}
     >
@@ -50,9 +50,9 @@ export function JournalKpiBadge() {
           📓 다음 단계로 넘어갈 기준 · 판정 쌓임
         </span>
         <span
-          className={`rounded px-2 py-0.5 text-[10px] font-semibold ${
+          className={`rounded-lg px-2 py-0.5 text-xs font-semibold ${
             passed
-              ? "bg-emerald-500/20 text-emerald-500"
+              ? "bg-primary/20 text-primary"
               : "bg-amber-500/20 text-amber-500"
           }`}
         >
@@ -73,14 +73,14 @@ export function JournalKpiBadge() {
         </div>
       </div>
 
-      <div className="mt-2 h-1.5 overflow-hidden rounded bg-muted">
+      <div className="mt-2 h-1.5 overflow-hidden rounded-lg bg-muted">
         <div
-          className={`h-full transition-all ${passed ? "bg-emerald-500" : "bg-primary"}`}
+          className={`h-full transition-all ${passed ? "bg-primary" : "bg-primary"}`}
           style={{ width: `${pct}%` }}
         />
       </div>
 
-      <p className="mt-2 text-[10px] text-muted-foreground">
+      <p className="mt-2 text-xs text-muted-foreground">
         Powderkeg lock · Watchlist add · Sniper enable 시 판정 팝업이 뜹니다. →{" "}
         <span className="underline">Journal 열기</span>
       </p>

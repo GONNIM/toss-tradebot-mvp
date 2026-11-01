@@ -46,7 +46,7 @@ function ReadoutCard({ r, onSaved }: { r: ReadoutRow; onSaved: () => void }) {
   return (
     <div className="rounded-lg border border-border bg-card p-3 text-xs">
       <div className="flex flex-wrap items-center gap-2">
-        <span className="rounded bg-slate-100 px-2 py-0.5 font-mono font-bold dark:bg-slate-800">{r.ticker || "-"}</span>
+        <span className="rounded-lg bg-slate-100 px-2 py-0.5 font-mono font-bold">{r.ticker || "-"}</span>
         <span className="font-semibold">{readoutTitle(r)}</span>
       </div>
       <div className="mt-1 text-muted-foreground">{readoutStatusLine(r)}</div>
@@ -54,10 +54,10 @@ function ReadoutCard({ r, onSaved }: { r: ReadoutRow; onSaved: () => void }) {
         {candidateLabel(r.candidate_direction)}
         {(r.keywords ?? []).length > 0 && <span className="text-muted-foreground"> · 검색어 {(r.keywords ?? []).join(", ")}</span>}
       </div>
-      {r.quote && <div className="mt-1 rounded bg-slate-50 p-2 text-muted-foreground dark:bg-slate-900/60">…{r.quote}…</div>}
+      {r.quote && <div className="mt-1 rounded-lg bg-slate-50 p-2 text-muted-foreground">…{r.quote}…</div>}
       <div className="mt-1">
         원문:{" "}
-        <a href={r.sec_url} target="_blank" rel="noopener noreferrer" className="text-sky-700 hover:underline dark:text-sky-300">
+        <a href={r.sec_url} target="_blank" rel="noopener noreferrer" className="text-sky-700 hover:underline">
           SEC {r.accession} ↗
         </a>
       </div>
@@ -65,20 +65,20 @@ function ReadoutCard({ r, onSaved }: { r: ReadoutRow; onSaved: () => void }) {
         <div className="mt-2 flex flex-wrap items-center gap-2">
           <label className="flex items-center gap-1">
             방향
-            <select value={dir} onChange={(e) => setDir(e.target.value)} className="rounded border bg-background px-2 py-1 text-xs" disabled={busy}>
+            <select value={dir} onChange={(e) => setDir(e.target.value)} className="rounded-lg border bg-background px-2 py-1 text-xs" disabled={busy}>
               <option value="">고르기</option>
               <option value="positive">긍정</option>
               <option value="mixed">혼재</option>
               <option value="negative">부정</option>
             </select>
           </label>
-          <button type="button" disabled={busy} onClick={() => save(true)} className="rounded border border-sky-600 px-2 py-1 font-semibold text-sky-700 hover:bg-sky-50 disabled:opacity-50 dark:text-sky-300 dark:hover:bg-sky-950/40">
+          <button type="button" disabled={busy} onClick={() => save(true)} className="rounded-lg border border-sky-600 px-2 py-1 font-semibold text-sky-700 hover:bg-sky-50 disabled:opacity-50">
             임상 발표 확정
           </button>
-          <button type="button" disabled={busy} onClick={() => save(false)} className="rounded border border-border px-2 py-1 text-muted-foreground hover:bg-muted disabled:opacity-50">
+          <button type="button" disabled={busy} onClick={() => save(false)} className="rounded-lg border border-border px-2 py-1 text-muted-foreground hover:bg-muted disabled:opacity-50">
             임상 발표 아님
           </button>
-          {err && <span className="text-rose-600 dark:text-rose-300">{err}</span>}
+          {err && <span className="text-warn">{err}</span>}
         </div>
       )}
     </div>

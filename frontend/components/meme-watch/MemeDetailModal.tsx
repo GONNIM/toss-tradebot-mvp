@@ -8,18 +8,19 @@ import { cn } from "@/lib/utils";
 
 import { MemeRadarChart } from "./MemeRadarChart";
 import { ScoreHistoryChart } from "./ScoreHistoryChart";
+import { upDownText } from "@/lib/updown";
 
 const LABEL_COLORS: Record<string, string> = {
   BLAZING:
-    "text-rose-700 dark:text-rose-300 border-rose-500/50 bg-rose-500/15",
+    "text-warn border-warn/50 bg-warn/15",
   HOT:
-    "text-orange-700 dark:text-orange-300 border-orange-500/50 bg-orange-500/15",
+    "text-orange-700 border-orange-500/50 bg-orange-500/15",
   WATCH:
-    "text-amber-700 dark:text-amber-300 border-amber-500/50 bg-amber-500/15",
+    "text-amber-700 border-amber-500/50 bg-amber-500/15",
   OBSERVE:
-    "text-cyan-700 dark:text-cyan-300 border-cyan-500/50 bg-cyan-500/15",
+    "text-cyan-700 border-cyan-500/50 bg-cyan-500/15",
   SLEEP:
-    "text-zinc-600 dark:text-zinc-400 border-zinc-500/40 bg-zinc-500/10",
+    "text-zinc-600 border-zinc-500/40 bg-zinc-500/10",
 };
 
 function MetricCell({
@@ -41,15 +42,13 @@ function MetricCell({
           : `${value >= 0 ? "+" : ""}${value.toFixed(2)}`;
   const cls =
     value == null
-      ? "text-zinc-500 dark:text-zinc-500"
-      : value < 0
-        ? "text-rose-700 dark:text-rose-300"
-        : value <= 0
-          ? "text-zinc-600 dark:text-zinc-400"
-          : "text-emerald-700 dark:text-emerald-300 font-semibold";
+      ? "text-zinc-500"
+      : value > 0
+        ? "text-up font-semibold"
+        : upDownText(value, "text-zinc-600");
   return (
-    <div className="rounded bg-muted/40 border border-border px-2 py-1.5 text-center">
-      <div className="text-zinc-600 dark:text-zinc-400 text-[10px]">{label}</div>
+    <div className="rounded-lg bg-muted/40 border border-border px-2 py-1.5 text-center">
+      <div className="text-zinc-600 text-xs">{label}</div>
       <div className={cn("font-mono text-sm mt-0.5", cls)}>{valStr}</div>
     </div>
   );
@@ -92,11 +91,7 @@ export function MemeDetailModal({
   const labelClass = LABEL_COLORS[item.label] || LABEL_COLORS.SLEEP;
   const r1d = item.return_1d_pct;
   const r1dClass =
-    r1d == null
-      ? "text-zinc-500 dark:text-zinc-400"
-      : r1d >= 0
-        ? "text-emerald-700 dark:text-emerald-300"
-        : "text-rose-700 dark:text-rose-300";
+    r1d == null ? "text-zinc-500": upDownText(r1d, "text-up");
 
   return (
     <div
@@ -104,7 +99,7 @@ export function MemeDetailModal({
       onClick={onClose}
     >
       <div
-        className="relative w-full max-w-3xl max-h-[90vh] flex flex-col overflow-hidden rounded-xl border border-cyan-500/40 bg-card shadow-2xl"
+        className="relative w-full max-w-3xl max-h-[90vh] flex flex-col overflow-hidden rounded-xl border border-cyan-500/40 bg-card "
         onClick={(e) => e.stopPropagation()}
       >
         {/* 헤더 */}
@@ -113,10 +108,10 @@ export function MemeDetailModal({
             <span className="text-3xl">{item.emoji}</span>
             <div>
               <div className="flex items-center gap-2 flex-wrap">
-                <span className="font-mono font-bold text-zinc-900 dark:text-zinc-50 text-base">
+                <span className="font-mono font-bold text-zinc-900 text-base">
                   <StockLink ticker={item.ticker}>{item.ticker}</StockLink>
                 </span>
-                <span className="text-zinc-800 dark:text-zinc-100 font-semibold">
+                <span className="text-zinc-800 font-semibold">
                   {item.name || "—"}
                 </span>
                 <span
@@ -128,7 +123,7 @@ export function MemeDetailModal({
                   {item.label}
                 </span>
               </div>
-              <div className="text-xs text-zinc-600 dark:text-zinc-400 mt-1">
+              <div className="text-xs text-zinc-600 mt-1">
                 {item.market || "—"}
                 {item.sector ? ` · ${item.sector}` : ""}
                 {item.market_cap
@@ -139,7 +134,7 @@ export function MemeDetailModal({
           </div>
           <button
             onClick={onClose}
-            className="rounded-md border border-border bg-muted/40 px-3 py-1.5 text-sm text-zinc-900 dark:text-zinc-100 hover:bg-muted/60"
+            className="rounded-lg border border-border bg-muted/40 px-3 py-1.5 text-sm text-zinc-900 hover:bg-muted/60"
           >
             ✕ 닫기 (Esc)
           </button>
@@ -150,15 +145,15 @@ export function MemeDetailModal({
           {/* 가격 요약 (신규) */}
           <div className="grid grid-cols-2 gap-3">
             <div className="rounded-lg border border-border bg-muted/40 p-3">
-              <div className="text-xs text-zinc-600 dark:text-zinc-400">
+              <div className="text-xs text-zinc-600">
                 현재가
               </div>
-              <div className="font-mono text-xl font-bold text-zinc-900 dark:text-zinc-50 mt-1">
+              <div className="font-mono text-xl font-bold text-zinc-900 mt-1">
                 {formatPrice(item.current_price, item.market)}
               </div>
             </div>
             <div className="rounded-lg border border-border bg-muted/40 p-3">
-              <div className="text-xs text-zinc-600 dark:text-zinc-400">
+              <div className="text-xs text-zinc-600">
                 1D 변화
               </div>
               <div className={cn("font-mono text-xl font-bold mt-1", r1dClass)}>
@@ -173,17 +168,17 @@ export function MemeDetailModal({
           {item.intensity && (
             <div className="rounded-xl border border-cyan-500/40 bg-cyan-500/10 p-4">
               <div className="flex items-baseline justify-between mb-2">
-                <div className="text-sm font-bold text-zinc-900 dark:text-zinc-50">
+                <div className="text-sm font-bold text-zinc-900">
                   🌡️ 현재 폭등 강도 (Intensity Index)
                 </div>
                 <div className="text-3xl">{item.intensity.emoji}</div>
               </div>
               <div className="flex items-baseline gap-3">
-                <div className="font-mono text-4xl font-bold text-zinc-900 dark:text-zinc-50">
+                <div className="font-mono text-4xl font-bold text-zinc-900">
                   {item.intensity.intensity.toFixed(1)}
                 </div>
-                <div className="text-sm text-zinc-600 dark:text-zinc-400">/ 10</div>
-                <div className="text-lg font-bold text-cyan-700 dark:text-cyan-300 ml-2">
+                <div className="text-sm text-zinc-600">/ 10</div>
+                <div className="text-lg font-bold text-cyan-700 ml-2">
                   {item.intensity.label}
                 </div>
               </div>
@@ -223,16 +218,16 @@ export function MemeDetailModal({
                   }
                   format="pct"
                 />
-                <div className="rounded bg-muted/40 border border-border px-2 py-1.5 text-center">
-                  <div className="text-zinc-600 dark:text-zinc-400 text-[10px]">
+                <div className="rounded-lg bg-muted/40 border border-border px-2 py-1.5 text-center">
+                  <div className="text-zinc-600 text-xs">
                     7d BLAZING/HOT
                   </div>
-                  <div className="font-mono text-sm mt-0.5 text-cyan-700 dark:text-cyan-300 font-semibold">
+                  <div className="font-mono text-sm mt-0.5 text-cyan-700 font-semibold">
                     {item.intensity.time_in_blazing_7d}회
                   </div>
                 </div>
               </div>
-              <div className="text-xs text-zinc-500 dark:text-zinc-500 mt-2">
+              <div className="text-xs text-zinc-500 mt-2">
                 샘플 {item.intensity.sample_days}일. 이력 누적 시 정확도 ↑.
               </div>
             </div>
@@ -241,36 +236,36 @@ export function MemeDetailModal({
           {/* Score 요약 3-grid */}
           <div className="grid grid-cols-3 gap-3 text-center">
             <div className="rounded-lg border border-border bg-muted/40 p-3">
-              <div className="text-xs text-zinc-600 dark:text-zinc-400">
+              <div className="text-xs text-zinc-600">
                 Meme Score
               </div>
-              <div className="font-mono text-2xl font-bold text-cyan-700 dark:text-cyan-300 mt-1">
+              <div className="font-mono text-2xl font-bold text-cyan-700 mt-1">
                 {item.score.toFixed(3)}
               </div>
-              <div className="text-xs text-zinc-500 dark:text-zinc-500 mt-1">
+              <div className="text-xs text-zinc-500 mt-1">
                 / 1.5 (이론 최대)
               </div>
             </div>
             <div className="rounded-lg border border-border bg-muted/40 p-3">
-              <div className="text-xs text-zinc-600 dark:text-zinc-400">
+              <div className="text-xs text-zinc-600">
                 활성 시그널
               </div>
-              <div className="font-mono text-2xl font-bold text-zinc-900 dark:text-zinc-50 mt-1">
+              <div className="font-mono text-2xl font-bold text-zinc-900 mt-1">
                 {item.active_signals}/5
               </div>
-              <div className="text-xs text-zinc-500 dark:text-zinc-500 mt-1">
+              <div className="text-xs text-zinc-500 mt-1">
                 normalized ≥ 0.5
               </div>
             </div>
             <div className="rounded-lg border border-border bg-muted/40 p-3">
-              <div className="text-xs text-zinc-600 dark:text-zinc-400">
+              <div className="text-xs text-zinc-600">
                 신뢰도
               </div>
-              <div className="font-mono text-2xl font-bold text-zinc-900 dark:text-zinc-50 mt-1">
+              <div className="font-mono text-2xl font-bold text-zinc-900 mt-1">
                 {item.confidence_label}
               </div>
               {item.sample_warning && (
-                <div className="text-xs text-amber-700 dark:text-amber-300 font-semibold mt-1">
+                <div className="text-xs text-amber-700 font-semibold mt-1">
                   ⚠️ 시그널 부족
                 </div>
               )}
@@ -279,10 +274,10 @@ export function MemeDetailModal({
 
           {/* Score 시계열 (Phase 5) */}
           <div className="rounded-xl border border-border p-4 bg-card">
-            <div className="text-sm font-bold text-zinc-900 dark:text-zinc-50 mb-1">
+            <div className="text-sm font-bold text-zinc-900 mb-1">
               📈 Meme Score 시계열 (최근 24시간, KST)
             </div>
-            <div className="text-xs text-zinc-500 dark:text-zinc-500 mb-2">
+            <div className="text-xs text-zinc-500 mb-2">
               점선 임계 — 붉음 1.0 BLAZING · 주황 0.75 HOT · 노랑 0.5 WATCH
             </div>
             <ScoreHistoryChart ticker={item.ticker} hours={24} />
@@ -290,7 +285,7 @@ export function MemeDetailModal({
 
           {/* 5축 레이더 */}
           <div className="rounded-xl border border-border p-4 bg-card">
-            <div className="text-sm font-bold text-zinc-900 dark:text-zinc-50 mb-2">
+            <div className="text-sm font-bold text-zinc-900 mb-2">
               📊 5요소 시그널 분해
             </div>
             <MemeRadarChart contributions={item.contributions} />
@@ -299,7 +294,7 @@ export function MemeDetailModal({
           {/* 시그널 detail 표 */}
           <div className="rounded-xl border border-border overflow-hidden">
             <table className="w-full text-sm">
-              <thead className="border-b border-cyan-500/40 bg-cyan-500/15 text-cyan-700 dark:text-cyan-200 font-bold">
+              <thead className="border-b border-cyan-500/40 bg-cyan-500/15 text-cyan-700 font-bold">
                 <tr>
                   <th className="px-3 py-2.5 text-left">시그널</th>
                   <th className="px-3 py-2.5 text-left">값</th>
@@ -308,12 +303,12 @@ export function MemeDetailModal({
                   <th className="px-3 py-2.5 text-right">기여도</th>
                 </tr>
               </thead>
-              <tbody className="text-zinc-800 dark:text-zinc-100">
+              <tbody className="text-zinc-800">
                 {item.contributions.length === 0 && (
                   <tr>
                     <td
                       colSpan={5}
-                      className="px-3 py-4 text-center text-zinc-500 dark:text-zinc-400"
+                      className="px-3 py-4 text-center text-zinc-500"
                     >
                       가용 시그널 없음
                     </td>
@@ -324,19 +319,19 @@ export function MemeDetailModal({
                     key={c.name}
                     className="border-b border-border/40 last:border-0 hover:bg-muted/30"
                   >
-                    <td className="px-3 py-2.5 text-zinc-900 dark:text-zinc-50 font-semibold">
+                    <td className="px-3 py-2.5 text-zinc-900 font-semibold">
                       {c.label}
                     </td>
-                    <td className="px-3 py-2.5 text-zinc-600 dark:text-zinc-300 font-mono text-xs">
+                    <td className="px-3 py-2.5 text-zinc-600 font-mono text-xs">
                       {c.raw_label}
                     </td>
-                    <td className="px-3 py-2.5 text-right font-mono text-zinc-800 dark:text-zinc-100">
+                    <td className="px-3 py-2.5 text-right font-mono text-zinc-800">
                       {c.normalized.toFixed(2)}
                     </td>
-                    <td className="px-3 py-2.5 text-right font-mono text-zinc-600 dark:text-zinc-400">
+                    <td className="px-3 py-2.5 text-right font-mono text-zinc-600">
                       {(c.weight * 100).toFixed(1)}%
                     </td>
-                    <td className="px-3 py-2.5 text-right font-mono font-bold text-cyan-700 dark:text-cyan-300">
+                    <td className="px-3 py-2.5 text-right font-mono font-bold text-cyan-700">
                       {c.contribution.toFixed(3)}
                     </td>
                   </tr>
@@ -346,7 +341,7 @@ export function MemeDetailModal({
           </div>
 
           {/* 안내 */}
-          <div className="rounded-lg border border-amber-500/40 bg-amber-500/10 p-3 text-xs text-amber-800 dark:text-amber-200 font-semibold">
+          <div className="rounded-lg border border-amber-500/40 bg-amber-500/10 p-3 text-xs text-amber-800 font-semibold">
             ⚠️ Meme Score 는 보조 시그널입니다. 투자 권유 아님 — 본 점수는
             과거 패턴 통계이며 미래 수익을 보장하지 않습니다.
           </div>

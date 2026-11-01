@@ -10,6 +10,7 @@ import Link from "next/link";
 import { useMemo, useState } from "react";
 import { fmtKstDateTimeSec } from "@/lib/time";
 import type { TickerCardItem } from "@/lib/serenity/types";
+import { upDownText } from "@/lib/updown";
 
 type SortKey =
   | "mentions_today"
@@ -35,8 +36,8 @@ const MENTIONS_PERIOD_KEY: Record<MentionsPeriod, SortKey> = {
 };
 
 const STANCE_META: Record<string, { icon: string; cls: string }> = {
-  bullish: { icon: "▲", cls: "text-emerald-500" },
-  bearish: { icon: "▼", cls: "text-red-500" },
+  bullish: { icon: "▲", cls: "text-up" },
+  bearish: { icon: "▼", cls: "text-down" },
   mixed: { icon: "◆", cls: "text-amber-500" },
   neutral: { icon: "●", cls: "text-slate-400" },
 };
@@ -48,8 +49,7 @@ function _fmtPct(v: number | null | undefined, digits = 2): string {
 }
 
 function _priorCls(v: number | null | undefined): string {
-  if (v === null || v === undefined) return "text-muted-foreground";
-  return v >= 0 ? "text-emerald-500" : "text-red-500";
+  return upDownText(v, "text-up");
 }
 
 function _mentionsForKey(t: TickerCardItem, k: SortKey): number {
@@ -178,7 +178,7 @@ export function TickerTable({ items }: { items: TickerCardItem[] }) {
       <div className="flex flex-wrap items-center justify-between gap-2 border-b border-t border-border px-3 py-2">
         <div className="flex flex-wrap items-center gap-2">
           {/* Mentions 정렬 컨트롤 (사용자 요구 · L11) */}
-          <div className="flex items-center gap-1 rounded border border-border bg-background px-2 py-1">
+          <div className="flex items-center gap-1 rounded-lg border border-border bg-background px-2 py-1">
             <span className="text-xs text-muted-foreground">Mentions</span>
             <select
               value={mentionsPeriod}
@@ -197,7 +197,7 @@ export function TickerTable({ items }: { items: TickerCardItem[] }) {
                 if (!mentionsActive) setSortKey(MENTIONS_PERIOD_KEY[mentionsPeriod]);
                 setSortDir(sortDir === "desc" ? "asc" : "desc");
               }}
-              className="rounded border border-border px-1.5 text-xs font-semibold hover:bg-muted/40"
+              className="rounded-lg border border-border px-1.5 text-xs font-semibold hover:bg-muted/40"
               title={`현재 ${mentionsActive ? (sortDir === "desc" ? "내림차순" : "오름차순") : "다른 컬럼 정렬 중"} · 클릭 시 반전`}
             >
               {mentionsActive ? (sortDir === "desc" ? "▼ desc" : "▲ asc") : "▼ desc"}
@@ -209,7 +209,7 @@ export function TickerTable({ items }: { items: TickerCardItem[] }) {
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="티커·도메인 검색"
-            className="rounded border border-border bg-background px-2 py-1 text-xs w-44"
+            className="rounded-lg border border-border bg-background px-2 py-1 text-xs w-44"
           />
         </div>
       </div>
@@ -235,8 +235,8 @@ export function TickerTable({ items }: { items: TickerCardItem[] }) {
                 </span>
                 <div className="text-xs font-normal opacity-70">{mentionsPeriod} (나머지 기간)</div>
               </th>
-              <th className="px-2 py-2.5 text-right text-xs font-semibold text-emerald-500">Bull</th>
-              <th className="px-2 py-2.5 text-right text-xs font-semibold text-red-500">Bear</th>
+              <th className="px-2 py-2.5 text-right text-xs font-semibold text-primary">Bull</th>
+              <th className="px-2 py-2.5 text-right text-xs font-semibold text-warn">Bear</th>
               <th className="px-2 py-2.5 text-right text-xs font-semibold text-slate-400">Neutral</th>
               <SortHead k="bullish_pct_90d" label="Bull%" align="right" />
               <SortHead k="vs_prior_close_pct" label="vs Prior" align="right" />
@@ -256,7 +256,7 @@ export function TickerTable({ items }: { items: TickerCardItem[] }) {
                 <tr
                   key={t.ticker}
                   className={`border-b border-border/40 hover:bg-muted/20 ${
-                    t.auto_avoid ? "bg-red-500/5" : ""
+                    t.auto_avoid ? "bg-warn/5" : ""
                   }`}
                 >
                   <td className="px-2 py-3 font-mono font-bold">
@@ -264,7 +264,7 @@ export function TickerTable({ items }: { items: TickerCardItem[] }) {
                       {t.ticker}
                     </Link>
                     {t.auto_avoid && (
-                      <span className="ml-1 text-xs font-semibold text-red-500">AVOID</span>
+                      <span className="ml-1 text-xs font-semibold text-warn">AVOID</span>
                     )}
                   </td>
                   <td className="px-2 py-3 text-xs text-muted-foreground">{industry}</td>
@@ -290,8 +290,8 @@ export function TickerTable({ items }: { items: TickerCardItem[] }) {
                       ].filter(Boolean).join(" · ")})
                     </span>
                   </td>
-                  <td className="px-2 py-3 text-right font-mono font-bold text-emerald-500">{t.stance_90d.bull}</td>
-                  <td className="px-2 py-3 text-right font-mono font-bold text-red-500">{t.stance_90d.bear}</td>
+                  <td className="px-2 py-3 text-right font-mono font-bold text-up">{t.stance_90d.bull}</td>
+                  <td className="px-2 py-3 text-right font-mono font-bold text-down">{t.stance_90d.bear}</td>
                   <td className="px-2 py-3 text-right font-mono font-bold text-slate-400">{t.stance_90d.neu}</td>
                   <td className="px-2 py-3 text-right font-mono font-bold">{t.bullish_pct_90d.toFixed(0)}%</td>
                   <td className={`px-2 py-3 text-right font-mono font-bold ${_priorCls(t.vs_prior_close_pct)}`}>

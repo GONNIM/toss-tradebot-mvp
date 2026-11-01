@@ -33,7 +33,7 @@ export default function MethodologyPage() {
       </header>
 
       {err && (
-        <div className="rounded border border-red-500/40 bg-red-500/10 p-3 text-xs text-red-500">
+        <div className="rounded-lg border border-warn/40 bg-warn/10 p-3 text-xs text-warn">
           {err.includes("404")
             ? "methodology.md 없음 · submodule 미초기화 또는 배포 후 재실행 필요"
             : `에러: ${err}`}
@@ -42,7 +42,7 @@ export default function MethodologyPage() {
 
       {data && (
         <>
-          <div className="text-[10px] text-muted-foreground">
+          <div className="text-xs text-muted-foreground">
             source: <code>{data.source}</code> · {data.bytes.toLocaleString()} bytes
           </div>
           <pre className="whitespace-pre-wrap rounded-lg border border-border bg-card p-4 text-xs leading-relaxed text-foreground">

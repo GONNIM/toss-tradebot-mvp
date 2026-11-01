@@ -50,7 +50,7 @@ export function MemeRadarChart({
           <PolarRadiusAxis
             angle={90}
             domain={[0, 1.5]}
-            tick={{ fill: "currentColor", fontSize: 10, opacity: 0.6 }}
+            tick={{ fill: "currentColor", fontSize: 12, opacity: 0.6 }}
           />
           <Tooltip
             contentStyle={{

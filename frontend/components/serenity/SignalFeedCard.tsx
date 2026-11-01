@@ -7,8 +7,8 @@ import { fmtKstDateTimeSec } from "@/lib/time";
 import type { SignalFeedItem } from "@/lib/serenity/types";
 
 const SENTIMENT_STYLE: Record<string, { chip: string; label: string }> = {
-  bullish: { chip: "bg-emerald-500/20 text-emerald-500", label: "🟢 Bullish" },
-  bearish: { chip: "bg-red-500/20 text-red-500", label: "🔴 Bearish" },
+  bullish: { chip: "bg-up/15 text-up", label: "▲ Bullish" },
+  bearish: { chip: "bg-down/15 text-down", label: "▼ Bearish" },
   neutral: { chip: "bg-slate-500/20 text-slate-400", label: "⚪ Neutral" },
   calibration: { chip: "bg-amber-500/20 text-amber-500", label: "🟡 Calibration" },
 };
@@ -27,16 +27,16 @@ export function SignalFeedCard({ item }: { item: SignalFeedItem }) {
         >
           ${item.ticker}
         </Link>
-        <span className={`rounded px-1.5 py-0.5 text-xs font-semibold ${s.chip}`}>
+        <span className={`rounded-lg px-1.5 py-0.5 text-xs font-semibold ${s.chip}`}>
           {s.label}
         </span>
         {item.thesis_type && (
-          <span className="rounded bg-indigo-500/20 px-1.5 py-0.5 text-xs text-indigo-400">
+          <span className="rounded-lg bg-indigo-500/20 px-1.5 py-0.5 text-xs text-indigo-400">
             {item.thesis_type}
           </span>
         )}
         {item.evidence_type && (
-          <span className="rounded bg-purple-500/20 px-1.5 py-0.5 text-xs text-purple-400">
+          <span className="rounded-lg bg-purple-500/20 px-1.5 py-0.5 text-xs text-purple-400">
             {item.evidence_type}
           </span>
         )}

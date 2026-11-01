@@ -39,8 +39,8 @@ function fmtKrw(v: number | null | undefined): string {
 
 function classPnL(v: number | null | undefined): string {
   if (v === null || v === undefined) return "text-muted-foreground";
-  if (v > 0) return "text-emerald-500";
-  if (v < 0) return "text-rose-500";
+  if (v > 0) return "text-up";
+  if (v < 0) return "text-down";
   return "text-muted-foreground";
 }
 
@@ -71,7 +71,7 @@ function HeroCard({ s }: { s: VipStatus }) {
 
   const marketBadge = () => {
     if (s.is_us_regular_hours)
-      return { text: "🟢 정규장", className: "bg-emerald-500/20 text-emerald-400" };
+      return { text: "🟢 정규장", className: "bg-primary/20 text-primary" };
     if (q?.market_status === "OPEN")
       return { text: "🟡 개장 중", className: "bg-amber-500/20 text-amber-400" };
     if (q?.over_market_ratio !== null && q?.over_market_ratio !== undefined)
@@ -331,15 +331,15 @@ function TriggerCard({ s }: { s: VipStatus }) {
                   </td>
                   <td className="py-2 text-center">
                     {t.alreadySent ? (
-                      <span className="rounded bg-rose-500/20 px-2 py-0.5 text-xs text-rose-400">
+                      <span className="rounded-lg bg-warn/20 px-2 py-0.5 text-xs text-warn">
                         발송됨
                       </span>
                     ) : t.reached ? (
-                      <span className="rounded bg-amber-500/20 px-2 py-0.5 text-xs text-amber-400">
+                      <span className="rounded-lg bg-amber-500/20 px-2 py-0.5 text-xs text-amber-400">
                         도달
                       </span>
                     ) : (
-                      <span className="rounded bg-muted px-2 py-0.5 text-xs text-muted-foreground">
+                      <span className="rounded-lg bg-muted px-2 py-0.5 text-xs text-muted-foreground">
                         대기
                       </span>
                     )}
@@ -421,7 +421,7 @@ function MarketCard({ s }: { s: VipStatus }) {
           </div>
           <div className="relative h-2 rounded-full bg-muted">
             <div
-              className="absolute top-0 h-2 w-1 rounded-full bg-primary shadow"
+              className="absolute top-0 h-2 w-1 rounded-full bg-primary "
               style={{ left: `calc(${bandPct}% - 2px)` }}
             />
           </div>
@@ -492,7 +492,7 @@ function AlertsCard({ s }: { s: VipStatus }) {
             const nextAt = ts + COOLDOWN_SEC;
             const cooldownLeft = Math.max(0, nextAt - now);
             return (
-              <div key={k} className="rounded border border-border/60 p-2 text-sm">
+              <div key={k} className="rounded-lg border border-border/60 p-2 text-sm">
                 <div className="flex items-baseline gap-2 flex-wrap">
                   <span>{info.icon}</span>
                   <span className="font-medium">{info.kor}</span>
@@ -506,7 +506,7 @@ function AlertsCard({ s }: { s: VipStatus }) {
                     다음 발송 가능: {fmtKst(nextAt)} ({Math.ceil(cooldownLeft / 3600)}h 남음)
                   </div>
                 ) : (
-                  <div className="mt-1 text-xs text-emerald-400">쿨다운 종료 · 재발송 대기</div>
+                  <div className="mt-1 text-xs text-primary">쿨다운 종료 · 재발송 대기</div>
                 )}
               </div>
             );
@@ -549,7 +549,7 @@ function StatusBadge({ active }: { active: boolean }) {
       className={
         "inline-block rounded-full px-2 py-0.5 text-xs font-medium " +
         (active
-          ? "bg-emerald-500/20 text-emerald-400"
+          ? "bg-primary/20 text-primary"
           : "bg-muted text-muted-foreground")
       }
     >
@@ -568,7 +568,7 @@ function ActivistCard({ s, onEdit }: { s: VipStatus; onEdit: () => void }) {
           <StatusBadge active={s.activist_active} />
           <button
             onClick={onEdit}
-            className="rounded border border-border bg-background px-3 py-1 text-xs hover:bg-muted"
+            className="rounded-lg border border-border bg-background px-3 py-1 text-xs hover:bg-muted"
           >
             편집
           </button>
@@ -576,7 +576,7 @@ function ActivistCard({ s, onEdit }: { s: VipStatus; onEdit: () => void }) {
       </div>
 
       {a.enabled && (
-        <div className="mb-3 rounded bg-muted/50 p-2 text-xs text-muted-foreground">
+        <div className="mb-3 rounded-lg bg-muted/50 p-2 text-xs text-muted-foreground">
           💡 <strong>Activist 란?</strong> 상장사 지분을 5% 이상 보유한 활동주주가 SEC 에
           제출하는 <strong>SC 13D/G</strong> 필링을 실시간 감시합니다. 지분 증가·감소·
           경영권 요구 등이 담기며, 통상 주가 급등락의 선행 신호입니다.
@@ -599,7 +599,7 @@ function ActivistCard({ s, onEdit }: { s: VipStatus; onEdit: () => void }) {
               a.keywords.map((k) => (
                 <span
                   key={k}
-                  className="rounded bg-muted px-2 py-0.5 text-xs font-mono"
+                  className="rounded-lg bg-muted px-2 py-0.5 text-xs font-mono"
                 >
                   {k}
                 </span>
@@ -613,23 +613,23 @@ function ActivistCard({ s, onEdit }: { s: VipStatus; onEdit: () => void }) {
 
       {a.latest_target ? (
         // v1.52 · design-rules 정합 · activist-radar와 동일 리팩터 (warm 축 + 라이트 우선)
-        <div className="mt-4 rounded-md border border-amber-300 bg-amber-50 p-3 text-sm dark:border-amber-800 dark:bg-amber-950/40">
+        <div className="mt-4 rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm">
           <div className="mb-2 flex items-baseline gap-2 flex-wrap">
-            <span className="text-xs font-bold uppercase tracking-wider text-amber-800 dark:text-amber-300">
+            <span className="text-xs font-bold uppercase tracking-wider text-amber-800">
               🎯 최신 대상 필링
             </span>
-            <span className="ml-auto text-[10px] font-mono text-slate-500 dark:text-slate-400">
+            <span className="ml-auto text-xs font-mono text-slate-500">
               Filing {a.latest_target.filing_date}
             </span>
           </div>
 
-          {/* 폼 배지 · 힌트 · shadow 제거 */}
+          {/* 폼 배지 · 힌트 ·  제거 */}
           <div className="flex items-baseline gap-2 flex-wrap">
-            <span className="rounded bg-amber-500 px-2 py-0.5 font-mono text-xs font-bold text-slate-900">
+            <span className="rounded-lg bg-amber-500 px-2 py-0.5 font-mono text-xs font-bold text-slate-900">
               {a.latest_target.form}
             </span>
             {a.latest_target.form_hint && (
-              <span className="text-xs font-medium text-amber-700 dark:text-amber-300">
+              <span className="text-xs font-medium text-amber-700">
                 {a.latest_target.form_hint}
               </span>
             )}
@@ -638,11 +638,11 @@ function ActivistCard({ s, onEdit }: { s: VipStatus; onEdit: () => void }) {
           {/* 이슈어 · 라이트 우선 */}
           {a.latest_target.details?.issuer_name && (
             <div className="mt-2 flex items-baseline gap-2 flex-wrap">
-              <span className="text-lg font-bold text-slate-900 dark:text-white">
+              <span className="text-lg font-bold text-slate-900">
                 {a.latest_target.details.issuer_name}
               </span>
               {a.latest_target.details.issuer_cik && (
-                <span className="text-[10px] font-mono text-slate-500 dark:text-slate-400">
+                <span className="text-xs font-mono text-slate-500">
                   issuer CIK {a.latest_target.details.issuer_cik}
                   {a.latest_target.details.issuer_cusip &&
                     ` · CUSIP ${a.latest_target.details.issuer_cusip}`}
@@ -657,42 +657,42 @@ function ActivistCard({ s, onEdit }: { s: VipStatus; onEdit: () => void }) {
             a.latest_target.details.aggregate_amount_owned != null) && (
             <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
               {a.latest_target.details.percent_of_class != null && (
-                <div className="rounded-md border border-amber-300 bg-white p-2 dark:border-amber-800 dark:bg-amber-950/30">
-                  <div className="text-[10px] font-semibold uppercase tracking-wide text-amber-700 dark:text-amber-300">
+                <div className="rounded-lg border border-amber-300 bg-white p-2">
+                  <div className="text-xs font-semibold uppercase tracking-wide text-amber-700">
                     지분율
                   </div>
-                  <div className="mt-0.5 text-3xl font-black leading-none text-amber-900 dark:text-amber-100">
+                  <div className="mt-0.5 text-3xl font-black leading-none text-amber-900">
                     {a.latest_target.details.percent_of_class.toFixed(1)}
                     <span className="text-xl">%</span>
                   </div>
                 </div>
               )}
               {a.latest_target.details.aggregate_amount_owned != null && (
-                <div className="rounded-md border border-slate-200 bg-white p-2 dark:border-slate-700 dark:bg-slate-900/40">
-                  <div className="text-[10px] font-semibold uppercase tracking-wide text-slate-600 dark:text-slate-300">
+                <div className="rounded-lg border border-slate-200 bg-white p-2">
+                  <div className="text-xs font-semibold uppercase tracking-wide text-slate-600">
                     보유 주식
                   </div>
-                  <div className="mt-0.5 text-base font-bold font-mono text-slate-800 dark:text-slate-100">
+                  <div className="mt-0.5 text-base font-bold font-mono text-slate-800">
                     {a.latest_target.details.aggregate_amount_owned.toLocaleString()}
                   </div>
                 </div>
               )}
               {a.latest_target.details.amendment_no != null && (
-                <div className="rounded-md border border-slate-200 bg-white p-2 dark:border-slate-700 dark:bg-slate-900/40">
-                  <div className="text-[10px] font-semibold uppercase tracking-wide text-slate-600 dark:text-slate-300">
+                <div className="rounded-lg border border-slate-200 bg-white p-2">
+                  <div className="text-xs font-semibold uppercase tracking-wide text-slate-600">
                     수정 차수
                   </div>
-                  <div className="mt-0.5 text-base font-bold text-slate-800 dark:text-slate-100">
+                  <div className="mt-0.5 text-base font-bold text-slate-800">
                     Amendment #{a.latest_target.details.amendment_no}
                   </div>
                 </div>
               )}
               {a.latest_target.details.date_of_event && (
-                <div className="rounded-md border border-slate-200 bg-white p-2 dark:border-slate-700 dark:bg-slate-900/40">
-                  <div className="text-[10px] font-semibold uppercase tracking-wide text-slate-600 dark:text-slate-300">
+                <div className="rounded-lg border border-slate-200 bg-white p-2">
+                  <div className="text-xs font-semibold uppercase tracking-wide text-slate-600">
                     이벤트 발생일
                   </div>
-                  <div className="mt-0.5 text-base font-bold text-slate-800 dark:text-slate-100">
+                  <div className="mt-0.5 text-base font-bold text-slate-800">
                     {a.latest_target.details.date_of_event}
                   </div>
                 </div>
@@ -701,24 +701,24 @@ function ActivistCard({ s, onEdit }: { s: VipStatus; onEdit: () => void }) {
           )}
 
           {a.latest_target.details?.securities_class_title && (
-            <div className="mt-3 rounded bg-slate-100 px-2 py-1 text-xs text-slate-700 dark:bg-slate-800 dark:text-slate-200">
-              <span className="font-semibold text-slate-500 dark:text-slate-400">증권 클래스:</span>{" "}
+            <div className="mt-3 rounded-lg bg-slate-100 px-2 py-1 text-xs text-slate-700">
+              <span className="font-semibold text-slate-500">증권 클래스:</span>{" "}
               {a.latest_target.details.securities_class_title}
             </div>
           )}
 
           {!a.latest_target.details?.issuer_name && a.latest_target.primary_desc && (
-            <div className="mt-2 text-sm font-medium text-slate-900 dark:text-white">
+            <div className="mt-2 text-sm font-medium text-slate-900">
               {a.latest_target.primary_desc}
             </div>
           )}
 
           {a.latest_target.details?.transaction_purpose && (
-            <details className="mt-3 rounded border border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-900">
-              <summary className="cursor-pointer px-2 py-1 text-xs font-semibold text-amber-700 hover:bg-slate-50 dark:text-amber-300 dark:hover:bg-slate-800">
+            <details className="mt-3 rounded-lg border border-slate-200 bg-white">
+              <summary className="cursor-pointer px-2 py-1 text-xs font-semibold text-amber-700 hover:bg-slate-50">
                 📝 Item 4 — 거래 목적/사유 (원문 발췌 · 클릭 펼치기)
               </summary>
-              <div className="whitespace-pre-wrap border-t border-slate-700 p-2 font-mono text-[11px] text-slate-100">
+              <div className="whitespace-pre-wrap border-t border-slate-700 p-2 font-mono text-xs text-slate-100">
                 {a.latest_target.details.transaction_purpose}
               </div>
             </details>
@@ -730,7 +730,7 @@ function ActivistCard({ s, onEdit }: { s: VipStatus; onEdit: () => void }) {
                 href={a.latest_target.filing_detail_url}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="rounded-md border border-slate-600 bg-slate-800 px-3 py-1 font-medium text-slate-100 hover:bg-slate-700 hover:text-white"
+                className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-1 font-medium text-slate-100 hover:bg-slate-700 hover:text-white"
               >
                 📄 원문 필링 ↗
               </a>
@@ -740,7 +740,7 @@ function ActivistCard({ s, onEdit }: { s: VipStatus; onEdit: () => void }) {
                 href={a.filer_search_url}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="rounded-md border border-slate-600 bg-slate-800 px-3 py-1 font-medium text-slate-100 hover:bg-slate-700 hover:text-white"
+                className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-1 font-medium text-slate-100 hover:bg-slate-700 hover:text-white"
               >
                 🔍 {a.name.split(" ")[0]} 다른 필링 ↗
               </a>
@@ -750,12 +750,12 @@ function ActivistCard({ s, onEdit }: { s: VipStatus; onEdit: () => void }) {
                 href={`https://www.google.com/search?q=${encodeURIComponent(a.latest_target.details.issuer_name + " SEC filing")}`}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="rounded-md border border-slate-600 bg-slate-800 px-3 py-1 font-medium text-slate-100 hover:bg-slate-700 hover:text-white"
+                className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-1 font-medium text-slate-100 hover:bg-slate-700 hover:text-white"
               >
                 🌐 웹 검색 ↗
               </a>
             )}
-            <span className="ml-auto text-[10px] font-mono text-slate-500">
+            <span className="ml-auto text-xs font-mono text-slate-500">
               Accession {a.latest_target.accession}
             </span>
           </div>
@@ -767,7 +767,7 @@ function ActivistCard({ s, onEdit }: { s: VipStatus; onEdit: () => void }) {
       ) : null}
 
       {a.recent_forms && a.recent_forms.length > 0 && (
-        <details className="mt-3 rounded border border-slate-700 bg-slate-900/60">
+        <details className="mt-3 rounded-lg border border-slate-700 bg-slate-900/60">
           <summary className="cursor-pointer px-3 py-2 text-xs font-semibold text-slate-200 hover:bg-slate-800/50">
             📋 {a.name || "Activist"} 최근 필링 10건 (activist 관점 전체 · 클릭 펼치기)
           </summary>
@@ -775,7 +775,7 @@ function ActivistCard({ s, onEdit }: { s: VipStatus; onEdit: () => void }) {
             {a.recent_forms.map((f) => (
               <li key={f.accession} className="flex items-center gap-2 px-3 py-1.5 text-xs">
                 <span className="w-24 shrink-0 font-mono text-slate-400">{f.date}</span>
-                <span className="w-32 shrink-0 truncate rounded bg-slate-800 px-1.5 py-0.5 font-mono font-medium text-slate-100">
+                <span className="w-32 shrink-0 truncate rounded-lg bg-slate-800 px-1.5 py-0.5 font-mono font-medium text-slate-100">
                   {f.form}
                 </span>
                 <span className="flex-1 truncate text-slate-300">
@@ -786,7 +786,7 @@ function ActivistCard({ s, onEdit }: { s: VipStatus; onEdit: () => void }) {
                     href={f.filing_detail_url}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="shrink-0 rounded border border-slate-600 bg-slate-800 px-2 py-0.5 text-slate-100 hover:bg-slate-700"
+                    className="shrink-0 rounded-lg border border-slate-600 bg-slate-800 px-2 py-0.5 text-slate-100 hover:bg-slate-700"
                   >
                     📄 ↗
                   </a>
@@ -847,7 +847,7 @@ function GlossaryCard() {
             해석됩니다.
           </p>
         </div>
-        <div className="rounded border border-amber-500/50 bg-amber-500/10 p-2 text-xs text-amber-400">
+        <div className="rounded-lg border border-amber-500/50 bg-amber-500/10 p-2 text-xs text-amber-400">
           ⚠️ 이 페이지는 <strong>참고 신호 알림</strong>이며 자동 매매를 수행하지 않습니다.
           모든 매매 결정은 사용자 본인의 판단입니다.
         </div>
@@ -895,7 +895,7 @@ function ExtLink({ href, label }: { href: string; label: string }) {
       href={href}
       target="_blank"
       rel="noopener noreferrer"
-      className="rounded border border-border bg-background px-3 py-1.5 hover:bg-muted"
+      className="rounded-lg border border-border bg-background px-3 py-1.5 hover:bg-muted"
     >
       {label} ↗
     </a>
@@ -982,7 +982,7 @@ function ActivistEditor({
           <h3 className="text-lg font-semibold">Activist 설정 편집</h3>
           <button
             onClick={onClose}
-            className="rounded border border-border px-2 py-1 text-xs hover:bg-muted"
+            className="rounded-lg border border-border px-2 py-1 text-xs hover:bg-muted"
           >
             닫기
           </button>
@@ -1005,7 +1005,7 @@ function ActivistEditor({
               value={cik}
               onChange={(e) => setCik(e.target.value)}
               placeholder="예: 0001345471 (Trian)"
-              className="mt-1 w-full rounded border border-border bg-background px-2 py-1 text-sm font-mono"
+              className="mt-1 w-full rounded-lg border border-border bg-background px-2 py-1 text-sm font-mono"
             />
             <p className="mt-1 text-xs text-muted-foreground">
               SEC EDGAR CIK · 10자리 zero-padding 자동 · 편집 후 저장 즉시 반영 (재시작 X).
@@ -1019,7 +1019,7 @@ function ActivistEditor({
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="예: Trian Partners"
-              className="mt-1 w-full rounded border border-border bg-background px-2 py-1 text-sm"
+              className="mt-1 w-full rounded-lg border border-border bg-background px-2 py-1 text-sm"
             />
           </div>
 
@@ -1032,7 +1032,7 @@ function ActivistEditor({
               value={keywords}
               onChange={(e) => setKeywords(e.target.value)}
               placeholder="예: WEN, WENDY"
-              className="mt-1 w-full rounded border border-border bg-background px-2 py-1 text-sm font-mono"
+              className="mt-1 w-full rounded-lg border border-border bg-background px-2 py-1 text-sm font-mono"
             />
             <p className="mt-1 text-xs text-muted-foreground">
               SEC 필링 description 에 이 문자열이 포함되면 매치.
@@ -1040,7 +1040,7 @@ function ActivistEditor({
           </div>
 
           {saveError && (
-            <div className="rounded border border-rose-500/50 bg-rose-500/10 p-2 text-xs text-rose-400">
+            <div className="rounded-lg border border-warn/50 bg-warn/10 p-2 text-xs text-warn">
               저장 실패: {saveError}
             </div>
           )}
@@ -1050,21 +1050,21 @@ function ActivistEditor({
           <button
             onClick={reset}
             disabled={mut.isPending}
-            className="rounded border border-rose-500/50 px-3 py-1.5 text-xs text-rose-400 hover:bg-rose-500/10 disabled:opacity-50"
+            className="rounded-lg border border-warn/50 px-3 py-1.5 text-xs text-warn hover:bg-warn/10 disabled:opacity-50"
           >
             override 초기화 (env 기본값 복귀)
           </button>
           <div className="flex gap-2">
             <button
               onClick={onClose}
-              className="rounded border border-border px-3 py-1.5 text-sm hover:bg-muted"
+              className="rounded-lg border border-border px-3 py-1.5 text-sm hover:bg-muted"
             >
               취소
             </button>
             <button
               onClick={submit}
               disabled={mut.isPending}
-              className="rounded bg-emerald-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-emerald-700 disabled:opacity-50"
+              className="rounded-lg bg-primary px-3 py-1.5 text-sm font-medium text-white hover:bg-primary disabled:opacity-50"
             >
               {mut.isPending ? "저장 중…" : "저장"}
             </button>
@@ -1107,7 +1107,7 @@ export default function VipPage() {
         <div>
           <h1 className="flex items-center gap-2 text-3xl font-bold">
             🕵️ VIP 개별 감시
-            <span className="rounded bg-green-500/20 px-2 py-0.5 text-[10px] font-semibold text-green-400" title="COINCIDENT · 실시간 관측">
+            <span className="rounded-lg bg-primary/20 px-2 py-0.5 text-xs font-semibold text-primary" title="COINCIDENT · 실시간 관측">
               COINCIDENT
             </span>
           </h1>
@@ -1122,19 +1122,19 @@ export default function VipPage() {
       <AdminSessionBar scope="vip" />
 
       {statusQ.isLoading && (
-        <div className="rounded border border-border bg-card p-4 text-sm text-muted-foreground">
+        <div className="rounded-lg border border-border bg-card p-4 text-sm text-muted-foreground">
           로딩 중…
         </div>
       )}
 
       {statusQ.isError && (
-        <div className="rounded border border-rose-500/50 bg-rose-500/10 p-4 text-sm text-rose-400">
+        <div className="rounded-lg border border-warn/50 bg-warn/10 p-4 text-sm text-warn">
           상태 조회 실패: {(statusQ.error as Error).message}
         </div>
       )}
 
       {s && !s.active && (
-        <div className="rounded border border-amber-500/50 bg-amber-500/10 p-4 text-sm">
+        <div className="rounded-lg border border-amber-500/50 bg-amber-500/10 p-4 text-sm">
           <div className="font-medium text-amber-400">감시 비활성</div>
           <p className="mt-1 text-muted-foreground">
             서버 <code>backend/.env.sops.yaml</code> 에{" "}

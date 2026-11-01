@@ -8,29 +8,29 @@ export type SectionTone = "sky" | "emerald" | "amber" | "rose" | "slate";
 
 const TONE: Record<SectionTone, { border: string; badge: string; count: string }> = {
   sky: {
-    border: "border-2 border-sky-300 bg-sky-50 dark:border-sky-800 dark:bg-sky-950/40",
+    border: "border-2 border-sky-300 bg-sky-50",
     badge: "bg-sky-600 text-white",
-    count: "bg-sky-100 text-sky-800 dark:bg-sky-900 dark:text-sky-100",
+    count: "bg-sky-100 text-sky-800",
   },
   emerald: {
-    border: "border-2 border-emerald-300 bg-emerald-50 dark:border-emerald-800 dark:bg-emerald-950/40",
-    badge: "bg-emerald-600 text-white",
-    count: "bg-emerald-100 text-emerald-800 dark:bg-emerald-900 dark:text-emerald-100",
+    border: "border-2 border-primary/40 bg-primary/5",
+    badge: "bg-primary text-white",
+    count: "bg-primary/10 text-primary",
   },
   amber: {
-    border: "border-2 border-amber-300 bg-amber-50 dark:border-amber-900 dark:bg-amber-950/40",
+    border: "border-2 border-amber-300 bg-amber-50",
     badge: "bg-amber-500 text-slate-900",
-    count: "bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-100",
+    count: "bg-amber-100 text-amber-800",
   },
   rose: {
-    border: "border-2 border-rose-300 bg-rose-50 dark:border-rose-800 dark:bg-rose-950/40",
-    badge: "bg-rose-600 text-white",
-    count: "bg-rose-100 text-rose-800 dark:bg-rose-900 dark:text-rose-100",
+    border: "border-2 border-warn/40 bg-warn/5",
+    badge: "bg-warn text-white",
+    count: "bg-warn/10 text-warn",
   },
   slate: {
-    border: "border-2 border-slate-300 bg-slate-50 dark:border-slate-700 dark:bg-slate-900/40",
+    border: "border-2 border-slate-300 bg-slate-50",
     badge: "bg-slate-500 text-white",
-    count: "bg-slate-100 text-slate-800 dark:bg-slate-800 dark:text-slate-100",
+    count: "bg-slate-100 text-slate-800",
   },
 };
 
@@ -57,8 +57,8 @@ export function SectionCard({
 }: Props) {
   const t = TONE[tone];
   const Header = (
-    <div className="flex items-center gap-2 flex-wrap bg-white/60 px-4 py-2.5 border-b border-slate-200 dark:bg-slate-900/60 dark:border-slate-700">
-      <span className={`inline-flex items-center gap-1.5 rounded-md px-2.5 py-1 text-sm font-bold ${t.badge}`}>
+    <div className="flex items-center gap-2 flex-wrap bg-white/60 px-4 py-2.5 border-b border-slate-200">
+      <span className={`inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-sm font-bold ${t.badge}`}>
         {icon && <span className="text-base">{icon}</span>}
         {label}
       </span>
@@ -68,7 +68,7 @@ export function SectionCard({
         </span>
       )}
       {hint && (
-        <span className="text-sm text-slate-700 dark:text-slate-100 font-medium">{hint}</span>
+        <span className="text-sm text-slate-700 font-medium">{hint}</span>
       )}
     </div>
   );

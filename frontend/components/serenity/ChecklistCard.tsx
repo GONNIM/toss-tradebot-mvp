@@ -116,8 +116,8 @@ const ITEMS: Item[] = [
 ];
 
 const STYLE = {
-  pass: { icon: "✅", cls: "text-emerald-500" },
-  fail: { icon: "⛔", cls: "text-red-500" },
+  pass: { icon: "✅", cls: "text-primary" },
+  fail: { icon: "⛔", cls: "text-warn" },
   skip: { icon: "⬜", cls: "text-muted-foreground" },
 };
 
@@ -131,16 +131,16 @@ export function ChecklistCard({ ticker }: { ticker: TickerCardItem }) {
       <div className="flex items-baseline justify-between">
         <h2 className="text-sm font-semibold">📋 15원칙 · Serenity Style Fit</h2>
         <span className="text-xs">
-          <span className="text-emerald-500">{passCount} pass</span>
+          <span className="text-primary">{passCount} pass</span>
           {" · "}
-          <span className="text-red-500">{failCount} fail</span>
+          <span className="text-warn">{failCount} fail</span>
           {" · "}
           <span className="text-muted-foreground">
             {ITEMS.length - passCount - failCount} skip
           </span>
         </span>
       </div>
-      <p className="mt-1 text-[10px] text-muted-foreground">
+      <p className="mt-1 text-xs text-muted-foreground">
         일부 원칙은 자동 판정 불가 (skip) · 사용자 육안 판단 필요
       </p>
       <div className="mt-3 grid grid-cols-1 gap-1 sm:grid-cols-2">
@@ -149,7 +149,7 @@ export function ChecklistCard({ ticker }: { ticker: TickerCardItem }) {
           return (
             <div
               key={r.n}
-              className={`flex items-baseline gap-2 rounded border border-border/40 bg-background/40 px-2 py-1 text-xs`}
+              className={`flex items-baseline gap-2 rounded-lg border border-border/40 bg-background/40 px-2 py-1 text-xs`}
               title={r.hint}
             >
               <span className={s.cls}>{s.icon}</span>

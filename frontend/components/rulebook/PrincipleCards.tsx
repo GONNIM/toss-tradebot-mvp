@@ -47,7 +47,7 @@ export function PrincipleCards() {
           href="https://www.tiktok.com/@official_myohada/video/7667782611628051720"
           target="_blank"
           rel="noopener noreferrer"
-          className="text-[10px] text-sky-500 hover:underline"
+          className="text-xs text-sky-500 hover:underline"
         >
           원본 →
         </a>
@@ -59,7 +59,7 @@ export function PrincipleCards() {
             className={`rounded-lg border p-3 ${
               p.fitBad
                 ? "border-slate-500/30 bg-slate-500/5"
-                : "border-emerald-500/30 bg-emerald-500/5"
+                : "border-primary/30 bg-primary/5"
             }`}
           >
             <div className="flex items-center gap-2">
@@ -69,16 +69,16 @@ export function PrincipleCards() {
               </span>
             </div>
             <div
-              className={`mt-1 rounded px-1.5 py-0.5 text-[10px] font-semibold w-fit ${
+              className={`mt-1 rounded-lg px-1.5 py-0.5 text-xs font-semibold w-fit ${
                 p.fitBad
                   ? "bg-slate-500/20 text-slate-400"
-                  : "bg-emerald-500/20 text-emerald-500"
+                  : "bg-primary/20 text-primary"
               }`}
             >
               {p.fit}
             </div>
             <p className="mt-2 text-xs text-foreground">{p.body}</p>
-            <p className="mt-1 text-[10px] text-muted-foreground">→ {p.adopt}</p>
+            <p className="mt-1 text-xs text-muted-foreground">→ {p.adopt}</p>
           </div>
         ))}
       </div>

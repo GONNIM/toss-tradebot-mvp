@@ -14,6 +14,7 @@ import {
   manipulationBadgeClass,
   riskBadgeClass,
 } from "@/lib/utils";
+import { upDownText } from "@/lib/updown";
 
 function parseJsonArray(s: string | null): string[] {
   if (!s) return [];
@@ -42,14 +43,14 @@ export default function MoonshotPage() {
       <header>
         <h1 className="flex items-center gap-2 text-3xl font-bold">
           🚀 Moonshot Picks
-          <span className="rounded bg-gray-500/20 px-2 py-0.5 text-[10px] font-semibold text-gray-400">
+          <span className="rounded-lg bg-gray-500/20 px-2 py-0.5 text-xs font-semibold text-gray-400">
             LAGGING
           </span>
         </h1>
         <p className="mt-1 text-sm text-muted-foreground">
           매일 16:50 KST (미국 장 시작 10분 전) · 정보 전용 (수동 매수)
         </p>
-        <p className="mt-1 text-[11px] text-amber-400/80">
+        <p className="mt-1 text-xs text-amber-400/80">
           ⚠️ 모든 pick 의 outcome (T+1·T+3·T+5) 을 카드에 표시합니다. cherry-pick 금지 (리뷰 A 권고 2).
         </p>
       </header>
@@ -61,7 +62,7 @@ export default function MoonshotPage() {
       {isLoading && <div className="text-muted-foreground">로딩 중...</div>}
       {isUnauthorized(error) && <LoginNotice />}
       {error && !isUnauthorized(error) && (
-        <div className="rounded-lg border border-red-500/30 bg-red-500/10 p-4 text-sm text-red-400">
+        <div className="rounded-lg border border-warn/30 bg-warn/10 p-4 text-sm text-warn">
           API 호출 실패. 백엔드(uvicorn) 가동 확인 필요.
         </div>
       )}
@@ -121,7 +122,7 @@ function PickCard({ pick }: { pick: MoonshotPick }) {
 
       {catalysts.length > 0 && (
         <div className="text-sm">
-          <div className="font-semibold text-green-400">🎯 카탈리스트</div>
+          <div className="font-semibold text-primary">🎯 카탈리스트</div>
           <ul className="mt-1 list-inside list-disc text-muted-foreground">
             {catalysts.map((c, i) => <li key={i}>{c}</li>)}
           </ul>
@@ -130,7 +131,7 @@ function PickCard({ pick }: { pick: MoonshotPick }) {
 
       {risks.length > 0 && (
         <div className="text-sm">
-          <div className="font-semibold text-red-400">⚠️ 위험</div>
+          <div className="font-semibold text-warn">⚠️ 위험</div>
           <ul className="mt-1 list-inside list-disc text-muted-foreground">
             {risks.map((r, i) => <li key={i}>{r}</li>)}
           </ul>
@@ -166,7 +167,7 @@ function PickCard({ pick }: { pick: MoonshotPick }) {
         <div className="mt-2 grid grid-cols-3 gap-2 text-center text-xs">
           <div>
             <div className="text-muted-foreground">목표 (×{pick.target_sell_multiplier ?? 2})</div>
-            <div className="font-mono font-bold text-green-400">
+            <div className="font-mono font-bold text-primary">
               {pick.current_price != null && pick.target_sell_multiplier != null
                 ? formatUSD(pick.current_price * pick.target_sell_multiplier, 2)
                 : "—"}
@@ -174,7 +175,7 @@ function PickCard({ pick }: { pick: MoonshotPick }) {
           </div>
           <div>
             <div className="text-muted-foreground">스탑 (×{pick.stop_loss_multiplier ?? 0.5})</div>
-            <div className="font-mono font-bold text-red-400">
+            <div className="font-mono font-bold text-warn">
               {pick.current_price != null && pick.stop_loss_multiplier != null
                 ? formatUSD(pick.current_price * pick.stop_loss_multiplier, 2)
                 : "—"}
@@ -209,7 +210,7 @@ function PickCard({ pick }: { pick: MoonshotPick }) {
 function PerfBox({ label, value }: { label: string; value: number | null }) {
   const pct = value !== null && value !== undefined ? value * 100 : null;
   const color =
-    pct === null ? "text-muted-foreground/60" : pct > 0 ? "text-green-400" : pct < 0 ? "text-red-400" : "text-muted-foreground";
+    pct === null ? "text-muted-foreground/60" : upDownText(pct);
   return (
     <div>
       <div className="text-muted-foreground">{label}</div>

@@ -177,7 +177,7 @@ export function JudgmentDialog({
             placeholder="왜 이 판단을 내렸나 (근거·기대·비교 사례)"
             required
             rows={4}
-            className="mt-1 w-full rounded border border-border bg-background px-3 py-2 text-sm"
+            className="mt-1 w-full rounded-lg border border-border bg-background px-3 py-2 text-sm"
           />
         </label>
 
@@ -192,7 +192,7 @@ export function JudgmentDialog({
               value={entry}
               onChange={(e) => setEntry(e.target.value)}
               placeholder="진입가"
-              className="mt-1 w-full rounded border border-border bg-background px-3 py-2 text-sm"
+              className="mt-1 w-full rounded-lg border border-border bg-background px-3 py-2 text-sm"
             />
           </label>
           <label className="block">
@@ -206,7 +206,7 @@ export function JudgmentDialog({
               onChange={(e) => setInvalidation(e.target.value)}
               required
               placeholder="반증가"
-              className="mt-1 w-full rounded border border-border bg-background px-3 py-2 text-sm"
+              className="mt-1 w-full rounded-lg border border-border bg-background px-3 py-2 text-sm"
             />
           </label>
           <label className="block">
@@ -219,7 +219,7 @@ export function JudgmentDialog({
               value={target}
               onChange={(e) => setTarget(e.target.value)}
               placeholder="목표가"
-              className="mt-1 w-full rounded border border-border bg-background px-3 py-2 text-sm"
+              className="mt-1 w-full rounded-lg border border-border bg-background px-3 py-2 text-sm"
             />
           </label>
         </div>
@@ -235,7 +235,7 @@ export function JudgmentDialog({
             max={365}
             value={horizon}
             onChange={(e) => setHorizon(parseInt(e.target.value, 10) || 7)}
-            className="mt-1 w-full rounded border border-border bg-background px-3 py-2 text-sm"
+            className="mt-1 w-full rounded-lg border border-border bg-background px-3 py-2 text-sm"
           />
         </label>
 
@@ -247,7 +247,7 @@ export function JudgmentDialog({
             {MOOD_OPTIONS.map((m) => (
               <label
                 key={m.value}
-                className={`cursor-pointer rounded border px-3 py-2 text-sm ${
+                className={`cursor-pointer rounded-lg border px-3 py-2 text-sm ${
                   mood === m.value
                     ? "border-primary bg-primary/10"
                     : "border-border hover:border-primary/40"
@@ -269,7 +269,7 @@ export function JudgmentDialog({
         </fieldset>
 
         {error && (
-          <div className="rounded border border-red-500/40 bg-red-500/10 p-2 text-xs text-red-400">
+          <div className="rounded-lg border border-warn/40 bg-warn/10 p-2 text-xs text-warn">
             {error}
           </div>
         )}
@@ -278,14 +278,14 @@ export function JudgmentDialog({
           <button
             type="button"
             onClick={handleClose}
-            className="rounded border border-border px-4 py-2 text-sm text-muted-foreground hover:text-foreground"
+            className="rounded-lg border border-border px-4 py-2 text-sm text-muted-foreground hover:text-foreground"
           >
             취소
           </button>
           <button
             type="submit"
             disabled={submitting}
-            className="rounded bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
+            className="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
           >
             {submitting ? "저장 중..." : "저장"}
           </button>
@@ -326,19 +326,19 @@ function RRHint({
   }
   if (rr === null || !isFinite(rr)) {
     return (
-      <p className="rounded bg-red-500/10 px-2 py-1 text-xs text-red-500">
+      <p className="rounded-lg bg-warn/10 px-2 py-1 text-xs text-warn">
         ⚠️ Entry·Invalidation·Target 관계가 Long/Short 어느 쪽도 아닙니다.
       </p>
     );
   }
   const color =
-    rr >= 2 ? "text-emerald-500" : rr >= 1 ? "text-amber-500" : "text-red-500";
+    rr >= 2 ? "text-primary" : rr >= 1 ? "text-amber-500" : "text-warn";
   const bg =
-    rr >= 2 ? "bg-emerald-500/10" : rr >= 1 ? "bg-amber-500/10" : "bg-red-500/10";
+    rr >= 2 ? "bg-primary/10" : rr >= 1 ? "bg-amber-500/10" : "bg-warn/10";
   const verdict =
     rr >= 2 ? "권장" : rr >= 1 ? "재검토 (강의 권장 2 미달)" : "위험 (손 > 보)";
   return (
-    <p className={`rounded ${bg} px-2 py-1 text-xs ${color}`}>
+    <p className={`rounded-lg ${bg} px-2 py-1 text-xs ${color}`}>
       R:R <strong>{rr.toFixed(2)}</strong> · {direction} · {verdict}
     </p>
   );

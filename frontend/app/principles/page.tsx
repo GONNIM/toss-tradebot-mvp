@@ -91,7 +91,7 @@ export default function PrinciplesPage() {
   }, []);
 
   if (error) {
-    return <p className="text-sm text-red-600">⚠️ 헌장 로드 실패: {error}</p>;
+    return <p className="text-sm text-warn">⚠️ 헌장 로드 실패: {error}</p>;
   }
   if (!charter) {
     return <p className="text-sm text-muted-foreground">헌장 로드 중…</p>;
@@ -102,7 +102,7 @@ export default function PrinciplesPage() {
       <header className="space-y-2 border-b border-border pb-6">
         <div className="flex items-center gap-3">
           <h1 className="text-3xl font-bold">📜 {charter.title}</h1>
-          <span className="rounded bg-emerald-100 px-2 py-0.5 text-xs font-semibold text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300">
+          <span className="rounded-lg bg-primary/10 px-2 py-0.5 text-xs font-semibold text-primary">
             v{charter.version}
           </span>
         </div>
@@ -131,7 +131,7 @@ export default function PrinciplesPage() {
                 <code className="text-xs text-muted-foreground">{p.code}</code>
               </div>
               <p className="text-sm">{p.definition}</p>
-              <dl className="grid grid-cols-1 gap-1 rounded bg-muted/40 p-3 text-xs font-mono sm:grid-cols-2">
+              <dl className="grid grid-cols-1 gap-1 rounded-lg bg-muted/40 p-3 text-xs font-mono sm:grid-cols-2">
                 {Object.entries(p.thresholds).map(([k, v]) => (
                   <div key={k} className="flex justify-between gap-2">
                     <dt className="text-muted-foreground">{k}</dt>
@@ -145,7 +145,7 @@ export default function PrinciplesPage() {
                 </p>
               )}
               {p.sector_exception && (
-                <p className="text-xs text-amber-600 dark:text-amber-400">
+                <p className="text-xs text-amber-600">
                   <strong>업종 예외:</strong> {p.sector_exception}
                 </p>
               )}
@@ -155,7 +155,7 @@ export default function PrinciplesPage() {
                 </p>
               )}
               {p.loss_handling && (
-                <p className="text-xs text-rose-600 dark:text-rose-400">
+                <p className="text-xs text-warn">
                   <strong>적자 처리:</strong> {p.loss_handling}
                 </p>
               )}
@@ -172,7 +172,7 @@ export default function PrinciplesPage() {
       <section className="space-y-3 rounded-lg border border-border bg-card p-4">
         <h2 className="text-lg font-semibold">🚧 매도 원칙</h2>
         <p className="text-sm">
-          <span className="rounded bg-amber-100 px-2 py-0.5 text-xs font-semibold text-amber-800 dark:bg-amber-950 dark:text-amber-300">
+          <span className="rounded-lg bg-amber-100 px-2 py-0.5 text-xs font-semibold text-amber-800">
             {charter.sell_principle.status}
           </span>{" "}
           {charter.sell_principle.note}
@@ -194,7 +194,7 @@ export default function PrinciplesPage() {
               charter.gate_policy.exempt_signal_types.map((s) => (
                 <code
                   key={s}
-                  className="ml-1 rounded bg-muted px-1.5 py-0.5 text-xs"
+                  className="ml-1 rounded-lg bg-muted px-1.5 py-0.5 text-xs"
                 >
                   {s}
                 </code>
@@ -212,7 +212,7 @@ export default function PrinciplesPage() {
             {charter.screener_verdict.values.map((v) => (
               <code
                 key={v}
-                className="rounded bg-muted px-2 py-0.5 text-xs font-semibold"
+                className="rounded-lg bg-muted px-2 py-0.5 text-xs font-semibold"
               >
                 {v}
               </code>
@@ -232,7 +232,7 @@ export default function PrinciplesPage() {
             <span className="text-xs text-muted-foreground">({charter.universe.note})</span>
           </p>
           <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-            <div className="rounded bg-muted/40 p-2 text-xs">
+            <div className="rounded-lg bg-muted/40 p-2 text-xs">
               <p className="font-semibold">DART 재무 수집</p>
               <p className="text-muted-foreground">
                 주기: {charter.data_pipeline.dart_financials.cadence}
@@ -241,7 +241,7 @@ export default function PrinciplesPage() {
                 {charter.data_pipeline.dart_financials.note}
               </p>
             </div>
-            <div className="rounded bg-muted/40 p-2 text-xs">
+            <div className="rounded-lg bg-muted/40 p-2 text-xs">
               <p className="font-semibold">일일 재계산</p>
               <p className="text-muted-foreground">
                 주기: {charter.data_pipeline.daily_recompute.cadence}
@@ -258,7 +258,7 @@ export default function PrinciplesPage() {
         <h2 className="text-lg font-semibold">⚙️ 수동 보정 (Overrides)</h2>
         <p className="text-sm text-muted-foreground">
           금융업 자동 감지가 애매한 종목 (지주사·여전사·특수목적법인 등) 은
-          <code className="mx-1 rounded bg-muted px-1 text-xs">
+          <code className="mx-1 rounded-lg bg-muted px-1 text-xs">
             manual_overrides.financial_sector
           </code>
           에 수동 등재.
@@ -271,7 +271,7 @@ export default function PrinciplesPage() {
           <ul className="space-y-1 text-xs font-mono">
             {charter.manual_overrides.financial_sector.entries.map((e) => (
               <li key={e.ticker}>
-                <span className="text-emerald-600"><StockLink ticker={e.ticker}>{e.ticker}</StockLink></span> · {String(e.value)} ·{" "}
+                <span className="text-primary"><StockLink ticker={e.ticker}>{e.ticker}</StockLink></span> · {String(e.value)} ·{" "}
                 <span className="text-muted-foreground">{e.reason}</span>
               </li>
             ))}
@@ -289,7 +289,7 @@ export default function PrinciplesPage() {
             >
               <div className="flex items-baseline justify-between gap-3">
                 <div>
-                  <span className="rounded bg-sky-100 px-2 py-0.5 text-xs font-semibold text-sky-700 dark:bg-sky-950 dark:text-sky-300">
+                  <span className="rounded-lg bg-sky-100 px-2 py-0.5 text-xs font-semibold text-sky-700">
                     v{r.version}
                   </span>
                   <span className="ml-2 text-xs text-muted-foreground">

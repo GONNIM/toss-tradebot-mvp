@@ -27,8 +27,8 @@ export function SourcesStatusBar({
             className={cn(
               "rounded-full border px-2 py-0.5",
               ok
-                ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300"
-                : "border-amber-500/40 bg-amber-500/10 text-amber-700 dark:text-amber-300",
+                ? "border-primary/40 bg-primary/10 text-primary"
+                : "border-amber-500/40 bg-amber-500/10 text-amber-700",
             )}
             title={
               ok

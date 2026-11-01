@@ -17,32 +17,32 @@ type Props = {
 
 export function RumorCard({ ticker, name, mcap_bucket, days_hint, detail, score, sentence, sourceUrl, order, subline }: Props) {
   return (
-    <div className="rounded-lg border border-slate-200 bg-white p-3 text-sm text-slate-800 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100">
+    <div className="rounded-lg border border-slate-200 bg-white p-3 text-sm text-slate-800">
       <div className="flex items-baseline gap-2 flex-wrap">
         {typeof order === "number" && (
           <span className="w-6 text-right font-mono text-xs text-muted-foreground">{order}</span>
         )}
-        <span className="rounded bg-sky-600 px-2 py-0.5 font-mono text-xs font-bold text-white">
+        <span className="rounded-lg bg-sky-600 px-2 py-0.5 font-mono text-xs font-bold text-white">
           {ticker}
         </span>
         {mcap_bucket && (
-          <span className="rounded bg-slate-100 px-1.5 py-0.5 text-[10px] font-mono text-slate-700 dark:bg-slate-800 dark:text-slate-200">
+          <span className="rounded-lg bg-slate-100 px-1.5 py-0.5 text-xs font-mono text-slate-700">
             {mcap_bucket}
           </span>
         )}
         {!sentence && (
-          <span className="rounded bg-amber-500 px-2 py-0.5 font-mono text-[10px] font-bold text-slate-900">
+          <span className="rounded-lg bg-amber-500 px-2 py-0.5 font-mono text-xs font-bold text-slate-900">
             {days_hint}
           </span>
         )}
         {typeof score === "number" && (
-          <span className="ml-auto rounded bg-slate-100 px-2 py-0.5 text-xs font-mono font-bold text-slate-700 dark:bg-slate-800 dark:text-slate-200">
+          <span className="ml-auto rounded-lg bg-slate-100 px-2 py-0.5 text-xs font-mono font-bold text-slate-700">
             score {score.toFixed(3)}
           </span>
         )}
       </div>
       <div className="mt-1.5 text-xs text-muted-foreground">{name}</div>
-      <div className="mt-1.5 text-sm text-slate-700 dark:text-slate-200">
+      <div className="mt-1.5 text-sm text-slate-700">
         {sentence ?? detail}
         {sentence && sourceUrl && (
           <>
@@ -52,14 +52,14 @@ export function RumorCard({ ticker, name, mcap_bucket, days_hint, detail, score,
               target="_blank"
               rel="noopener noreferrer"
               onClick={(e) => e.stopPropagation()}
-              className="text-xs text-sky-700 hover:underline dark:text-sky-300"
+              className="text-xs text-sky-700 hover:underline"
             >
               임상 원문 보기 ↗
             </a>
           </>
         )}
       </div>
-      {subline && <div className="mt-1 text-xs text-sky-800 dark:text-sky-300">{subline}</div>}
+      {subline && <div className="mt-1 text-xs text-sky-800">{subline}</div>}
     </div>
   );
 }

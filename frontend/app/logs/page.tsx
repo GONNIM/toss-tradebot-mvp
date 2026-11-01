@@ -7,12 +7,12 @@ import { api, type LogEntry } from "@/lib/api";
 import { cn } from "@/lib/utils";
 
 const LEVEL_COLORS: Record<string, string> = {
-  CRITICAL: "text-red-700 dark:text-red-400",
-  ERROR: "text-red-600 dark:text-red-400",
-  WARNING: "text-amber-600 dark:text-yellow-400",
-  WARN: "text-amber-600 dark:text-yellow-400",
-  INFO: "text-cyan-700 dark:text-cyan-400",
-  DEBUG: "text-zinc-500 dark:text-zinc-400",
+  CRITICAL: "text-warn",
+  ERROR: "text-warn",
+  WARNING: "text-amber-600",
+  WARN: "text-amber-600",
+  INFO: "text-cyan-700",
+  DEBUG: "text-zinc-500",
 };
 
 const JOB_LABELS: Record<string, string> = {
@@ -84,7 +84,7 @@ function TabButton({
       className={cn(
         "px-4 py-2 text-sm font-medium transition-colors border-b-2 -mb-px",
         active
-          ? "border-cyan-500 text-cyan-700 dark:text-cyan-300"
+          ? "border-cyan-500 text-cyan-700"
           : "border-transparent text-muted-foreground hover:text-foreground",
       )}
     >
@@ -169,7 +169,7 @@ function SchedulerTable({ hours }: { hours: number }) {
       </div>
       <div className="rounded-xl border border-border overflow-hidden bg-card">
         <table className="w-full text-sm">
-          <thead className="border-b border-cyan-500/40 bg-cyan-500/15 text-cyan-700 dark:text-cyan-200 text-left font-semibold">
+          <thead className="border-b border-cyan-500/40 bg-cyan-500/15 text-cyan-700 text-left font-semibold">
             <tr>
               <th className="px-3 py-3">시각 (KST)</th>
               <th className="px-3 py-3">잡</th>
@@ -210,9 +210,9 @@ function SchedulerRow({ log }: { log: LogEntry }) {
         </td>
         <td className="px-3 py-2.5 text-center">
           {isError ? (
-            <span className="text-rose-600 dark:text-rose-400 font-semibold">✗ 실패</span>
+            <span className="text-warn font-semibold">✗ 실패</span>
           ) : (
-            <span className="text-emerald-600 dark:text-emerald-400 font-semibold">✓ 완료</span>
+            <span className="text-primary font-semibold">✓ 완료</span>
           )}
         </td>
         <td className="px-3 py-2.5 text-right font-mono text-xs text-foreground">
@@ -226,7 +226,7 @@ function SchedulerRow({ log }: { log: LogEntry }) {
         <tr className="border-b border-border/40 last:border-0">
           <td
             colSpan={7}
-            className="px-3 py-2 text-xs text-rose-700 dark:text-rose-300 bg-rose-500/10"
+            className="px-3 py-2 text-xs text-warn bg-warn/10"
           >
             {ctx.error_type}: {ctx.error}
           </td>
@@ -264,13 +264,13 @@ function renderStep(step: unknown): React.ReactNode {
   const obj = step as Record<string, unknown>;
   if ("error" in obj)
     return (
-      <span className="text-rose-600 dark:text-rose-400" title={String(obj.error)}>
+      <span className="text-warn" title={String(obj.error)}>
         ✗ error
       </span>
     );
   if ("skipped" in obj)
     return (
-      <span className="text-amber-600 dark:text-amber-400" title={String(obj.skipped)}>
+      <span className="text-amber-600" title={String(obj.skipped)}>
         skip
       </span>
     );
@@ -279,7 +279,7 @@ function renderStep(step: unknown): React.ReactNode {
   for (const k of keys) {
     if (k in obj)
       return (
-        <span className="text-emerald-700 dark:text-emerald-300">
+        <span className="text-primary">
           ✓ {k}: {String(obj[k])}
         </span>
       );
@@ -288,11 +288,11 @@ function renderStep(step: unknown): React.ReactNode {
   const first = Object.keys(obj)[0];
   if (first)
     return (
-      <span className="text-emerald-700 dark:text-emerald-300">
+      <span className="text-primary">
         ✓ {first}: {String(obj[first])}
       </span>
     );
-  return <span className="text-emerald-700 dark:text-emerald-300">✓</span>;
+  return <span className="text-primary">✓</span>;
 }
 
 function formatTs(iso: string): string {

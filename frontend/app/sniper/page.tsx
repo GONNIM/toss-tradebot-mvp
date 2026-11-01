@@ -28,6 +28,7 @@ import { AdminSessionBar } from "@/components/admin/AdminSessionBar";
 import { SafetyPanel } from "@/components/sniper/SafetyPanel";
 import { scanBadge } from "@/lib/sniper-safety";
 import { JudgmentDialog } from "@/components/journal/JudgmentDialog";
+import { upDownText } from "@/lib/updown";
 
 export default function SniperPage() {
   // Phase D 주 7 (2026-07-31) · localStorage 토큰 → httpOnly 쿠키 세션.
@@ -102,13 +103,13 @@ function SetupGuide({ isAdmin }: { isAdmin: boolean }) {
   }
 
   return (
-    <section className="rounded border-2 border-sky-200 bg-sky-50 p-4 dark:border-sky-900 dark:bg-sky-950">
+    <section className="rounded-lg border-2 border-sky-200 bg-sky-50 p-4">
       <div className="mb-3 flex items-start justify-between">
         <div>
-          <h2 className="text-base font-bold text-sky-900 dark:text-sky-100">
+          <h2 className="text-base font-bold text-sky-900">
             📖 시작하기 — 3단계 준비
           </h2>
-          <p className="mt-0.5 text-xs text-sky-800 dark:text-sky-200">
+          <p className="mt-0.5 text-xs text-sky-800">
             실주문 안전과 스나이퍼 사용을 위해 아래 3단계를 확인합니다.
           </p>
         </div>
@@ -142,7 +143,7 @@ function SetupGuide({ isAdmin }: { isAdmin: boolean }) {
             직접 주문은 바이오·화약고 화면의 「토스증권에서 열기 ↗」 또는{" "}
             <a href="/account" className="underline">내 계좌</a> 에서 토스증권 화면으로 가서 합니다.
           </p>
-          <p className="mt-1 text-[11px] text-muted-foreground">
+          <p className="mt-1 text-xs text-muted-foreground">
             관리자 로그인 토큰은 서버 암호화 설정에 있습니다. 만들거나 바꾸려면 운영 설정 안내 문서를 따르십시오.
           </p>
         </GuideStep>
@@ -172,7 +173,7 @@ function SetupGuide({ isAdmin }: { isAdmin: boolean }) {
           <p className="mt-1 text-xs">
             켜도 주문 대상이 모의 계좌면 실계좌 주문은 나가지 않습니다 (지금 주문 대상: {s?.order_target === "toss" ? "실계좌" : "모의"}).
           </p>
-          <p className="mt-1 text-xs text-red-600">
+          <p className="mt-1 text-xs text-warn">
             ⚠️ 시드 100만원 100% 손실 가능. 안전장치(Kill Switch -3% · 종목당 상한 · 정규장 게이팅)는
             존재하지만 실현손실 자체는 감내 대상.
           </p>
@@ -198,10 +199,10 @@ function GuideStep({
   const [open, setOpen] = useState(!done);
   return (
     <div
-      className={`rounded border ${
+      className={`rounded-lg border ${
         done
-          ? "border-emerald-200 bg-white/50 dark:border-emerald-900 dark:bg-slate-900/40"
-          : "border-amber-300 bg-white dark:border-amber-800 dark:bg-slate-900"
+          ? "border-primary/30 bg-white/50"
+          : "border-amber-300 bg-white"
       } p-2`}
     >
       <button
@@ -213,7 +214,7 @@ function GuideStep({
           <span
             className={`flex h-6 w-6 items-center justify-center rounded-full text-xs font-bold ${
               done
-                ? "bg-emerald-500 text-white"
+                ? "bg-primary text-white"
                 : "bg-amber-500 text-white"
             }`}
           >
@@ -221,14 +222,14 @@ function GuideStep({
           </span>
           <div>
             <p className="text-sm font-semibold">{title}</p>
-            <p className={`text-xs ${done ? "text-emerald-700" : "text-amber-700"}`}>
+            <p className={`text-xs ${done ? "text-primary" : "text-amber-700"}`}>
               {summary}
             </p>
           </div>
         </div>
         <span className="text-xs text-muted-foreground">{open ? "▲" : "▼"}</span>
       </button>
-      {open && <div className="mt-2 text-xs text-slate-700 dark:text-slate-300">{children}</div>}
+      {open && <div className="mt-2 text-xs text-slate-700">{children}</div>}
     </div>
   );
 }
@@ -248,22 +249,22 @@ function StatusPanel() {
   const badge = scanBadge(s);
   const isRunning = badge.running;
   return (
-    <section className="rounded border border-border bg-card p-4">
+    <section className="rounded-lg border border-border bg-card p-4">
       <div className="mb-3 flex items-center justify-between">
         <h2 className="text-sm font-semibold">📊 전역 상태</h2>
         <div className="flex items-center gap-2">
           <span
             className={`inline-flex items-center gap-1 rounded-full px-3 py-1 text-xs font-bold ${
               isRunning
-                ? "bg-emerald-100 text-emerald-700"
+                ? "bg-primary/10 text-primary"
                 : s.kill_switch_active
-                ? "bg-red-100 text-red-700"
+                ? "bg-warn/10 text-warn"
                 : "bg-slate-200 text-slate-700"
             }`}
           >
             <span
               className={`h-2 w-2 rounded-full ${
-                isRunning ? "animate-pulse bg-emerald-500" : "bg-slate-400"
+                isRunning ? "animate-pulse bg-primary" : "bg-slate-400"
               }`}
             />
             {badge.label}
@@ -337,12 +338,12 @@ function Stat({
   hint?: string;
 }) {
   const color =
-    tone === "good" ? "text-emerald-600" : tone === "bad" ? "text-red-600" : "text-foreground";
+    tone === "good" ? "text-primary" : tone === "bad" ? "text-warn" : "text-foreground";
   return (
     <div title={hint} className={hint ? "cursor-help" : ""}>
       <p className="text-xs text-muted-foreground">
         {label}
-        {hint && <span className="ml-1 text-[9px] text-slate-400">ⓘ</span>}
+        {hint && <span className="ml-1 text-xs text-slate-400">ⓘ</span>}
       </p>
       <p className={`text-sm font-semibold ${color}`}>{value}</p>
     </div>
@@ -357,10 +358,10 @@ function CandidatesPanel() {
     refetchInterval: 30_000,
   });
   return (
-    <section className="rounded border border-border bg-card p-4">
+    <section className="rounded-lg border border-border bg-card p-4">
       <div className="mb-3">
         <h2 className="text-sm font-semibold">🎯 실시간 candidate 스캔 (Top 15)</h2>
-        <p className="mt-0.5 text-[10px] text-muted-foreground">
+        <p className="mt-0.5 text-xs text-muted-foreground">
           30초 주기 · 유니버스 상위 종목의 tape_score 산출 · 임계 초과 시 자동 매수 (Sniper 활성 필요)
           · 컬럼 rank_z/trades_z/book_z 는 3개 소스 z-score
         </p>
@@ -397,18 +398,18 @@ function CandidatesPanel() {
                   </td>
                   <td
                     className={`py-1 text-right ${
-                      (r.return_pct ?? 0) >= 0 ? "text-emerald-600" : "text-red-600"
+                      upDownText(r.return_pct ?? 0, "text-up")
                     }`}
                   >
                     {fmtPct(r.return_pct)}
                   </td>
                   <td className="py-1">
                     {r.candidate ? (
-                      <span className="rounded bg-emerald-100 px-1.5 py-0.5 text-[10px] font-semibold text-emerald-700">
+                      <span className="rounded-lg bg-primary/10 px-1.5 py-0.5 text-xs font-semibold text-primary">
                         ✓ candidate
                       </span>
                     ) : (
-                      <span className="text-[10px] text-muted-foreground">
+                      <span className="text-xs text-muted-foreground">
                         {r.reject_reason ?? "reject"}
                       </span>
                     )}
@@ -433,10 +434,10 @@ function SignalsPanel() {
     refetchInterval: 15_000,
   });
   return (
-    <section className="rounded border border-border bg-card p-4">
+    <section className="rounded-lg border border-border bg-card p-4">
       <div className="mb-3">
         <h2 className="text-sm font-semibold">📜 최근 24h 진입·청산 이력</h2>
-        <p className="mt-0.5 text-[10px] text-muted-foreground">
+        <p className="mt-0.5 text-xs text-muted-foreground">
           자동 매매가 실제로 실행되면 여기 기록됩니다. PnL 초록/빨강 · 상태 open/closed · 사유 trailing/hard_sl/force_close
         </p>
       </div>
@@ -469,7 +470,7 @@ function SignalsPanel() {
                   <td className="py-1 text-right">{fmtPriceForTicker(r.ticker, r.exit_price)}</td>
                   <td
                     className={`py-1 text-right font-semibold ${
-                      (r.pnl_pct ?? 0) >= 0 ? "text-emerald-600" : "text-red-600"
+                      upDownText(r.pnl_pct ?? 0, "text-up")
                     }`}
                   >
                     {fmtPct(r.pnl_pct)}
@@ -477,7 +478,7 @@ function SignalsPanel() {
                   <td className="py-1">{r.reason ?? "—"}</td>
                   <td className="py-1">
                     <span
-                      className={`inline-flex items-center rounded px-1.5 py-0.5 text-[10px] font-semibold ${
+                      className={`inline-flex items-center rounded-lg px-1.5 py-0.5 text-xs font-semibold ${
                         r.exit_order_uuid
                           ? "bg-slate-100 text-slate-700"
                           : "bg-sky-100 text-sky-700"
@@ -512,11 +513,11 @@ function UniversePanel({ isAdmin }: { isAdmin: boolean }) {
   });
   const size = q.data?.size ?? 0;
   return (
-    <section className="rounded border border-border bg-card p-4">
+    <section className="rounded-lg border border-border bg-card p-4">
       <div className="mb-3 flex items-center justify-between">
         <div>
           <h2 className="text-sm font-semibold">🗂 유니버스 (Top 30 · nightly 22:00 KST 재싱크)</h2>
-          <p className="mt-0.5 text-[10px] text-muted-foreground">
+          <p className="mt-0.5 text-xs text-muted-foreground">
             스나이퍼가 감시할 KOSDAQ 종목 목록 · 매일 22:00 KST 자동 재싱크 · 즉시 재싱크는 관리자 세션 필요
           </p>
         </div>
@@ -524,29 +525,29 @@ function UniversePanel({ isAdmin }: { isAdmin: boolean }) {
           type="button"
           onClick={() => isAdmin && refresh.mutate()}
           disabled={!isAdmin || refresh.isPending}
-          className="rounded bg-sky-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-sky-700 disabled:opacity-50"
+          className="rounded-lg bg-sky-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-sky-700 disabled:opacity-50"
           title={!isAdmin ? "관리자 로그인 필요" : ""}
         >
           {refresh.isPending ? "재싱크 중…" : "🔄 지금 재싱크 (관리자)"}
         </button>
       </div>
       {refresh.error && (
-        <div className="mb-3 rounded border border-red-300 bg-red-50 p-2 text-xs text-red-700 dark:border-red-900 dark:bg-red-950">
+        <div className="mb-3 rounded-lg border border-warn/40 bg-warn/5 p-2 text-xs text-warn">
           <p className="font-semibold">재싱크 실패</p>
-          <p className="mt-1 font-mono text-[10px]">{(refresh.error as Error).message}</p>
+          <p className="mt-1 font-mono text-xs">{(refresh.error as Error).message}</p>
           <p className="mt-1">
             401 이면 세션 만료·미로그인 · 403 이면 SNIPER_LIVE_ENABLED 확인 · 500 이면 서버 SNIPER_API_TOKEN 미설정.
           </p>
         </div>
       )}
       {refresh.data && (
-        <p className="mb-2 text-xs text-emerald-600">
+        <p className="mb-2 text-xs text-primary">
           ✓ 재싱크 완료 · {new Date(refresh.data.refreshed_at).toLocaleTimeString("ko-KR")} ·{" "}
           {refresh.data.passed} 종목 통과
         </p>
       )}
       {size === 0 && !q.isLoading && (
-        <p className="mb-2 rounded bg-amber-50 p-2 text-xs text-amber-700 dark:bg-amber-950 dark:text-amber-200">
+        <p className="mb-2 rounded-lg bg-amber-50 p-2 text-xs text-amber-700">
           ⚠️ 유니버스 비어있음 · 위 "🔄 지금 재싱크" 버튼 눌러 초기 로드 필요 · 이후 매일 22:00 KST 자동 재싱크
         </p>
       )}
@@ -579,7 +580,7 @@ function UniversePanel({ isAdmin }: { isAdmin: boolean }) {
                     <td className="py-1 text-right">{fmtKrw(r.amount_today)}</td>
                     <td className="py-1">
                       {r.is_squeeze && (
-                        <span className="rounded bg-amber-100 px-1.5 py-0.5 text-[10px] font-semibold text-amber-700">
+                        <span className="rounded-lg bg-amber-100 px-1.5 py-0.5 text-xs font-semibold text-amber-700">
                           🎯 squeeze
                         </span>
                       )}
@@ -629,14 +630,14 @@ function ParamsEditor({ isAdmin }: { isAdmin: boolean }) {
     setDraft({ ...draft, [k]: v });
 
   return (
-    <section className="rounded border border-border bg-card p-4">
+    <section className="rounded-lg border border-border bg-card p-4">
       <div className="mb-3 flex items-center justify-between">
         <div>
           <h2 className="text-sm font-semibold">⚙️ 하드 파라미터 편집</h2>
-          <p className="mt-0.5 text-[10px] text-muted-foreground">
+          <p className="mt-0.5 text-xs text-muted-foreground">
             아래 값을 화면에서 바꿀 수 있습니다 · 관리자 로그인 필요 · 저장 시 백엔드 hot reload · 다음 폴부터 즉시 반영
             {!isAdmin && (
-              <span className="ml-1 rounded bg-red-100 px-1.5 py-0.5 font-semibold text-red-700">
+              <span className="ml-1 rounded-lg bg-warn/10 px-1.5 py-0.5 font-semibold text-warn">
                 🔐 anon · 저장 불가
               </span>
             )}
@@ -648,7 +649,7 @@ function ParamsEditor({ isAdmin }: { isAdmin: boolean }) {
             type="button"
             onClick={() => isAdmin && save.mutate(draft)}
             disabled={!isAdmin || !dirty || save.isPending}
-            className="rounded bg-primary px-3 py-1.5 text-xs font-semibold text-primary-foreground disabled:opacity-50"
+            className="rounded-lg bg-primary px-3 py-1.5 text-xs font-semibold text-primary-foreground disabled:opacity-50"
             title={!isAdmin ? "먼저 🔐 관리자 로그인 필요" : ""}
           >
             {save.isPending ? "저장 중…" : "💾 저장"}
@@ -656,13 +657,13 @@ function ParamsEditor({ isAdmin }: { isAdmin: boolean }) {
         </div>
       </div>
       {save.error && (
-        <p className="mb-2 text-xs text-red-500">
+        <p className="mb-2 text-xs text-warn">
           실패: {(save.error as Error).message}
         </p>
       )}
 
       {/* On/Off 토글 · 가장 중요 */}
-      <h3 className="mb-2 text-xs font-semibold text-red-700">🚦 실행 스위치 (가장 중요)</h3>
+      <h3 className="mb-2 text-xs font-semibold text-warn">🚦 실행 스위치 (가장 중요)</h3>
       <div className="mb-4 grid grid-cols-2 gap-3">
         <ToggleField
           label="Sniper 활성 (enabled)"
@@ -752,7 +753,7 @@ function ParamsEditor({ isAdmin }: { isAdmin: boolean }) {
       </div>
 
       <h3 className="mb-2 text-xs font-semibold">🎯 Composite Score 임계</h3>
-      <p className="mb-2 text-[10px] text-muted-foreground">
+      <p className="mb-2 text-xs text-muted-foreground">
         tape_score = 0.5×rank_z + 0.3×trades_z + 0.2×book_z (가중 합) · 다음 임계 전부 통과해야 candidate 승격
       </p>
       <div className="mb-4 grid grid-cols-4 gap-3">
@@ -855,7 +856,7 @@ function ParamsEditor({ isAdmin }: { isAdmin: boolean }) {
           int
         />
       </div>
-      <p className="mt-3 text-[10px] text-muted-foreground">
+      <p className="mt-3 text-xs text-muted-foreground">
         저장 시 백엔드 hot reload · 다음 폴링부터 즉시 반영. 유니버스 필터 변경 시 재싱크 필요.
       </p>
       <JudgmentDialog
@@ -883,9 +884,9 @@ function ToggleField({
   return (
     <label
       title={hint}
-      className={`flex items-start gap-2 rounded border p-2 text-sm cursor-pointer ${
+      className={`flex items-start gap-2 rounded-lg border p-2 text-sm cursor-pointer ${
         value
-          ? "border-emerald-400 bg-emerald-50 dark:bg-emerald-950"
+          ? "border-primary/60 bg-primary/5"
           : "border-border bg-background"
       }`}
     >
@@ -898,13 +899,13 @@ function ToggleField({
       <div className="flex-1">
         <div className="flex items-center gap-1">
           <span className="font-semibold">{label}</span>
-          {hint && <span className="text-[9px] text-slate-400">ⓘ</span>}
+          {hint && <span className="text-xs text-slate-400">ⓘ</span>}
         </div>
-        {hint && <p className="text-[10px] text-muted-foreground">{hint}</p>}
+        {hint && <p className="text-xs text-muted-foreground">{hint}</p>}
       </div>
       <span
-        className={`ml-auto rounded px-2 py-0.5 text-[10px] font-bold ${
-          value ? "bg-emerald-500 text-white" : "bg-slate-300 text-slate-700"
+        className={`ml-auto rounded-lg px-2 py-0.5 text-xs font-bold ${
+          value ? "bg-primary text-white" : "bg-slate-300 text-slate-700"
         }`}
       >
         {value ? "ON" : "OFF"}
@@ -916,13 +917,13 @@ function ToggleField({
 function LabelWithHint({ label, hint }: { label: string; hint?: string }) {
   return (
     <label
-      className={`mb-0.5 block text-[10px] font-semibold text-muted-foreground ${
+      className={`mb-0.5 block text-xs font-semibold text-muted-foreground ${
         hint ? "cursor-help" : ""
       }`}
       title={hint}
     >
       {label}
-      {hint && <span className="ml-1 text-[9px] text-slate-400">ⓘ</span>}
+      {hint && <span className="ml-1 text-xs text-slate-400">ⓘ</span>}
     </label>
   );
 }
@@ -948,7 +949,7 @@ function NumField({
         value={v}
         step={int ? 1 : "any"}
         onChange={(e) => on(int ? parseInt(e.target.value, 10) || 0 : parseFloat(e.target.value) || 0)}
-        className="w-full rounded border border-border bg-background px-2 py-1 text-xs"
+        className="w-full rounded-lg border border-border bg-background px-2 py-1 text-xs"
       />
     </div>
   );
@@ -976,7 +977,7 @@ function PctField({
           const pct = parseFloat(e.target.value);
           on(Number.isNaN(pct) ? 0 : pct / 100);
         }}
-        className="w-full rounded border border-border bg-background px-2 py-1 text-xs"
+        className="w-full rounded-lg border border-border bg-background px-2 py-1 text-xs"
       />
     </div>
   );
@@ -1000,7 +1001,7 @@ function StrField({
         type="text"
         value={v}
         onChange={(e) => on(e.target.value)}
-        className="w-full rounded border border-border bg-background px-2 py-1 text-xs font-mono"
+        className="w-full rounded-lg border border-border bg-background px-2 py-1 text-xs font-mono"
       />
     </div>
   );

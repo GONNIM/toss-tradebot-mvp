@@ -50,6 +50,8 @@ const config: Config = {
         },
       },
       borderRadius: {
+        // 5c · 반경은 8 (lg) · 14 (xl) · 알약 (full) 셋 (docs/design-rules.md 3절)
+        xl: "14px",
         lg: "var(--radius)",
         md: "calc(var(--radius) - 2px)",
         sm: "calc(var(--radius) - 4px)",

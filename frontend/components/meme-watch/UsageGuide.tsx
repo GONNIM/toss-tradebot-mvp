@@ -9,7 +9,7 @@ export function UsageGuide() {
     <div className="rounded-lg border border-cyan-500/30 bg-cyan-500/5">
       <button
         onClick={() => setOpen(!open)}
-        className="w-full flex items-center justify-between px-4 py-2.5 text-sm font-semibold text-cyan-700 dark:text-cyan-300 hover:bg-cyan-500/10"
+        className="w-full flex items-center justify-between px-4 py-2.5 text-sm font-semibold text-cyan-700 hover:bg-cyan-500/10"
       >
         <span>📖 밈주 워치 사용 가이드 {open ? "▼" : "▶"}</span>
         <span className="text-xs text-muted-foreground">
@@ -85,11 +85,11 @@ export function UsageGuide() {
           </div>
 
           {/* Meme-watch vs Sector Leaders */}
-          <div className="rounded border border-amber-500/30 bg-amber-500/5 p-2">
-            <div className="font-semibold text-amber-700 dark:text-amber-300 mb-1 text-xs">
+          <div className="rounded-lg border border-amber-500/30 bg-amber-500/5 p-2">
+            <div className="font-semibold text-amber-700 mb-1 text-xs">
               🔍 밈주 워치 vs 섹터별 주도주 Top 10
             </div>
-            <div className="text-xs text-amber-700 dark:text-amber-300">
+            <div className="text-xs text-amber-700">
               밈주 워치는 <strong>사후 반응 시그널</strong>(폭등 감지)이라 forecast(예측 수익가,
               진입 시점)는 <strong>제공하지 않습니다</strong>. 예측이 필요하면 섹터별 주도주 페이지의
               Top 10 을 참고하세요. 여기 표시된 현재가는 마지막 일봉 종가입니다.
@@ -97,7 +97,7 @@ export function UsageGuide() {
           </div>
 
           {/* disclaimer */}
-          <div className="text-xs text-rose-600 dark:text-rose-400 font-semibold">
+          <div className="text-xs text-warn font-semibold">
             ⚠️ 밈주는 단시간 -50% 이상 손실 가능 — 투자 권유 아님, 잃어도 되는 고위험 시드로만 운영 권장.
           </div>
         </div>

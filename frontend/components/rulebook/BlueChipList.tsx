@@ -126,7 +126,7 @@ export function BlueChipList({ isAdmin = false }: { isAdmin?: boolean }) {
             <select
               value={minPass}
               onChange={(e) => setMinPass(Number(e.target.value))}
-              className="rounded border border-border bg-background px-1 py-0.5"
+              className="rounded-lg border border-border bg-background px-1 py-0.5"
             >
               {[1, 2, 3, 4, 5].map((n) => (
                 <option key={n} value={n}>
@@ -152,7 +152,7 @@ export function BlueChipList({ isAdmin = false }: { isAdmin?: boolean }) {
                 ? "관리자 로그인 필요 (상단 🔐 카드)"
                 : "5단계 스크리너 즉시 재실행 · 예상 3~10분"
             }
-            className="rounded bg-primary px-3 py-1 text-xs font-semibold text-primary-foreground disabled:opacity-40"
+            className="rounded-lg bg-primary px-3 py-1 text-xs font-semibold text-primary-foreground disabled:opacity-40"
           >
             {running ? "실행 중… (3~10분)" : "🔄 지금 재실행"}
           </button>
@@ -160,12 +160,12 @@ export function BlueChipList({ isAdmin = false }: { isAdmin?: boolean }) {
       </div>
 
       {runResult && (
-        <div className="mt-2 rounded border border-emerald-500/40 bg-emerald-500/10 px-3 py-2 text-xs text-emerald-500">
+        <div className="mt-2 rounded-lg border border-primary/40 bg-primary/10 px-3 py-2 text-xs text-primary">
           ✅ {runResult}
         </div>
       )}
       {runError && (
-        <div className="mt-2 rounded border border-red-500/40 bg-red-500/10 px-3 py-2 text-xs text-red-500">
+        <div className="mt-2 rounded-lg border border-warn/40 bg-warn/10 px-3 py-2 text-xs text-warn">
           ⛔ {runError}
         </div>
       )}
@@ -174,13 +174,13 @@ export function BlueChipList({ isAdmin = false }: { isAdmin?: boolean }) {
         <div className="mt-2 flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
           <span>run: {data.run_id ?? "—"}</span>
           <span>유니버스 {data.universe_size}</span>
-          <span className="text-emerald-500">전 통과 {data.passed_count}</span>
+          <span className="text-primary">전 통과 {data.passed_count}</span>
           <span className="text-amber-500">부분 통과 {data.partial_count}</span>
         </div>
       )}
 
       {loading && <div className="mt-3 text-xs text-muted-foreground">로딩...</div>}
-      {error && <div className="mt-3 text-xs text-red-500">에러: {error}</div>}
+      {error && <div className="mt-3 text-xs text-warn">에러: {error}</div>}
 
       {!loading && data && data.items.length === 0 && (
         <div className="mt-3 rounded-lg border border-dashed border-border p-4 text-center text-xs text-muted-foreground">
@@ -222,20 +222,20 @@ export function BlueChipList({ isAdmin = false }: { isAdmin?: boolean }) {
                   <tr
                     key={it.ticker}
                     className={`border-b border-border/40 ${
-                      it.overall_pass ? "bg-emerald-500/5" : ""
+                      it.overall_pass ? "bg-primary/5" : ""
                     }`}
                     title={it.reject_reasons || "5단계 모두 통과"}
                   >
                     <td className="py-1.5 font-mono font-bold"><StockLink ticker={it.ticker}>{it.ticker}</StockLink></td>
                     <td className="py-1.5">
                       <div>{it.name ?? "—"}</div>
-                      <div className="text-[10px] text-muted-foreground">
+                      <div className="text-xs text-muted-foreground">
                         {it.market}
                       </div>
                     </td>
                     <td className="py-1.5">
                       <span
-                        className={`rounded px-1.5 py-0.5 text-[10px] font-semibold ${tb.className}`}
+                        className={`rounded-lg px-1.5 py-0.5 text-xs font-semibold ${tb.className}`}
                       >
                         {tb.label}
                       </span>
@@ -253,7 +253,7 @@ export function BlueChipList({ isAdmin = false }: { isAdmin?: boolean }) {
                     ))}
                     <td
                       className={`py-1.5 text-right font-bold ${
-                        it.overall_pass ? "text-emerald-500" : "text-amber-500"
+                        it.overall_pass ? "text-primary" : "text-amber-500"
                       }`}
                     >
                       {it.pass_count}/5
@@ -266,7 +266,7 @@ export function BlueChipList({ isAdmin = false }: { isAdmin?: boolean }) {
         </div>
       )}
 
-      <p className="mt-3 text-[10px] text-muted-foreground">
+      <p className="mt-3 text-xs text-muted-foreground">
         단계: 1시총 · 2업종(자동통과) · 3매출·순이익 3Y↑ · 4연봉 3Y↑ · 5월봉 5MA 3M+
       </p>
     </section>
