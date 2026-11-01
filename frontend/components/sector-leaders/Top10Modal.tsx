@@ -6,7 +6,7 @@
  * 매력도 점수(Confluence 0.5 + 신뢰도 0.3 + R/R 0.2) 상위 10 종목.
  * 진입가 v2.0 (2026-07-08~): 52W 위치 + ATR14 완충 + 200MA 이격도 기반 과열 판정.
  *   - 과열 (52W ≥85% or MA200 ≥+25%): 🔴 관망
- *   - 정상: 현재가 − 1.0 × ATR14 → 🟢 지금 or 🟡 조정 대기
+ *   - 정상: 현재가 − 1.0 × ATR14 → 🟢 참고선 근처 or 🟡 참고선이 n% 아래
  */
 import { useEffect } from "react";
 import { StockLink } from "@/components/stock/StockLink";
@@ -306,7 +306,7 @@ function Row({ it }: { it: Top10Item }) {
     <tr className="border-b border-border/40 hover:bg-muted/30 whitespace-nowrap">
       <td className="px-2.5 py-2 font-bold text-primary text-base">#{it.rank}</td>
       <td className="px-2.5 py-2">
-        <div className="font-semibold text-zinc-50 leading-tight">{it.name}</div>
+        <div className="font-semibold text-foreground leading-tight">{it.name}</div>
         <div className="text-xs text-zinc-400 font-mono leading-tight mt-0.5">
           <StockLink ticker={it.ticker}>{it.ticker}</StockLink> · {it.item}
         </div>
@@ -323,7 +323,7 @@ function Row({ it }: { it: Top10Item }) {
       </td>
       <td className="px-2.5 py-2 text-right">
         <div
-          className={`font-mono font-semibold leading-tight ${isOverheat ? "text-zinc-500" : "text-zinc-50"}`}
+          className={`font-mono font-semibold leading-tight ${isOverheat ? "text-zinc-500" : "text-foreground"}`}
           title={
             isOverheat
               ? "과열 종목은 지정가 참고선을 계산하지 않습니다"

@@ -190,7 +190,7 @@ class TestEntryPriceCalculation:
         assert result.entry_price == pytest.approx(expected_entry)
 
     def test_status_ready_when_gap_small(self):
-        """진입가 gap이 -0.5% 이내면 '지금 매수'."""
+        """진입가 gap이 -0.5% 이내면 '참고선 근처'."""
         # 매우 낮은 변동성 → ATR도 작음 → gap 작음
         n = 252
         closes = [100_000.0] * n
@@ -203,7 +203,7 @@ class TestEntryPriceCalculation:
         assert result.entry_status.startswith("🟢")
 
     def test_status_wait_when_gap_large(self):
-        """진입가 gap이 -0.5% 초과면 '조정 대기'."""
+        """진입가 gap이 -0.5% 초과면 '참고선이 n% 아래'."""
         n = 252
         closes = [100_000.0] * n
         highs = [103_000.0] * n  # range 6000원 (6%) → 큰 gap
