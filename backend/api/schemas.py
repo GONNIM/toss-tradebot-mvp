@@ -431,6 +431,7 @@ class VerdictResponse(BaseModel):
     label: str
     context: str
     action_hint: str
+    kind: str  # up / down / warning / neutral (1101-01)
 
 
 class RiskRewardResponse(BaseModel):

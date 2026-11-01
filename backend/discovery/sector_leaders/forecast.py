@@ -100,7 +100,8 @@ class Verdict:
     color: str         # green / amber / red
     label: str         # "강한 상승 시그널" / "약한 상승" / "중립" / "하락" / "이례" / "신뢰 낮음"
     context: str       # 한 줄 컨텍스트
-    action_hint: str   # "진입 가치" / "관심" / "관망" / "비추천"
+    action_hint: str   # "관심" / "관망" / "참고만 (근거 약함)" — 사고팔기를 권하지 않는다 (1101-01)
+    kind: str          # up / down / warning / neutral — 화면 색·아이콘은 이 값으로 고른다 (red 는 하락·경고 두 뜻)
 
 
 @dataclass(frozen=True)
@@ -308,7 +309,8 @@ def compute_verdict(
             color="red",
             label="신뢰 매우 낮음",
             context=f"{oos_text} — 모델 단독 판단 금지, 다른 변수와 함께 사용",
-            action_hint="비추천",
+            action_hint="참고만 (근거 약함)",
+            kind="warning",
         )
 
     # 2) 통계적 이례 — 24M 범위 외삽
@@ -319,6 +321,7 @@ def compute_verdict(
                 label="강한 상승 시그널 — 통계적 이례",
                 context=f"점추정({pt:+.1f}%)이 24M 강세 범위(P90 {band.p90_pct:+.1f}%) 초과 — 외삽 영역",
                 action_hint="관심 (외삽 영역 주의)",
+                kind="neutral",
             )
         if pt < band.p10_pct:
             return Verdict(
@@ -326,6 +329,7 @@ def compute_verdict(
                 label="강한 하락 시그널 — 통계적 이례",
                 context=f"점추정({pt:+.1f}%)이 24M 약세 범위(P10 {band.p10_pct:+.1f}%) 미달 — 외삽 영역",
                 action_hint="관심 (외삽 영역 주의)",
+                kind="neutral",
             )
 
     # 3) 표준 분류
@@ -333,8 +337,9 @@ def compute_verdict(
         return Verdict(
             color="green",
             label="강한 상승 시그널",
-            context=f"진입 가치 있음 · R² {r2:.2f} · 표본 부호 적중 {(hit_input * 100):.0f}%",
-            action_hint="관심 가치",
+            context=f"상승 방향 뚜렷 · R² {r2:.2f} · 표본 부호 적중 {(hit_input * 100):.0f}%",
+            action_hint="관심",
+            kind="up",
         )
     if pt >= 2 and r2 >= 0.05:
         return Verdict(
@@ -342,19 +347,22 @@ def compute_verdict(
             label="약한 상승 시그널",
             context=f"방향 일관 · R² {r2:.2f} · 보조 신호로 활용",
             action_hint="관심",
+            kind="up",
         )
     if pt <= -5 and r2 >= 0.1:
         return Verdict(
             color="red",
             label="하락 시그널",
-            context=f"진입 신중 권장 · R² {r2:.2f}",
-            action_hint="비추천",
+            context=f"하락 방향 · R² {r2:.2f}",
+            action_hint="관망",
+            kind="down",
         )
     return Verdict(
         color="amber",
         label="중립 (시그널 약함)",
         context=f"수익률 절대값 작음 · 점추정 {pt:+.1f}% · R² {r2:.2f}",
         action_hint="관망",
+        kind="neutral",
     )
 
 
