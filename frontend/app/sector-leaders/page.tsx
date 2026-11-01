@@ -71,7 +71,7 @@ export default function SectorLeadersPage() {
         </div>
         <button
           onClick={() => setTop10Open(true)}
-          className="rounded-lg border border-sky-300 bg-sky-50 px-4 py-2 text-sm font-semibold text-sky-800 hover:bg-sky-100 transition"
+          className="rounded-lg border border-primary/40 bg-primary/5 px-4 py-2 text-sm font-semibold text-primary hover:bg-primary/10 transition"
         >
           🏆 투자 종목 Top 10
         </button>
@@ -134,7 +134,7 @@ function ItemList({
             onClick={() => onSelect(it.item)}
             className={`w-full text-left px-3 py-2.5 text-sm transition ${
               active
-                ? "bg-sky-50 border-l-2 border-sky-500"
+                ? "bg-primary/5 border-l-2 border-primary"
                 : "hover:bg-muted/30 border-l-2 border-transparent"
             }`}
           >
@@ -314,7 +314,7 @@ function LeaderCard({
       onClick={onSelect}
       className={`text-left rounded-lg border bg-background p-3 transition ${
         active
-          ? "border-2 border-sky-400 bg-sky-50"
+          ? "border-2 border-primary/60 bg-primary/5"
           : "border-border hover:border-muted-foreground/40"
       }`}
     >
@@ -358,7 +358,7 @@ function LeaderCard({
         </span>
         <span className="text-xs text-muted-foreground">rank #{leader.rank}</span>
       </div>
-      <div className="mt-2 text-xs text-cyan-400">
+      <div className="mt-2 text-xs text-primary">
         {active ? "✓ 선택됨 (아래 패널)" : "클릭 → 분석 패널 ▾"}
       </div>
     </button>

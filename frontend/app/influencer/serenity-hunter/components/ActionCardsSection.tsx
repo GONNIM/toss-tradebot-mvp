@@ -73,7 +73,7 @@ export function ActionCardsSection({ data }: { data: ActionCardsResponse }) {
           <button
             type="button"
             onClick={() => setShowRest(!showRest)}
-            className="text-xs text-sky-500 hover:underline"
+            className="text-xs text-primary hover:underline"
           >
             {showRest ? "▲ 접기" : `▼ 더 보기 (+${data.rest_count})`}
           </button>
@@ -164,7 +164,7 @@ function ActionCardItem({
         </span>
         {card.sector_overlap && (
           <span
-            className="rounded-lg bg-amber-500/20 px-1.5 py-0.5 text-xs font-semibold text-amber-500"
+            className="rounded-lg bg-warn/20 px-1.5 py-0.5 text-xs font-semibold text-warn"
             title={`같은 thesis 태그 (${card.sector_overlap_tags.join(", ")}) 2+ 카드 · 사실상 같은 베팅 · Serenity 논지 축 기준`}
           >
             ⚠ 논지겹침 {card.sector_overlap_tags.length > 0 ? `(${card.sector_overlap_tags[0]}${card.sector_overlap_tags.length > 1 ? "+" : ""})` : ""}
@@ -180,7 +180,7 @@ function ActionCardItem({
         )}
         {card.market_cap_sanity_warning && (
           <span
-            className="rounded-lg bg-orange-500/20 px-1.5 py-0.5 text-xs font-semibold text-orange-500"
+            className="rounded-lg bg-warn/20 px-1.5 py-0.5 text-xs font-semibold text-warn"
             title="marketCap ≠ shares × close (>10% 편차) · yfinance 데이터 정합성 의심 · 계산 신뢰도 낮음"
           >
             ⚠ 시총 검산 실패
@@ -189,13 +189,13 @@ function ActionCardItem({
         {card.order_mode === "amount" && (
           <>
             <span
-              className="rounded-lg bg-purple-500/20 px-1.5 py-0.5 text-xs font-semibold text-purple-400"
+              className="rounded-lg bg-primary/20 px-1.5 py-0.5 text-xs font-semibold text-primary"
               title="1주가 예산을 초과 · 금액 주문 (₩200,000 상당) · 소수점 수량 · 지정가 통제 브로커별 제한"
             >
               💰 금액 모드
             </span>
             <span
-              className="rounded-lg bg-yellow-500/20 px-1.5 py-0.5 text-xs font-semibold text-yellow-400"
+              className="rounded-lg bg-warn/20 px-1.5 py-0.5 text-xs font-semibold text-warn"
               title="소수점 주문은 지정가 슬리피지 방어가 약함 · 브로커 매매 방식 실 확인"
             >
               ⚠ 지정가 통제 제한
@@ -236,7 +236,7 @@ function ActionCardItem({
                 {_fmtUsd((card.last_close ?? 0) / (1 + (card.vs_prior_pct ?? 0) / 100))}
               </span>{" "}
               (
-              <span className={upDownText(card.vs_prior_pct ?? 0, "text-down")}>
+              <span className={upDownText(card.vs_prior_pct ?? 0)}>
                 {(card.vs_prior_pct ?? 0) > 0 ? "+" : ""}
                 {(card.vs_prior_pct ?? 0).toFixed(1)}%
               </span>
@@ -296,7 +296,7 @@ function ActionCardItem({
                 <span className="font-bold">{_fmtUsd(card.tp_trigger_price, 4)}</span>{" "}
                 <span className="text-muted-foreground">후 트레일링 -{card.trail_pct}%</span>
               </div>
-              <div className={card.min_rr_warning ? "text-amber-500" : "text-muted-foreground"}>
+              <div className={card.min_rr_warning ? "text-warn" : "text-muted-foreground"}>
                 최소 R:R <span className="text-muted-foreground">·</span>{" "}
                 <span className="font-bold">{card.min_rr}</span>
                 {card.min_rr_warning && ` ⚠ Rulebook ${risk.min_rr_warning} 미달 · 확인 후 진행`}

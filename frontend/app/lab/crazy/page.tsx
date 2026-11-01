@@ -43,7 +43,7 @@ export default function CrazyPage() {
           <p className="mt-1 text-sm text-muted-foreground">
             매일 06:30 KST · 시총 ≥ $1B 안전 universe · 정보 전용 (수동 매수) · 행 클릭 시 상세 보기
           </p>
-          <p className="mt-1 text-xs text-amber-400/80">
+          <p className="mt-1 text-xs text-warn/80">
             ⚠️ 모든 pick 의 outcome (T+7·T+30) 을 무조건 표시합니다. cherry-pick 금지 (리뷰 A 권고 2).
           </p>
         </div>
@@ -52,7 +52,7 @@ export default function CrazyPage() {
             onClick={() => setTab("today")}
             className={`rounded-lg border px-3 py-1.5 text-sm ${
               tab === "today"
-                ? "border-sky-300 bg-sky-50 text-sky-800"
+                ? "border-primary/40 bg-primary/5 text-primary"
                 : "border-border text-muted-foreground hover:text-foreground"
             }`}
           >
@@ -62,7 +62,7 @@ export default function CrazyPage() {
             onClick={() => setTab("history")}
             className={`rounded-lg border px-3 py-1.5 text-sm ${
               tab === "history"
-                ? "border-sky-300 bg-sky-50 text-sky-800"
+                ? "border-primary/40 bg-primary/5 text-primary"
                 : "border-border text-muted-foreground hover:text-foreground"
             }`}
           >
@@ -242,7 +242,7 @@ function PickDetail({ pick }: { pick: CrazyPick }) {
 
       {pick.news_summary && (
         <div>
-          <div className="mb-1 font-semibold text-cyan-400">📰 News summary</div>
+          <div className="mb-1 font-semibold text-primary">📰 News summary</div>
           <p className="whitespace-pre-line text-muted-foreground">{pick.news_summary}</p>
         </div>
       )}

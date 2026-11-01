@@ -23,8 +23,8 @@ import { ShowMoreButton } from "@/components/ui/show-more";
 
 const SENTIMENT_OPTS: { value: string; label: string }[] = [
   { value: "", label: "전체" },
-  { value: "bullish", label: "🟢 Bullish" },
-  { value: "bearish", label: "🔴 Bearish" },
+  { value: "bullish", label: "▲ Bullish" },
+  { value: "bearish", label: "▼ Bearish" },
   { value: "neutral", label: "⚪ Neutral" },
   { value: "calibration", label: "🟡 Calibration" },
 ];
@@ -203,7 +203,7 @@ export default function SerenityLanding() {
             {momentum.map(({ t, r }) => (
               <div key={t.ticker} className="relative">
                 <TickerCard item={t} />
-                <span className="absolute right-2 top-2 rounded-lg bg-purple-500/20 px-1.5 py-0.5 text-xs font-semibold text-purple-400">
+                <span className="absolute right-2 top-2 rounded-lg bg-primary/20 px-1.5 py-0.5 text-xs font-semibold text-primary">
                   ×{r.toFixed(1)} momentum
                 </span>
               </div>

@@ -167,12 +167,12 @@ function ExecuteStatusPanel() {
   const we = s?.watchlist_execute;
 
   return (
-    <section className="rounded-lg border-2 border-sky-200 bg-sky-50 p-3 text-xs">
+    <section className="rounded-lg border-2 border-primary/30 bg-primary/5 p-3 text-xs">
       <div className="mb-2 flex items-center justify-between">
-        <div className="font-bold text-sky-900">
+        <div className="font-bold text-primary">
           ⚡ 자동 진입 창 설정
         </div>
-        <a href="/sniper" className="text-sky-600 hover:underline">
+        <a href="/sniper" className="text-primary hover:underline">
           ⚙️ 파라미터 편집 →
         </a>
       </div>
@@ -214,7 +214,7 @@ function ExecuteStatusPanel() {
       )}
       {/* 1025-07 · 관심 종목 자동 진입은 실주문 허용 값을 보지 않고 주문 대상 (EXECUTION_BROKER) 만 본다 */}
       {we?.enabled ? (
-        <div className="mt-2 rounded-lg border border-amber-300 bg-amber-100 px-2 py-1 text-amber-900">
+        <div className="mt-2 rounded-lg border border-warn/40 bg-warn/10 px-2 py-1 text-warn">
           ⚠️ 관심 종목 자동 진입이 켜져 있습니다 · 주문 대상: {s?.order_target === "toss" ? "실계좌 (실제 돈)" : "모의 계좌 (실계좌 주문 없음)"}
         </div>
       ) : null}
@@ -227,11 +227,11 @@ function ExecuteStatusPanel() {
 // ═══════════════════════════════════════════════════════════════
 function PrincipleBanner() {
   return (
-    <section className="rounded-lg border-2 border-amber-200 bg-amber-50 p-3 text-sm">
-      <div className="font-bold text-amber-900">
+    <section className="rounded-lg border-2 border-warn/30 bg-warn/5 p-3 text-sm">
+      <div className="font-bold text-warn">
         🎯 3원칙 (2026-07-13 pivot)
       </div>
-      <ul className="mt-1 space-y-0.5 text-xs text-amber-800">
+      <ul className="mt-1 space-y-0.5 text-xs text-warn">
         <li>1. 마감 후 예측 결정 (15:30 KST~ · 뉴스·소셜·이벤트 야간 축적)</li>
         <li>2. 개장 전 최종 Watchlist (08:30 KST · Top 30 확정 · 수동 편집 가능)</li>
         <li>3. 자동 진입 창 (09:00~09:30 KST · 봇이 Watchlist 종목만 시가 근처에서 진입 · 실행 스위치가 켜졌을 때만)</li>
@@ -274,7 +274,7 @@ function DateSelector({
           <button
             type="button"
             onClick={() => setTradeDate("")}
-            className="text-xs text-sky-600 hover:underline"
+            className="text-xs text-primary hover:underline"
           >
             ↺ 다음 영업일로
           </button>
@@ -292,8 +292,8 @@ function DateSelector({
               onClick={() => setTradeDate(d)}
               className={`rounded-lg px-2 py-0.5 text-xs ${
                 d === tradeDate
-                  ? "bg-sky-600 text-white"
-                  : "border hover:bg-sky-50"
+                  ? "bg-primary text-white"
+                  : "border hover:bg-primary/5"
               }`}
             >
               {d}
@@ -368,7 +368,7 @@ function WatchlistTable({ tradeDate, isAdmin }: { tradeDate: string; isAdmin: bo
             type="button"
             disabled={!isAdmin || finalize.isPending}
             onClick={() => finalize.mutate()}
-            className="rounded-lg bg-sky-600 px-3 py-1 text-xs text-white disabled:opacity-50"
+            className="rounded-lg bg-primary px-3 py-1 text-xs text-white disabled:opacity-50"
             title="지금 즉시 finalize 실행 (08:30 KST 잡과 동일)"
           >
             {finalize.isPending ? "실행 중..." : "🔄 지금 finalize"}
@@ -422,14 +422,14 @@ function WatchlistTable({ tradeDate, isAdmin }: { tradeDate: string; isAdmin: bo
             <tbody>
               {items.map((it) => (
                 <Fragment key={it.id}>
-                <tr className="border-b hover:bg-sky-50/30">
+                <tr className="border-b hover:bg-primary/30">
                   <td className="p-2 font-bold">{it.rank}</td>
                   <td className="p-2">
                     <button
                       type="button"
                       onClick={() => toggleOpen(it.id)}
                       aria-expanded={open.has(it.id)}
-                      className="min-h-[44px] min-w-[44px] rounded-lg border px-2 text-xs hover:bg-sky-50"
+                      className="min-h-[44px] min-w-[44px] rounded-lg border px-2 text-xs hover:bg-primary/5"
                     >
                       {open.has(it.id) ? "접기" : "근거"}
                     </button>
@@ -438,10 +438,10 @@ function WatchlistTable({ tradeDate, isAdmin }: { tradeDate: string; isAdmin: bo
                     <div className="font-medium">{it.name || "-"}</div>
                     <div className="text-xs text-muted-foreground"><StockLink ticker={it.ticker}>{it.ticker}</StockLink></div>
                   </td>
-                  <td className="p-2 text-right font-bold text-sky-700">
+                  <td className="p-2 text-right font-bold text-primary">
                     {it.composite_score.toFixed(3)}
                     {it.evidence?.caution?.length ? (
-                      <div className="mt-0.5 text-xs font-bold text-orange-700">⚠ 주의 공시</div>
+                      <div className="mt-0.5 text-xs font-bold text-warn">⚠ 주의 공시</div>
                     ) : null}
                   </td>
                   <td className="p-2 text-right">{scoreCell("news", it.news_score)}</td>
@@ -456,7 +456,7 @@ function WatchlistTable({ tradeDate, isAdmin }: { tradeDate: string; isAdmin: bo
                     {it.locked ? (
                       <span
                         title="사용자 lock · finalize 실행 후에도 유지"
-                        className="rounded-lg bg-amber-100 px-1.5 py-0.5 text-xs text-amber-800"
+                        className="rounded-lg bg-warn/10 px-1.5 py-0.5 text-xs text-warn"
                       >
                         🔒 lock
                       </span>
@@ -472,7 +472,7 @@ function WatchlistTable({ tradeDate, isAdmin }: { tradeDate: string; isAdmin: bo
                         type="button"
                         disabled={!isAdmin || toggleLock.isPending}
                         onClick={() => toggleLock.mutate({ id: it.id, locked: !it.locked })}
-                        className="rounded-lg border px-1.5 py-0.5 text-xs hover:bg-amber-50 disabled:opacity-30"
+                        className="rounded-lg border px-1.5 py-0.5 text-xs hover:bg-warn/5 disabled:opacity-30"
                         title={it.locked ? "unlock (다음 finalize 시 재평가)" : "lock (다음 finalize 시 유지)"}
                       >
                         {it.locked ? "unlock" : "lock"}
@@ -532,7 +532,7 @@ function EvidenceBlock({ ev, version }: { ev: WatchlistEvidence | null; version:
   return (
     <div className="sticky left-0 max-w-[calc(100vw-5rem)] space-y-3 break-words text-xs md:max-w-none">
       {ev.caution.length > 0 && (
-        <div className="rounded-lg border-2 border-orange-400 bg-orange-50 p-2 text-orange-900">
+        <div className="rounded-lg border-2 border-warn/60 bg-warn/5 p-2 text-warn">
           <div className="font-bold">⚠ 주의 공시 (점수에 넣지 않음)</div>
           <ul className="mt-1 list-disc pl-4">
             {ev.caution.map((c, i) => (
@@ -551,7 +551,7 @@ function EvidenceBlock({ ev, version }: { ev: WatchlistEvidence | null; version:
             : ev.news.articles.map((a, i) => (
                 <li key={i}>
                   {a.url ? (
-                    <a href={a.url} target="_blank" rel="noopener noreferrer" className="text-sky-700 underline">
+                    <a href={a.url} target="_blank" rel="noopener noreferrer" className="text-primary underline">
                       {a.title}
                     </a>
                   ) : (
@@ -798,7 +798,7 @@ function SignalsInspector({ tradeDate }: { tradeDate: string }) {
               <li key={s.id} className="flex gap-2">
                 <span className="font-mono text-muted-foreground"><StockLink ticker={s.ticker}>{s.ticker}</StockLink></span>
                 <span>{s.signal_type}</span>
-                <span className="text-sky-700">int={s.intensity.toFixed(2)}</span>
+                <span className="text-primary">int={s.intensity.toFixed(2)}</span>
                 <span className="ml-auto text-muted-foreground">
                   {s.detected_at ? fmtKstTime(s.detected_at) : "-"}
                 </span>

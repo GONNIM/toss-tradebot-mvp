@@ -139,10 +139,10 @@ export default function VerificationPage() {
                     onClick={() => confirm(p)}
                     style={{
                       padding: "4px 12px",
-                      background: "#4a90e2",
+                      background: "hsl(var(--primary))",
                       color: "white",
                       border: 0,
-                      borderRadius: 4,
+                      borderRadius: 8,
                       cursor: busy === p.ticker ? "wait" : "pointer",
                     }}
                   >

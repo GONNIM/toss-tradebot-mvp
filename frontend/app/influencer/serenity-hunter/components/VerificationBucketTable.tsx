@@ -13,7 +13,7 @@ function _fmtPct(v: number | null | undefined, digits = 2): string {
 }
 
 function _cls(v: number | null | undefined): string {
-  return upDownText(v, "text-up");
+  return upDownText(v);
 }
 
 const BUCKET_LABELS: Record<string, string> = {

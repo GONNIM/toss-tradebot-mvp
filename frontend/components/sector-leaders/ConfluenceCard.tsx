@@ -10,14 +10,15 @@ import type { Confluence, SignalContribution } from "@/lib/api";
 
 export function ConfluenceCard({ data }: { data: Confluence }) {
   const colorMap = {
-    green: "border-primary/50 bg-primary/10 text-primary",
-    amber: "border-amber-500/50 bg-amber-500/10 text-amber-200",
-    red: "border-warn/50 bg-warn/10 text-warn",
+    // 5c-2 · 강세 = 상승 빨강 · 약세 = 하락 파랑 (한국식)
+    green: "border-up/50 bg-up/10 text-up",
+    amber: "border-warn/50 bg-warn/10 text-warn",
+    red: "border-down/50 bg-down/10 text-down",
   } as const;
-  const iconMap = { green: "🟢", amber: "🟡", red: "🔴" } as const;
+  const iconMap = { green: "▲", amber: "■", red: "▼" } as const;
 
   return (
-    <div className="rounded-xl border border-fuchsia-500/30 bg-card p-4 space-y-3">
+    <div className="rounded-xl border border-primary/30 bg-card p-4 space-y-3">
       <div className="flex items-baseline justify-between gap-2 flex-wrap">
         <h4 className="text-base font-semibold">🔬 Confluence — 다중 시그널 통합</h4>
         <span className="text-xs text-muted-foreground">
@@ -77,15 +78,16 @@ function ScoreGauge({
   // -1 ~ +1 → 0 ~ 100% (50%가 중립)
   const x = ((score + 1) / 2) * 100;
   const colorFill = {
-    green: "#10b981",
-    amber: "#f59e0b",
-    red: "#f43f5e",
+    // 5c-2 · 한국식: 강세 빨강 (up) · 약세 파랑 (down)
+    green: "hsl(var(--up))",
+    amber: "hsl(var(--warn))",
+    red: "hsl(var(--down))",
   }[color];
 
   return (
     <div className="relative h-6">
-      {/* 배경 그라데이션: 빨강 ━ 회색 ━ 초록 */}
-      <div className="absolute inset-x-0 top-2 h-2 rounded-full bg-gradient-to-r from-warn/40 via-zinc-500/30 to-primary/40" />
+      {/* 배경 그라데이션: 약세 파랑 ━ 회색 ━ 강세 빨강 */}
+      <div className="absolute inset-x-0 top-2 h-2 rounded-full bg-gradient-to-r from-down/40 via-zinc-500/30 to-up/40" />
       {/* 0 (중앙) 표시 */}
       <div className="absolute top-1 h-4 w-px bg-zinc-400/60" style={{ left: "50%" }} />
       {/* score 마커 */}

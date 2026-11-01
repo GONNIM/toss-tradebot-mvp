@@ -57,7 +57,7 @@ function ReadoutCard({ r, onSaved }: { r: ReadoutRow; onSaved: () => void }) {
       {r.quote && <div className="mt-1 rounded-lg bg-slate-50 p-2 text-muted-foreground">…{r.quote}…</div>}
       <div className="mt-1">
         원문:{" "}
-        <a href={r.sec_url} target="_blank" rel="noopener noreferrer" className="text-sky-700 hover:underline">
+        <a href={r.sec_url} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
           SEC {r.accession} ↗
         </a>
       </div>
@@ -72,7 +72,7 @@ function ReadoutCard({ r, onSaved }: { r: ReadoutRow; onSaved: () => void }) {
               <option value="negative">부정</option>
             </select>
           </label>
-          <button type="button" disabled={busy} onClick={() => save(true)} className="rounded-lg border border-sky-600 px-2 py-1 font-semibold text-sky-700 hover:bg-sky-50 disabled:opacity-50">
+          <button type="button" disabled={busy} onClick={() => save(true)} className="rounded-lg border border-primary px-2 py-1 font-semibold text-primary hover:bg-primary/5 disabled:opacity-50">
             임상 발표 확정
           </button>
           <button type="button" disabled={busy} onClick={() => save(false)} className="rounded-lg border border-border px-2 py-1 text-muted-foreground hover:bg-muted disabled:opacity-50">

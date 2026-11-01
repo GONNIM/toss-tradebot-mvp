@@ -25,7 +25,7 @@ type SortDir = "desc" | "asc";
 const STANCE_META: Record<string, { icon: string; cls: string }> = {
   bullish: { icon: "▲", cls: "text-up" },
   bearish: { icon: "▼", cls: "text-down" },
-  mixed: { icon: "◆", cls: "text-amber-500" },
+  mixed: { icon: "◆", cls: "text-warn" },
   neutral: { icon: "●", cls: "text-slate-400" },
 };
 
@@ -36,7 +36,7 @@ function _fmtPct(v: number | null | undefined, digits = 2): string {
 }
 
 function _cls(v: number | null | undefined): string {
-  return upDownText(v, "text-up");
+  return upDownText(v);
 }
 
 function _fmtMcap(v: number | null | undefined): string {

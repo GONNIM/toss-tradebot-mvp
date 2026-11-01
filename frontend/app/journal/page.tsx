@@ -43,8 +43,8 @@ type Judgment = {
 
 const strategyBadge = (s: string | null) => {
   if (s === "core") return { icon: "🏛", label: "core", cls: "bg-primary/20 text-primary" };
-  if (s === "swing") return { icon: "🌊", label: "swing", cls: "bg-sky-500/20 text-sky-400" };
-  if (s === "event") return { icon: "⚡", label: "event", cls: "bg-purple-500/20 text-purple-400" };
+  if (s === "swing") return { icon: "🌊", label: "swing", cls: "bg-primary/20 text-primary" };
+  if (s === "event") return { icon: "⚡", label: "event", cls: "bg-primary/20 text-primary" };
   return null;
 };
 
@@ -67,21 +67,21 @@ type Baseline = {
 
 const moodBadge = (m: string) => {
   const map: Record<string, string> = {
-    cool: "bg-blue-500/20 text-blue-400",
+    cool: "bg-primary/20 text-primary",
     neutral: "bg-gray-500/20 text-gray-400",
     revenge: "bg-warn/20 text-warn",
-    fomo: "bg-yellow-500/20 text-yellow-400",
+    fomo: "bg-warn/20 text-warn",
   };
   return map[m] || "bg-gray-500/20 text-gray-400";
 };
 
 const pageBadge = (p: string) => {
   const map: Record<string, string> = {
-    powderkeg: "bg-orange-500/20 text-orange-400",
-    watchlist: "bg-purple-500/20 text-purple-400",
-    sniper: "bg-cyan-500/20 text-cyan-400",
+    powderkeg: "bg-warn/20 text-warn",
+    watchlist: "bg-primary/20 text-primary",
+    sniper: "bg-primary/20 text-primary",
     activist: "bg-primary/20 text-primary",
-    vip: "bg-pink-500/20 text-pink-400",
+    vip: "bg-primary/20 text-primary",
     manual: "bg-slate-500/20 text-slate-400",
   };
   return map[p] || "bg-slate-500/20 text-slate-400";
@@ -369,7 +369,7 @@ function Stage2KpiProgress({
           className={`rounded-lg px-2 py-0.5 text-xs font-semibold ${
             total >= target
               ? "bg-primary/20 text-primary"
-              : "bg-amber-500/20 text-amber-500"
+              : "bg-warn/20 text-warn"
           }`}
         >
           {total >= target ? "PASS" : "진행 중"}
@@ -519,7 +519,7 @@ function JudgmentCard({
         <span className="rounded-lg bg-slate-500/20 px-2 py-0.5 text-xs text-slate-400">
           {j.market_regime}
         </span>
-        <span className="rounded-lg bg-indigo-500/20 px-2 py-0.5 text-xs text-indigo-400">
+        <span className="rounded-lg bg-primary/20 px-2 py-0.5 text-xs text-primary">
           id={j.id}
         </span>
         {(() => {
@@ -554,13 +554,13 @@ function JudgmentCard({
           </span>
         )}
         {abnormalState && !triggerHit && !superseded && (
-          <span className="rounded-lg bg-amber-500/30 px-2 py-0.5 text-xs font-semibold text-amber-400">
+          <span className="rounded-lg bg-warn/30 px-2 py-0.5 text-xs font-semibold text-warn">
             ⚠ invalidation 비정상 (≥ 현재가)
           </span>
         )}
         {history.length > 0 && (
           <span
-            className="rounded-lg bg-amber-500/20 px-2 py-0.5 text-xs text-amber-400"
+            className="rounded-lg bg-warn/20 px-2 py-0.5 text-xs text-warn"
             title={`갱신 ${history.length}회`}
           >
             ✎ updated ×{history.length}
@@ -627,7 +627,7 @@ function JudgmentCard({
               <button
                 type="button"
                 onClick={() => setMode("transition")}
-                className="rounded-lg border border-purple-500/40 px-3 py-1 text-xs text-purple-400 hover:bg-purple-500/10"
+                className="rounded-lg border border-primary/40 px-3 py-1 text-xs text-primary hover:bg-primary/10"
                 title="전술 (core/swing/event) 전환 · 이전 판정 supersede + 신규 판정"
               >
                 🔀 전술 전환
@@ -876,7 +876,7 @@ function EditForm({
                 <button
                   type="button"
                   onClick={moveTargetToWish}
-                  className="text-xs text-sky-500 hover:underline"
+                  className="text-xs text-primary hover:underline"
                 >
                   소원으로 이관
                 </button>
@@ -1291,9 +1291,9 @@ function TransitionForm({
   const currentBadge = strategyBadge(j.strategy);
 
   return (
-    <div className="mt-3 space-y-3 rounded-lg border border-purple-500/40 bg-purple-500/5 p-3 text-sm">
+    <div className="mt-3 space-y-3 rounded-lg border border-primary/40 bg-primary/5 p-3 text-sm">
       <div className="flex flex-wrap items-center gap-2">
-        <span className="text-xs font-semibold text-purple-400">🔀 전술 전환</span>
+        <span className="text-xs font-semibold text-primary">🔀 전술 전환</span>
         <span className="text-xs text-muted-foreground">
           원칙: strategy 는 수정 불가 · 전환 = 이전 판정 supersede + 신규 판정
         </span>
@@ -1415,7 +1415,7 @@ function TransitionForm({
           type="button"
           onClick={submit}
           disabled={!canSave}
-          className="ml-auto rounded-lg bg-purple-500 px-4 py-1.5 text-xs font-semibold text-white disabled:opacity-50 hover:bg-purple-500/80"
+          className="ml-auto rounded-lg bg-primary px-4 py-1.5 text-xs font-semibold text-white disabled:opacity-50 hover:bg-primary/80"
         >
           {submitting ? "저장 중..." : "전환 저장 · supersede + 신규 판정"}
         </button>

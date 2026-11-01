@@ -91,8 +91,8 @@ export function PositionPlans({ isAdmin }: { isAdmin: boolean }) {
         <>
           {/* Fable 5 캠페인 카운터 · 미기록 종목 강조 */}
           {data.total_missing_plans > 0 && (
-            <div className="rounded-lg border border-amber-500/40 bg-amber-500/10 p-3 text-sm">
-              <span className="font-semibold text-amber-500">
+            <div className="rounded-lg border border-warn/40 bg-warn/10 p-3 text-sm">
+              <span className="font-semibold text-warn">
                 ⚠ 청산 계획 미기록 {data.total_missing_plans}종목
               </span>{" "}
               <span className="text-muted-foreground">
@@ -133,7 +133,7 @@ function PositionCardView({ card }: { card: PositionCard }) {
   const borderClass = triggerHit
     ? "border-warn/60 bg-warn/5"
     : missingPlan
-      ? "border-amber-500/40 bg-amber-500/5"
+      ? "border-warn/40 bg-warn/5"
       : "border-border bg-card";
 
   const fmt = card.currency === "KRW" ? _krw : (v: number | null) => _usd(v, 4);
@@ -151,7 +151,7 @@ function PositionCardView({ card }: { card: PositionCard }) {
           </span>
           {card.activist_symbol && (
             <span
-              className="rounded-lg bg-purple-500/20 px-1.5 py-0.5 text-xs font-semibold text-purple-400"
+              className="rounded-lg bg-primary/20 px-1.5 py-0.5 text-xs font-semibold text-primary"
               title="Activist Radar universe 소속 · SEC 13D/A 추적"
             >
               🕵️ Activist
@@ -236,7 +236,7 @@ function TrancheBlock({ card }: { card: PositionCard }) {
         {card.symbol} {card.qty}{card.currency === "KRW" ? "주" : ""} = {parts.join(" + ")}
       </div>
       {card.qty_mismatch && (
-        <div className="mt-1 text-xs text-amber-500">
+        <div className="mt-1 text-xs text-warn">
           ⚠ 트랑셰 합계 ≠ 실 보유 수량 · 편집으로 정합 맞추기
         </div>
       )}
@@ -256,7 +256,7 @@ function SerenityBlock({
     bullish: "text-up",
     bearish: "text-down",
     neutral: "text-slate-400",
-    calibration: "text-amber-500",
+    calibration: "text-warn",
   };
   const sentimentIcon: Record<string, string> = {
     bullish: "▲", bearish: "▼", neutral: "●", calibration: "◆",
@@ -368,7 +368,7 @@ function ExitPlanBlock({
         {plan.judgment_id !== null && (
           <Link
             href={`/journal?ticker=${symbol}`}
-            className="self-end text-xs text-sky-500 hover:underline"
+            className="self-end text-xs text-primary hover:underline"
           >
             저널 열기 →
           </Link>

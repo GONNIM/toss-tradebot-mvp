@@ -25,7 +25,7 @@ export default function BacktestReportPage() {
 
   return (
     <div className="space-y-6">
-      <Link href="/influencer/serenity" className="text-xs text-sky-500 hover:underline">
+      <Link href="/influencer/serenity" className="text-xs text-primary hover:underline">
         ← Serenity 랜딩
       </Link>
 
@@ -116,7 +116,7 @@ function BucketBlock({ title, buckets }: { title: string; buckets: BacktestBucke
                   const cls =
                     v === null
                       ? "text-muted-foreground"
-                      : upDownText(v, "text-up");
+                      : upDownText(v);
                   return (
                     <td key={f} className={`py-1.5 text-right font-mono ${cls}`}>
                       {v !== null ? `${v.toFixed(2)}%` : "—"}

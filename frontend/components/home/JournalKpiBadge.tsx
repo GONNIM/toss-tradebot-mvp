@@ -53,7 +53,7 @@ export function JournalKpiBadge() {
           className={`rounded-lg px-2 py-0.5 text-xs font-semibold ${
             passed
               ? "bg-primary/20 text-primary"
-              : "bg-amber-500/20 text-amber-500"
+              : "bg-warn/20 text-warn"
           }`}
         >
           {passed ? "PASS" : "진행 중"}

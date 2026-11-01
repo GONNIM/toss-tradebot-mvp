@@ -12,7 +12,7 @@ import { activePathsLabel, actorLabel, lossLimitLabel, manualEntryLabel, orderTa
 const TONE = {
   stop: "border-warn/40 bg-warn/5 text-warn",
   off: "border-slate-300 bg-slate-50 text-slate-800",
-  on: "border-amber-300 bg-amber-50 text-amber-900",
+  on: "border-warn/40 bg-warn/5 text-warn",
   live: "border-warn/60 bg-warn/10 text-warn",
 } as const;
 

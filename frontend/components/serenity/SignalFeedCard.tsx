@@ -10,7 +10,7 @@ const SENTIMENT_STYLE: Record<string, { chip: string; label: string }> = {
   bullish: { chip: "bg-up/15 text-up", label: "▲ Bullish" },
   bearish: { chip: "bg-down/15 text-down", label: "▼ Bearish" },
   neutral: { chip: "bg-slate-500/20 text-slate-400", label: "⚪ Neutral" },
-  calibration: { chip: "bg-amber-500/20 text-amber-500", label: "🟡 Calibration" },
+  calibration: { chip: "bg-warn/20 text-warn", label: "🟡 Calibration" },
 };
 
 export function SignalFeedCard({ item }: { item: SignalFeedItem }) {
@@ -31,12 +31,12 @@ export function SignalFeedCard({ item }: { item: SignalFeedItem }) {
           {s.label}
         </span>
         {item.thesis_type && (
-          <span className="rounded-lg bg-indigo-500/20 px-1.5 py-0.5 text-xs text-indigo-400">
+          <span className="rounded-lg bg-primary/20 px-1.5 py-0.5 text-xs text-primary">
             {item.thesis_type}
           </span>
         )}
         {item.evidence_type && (
-          <span className="rounded-lg bg-purple-500/20 px-1.5 py-0.5 text-xs text-purple-400">
+          <span className="rounded-lg bg-primary/20 px-1.5 py-0.5 text-xs text-primary">
             {item.evidence_type}
           </span>
         )}
@@ -60,7 +60,7 @@ export function SignalFeedCard({ item }: { item: SignalFeedItem }) {
           href={item.tweet_url}
           target="_blank"
           rel="noopener noreferrer"
-          className="mt-2 inline-block text-xs text-sky-500 hover:underline"
+          className="mt-2 inline-block text-xs text-primary hover:underline"
         >
           원문 트윗 →
         </a>

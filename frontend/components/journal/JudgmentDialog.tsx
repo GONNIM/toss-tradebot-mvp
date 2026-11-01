@@ -332,9 +332,9 @@ function RRHint({
     );
   }
   const color =
-    rr >= 2 ? "text-primary" : rr >= 1 ? "text-amber-500" : "text-warn";
+    rr >= 2 ? "text-primary" : rr >= 1 ? "text-warn" : "text-warn";
   const bg =
-    rr >= 2 ? "bg-primary/10" : rr >= 1 ? "bg-amber-500/10" : "bg-warn/10";
+    rr >= 2 ? "bg-primary/10" : rr >= 1 ? "bg-warn/10" : "bg-warn/10";
   const verdict =
     rr >= 2 ? "권장" : rr >= 1 ? "재검토 (강의 권장 2 미달)" : "위험 (손 > 보)";
   return (

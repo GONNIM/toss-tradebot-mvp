@@ -196,7 +196,7 @@ export default function ScreenerPage() {
                         {r.verification_tags && r.verification_tags.length > 0 && (
                           <span
                             title={`실체 검증 필요 · ${r.verification_tags.join(", ")}`}
-                            className="ml-1 text-amber-600"
+                            className="ml-1 text-warn"
                           >
                             ⚠
                           </span>
@@ -241,7 +241,7 @@ export default function ScreenerPage() {
                               </li>
                             ))}
                             {r.missing_fields && r.missing_fields.length > 0 && (
-                              <li className="text-amber-600">
+                              <li className="text-warn">
                                 <strong>결측 필드:</strong> {r.missing_fields.join(", ")}
                               </li>
                             )}

@@ -44,14 +44,14 @@ export function Top10Modal({ open, onClose }: { open: boolean; onClose: () => vo
       onClick={onClose}
     >
       <div
-        className="relative w-full max-w-[96vw] max-h-[96vh] flex flex-col overflow-hidden rounded-xl border border-cyan-500/50 bg-card "
+        className="relative w-full max-w-[96vw] max-h-[96vh] flex flex-col overflow-hidden rounded-xl border border-primary/50 bg-card"
         onClick={(e) => e.stopPropagation()}
       >
         {/* 헤더 (고정) */}
         <div className="flex items-center justify-between border-b border-border bg-card px-4 py-2.5">
           <div>
             <h2 className="text-xl font-bold text-foreground">🏆 투자 종목 Top 10</h2>
-            <p className="text-xs text-zinc-300 mt-1">
+            <p className="text-xs text-muted-foreground mt-1">
               매력도 = Confluence 0.5 + 신뢰도 0.3 + R/R 0.2 · horizon = 종목별 best_lag
             </p>
           </div>
@@ -95,7 +95,7 @@ function PriceSourceBadge({
   if (source === "fallback") {
     return (
       <div
-        className="text-xs text-amber-400 leading-tight mt-0.5"
+        className="text-xs text-warn leading-tight mt-0.5"
         title="네이버 실시간 가격 fetch 실패 — 최근 종가 표시"
       >
         ⚠️ 종가 (fallback)
@@ -136,14 +136,14 @@ function formatComputedAt(iso: string): string {
 function Top10Table({ items, computedAt }: { items: Top10Item[]; computedAt: string }) {
   return (
     <div className="space-y-2">
-      <div className="text-xs text-zinc-300 font-mono">
+      <div className="text-xs text-muted-foreground font-mono">
         산출 시점: {formatComputedAt(computedAt)} · {items.length} 종목
       </div>
 
       <div className="overflow-x-auto rounded-lg border border-border">
         <table className="w-full text-sm">
-          <thead className="border-b border-cyan-500/40 bg-cyan-500/10 sticky top-0">
-            <tr className="text-left whitespace-nowrap text-cyan-200 font-semibold">
+          <thead className="border-b border-primary/40 bg-primary/10 sticky top-0">
+            <tr className="text-left whitespace-nowrap text-primary font-semibold">
               <th className="px-2.5 py-2 w-10">#</th>
               <th className="px-2.5 py-2">종목 / 품목</th>
               <th className="px-2.5 py-2 text-right">현재가</th>
@@ -155,7 +155,7 @@ function Top10Table({ items, computedAt }: { items: Top10Item[]; computedAt: str
               <th className="px-2.5 py-2 text-right">매력도</th>
             </tr>
           </thead>
-          <tbody className="text-zinc-100">
+          <tbody className="text-foreground">
             {items.map((it) => (
               <Row key={`${it.ticker}-${it.item}`} it={it} />
             ))}
@@ -163,87 +163,87 @@ function Top10Table({ items, computedAt }: { items: Top10Item[]; computedAt: str
         </table>
       </div>
 
-      <div className="text-xs text-zinc-200 rounded-lg border border-cyan-500/30 bg-cyan-500/10 p-3 space-y-3">
-        <div className="font-semibold text-cyan-200 text-sm">💡 사용 가이드 — 처음 보시는 분도 이해할 수 있게</div>
+      <div className="text-xs text-foreground rounded-lg border border-primary/30 bg-primary/10 p-3 space-y-3">
+        <div className="font-semibold text-primary text-sm">💡 사용 가이드 — 처음 보시는 분도 이해할 수 있게</div>
 
         {/* ── 1. 진입 상태 3분류 ── */}
         <div>
-          <div className="font-semibold text-cyan-200 mb-1">🎯 상태 3분류 (지정가 참고 칸)</div>
+          <div className="font-semibold text-primary mb-1">🎯 상태 3분류 (지정가 참고 칸)</div>
           <ul className="grid grid-cols-1 md:grid-cols-3 gap-2">
             <li className="rounded-lg border border-warn/30 bg-warn/5 p-2">
               <div className="font-semibold text-warn">🔴 과열</div>
-              <div className="text-zinc-300 mt-0.5">1년 범위 위쪽(52W 85% 넘음)이거나 <strong>200일 평균보다 25% 넘게 오른</strong> 상태. 지정가 참고선을 계산하지 않습니다</div>
+              <div className="text-muted-foreground mt-0.5">1년 범위 위쪽(52W 85% 넘음)이거나 <strong>200일 평균보다 25% 넘게 오른</strong> 상태. 지정가 참고선을 계산하지 않습니다</div>
             </li>
-            <li className="rounded-lg border border-amber-500/30 bg-amber-500/5 p-2">
-              <div className="font-semibold text-amber-300">🟡 참고선 위</div>
-              <div className="text-zinc-300 mt-0.5">현재가가 지정가 참고선보다 위. <strong>참고선까지 몇 % 아래인지</strong> 함께 표시</div>
+            <li className="rounded-lg border border-warn/30 bg-warn/5 p-2">
+              <div className="font-semibold text-warn">🟡 참고선 위</div>
+              <div className="text-muted-foreground mt-0.5">현재가가 지정가 참고선보다 위. <strong>참고선까지 몇 % 아래인지</strong> 함께 표시</div>
             </li>
             <li className="rounded-lg border border-primary/30 bg-primary/5 p-2">
               <div className="font-semibold text-primary">🟢 참고선 근처</div>
-              <div className="text-zinc-300 mt-0.5">현재가가 이미 <strong>지정가 참고선 근처</strong>인 구간</div>
+              <div className="text-muted-foreground mt-0.5">현재가가 이미 <strong>지정가 참고선 근처</strong>인 구간</div>
             </li>
           </ul>
         </div>
 
         {/* ── 2. 근거 배지 읽는 법 ── */}
         <div>
-          <div className="font-semibold text-cyan-200 mb-1">🔍 근거 배지 읽는 법 (지정가 참고 아래 회색 작은 글씨)</div>
+          <div className="font-semibold text-primary mb-1">🔍 근거 배지 읽는 법 (지정가 참고 아래 회색 작은 글씨)</div>
           <ul className="space-y-1">
             <li>
-              <strong className="text-cyan-100">52W xx%</strong> —{" "}
-              <span className="text-zinc-300">최근 1년(52주) 최저가~최고가 사이에서 현재가가 어디쯤인지. <strong>0% = 1년 최저가, 100% = 1년 신고가</strong>. 85% 넘으면 과열로 판정</span>
+              <strong className="text-primary">52W xx%</strong> —{" "}
+              <span className="text-muted-foreground">최근 1년(52주) 최저가~최고가 사이에서 현재가가 어디쯤인지. <strong>0% = 1년 최저가, 100% = 1년 신고가</strong>. 85% 넘으면 과열로 판정</span>
             </li>
             <li>
-              <strong className="text-cyan-100">MA200 +xx%</strong> —{" "}
-              <span className="text-zinc-300">최근 200거래일(약 10개월) 평균 주가 대비 지금 얼마나 비싼가. <strong>+119%면 10개월 평균의 2배 넘게 오른 것</strong>. +25% 넘으면 과열 판정</span>
+              <strong className="text-primary">MA200 +xx%</strong> —{" "}
+              <span className="text-muted-foreground">최근 200거래일(약 10개월) 평균 주가 대비 지금 얼마나 비싼가. <strong>+119%면 10개월 평균의 2배 넘게 오른 것</strong>. +25% 넘으면 과열 판정</span>
             </li>
             <li>
-              <strong className="text-cyan-100">ATR xx,xxx원</strong> —{" "}
-              <span className="text-zinc-300">이 종목이 <strong>하루 평균 얼마씩 위아래로 흔들리는지</strong>. 종목 <strong>변동성 크기</strong>를 원 단위로 표시. 지정가 참고는 &quot;현재가 − ATR&quot;로 계산 (하루 변동성만큼 아래)</span>
+              <strong className="text-primary">ATR xx,xxx원</strong> —{" "}
+              <span className="text-muted-foreground">이 종목이 <strong>하루 평균 얼마씩 위아래로 흔들리는지</strong>. 종목 <strong>변동성 크기</strong>를 원 단위로 표시. 지정가 참고는 &quot;현재가 − ATR&quot;로 계산 (하루 변동성만큼 아래)</span>
             </li>
           </ul>
         </div>
 
         {/* ── 3. 컬럼 설명 ── */}
         <div>
-          <div className="font-semibold text-cyan-200 mb-1">📊 컬럼별 의미</div>
+          <div className="font-semibold text-primary mb-1">📊 컬럼별 의미</div>
           <ul className="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-1 list-disc list-inside">
-            <li><strong className="text-cyan-100">현재가</strong>: 지금 실시간 시장 가격</li>
-            <li><strong className="text-cyan-100">지정가 참고</strong>: 현재가에서 하루 변동폭(ATR)만큼 아래 가격</li>
-            <li><strong className="text-cyan-100">통계 추정가</strong>: N개월 뒤 추정 가격 (수출 자료와 과거 상관 · 보장 아님)</li>
-            <li><strong className="text-cyan-100">손절 참고선</strong>: 손실을 끊는 기준으로 쓰는 가격</li>
-            <li><strong className="text-cyan-100">익절 참고선</strong>: 이익을 확정하는 기준으로 쓰는 가격</li>
-            <li><strong className="text-cyan-100">매력도</strong>: 종합 점수 0~1, <strong>0.6 이상이면 강한 시그널</strong></li>
+            <li><strong className="text-primary">현재가</strong>: 지금 실시간 시장 가격</li>
+            <li><strong className="text-primary">지정가 참고</strong>: 현재가에서 하루 변동폭(ATR)만큼 아래 가격</li>
+            <li><strong className="text-primary">통계 추정가</strong>: N개월 뒤 추정 가격 (수출 자료와 과거 상관 · 보장 아님)</li>
+            <li><strong className="text-primary">손절 참고선</strong>: 손실을 끊는 기준으로 쓰는 가격</li>
+            <li><strong className="text-primary">익절 참고선</strong>: 이익을 확정하는 기준으로 쓰는 가격</li>
+            <li><strong className="text-primary">매력도</strong>: 종합 점수 0~1, <strong>0.6 이상이면 강한 시그널</strong></li>
           </ul>
         </div>
 
         {/* ── 4. 실전 예시 ── */}
         <div>
-          <div className="font-semibold text-cyan-200 mb-1">📖 실전 예시 — 두 종목 비교</div>
+          <div className="font-semibold text-primary mb-1">📖 실전 예시 — 두 종목 비교</div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
             <div className="rounded-lg border border-warn/30 bg-warn/5 p-2">
-              <div className="font-semibold text-zinc-100 mb-1">SK하이닉스 · 현재 2,076,000원</div>
-              <ul className="text-zinc-300 space-y-0.5">
+              <div className="font-semibold text-foreground mb-1">SK하이닉스 · 현재 2,076,000원</div>
+              <ul className="text-muted-foreground space-y-0.5">
                 <li>• 52W 68% → 1년 범위 위쪽 68% 지점</li>
                 <li>• MA200 <strong className="text-warn">+119%</strong> → 10개월 평균의 2배 넘음</li>
                 <li>• ATR 225,786원 → 하루 평균 22.6만원씩 흔들림</li>
                 <li className="text-warn pt-1">→ 🔴 과열 (200일 평균의 2배 넘음)</li>
               </ul>
             </div>
-            <div className="rounded-lg border border-amber-500/30 bg-amber-500/5 p-2">
-              <div className="font-semibold text-zinc-100 mb-1">원익IPS · 현재 102,700원</div>
-              <ul className="text-zinc-300 space-y-0.5">
+            <div className="rounded-lg border border-warn/30 bg-warn/5 p-2">
+              <div className="font-semibold text-foreground mb-1">원익IPS · 현재 102,700원</div>
+              <ul className="text-muted-foreground space-y-0.5">
                 <li>• 52W 49% → 정확히 1년 범위 중간</li>
                 <li>• MA200 +13% → 정상 범위 안</li>
                 <li>• ATR 22,986원 → 하루 평균 2.3만원 흔들림</li>
-                <li className="text-amber-300 pt-1">→ 🟡 참고선까지 22.4% 아래 (약 79,700원)</li>
+                <li className="text-warn pt-1">→ 🟡 참고선까지 22.4% 아래 (약 79,700원)</li>
               </ul>
             </div>
           </div>
         </div>
 
         {/* ── 5. 면책 ── */}
-        <div className="text-amber-300 pt-1 border-t border-cyan-500/20">
+        <div className="text-warn pt-1 border-t border-primary/20">
           ⚠️ <strong>보조 신호일 뿐 투자 권유가 아닙니다.</strong> 최종 매수·매도 결정은 본인 판단·책임하에 진행하세요.
         </div>
       </div>
@@ -255,10 +255,10 @@ function Row({ it }: { it: Top10Item }) {
   const formatKRW = (n: number) => Math.round(n).toLocaleString("ko-KR");
   const confColor =
     it.confluence_score > 0.4 ? "text-primary" :
-    it.confluence_score > -0.4 ? "text-amber-400" : "text-warn";
+    it.confluence_score > -0.4 ? "text-warn" : "text-warn";
   const starColor =
     it.confidence_label === "strong" ? "text-primary" :
-    it.confidence_label === "medium" ? "text-cyan-400" : "text-muted-foreground";
+    it.confidence_label === "medium" ? "text-primary" : "text-muted-foreground";
 
   // v2.0 진입가 상태 3분기
   const isOverheat = it.overheat;
@@ -273,7 +273,7 @@ function Row({ it }: { it: Top10Item }) {
     ? "text-warn"
     : isReady
       ? "text-primary"
-      : "text-amber-300";
+      : "text-warn";
   // 근거 배지 + hover tooltip — 초보자용 자연어 설명
   const pos52wPct = Math.round(it.pos_52w * 100);
   const ma200Badge = it.ma200_deviation !== null
@@ -304,7 +304,7 @@ function Row({ it }: { it: Top10Item }) {
 
   return (
     <tr className="border-b border-border/40 hover:bg-muted/30 whitespace-nowrap">
-      <td className="px-2.5 py-2 font-bold text-cyan-300 text-base">#{it.rank}</td>
+      <td className="px-2.5 py-2 font-bold text-primary text-base">#{it.rank}</td>
       <td className="px-2.5 py-2">
         <div className="font-semibold text-zinc-50 leading-tight">{it.name}</div>
         <div className="text-xs text-zinc-400 font-mono leading-tight mt-0.5">
@@ -312,7 +312,7 @@ function Row({ it }: { it: Top10Item }) {
         </div>
       </td>
       <td className="px-2.5 py-2 text-right whitespace-nowrap">
-        <div className="font-mono text-zinc-100 font-semibold leading-tight">
+        <div className="font-mono text-foreground font-semibold leading-tight">
           {formatKRW(it.current_price)}
         </div>
         <PriceSourceBadge
@@ -385,7 +385,7 @@ function Row({ it }: { it: Top10Item }) {
           {it.confidence_stars}
         </div>
       </td>
-      <td className="px-2.5 py-2 text-right font-bold font-mono text-cyan-300 text-base">
+      <td className="px-2.5 py-2 text-right font-bold font-mono text-primary text-base">
         {it.attractiveness.toFixed(3)}
       </td>
     </tr>

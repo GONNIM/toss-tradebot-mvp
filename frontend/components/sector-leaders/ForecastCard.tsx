@@ -66,7 +66,7 @@ function PriceSourceTag({
   }
   return (
     <span
-      className="text-xs text-amber-600"
+      className="text-xs text-warn"
       title="네이버 실시간 가격 fetch 실패 — 일봉 종가 사용"
     >
       ({fallbackDate || "—"} 종가 · fallback)
@@ -107,11 +107,11 @@ export function ForecastCard({ data }: { data: TickerForecast }) {
   const cp = data.latest_close_krw;
 
   return (
-    <div className="rounded-xl border border-purple-500/30 bg-card p-4 space-y-4">
+    <div className="rounded-xl border border-primary/30 bg-card p-4 space-y-4">
       <Header data={data} />
 
       {sign < 0 && (
-        <div className="rounded-lg border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-xs text-amber-200">
+        <div className="rounded-lg border border-warn/40 bg-warn/10 px-3 py-2 text-xs text-warn">
           ⚠️ 이 종목은 <strong>음의 상관 종목</strong>입니다 — 수출이 늘면 주가가
           오히려 부진하는 경향. 시그널 방향은 회귀가 이미 반영했으나 해석에 주의.
         </div>
@@ -127,7 +127,7 @@ export function ForecastCard({ data }: { data: TickerForecast }) {
               onClick={() => setHIdx(i)}
               className={`rounded-lg border px-3 py-1.5 text-sm transition ${
                 active
-                  ? "border-purple-500/60 bg-purple-500/10 text-purple-300"
+                  ? "border-primary/60 bg-primary/10 text-primary"
                   : "border-border text-muted-foreground hover:text-foreground"
               }`}
             >
@@ -219,7 +219,7 @@ function Header({ data }: { data: TickerForecast }) {
         입력 시그널: {data.latest_data_month} {data.leader.item} 수출 YoY{" "}
         <span
           className={
-            upDownText(data.latest_input_yoy, "text-up")
+            upDownText(data.latest_input_yoy)
           }
         >
           {formatPct(data.latest_input_yoy, 1)}
@@ -239,12 +239,12 @@ function VerdictBanner({
   targetMonth: string;
 }) {
   const colorMap = {
-    green:
-      "border-primary/50 bg-primary/10 text-primary",
-    amber: "border-amber-500/50 bg-amber-500/10 text-amber-200",
-    red: "border-warn/50 bg-warn/10 text-warn",
+    // 5c-2 · 강세 = 상승 빨강 · 약세 = 하락 파랑 (한국식)
+    green: "border-up/50 bg-up/10 text-up",
+    amber: "border-warn/50 bg-warn/10 text-warn",
+    red: "border-down/50 bg-down/10 text-down",
   } as const;
-  const iconMap = { green: "🟢", amber: "🟡", red: "🔴" } as const;
+  const iconMap = { green: "▲", amber: "■", red: "▼" } as const;
   return (
     <div className={`rounded-lg border ${colorMap[v.color]} p-3`}>
       <div className="flex items-baseline justify-between gap-2 flex-wrap">
@@ -334,14 +334,14 @@ function Marker({
   const xClamped = Math.max(0, Math.min(100, x));
   const colorMap = {
     rose: "bg-warn",
-    cyan: "bg-cyan-400",
-    purple: "bg-purple-500",
+    cyan: "bg-primary/60",
+    purple: "bg-primary",
     emerald: "bg-primary",
   };
   const textColor = {
     rose: "text-warn",
-    cyan: "text-cyan-300",
-    purple: "text-purple-300",
+    cyan: "text-primary",
+    purple: "text-primary",
     emerald: "text-primary",
   };
   return (
@@ -397,7 +397,7 @@ function KpiCards({
   } else if (horizon.r_squared >= 0.1) {
     strengthStars = "★★";
     strengthLabel = "중간";
-    strengthTone = "text-cyan-400";
+    strengthTone = "text-primary";
   }
 
   return (
@@ -409,7 +409,7 @@ function KpiCards({
           expectedDelta !== null ? formatKRWDelta(expectedDelta) : "—"
         }
         tone={
-          upDownText(horizon.point_estimate_pct, "text-down")
+          upDownText(horizon.point_estimate_pct)
         }
       />
       <KpiCell
@@ -420,7 +420,7 @@ function KpiCards({
           rr?.grade === "excellent" || rr?.grade === "good"
             ? "text-primary"
             : rr?.grade === "too_high"
-              ? "text-amber-400"
+              ? "text-warn"
               : "text-muted-foreground"
         }
       />
@@ -495,7 +495,7 @@ function PriceTagsBox({
         : isOutlierLow
           ? "⬇️ 통계적 이례 — 시그널이 약세 범위 미달 (외삽)"
           : "가장 가능성이 높은 가격대 — 수출 데이터가 가리키는 방향",
-      tone: "text-cyan-400",
+      tone: "text-primary",
     },
     {
       icon: "━━",
@@ -685,7 +685,7 @@ function PriceFanChart({
       </svg>
       <div className="text-xs text-muted-foreground flex justify-between font-mono">
         <span>{formatKRWPrice(Math.round(minY))}</span>
-        <span className="text-cyan-400">● 현재 {formatKRWPrice(currentPrice)}</span>
+        <span className="text-primary">● 현재 {formatKRWPrice(currentPrice)}</span>
         <span>{formatKRWPrice(Math.round(maxY))}</span>
       </div>
     </div>
@@ -715,9 +715,9 @@ function InterpretationGuide({
     );
   }
   return (
-    <div className="rounded-lg border border-cyan-500/20 bg-cyan-500/5 p-3 text-xs space-y-1">
-      <div className="font-semibold text-cyan-300 mb-1">💡 어떻게 읽어야 하나요?</div>
-      <ul className="list-disc list-inside space-y-1 text-cyan-100/80">
+    <div className="rounded-lg border border-primary/20 bg-primary/5 p-3 text-xs space-y-1">
+      <div className="font-semibold text-primary mb-1">💡 어떻게 읽어야 하나요?</div>
+      <ul className="list-disc list-inside space-y-1 text-primary/80">
         {points.map((p, i) => (
           <li key={i} dangerouslySetInnerHTML={{ __html: p.replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>") }} />
         ))}
@@ -783,9 +783,9 @@ function ExpertMode({
               </div>
             </div>
           )}
-          <div className="pt-2 border-t border-border space-y-1 text-amber-200/80">
+          <div className="pt-2 border-t border-border space-y-1 text-warn/80">
             <div className="font-semibold">⚠️ 모델 한계</div>
-            <div className="font-mono text-amber-200/60">
+            <div className="font-mono text-warn/60">
               {disclaimer.method} · {disclaimer.ci_method} ·{" "}
               {disclaimer.sample_window}
             </div>

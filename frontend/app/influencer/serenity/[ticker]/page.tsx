@@ -32,7 +32,7 @@ export default function TickerDetailPage({ params }: PageProps) {
   if (err) {
     return (
       <div>
-        <Link href="/influencer/serenity" className="text-xs text-sky-500 hover:underline">
+        <Link href="/influencer/serenity" className="text-xs text-primary hover:underline">
           ← Serenity 랜딩
         </Link>
         <div className="mt-4 rounded-lg border border-warn/40 bg-warn/10 p-4 text-sm text-warn">
@@ -54,7 +54,7 @@ export default function TickerDetailPage({ params }: PageProps) {
 
   return (
     <div className="space-y-6">
-      <Link href="/influencer/serenity" className="text-xs text-sky-500 hover:underline">
+      <Link href="/influencer/serenity" className="text-xs text-primary hover:underline">
         ← Serenity 랜딩
       </Link>
 
@@ -126,7 +126,7 @@ export default function TickerDetailPage({ params }: PageProps) {
 
       <footer className="border-t border-border pt-4 text-xs text-muted-foreground">
         참조 · Serenity 원본 theses.md · methodology.md ({" "}
-        <Link href="/influencer/serenity/methodology" className="text-sky-500 hover:underline">
+        <Link href="/influencer/serenity/methodology" className="text-primary hover:underline">
           15원칙 열람
         </Link>{" "}
         )
