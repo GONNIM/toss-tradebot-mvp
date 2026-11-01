@@ -60,17 +60,14 @@ WATCHLIST = [
     # 미친 상승 후보 (역사적 화제 / 백테스트 검증)
     "EHGO", "AZTR", "AMC", "GME", "CARV",
     # 마이크로캡 / 페니 추가 (Moonshot HIGH 위험 후보 — 결정 2026-06-20)
+    # 1028-02 (11/01) 뺌: ZAPP·HCDI 상장폐지 · NUKK→DFNS·BREA→SLMT 티커 변경 (사업 바뀜 · 새 티커 안 넣음)
     "BBAI",     # BigBear.ai — AI 정부 계약 마이크로캡
     "SOFI",     # SoFi Tech — 핀테크 소형주
     "RIVN",     # Rivian — EV 손실 누적 후보
     "LCID",     # Lucid Motors — EV 단가 변동성
     "MNTS",     # Momentus — 우주 마이크로캡
     "IPDN",     # Professional Diversity — 페니스톡
-    "ZAPP",     # Zapp Electric Vehicles — EV 페니
     "BURU",     # Nuburu — 레이저 페니
-    "HCDI",     # Harbor Custom Dev — 주택 페니
-    "NUKK",     # Nukkleus — 핀테크 페니
-    "BREA",     # Brera Holdings — 스포츠 마이크로캡
     "WAVE",     # Eco Wave Power — 청정에너지 마이크로
 ]
 
