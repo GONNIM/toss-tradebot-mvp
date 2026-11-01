@@ -61,3 +61,14 @@
     @apply bg-background text-foreground;
   }
 }
+
+/* 1022-10 5b (2026-11-01) · 휴대폰 너비에서 누르는 칸은 44px 이상 (docs/design-rules.md 3절).
+   글 속 링크·체크박스는 뺀다 (줄 높이가 바뀌어 읽기 어려워짐). */
+@media (max-width: 767px) {
+  button,
+  select,
+  input:not([type="checkbox"]):not([type="radio"]):not([type="hidden"]),
+  [role="button"] {
+    min-height: 44px;
+  }
+}

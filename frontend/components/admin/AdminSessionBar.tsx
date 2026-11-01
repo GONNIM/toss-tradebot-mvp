@@ -33,7 +33,7 @@ export function AdminSessionBar({ onSessionChange }: Props) {
   if (role === null || role === "admin") return null;
   return (
     <p className="rounded border border-border bg-card px-3 py-2 text-sm text-muted-foreground">
-      편집하려면 오른쪽 위 「관리자 로그인」 에서 로그인하십시오.
+      편집하려면 오른쪽 위 「로그인」 에서 로그인하십시오.
     </p>
   );
 }

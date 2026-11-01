@@ -67,7 +67,7 @@ export function HeaderSession() {
     return (
       <div className="flex items-center gap-2 text-sm">
         <span className="inline-block h-2 w-2 rounded-full bg-teal-600" aria-hidden />
-        <span className="text-foreground">관리자</span>
+        <span className="hidden text-foreground md:inline">관리자</span>
         <button
           type="button"
           onClick={() => run(logout)}
@@ -87,9 +87,9 @@ export function HeaderSession() {
         type="button"
         onClick={() => setOpen(!open)}
         aria-expanded={open}
-        className="min-h-[44px] rounded-lg px-3 text-sm text-muted-foreground hover:text-foreground"
+        className="min-h-[44px] rounded-lg px-2 text-sm text-muted-foreground hover:text-foreground md:px-3"
       >
-        관리자 로그인
+        <span className="hidden md:inline">관리자 </span>로그인
       </button>
       {open && (
         <div className="absolute right-0 top-full z-50 mt-1 w-72 rounded-[14px] border border-border bg-card p-3 text-sm">

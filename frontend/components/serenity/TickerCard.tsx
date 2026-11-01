@@ -85,7 +85,7 @@ export function TickerCard({ item }: { item: TickerCardItem }) {
         <span className="font-mono text-lg font-bold">{item.ticker}</span>
         {financing && (
           <span
-            className={`rounded border px-1.5 py-0.5 text-[10px] font-semibold ${
+            className={`rounded border px-1.5 py-0.5 text-xs font-semibold ${
               TIER_STYLE[financing] ?? "border-slate-500/40 bg-slate-500/20 text-slate-400"
             }`}
             title={`Financing tier ${financing}`}
@@ -95,7 +95,7 @@ export function TickerCard({ item }: { item: TickerCardItem }) {
         )}
         {serenity && (
           <span
-            className={`rounded border px-1.5 py-0.5 text-[10px] font-semibold ${
+            className={`rounded border px-1.5 py-0.5 text-xs font-semibold ${
               TIER_STYLE[serenity] ?? "border-slate-500/40 bg-slate-500/20 text-slate-400"
             }`}
             title={`Serenity conviction tier ${serenity}`}
@@ -111,7 +111,7 @@ export function TickerCard({ item }: { item: TickerCardItem }) {
       </div>
 
       {/* 2행 · 신선도 (카드의 새 주인공): 🕐 마지막 언급 · 최신 1건 방향 */}
-      <div className="mt-2 flex flex-wrap items-baseline gap-2 text-[11px]">
+      <div className="mt-2 flex flex-wrap items-baseline gap-2 text-xs">
         {rt.silent ? (
           <span
             className="text-muted-foreground"
@@ -128,7 +128,7 @@ export function TickerCard({ item }: { item: TickerCardItem }) {
               🕐 마지막 언급: <strong>{rt.txt}</strong>
             </span>
             {item.latest_stance && (
-              <span className={`text-[11px] font-semibold ${latestStance.cls}`}>
+              <span className={`text-xs font-semibold ${latestStance.cls}`}>
                 {latestStance.icon} {latestStance.label}
               </span>
             )}
@@ -137,7 +137,7 @@ export function TickerCard({ item }: { item: TickerCardItem }) {
       </div>
 
       {/* 3행 · 추세: 7d/28d/90d 한 줄 압축 + 배지 */}
-      <div className="mt-1 flex flex-wrap items-baseline gap-1 text-[11px] text-muted-foreground">
+      <div className="mt-1 flex flex-wrap items-baseline gap-1 text-xs text-muted-foreground">
         <span>📈 7d <strong className="text-foreground">{item.mentions_7d}</strong></span>
         <span>· 28d <strong className="text-foreground">{item.mentions_28d}</strong></span>
         <span>· 90d <strong className="text-foreground">{item.mention_count_90d}</strong></span>
@@ -149,7 +149,7 @@ export function TickerCard({ item }: { item: TickerCardItem }) {
       </div>
 
       {/* 4행 · 가격 또는 관찰 전용 + 태그 */}
-      <div className="mt-2 flex flex-wrap items-center gap-2 text-[10px]">
+      <div className="mt-2 flex flex-wrap items-center gap-2 text-xs">
         {hasPrice ? (
           <span className={prior.cls} title="전일 종가 대비">
             vs prior {prior.txt}

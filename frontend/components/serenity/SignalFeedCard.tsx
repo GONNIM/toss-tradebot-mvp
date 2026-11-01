@@ -27,20 +27,20 @@ export function SignalFeedCard({ item }: { item: SignalFeedItem }) {
         >
           ${item.ticker}
         </Link>
-        <span className={`rounded px-1.5 py-0.5 text-[10px] font-semibold ${s.chip}`}>
+        <span className={`rounded px-1.5 py-0.5 text-xs font-semibold ${s.chip}`}>
           {s.label}
         </span>
         {item.thesis_type && (
-          <span className="rounded bg-indigo-500/20 px-1.5 py-0.5 text-[10px] text-indigo-400">
+          <span className="rounded bg-indigo-500/20 px-1.5 py-0.5 text-xs text-indigo-400">
             {item.thesis_type}
           </span>
         )}
         {item.evidence_type && (
-          <span className="rounded bg-purple-500/20 px-1.5 py-0.5 text-[10px] text-purple-400">
+          <span className="rounded bg-purple-500/20 px-1.5 py-0.5 text-xs text-purple-400">
             {item.evidence_type}
           </span>
         )}
-        <span className="ml-auto text-[10px] text-muted-foreground">
+        <span className="ml-auto text-xs text-muted-foreground">
           conf {item.confidence.toFixed(2)}
         </span>
       </div>
@@ -50,7 +50,7 @@ export function SignalFeedCard({ item }: { item: SignalFeedItem }) {
       )}
 
       {item.tweet_text && (
-        <p className="mt-2 line-clamp-2 text-[11px] text-muted-foreground">
+        <p className="mt-2 line-clamp-2 text-xs text-muted-foreground">
           &ldquo;{item.tweet_text}&rdquo;
         </p>
       )}
@@ -60,7 +60,7 @@ export function SignalFeedCard({ item }: { item: SignalFeedItem }) {
           href={item.tweet_url}
           target="_blank"
           rel="noopener noreferrer"
-          className="mt-2 inline-block text-[10px] text-sky-500 hover:underline"
+          className="mt-2 inline-block text-xs text-sky-500 hover:underline"
         >
           원문 트윗 →
         </a>

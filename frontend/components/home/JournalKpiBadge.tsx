@@ -47,7 +47,7 @@ export function JournalKpiBadge() {
     >
       <div className="flex items-center justify-between text-xs">
         <span className="font-semibold uppercase tracking-wide">
-          📓 Stage 2 진입 KPI · 판정 축적
+          📓 다음 단계로 넘어갈 기준 · 판정 쌓임
         </span>
         <span
           className={`rounded px-2 py-0.5 text-[10px] font-semibold ${

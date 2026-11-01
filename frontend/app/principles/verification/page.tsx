@@ -98,6 +98,7 @@ export default function VerificationPage() {
       {data.pending.length === 0 ? (
         <p style={{ marginTop: 24 }}>✅ 모든 PASS 종목 확인 완료</p>
       ) : (
+        <div style={{ overflowX: "auto" }}>
         <table
           style={{
             width: "100%",
@@ -152,6 +153,7 @@ export default function VerificationPage() {
             ))}
           </tbody>
         </table>
+        </div>
       )}
     </main>
   );
