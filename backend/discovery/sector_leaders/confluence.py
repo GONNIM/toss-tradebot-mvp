@@ -361,11 +361,11 @@ def compute_confluence(
 
     if score >= 0.7:
         grade = "strong_bullish"
-        grade_label = "강한 매수 동의"
+        grade_label = "강한 상승 동의"
         grade_color = "green"
     elif score >= 0.4:
         grade = "moderate_bullish"
-        grade_label = "중간 매수 시그널"
+        grade_label = "중간 상승 신호"
         grade_color = "green"
     elif score >= -0.4:
         grade = "mixed"
@@ -373,11 +373,11 @@ def compute_confluence(
         grade_color = "amber"
     elif score >= -0.7:
         grade = "moderate_bearish"
-        grade_label = "중간 매도 시그널"
+        grade_label = "중간 하락 신호"
         grade_color = "red"
     else:
         grade = "strong_bearish"
-        grade_label = "강한 매도 동의"
+        grade_label = "강한 하락 동의"
         grade_color = "red"
 
     direction = _sign_direction(score, eps=0.05)
@@ -409,17 +409,17 @@ def _build_interpretation(
         return "데이터 부족 — 시그널 산출 불가."
     parts = []
     if score >= 0.7:
-        parts.append(f"{bullish}/{total} 시그널이 강세 동의 — 매우 강한 매수 시그널.")
+        parts.append(f"{bullish}/{total} 시그널이 강세 동의 — 매우 강한 상승 신호.")
     elif score >= 0.4:
-        parts.append(f"{bullish}/{total} 시그널이 상승 — 중간 강도 매수 시그널.")
+        parts.append(f"{bullish}/{total} 시그널이 상승 — 중간 강도 상승 신호.")
     elif score >= -0.4:
         parts.append(
             f"시그널 혼재 (강세 {bullish} · 약세 {bearish}) — 단변량 회귀만 으로 단독 판단 위험."
         )
     elif score >= -0.7:
-        parts.append(f"{bearish}/{total} 시그널이 하락 — 중간 강도 매도 시그널.")
+        parts.append(f"{bearish}/{total} 시그널이 하락 — 중간 강도 하락 신호.")
     else:
-        parts.append(f"{bearish}/{total} 시그널이 강세 동의 매도 — 매우 강한 약세.")
+        parts.append(f"{bearish}/{total} 시그널이 약세 동의 — 매우 강한 하락 신호.")
 
     if correlation_sign < 0:
         parts.append("(음의 상관 종목 — 부호 반전 적용)")

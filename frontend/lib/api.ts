@@ -546,6 +546,8 @@ export interface Verdict {
   label: string;
   context: string;
   action_hint: string;
+  // 1101-01 · 색·아이콘은 이 값으로 고른다 (color red 는 하락·경고 두 뜻) · 배포 사이 잠깐 없을 수 있음
+  kind?: "up" | "down" | "warning" | "neutral";
 }
 
 export interface RiskReward {
