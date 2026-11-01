@@ -3,7 +3,7 @@
 기획: docs/plans/sector-leaders-top10-entry-refinement/plan.md §5
 
 기존 로직 (top10.py:279-290) 은 `min(현재가, 점추정×0.9)` 로 대부분 현재가를 반환 →
-낙관적 예측이면 최고점에서도 "지금 매수" 표시. 본 모듈은 그것을 대체한다.
+낙관적 예측이면 최고점에서도 진입 가능처럼 표시. 본 모듈은 그것을 대체한다.
 
 핵심 원칙:
 1. **과열 판정 우선**: 52W 위치 ≥ 85% OR 200MA 이격 ≥ +25% → 진입가 None + 관망
@@ -26,7 +26,7 @@ ATR_PERIOD = 14
 OVERHEAT_52W_THRESHOLD = 0.85     # 52W 상위 15%
 OVERHEAT_MA200_THRESHOLD = 0.25   # 200MA 대비 +25% 이상
 ATR_ENTRY_MULTIPLIER = 1.0        # 표준 스케일 (v2.1에서 0.5/1.0/1.5 3단계)
-NEAR_ENTRY_TOLERANCE_PCT = 0.5    # 진입가 대비 ±0.5% 이내면 "지금 매수"
+NEAR_ENTRY_TOLERANCE_PCT = 0.5    # 진입가 대비 ±0.5% 이내면 "참고선 근처"
 ATR_FALLBACK_PCT = 0.02           # ATR 계산 실패 시 현재가의 2%
 
 
@@ -207,9 +207,9 @@ def compute_entry_price(
     entry_gap_pct = (entry_price / current_price - 1) * 100  # 음수
 
     if entry_gap_pct >= -NEAR_ENTRY_TOLERANCE_PCT:
-        entry_status = "🟢 지금 매수 가능 (ATR 완충 흡수)"
+        entry_status = "🟢 참고선 근처 (차이 0.5% 안)"
     else:
-        entry_status = f"🟡 {abs(entry_gap_pct):.1f}% 조정 대기"
+        entry_status = f"🟡 참고선이 {abs(entry_gap_pct):.1f}% 아래"
 
     return EntryPriceResult(
         entry_price=entry_price,

@@ -16,7 +16,7 @@ KST = timezone(timedelta(hours=9))
 def _item(rank=1, **kw):
     base = dict(rank=rank, name="원익IPS", ticker="240810", attractiveness=0.612, item="반도체 제조장비",
                 price_source="live", current_price=102700.0, entry_price=79714.0,
-                entry_status="🟡 22.4% 조정 대기", point_price=118400.0, point_pct=15.3, horizon_months=6)
+                entry_status="🟡 참고선이 22.4% 아래", point_price=118400.0, point_pct=15.3, horizon_months=6)
     base.update(kw)
     return SimpleNamespace(**base)
 
@@ -53,7 +53,7 @@ def test_sector_empty():
 
 
 def test_sector_entry_status_prefix_kept():
-    it = _item(entry_status="🟢 지금 매수 가능 (ATR 완충 흡수)")
+    it = _item(entry_status="🟢 참고선 근처 (차이 0.5% 안)")
     _, body = nmod.format_sector_leaders_alert([it], "0.6")
     assert "현재가가 지정가 참고선 근처" in body
     assert it.entry_status.startswith("🟢")   # 화면이 쓰는 값은 그대로
