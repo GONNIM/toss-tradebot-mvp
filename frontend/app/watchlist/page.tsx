@@ -62,16 +62,16 @@ function DoDReportPanel() {
   });
   const r = q.data;
   return (
-    <section className="rounded border p-4">
+    <section className="rounded-lg border p-4">
       <div className="mb-3 flex items-center justify-between">
         <h2 className="text-base font-bold">
           📈 예측 성적표
           {r ? (
             <span
-              className={`ml-3 rounded px-2 py-0.5 text-xs ${
+              className={`ml-3 rounded-lg px-2 py-0.5 text-xs ${
                 r.total_pass
-                  ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-900 dark:text-emerald-100"
-                  : "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-100"
+                  ? "bg-primary/10 text-primary"
+                  : "bg-warn/10 text-warn"
               }`}
             >
               {r.total_pass ? "✅ PASS" : "⛔ 미달"}
@@ -83,7 +83,7 @@ function DoDReportPanel() {
           <select
             value={days}
             onChange={(e) => setDays(Number(e.target.value))}
-            className="rounded border px-1 py-0.5"
+            className="rounded-lg border px-1 py-0.5"
           >
             <option value={7}>7일</option>
             <option value={14}>14일</option>
@@ -113,8 +113,8 @@ function DoDReportPanel() {
             {r.checks.map((c) => (
               <div
                 key={c.name}
-                className={`flex items-center gap-2 rounded border px-2 py-1 text-xs ${
-                  c.passed ? "border-emerald-200 bg-emerald-50" : "border-red-200 bg-red-50"
+                className={`flex items-center gap-2 rounded-lg border px-2 py-1 text-xs ${
+                  c.passed ? "border-primary/30 bg-primary/5" : "border-warn/30 bg-warn/5"
                 }`}
               >
                 <span className="w-4">{c.passed ? "✅" : "⛔"}</span>
@@ -130,7 +130,7 @@ function DoDReportPanel() {
               {Object.entries(r.metrics.reason_breakdown).map(([k, v]) => (
                 <span
                   key={k}
-                  className="rounded bg-slate-100 px-1.5 py-0.5 dark:bg-slate-800"
+                  className="rounded-lg bg-slate-100 px-1.5 py-0.5"
                 >
                   {k}: {v}
                 </span>
@@ -147,7 +147,7 @@ function DoDReportPanel() {
 
 function Stat({ label, value }: { label: string; value: string }) {
   return (
-    <div className="flex justify-between rounded border bg-slate-50 px-2 py-1 dark:bg-slate-900">
+    <div className="flex justify-between rounded-lg border bg-slate-50 px-2 py-1">
       <span className="text-muted-foreground">{label}</span>
       <span className="font-mono font-bold">{value}</span>
     </div>
@@ -167,9 +167,9 @@ function ExecuteStatusPanel() {
   const we = s?.watchlist_execute;
 
   return (
-    <section className="rounded border-2 border-sky-200 bg-sky-50 p-3 text-xs dark:border-sky-900 dark:bg-sky-950">
+    <section className="rounded-lg border-2 border-sky-200 bg-sky-50 p-3 text-xs">
       <div className="mb-2 flex items-center justify-between">
-        <div className="font-bold text-sky-900 dark:text-sky-100">
+        <div className="font-bold text-sky-900">
           ⚡ 자동 진입 창 설정
         </div>
         <a href="/sniper" className="text-sky-600 hover:underline">
@@ -182,7 +182,7 @@ function ExecuteStatusPanel() {
         <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs md:grid-cols-3">
           <div>
             <span className="text-muted-foreground">활성 </span>
-            <span className={we.enabled ? "font-bold text-emerald-600" : "font-bold text-red-600"}>
+            <span className={we.enabled ? "font-bold text-primary" : "font-bold text-warn"}>
               {we.enabled ? "🟢 ON" : "⛔ OFF"}
             </span>
           </div>
@@ -206,7 +206,7 @@ function ExecuteStatusPanel() {
           </div>
           <div>
             <span className="text-muted-foreground">Broker </span>
-            <span className={s?.sniper_enabled ? "text-emerald-600" : "text-muted-foreground"}>
+            <span className={s?.sniper_enabled ? "text-primary" : "text-muted-foreground"}>
               {s?.sniper_enabled ? "sniper.enabled=on" : "sniper.enabled=off"}
             </span>
           </div>
@@ -214,7 +214,7 @@ function ExecuteStatusPanel() {
       )}
       {/* 1025-07 · 관심 종목 자동 진입은 실주문 허용 값을 보지 않고 주문 대상 (EXECUTION_BROKER) 만 본다 */}
       {we?.enabled ? (
-        <div className="mt-2 rounded border border-amber-300 bg-amber-100 px-2 py-1 text-amber-900 dark:bg-amber-900 dark:text-amber-100">
+        <div className="mt-2 rounded-lg border border-amber-300 bg-amber-100 px-2 py-1 text-amber-900">
           ⚠️ 관심 종목 자동 진입이 켜져 있습니다 · 주문 대상: {s?.order_target === "toss" ? "실계좌 (실제 돈)" : "모의 계좌 (실계좌 주문 없음)"}
         </div>
       ) : null}
@@ -227,11 +227,11 @@ function ExecuteStatusPanel() {
 // ═══════════════════════════════════════════════════════════════
 function PrincipleBanner() {
   return (
-    <section className="rounded border-2 border-amber-200 bg-amber-50 p-3 text-sm dark:border-amber-900 dark:bg-amber-950">
-      <div className="font-bold text-amber-900 dark:text-amber-100">
+    <section className="rounded-lg border-2 border-amber-200 bg-amber-50 p-3 text-sm">
+      <div className="font-bold text-amber-900">
         🎯 3원칙 (2026-07-13 pivot)
       </div>
-      <ul className="mt-1 space-y-0.5 text-xs text-amber-800 dark:text-amber-200">
+      <ul className="mt-1 space-y-0.5 text-xs text-amber-800">
         <li>1. 마감 후 예측 결정 (15:30 KST~ · 뉴스·소셜·이벤트 야간 축적)</li>
         <li>2. 개장 전 최종 Watchlist (08:30 KST · Top 30 확정 · 수동 편집 가능)</li>
         <li>3. 자동 진입 창 (09:00~09:30 KST · 봇이 Watchlist 종목만 시가 근처에서 진입 · 실행 스위치가 켜졌을 때만)</li>
@@ -261,14 +261,14 @@ function DateSelector({
   });
 
   return (
-    <section className="rounded border p-3">
+    <section className="rounded-lg border p-3">
       <div className="mb-2 flex items-center gap-3">
         <label className="text-xs text-muted-foreground">거래일</label>
         <input
           type="date"
           value={tradeDate}
           onChange={(e) => setTradeDate(e.target.value)}
-          className="rounded border px-2 py-1 text-sm"
+          className="rounded-lg border px-2 py-1 text-sm"
         />
         {tradeDate && (
           <button
@@ -290,7 +290,7 @@ function DateSelector({
               key={d}
               type="button"
               onClick={() => setTradeDate(d)}
-              className={`rounded px-2 py-0.5 text-xs ${
+              className={`rounded-lg px-2 py-0.5 text-xs ${
                 d === tradeDate
                   ? "bg-sky-600 text-white"
                   : "border hover:bg-sky-50"
@@ -355,7 +355,7 @@ function WatchlistTable({ tradeDate, isAdmin }: { tradeDate: string; isAdmin: bo
   const showTradeDate = q.data?.trade_date ?? tradeDate;
 
   return (
-    <section className="rounded border p-4">
+    <section className="rounded-lg border p-4">
       <div className="mb-3 flex items-center justify-between">
         <h2 className="text-base font-bold">
           📊 Watchlist Top {q.data?.size ?? 0}
@@ -368,7 +368,7 @@ function WatchlistTable({ tradeDate, isAdmin }: { tradeDate: string; isAdmin: bo
             type="button"
             disabled={!isAdmin || finalize.isPending}
             onClick={() => finalize.mutate()}
-            className="rounded bg-sky-600 px-3 py-1 text-xs text-white disabled:opacity-50"
+            className="rounded-lg bg-sky-600 px-3 py-1 text-xs text-white disabled:opacity-50"
             title="지금 즉시 finalize 실행 (08:30 KST 잡과 동일)"
           >
             {finalize.isPending ? "실행 중..." : "🔄 지금 finalize"}
@@ -377,14 +377,14 @@ function WatchlistTable({ tradeDate, isAdmin }: { tradeDate: string; isAdmin: bo
       </div>
 
       {finalize.data && (
-        <div className="mb-2 rounded bg-slate-50 p-2 text-xs dark:bg-slate-900">
+        <div className="mb-2 rounded-lg bg-slate-50 p-2 text-xs">
           ✅ finalize 완료 · {finalize.data.trade_date} · signals={finalize.data.signals_read} ·
           scored={finalize.data.candidates_scored} · written={finalize.data.written} (locked=
           {finalize.data.locked_kept} + auto={finalize.data.auto_picked})
         </div>
       )}
       {finalize.error && (
-        <div className="mb-2 rounded bg-red-50 p-2 text-xs text-red-800 dark:bg-red-950">
+        <div className="mb-2 rounded-lg bg-warn/5 p-2 text-xs text-warn">
           ⛔ finalize 실패 · {String((finalize.error as Error).message)}
         </div>
       )}
@@ -397,14 +397,14 @@ function WatchlistTable({ tradeDate, isAdmin }: { tradeDate: string; isAdmin: bo
       {q.isLoading ? (
         <div className="text-xs text-muted-foreground">불러오는 중...</div>
       ) : items.length === 0 ? (
-        <div className="rounded border-2 border-dashed p-6 text-center text-xs text-muted-foreground">
+        <div className="rounded-lg border-2 border-dashed p-6 text-center text-xs text-muted-foreground">
           Watchlist 비어있음. 08:30 KST 자동 finalize 대기 · 또는 상단 "지금 finalize" 클릭.
         </div>
       ) : (
         <div className="overflow-x-auto">
           <table className="w-full text-xs">
             <thead>
-              <tr className="border-b bg-slate-50 dark:bg-slate-900">
+              <tr className="border-b bg-slate-50">
                 <th className="p-2 text-left">순위</th>
                 <th className="p-2 text-left">근거</th>
                 <th className="p-2 text-left">종목</th>
@@ -429,7 +429,7 @@ function WatchlistTable({ tradeDate, isAdmin }: { tradeDate: string; isAdmin: bo
                       type="button"
                       onClick={() => toggleOpen(it.id)}
                       aria-expanded={open.has(it.id)}
-                      className="min-h-[44px] min-w-[44px] rounded border px-2 text-xs hover:bg-sky-50"
+                      className="min-h-[44px] min-w-[44px] rounded-lg border px-2 text-xs hover:bg-sky-50"
                     >
                       {open.has(it.id) ? "접기" : "근거"}
                     </button>
@@ -441,7 +441,7 @@ function WatchlistTable({ tradeDate, isAdmin }: { tradeDate: string; isAdmin: bo
                   <td className="p-2 text-right font-bold text-sky-700">
                     {it.composite_score.toFixed(3)}
                     {it.evidence?.caution?.length ? (
-                      <div className="mt-0.5 text-xs font-bold text-orange-700 dark:text-orange-300">⚠ 주의 공시</div>
+                      <div className="mt-0.5 text-xs font-bold text-orange-700">⚠ 주의 공시</div>
                     ) : null}
                   </td>
                   <td className="p-2 text-right">{scoreCell("news", it.news_score)}</td>
@@ -456,7 +456,7 @@ function WatchlistTable({ tradeDate, isAdmin }: { tradeDate: string; isAdmin: bo
                     {it.locked ? (
                       <span
                         title="사용자 lock · finalize 실행 후에도 유지"
-                        className="rounded bg-amber-100 px-1.5 py-0.5 text-xs text-amber-800 dark:bg-amber-900 dark:text-amber-200"
+                        className="rounded-lg bg-amber-100 px-1.5 py-0.5 text-xs text-amber-800"
                       >
                         🔒 lock
                       </span>
@@ -472,7 +472,7 @@ function WatchlistTable({ tradeDate, isAdmin }: { tradeDate: string; isAdmin: bo
                         type="button"
                         disabled={!isAdmin || toggleLock.isPending}
                         onClick={() => toggleLock.mutate({ id: it.id, locked: !it.locked })}
-                        className="rounded border px-1.5 py-0.5 text-xs hover:bg-amber-50 disabled:opacity-30"
+                        className="rounded-lg border px-1.5 py-0.5 text-xs hover:bg-amber-50 disabled:opacity-30"
                         title={it.locked ? "unlock (다음 finalize 시 재평가)" : "lock (다음 finalize 시 유지)"}
                       >
                         {it.locked ? "unlock" : "lock"}
@@ -483,7 +483,7 @@ function WatchlistTable({ tradeDate, isAdmin }: { tradeDate: string; isAdmin: bo
                         onClick={() => {
                           if (confirm(`삭제 · ${it.ticker} · id=${it.id}?`)) remove.mutate(it.id);
                         }}
-                        className="rounded border border-red-300 px-1.5 py-0.5 text-xs text-red-700 hover:bg-red-50 disabled:opacity-30"
+                        className="rounded-lg border border-warn/40 px-1.5 py-0.5 text-xs text-warn hover:bg-warn/5 disabled:opacity-30"
                         title="이 거래일 Watchlist 에서 완전 삭제"
                       >
                         ×
@@ -492,7 +492,7 @@ function WatchlistTable({ tradeDate, isAdmin }: { tradeDate: string; isAdmin: bo
                   </td>
                 </tr>
                 {open.has(it.id) && (
-                  <tr className="border-b bg-slate-50/60 dark:bg-slate-900/60">
+                  <tr className="border-b bg-slate-50/60">
                     <td colSpan={12} className="p-3">
                       <EvidenceBlock ev={it.evidence ?? null} version={it.score_version ?? null} />
                     </td>
@@ -532,7 +532,7 @@ function EvidenceBlock({ ev, version }: { ev: WatchlistEvidence | null; version:
   return (
     <div className="sticky left-0 max-w-[calc(100vw-5rem)] space-y-3 break-words text-xs md:max-w-none">
       {ev.caution.length > 0 && (
-        <div className="rounded border-2 border-orange-400 bg-orange-50 p-2 text-orange-900 dark:bg-orange-950 dark:text-orange-100">
+        <div className="rounded-lg border-2 border-orange-400 bg-orange-50 p-2 text-orange-900">
           <div className="font-bold">⚠ 주의 공시 (점수에 넣지 않음)</div>
           <ul className="mt-1 list-disc pl-4">
             {ev.caution.map((c, i) => (
@@ -551,7 +551,7 @@ function EvidenceBlock({ ev, version }: { ev: WatchlistEvidence | null; version:
             : ev.news.articles.map((a, i) => (
                 <li key={i}>
                   {a.url ? (
-                    <a href={a.url} target="_blank" rel="noopener noreferrer" className="text-sky-700 underline dark:text-sky-300">
+                    <a href={a.url} target="_blank" rel="noopener noreferrer" className="text-sky-700 underline">
                       {a.title}
                     </a>
                   ) : (
@@ -600,7 +600,7 @@ function EvidenceBlock({ ev, version }: { ev: WatchlistEvidence | null; version:
 
 function SourceStatusLine({ sources }: { sources: WatchlistSourceStatus[] }) {
   return (
-    <div className="mb-2 rounded border border-border p-2 text-xs">
+    <div className="mb-2 rounded-lg border border-border p-2 text-xs">
       <span className="font-semibold">수집 상태</span>
       <ul className="mt-1 space-y-0.5">
         {sources.map((s) => (
@@ -612,7 +612,7 @@ function SourceStatusLine({ sources }: { sources: WatchlistSourceStatus[] }) {
                 {s.last_saved_at ? ` · 마지막 저장 ${fmtKstDateTime(s.last_saved_at)}` : ""}
               </span>
             ) : (
-              <span className="text-red-600 dark:text-red-400">수집 안 함</span>
+              <span className="text-warn">수집 안 함</span>
             )}
             {s.note && <span className="text-muted-foreground">{s.note}</span>}
           </li>
@@ -639,7 +639,7 @@ function SourceBadges({
         <span
           key={s}
           title={`${s} · count=${breakdown[s].count} · sum=${breakdown[s].intensity_sum}`}
-          className="rounded bg-slate-100 px-1 py-0.5 text-xs text-slate-700 dark:bg-slate-800 dark:text-slate-200"
+          className="rounded-lg bg-slate-100 px-1 py-0.5 text-xs text-slate-700"
         >
           {shortSource(s)}
         </span>
@@ -703,7 +703,7 @@ function ManualAdd({ tradeDate, isAdmin }: { tradeDate: string; isAdmin: boolean
   });
 
   return (
-    <section className="rounded border p-4">
+    <section className="rounded-lg border p-4">
       <h2 className="mb-2 text-base font-bold">➕ 수동 add · locked=True</h2>
       <p className="mb-3 text-xs text-muted-foreground">
         사용자 판단으로 종목을 Watchlist 에 강제 편입. finalize 실행 후에도 유지됨.
@@ -714,30 +714,30 @@ function ManualAdd({ tradeDate, isAdmin }: { tradeDate: string; isAdmin: boolean
           value={ticker}
           onChange={(e) => setTicker(e.target.value.trim())}
           placeholder="티커 (예: 005930)"
-          className="rounded border px-2 py-1 text-sm"
+          className="rounded-lg border px-2 py-1 text-sm"
         />
         <input
           type="text"
           value={name}
           onChange={(e) => setName(e.target.value)}
           placeholder="종목명 (선택)"
-          className="rounded border px-2 py-1 text-sm"
+          className="rounded-lg border px-2 py-1 text-sm"
         />
         <button
           type="button"
           disabled={!isAdmin || !ticker || add.isPending}
           onClick={() => add.mutate()}
-          className="rounded bg-emerald-600 px-3 py-1 text-xs text-white disabled:opacity-50"
+          className="rounded-lg bg-primary px-3 py-1 text-xs text-white disabled:opacity-50"
         >
           {add.isPending ? "추가 중..." : "🔒 추가 + lock"}
         </button>
         {add.data && (
-          <span className="text-xs text-emerald-700">
+          <span className="text-xs text-primary">
             ✅ 저장 · id={add.data.id}
           </span>
         )}
         {add.error && (
-          <span className="text-xs text-red-700">
+          <span className="text-xs text-warn">
             ⛔ {String((add.error as Error).message)}
           </span>
         )}
@@ -773,7 +773,7 @@ function SignalsInspector({ tradeDate }: { tradeDate: string }) {
   }, [items]);
 
   return (
-    <section className="rounded border p-4">
+    <section className="rounded-lg border p-4">
       <h2 className="mb-2 text-base font-bold">
         🔎 원본 signal (breakdown 감사)
         <span className="ml-2 text-xs text-muted-foreground">
@@ -784,12 +784,12 @@ function SignalsInspector({ tradeDate }: { tradeDate: string }) {
         <div className="text-xs text-muted-foreground">불러오는 중...</div>
       )}
       {!q.isLoading && items.length === 0 && (
-        <div className="rounded border-2 border-dashed p-4 text-center text-xs text-muted-foreground">
+        <div className="rounded-lg border-2 border-dashed p-4 text-center text-xs text-muted-foreground">
           신호 없음. 뉴스 5분 · 유튜브 1시간 · 공시 08:20·20:40 · 순위 20:30 (KST) 수집 대기.
         </div>
       )}
       {Object.entries(bySource).map(([source, sigs]) => (
-        <details key={source} className="mb-2 rounded border bg-slate-50 dark:bg-slate-900">
+        <details key={source} className="mb-2 rounded-lg border bg-slate-50">
           <summary className="cursor-pointer p-2 text-xs font-medium">
             {shortSource(source)} · {sigs.length}건
           </summary>

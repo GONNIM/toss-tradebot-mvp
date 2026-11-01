@@ -11,7 +11,7 @@ export function WatchOnlyList({ items }: { items: WatchOnlyItem[] }) {
   const [open, setOpen] = useState(false);
   if (items.length === 0) return null;
   return (
-    <section className="rounded border border-border/40 bg-background/40 px-3 py-2">
+    <section className="rounded-lg border border-border/40 bg-background/40 px-3 py-2">
       <button
         type="button"
         onClick={() => setOpen(!open)}
@@ -25,12 +25,12 @@ export function WatchOnlyList({ items }: { items: WatchOnlyItem[] }) {
             <div key={w.ticker} className="flex flex-wrap items-baseline gap-2 text-xs">
               <span className="font-mono font-bold"><StockLink ticker={w.ticker}>{w.ticker}</StockLink></span>
               {w.industry && (
-                <span className="text-[10px] text-muted-foreground">{w.industry}</span>
+                <span className="text-xs text-muted-foreground">{w.industry}</span>
               )}
-              <span className="text-[10px] text-muted-foreground">
+              <span className="text-xs text-muted-foreground">
                 Bull {w.bull_pct.toFixed(0)}% · 90d {w.mentions_90d} · 7d {w.mentions_7d}
               </span>
-              <span className="ml-auto text-[10px] text-red-500">{w.reason}</span>
+              <span className="ml-auto text-xs text-warn">{w.reason}</span>
             </div>
           ))}
         </div>

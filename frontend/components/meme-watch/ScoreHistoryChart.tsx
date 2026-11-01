@@ -38,7 +38,7 @@ export function ScoreHistoryChart({
 
   if (isLoading) {
     return (
-      <div className="text-xs text-zinc-500 dark:text-zinc-400 py-4 text-center">
+      <div className="text-xs text-zinc-500 py-4 text-center">
         로딩 중...
       </div>
     );
@@ -46,7 +46,7 @@ export function ScoreHistoryChart({
 
   if (!data || data.points.length === 0) {
     return (
-      <div className="text-xs text-zinc-500 dark:text-zinc-400 py-4 text-center">
+      <div className="text-xs text-zinc-500 py-4 text-center">
         최근 {hours}시간 기록이 없습니다. 점수 기록은 5분마다 쌓입니다.
       </div>
     );
@@ -65,12 +65,12 @@ export function ScoreHistoryChart({
           <CartesianGrid stroke="currentColor" strokeOpacity={0.15} strokeDasharray="3 3" />
           <XAxis
             dataKey="t"
-            tick={{ fill: "currentColor", fontSize: 10 }}
+            tick={{ fill: "currentColor", fontSize: 12 }}
             interval="preserveStartEnd"
             minTickGap={40}
           />
           <YAxis
-            tick={{ fill: "currentColor", fontSize: 10 }}
+            tick={{ fill: "currentColor", fontSize: 12 }}
             domain={[0, 1.5]}
             ticks={[0, 0.25, 0.5, 0.75, 1.0, 1.25, 1.5]}
           />

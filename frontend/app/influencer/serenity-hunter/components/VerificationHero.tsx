@@ -4,6 +4,7 @@
 // Fable 5 6차 GO · v6 §2.6 API 계약 · IWM 단독 primary · SPY 참고
 
 import type { VerificationHero } from "@/lib/serenity-hunter/types";
+import { upDownText } from "@/lib/updown";
 
 function _fmtPct(v: number | null | undefined, digits = 2): string {
   if (v === null || v === undefined) return "—";
@@ -12,8 +13,7 @@ function _fmtPct(v: number | null | undefined, digits = 2): string {
 }
 
 function _cls(v: number | null | undefined): string {
-  if (v === null || v === undefined) return "text-muted-foreground";
-  return v >= 0 ? "text-emerald-500" : "text-red-500";
+  return upDownText(v, "text-up");
 }
 
 export function VerificationHero({ hero }: { hero: VerificationHero }) {
@@ -24,25 +24,25 @@ export function VerificationHero({ hero }: { hero: VerificationHero }) {
   let statusBadge: React.ReactNode;
   if (deprecated) {
     statusBadge = (
-      <span className="rounded bg-red-500/20 px-2 py-0.5 text-xs font-semibold text-red-500">
+      <span className="rounded-lg bg-warn/20 px-2 py-0.5 text-xs font-semibold text-warn">
         🚨 폐기 발동 · 알파 부재 · 매수 금지
       </span>
     );
   } else if (midWarn) {
     statusBadge = (
-      <span className="rounded bg-amber-500/20 px-2 py-0.5 text-xs font-semibold text-amber-500">
+      <span className="rounded-lg bg-amber-500/20 px-2 py-0.5 text-xs font-semibold text-amber-500">
         ⚠ 중간 경고 · 초과수익 음수 (표본 축적 중)
       </span>
     );
   } else if (!gateOpen) {
     statusBadge = (
-      <span className="rounded bg-slate-500/20 px-2 py-0.5 text-xs font-semibold text-slate-400">
+      <span className="rounded-lg bg-slate-500/20 px-2 py-0.5 text-xs font-semibold text-slate-400">
         ⏸ 게이트 닫힘 · 데이터 축적 중
       </span>
     );
   } else {
     statusBadge = (
-      <span className="rounded bg-emerald-500/20 px-2 py-0.5 text-xs font-semibold text-emerald-500">
+      <span className="rounded-lg bg-primary/20 px-2 py-0.5 text-xs font-semibold text-primary">
         ✓ 게이트 오픈 · 매매 후보 노출
       </span>
     );
@@ -53,7 +53,7 @@ export function VerificationHero({ hero }: { hero: VerificationHero }) {
       <div className="flex flex-wrap items-baseline justify-between gap-2">
         <div>
           <h2 className="text-sm font-semibold">🔬 알파 검증 · Serenity first-mention 사후 성과</h2>
-          <p className="mt-1 text-[10px] text-muted-foreground">
+          <p className="mt-1 text-xs text-muted-foreground">
             각 티커의 첫 트윗 언급 후 실제 주가 변화율 · IWM 벤치마크 대비 초과수익 판정 ·
             비용 (슬리피지 +1% + 왕복 수수료 1%) 차감.
           </p>
@@ -71,7 +71,7 @@ export function VerificationHero({ hero }: { hero: VerificationHero }) {
 
       {/* 초과수익 · IWM primary · SPY reference */}
       <div className="mt-4">
-        <div className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wide">
+        <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
           IWM 대비 초과수익 (v6 판정 기준)
         </div>
         <div className="mt-1 grid grid-cols-3 gap-3">
@@ -94,7 +94,7 @@ export function VerificationHero({ hero }: { hero: VerificationHero }) {
       </div>
 
       <div className="mt-3">
-        <div className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wide">
+        <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
           SPY 대비 초과수익 (참고)
         </div>
         <div className="mt-1 grid grid-cols-3 gap-3">
@@ -119,12 +119,12 @@ export function VerificationHero({ hero }: { hero: VerificationHero }) {
       {/* raw 평균 수익률 · 참고 */}
       <div className="mt-4 grid grid-cols-5 gap-2 text-xs">
         {(["1", "3", "5", "10", "30"] as const).map((w) => (
-          <div key={w} className="rounded border border-border/40 bg-background/40 px-2 py-1">
-            <div className="text-[9px] uppercase text-muted-foreground">avg +{w}d (raw)</div>
+          <div key={w} className="rounded-lg border border-border/40 bg-background/40 px-2 py-1">
+            <div className="text-xs uppercase text-muted-foreground">avg +{w}d (raw)</div>
             <div className={`font-mono font-bold ${_cls(hero.avg_return_by_window[w])}`}>
               {_fmtPct(hero.avg_return_by_window[w])}
             </div>
-            <div className="text-[9px] text-muted-foreground">
+            <div className="text-xs text-muted-foreground">
               IWM {_fmtPct(hero.benchmark_iwm_avg[w])}
             </div>
           </div>
@@ -132,13 +132,13 @@ export function VerificationHero({ hero }: { hero: VerificationHero }) {
       </div>
 
       {hero.warning_text && (
-        <div className="mt-3 rounded border border-slate-500/40 bg-slate-500/10 px-3 py-2 text-xs text-muted-foreground">
+        <div className="mt-3 rounded-lg border border-slate-500/40 bg-slate-500/10 px-3 py-2 text-xs text-muted-foreground">
           {hero.warning_text}
         </div>
       )}
 
       {hero.gate_close_reasons.length > 0 && (
-        <div className="mt-3 text-[10px] text-muted-foreground">
+        <div className="mt-3 text-xs text-muted-foreground">
           게이트 닫힘 사유: {hero.gate_close_reasons.join(" · ")}
         </div>
       )}
@@ -148,8 +148,8 @@ export function VerificationHero({ hero }: { hero: VerificationHero }) {
 
 function MetricBox({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded border border-border/40 bg-background/40 px-2 py-2">
-      <div className="text-[9px] uppercase tracking-wide text-muted-foreground">{label}</div>
+    <div className="rounded-lg border border-border/40 bg-background/40 px-2 py-2">
+      <div className="text-xs uppercase tracking-wide text-muted-foreground">{label}</div>
       <div className="text-lg font-bold">{value}</div>
     </div>
   );
@@ -165,8 +165,8 @@ function ExcessBox({
   adjusted: number | null | undefined;
 }) {
   return (
-    <div className="rounded border border-border/40 bg-background/40 px-2 py-2">
-      <div className="text-[9px] uppercase text-muted-foreground">+{label}</div>
+    <div className="rounded-lg border border-border/40 bg-background/40 px-2 py-2">
+      <div className="text-xs uppercase text-muted-foreground">+{label}</div>
       <div className={`text-sm font-mono font-bold ${_cls(raw)}`}>
         raw {_fmtPct(raw, 2)}
       </div>

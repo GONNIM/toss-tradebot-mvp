@@ -47,27 +47,27 @@ export function RRStatsCard() {
       </div>
 
       {loading && <div className="mt-3 text-xs text-muted-foreground">로딩...</div>}
-      {error && <div className="mt-3 text-xs text-red-500">에러: {error}</div>}
+      {error && <div className="mt-3 text-xs text-warn">에러: {error}</div>}
 
       {!loading && stats && (
         <>
           <div className="mt-3 grid grid-cols-3 gap-3 text-xs">
-            <div className="rounded border border-border bg-muted/20 px-2 py-1.5">
+            <div className="rounded-lg border border-border bg-muted/20 px-2 py-1.5">
               <div className="text-muted-foreground">계산 가능</div>
               <div className="mt-0.5 text-lg font-bold">
                 {stats.computable_count}
               </div>
             </div>
-            <div className="rounded border border-border bg-muted/20 px-2 py-1.5">
+            <div className="rounded-lg border border-border bg-muted/20 px-2 py-1.5">
               <div className="text-muted-foreground">평균 R:R</div>
               <div className="mt-0.5 text-lg font-bold">
                 {stats.avg_rr_ratio !== null ? stats.avg_rr_ratio.toFixed(2) : "—"}
               </div>
             </div>
             <div
-              className={`rounded border px-2 py-1.5 ${
+              className={`rounded-lg border px-2 py-1.5 ${
                 rateOk
-                  ? "border-emerald-500/40 bg-emerald-500/10"
+                  ? "border-primary/40 bg-primary/10"
                   : "border-amber-500/40 bg-amber-500/10"
               }`}
             >
@@ -97,9 +97,9 @@ export function RRStatsCard() {
                       {b.count} ({pct}%)
                     </span>
                   </div>
-                  <div className="mt-0.5 h-1.5 overflow-hidden rounded bg-muted">
+                  <div className="mt-0.5 h-1.5 overflow-hidden rounded-lg bg-muted">
                     <div
-                      className={`h-full ${good ? "bg-emerald-500" : "bg-amber-500"}`}
+                      className={`h-full ${good ? "bg-primary" : "bg-amber-500"}`}
                       style={{ width: `${pct}%` }}
                     />
                   </div>
@@ -109,7 +109,7 @@ export function RRStatsCard() {
           </div>
 
           {stats.computable_count === 0 && (
-            <p className="mt-2 text-[10px] text-muted-foreground">
+            <p className="mt-2 text-xs text-muted-foreground">
               R:R 계산 판정 0건 · JudgmentDialog 저장 시 entry_price·target_price·invalidation_price
               모두 입력하면 여기 집계 시작.
             </p>

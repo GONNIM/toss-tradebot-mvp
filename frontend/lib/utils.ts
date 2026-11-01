@@ -26,20 +26,20 @@ export function formatMarketCap(usd: number | null): string {
 export function riskBadgeClass(level: string): string {
   switch (level) {
     case "HIGH":
-      return "bg-red-500/15 text-red-400 border-red-500/30";
+      return "bg-warn/15 text-warn border-warn/30";
     case "MED":
       return "bg-yellow-500/15 text-yellow-400 border-yellow-500/30";
     case "LOW":
-      return "bg-green-500/15 text-green-400 border-green-500/30";
+      return "bg-primary/15 text-primary border-primary/30";
     default:
       return "bg-gray-500/15 text-gray-400 border-gray-500/30";
   }
 }
 
 export function manipulationBadgeClass(score: number): string {
-  if (score >= 4) return "bg-red-500/15 text-red-400 border-red-500/30";
+  if (score >= 4) return "bg-warn/15 text-warn border-warn/30";
   if (score === 3) return "bg-yellow-500/15 text-yellow-400 border-yellow-500/30";
-  return "bg-green-500/15 text-green-400 border-green-500/30";
+  return "bg-primary/15 text-primary border-primary/30";
 }
 
 // ─── Sector Leaders ───────────────────────────────────────────
@@ -61,7 +61,7 @@ export function formatMUSD(amount: number | null | undefined): string {
 export function confidenceBadgeClass(c: string): string {
   switch (c) {
     case "strong":
-      return "bg-emerald-500/15 text-emerald-400 border-emerald-500/30";
+      return "bg-primary/15 text-primary border-primary/30";
     case "medium":
       return "bg-cyan-500/15 text-cyan-400 border-cyan-500/30";
     case "weak":

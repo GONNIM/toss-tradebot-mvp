@@ -85,7 +85,7 @@ export default function NotificationsPage() {
         <div
           role={banner.kind === "ok" ? "status" : "alert"}
           className={`flex items-start justify-between gap-3 rounded-lg border px-4 py-3 text-sm ${
-            banner.kind === "ok" ? "border-teal-700/40 bg-teal-50 text-teal-900" : "border-red-700/40 bg-red-50 text-red-900"
+            banner.kind === "ok" ? "border-teal-700/40 bg-teal-50 text-teal-900" : "border-warn/40 bg-warn/5 text-warn"
           }`}
         >
           <span>{banner.text}</span>
@@ -102,7 +102,7 @@ export default function NotificationsPage() {
         </p>
       )}
       {error && !unauthorized && (
-        <p role="alert" className="rounded-lg border border-red-700/40 px-4 py-3 text-sm">
+        <p role="alert" className="rounded-lg border border-warn/40 px-4 py-3 text-sm">
           설정을 불러오지 못했습니다 · 서버 응답을 확인한 뒤 새로 고침해 주세요. ({errorText(error)})
         </p>
       )}
@@ -162,7 +162,7 @@ function SettingRow({
             {row.skipped_today > 0 && ` · 오늘 설정으로 건너뜀 ${row.skipped_today}건`}
           </div>
           {row.last_failed_at && (
-            <div className="mt-1 text-sm text-red-700">
+            <div className="mt-1 text-sm text-warn">
               최근 실패 {whenText(row.last_failed_at)} · {row.last_error ?? "원인 기록 없음"}
             </div>
           )}
@@ -255,14 +255,14 @@ function RecentLog({ category }: { category: string }) {
     queryFn: () => api.notifications.log(category, 10),
   });
   if (isLoading) return <p className="mt-2 text-sm text-muted-foreground">불러오는 중…</p>;
-  if (error) return <p className="mt-2 text-sm text-red-700">최근 알림을 불러오지 못했습니다 · 다시 펼쳐 주세요.</p>;
+  if (error) return <p className="mt-2 text-sm text-warn">최근 알림을 불러오지 못했습니다 · 다시 펼쳐 주세요.</p>;
   if (!data?.length) return <p className="mt-2 text-sm text-muted-foreground">기록된 알림이 아직 없습니다 (기록은 이번 배포부터 쌓입니다).</p>;
   return (
     <ul className="mt-2 border-t border-border">
       {data.map((it, i) => (
         <li key={i} className="flex flex-wrap gap-x-3 border-b border-border py-2 text-sm last:border-b-0">
           <span className="text-muted-foreground">{whenText(it.created_at)}</span>
-          <span className={it.result === "failed" ? "text-red-700" : ""}>{RESULT_TEXT[it.result]}</span>
+          <span className={it.result === "failed" ? "text-warn" : ""}>{RESULT_TEXT[it.result]}</span>
           <span className="min-w-0 flex-1">{it.title}</span>
           {it.error && <span className="w-full text-muted-foreground">{it.error}</span>}
         </li>

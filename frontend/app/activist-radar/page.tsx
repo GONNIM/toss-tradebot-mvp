@@ -45,55 +45,55 @@ const INTENSITY_META: Record<
   }
 > = {
   // v1.51 · P2-4 · design-rules.md 정합 · warm 축 통일 + 명도 위계 (규칙 3·9·10·25·26·27)
-  //   원 · pink/rose/amber/cyan/indigo 강채도 500 혼재 + ring-2 + shadow → 이질감 유발
+  //   원 · pink/rose/amber/cyan/indigo 강채도 500 혼재 + ring-2 +  → 이질감 유발
   //   개선 · rose/orange/amber/sky/slate 명도 위계 (라이트 우선 · dark: variant · border만)
   REGIME_CHANGE: {
     icon: "🚨",
     label: "REGIME CHANGE",
     hint: "13G→13D 전환 · passive → active 태세 전환 · 최상 신호 · 즉시 검토",
-    className: "border-2 border-rose-300 bg-rose-50 dark:border-rose-800 dark:bg-rose-950/40",
-    badgeBg: "bg-rose-600 text-white",
-    countBg: "bg-rose-100 text-rose-800 dark:bg-rose-900 dark:text-rose-100",
+    className: "border-2 border-warn/40 bg-warn/5",
+    badgeBg: "bg-warn text-white",
+    countBg: "bg-warn/10 text-warn",
   },
   CRITICAL: {
     icon: "🌋",
     label: "CRITICAL",
     hint: "즉시 검토 · 신규 SC 13D 또는 Wolf Pack",
-    className: "border-2 border-orange-300 bg-orange-50 dark:border-orange-900 dark:bg-orange-950/40",
+    className: "border-2 border-orange-300 bg-orange-50",
     badgeBg: "bg-orange-600 text-white",
-    countBg: "bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-100",
+    countBg: "bg-orange-100 text-orange-800",
   },
   STRONG: {
     icon: "🔥",
     label: "STRONG",
     hint: "관심 · 지분 변동·수정본",
-    className: "border-2 border-amber-300 bg-amber-50 dark:border-amber-900 dark:bg-amber-950/40",
+    className: "border-2 border-amber-300 bg-amber-50",
     badgeBg: "bg-amber-500 text-slate-900",
-    countBg: "bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-100",
+    countBg: "bg-amber-100 text-amber-800",
   },
   INSIDER: {
     icon: "👤",
     label: "INSIDER",
     hint: "임원 매매 · activism 진입 종목의 동조/이탈 방향",
-    className: "border-2 border-sky-300 bg-sky-50 dark:border-sky-900 dark:bg-sky-950/40",
+    className: "border-2 border-sky-300 bg-sky-50",
     badgeBg: "bg-sky-600 text-white",
-    countBg: "bg-sky-100 text-sky-800 dark:bg-sky-900 dark:text-sky-100",
+    countBg: "bg-sky-100 text-sky-800",
   },
   WATCH: {
     icon: "⚠️",
     label: "WATCH",
     hint: "참고 · passive 성 필링",
-    className: "border-2 border-slate-300 bg-slate-50 dark:border-slate-700 dark:bg-slate-900/40",
+    className: "border-2 border-slate-300 bg-slate-50",
     badgeBg: "bg-slate-500 text-white",
-    countBg: "bg-slate-100 text-slate-800 dark:bg-slate-800 dark:text-slate-100",
+    countBg: "bg-slate-100 text-slate-800",
   },
   NOTE: {
     icon: "📝",
     label: "NOTE",
     hint: "기록만",
-    className: "border border-slate-200 bg-slate-50/50 dark:border-slate-800 dark:bg-slate-900/20",
+    className: "border border-slate-200 bg-slate-50/50",
     badgeBg: "bg-slate-400 text-white",
-    countBg: "bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300",
+    countBg: "bg-slate-100 text-slate-700",
   },
 };
 
@@ -106,22 +106,22 @@ function EventRow({ e }: { e: ActivistEventItem }) {
     : `https://www.google.com/search?q=${encodeURIComponent(searchQuery + " SEC filing")}`;
 
   return (
-    // v1.51 · P2-4 · 라이트 우선 · shadow 제거 (규칙 26) · border 단독 (규칙 25·27)
-    <div className="rounded-lg border border-slate-200 bg-white p-3 text-sm text-slate-800 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100">
+    // v1.51 · P2-4 · 라이트 우선 ·  제거 (규칙 26) · border 단독 (규칙 25·27)
+    <div className="rounded-lg border border-slate-200 bg-white p-3 text-sm text-slate-800">
       {/* 헤더 · 폼 배지 + 힌트 + 점수 */}
       <div className="flex items-baseline gap-2 flex-wrap">
         <span
-          className="rounded bg-amber-500 px-2 py-0.5 font-mono text-xs font-bold text-slate-900"
+          className="rounded-lg bg-amber-500 px-2 py-0.5 font-mono text-xs font-bold text-slate-900"
           title={e.form_hint || undefined}
         >
           {e.form}
         </span>
         {e.form_hint && (
-          <span className="text-xs font-medium text-amber-700 dark:text-amber-300">
+          <span className="text-xs font-medium text-amber-700">
             {e.form_hint}
           </span>
         )}
-        <span className="ml-auto rounded bg-slate-100 px-2 py-0.5 text-xs font-mono font-bold text-slate-700 dark:bg-slate-800 dark:text-slate-200">
+        <span className="ml-auto rounded-lg bg-slate-100 px-2 py-0.5 text-xs font-mono font-bold text-slate-700">
           score {e.score}
         </span>
       </div>
@@ -131,9 +131,9 @@ function EventRow({ e }: { e: ActivistEventItem }) {
         {e.filer_tier && (
           <span
             className={
-              "rounded px-1.5 py-0.5 text-xs font-mono font-bold " +
+              "rounded-lg px-1.5 py-0.5 text-xs font-mono font-bold " +
               (e.filer_tier === 1
-                ? "bg-emerald-500 text-white"
+                ? "bg-primary text-white"
                 : e.filer_tier === 2
                 ? "bg-sky-500 text-white"
                 : "bg-slate-400 text-white")
@@ -142,34 +142,34 @@ function EventRow({ e }: { e: ActivistEventItem }) {
             T{e.filer_tier}
           </span>
         )}
-        <span className="rounded bg-slate-100 px-1.5 py-0.5 text-xs font-mono font-bold text-slate-700 dark:bg-slate-800 dark:text-slate-200">
+        <span className="rounded-lg bg-slate-100 px-1.5 py-0.5 text-xs font-mono font-bold text-slate-700">
           {e.country}
         </span>
-        <span className="font-bold text-slate-900 dark:text-white">{e.filer_name}</span>
+        <span className="font-bold text-slate-900">{e.filer_name}</span>
         {e.filer_cik && (
-          <span className="text-xs font-mono text-slate-500 dark:text-slate-400">
+          <span className="text-xs font-mono text-slate-500">
             CIK {e.filer_cik}
           </span>
         )}
       </div>
 
       {/* 메타 */}
-      <div className="mt-1.5 text-xs text-slate-500 dark:text-slate-400">
-        <span className="text-slate-600 dark:text-slate-300">Filing</span>{" "}
-        <span className="font-mono text-slate-700 dark:text-slate-200">{e.filing_date}</span>{" "}
-        · <span className="text-slate-600 dark:text-slate-300">Accession</span>{" "}
-        <span className="font-mono text-slate-700 dark:text-slate-200">{e.accession}</span>{" "}
-        · 감지 <span className="text-slate-700 dark:text-slate-200">{relTime(e.detected_at)}</span>
+      <div className="mt-1.5 text-xs text-slate-500">
+        <span className="text-slate-600">Filing</span>{" "}
+        <span className="font-mono text-slate-700">{e.filing_date}</span>{" "}
+        · <span className="text-slate-600">Accession</span>{" "}
+        <span className="font-mono text-slate-700">{e.accession}</span>{" "}
+        · 감지 <span className="text-slate-700">{relTime(e.detected_at)}</span>
       </div>
 
       {/* 대상 회사·종목 · warm 축 통일 (amber) · 단일 강조 · 사중 디바이드 해체 */}
-      <div className="mt-3 rounded-md border border-amber-300 bg-amber-50 p-3 text-sm dark:border-amber-800 dark:bg-amber-950/40">
+      <div className="mt-3 rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm">
         <div className="mb-2 flex items-center gap-2">
-          <span className="text-xs font-bold uppercase tracking-wider text-amber-800 dark:text-amber-300">
+          <span className="text-xs font-bold uppercase tracking-wider text-amber-800">
             🎯 대상 종목
           </span>
           {e.details?.issuer_cik && (
-            <span className="ml-auto text-xs font-mono text-slate-500 dark:text-slate-400">
+            <span className="ml-auto text-xs font-mono text-slate-500">
               issuer CIK {e.details.issuer_cik}
               {e.details.issuer_cusip && ` · CUSIP ${e.details.issuer_cusip}`}
             </span>
@@ -178,11 +178,11 @@ function EventRow({ e }: { e: ActivistEventItem }) {
 
         <div className="flex items-baseline gap-2 flex-wrap">
           {e.target_ticker && (
-            <span className="rounded-md bg-amber-600 px-2.5 py-1 font-mono text-sm font-bold text-white">
+            <span className="rounded-lg bg-amber-600 px-2.5 py-1 font-mono text-sm font-bold text-white">
               {e.target_ticker}
             </span>
           )}
-          <span className="text-lg font-bold text-slate-900 dark:text-white">
+          <span className="text-lg font-bold text-slate-900">
             {e.details?.issuer_name || e.target_desc || (
               <span className="text-slate-500 italic font-normal">
                 회사명 미확인 — 원문 링크 확인 필요
@@ -199,11 +199,11 @@ function EventRow({ e }: { e: ActivistEventItem }) {
           <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
             {e.details?.percent_of_class !== null &&
              e.details?.percent_of_class !== undefined && (
-              <div className="rounded-md border border-amber-300 bg-white p-2 dark:border-amber-800 dark:bg-amber-950/30">
-                <div className="text-xs font-semibold uppercase tracking-wide text-amber-700 dark:text-amber-300">
+              <div className="rounded-lg border border-amber-300 bg-white p-2">
+                <div className="text-xs font-semibold uppercase tracking-wide text-amber-700">
                   지분율
                 </div>
-                <div className="mt-0.5 text-3xl font-black leading-none text-amber-900 dark:text-amber-100">
+                <div className="mt-0.5 text-3xl font-black leading-none text-amber-900">
                   {e.details.percent_of_class.toFixed(1)}
                   <span className="text-xl">%</span>
                 </div>
@@ -211,32 +211,32 @@ function EventRow({ e }: { e: ActivistEventItem }) {
             )}
             {e.details?.aggregate_amount_owned !== null &&
              e.details?.aggregate_amount_owned !== undefined && (
-              <div className="rounded-md border border-slate-200 bg-white p-2 dark:border-slate-700 dark:bg-slate-900/40">
-                <div className="text-xs font-semibold uppercase tracking-wide text-slate-600 dark:text-slate-300">
+              <div className="rounded-lg border border-slate-200 bg-white p-2">
+                <div className="text-xs font-semibold uppercase tracking-wide text-slate-600">
                   보유 주식
                 </div>
-                <div className="mt-0.5 text-base font-bold font-mono text-slate-800 dark:text-slate-100">
+                <div className="mt-0.5 text-base font-bold font-mono text-slate-800">
                   {e.details.aggregate_amount_owned.toLocaleString()}
                 </div>
               </div>
             )}
             {e.details?.amendment_no !== null &&
              e.details?.amendment_no !== undefined && (
-              <div className="rounded-md border border-slate-200 bg-white p-2 dark:border-slate-700 dark:bg-slate-900/40">
-                <div className="text-xs font-semibold uppercase tracking-wide text-slate-600 dark:text-slate-300">
+              <div className="rounded-lg border border-slate-200 bg-white p-2">
+                <div className="text-xs font-semibold uppercase tracking-wide text-slate-600">
                   수정 차수
                 </div>
-                <div className="mt-0.5 text-base font-bold text-slate-800 dark:text-slate-100">
+                <div className="mt-0.5 text-base font-bold text-slate-800">
                   Amendment #{e.details.amendment_no}
                 </div>
               </div>
             )}
             {e.details?.date_of_event && (
-              <div className="rounded-md border border-slate-200 bg-white p-2 dark:border-slate-700 dark:bg-slate-900/40">
-                <div className="text-xs font-semibold uppercase tracking-wide text-slate-600 dark:text-slate-300">
+              <div className="rounded-lg border border-slate-200 bg-white p-2">
+                <div className="text-xs font-semibold uppercase tracking-wide text-slate-600">
                   이벤트 발생일
                 </div>
-                <div className="mt-0.5 text-base font-bold text-slate-800 dark:text-slate-100">
+                <div className="mt-0.5 text-base font-bold text-slate-800">
                   {e.details.date_of_event}
                 </div>
               </div>
@@ -245,40 +245,40 @@ function EventRow({ e }: { e: ActivistEventItem }) {
         )}
 
         {e.details?.securities_class_title && (
-          <div className="mt-3 rounded bg-slate-100 px-2 py-1 text-xs text-slate-700 dark:bg-slate-800/70 dark:text-slate-200">
-            <span className="font-semibold text-slate-500 dark:text-slate-400">증권 클래스:</span>{" "}
+          <div className="mt-3 rounded-lg bg-slate-100 px-2 py-1 text-xs text-slate-700">
+            <span className="font-semibold text-slate-500">증권 클래스:</span>{" "}
             {e.details.securities_class_title}
           </div>
         )}
 
         {e.details?.transaction_purpose && (
-          <details className="mt-3 rounded border border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-900/60">
-            <summary className="cursor-pointer px-2 py-1 text-xs font-semibold text-amber-700 hover:bg-slate-50 dark:text-amber-300 dark:hover:bg-slate-800/50">
+          <details className="mt-3 rounded-lg border border-slate-200 bg-white">
+            <summary className="cursor-pointer px-2 py-1 text-xs font-semibold text-amber-700 hover:bg-slate-50">
               📝 Item 4 — 거래 목적/사유 (원문 발췌 · 클릭 펼치기)
             </summary>
-            <div className="whitespace-pre-wrap border-t border-slate-200 p-2 font-mono text-xs text-slate-800 dark:border-slate-700 dark:text-slate-100">
+            <div className="whitespace-pre-wrap border-t border-slate-200 p-2 font-mono text-xs text-slate-800">
               {e.details.transaction_purpose}
             </div>
           </details>
         )}
       </div>
 
-      {/* 액션 힌트 · sky 계열 (프로젝트 팔레트) · shadow 제거 */}
+      {/* 액션 힌트 · sky 계열 (프로젝트 팔레트) ·  제거 */}
       {e.action_hint && (
-        <div className="mt-3 rounded-md border border-sky-300 bg-sky-50 p-2 text-sm dark:border-sky-800 dark:bg-sky-950/40">
-          <span className="mr-1 text-xs font-bold uppercase tracking-wide text-sky-800 dark:text-sky-300">
+        <div className="mt-3 rounded-lg border border-sky-300 bg-sky-50 p-2 text-sm">
+          <span className="mr-1 text-xs font-bold uppercase tracking-wide text-sky-800">
             추천 액션
           </span>
-          <span className="text-sky-900 font-medium dark:text-sky-100">{e.action_hint}</span>
+          <span className="text-sky-900 font-medium">{e.action_hint}</span>
         </div>
       )}
 
       {/* Wolf Pack · rose 축 유지 · border만 · 라이트화 */}
       {e.wolf_pack.length > 0 && (
-        <div className="mt-2 rounded-md border-2 border-rose-300 bg-rose-50 p-2 text-xs font-medium text-rose-900 dark:border-rose-800 dark:bg-rose-950/40 dark:text-rose-100">
+        <div className="mt-2 rounded-lg border-2 border-warn/40 bg-warn/5 p-2 text-xs font-medium text-warn">
           🐺 <span className="font-bold">Wolf Pack (30d)</span>: 다른 activist{" "}
-          <span className="text-rose-700 font-bold dark:text-rose-300">{e.wolf_pack.length}명</span> 동일 종목 진입 —{" "}
-          <span className="text-rose-800 dark:text-rose-200">{e.wolf_pack.join(", ")}</span>
+          <span className="text-warn font-bold">{e.wolf_pack.length}명</span> 동일 종목 진입 —{" "}
+          <span className="text-warn">{e.wolf_pack.join(", ")}</span>
         </div>
       )}
 
@@ -289,7 +289,7 @@ function EventRow({ e }: { e: ActivistEventItem }) {
             href={filingUrl}
             target="_blank"
             rel="noopener noreferrer"
-            className="rounded-md border border-slate-200 bg-white px-3 py-1 font-medium text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700"
+            className="rounded-lg border border-slate-200 bg-white px-3 py-1 font-medium text-slate-700 hover:bg-slate-50"
           >
             📄 원문 필링 ↗
           </a>
@@ -299,7 +299,7 @@ function EventRow({ e }: { e: ActivistEventItem }) {
             href={filerUrl}
             target="_blank"
             rel="noopener noreferrer"
-            className="rounded-md border border-slate-200 bg-white px-3 py-1 font-medium text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700"
+            className="rounded-lg border border-slate-200 bg-white px-3 py-1 font-medium text-slate-700 hover:bg-slate-50"
           >
             🔍 {e.filer_name.split(" ")[0]} 다른 필링 ↗
           </a>
@@ -308,7 +308,7 @@ function EventRow({ e }: { e: ActivistEventItem }) {
           href={websearchUrl}
           target="_blank"
           rel="noopener noreferrer"
-          className="rounded-md border border-slate-600 bg-slate-800 px-3 py-1 font-medium text-slate-100 hover:bg-slate-700 hover:text-white"
+          className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-1 font-medium text-slate-100 hover:bg-slate-700 hover:text-white"
         >
           {e.country === "KR" ? "🇰🇷" : "🌐"} 웹 검색 ↗
         </a>
@@ -329,17 +329,17 @@ const PACK_STYLE: Record<
   CRITICAL_PACK: {
     icon: "🐺🐺",
     label: "CRITICAL PACK",
-    className: "border-2 border-rose-300 bg-rose-50 dark:border-rose-800 dark:bg-rose-950/40",
+    className: "border-2 border-warn/40 bg-warn/5",
   },
   STRONG_PACK: {
     icon: "🐺",
     label: "STRONG PACK",
-    className: "border-2 border-orange-300 bg-orange-50 dark:border-orange-900 dark:bg-orange-950/40",
+    className: "border-2 border-orange-300 bg-orange-50",
   },
   PACK: {
     icon: "🐺",
     label: "PACK",
-    className: "border border-amber-300 bg-amber-50 dark:border-amber-900 dark:bg-amber-950/30",
+    className: "border border-amber-300 bg-amber-50",
   },
 };
 
@@ -347,12 +347,12 @@ function TierBadge({ tier }: { tier: number }) {
   // v1.51 · 라이트 우선 · 파스텔 배경 + 짙은 텍스트
   const color =
     tier === 1
-      ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-200"
+      ? "bg-primary/10 text-primary"
       : tier === 2
-      ? "bg-sky-100 text-sky-800 dark:bg-sky-900/40 dark:text-sky-200"
-      : "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300";
+      ? "bg-sky-100 text-sky-800"
+      : "bg-slate-100 text-slate-600";
   return (
-    <span className={`rounded px-1.5 py-0.5 text-xs font-mono ${color}`}>
+    <span className={`rounded-lg px-1.5 py-0.5 text-xs font-mono ${color}`}>
       T{tier}
     </span>
   );
@@ -371,21 +371,21 @@ function WolfPackEntryRow({
     <div className="relative flex gap-3">
       <div className="flex flex-col items-center">
         {/* v1.51 · rose 축 통일 (Wolf Pack 정체성) · ring 제거 · border로 대체 */}
-        <div className="h-3 w-3 rounded-full bg-rose-500 border-2 border-white dark:border-slate-900" />
-        {!isLast && <div className="w-px flex-1 bg-rose-300 dark:bg-rose-800" />}
+        <div className="h-3 w-3 rounded-full bg-warn border-2 border-white" />
+        {!isLast && <div className="w-px flex-1 bg-warn/30" />}
       </div>
       <div className="mb-3 flex-1 pb-2">
         <div className="flex items-baseline gap-2 flex-wrap">
           <TierBadge tier={e.tier} />
           <span className="font-medium">{e.filer_name}</span>
-          <span className="rounded bg-amber-100 px-2 py-0.5 text-xs font-mono text-amber-800 dark:bg-amber-900/40 dark:text-amber-200">
+          <span className="rounded-lg bg-amber-100 px-2 py-0.5 text-xs font-mono text-amber-800">
             {e.form}
           </span>
           {isFirst && (
             <span className="text-xs text-muted-foreground">🩸 최초 진입</span>
           )}
           {isLast && !isFirst && (
-            <span className="text-xs text-rose-700 dark:text-rose-300">⚡ 최신 진입</span>
+            <span className="text-xs text-warn">⚡ 최신 진입</span>
           )}
         </div>
         <div className="mt-0.5 text-xs text-muted-foreground">
@@ -406,7 +406,7 @@ function WolfPackCard({ g }: { g: WolfPackGroup }) {
         <div>
           <div className="flex items-baseline gap-2 flex-wrap">
             <span className="text-2xl">{style.icon}</span>
-            <span className="rounded bg-rose-100 px-2 py-0.5 text-xs font-mono font-semibold text-rose-800 dark:bg-rose-900/40 dark:text-rose-200">
+            <span className="rounded-lg bg-warn/10 px-2 py-0.5 text-xs font-mono font-semibold text-warn">
               {g.country}
             </span>
             <span className="text-xl font-bold font-mono">{g.target_ticker}</span>
@@ -428,7 +428,7 @@ function WolfPackCard({ g }: { g: WolfPackGroup }) {
               href={`https://finance.yahoo.com/quote/${yahooTicker}`}
               target="_blank"
               rel="noopener noreferrer"
-              className="rounded border border-border bg-background/50 px-2 py-1 hover:bg-muted"
+              className="rounded-lg border border-border bg-background/50 px-2 py-1 hover:bg-muted"
             >
               Yahoo ↗
             </a>
@@ -438,7 +438,7 @@ function WolfPackCard({ g }: { g: WolfPackGroup }) {
               href={`https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=${g.target_cik}&type=SC+13`}
               target="_blank"
               rel="noopener noreferrer"
-              className="rounded border border-border bg-background/50 px-2 py-1 hover:bg-muted"
+              className="rounded-lg border border-border bg-background/50 px-2 py-1 hover:bg-muted"
             >
               SEC ↗
             </a>
@@ -502,10 +502,10 @@ function BucketCard({
   const visible = showAll ? events : events.slice(0, 5);
   return (
     <div className={`overflow-hidden rounded-lg border ${meta.className}`}>
-      {/* v1.51 · 헤더 밴드 라이트 우선 · shadow 제거 (규칙 26) · 배경은 카드 톤 상속 */}
-      <div className="flex items-center gap-2 flex-wrap bg-white/60 px-4 py-2.5 border-b border-slate-200 dark:bg-slate-900/60 dark:border-slate-700">
+      {/* v1.51 · 헤더 밴드 라이트 우선 ·  제거 (규칙 26) · 배경은 카드 톤 상속 */}
+      <div className="flex items-center gap-2 flex-wrap bg-white/60 px-4 py-2.5 border-b border-slate-200">
         <span
-          className={`inline-flex items-center gap-1.5 rounded-md px-2.5 py-1 text-sm font-bold ${meta.badgeBg}`}
+          className={`inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-sm font-bold ${meta.badgeBg}`}
         >
           <span className="text-base">{meta.icon}</span>
           {meta.label}
@@ -515,7 +515,7 @@ function BucketCard({
         >
           {events.length}
         </span>
-        <span className="text-sm text-slate-700 dark:text-slate-100 font-medium">
+        <span className="text-sm text-slate-700 font-medium">
           {meta.hint}
         </span>
       </div>
@@ -556,7 +556,7 @@ function UniverseCard({
           {inactive.length > 0 ? ` · ${inactive.length} inactive` : ""})
         </h2>
         <div className="flex items-center gap-2">
-          <div className="flex overflow-hidden rounded border border-border text-xs">
+          <div className="flex overflow-hidden rounded-lg border border-border text-xs">
             {(["all", "US", "KR"] as const).map((f) => (
               <button
                 key={f}
@@ -571,7 +571,7 @@ function UniverseCard({
           </div>
           <button
             onClick={onAdd}
-            className="rounded bg-emerald-600 px-3 py-1 text-xs font-medium text-white hover:bg-emerald-700"
+            className="rounded-lg bg-primary px-3 py-1 text-xs font-medium text-white hover:bg-primary"
           >
             + Activist 추가
           </button>
@@ -582,11 +582,11 @@ function UniverseCard({
         {filtered.map((a) => (
           <div
             key={a.key}
-            className={`flex items-center gap-2 rounded border border-border/60 px-2 py-1.5 ${
+            className={`flex items-center gap-2 rounded-lg border border-border/60 px-2 py-1.5 ${
               a.enabled ? "" : "opacity-50"
             }`}
           >
-            <span className="rounded bg-muted px-1.5 py-0.5 text-xs font-mono">
+            <span className="rounded-lg bg-muted px-1.5 py-0.5 text-xs font-mono">
               {a.country}·T{a.tier}
             </span>
             <span className="flex-1 truncate">{a.name}</span>
@@ -595,13 +595,13 @@ function UniverseCard({
             </span>
             <button
               onClick={() => onEdit(a)}
-              className="rounded border border-border bg-background px-2 py-0.5 hover:bg-muted"
+              className="rounded-lg border border-border bg-background px-2 py-0.5 hover:bg-muted"
             >
               편집
             </button>
             <button
               onClick={() => onDelete(a)}
-              className="rounded border border-rose-500/50 bg-rose-500/10 px-2 py-0.5 text-rose-400 hover:bg-rose-500/20"
+              className="rounded-lg border border-warn/50 bg-warn/10 px-2 py-0.5 text-warn hover:bg-warn/20"
             >
               삭제
             </button>
@@ -676,7 +676,7 @@ function UniverseEditor({
           </h3>
           <button
             onClick={onClose}
-            className="rounded border border-border px-2 py-1 text-xs hover:bg-muted"
+            className="rounded-lg border border-border px-2 py-1 text-xs hover:bg-muted"
           >
             닫기
           </button>
@@ -693,7 +693,7 @@ function UniverseEditor({
               onChange={(e) => setKey(e.target.value)}
               placeholder="예: elliott_investment_mgmt"
               disabled={!isNew}
-              className="mt-1 w-full rounded border border-border bg-background px-2 py-1 text-sm font-mono disabled:opacity-60"
+              className="mt-1 w-full rounded-lg border border-border bg-background px-2 py-1 text-sm font-mono disabled:opacity-60"
             />
           </div>
 
@@ -704,7 +704,7 @@ function UniverseEditor({
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="예: Elliott Investment Management L.P."
-              className="mt-1 w-full rounded border border-border bg-background px-2 py-1 text-sm"
+              className="mt-1 w-full rounded-lg border border-border bg-background px-2 py-1 text-sm"
             />
           </div>
 
@@ -714,7 +714,7 @@ function UniverseEditor({
               <select
                 value={country}
                 onChange={(e) => setCountry(e.target.value as "US" | "KR")}
-                className="mt-1 w-full rounded border border-border bg-background px-2 py-1 text-sm"
+                className="mt-1 w-full rounded-lg border border-border bg-background px-2 py-1 text-sm"
               >
                 <option value="US">US · SEC</option>
                 <option value="KR">KR · DART</option>
@@ -725,7 +725,7 @@ function UniverseEditor({
               <select
                 value={tier}
                 onChange={(e) => setTier(Number(e.target.value))}
-                className="mt-1 w-full rounded border border-border bg-background px-2 py-1 text-sm"
+                className="mt-1 w-full rounded-lg border border-border bg-background px-2 py-1 text-sm"
               >
                 <option value={1}>1 · 실행력 최상위</option>
                 <option value={2}>2 · 중간</option>
@@ -742,7 +742,7 @@ function UniverseEditor({
                 value={cik}
                 onChange={(e) => setCik(e.target.value)}
                 placeholder="예: 0001345471"
-                className="mt-1 w-full rounded border border-border bg-background px-2 py-1 text-sm font-mono"
+                className="mt-1 w-full rounded-lg border border-border bg-background px-2 py-1 text-sm font-mono"
               />
               <p className="mt-1 text-xs text-muted-foreground">
                 data.sec.gov/submissions/CIK{"{cik}"}.json 폴링에 사용됨
@@ -758,7 +758,7 @@ function UniverseEditor({
                 value={corpCode}
                 onChange={(e) => setCorpCode(e.target.value)}
                 placeholder="예: 00126380"
-                className="mt-1 w-full rounded border border-border bg-background px-2 py-1 text-sm font-mono"
+                className="mt-1 w-full rounded-lg border border-border bg-background px-2 py-1 text-sm font-mono"
               />
               <p className="mt-1 text-xs text-muted-foreground">
                 이름 정규화 매칭 우선 · corp_code 는 참고용
@@ -775,7 +775,7 @@ function UniverseEditor({
               value={keywords}
               onChange={(e) => setKeywords(e.target.value)}
               placeholder="예: WEN, WENDY"
-              className="mt-1 w-full rounded border border-border bg-background px-2 py-1 text-sm font-mono"
+              className="mt-1 w-full rounded-lg border border-border bg-background px-2 py-1 text-sm font-mono"
             />
           </div>
 
@@ -789,7 +789,7 @@ function UniverseEditor({
           </label>
 
           {saveError && (
-            <div className="rounded border border-rose-500/50 bg-rose-500/10 p-2 text-xs text-rose-400">
+            <div className="rounded-lg border border-warn/50 bg-warn/10 p-2 text-xs text-warn">
               저장 실패: {saveError}
             </div>
           )}
@@ -798,14 +798,14 @@ function UniverseEditor({
         <div className="mt-5 flex justify-end gap-2">
           <button
             onClick={onClose}
-            className="rounded border border-border px-3 py-1.5 text-sm hover:bg-muted"
+            className="rounded-lg border border-border px-3 py-1.5 text-sm hover:bg-muted"
           >
             취소
           </button>
           <button
             onClick={submit}
             disabled={mut.isPending}
-            className="rounded bg-emerald-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-emerald-700 disabled:opacity-50"
+            className="rounded-lg bg-primary px-3 py-1.5 text-sm font-medium text-white hover:bg-primary disabled:opacity-50"
           >
             {mut.isPending ? "저장 중…" : "저장"}
           </button>
@@ -870,7 +870,7 @@ export default function ActivistRadarPage() {
       <header>
         <h1 className="flex items-center gap-2 text-3xl font-bold">
           🐺 Activist Radar
-          <span className="rounded bg-green-500/20 px-2 py-0.5 text-xs font-semibold text-green-400" title="COINCIDENT · 실시간 이벤트">
+          <span className="rounded-lg bg-primary/20 px-2 py-0.5 text-xs font-semibold text-primary" title="COINCIDENT · 실시간 이벤트">
             COINCIDENT
           </span>
         </h1>
@@ -884,13 +884,13 @@ export default function ActivistRadarPage() {
       <AdminSessionBar scope="activist" />
 
       {statusQ.isLoading && (
-        <div className="rounded border border-border bg-card p-4 text-sm text-muted-foreground">
+        <div className="rounded-lg border border-border bg-card p-4 text-sm text-muted-foreground">
           로딩 중…
         </div>
       )}
 
       {statusQ.isError && (
-        <div className="rounded border border-rose-500/50 bg-rose-500/10 p-4 text-sm text-rose-400">
+        <div className="rounded-lg border border-warn/50 bg-warn/10 p-4 text-sm text-warn">
           상태 조회 실패: {(statusQ.error as Error).message}
         </div>
       )}
@@ -927,13 +927,13 @@ export default function ActivistRadarPage() {
           <BucketCard intensity="INSIDER" events={s.buckets.INSIDER || []} />
           <BucketCard intensity="WATCH" events={s.buckets.WATCH || []} />
           {(s.insider_watchlist_kr || []).length > 0 && (
-            <div className="rounded-lg border border-sky-300 bg-sky-50 p-3 text-sm dark:border-sky-800 dark:bg-sky-950/40">
-              <div className="mb-1 font-medium text-sky-800 dark:text-sky-300">
+            <div className="rounded-lg border border-sky-300 bg-sky-50 p-3 text-sm">
+              <div className="mb-1 font-medium text-sky-800">
                 👤 KR Insider Watchlist ({s.insider_watchlist_kr!.length} 종목 · 최근 90일 activism 진입 자동 추적)
               </div>
               <div className="flex flex-wrap gap-1 font-mono text-xs">
                 {s.insider_watchlist_kr!.map((code) => (
-                  <span key={code} className="rounded bg-sky-100 px-2 py-0.5 text-sky-800 dark:bg-sky-900/40 dark:text-sky-200">
+                  <span key={code} className="rounded-lg bg-sky-100 px-2 py-0.5 text-sky-800">
                     {code}
                   </span>
                 ))}
@@ -944,14 +944,14 @@ export default function ActivistRadarPage() {
             </div>
           )}
           {(s.insider_watchlist_us || []).length > 0 && (
-            <div className="rounded-lg border border-sky-300 bg-sky-50 p-3 text-sm dark:border-sky-800 dark:bg-sky-950/40">
-              <div className="mb-1 font-medium text-sky-800 dark:text-sky-300">
+            <div className="rounded-lg border border-sky-300 bg-sky-50 p-3 text-sm">
+              <div className="mb-1 font-medium text-sky-800">
                 👤 US Insider Watchlist ({s.insider_watchlist_us!.length} 회사 · 최근 90일 activism 진입 자동 추적)
               </div>
               <div className="flex flex-col gap-1 text-xs">
                 {s.insider_watchlist_us!.map((w) => (
                   <div key={w.cik} className="flex gap-2 items-baseline">
-                    <span className="rounded bg-sky-100 px-2 py-0.5 font-mono font-semibold text-sky-800 dark:bg-sky-900/40 dark:text-sky-200">
+                    <span className="rounded-lg bg-sky-100 px-2 py-0.5 font-mono font-semibold text-sky-800">
                       <StockLink ticker={w.ticker}>{w.ticker}</StockLink>
                     </span>
                     <span className="text-muted-foreground truncate">{w.name}</span>
@@ -970,7 +970,7 @@ export default function ActivistRadarPage() {
       )}
 
       {s && (s.events_total === 0) && (
-        <div className="rounded border border-amber-500/50 bg-amber-500/10 p-4 text-sm text-amber-300">
+        <div className="rounded-lg border border-amber-500/50 bg-amber-500/10 p-4 text-sm text-amber-300">
           아직 감지된 신규 필링이 없습니다. 첫 tick 은 baseline (알림 없음), 다음 tick 부터 실 신규
           필링만 이벤트로 기록됩니다. 5분 간격 폴링이라 초기엔 이벤트가 없어도 정상입니다.
         </div>
@@ -1033,7 +1033,7 @@ export default function ActivistRadarPage() {
           <div>
             <strong>D001 · D002</strong> — 한국 DART · 대량보유(경영권) · 임원주주소유상황(insider)
           </div>
-          <div className="rounded border border-amber-500/50 bg-amber-500/10 p-2 text-xs text-amber-400">
+          <div className="rounded-lg border border-amber-500/50 bg-amber-500/10 p-2 text-xs text-amber-400">
             ⚠️ 참고 신호이며 자동 매매 아님. 매매 결정은 사용자 판단.
           </div>
         </div>

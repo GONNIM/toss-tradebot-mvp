@@ -35,7 +35,7 @@ export default function TickerDetailPage({ params }: PageProps) {
         <Link href="/influencer/serenity" className="text-xs text-sky-500 hover:underline">
           ← Serenity 랜딩
         </Link>
-        <div className="mt-4 rounded border border-red-500/40 bg-red-500/10 p-4 text-sm text-red-500">
+        <div className="mt-4 rounded-lg border border-warn/40 bg-warn/10 p-4 text-sm text-warn">
           {err.includes("404") ? `티커 ${upper} · 스코어 없음 (seed 필요)` : `에러: ${err}`}
         </div>
       </div>
@@ -60,7 +60,7 @@ export default function TickerDetailPage({ params }: PageProps) {
 
       <header
         className={`rounded-lg border p-4 ${
-          s.auto_avoid ? "border-red-500/40 bg-red-500/5" : "border-border bg-card"
+          s.auto_avoid ? "border-warn/40 bg-warn/5" : "border-border bg-card"
         }`}
       >
         <div className="flex items-baseline justify-between">
@@ -75,28 +75,28 @@ export default function TickerDetailPage({ params }: PageProps) {
           <div className="text-right">
             <div className="text-3xl font-bold text-primary">{s.total_score}</div>
             {s.auto_avoid ? (
-              <span className="text-xs font-semibold text-red-500">🚨 AVOID</span>
+              <span className="text-xs font-semibold text-warn">🚨 AVOID</span>
             ) : (
-              <span className="text-xs text-emerald-500">watch</span>
+              <span className="text-xs text-primary">watch</span>
             )}
           </div>
         </div>
         <div className="mt-3 flex flex-wrap gap-2 text-xs">
-          <span className="rounded bg-slate-500/20 px-2 py-0.5">
+          <span className="rounded-lg bg-slate-500/20 px-2 py-0.5">
             Financing tier: <strong>{s.financing_tier ?? "-"}</strong>
           </span>
-          <span className="rounded bg-slate-500/20 px-2 py-0.5">
+          <span className="rounded-lg bg-slate-500/20 px-2 py-0.5">
             Serenity tier: <strong>{s.serenity_tier ?? "-"}</strong>
           </span>
-          <span className="rounded bg-slate-500/20 px-2 py-0.5">
+          <span className="rounded-lg bg-slate-500/20 px-2 py-0.5">
             90일 mentions: <strong>{s.mention_count_90d}</strong>
           </span>
-          <span className="rounded bg-slate-500/20 px-2 py-0.5">
+          <span className="rounded-lg bg-slate-500/20 px-2 py-0.5">
             bullish: <strong>{s.bullish_pct_90d.toFixed(0)}%</strong>
           </span>
         </div>
         {s.anti_pattern_flags.length > 0 && (
-          <div className="mt-2 text-xs text-red-500">
+          <div className="mt-2 text-xs text-warn">
             ⚠ Anti-pattern: {s.anti_pattern_flags.join(", ")}
           </div>
         )}
@@ -112,7 +112,7 @@ export default function TickerDetailPage({ params }: PageProps) {
       <section>
         <h2 className="mb-2 text-sm font-semibold">📡 Recent Signals · {data.recent_signals.length}건</h2>
         {data.recent_signals.length === 0 ? (
-          <div className="rounded border border-dashed border-border p-4 text-center text-xs text-muted-foreground">
+          <div className="rounded-lg border border-dashed border-border p-4 text-center text-xs text-muted-foreground">
             signal 없음 · 크론이 매일 07:00 KST 자동 수집 예정
           </div>
         ) : (

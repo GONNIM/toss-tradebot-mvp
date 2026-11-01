@@ -64,7 +64,7 @@ export default function SettingsPage() {
                     key={s.key}
                     className="border-b border-border last:border-0 hover:bg-muted/30"
                   >
-                    <td className="px-4 py-3 font-mono text-cyan-700 dark:text-cyan-300">
+                    <td className="px-4 py-3 font-mono text-cyan-700">
                       {s.key}
                     </td>
                     <td className="px-4 py-3 text-right font-mono text-foreground font-semibold whitespace-nowrap">

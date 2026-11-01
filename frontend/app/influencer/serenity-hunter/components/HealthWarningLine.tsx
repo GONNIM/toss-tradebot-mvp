@@ -9,7 +9,7 @@ export function HealthWarningLine({ health }: { health: HealthResponse | null })
   if (!health || !health.warn) return null;
   const reasons = health.reasons.map((r) => r.message).join(" · ");
   return (
-    <div className="rounded border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-xs text-amber-500">
+    <div className="rounded-lg border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-xs text-amber-500">
       ⚠ 시스템 헬스 경고 · {reasons}
     </div>
   );

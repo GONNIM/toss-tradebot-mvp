@@ -166,24 +166,24 @@ function AlertBriefCard({ b, defaultOpen = false, links }: { b: AlertBrief; defa
   const [open, setOpen] = useState(defaultOpen); // WP85 · 첫 경보는 펼친 채로 (접혀 있어 요약이 안 보이던 문제)
   const m = b.mentions;
   return (
-    <div className="rounded-lg border border-rose-200 bg-white dark:border-rose-900 dark:bg-slate-900">
+    <div className="rounded-lg border border-warn/30 bg-white">
       <button type="button" aria-expanded={open} onClick={() => setOpen((v) => !v)} className="flex w-full items-baseline gap-2 p-3 text-left">
-        <span className="rounded bg-rose-600 px-2 py-0.5 font-mono text-xs font-bold text-white">{b.ticker}</span>
+        <span className="rounded-lg bg-warn px-2 py-0.5 font-mono text-xs font-bold text-white">{b.ticker}</span>
         <span className="text-muted-foreground">{shortName(b.name)}</span>
         <span className="ml-auto text-muted-foreground">{open ? "접기 ▲" : "브리핑 보기 ▼"}</span>
       </button>
       {open && (
-        <div className="space-y-2 border-t border-rose-100 p-3 dark:border-rose-900">
+        <div className="space-y-2 border-t border-warn/20 p-3">
           <BrokerLink symbol={b.ticker} links={links} />
-          <div className="rounded border-l-4 border-amber-500 bg-amber-50 p-2 dark:border-amber-600 dark:bg-amber-950/40">⚠️ {b.note}</div>
+          <div className="rounded-lg border-l-4 border-amber-500 bg-amber-50 p-2">⚠️ {b.note}</div>
           {summaryStatus(b.summary) && (
-            <div className="rounded border border-slate-300 bg-slate-50 p-2 text-muted-foreground dark:border-slate-700 dark:bg-slate-900">
+            <div className="rounded-lg border border-slate-300 bg-slate-50 p-2 text-muted-foreground">
               {summaryStatus(b.summary)} · 아래 수집 자료는 그대로 보여 드립니다.
             </div>
           )}
           {b.summary?.ok && (b.summary.lines ?? []).length > 0 && (
-            <div className="rounded border border-sky-300 bg-sky-50 p-2 dark:border-sky-800 dark:bg-sky-950/40">
-              <div className="mb-1 text-[10px] font-bold uppercase tracking-wider text-sky-800 dark:text-sky-300">
+            <div className="rounded-lg border border-sky-300 bg-sky-50 p-2">
+              <div className="mb-1 text-xs font-bold uppercase tracking-wider text-sky-800">
                 자동 요약 · 진위 미검증{b.summary.model ? ` · ${b.summary.model}` : ""}
               </div>
               {(b.summary.lines ?? []).map((l, i) => <div key={i}>{l}</div>)}
@@ -208,7 +208,7 @@ function AlertBriefCard({ b, defaultOpen = false, links }: { b: AlertBrief; defa
             ) : (
               <ul className="list-disc pl-5">
                 {b.reddit.map((p, i) => (
-                  <li key={i}><a href={p.link} target="_blank" rel="noopener noreferrer" className="text-sky-700 hover:underline dark:text-sky-300">{p.title}</a></li>
+                  <li key={i}><a href={p.link} target="_blank" rel="noopener noreferrer" className="text-sky-700 hover:underline">{p.title}</a></li>
                 ))}
               </ul>
             )}
@@ -223,7 +223,7 @@ function AlertBriefCard({ b, defaultOpen = false, links }: { b: AlertBrief; defa
               <ul className="list-disc pl-5">
                 {b.sec_8k.map((f, i) => (
                   <li key={i}>
-                    <a href={f.url} target="_blank" rel="noopener noreferrer" className="text-sky-700 hover:underline dark:text-sky-300">{f.filing_date} · 항목 {f.items || "-"}</a>
+                    <a href={f.url} target="_blank" rel="noopener noreferrer" className="text-sky-700 hover:underline">{f.filing_date} · 항목 {f.items || "-"}</a>
                     {f.description && ` · ${f.description}`}
                     {exhibitLine(f) && ` · ${exhibitLine(f)}`}
                     {f.ex99_1_lead && (
@@ -260,16 +260,16 @@ function CompactList({ rows, emptyLabel, kind, alertTickers = [] }: { rows: Rumo
     <ul className="space-y-1 text-xs">
       {rows.map((r, i) => (
         <li key={i} className="flex items-baseline gap-2 flex-wrap">
-          <span className="rounded bg-slate-100 px-1.5 py-0.5 font-mono font-bold text-slate-700 dark:bg-slate-800 dark:text-slate-200">
+          <span className="rounded-lg bg-slate-100 px-1.5 py-0.5 font-mono font-bold text-slate-700">
             <StockLink ticker={r.ticker}>{r.ticker}</StockLink>
           </span>
           <span className="text-muted-foreground">{shortName(r.name)}</span>
           {mcapBadge(r.mcap_bucket, r.mcap_asof) && (
-            <span className="rounded bg-slate-50 px-1 py-0.5 text-[10px] font-mono text-slate-600 dark:bg-slate-900 dark:text-slate-300">
+            <span className="rounded-lg bg-slate-50 px-1 py-0.5 text-xs font-mono text-slate-600">
               {mcapBadge(r.mcap_bucket, r.mcap_asof)}
             </span>
           )}
-          <span className="text-slate-700 dark:text-slate-200">
+          <span className="text-slate-700">
             {kind === "mentions"
               ? mentionSentence(r.stage || r.days_hint, r.baseline_n, r.st_24h, r.mult, r.baseline_mean, alertTickers.includes(r.ticker))
               : trialSentence(r.phase, r.event_date, r.days_to) ?? r.detail}
@@ -284,17 +284,17 @@ function CompactList({ rows, emptyLabel, kind, alertTickers = [] }: { rows: Rumo
 function Form4Card({ rows }: { rows: RumorRow[] }) {
   const g = { key: "", rows };
   return (
-    <div className="rounded-lg border border-slate-200 bg-white p-3 text-sm dark:border-slate-700 dark:bg-slate-900">
+    <div className="rounded-lg border border-slate-200 bg-white p-3 text-sm">
       <div className="flex items-baseline gap-2 flex-wrap">
-        <span className="rounded bg-emerald-600 px-2 py-0.5 font-mono text-xs font-bold text-white">{tickerOrUnknown(rows[0].ticker)}</span>
+        <span className="rounded-lg bg-primary px-2 py-0.5 font-mono text-xs font-bold text-white">{tickerOrUnknown(rows[0].ticker)}</span>
         {mcapBadge(rows[0].mcap_bucket, rows[0].mcap_asof) && (
-          <span className="rounded bg-slate-100 px-1.5 py-0.5 text-[10px] font-mono text-slate-700 dark:bg-slate-800 dark:text-slate-200">
+          <span className="rounded-lg bg-slate-100 px-1.5 py-0.5 text-xs font-mono text-slate-700">
             {mcapBadge(rows[0].mcap_bucket, rows[0].mcap_asof)}
           </span>
         )}
       </div>
-      <div className="mt-1.5 text-xs text-slate-700 dark:text-slate-200">{insiderSummary(g)}</div>
-      <details className="mt-1 text-[11px] text-muted-foreground">
+      <div className="mt-1.5 text-xs text-slate-700">{insiderSummary(g)}</div>
+      <details className="mt-1 text-xs text-muted-foreground">
         <summary className="cursor-pointer">자세히</summary>
         <ul className="list-disc pl-5">
           {rows.map((r, i) => <li key={i}>{insiderTxLine(r.form4 ?? {})}</li>)}
@@ -382,7 +382,7 @@ export default function BiotechPage() {
   }
   const ring = (id: string) => (highlight === id ? "rounded-lg ring-2 ring-offset-2 ring-sky-500 transition" : "transition");
   const chip = (on: boolean) =>
-    `rounded-full border px-2.5 py-0.5 text-xs ${on ? "border-sky-600 bg-sky-50 font-semibold text-sky-700 dark:bg-sky-950/40 dark:text-sky-300" : "border-border text-muted-foreground hover:bg-muted"}`;
+    `rounded-full border px-2.5 py-0.5 text-xs ${on ? "border-sky-600 bg-sky-50 font-semibold text-sky-700" : "border-border text-muted-foreground hover:bg-muted"}`;
 
   return (
     <div className="space-y-4">
@@ -397,22 +397,22 @@ export default function BiotechPage() {
         <BiotechSessionControl onSessionChange={setSession} />
       </header>
 
-      <div className="rounded border-l-4 border-amber-500 bg-amber-50 p-3 text-sm dark:border-amber-600 dark:bg-amber-950/40">
+      <div className="rounded-lg border-l-4 border-amber-500 bg-amber-50 p-3 text-sm">
         ⚠️ 이 화면은 관찰용입니다. 매수 추천이 아니며 자동으로 주문하지 않습니다. 투자하더라도 소액만 권합니다.
       </div>
 
       {!isAdmin && (
-        <div className="rounded border border-rose-500/50 bg-rose-500/10 p-4 text-sm text-rose-700 dark:text-rose-300">
+        <div className="rounded-lg border border-warn/50 bg-warn/10 p-4 text-sm text-warn">
           🔒 관리자 로그인이 필요합니다. 오른쪽 위 「로그인」 에서 로그인하십시오.
         </div>
       )}
 
       {isAdmin && loading && (
-        <div className="rounded border border-border bg-card p-4 text-sm text-muted-foreground">로딩 중…</div>
+        <div className="rounded-lg border border-border bg-card p-4 text-sm text-muted-foreground">로딩 중…</div>
       )}
 
       {isAdmin && error && (
-        <div className="rounded border border-rose-500/50 bg-rose-500/10 p-4 text-sm text-rose-700 dark:text-rose-300">
+        <div className="rounded-lg border border-warn/50 bg-warn/10 p-4 text-sm text-warn">
           {error}
         </div>
       )}
@@ -466,7 +466,7 @@ export default function BiotechPage() {
               </button>
               <label className="ml-auto flex items-center gap-1 text-xs text-muted-foreground">
                 정렬
-                <select value={sortBy} onChange={(e) => setSortBy(e.target.value as CardSort)} className="border rounded px-2 py-1 text-sm bg-background">
+                <select value={sortBy} onChange={(e) => setSortBy(e.target.value as CardSort)} className="border rounded-lg px-2 py-1 text-sm bg-background">
                   <option value="date">예정일 가까운 순</option>
                   <option value="score">점수 높은 순</option>
                 </select>
@@ -483,7 +483,7 @@ export default function BiotechPage() {
             ) : (
               <div className="space-y-2">
                 <div className="text-xs text-muted-foreground">
-                  <strong className="font-semibold text-slate-700 dark:text-slate-200">{sortLabel(sortBy)}</strong> ↓ · 카드를 누르면 자세히 보입니다.
+                  <strong className="font-semibold text-slate-700">{sortLabel(sortBy)}</strong> ↓ · 카드를 누르면 자세히 보입니다.
                 </div>
                 {cards.map((r, i) => {
                   const rr = radarByTicker.get(r.ticker);
@@ -515,7 +515,7 @@ export default function BiotechPage() {
                         <BrokerLink symbol={r.ticker} links={brokerLinks} />
                       </div>
                       {open && (
-                        <div className="mt-1 rounded-lg border border-slate-200 bg-slate-50 p-3 text-xs dark:border-slate-700 dark:bg-slate-900/60">
+                        <div className="mt-1 rounded-lg border border-slate-200 bg-slate-50 p-3 text-xs">
                           {rr ? (
                             <>
                               <div className="mb-1 font-semibold">점수 {rr.score.toFixed(3)} · 5가지 요소</div>
@@ -547,7 +547,7 @@ export default function BiotechPage() {
                           <div className="mt-2">
                             근거 원문:{" "}
                             {ctgovUrl(r.nct_id) ? (
-                              <a href={ctgovUrl(r.nct_id)!} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} className="text-sky-700 hover:underline dark:text-sky-300">
+                              <a href={ctgovUrl(r.nct_id)!} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} className="text-sky-700 hover:underline">
                                 ClinicalTrials.gov {r.nct_id} ↗
                               </a>
                             ) : (
@@ -574,7 +574,7 @@ export default function BiotechPage() {
         <div id="sec-insider" className={ring("sec-insider")}>
           <SectionCard tone="emerald" icon="👤" label="임원·대주주 매수 (최근 20일)" count={groupForm4(t4).length} hint="Form 4 · 신고 1건당 한 카드 · 금액은 신고서 기재 가격 기준">
             {t4.length === 0 ? (
-              <div className="rounded border border-dashed border-emerald-300 p-3 text-sm text-muted-foreground dark:border-emerald-800">
+              <div className="rounded-lg border border-dashed border-primary/40 p-3 text-sm text-muted-foreground">
                 최근 20거래일 동안 새 매수 신고가 없습니다.{checkedAt && ` (${checkedAt} 확인)`}
               </div>
             ) : (
@@ -599,7 +599,7 @@ export default function BiotechPage() {
               <div className="space-y-2 text-xs">
                 <div className="flex flex-wrap gap-2">
                   {(kpi.alert_tickers ?? []).map((tk) => (
-                    <span key={tk} className="rounded bg-rose-100 px-2 py-0.5 font-mono font-bold text-rose-800 dark:bg-rose-900/40 dark:text-rose-200">{tk}</span>
+                    <span key={tk} className="rounded-lg bg-warn/10 px-2 py-0.5 font-mono font-bold text-warn">{tk}</span>
                   ))}
                   <span className="text-muted-foreground">{alertCriteria(kpi.reddit_baseline_days)}</span>
                 </div>
@@ -654,7 +654,7 @@ export default function BiotechPage() {
             📁 {radar.source_csv} · 생성 {radar.generated}
           </div>
           {inputsMissingLine(radar.inputs_missing) && (
-            <details className="mb-2 rounded border border-amber-300 bg-amber-50 px-2 py-1 text-xs text-amber-900 dark:border-amber-700 dark:bg-amber-950 dark:text-amber-200">
+            <details className="mb-2 rounded-lg border border-amber-300 bg-amber-50 px-2 py-1 text-xs text-amber-900">
               <summary className="cursor-pointer font-semibold">{inputsMissingLine(radar.inputs_missing)}</summary>
               <ul className="mt-1 list-disc pl-5">
                 {(radar.inputs_missing ?? []).map((n) => (
@@ -681,9 +681,9 @@ export default function BiotechPage() {
       {isAdmin && (
         <nav className="flex flex-wrap gap-4 border-t border-border pt-3 text-sm">
           <span className="text-muted-foreground">📄 문서</span>
-          <Link href="/biotech/docs?tab=status" className="text-sky-700 hover:underline dark:text-sky-300">상태판</Link>
-          <Link href="/biotech/docs?tab=glossary" className="text-sky-700 hover:underline dark:text-sky-300">용어집</Link>
-          <Link href="/biotech/docs?tab=final" className="text-sky-700 hover:underline dark:text-sky-300">최종 리포트</Link>
+          <Link href="/biotech/docs?tab=status" className="text-sky-700 hover:underline">상태판</Link>
+          <Link href="/biotech/docs?tab=glossary" className="text-sky-700 hover:underline">용어집</Link>
+          <Link href="/biotech/docs?tab=final" className="text-sky-700 hover:underline">최종 리포트</Link>
         </nav>
       )}
     </div>

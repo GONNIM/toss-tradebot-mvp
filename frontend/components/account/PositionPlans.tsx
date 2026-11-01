@@ -14,8 +14,8 @@ import { api, type PositionCard, type PositionExitPlan } from "@/lib/api";
 
 function pnlClass(v: number | null | undefined): string {
   if (v === null || v === undefined) return "text-muted-foreground";
-  if (v > 0) return "text-red-500";
-  if (v < 0) return "text-blue-500";
+  if (v > 0) return "text-up";
+  if (v < 0) return "text-down";
   return "text-muted-foreground";
 }
 
@@ -80,8 +80,8 @@ export function PositionPlans({ isAdmin }: { isAdmin: boolean }) {
       )}
 
       {isAdmin && data && !data.ok && (
-        <div className="rounded border border-red-500/40 bg-red-500/10 p-3 text-xs">
-          <div className="font-semibold text-red-500">
+        <div className="rounded-lg border border-warn/40 bg-warn/10 p-3 text-xs">
+          <div className="font-semibold text-warn">
             🚨 토스 연결 실패 · {data.error_reason ?? "unknown"}
           </div>
         </div>
@@ -91,7 +91,7 @@ export function PositionPlans({ isAdmin }: { isAdmin: boolean }) {
         <>
           {/* Fable 5 캠페인 카운터 · 미기록 종목 강조 */}
           {data.total_missing_plans > 0 && (
-            <div className="rounded border border-amber-500/40 bg-amber-500/10 p-3 text-sm">
+            <div className="rounded-lg border border-amber-500/40 bg-amber-500/10 p-3 text-sm">
               <span className="font-semibold text-amber-500">
                 ⚠ 청산 계획 미기록 {data.total_missing_plans}종목
               </span>{" "}
@@ -102,7 +102,7 @@ export function PositionPlans({ isAdmin }: { isAdmin: boolean }) {
           )}
 
           {data.positions.length === 0 ? (
-            <div className="rounded border border-dashed border-border p-6 text-center text-sm text-muted-foreground">
+            <div className="rounded-lg border border-dashed border-border p-6 text-center text-sm text-muted-foreground">
               보유 종목 없음
             </div>
           ) : (
@@ -113,7 +113,7 @@ export function PositionPlans({ isAdmin }: { isAdmin: boolean }) {
             </div>
           )}
 
-          <footer className="text-[10px] text-muted-foreground">
+          <footer className="text-xs text-muted-foreground">
             60s 자동 갱신 · {new Date(data.fetched_at).toLocaleTimeString("ko-KR")}
           </footer>
         </>
@@ -131,7 +131,7 @@ function PositionCardView({ card }: { card: PositionCard }) {
 
   // 카드 border: 트리거 도달 > 미기록 > 정상
   const borderClass = triggerHit
-    ? "border-red-500/60 bg-red-500/5"
+    ? "border-warn/60 bg-warn/5"
     : missingPlan
       ? "border-amber-500/40 bg-amber-500/5"
       : "border-border bg-card";
@@ -146,19 +146,19 @@ function PositionCardView({ card }: { card: PositionCard }) {
           {card.name && (
             <span className="text-sm text-muted-foreground">{card.name}</span>
           )}
-          <span className="rounded bg-muted px-1.5 py-0.5 text-[10px] font-semibold text-muted-foreground">
+          <span className="rounded-lg bg-muted px-1.5 py-0.5 text-xs font-semibold text-muted-foreground">
             {card.currency}
           </span>
           {card.activist_symbol && (
             <span
-              className="rounded bg-purple-500/20 px-1.5 py-0.5 text-[10px] font-semibold text-purple-400"
+              className="rounded-lg bg-purple-500/20 px-1.5 py-0.5 text-xs font-semibold text-purple-400"
               title="Activist Radar universe 소속 · SEC 13D/A 추적"
             >
               🕵️ Activist
             </span>
           )}
           {triggerHit && (
-            <span className="rounded bg-red-500/20 px-1.5 py-0.5 text-[10px] font-semibold text-red-500">
+            <span className="rounded-lg bg-warn/20 px-1.5 py-0.5 text-xs font-semibold text-warn">
               🚨 트리거 도달 ({plan.trigger_reason})
             </span>
           )}
@@ -184,7 +184,7 @@ function PositionCardView({ card }: { card: PositionCard }) {
           <div className="font-mono">
             {fmt(card.market_value)}
             {card.currency === "USD" && card.market_value_krw !== null && (
-              <span className="ml-1 whitespace-nowrap text-[10px] text-muted-foreground">
+              <span className="ml-1 whitespace-nowrap text-xs text-muted-foreground">
                 ≈{_krw(card.market_value_krw)}
               </span>
             )}
@@ -192,7 +192,7 @@ function PositionCardView({ card }: { card: PositionCard }) {
         </div>
       </div>
 
-      <div className={"mb-3 rounded bg-background/40 px-2 py-1 text-sm font-semibold " + pnlClass(card.unrealized_pnl)}>
+      <div className={"mb-3 rounded-lg bg-background/40 px-2 py-1 text-sm font-semibold " + pnlClass(card.unrealized_pnl)}>
         수익 {card.unrealized_pnl !== null && card.unrealized_pnl > 0 ? "+" : ""}
         {fmt(card.unrealized_pnl)} ({_pct(card.unrealized_pnl_pct)})
       </div>
@@ -225,10 +225,10 @@ function TrancheBlock({ card }: { card: PositionCard }) {
     return `${icon}${qtyText} ${t.strategy}`;
   });
   return (
-    <div className="mt-3 rounded border border-border/40 bg-background/40 p-2 text-[11px]">
+    <div className="mt-3 rounded-lg border border-border/40 bg-background/40 p-2 text-xs">
       <div className="flex flex-wrap items-baseline justify-between gap-2">
         <span className="text-muted-foreground">🎚 트랑셰 분해</span>
-        <span className="font-mono text-[10px] text-muted-foreground">
+        <span className="font-mono text-xs text-muted-foreground">
           실보유 {card.qty} · 판정 합계 {card.qty_sum_declared ?? "?"}
         </span>
       </div>
@@ -236,7 +236,7 @@ function TrancheBlock({ card }: { card: PositionCard }) {
         {card.symbol} {card.qty}{card.currency === "KRW" ? "주" : ""} = {parts.join(" + ")}
       </div>
       {card.qty_mismatch && (
-        <div className="mt-1 text-[10px] text-amber-500">
+        <div className="mt-1 text-xs text-amber-500">
           ⚠ 트랑셰 합계 ≠ 실 보유 수량 · 편집으로 정합 맞추기
         </div>
       )}
@@ -253,8 +253,8 @@ function SerenityBlock({
 }) {
   if (!signals || signals.length === 0) return null;
   const sentimentColor: Record<string, string> = {
-    bullish: "text-emerald-500",
-    bearish: "text-red-500",
+    bullish: "text-up",
+    bearish: "text-down",
     neutral: "text-slate-400",
     calibration: "text-amber-500",
   };
@@ -262,13 +262,13 @@ function SerenityBlock({
     bullish: "▲", bearish: "▼", neutral: "●", calibration: "◆",
   };
   return (
-    <div className="mt-3 rounded border border-border/40 bg-background/40 p-2 text-[11px]">
+    <div className="mt-3 rounded-lg border border-border/40 bg-background/40 p-2 text-xs">
       <div className="mb-1 flex items-center justify-between">
         <span className="font-semibold text-muted-foreground">
           🕵️ Serenity 최근 signal ({signals.length})
         </span>
         {bearishAlert && (
-          <span className="rounded bg-red-500/20 px-1.5 py-0.5 text-[10px] font-semibold text-red-500">
+          <span className="rounded-lg bg-warn/20 px-1.5 py-0.5 text-xs font-semibold text-warn">
             ⚠ bearish 감지
           </span>
         )}
@@ -280,11 +280,11 @@ function SerenityBlock({
               {sentimentIcon[s.sentiment] ?? "?"} {s.sentiment}
             </span>
             {s.thesis_type && (
-              <span className="rounded bg-slate-500/20 px-1 py-0.5 text-[10px] text-slate-400">
+              <span className="rounded-lg bg-slate-500/20 px-1 py-0.5 text-xs text-slate-400">
                 {s.thesis_type}
               </span>
             )}
-            <span className="ml-auto text-[10px] text-muted-foreground">
+            <span className="ml-auto text-xs text-muted-foreground">
               {new Date(s.ts).toLocaleDateString("ko-KR")}
             </span>
           </div>
@@ -308,14 +308,14 @@ function ExitPlanBlock({
   // 판단 기록이 전혀 없을 때만 빈 안내 · 판단은 있고 가격이 없으면 아래에서 내용과 함께 경고 (1027-01)
   if (!plan.has_plan && plan.judgment_id === null) {
     return (
-      <div className="rounded border border-red-500/40 bg-red-500/5 p-3">
-        <div className="text-sm font-semibold text-red-500">⚠ 청산 계획 없음</div>
-        <p className="mt-1 text-[11px] text-muted-foreground">
+      <div className="rounded-lg border border-warn/40 bg-warn/5 p-3">
+        <div className="text-sm font-semibold text-warn">⚠ 청산 계획 없음</div>
+        <p className="mt-1 text-xs text-muted-foreground">
           보유 이유 · 청산 조건 · 지금 기분 3줄. 오늘 밤 15분.
         </p>
         <Link
           href={`/journal?ticker=${symbol}`}
-          className="mt-2 inline-block rounded bg-primary px-3 py-1 text-xs font-semibold text-primary-foreground hover:bg-primary/80"
+          className="mt-2 inline-block rounded-lg bg-primary px-3 py-1 text-xs font-semibold text-primary-foreground hover:bg-primary/80"
         >
           📓 지금 판정 기록
         </Link>
@@ -335,30 +335,30 @@ function ExitPlanBlock({
   if (plan.target_price !== null) priceParts.push(`목표 ${fmtPrice(plan.target_price)}`);
 
   return (
-    <div className="space-y-2 rounded bg-background/40 p-2 text-[11px]">
+    <div className="space-y-2 rounded-lg bg-background/40 p-2 text-xs">
       {!plan.has_plan && (
-        <div className="rounded border border-red-500/40 bg-red-500/5 p-2">
-          <div className="text-xs font-semibold text-red-500">⚠ 청산 계획 없음 — 손절가·목표가가 비어 있습니다</div>
-          <p className="mt-0.5 text-[11px] text-muted-foreground">
+        <div className="rounded-lg border border-warn/40 bg-warn/5 p-2">
+          <div className="text-xs font-semibold text-warn">⚠ 청산 계획 없음 — 손절가·목표가가 비어 있습니다</div>
+          <p className="mt-0.5 text-xs text-muted-foreground">
             판단은 적혀 있지만 언제 팔지 정하는 가격이 없습니다 · 저널에서 손절가나 목표가를 적으면 「있음」이 됩니다.
           </p>
         </div>
       )}
       <div>
-        <div className="text-[10px] uppercase tracking-wide text-muted-foreground">가격 조건</div>
+        <div className="text-xs uppercase tracking-wide text-muted-foreground">가격 조건</div>
         <div className="font-mono">
           {priceParts.length > 0 ? priceParts.join(" · ") : <span className="text-muted-foreground">—</span>}
         </div>
       </div>
       <div>
-        <div className="text-[10px] uppercase tracking-wide text-muted-foreground">사건 조건 / thesis</div>
+        <div className="text-xs uppercase tracking-wide text-muted-foreground">사건 조건 / thesis</div>
         <div className="whitespace-pre-wrap text-muted-foreground">
           {plan.thesis_full ?? "—"}
         </div>
       </div>
       <div className="flex justify-between">
         <div>
-          <div className="text-[10px] uppercase tracking-wide text-muted-foreground">시한</div>
+          <div className="text-xs uppercase tracking-wide text-muted-foreground">시한</div>
           <div className="font-mono">
             {plan.deadline
               ? `${new Date(plan.deadline).toLocaleDateString("ko-KR")}${plan.horizon_days ? ` · T+${plan.horizon_days}d` : ""}`
@@ -368,7 +368,7 @@ function ExitPlanBlock({
         {plan.judgment_id !== null && (
           <Link
             href={`/journal?ticker=${symbol}`}
-            className="self-end text-[10px] text-sky-500 hover:underline"
+            className="self-end text-xs text-sky-500 hover:underline"
           >
             저널 열기 →
           </Link>

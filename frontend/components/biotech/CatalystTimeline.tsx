@@ -46,7 +46,7 @@ export function CatalystTimeline({ items, onSelect }: { items: TimelineItem[]; o
   const ticks = [0, 30, 60, 90];
 
   return (
-    <figure className="rounded-lg border border-slate-200 bg-white p-3 dark:border-slate-700 dark:bg-slate-900">
+    <figure className="rounded-lg border border-slate-200 bg-white p-3">
       <figcaption className="mb-2 text-xs text-muted-foreground">
         앞으로 90일 안에 임상이 끝날 예정인 종목 {pts.length}개입니다. 점을 누르면 해당 카드로 이동합니다.
         {outside > 0 && ` (90일 밖 ${outside}개는 목록에만 있습니다.)`}
@@ -54,8 +54,8 @@ export function CatalystTimeline({ items, onSelect }: { items: TimelineItem[]; o
       <div className="relative mx-3" style={{ height: lanes * LANE_H + 28 }}>
         {/* 격자·축 (약하게) */}
         {ticks.map((t) => (
-          <div key={t} className="absolute top-0 bottom-5 border-l border-slate-200 dark:border-slate-700" style={{ left: `${(t / HORIZON) * 100}%` }}>
-            <span className="absolute -bottom-5 -translate-x-1/2 whitespace-nowrap text-[10px] text-muted-foreground">
+          <div key={t} className="absolute top-0 bottom-5 border-l border-slate-200" style={{ left: `${(t / HORIZON) * 100}%` }}>
+            <span className="absolute -bottom-5 -translate-x-1/2 whitespace-nowrap text-xs text-muted-foreground">
               {t === 0 ? "오늘" : `${t}일 (${dateAfter(t)})`}
             </span>
           </div>
@@ -76,11 +76,11 @@ export function CatalystTimeline({ items, onSelect }: { items: TimelineItem[]; o
               className="group absolute flex h-6 w-6 -translate-x-1/2 items-center justify-center rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-500"
               style={{ left: `${pct}%`, top }}
             >
-              <span className="block h-2.5 w-2.5 rounded-full bg-sky-600 ring-2 ring-white group-hover:scale-125 dark:bg-[#0c95d6] dark:ring-slate-900" />
+              <span className="block h-2.5 w-2.5 rounded-full bg-sky-600 ring-2 ring-white group-hover:scale-125" />
               {tip === item.ticker && (
                 <span
                   role="tooltip"
-                  className={`pointer-events-none absolute bottom-full z-10 mb-1 whitespace-nowrap rounded border border-border bg-background px-2 py-1 text-left text-xs shadow ${
+                  className={`pointer-events-none absolute bottom-full z-10 mb-1 whitespace-nowrap rounded-lg border border-border bg-background px-2 py-1 text-left text-xs  ${
                     pct < 20 ? "left-0" : pct > 80 ? "right-0" : "left-1/2 -translate-x-1/2"
                   }`}
                 >

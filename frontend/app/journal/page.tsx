@@ -13,6 +13,7 @@ import { StockLink } from "@/components/stock/StockLink";
 import { AdminSessionBar } from "@/components/admin/AdminSessionBar";
 import type { SessionInfo } from "@/lib/auth";
 import { baseNote, notScoredText, outcomeText } from "@/lib/outcome-display";
+import { upDownText } from "@/lib/updown";
 
 type Judgment = {
   id: number;
@@ -41,7 +42,7 @@ type Judgment = {
 };
 
 const strategyBadge = (s: string | null) => {
-  if (s === "core") return { icon: "🏛", label: "core", cls: "bg-emerald-500/20 text-emerald-400" };
+  if (s === "core") return { icon: "🏛", label: "core", cls: "bg-primary/20 text-primary" };
   if (s === "swing") return { icon: "🌊", label: "swing", cls: "bg-sky-500/20 text-sky-400" };
   if (s === "event") return { icon: "⚡", label: "event", cls: "bg-purple-500/20 text-purple-400" };
   return null;
@@ -68,7 +69,7 @@ const moodBadge = (m: string) => {
   const map: Record<string, string> = {
     cool: "bg-blue-500/20 text-blue-400",
     neutral: "bg-gray-500/20 text-gray-400",
-    revenge: "bg-red-500/20 text-red-400",
+    revenge: "bg-warn/20 text-warn",
     fomo: "bg-yellow-500/20 text-yellow-400",
   };
   return map[m] || "bg-gray-500/20 text-gray-400";
@@ -79,7 +80,7 @@ const pageBadge = (p: string) => {
     powderkeg: "bg-orange-500/20 text-orange-400",
     watchlist: "bg-purple-500/20 text-purple-400",
     sniper: "bg-cyan-500/20 text-cyan-400",
-    activist: "bg-emerald-500/20 text-emerald-400",
+    activist: "bg-primary/20 text-primary",
     vip: "bg-pink-500/20 text-pink-400",
     manual: "bg-slate-500/20 text-slate-400",
   };
@@ -215,7 +216,7 @@ function JournalPageInner() {
               <div className="text-xs text-muted-foreground">mood 분포</div>
               <div className="mt-2 flex flex-wrap gap-2 text-xs">
                 {Object.entries(baseline.mood_distribution).map(([m, n]) => (
-                  <span key={m} className={`rounded px-2 py-0.5 ${moodBadge(m)}`}>
+                  <span key={m} className={`rounded-lg px-2 py-0.5 ${moodBadge(m)}`}>
                     {m}: {n}
                   </span>
                 ))}
@@ -228,7 +229,7 @@ function JournalPageInner() {
               <div className="text-xs text-muted-foreground">page_source 분포</div>
               <div className="mt-2 flex flex-wrap gap-2 text-xs">
                 {Object.entries(baseline.page_source_distribution).map(([p, n]) => (
-                  <span key={p} className={`rounded px-2 py-0.5 ${pageBadge(p)}`}>
+                  <span key={p} className={`rounded-lg px-2 py-0.5 ${pageBadge(p)}`}>
                     {p}: {n}
                   </span>
                 ))}
@@ -252,7 +253,7 @@ function JournalPageInner() {
               <button
                 key={d}
                 onClick={() => setDays(d)}
-                className={`rounded border px-2 py-1 text-xs ${
+                className={`rounded-lg border px-2 py-1 text-xs ${
                   days === d
                     ? "border-primary bg-primary/10 text-primary"
                     : "border-border text-muted-foreground hover:text-foreground"
@@ -279,7 +280,7 @@ function JournalPageInner() {
           </div>
         )}
         {loading && <div className="text-xs text-muted-foreground">로딩...</div>}
-        {error && <div className="rounded border border-red-500/40 bg-red-500/10 p-3 text-xs text-red-400">에러: {error}</div>}
+        {error && <div className="rounded-lg border border-warn/40 bg-warn/10 p-3 text-xs text-warn">에러: {error}</div>}
 
         {!loading && !error && judgments.length === 0 && (
           <div className="rounded-lg border border-dashed border-border p-8 text-center">
@@ -310,7 +311,7 @@ function JournalPageInner() {
 
 function Kpi({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded border border-border bg-muted/20 px-3 py-2">
+    <div className="rounded-lg border border-border bg-muted/20 px-3 py-2">
       <div className="text-xs text-muted-foreground">{label}</div>
       <div className="mt-1 text-lg font-bold">{value}</div>
     </div>
@@ -365,9 +366,9 @@ function Stage2KpiProgress({
           </div>
         </div>
         <span
-          className={`rounded px-2 py-0.5 text-xs font-semibold ${
+          className={`rounded-lg px-2 py-0.5 text-xs font-semibold ${
             total >= target
-              ? "bg-emerald-500/20 text-emerald-500"
+              ? "bg-primary/20 text-primary"
               : "bg-amber-500/20 text-amber-500"
           }`}
         >
@@ -382,10 +383,10 @@ function Stage2KpiProgress({
             {total} / {target} 건 ({pct}%)
           </span>
         </div>
-        <div className="mt-1 h-2 overflow-hidden rounded bg-muted">
+        <div className="mt-1 h-2 overflow-hidden rounded-lg bg-muted">
           <div
             className={`h-full transition-all ${
-              total >= target ? "bg-emerald-500" : "bg-primary"
+              total >= target ? "bg-primary" : "bg-primary"
             }`}
             style={{ width: `${pct}%` }}
           />
@@ -424,7 +425,7 @@ function Stage2KpiProgress({
         />
       </div>
 
-      <div className="mt-3 text-[10px] text-muted-foreground">
+      <div className="mt-3 text-xs text-muted-foreground">
         수동 확인 필요: Obsidian sync 3경로 · 3계층 재편 완결 · T2 Cal.com 컨설팅 예약.
         <br />
         기준: 12주 로드맵 첫 단계 목표
@@ -447,13 +448,13 @@ function KpiCheck({
   warnHigh?: boolean;
 }) {
   return (
-    <div className="rounded border border-border bg-background/50 px-2 py-1.5">
+    <div className="rounded-lg border border-border bg-background/50 px-2 py-1.5">
       <div className="flex items-center justify-between">
-        <span className="text-[10px] text-muted-foreground">{label}</span>
+        <span className="text-xs text-muted-foreground">{label}</span>
         <span className="text-xs">{ok ? "✅" : warnHigh ? "⚠️" : "⏳"}</span>
       </div>
       <div className="mt-0.5 text-sm font-semibold">{value}</div>
-      <div className="mt-0.5 line-clamp-2 text-[10px] text-muted-foreground">{detail}</div>
+      <div className="mt-0.5 line-clamp-2 text-xs text-muted-foreground">{detail}</div>
     </div>
   );
 }
@@ -509,63 +510,63 @@ function JudgmentCard({
         <span className={"font-mono text-sm font-bold " + (superseded ? "line-through" : "")}>
           <StockLink ticker={j.ticker}>{j.ticker}</StockLink>
         </span>
-        <span className={`rounded px-2 py-0.5 text-[10px] ${pageBadge(j.page_source)}`}>
+        <span className={`rounded-lg px-2 py-0.5 text-xs ${pageBadge(j.page_source)}`}>
           {j.page_source}
         </span>
-        <span className={`rounded px-2 py-0.5 text-[10px] ${moodBadge(j.mood)}`}>
+        <span className={`rounded-lg px-2 py-0.5 text-xs ${moodBadge(j.mood)}`}>
           {j.mood}
         </span>
-        <span className="rounded bg-slate-500/20 px-2 py-0.5 text-[10px] text-slate-400">
+        <span className="rounded-lg bg-slate-500/20 px-2 py-0.5 text-xs text-slate-400">
           {j.market_regime}
         </span>
-        <span className="rounded bg-indigo-500/20 px-2 py-0.5 text-[10px] text-indigo-400">
+        <span className="rounded-lg bg-indigo-500/20 px-2 py-0.5 text-xs text-indigo-400">
           id={j.id}
         </span>
         {(() => {
           const b = strategyBadge(j.strategy);
           return b ? (
-            <span className={`rounded px-2 py-0.5 text-[10px] font-semibold ${b.cls}`}>
+            <span className={`rounded-lg px-2 py-0.5 text-xs font-semibold ${b.cls}`}>
               {b.icon} {b.label}
             </span>
           ) : null;
         })()}
         {j.qty !== null && (
-          <span className="rounded bg-slate-500/20 px-2 py-0.5 text-[10px] font-mono text-slate-400">
+          <span className="rounded-lg bg-slate-500/20 px-2 py-0.5 text-xs font-mono text-slate-400">
             qty {j.qty}
           </span>
         )}
         {superseded && (
           <span
-            className="rounded bg-gray-500/30 px-2 py-0.5 text-[10px] font-semibold text-gray-400"
+            className="rounded-lg bg-gray-500/30 px-2 py-0.5 text-xs font-semibold text-gray-400"
             title={j.supersede_reason ?? undefined}
           >
             ↷ superseded by id={j.superseded_by_id}
           </span>
         )}
         {(j.mood === "revenge" || j.mood === "fomo") && !superseded && (
-          <span className="rounded bg-red-500/30 px-2 py-0.5 text-[10px] font-semibold text-red-400">
+          <span className="rounded-lg bg-warn/30 px-2 py-0.5 text-xs font-semibold text-warn">
             🚫 오늘 실행 금지
           </span>
         )}
         {triggerHit && !superseded && (
-          <span className="rounded bg-red-500/40 px-2 py-0.5 text-[10px] font-semibold text-red-300">
+          <span className="rounded-lg bg-warn/40 px-2 py-0.5 text-xs font-semibold text-warn">
             🚨 트리거 도달 (현재가 {currentPrice})
           </span>
         )}
         {abnormalState && !triggerHit && !superseded && (
-          <span className="rounded bg-amber-500/30 px-2 py-0.5 text-[10px] font-semibold text-amber-400">
+          <span className="rounded-lg bg-amber-500/30 px-2 py-0.5 text-xs font-semibold text-amber-400">
             ⚠ invalidation 비정상 (≥ 현재가)
           </span>
         )}
         {history.length > 0 && (
           <span
-            className="rounded bg-amber-500/20 px-2 py-0.5 text-[10px] text-amber-400"
+            className="rounded-lg bg-amber-500/20 px-2 py-0.5 text-xs text-amber-400"
             title={`갱신 ${history.length}회`}
           >
             ✎ updated ×{history.length}
           </span>
         )}
-        <span className="ml-auto text-[10px] text-muted-foreground">
+        <span className="ml-auto text-xs text-muted-foreground">
           {new Date(j.ts).toLocaleString("ko-KR")}
         </span>
       </div>
@@ -592,7 +593,7 @@ function JudgmentCard({
             {j.result_at_horizon !== null ? (
               <span
                 className={`font-semibold ${
-                  j.result_at_horizon > 0 ? "text-green-400" : "text-red-400"
+                  upDownText(j.result_at_horizon)
                 }`}
               >
                 {outcomeText(j.result_at_horizon, j.horizon_days)}
@@ -607,7 +608,7 @@ function JudgmentCard({
             )}
           </div>
           {j.supersede_reason && (
-            <div className="mt-2 text-[10px] italic text-muted-foreground">
+            <div className="mt-2 text-xs italic text-muted-foreground">
               Supersede 사유: {j.supersede_reason}
             </div>
           )}
@@ -618,7 +619,7 @@ function JudgmentCard({
               <button
                 type="button"
                 onClick={() => setMode("edit")}
-                className="rounded border border-border px-3 py-1 text-xs hover:bg-muted"
+                className="rounded-lg border border-border px-3 py-1 text-xs hover:bg-muted"
                 title="invalidation · target · qty · horizon · thesis · mood 편집 (strategy 제외)"
               >
                 ✎ 수정
@@ -626,7 +627,7 @@ function JudgmentCard({
               <button
                 type="button"
                 onClick={() => setMode("transition")}
-                className="rounded border border-purple-500/40 px-3 py-1 text-xs text-purple-400 hover:bg-purple-500/10"
+                className="rounded-lg border border-purple-500/40 px-3 py-1 text-xs text-purple-400 hover:bg-purple-500/10"
                 title="전술 (core/swing/event) 전환 · 이전 판정 supersede + 신규 판정"
               >
                 🔀 전술 전환
@@ -634,7 +635,7 @@ function JudgmentCard({
               <button
                 type="button"
                 onClick={() => setMode("close")}
-                className="rounded border border-red-500/40 px-3 py-1 text-xs text-red-400 hover:bg-red-500/10"
+                className="rounded-lg border border-warn/40 px-3 py-1 text-xs text-warn hover:bg-warn/10"
               >
                 청산
               </button>
@@ -692,10 +693,10 @@ function JudgmentCard({
 
       {/* 이력 접힘 */}
       {mode === "view" && showHistory && history.length > 0 && (
-        <div className="mt-3 space-y-1 rounded border border-border/40 bg-background/40 p-2 text-[11px]">
+        <div className="mt-3 space-y-1 rounded-lg border border-border/40 bg-background/40 p-2 text-xs">
           {history.map((h, i) => (
             <div key={i} className="border-b border-border/20 pb-1 last:border-0">
-              <div className="text-[10px] text-muted-foreground">
+              <div className="text-xs text-muted-foreground">
                 {new Date(h.at).toLocaleString("ko-KR")} · <em>{h.note}</em>
               </div>
               <div className="mt-0.5 font-mono">
@@ -829,14 +830,14 @@ function EditForm({
   };
 
   return (
-    <div className="mt-3 space-y-3 rounded border border-primary/30 bg-primary/5 p-3 text-sm">
+    <div className="mt-3 space-y-3 rounded-lg border border-primary/30 bg-primary/5 p-3 text-sm">
       <div className="flex flex-wrap items-center gap-2">
         <span className="text-xs font-semibold text-primary">✎ 판정 수정</span>
         {j.strategy && (() => {
           const b = strategyBadge(j.strategy);
           return b ? (
             <span
-              className={`rounded px-2 py-0.5 text-[10px] font-semibold ${b.cls}`}
+              className={`rounded-lg px-2 py-0.5 text-xs font-semibold ${b.cls}`}
               title="전술 변경은 [🔀 전술 전환] 버튼으로 · 이 폼에서는 수정 불가"
             >
               {b.icon} {b.label} · 여기선 수정 불가 (전환 → 뒤로 · 🔀)
@@ -844,7 +845,7 @@ function EditForm({
           ) : null;
         })()}
       </div>
-      <div className="text-[10px] text-muted-foreground">
+      <div className="text-xs text-muted-foreground">
         편집 가능: invalidation · target · qty · horizon · thesis · mood
         <br />
         편집 불가: strategy (전환은 [🔀 전술 전환]) · ticker (신규 판정) · id/ts (자동)
@@ -853,29 +854,29 @@ function EditForm({
       {/* 값 5 · invalidation·target·horizon·qty·thesis */}
       <div className="grid gap-2 sm:grid-cols-4">
         <label className="block">
-          <div className="text-[10px] text-muted-foreground">Invalidation</div>
+          <div className="text-xs text-muted-foreground">Invalidation</div>
           <input
             type="number"
             step="any"
             value={invalidation}
             onChange={(e) => setInvalidation(e.target.value)}
-            className="mt-1 w-full rounded border border-border bg-background px-2 py-1 font-mono text-sm"
+            className="mt-1 w-full rounded-lg border border-border bg-background px-2 py-1 font-mono text-sm"
           />
           {currentPrice !== undefined && (
-            <div className="mt-0.5 text-[9px] text-muted-foreground">
+            <div className="mt-0.5 text-xs text-muted-foreground">
               현재가 {currentPrice.toLocaleString()}
             </div>
           )}
         </label>
         <label className="block">
-          <div className="flex flex-wrap items-baseline gap-2 text-[10px] text-muted-foreground">
+          <div className="flex flex-wrap items-baseline gap-2 text-xs text-muted-foreground">
             <span>Target</span>
             {target.trim() && (
               <>
                 <button
                   type="button"
                   onClick={moveTargetToWish}
-                  className="text-[9px] text-sky-500 hover:underline"
+                  className="text-xs text-sky-500 hover:underline"
                 >
                   소원으로 이관
                 </button>
@@ -885,7 +886,7 @@ function EditForm({
                     setTarget("");
                     if (!note) setNote("target 비움 (직접)");
                   }}
-                  className="text-[9px] text-red-500 hover:underline"
+                  className="text-xs text-warn hover:underline"
                   title="target 필드 null · 승률 계산에 invalidation 기준만 채점"
                 >
                   × 비우기
@@ -898,60 +899,60 @@ function EditForm({
             step="any"
             value={target}
             onChange={(e) => setTarget(e.target.value)}
-            className="mt-1 w-full rounded border border-border bg-background px-2 py-1 font-mono text-sm"
+            className="mt-1 w-full rounded-lg border border-border bg-background px-2 py-1 font-mono text-sm"
           />
         </label>
         <label className="block">
-          <div className="text-[10px] text-muted-foreground">Qty (트랑셰)</div>
+          <div className="text-xs text-muted-foreground">Qty (트랑셰)</div>
           <input
             type="number"
             step="any"
             value={qty}
             onChange={(e) => setQty(e.target.value)}
-            className="mt-1 w-full rounded border border-border bg-background px-2 py-1 font-mono text-sm"
+            className="mt-1 w-full rounded-lg border border-border bg-background px-2 py-1 font-mono text-sm"
           />
         </label>
         <label className="block">
-          <div className="text-[10px] text-muted-foreground">Horizon (일)</div>
+          <div className="text-xs text-muted-foreground">Horizon (일)</div>
           <input
             type="number"
             min={1}
             max={3650}
             value={horizon}
             onChange={(e) => setHorizon(parseInt(e.target.value) || 30)}
-            className="mt-1 w-full rounded border border-border bg-background px-2 py-1 font-mono text-sm"
+            className="mt-1 w-full rounded-lg border border-border bg-background px-2 py-1 font-mono text-sm"
           />
         </label>
       </div>
 
       <label className="block">
-        <div className="text-[10px] text-muted-foreground">Thesis / 사건 조건</div>
+        <div className="text-xs text-muted-foreground">Thesis / 사건 조건</div>
         <textarea
           value={thesis}
           onChange={(e) => setThesis(e.target.value)}
           rows={5}
-          className="mt-1 w-full rounded border border-border bg-background px-2 py-1 text-sm font-mono"
+          className="mt-1 w-full rounded-lg border border-border bg-background px-2 py-1 text-sm font-mono"
         />
       </label>
 
       {/* 필수 1 · change_note */}
       <label className="block">
-        <div className="text-[10px] text-muted-foreground">
-          변경 사유 <span className="text-red-500">*</span>
+        <div className="text-xs text-muted-foreground">
+          변경 사유 <span className="text-warn">*</span>
         </div>
         <input
           type="text"
           value={note}
           onChange={(e) => setNote(e.target.value)}
           placeholder="한 줄 · 왜 수정하는지"
-          className="mt-1 w-full rounded border border-border bg-background px-2 py-1 text-sm"
+          className="mt-1 w-full rounded-lg border border-border bg-background px-2 py-1 text-sm"
         />
       </label>
 
       {/* 필수 2 · mood 재선택 (이전값 미리 선택 X · 매번 새로 탭) */}
       <div>
-        <div className="text-[10px] text-muted-foreground">
-          지금 기분 <span className="text-red-500">*</span>
+        <div className="text-xs text-muted-foreground">
+          지금 기분 <span className="text-warn">*</span>
           <span className="ml-2 text-muted-foreground/70">(재선택 필수 · 이전값 미리 선택 X)</span>
         </div>
         <div className="mt-1 flex flex-wrap gap-2">
@@ -961,7 +962,7 @@ function EditForm({
               type="button"
               onClick={() => setMood(m)}
               className={
-                "rounded border px-3 py-1 text-xs " +
+                "rounded-lg border px-3 py-1 text-xs " +
                 (mood === m
                   ? "border-primary bg-primary/20 text-primary"
                   : "border-border text-muted-foreground hover:bg-muted")
@@ -975,7 +976,7 @@ function EditForm({
           ))}
         </div>
         {(mood === "revenge" || mood === "fomo") && (
-          <div className="mt-1 text-[10px] text-red-400">
+          <div className="mt-1 text-xs text-warn">
             🚫 이 상태의 변경은 저장은 되지만 카드에 「오늘 실행 금지」 태그가 붙습니다.
           </div>
         )}
@@ -983,8 +984,8 @@ function EditForm({
 
       {/* 하향 편집 카운트다운 (Fable 5 가드) */}
       {needsCountdown && (
-        <div className="rounded border border-red-500/40 bg-red-500/10 p-2 text-xs">
-          <div className="font-semibold text-red-500">
+        <div className="rounded-lg border border-warn/40 bg-warn/10 p-2 text-xs">
+          <div className="font-semibold text-warn">
             🚨 손절선을 내리는 중입니다 ({invOld} → {invNew}).
           </div>
           <div className="mt-1 text-muted-foreground">
@@ -994,7 +995,7 @@ function EditForm({
             <button
               type="button"
               onClick={startCountdown}
-              className="mt-2 rounded bg-red-500/20 px-3 py-1 text-xs text-red-400 hover:bg-red-500/30"
+              className="mt-2 rounded-lg bg-warn/20 px-3 py-1 text-xs text-warn hover:bg-warn/30"
             >
               그래도 진행 (10초 카운트다운)
             </button>
@@ -1006,19 +1007,19 @@ function EditForm({
         </div>
       )}
       {isFixingAbnormal && (
-        <div className="rounded border border-emerald-500/40 bg-emerald-500/10 p-2 text-[10px] text-emerald-400">
+        <div className="rounded-lg border border-primary/40 bg-primary/10 p-2 text-xs text-primary">
           ✓ 첫 정정 (발동 상태 해소) · 카운트다운 예외 · 즉시 저장 가능
         </div>
       )}
 
-      {error && <div className="text-xs text-red-500">⚠ {error}</div>}
+      {error && <div className="text-xs text-warn">⚠ {error}</div>}
 
       <div className="flex gap-2 border-t border-border/40 pt-2">
         <button
           type="button"
           onClick={onCancel}
           disabled={submitting}
-          className="rounded border border-border px-3 py-1.5 text-xs hover:bg-muted disabled:opacity-50"
+          className="rounded-lg border border-border px-3 py-1.5 text-xs hover:bg-muted disabled:opacity-50"
         >
           취소
         </button>
@@ -1026,7 +1027,7 @@ function EditForm({
           type="button"
           onClick={submit}
           disabled={!canSave}
-          className="ml-auto rounded bg-primary px-4 py-1.5 text-xs font-semibold text-primary-foreground disabled:opacity-50 hover:bg-primary/80"
+          className="ml-auto rounded-lg bg-primary px-4 py-1.5 text-xs font-semibold text-primary-foreground disabled:opacity-50 hover:bg-primary/80"
           title={!canSave ? "변경 사유·기분 필수 (하향 편집 시 카운트다운 완료)" : undefined}
         >
           {submitting ? "저장 중..." : "저장"}
@@ -1114,34 +1115,34 @@ function CloseForm({
   };
 
   return (
-    <div className="mt-3 space-y-3 rounded border border-red-500/40 bg-red-500/5 p-3 text-sm">
-      <div className="text-xs font-semibold text-red-400">청산 판정</div>
+    <div className="mt-3 space-y-3 rounded-lg border border-warn/40 bg-warn/5 p-3 text-sm">
+      <div className="text-xs font-semibold text-warn">청산 판정</div>
 
       <div className="grid gap-2 sm:grid-cols-2">
         <label className="block">
-          <div className="text-[10px] text-muted-foreground">청산가 <span className="text-red-500">*</span></div>
+          <div className="text-xs text-muted-foreground">청산가 <span className="text-warn">*</span></div>
           <input
             type="number"
             step="any"
             value={closePrice}
             onChange={(e) => setClosePrice(e.target.value)}
-            className="mt-1 w-full rounded border border-border bg-background px-2 py-1 font-mono text-sm"
+            className="mt-1 w-full rounded-lg border border-border bg-background px-2 py-1 font-mono text-sm"
           />
         </label>
         <label className="block">
-          <div className="text-[10px] text-muted-foreground">메모 (선택)</div>
+          <div className="text-xs text-muted-foreground">메모 (선택)</div>
           <input
             type="text"
             value={note}
             onChange={(e) => setNote(e.target.value)}
             placeholder="한 줄"
-            className="mt-1 w-full rounded border border-border bg-background px-2 py-1 text-sm"
+            className="mt-1 w-full rounded-lg border border-border bg-background px-2 py-1 text-sm"
           />
         </label>
       </div>
 
       <div>
-        <div className="text-[10px] text-muted-foreground">청산 사유 <span className="text-red-500">*</span></div>
+        <div className="text-xs text-muted-foreground">청산 사유 <span className="text-warn">*</span></div>
         <div className="mt-1 flex flex-wrap gap-2">
           {[
             { v: "invalidation_hit" as const, label: "invalidation 도달" },
@@ -1153,9 +1154,9 @@ function CloseForm({
               type="button"
               onClick={() => setReason(o.v)}
               className={
-                "rounded border px-3 py-1 text-xs " +
+                "rounded-lg border px-3 py-1 text-xs " +
                 (reason === o.v
-                  ? "border-red-500 bg-red-500/20 text-red-400"
+                  ? "border-warn bg-warn/20 text-warn"
                   : "border-border text-muted-foreground hover:bg-muted")
               }
             >
@@ -1166,8 +1167,8 @@ function CloseForm({
       </div>
 
       <div>
-        <div className="text-[10px] text-muted-foreground">
-          지금 기분 <span className="text-red-500">*</span>
+        <div className="text-xs text-muted-foreground">
+          지금 기분 <span className="text-warn">*</span>
           <span className="ml-2 text-muted-foreground/70">(재선택 필수)</span>
         </div>
         <div className="mt-1 flex flex-wrap gap-2">
@@ -1177,7 +1178,7 @@ function CloseForm({
               type="button"
               onClick={() => setMood(m)}
               className={
-                "rounded border px-3 py-1 text-xs " +
+                "rounded-lg border px-3 py-1 text-xs " +
                 (mood === m
                   ? "border-primary bg-primary/20 text-primary"
                   : "border-border text-muted-foreground hover:bg-muted")
@@ -1192,14 +1193,14 @@ function CloseForm({
         </div>
       </div>
 
-      {error && <div className="text-xs text-red-500">⚠ {error}</div>}
+      {error && <div className="text-xs text-warn">⚠ {error}</div>}
 
       <div className="flex gap-2 border-t border-border/40 pt-2">
         <button
           type="button"
           onClick={onCancel}
           disabled={submitting}
-          className="rounded border border-border px-3 py-1.5 text-xs hover:bg-muted disabled:opacity-50"
+          className="rounded-lg border border-border px-3 py-1.5 text-xs hover:bg-muted disabled:opacity-50"
         >
           취소
         </button>
@@ -1207,7 +1208,7 @@ function CloseForm({
           type="button"
           onClick={submit}
           disabled={!canSave}
-          className="ml-auto rounded bg-red-500 px-4 py-1.5 text-xs font-semibold text-white disabled:opacity-50 hover:bg-red-500/80"
+          className="ml-auto rounded-lg bg-warn px-4 py-1.5 text-xs font-semibold text-white disabled:opacity-50 hover:bg-warn/80"
         >
           {submitting ? "저장 중..." : "청산 판정 저장 · 이전 판정 supersede"}
         </button>
@@ -1290,19 +1291,19 @@ function TransitionForm({
   const currentBadge = strategyBadge(j.strategy);
 
   return (
-    <div className="mt-3 space-y-3 rounded border border-purple-500/40 bg-purple-500/5 p-3 text-sm">
+    <div className="mt-3 space-y-3 rounded-lg border border-purple-500/40 bg-purple-500/5 p-3 text-sm">
       <div className="flex flex-wrap items-center gap-2">
         <span className="text-xs font-semibold text-purple-400">🔀 전술 전환</span>
-        <span className="text-[10px] text-muted-foreground">
+        <span className="text-xs text-muted-foreground">
           원칙: strategy 는 수정 불가 · 전환 = 이전 판정 supersede + 신규 판정
         </span>
       </div>
 
       {/* 현재 → 새 전술 */}
-      <div className="rounded border border-border/40 bg-background/40 p-2 text-xs">
+      <div className="rounded-lg border border-border/40 bg-background/40 p-2 text-xs">
         <span className="text-muted-foreground">현재</span>{" "}
         {currentBadge && (
-          <span className={`ml-1 rounded px-1.5 py-0.5 text-[10px] font-semibold ${currentBadge.cls}`}>
+          <span className={`ml-1 rounded-lg px-1.5 py-0.5 text-xs font-semibold ${currentBadge.cls}`}>
             {currentBadge.icon} {currentBadge.label}
           </span>
         )}
@@ -1311,7 +1312,7 @@ function TransitionForm({
         {newStrategy && (() => {
           const b = strategyBadge(newStrategy);
           return b ? (
-            <span className={`ml-1 rounded px-1.5 py-0.5 text-[10px] font-semibold ${b.cls}`}>
+            <span className={`ml-1 rounded-lg px-1.5 py-0.5 text-xs font-semibold ${b.cls}`}>
               {b.icon} {b.label}
             </span>
           ) : null;
@@ -1320,8 +1321,8 @@ function TransitionForm({
 
       {/* 새 strategy 선택 */}
       <div>
-        <div className="text-[10px] text-muted-foreground">
-          새 전술 <span className="text-red-500">*</span>
+        <div className="text-xs text-muted-foreground">
+          새 전술 <span className="text-warn">*</span>
           <span className="ml-2 text-muted-foreground/70">현재와 다른 것</span>
         </div>
         <div className="mt-1 flex flex-wrap gap-2">
@@ -1332,7 +1333,7 @@ function TransitionForm({
               onClick={() => setNewStrategy(s)}
               disabled={s === j.strategy}
               className={
-                "rounded border px-3 py-1 text-xs disabled:opacity-40 disabled:cursor-not-allowed " +
+                "rounded-lg border px-3 py-1 text-xs disabled:opacity-40 disabled:cursor-not-allowed " +
                 (newStrategy === s
                   ? "border-primary bg-primary/20 text-primary"
                   : "border-border text-muted-foreground hover:bg-muted")
@@ -1346,35 +1347,35 @@ function TransitionForm({
           ))}
         </div>
         {newStrategy && (
-          <div className="mt-1 text-[10px] text-muted-foreground">
+          <div className="mt-1 text-xs text-muted-foreground">
             {STRATEGY_PRESETS[newStrategy].hint} · horizon 자동 {STRATEGY_PRESETS[newStrategy].horizon}일
           </div>
         )}
       </div>
 
       {/* 승계 값 프리뷰 (읽기 전용) */}
-      <div className="rounded bg-background/40 p-2 text-[10px] font-mono">
+      <div className="rounded-lg bg-background/40 p-2 text-xs font-mono">
         <div className="mb-1 text-muted-foreground">신규 판정에 자동 승계 (수정 필요 시 저장 후 [✎ 수정])</div>
         <div>invalidation={j.invalidation_price ?? "—"} · target={j.target_price ?? "—"} · qty={j.qty ?? "—"} · ticker={j.ticker}</div>
       </div>
 
       {/* 전환 사유 · mood */}
       <label className="block">
-        <div className="text-[10px] text-muted-foreground">
-          전환 사유 <span className="text-red-500">*</span>
+        <div className="text-xs text-muted-foreground">
+          전환 사유 <span className="text-warn">*</span>
         </div>
         <input
           type="text"
           value={note}
           onChange={(e) => setNote(e.target.value)}
           placeholder="한 줄 · 왜 전술을 바꾸는지"
-          className="mt-1 w-full rounded border border-border bg-background px-2 py-1 text-sm"
+          className="mt-1 w-full rounded-lg border border-border bg-background px-2 py-1 text-sm"
         />
       </label>
 
       <div>
-        <div className="text-[10px] text-muted-foreground">
-          지금 기분 <span className="text-red-500">*</span>
+        <div className="text-xs text-muted-foreground">
+          지금 기분 <span className="text-warn">*</span>
           <span className="ml-2 text-muted-foreground/70">(재선택 필수)</span>
         </div>
         <div className="mt-1 flex flex-wrap gap-2">
@@ -1384,7 +1385,7 @@ function TransitionForm({
               type="button"
               onClick={() => setMood(m)}
               className={
-                "rounded border px-3 py-1 text-xs " +
+                "rounded-lg border px-3 py-1 text-xs " +
                 (mood === m
                   ? "border-primary bg-primary/20 text-primary"
                   : "border-border text-muted-foreground hover:bg-muted")
@@ -1399,14 +1400,14 @@ function TransitionForm({
         </div>
       </div>
 
-      {error && <div className="text-xs text-red-500">⚠ {error}</div>}
+      {error && <div className="text-xs text-warn">⚠ {error}</div>}
 
       <div className="flex gap-2 border-t border-border/40 pt-2">
         <button
           type="button"
           onClick={onCancel}
           disabled={submitting}
-          className="rounded border border-border px-3 py-1.5 text-xs hover:bg-muted disabled:opacity-50"
+          className="rounded-lg border border-border px-3 py-1.5 text-xs hover:bg-muted disabled:opacity-50"
         >
           취소
         </button>
@@ -1414,7 +1415,7 @@ function TransitionForm({
           type="button"
           onClick={submit}
           disabled={!canSave}
-          className="ml-auto rounded bg-purple-500 px-4 py-1.5 text-xs font-semibold text-white disabled:opacity-50 hover:bg-purple-500/80"
+          className="ml-auto rounded-lg bg-purple-500 px-4 py-1.5 text-xs font-semibold text-white disabled:opacity-50 hover:bg-purple-500/80"
         >
           {submitting ? "저장 중..." : "전환 저장 · supersede + 신규 판정"}
         </button>
@@ -1572,13 +1573,13 @@ function NewJudgmentForm({
           {/* 티커·페이지·가설 */}
           <div className="grid gap-3 sm:grid-cols-3">
             <label className="block">
-              <div className="text-xs text-muted-foreground">Ticker <span className="text-red-500">*</span></div>
+              <div className="text-xs text-muted-foreground">Ticker <span className="text-warn">*</span></div>
               <input
                 type="text"
                 value={ticker}
                 onChange={(e) => setTicker(e.target.value)}
                 placeholder="예: NBIS · 005930 · WEN"
-                className="mt-1 w-full rounded border border-border bg-background px-2 py-1 font-mono text-sm"
+                className="mt-1 w-full rounded-lg border border-border bg-background px-2 py-1 font-mono text-sm"
               />
             </label>
             <label className="block">
@@ -1588,7 +1589,7 @@ function NewJudgmentForm({
                 value={pageSource}
                 onChange={(e) => setPageSource(e.target.value)}
                 placeholder="manual / positions / watchlist"
-                className="mt-1 w-full rounded border border-border bg-background px-2 py-1 text-sm"
+                className="mt-1 w-full rounded-lg border border-border bg-background px-2 py-1 text-sm"
               />
             </label>
             <label className="block">
@@ -1598,7 +1599,7 @@ function NewJudgmentForm({
                 value={hypothesisId}
                 onChange={(e) => setHypothesisId(e.target.value)}
                 placeholder="manual-v1"
-                className="mt-1 w-full rounded border border-border bg-background px-2 py-1 text-sm"
+                className="mt-1 w-full rounded-lg border border-border bg-background px-2 py-1 text-sm"
               />
             </label>
           </div>
@@ -1606,8 +1607,8 @@ function NewJudgmentForm({
           {/* 전술 격벽 (Fable 5 · 필수 · 생성 후 수정 불가) */}
           <div>
             <div className="text-xs text-muted-foreground">
-              전술 <span className="text-red-500">*</span>{" "}
-              <span className="text-[10px] text-muted-foreground/70">
+              전술 <span className="text-warn">*</span>{" "}
+              <span className="text-xs text-muted-foreground/70">
                 (생성 후 수정 불가 · 전환은 supersede 만)
               </span>
             </div>
@@ -1618,7 +1619,7 @@ function NewJudgmentForm({
                   type="button"
                   onClick={() => applyPreset(s)}
                   className={
-                    "rounded border px-3 py-1 text-xs " +
+                    "rounded-lg border px-3 py-1 text-xs " +
                     (strategy === s
                       ? "border-primary bg-primary/20 text-primary"
                       : "border-border text-muted-foreground hover:bg-muted")
@@ -1631,7 +1632,7 @@ function NewJudgmentForm({
               ))}
             </div>
             {strategy && (
-              <div className="mt-1 text-[10px] text-muted-foreground">
+              <div className="mt-1 text-xs text-muted-foreground">
                 {STRATEGY_PRESETS[strategy].hint}
               </div>
             )}
@@ -1639,11 +1640,11 @@ function NewJudgmentForm({
 
           {/* 세탁 감지 · 마찰 (차단 X) */}
           {showLaundryWarn && (
-            <div className="rounded border border-red-500/40 bg-red-500/10 p-3">
-              <div className="text-xs font-semibold text-red-500">
+            <div className="rounded-lg border border-warn/40 bg-warn/10 p-3">
+              <div className="text-xs font-semibold text-warn">
                 🚨 세탁 감지 · {tickerUpper} 손실 중 swing 판정 열려 있음
               </div>
-              <div className="mt-1 text-[11px] text-muted-foreground">
+              <div className="mt-1 text-xs text-muted-foreground">
                 손실 포지션의 장기 전환은 청산 기록을 먼저 남긴 뒤에 (Fable 5).
                 현 swing id={activeSwing?.id} · invalidation={activeSwing?.invalidation_price} ·
                 현재가 {priceMap[tickerUpper]}
@@ -1652,10 +1653,10 @@ function NewJudgmentForm({
                 type="button"
                 onClick={() => setLaundryAck(true)}
                 className={
-                  "mt-2 rounded border px-3 py-1 text-xs " +
+                  "mt-2 rounded-lg border px-3 py-1 text-xs " +
                   (laundryAck
-                    ? "border-emerald-500 bg-emerald-500/20 text-emerald-400"
-                    : "border-red-500 bg-red-500/20 text-red-400 hover:bg-red-500/30")
+                    ? "border-primary bg-primary/20 text-primary"
+                    : "border-warn bg-warn/20 text-warn hover:bg-warn/30")
                 }
               >
                 {laundryAck ? "✓ 확인함 · 저장 가능" : "그래도 진행 · 확인"}
@@ -1666,7 +1667,7 @@ function NewJudgmentForm({
           {/* Thesis */}
           <label className="block">
             <div className="text-xs text-muted-foreground">
-              Thesis (판정 본문) <span className="text-red-500">*</span>
+              Thesis (판정 본문) <span className="text-warn">*</span>
               <span className="ml-2 text-muted-foreground/70">
                 권장 3줄: 보유 이유 · 청산 조건 · 지금 기분
               </span>
@@ -1676,7 +1677,7 @@ function NewJudgmentForm({
               onChange={(e) => setThesis(e.target.value)}
               rows={5}
               placeholder="보유 이유: ...&#10;청산 조건: ...&#10;지금 기분: ..."
-              className="mt-1 w-full rounded border border-border bg-background px-2 py-2 text-sm font-mono"
+              className="mt-1 w-full rounded-lg border border-border bg-background px-2 py-2 text-sm font-mono"
             />
           </label>
 
@@ -1684,7 +1685,7 @@ function NewJudgmentForm({
           <div className="grid gap-3 sm:grid-cols-5">
             <label className="block">
               <div className="text-xs text-muted-foreground">
-                Invalidation <span className="text-red-500">*</span>
+                Invalidation <span className="text-warn">*</span>
               </div>
               <input
                 type="number"
@@ -1692,7 +1693,7 @@ function NewJudgmentForm({
                 value={invalidation}
                 onChange={(e) => setInvalidation(e.target.value)}
                 placeholder="손절가"
-                className="mt-1 w-full rounded border border-border bg-background px-2 py-1 font-mono text-sm"
+                className="mt-1 w-full rounded-lg border border-border bg-background px-2 py-1 font-mono text-sm"
               />
             </label>
             <label className="block">
@@ -1703,7 +1704,7 @@ function NewJudgmentForm({
                 value={target}
                 onChange={(e) => setTarget(e.target.value)}
                 placeholder="목표가"
-                className="mt-1 w-full rounded border border-border bg-background px-2 py-1 font-mono text-sm"
+                className="mt-1 w-full rounded-lg border border-border bg-background px-2 py-1 font-mono text-sm"
               />
             </label>
             <label className="block">
@@ -1714,7 +1715,7 @@ function NewJudgmentForm({
                 value={entry}
                 onChange={(e) => setEntry(e.target.value)}
                 placeholder="진입가"
-                className="mt-1 w-full rounded border border-border bg-background px-2 py-1 font-mono text-sm"
+                className="mt-1 w-full rounded-lg border border-border bg-background px-2 py-1 font-mono text-sm"
               />
             </label>
             <label className="block">
@@ -1725,7 +1726,7 @@ function NewJudgmentForm({
                 value={qty}
                 onChange={(e) => setQty(e.target.value)}
                 placeholder="수량"
-                className="mt-1 w-full rounded border border-border bg-background px-2 py-1 font-mono text-sm"
+                className="mt-1 w-full rounded-lg border border-border bg-background px-2 py-1 font-mono text-sm"
               />
             </label>
             <label className="block">
@@ -1736,7 +1737,7 @@ function NewJudgmentForm({
                 max={3650}
                 value={horizon}
                 onChange={(e) => setHorizon(parseInt(e.target.value) || 30)}
-                className="mt-1 w-full rounded border border-border bg-background px-2 py-1 font-mono text-sm"
+                className="mt-1 w-full rounded-lg border border-border bg-background px-2 py-1 font-mono text-sm"
               />
             </label>
           </div>
@@ -1751,7 +1752,7 @@ function NewJudgmentForm({
                   type="button"
                   onClick={() => setMood(m)}
                   className={
-                    "rounded border px-3 py-1 text-xs " +
+                    "rounded-lg border px-3 py-1 text-xs " +
                     (mood === m
                       ? "border-primary bg-primary/20 text-primary"
                       : "border-border text-muted-foreground hover:bg-muted")
@@ -1769,15 +1770,15 @@ function NewJudgmentForm({
           {/* 액션 */}
           <div className="flex items-center justify-between border-t border-border/40 pt-3">
             <div className="text-xs">
-              {error && <span className="text-red-500">⚠ {error}</span>}
-              {success && <span className="text-emerald-500">{success}</span>}
+              {error && <span className="text-warn">⚠ {error}</span>}
+              {success && <span className="text-primary">{success}</span>}
             </div>
             <div className="flex gap-2">
               <button
                 type="button"
                 onClick={reset}
                 disabled={submitting}
-                className="rounded border border-border px-3 py-1.5 text-xs hover:bg-muted disabled:opacity-50"
+                className="rounded-lg border border-border px-3 py-1.5 text-xs hover:bg-muted disabled:opacity-50"
               >
                 초기화
               </button>
@@ -1785,7 +1786,7 @@ function NewJudgmentForm({
                 type="button"
                 onClick={submit}
                 disabled={submitting}
-                className="rounded bg-primary px-4 py-1.5 text-xs font-semibold text-primary-foreground disabled:opacity-50 hover:bg-primary/80"
+                className="rounded-lg bg-primary px-4 py-1.5 text-xs font-semibold text-primary-foreground disabled:opacity-50 hover:bg-primary/80"
               >
                 {submitting ? "저장 중..." : "저장"}
               </button>

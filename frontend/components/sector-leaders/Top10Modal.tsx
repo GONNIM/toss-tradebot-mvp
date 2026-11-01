@@ -44,7 +44,7 @@ export function Top10Modal({ open, onClose }: { open: boolean; onClose: () => vo
       onClick={onClose}
     >
       <div
-        className="relative w-full max-w-[96vw] max-h-[96vh] flex flex-col overflow-hidden rounded-xl border border-cyan-500/50 bg-card shadow-2xl"
+        className="relative w-full max-w-[96vw] max-h-[96vh] flex flex-col overflow-hidden rounded-xl border border-cyan-500/50 bg-card "
         onClick={(e) => e.stopPropagation()}
       >
         {/* 헤더 (고정) */}
@@ -57,7 +57,7 @@ export function Top10Modal({ open, onClose }: { open: boolean; onClose: () => vo
           </div>
           <button
             onClick={onClose}
-            className="rounded-md border border-border bg-muted/30 px-3 py-1.5 text-sm text-foreground hover:bg-muted/50"
+            className="rounded-lg border border-border bg-muted/30 px-3 py-1.5 text-sm text-foreground hover:bg-muted/50"
             aria-label="Close"
           >
             ✕ 닫기 (Esc)
@@ -72,7 +72,7 @@ export function Top10Modal({ open, onClose }: { open: boolean; onClose: () => vo
             </div>
           )}
           {q.error && (
-            <div className="rounded-lg border border-red-500/30 bg-red-500/10 p-4 text-sm text-red-400">
+            <div className="rounded-lg border border-warn/30 bg-warn/10 p-4 text-sm text-warn">
               Top 10 호출 실패
             </div>
           )}
@@ -106,7 +106,7 @@ function PriceSourceBadge({
   const label = isOpen ? "🟢 LIVE" : "⚪ 종가";
   const kstTime = priceAt ? formatKstTime(priceAt) : null;
   return (
-    <div className="text-xs text-emerald-300 leading-tight mt-0.5">
+    <div className="text-xs text-primary leading-tight mt-0.5">
       {label}
       {kstTime && <span className="text-zinc-400 ml-1">{kstTime}</span>}
     </div>
@@ -170,16 +170,16 @@ function Top10Table({ items, computedAt }: { items: Top10Item[]; computedAt: str
         <div>
           <div className="font-semibold text-cyan-200 mb-1">🎯 상태 3분류 (지정가 참고 칸)</div>
           <ul className="grid grid-cols-1 md:grid-cols-3 gap-2">
-            <li className="rounded border border-rose-500/30 bg-rose-500/5 p-2">
-              <div className="font-semibold text-rose-300">🔴 과열</div>
+            <li className="rounded-lg border border-warn/30 bg-warn/5 p-2">
+              <div className="font-semibold text-warn">🔴 과열</div>
               <div className="text-zinc-300 mt-0.5">1년 범위 위쪽(52W 85% 넘음)이거나 <strong>200일 평균보다 25% 넘게 오른</strong> 상태. 지정가 참고선을 계산하지 않습니다</div>
             </li>
-            <li className="rounded border border-amber-500/30 bg-amber-500/5 p-2">
+            <li className="rounded-lg border border-amber-500/30 bg-amber-500/5 p-2">
               <div className="font-semibold text-amber-300">🟡 참고선 위</div>
               <div className="text-zinc-300 mt-0.5">현재가가 지정가 참고선보다 위. <strong>참고선까지 몇 % 아래인지</strong> 함께 표시</div>
             </li>
-            <li className="rounded border border-emerald-500/30 bg-emerald-500/5 p-2">
-              <div className="font-semibold text-emerald-300">🟢 참고선 근처</div>
+            <li className="rounded-lg border border-primary/30 bg-primary/5 p-2">
+              <div className="font-semibold text-primary">🟢 참고선 근처</div>
               <div className="text-zinc-300 mt-0.5">현재가가 이미 <strong>지정가 참고선 근처</strong>인 구간</div>
             </li>
           </ul>
@@ -221,16 +221,16 @@ function Top10Table({ items, computedAt }: { items: Top10Item[]; computedAt: str
         <div>
           <div className="font-semibold text-cyan-200 mb-1">📖 실전 예시 — 두 종목 비교</div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-            <div className="rounded border border-rose-500/30 bg-rose-500/5 p-2">
+            <div className="rounded-lg border border-warn/30 bg-warn/5 p-2">
               <div className="font-semibold text-zinc-100 mb-1">SK하이닉스 · 현재 2,076,000원</div>
               <ul className="text-zinc-300 space-y-0.5">
                 <li>• 52W 68% → 1년 범위 위쪽 68% 지점</li>
-                <li>• MA200 <strong className="text-rose-300">+119%</strong> → 10개월 평균의 2배 넘음</li>
+                <li>• MA200 <strong className="text-warn">+119%</strong> → 10개월 평균의 2배 넘음</li>
                 <li>• ATR 225,786원 → 하루 평균 22.6만원씩 흔들림</li>
-                <li className="text-rose-300 pt-1">→ 🔴 과열 (200일 평균의 2배 넘음)</li>
+                <li className="text-warn pt-1">→ 🔴 과열 (200일 평균의 2배 넘음)</li>
               </ul>
             </div>
-            <div className="rounded border border-amber-500/30 bg-amber-500/5 p-2">
+            <div className="rounded-lg border border-amber-500/30 bg-amber-500/5 p-2">
               <div className="font-semibold text-zinc-100 mb-1">원익IPS · 현재 102,700원</div>
               <ul className="text-zinc-300 space-y-0.5">
                 <li>• 52W 49% → 정확히 1년 범위 중간</li>
@@ -254,10 +254,10 @@ function Top10Table({ items, computedAt }: { items: Top10Item[]; computedAt: str
 function Row({ it }: { it: Top10Item }) {
   const formatKRW = (n: number) => Math.round(n).toLocaleString("ko-KR");
   const confColor =
-    it.confluence_score > 0.4 ? "text-emerald-400" :
-    it.confluence_score > -0.4 ? "text-amber-400" : "text-rose-400";
+    it.confluence_score > 0.4 ? "text-primary" :
+    it.confluence_score > -0.4 ? "text-amber-400" : "text-warn";
   const starColor =
-    it.confidence_label === "strong" ? "text-emerald-400" :
+    it.confidence_label === "strong" ? "text-primary" :
     it.confidence_label === "medium" ? "text-cyan-400" : "text-muted-foreground";
 
   // v2.0 진입가 상태 3분기
@@ -270,9 +270,9 @@ function Row({ it }: { it: Top10Item }) {
       ? "🟢 근처"
       : `🟡 ${it.entry_gap_pct !== null ? it.entry_gap_pct.toFixed(1) : "?"}%`;
   const entryStatusColor = isOverheat
-    ? "text-rose-300"
+    ? "text-warn"
     : isReady
-      ? "text-emerald-300"
+      ? "text-primary"
       : "text-amber-300";
   // 근거 배지 + hover tooltip — 초보자용 자연어 설명
   const pos52wPct = Math.round(it.pos_52w * 100);
@@ -339,7 +339,7 @@ function Row({ it }: { it: Top10Item }) {
           {entryStatusShort}
         </div>
         <div
-          className="text-[10px] text-zinc-400 font-mono leading-tight mt-0.5 cursor-help"
+          className="text-xs text-zinc-400 font-mono leading-tight mt-0.5 cursor-help"
           title={rationaleTooltip}
         >
           {rationale}
@@ -347,7 +347,7 @@ function Row({ it }: { it: Top10Item }) {
       </td>
       <td className="px-2.5 py-2 text-right">
         <div
-          className="font-mono text-emerald-300 font-semibold leading-tight cursor-help"
+          className="font-mono text-primary font-semibold leading-tight cursor-help"
           title={`통계 추정가 = ${it.horizon_months}개월 뒤 추정 가격 (보장 아님)\n\n산출: 산업통상부 수출 데이터와 이 종목의 과거 상관관계로 통계 추정\n추정 수익률: ${formatPct(it.point_pct, 1)}`}
         >
           {formatKRW(it.point_price)}
@@ -357,7 +357,7 @@ function Row({ it }: { it: Top10Item }) {
         </div>
       </td>
       <td className="px-2.5 py-2 text-right">
-        <div className="font-mono text-rose-300 leading-tight">
+        <div className="font-mono text-warn leading-tight">
           {it.stop_price !== null ? formatKRW(it.stop_price) : "—"}
         </div>
         {it.stop_pct !== null && (
@@ -367,7 +367,7 @@ function Row({ it }: { it: Top10Item }) {
         )}
       </td>
       <td className="px-2.5 py-2 text-right">
-        <div className="font-mono text-emerald-300 leading-tight">
+        <div className="font-mono text-primary leading-tight">
           {it.take_price !== null ? formatKRW(it.take_price) : "—"}
         </div>
         {it.take_pct !== null && (

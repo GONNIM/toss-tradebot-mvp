@@ -10,9 +10,9 @@ import type { Confluence, SignalContribution } from "@/lib/api";
 
 export function ConfluenceCard({ data }: { data: Confluence }) {
   const colorMap = {
-    green: "border-emerald-500/50 bg-emerald-500/10 text-emerald-300",
+    green: "border-primary/50 bg-primary/10 text-primary",
     amber: "border-amber-500/50 bg-amber-500/10 text-amber-200",
-    red: "border-rose-500/50 bg-rose-500/10 text-rose-300",
+    red: "border-warn/50 bg-warn/10 text-warn",
   } as const;
   const iconMap = { green: "🟢", amber: "🟡", red: "🔴" } as const;
 
@@ -85,7 +85,7 @@ function ScoreGauge({
   return (
     <div className="relative h-6">
       {/* 배경 그라데이션: 빨강 ━ 회색 ━ 초록 */}
-      <div className="absolute inset-x-0 top-2 h-2 rounded-full bg-gradient-to-r from-rose-500/40 via-zinc-500/30 to-emerald-500/40" />
+      <div className="absolute inset-x-0 top-2 h-2 rounded-full bg-gradient-to-r from-warn/40 via-zinc-500/30 to-primary/40" />
       {/* 0 (중앙) 표시 */}
       <div className="absolute top-1 h-4 w-px bg-zinc-400/60" style={{ left: "50%" }} />
       {/* score 마커 */}
@@ -94,7 +94,7 @@ function ScoreGauge({
         style={{ left: `${x}%`, backgroundColor: colorFill }}
       />
       <div
-        className="absolute top-5 text-[10px] font-mono -translate-x-1/2 opacity-70"
+        className="absolute top-5 text-xs font-mono -translate-x-1/2 opacity-70"
         style={{ left: `${x}%`, color: colorFill }}
       >
         {score >= 0 ? "+" : ""}
@@ -109,9 +109,9 @@ function ScoreGauge({
 function SignalRow({ s }: { s: SignalContribution }) {
   const dirColor =
     s.direction === "bullish"
-      ? "text-emerald-400"
+      ? "text-primary"
       : s.direction === "bearish"
-        ? "text-rose-400"
+        ? "text-warn"
         : "text-muted-foreground";
   const flag =
     s.direction === "bullish" ? "✓" : s.direction === "bearish" ? "✗" : "─";
@@ -119,9 +119,9 @@ function SignalRow({ s }: { s: SignalContribution }) {
   const fillPct = Math.abs(s.normalized) * 100;
   const fillColor =
     s.direction === "bullish"
-      ? "bg-emerald-500/70"
+      ? "bg-primary/70"
       : s.direction === "bearish"
-        ? "bg-rose-500/70"
+        ? "bg-warn/70"
         : "bg-zinc-500/40";
   const isRtl = s.normalized < 0;
 

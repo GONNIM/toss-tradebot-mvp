@@ -90,7 +90,7 @@ export default function ScreenerPage() {
     };
   }, []);
 
-  if (error) return <p className="text-sm text-red-600">⚠️ {error}</p>;
+  if (error) return <p className="text-sm text-warn">⚠️ {error}</p>;
   if (!data) return <p className="text-sm text-muted-foreground">배치 결과 로드 중…</p>;
 
   const { run, results } = data;
@@ -118,27 +118,27 @@ export default function ScreenerPage() {
       </header>
 
       <section className="grid grid-cols-2 gap-3 sm:grid-cols-5">
-        <div className="rounded border border-border bg-card p-3 text-center">
+        <div className="rounded-lg border border-border bg-card p-3 text-center">
           <p className="text-xs text-muted-foreground">Universe</p>
           <p className="text-lg font-bold">{run.universe_size.toLocaleString()}</p>
         </div>
-        <div className="rounded border border-emerald-200 bg-emerald-50 p-3 text-center dark:border-emerald-900 dark:bg-emerald-950">
-          <p className="text-xs text-emerald-700 dark:text-emerald-300">PASS</p>
-          <p className="text-lg font-bold text-emerald-700 dark:text-emerald-300">
+        <div className="rounded-lg border border-primary/30 bg-primary/5 p-3 text-center">
+          <p className="text-xs text-primary">PASS</p>
+          <p className="text-lg font-bold text-primary">
             {run.pass_count.toLocaleString()}
           </p>
         </div>
-        <div className="rounded border border-rose-200 bg-rose-50 p-3 text-center dark:border-rose-900 dark:bg-rose-950">
-          <p className="text-xs text-rose-700 dark:text-rose-300">FAIL</p>
-          <p className="text-lg font-bold text-rose-700 dark:text-rose-300">
+        <div className="rounded-lg border border-warn/30 bg-warn/5 p-3 text-center">
+          <p className="text-xs text-warn">FAIL</p>
+          <p className="text-lg font-bold text-warn">
             {run.fail_count.toLocaleString()}
           </p>
         </div>
-        <div className="rounded border border-border bg-card p-3 text-center">
+        <div className="rounded-lg border border-border bg-card p-3 text-center">
           <p className="text-xs text-muted-foreground">INSUFFICIENT</p>
           <p className="text-lg font-bold">{run.insufficient_count.toLocaleString()}</p>
         </div>
-        <div className="rounded border border-border bg-card p-3 text-center">
+        <div className="rounded-lg border border-border bg-card p-3 text-center">
           <p className="text-xs text-muted-foreground">DART calls</p>
           <p className="text-lg font-bold">{run.dart_call_count.toLocaleString()}</p>
         </div>
@@ -231,9 +231,9 @@ export default function ScreenerPage() {
                                 key={rn.code}
                                 className={
                                   rn.status === "pass"
-                                    ? "text-emerald-600"
+                                    ? "text-primary"
                                     : rn.status === "fail"
-                                    ? "text-rose-600"
+                                    ? "text-warn"
                                     : "text-muted-foreground"
                                 }
                               >

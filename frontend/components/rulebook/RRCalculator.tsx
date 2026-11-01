@@ -23,16 +23,16 @@ type Calc = {
 
 function color(rr: number | null): string {
   if (rr === null) return "text-slate-500";
-  if (rr >= 2) return "text-emerald-500";
+  if (rr >= 2) return "text-primary";
   if (rr >= 1) return "text-amber-500";
-  return "text-red-500";
+  return "text-warn";
 }
 
 function bg(rr: number | null): string {
   if (rr === null) return "bg-slate-500/10 border-slate-500/40";
-  if (rr >= 2) return "bg-emerald-500/10 border-emerald-500/40";
+  if (rr >= 2) return "bg-primary/10 border-primary/40";
   if (rr >= 1) return "bg-amber-500/10 border-amber-500/40";
-  return "bg-red-500/10 border-red-500/40";
+  return "bg-warn/10 border-warn/40";
 }
 
 export function RRCalculator() {
@@ -85,7 +85,7 @@ export function RRCalculator() {
             value={entry}
             onChange={(e) => setEntry(e.target.value)}
             placeholder="예: 10000"
-            className="mt-1 w-full rounded border border-border bg-background px-2 py-1 text-sm font-mono"
+            className="mt-1 w-full rounded-lg border border-border bg-background px-2 py-1 text-sm font-mono"
           />
         </label>
         <label className="block">
@@ -96,7 +96,7 @@ export function RRCalculator() {
             value={inv}
             onChange={(e) => setInv(e.target.value)}
             placeholder="예: 9500"
-            className="mt-1 w-full rounded border border-border bg-background px-2 py-1 text-sm font-mono"
+            className="mt-1 w-full rounded-lg border border-border bg-background px-2 py-1 text-sm font-mono"
           />
         </label>
         <label className="block">
@@ -107,7 +107,7 @@ export function RRCalculator() {
             value={target}
             onChange={(e) => setTarget(e.target.value)}
             placeholder="예: 13000"
-            className="mt-1 w-full rounded border border-border bg-background px-2 py-1 text-sm font-mono"
+            className="mt-1 w-full rounded-lg border border-border bg-background px-2 py-1 text-sm font-mono"
           />
         </label>
       </div>
@@ -116,17 +116,17 @@ export function RRCalculator() {
         type="button"
         onClick={calc}
         disabled={busy}
-        className="mt-3 rounded bg-primary px-3 py-1.5 text-xs font-semibold text-primary-foreground disabled:opacity-50"
+        className="mt-3 rounded-lg bg-primary px-3 py-1.5 text-xs font-semibold text-primary-foreground disabled:opacity-50"
       >
         {busy ? "계산 중…" : "R:R 계산"}
       </button>
 
       {error && (
-        <p className="mt-2 text-xs text-red-500">⚠️ {error}</p>
+        <p className="mt-2 text-xs text-warn">⚠️ {error}</p>
       )}
 
       {result && (
-        <div className={`mt-3 rounded border p-3 ${bg(result.rr_ratio)}`}>
+        <div className={`mt-3 rounded-lg border p-3 ${bg(result.rr_ratio)}`}>
           <div className="flex items-baseline justify-between">
             <div>
               <div className="text-xs text-muted-foreground">
@@ -138,10 +138,10 @@ export function RRCalculator() {
             </div>
             {result.risk_pct !== null && result.reward_pct !== null && (
               <div className="text-right text-xs">
-                <div className="text-red-500">
+                <div className="text-warn">
                   손실 -{(result.risk_pct * 100).toFixed(2)}%
                 </div>
-                <div className="text-emerald-500">
+                <div className="text-primary">
                   목표 +{(result.reward_pct * 100).toFixed(2)}%
                 </div>
               </div>

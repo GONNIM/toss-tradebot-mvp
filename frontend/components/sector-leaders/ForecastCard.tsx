@@ -25,6 +25,7 @@ import type {
   Verdict,
 } from "@/lib/api";
 import { formatPct } from "@/lib/utils";
+import { upDownText } from "@/lib/updown";
 
 // ─── 유틸 ──────────────────────────────────────────────
 
@@ -57,7 +58,7 @@ function PriceSourceTag({
     const badge = isOpen ? "🟢 LIVE" : "⚪ 종가";
     const t = priceAt ? formatKstTime(priceAt) : null;
     return (
-      <span className="text-xs text-emerald-600 dark:text-emerald-400">
+      <span className="text-xs text-primary">
         ({badge}
         {t && <span className="text-muted-foreground"> · {t}</span>})
       </span>
@@ -65,7 +66,7 @@ function PriceSourceTag({
   }
   return (
     <span
-      className="text-xs text-amber-600 dark:text-amber-400"
+      className="text-xs text-amber-600"
       title="네이버 실시간 가격 fetch 실패 — 일봉 종가 사용"
     >
       ({fallbackDate || "—"} 종가 · fallback)
@@ -218,7 +219,7 @@ function Header({ data }: { data: TickerForecast }) {
         입력 시그널: {data.latest_data_month} {data.leader.item} 수출 YoY{" "}
         <span
           className={
-            data.latest_input_yoy >= 0 ? "text-emerald-400" : "text-rose-400"
+            upDownText(data.latest_input_yoy, "text-up")
           }
         >
           {formatPct(data.latest_input_yoy, 1)}
@@ -239,9 +240,9 @@ function VerdictBanner({
 }) {
   const colorMap = {
     green:
-      "border-emerald-500/50 bg-emerald-500/10 text-emerald-300",
+      "border-primary/50 bg-primary/10 text-primary",
     amber: "border-amber-500/50 bg-amber-500/10 text-amber-200",
-    red: "border-rose-500/50 bg-rose-500/10 text-rose-300",
+    red: "border-warn/50 bg-warn/10 text-warn",
   } as const;
   const iconMap = { green: "🟢", amber: "🟡", red: "🔴" } as const;
   return (
@@ -293,7 +294,7 @@ function PositionBar({
 
       <div className="relative h-16">
         {/* 막대 배경 */}
-        <div className="absolute top-7 left-0 right-0 h-2 rounded-full bg-gradient-to-r from-rose-500/30 via-zinc-500/30 to-emerald-500/30" />
+        <div className="absolute top-7 left-0 right-0 h-2 rounded-full bg-gradient-to-r from-warn/30 via-zinc-500/30 to-primary/30" />
 
         {/* P10 마커 */}
         <Marker x={xP10} color="rose" label={`P10\n${formatPct(band.p10_pct, 1)}`} priceLabel={formatKRWPrice(Math.round(p10Price))} position="bottom" />
@@ -332,16 +333,16 @@ function Marker({
 }) {
   const xClamped = Math.max(0, Math.min(100, x));
   const colorMap = {
-    rose: "bg-rose-500",
+    rose: "bg-warn",
     cyan: "bg-cyan-400",
     purple: "bg-purple-500",
-    emerald: "bg-emerald-500",
+    emerald: "bg-primary",
   };
   const textColor = {
-    rose: "text-rose-400",
+    rose: "text-warn",
     cyan: "text-cyan-300",
     purple: "text-purple-300",
-    emerald: "text-emerald-400",
+    emerald: "text-primary",
   };
   return (
     <div
@@ -349,7 +350,7 @@ function Marker({
       style={{ left: `${xClamped}%`, transform: "translateX(-50%)" }}
     >
       {position === "top" && (
-        <div className={`absolute -translate-x-1/2 left-1/2 text-center whitespace-pre text-[10px] ${textColor[color]} ${highlight ? "font-bold" : ""}`} style={{ top: "-2px" }}>
+        <div className={`absolute -translate-x-1/2 left-1/2 text-center whitespace-pre text-xs ${textColor[color]} ${highlight ? "font-bold" : ""}`} style={{ top: "-2px" }}>
           {label}
           <br />
           <span className="font-mono">{priceLabel}</span>
@@ -360,7 +361,7 @@ function Marker({
         style={{ left: "-50%" }}
       />
       {position === "bottom" && (
-        <div className={`absolute -translate-x-1/2 left-1/2 text-center whitespace-pre text-[10px] ${textColor[color]} ${highlight ? "font-bold" : ""}`} style={{ top: "36px" }}>
+        <div className={`absolute -translate-x-1/2 left-1/2 text-center whitespace-pre text-xs ${textColor[color]} ${highlight ? "font-bold" : ""}`} style={{ top: "36px" }}>
           {label}
           <br />
           <span className="font-mono">{priceLabel}</span>
@@ -388,11 +389,11 @@ function KpiCards({
 
   let strengthStars = "★";
   let strengthLabel = "약함";
-  let strengthTone = "text-rose-400";
+  let strengthTone = "text-warn";
   if (horizon.r_squared >= 0.3) {
     strengthStars = "★★★";
     strengthLabel = "강함";
-    strengthTone = "text-emerald-400";
+    strengthTone = "text-primary";
   } else if (horizon.r_squared >= 0.1) {
     strengthStars = "★★";
     strengthLabel = "중간";
@@ -408,9 +409,7 @@ function KpiCards({
           expectedDelta !== null ? formatKRWDelta(expectedDelta) : "—"
         }
         tone={
-          horizon.point_estimate_pct > 0
-            ? "text-emerald-400"
-            : "text-rose-400"
+          upDownText(horizon.point_estimate_pct, "text-down")
         }
       />
       <KpiCell
@@ -419,7 +418,7 @@ function KpiCards({
         secondary={rr ? rr.grade_label : "산출 불가"}
         tone={
           rr?.grade === "excellent" || rr?.grade === "good"
-            ? "text-emerald-400"
+            ? "text-primary"
             : rr?.grade === "too_high"
               ? "text-amber-400"
               : "text-muted-foreground"
@@ -485,7 +484,7 @@ function PriceTagsBox({
       label: `${targetMonth} 강세 상단 (24M P90)`,
       price: p90Price,
       meaning: "이 가격대 도달 시 — 24개월 중 상위 10% 강세 시나리오",
-      tone: "text-emerald-400",
+      tone: "text-primary",
     },
     {
       icon: "📊",
@@ -510,7 +509,7 @@ function PriceTagsBox({
       label: `${targetMonth} 약세 하단 (24M P10)`,
       price: p10Price,
       meaning: "이 가격대 도달 시 — 24개월 중 하위 10% 약세 시나리오, 손절 검토",
-      tone: "text-rose-400",
+      tone: "text-warn",
     },
   ];
 
@@ -563,25 +562,25 @@ function StopTakeBox({
         </span>
       </div>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        <div className="rounded-md border border-rose-500/30 bg-rose-500/5 p-3">
-          <div className="text-xs text-rose-300/80 mb-0.5">📉 Stop Loss (손절가)</div>
-          <div className="text-lg font-bold font-mono text-rose-400">
+        <div className="rounded-lg border border-warn/30 bg-warn/5 p-3">
+          <div className="text-xs text-warn/80 mb-0.5">📉 Stop Loss (손절가)</div>
+          <div className="text-lg font-bold font-mono text-warn">
             {formatKRWPrice(Math.round(st.stop_price))}
           </div>
           <div className="text-xs text-muted-foreground">
             현재가 대비 {formatPct(st.stop_pct, 1)} · {formatKRWDelta(Math.round(st.stop_price - currentPrice))}
           </div>
-          <div className="text-xs text-rose-300/70 mt-1.5">{st.stop_basis}</div>
+          <div className="text-xs text-warn/70 mt-1.5">{st.stop_basis}</div>
         </div>
-        <div className="rounded-md border border-emerald-500/30 bg-emerald-500/5 p-3">
-          <div className="text-xs text-emerald-300/80 mb-0.5">📈 Take Profit (익절가)</div>
-          <div className="text-lg font-bold font-mono text-emerald-400">
+        <div className="rounded-lg border border-primary/30 bg-primary/5 p-3">
+          <div className="text-xs text-primary/80 mb-0.5">📈 Take Profit (익절가)</div>
+          <div className="text-lg font-bold font-mono text-primary">
             {formatKRWPrice(Math.round(st.take_price))}
           </div>
           <div className="text-xs text-muted-foreground">
             현재가 대비 {formatPct(st.take_pct, 1)} · {formatKRWDelta(Math.round(st.take_price - currentPrice))}
           </div>
-          <div className="text-xs text-emerald-300/70 mt-1.5">{st.take_basis}</div>
+          <div className="text-xs text-primary/70 mt-1.5">{st.take_basis}</div>
         </div>
       </div>
     </div>

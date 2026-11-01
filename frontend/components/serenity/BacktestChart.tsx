@@ -49,7 +49,7 @@ export function BacktestChart({ data, title, height = 220 }: Props) {
     <section className="rounded-lg border border-border bg-card p-4">
       {title && <h3 className="mb-2 text-sm font-semibold">{title}</h3>}
       {allEmpty ? (
-        <div className="rounded border border-dashed border-border p-6 text-center text-xs text-muted-foreground">
+        <div className="rounded-lg border border-dashed border-border p-6 text-center text-xs text-muted-foreground">
           이 티커에 대한 백테스트 결과가 아직 없습니다.
           <br />
           각 신호의 <strong>추출일 종가</strong> 대비 5·10·30·60·180 거래일 후
@@ -62,9 +62,9 @@ export function BacktestChart({ data, title, height = 220 }: Props) {
         <ResponsiveContainer width="100%" height={height}>
           <BarChart data={chartData} margin={{ top: 8, right: 8, bottom: 8, left: 0 }}>
             <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
-            <XAxis dataKey="window" tick={{ fontSize: 10 }} />
+            <XAxis dataKey="window" tick={{ fontSize: 12 }} />
             <YAxis
-              tick={{ fontSize: 10 }}
+              tick={{ fontSize: 12 }}
               tickFormatter={(v: number) => `${v}%`}
               width={44}
             />
@@ -74,7 +74,7 @@ export function BacktestChart({ data, title, height = 220 }: Props) {
               contentStyle={{
                 background: "hsl(var(--card))",
                 border: "1px solid hsl(var(--border))",
-                fontSize: 11,
+                fontSize: 12,
               }}
             />
             <Bar dataKey="return" radius={[4, 4, 0, 0]}>

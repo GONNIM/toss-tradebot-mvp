@@ -42,6 +42,7 @@ import {
 } from "@/lib/utils";
 import { ForecastCard } from "@/components/sector-leaders/ForecastCard";
 import { ConfluenceCard } from "@/components/sector-leaders/ConfluenceCard";
+import { upDownText } from "@/lib/updown";
 
 export function AnalysisPanel({
   ticker,
@@ -71,7 +72,7 @@ export function AnalysisPanel({
   }
   if (analysisQ.error || !analysisQ.data) {
     return (
-      <div className="rounded-xl border border-red-500/30 bg-red-500/10 p-4 text-sm text-red-400">
+      <div className="rounded-xl border border-warn/30 bg-warn/10 p-4 text-sm text-warn">
         분석 데이터 호출 실패 ({ticker})
       </div>
     );
@@ -120,7 +121,7 @@ function PanelBody({
         </div>
       )}
       {confluenceError && (
-        <div className="rounded-xl border border-red-500/30 bg-red-500/10 p-4 text-sm text-red-400">
+        <div className="rounded-xl border border-warn/30 bg-warn/10 p-4 text-sm text-warn">
           Confluence 호출 실패
         </div>
       )}
@@ -133,7 +134,7 @@ function PanelBody({
         </div>
       )}
       {forecastError && (
-        <div className="rounded-xl border border-red-500/30 bg-red-500/10 p-4 text-sm text-red-400">
+        <div className="rounded-xl border border-warn/30 bg-warn/10 p-4 text-sm text-warn">
           미래 예측 호출 실패
         </div>
       )}
@@ -280,21 +281,21 @@ function AnalysisChart({ data }: { data: TickerAnalysis }) {
           <XAxis
             dataKey="month"
             stroke="hsl(var(--muted-foreground))"
-            fontSize={10}
+            fontSize={12}
             tickFormatter={(v) => v.slice(2)}
           />
           <YAxis
             yAxisId="close"
             orientation="left"
             stroke="hsl(var(--muted-foreground))"
-            fontSize={10}
+            fontSize={12}
             tickFormatter={(v) => `${(v / 10000).toFixed(0)}만`}
           />
           <YAxis
             yAxisId="yoy"
             orientation="right"
             stroke="hsl(var(--muted-foreground))"
-            fontSize={10}
+            fontSize={12}
             tickFormatter={(v) => `${v}%`}
           />
           <Tooltip
@@ -407,11 +408,9 @@ function BacktestTable({
             const meanClass =
               b.n_months === 0
                 ? "text-muted-foreground"
-                : upBias && Math.abs(b.mean_return_pct) > 1
-                  ? "text-emerald-400"
-                  : !upBias && Math.abs(b.mean_return_pct) > 1
-                    ? "text-rose-400"
-                    : "text-foreground";
+                : Math.abs(b.mean_return_pct) > 1
+                  ? upDownText(upBias ? 1 : -1)
+                  : "text-foreground";
             return (
               <tr key={b.label} className="border-b border-border/40">
                 <td className="py-1.5 pr-2 font-medium">{b.label}</td>
@@ -496,7 +495,7 @@ function MonthlyJoinTable({ rows }: { rows: MonthlyJoinRow[] }) {
                         {displayVal !== null ? (
                           <span title={isInterimVal ? "관세청 전체 잠정치 (품목 세분 아님)" : undefined}>
                             {Math.round(displayVal).toLocaleString()}
-                            {isInterimVal && <span className="ml-1 text-[9px] text-sky-400">*</span>}
+                            {isInterimVal && <span className="ml-1 text-xs text-sky-400">*</span>}
                           </span>
                         ) : (
                           "—"
@@ -508,7 +507,7 @@ function MonthlyJoinTable({ rows }: { rows: MonthlyJoinRow[] }) {
                         {displayYoy !== null ? (
                           <span title={isInterimYoy ? "관세청 전체 잠정치 YoY (품목 세분 아님)" : undefined}>
                             {formatPct(displayYoy, 1)}
-                            {isInterimYoy && <span className="ml-1 text-[9px] text-sky-400">*</span>}
+                            {isInterimYoy && <span className="ml-1 text-xs text-sky-400">*</span>}
                           </span>
                         ) : (
                           "—"
@@ -529,7 +528,7 @@ function MonthlyJoinTable({ rows }: { rows: MonthlyJoinRow[] }) {
               </tbody>
             </table>
             {rows.some((r) => r.interim_period !== null) && (
-              <div className="pt-2 text-[10px] text-muted-foreground">
+              <div className="pt-2 text-xs text-muted-foreground">
                 <span className="text-sky-400">*</span> 관세청 전체 잠정치 (품목 세분 아님) · motir 미발표 월 참고용
               </div>
             )}
@@ -542,23 +541,23 @@ function MonthlyJoinTable({ rows }: { rows: MonthlyJoinRow[] }) {
 
 function yoyClass(yoy: number | null): string {
   if (yoy === null) return "text-muted-foreground";
-  if (yoy >= 30) return "text-emerald-400";
-  if (yoy > 0) return "text-emerald-300";
+  if (yoy >= 30) return "text-up font-semibold";
+  if (yoy > 0) return "text-up";
   if (yoy >= -10) return "text-muted-foreground";
-  return "text-rose-400";
+  return "text-down";
 }
 
 function retClass(r: number | null): string {
   if (r === null) return "text-muted-foreground";
-  if (r > 1) return "text-emerald-400";
-  if (r < -1) return "text-rose-400";
+  if (r > 1) return "text-up";
+  if (r < -1) return "text-down";
   return "text-muted-foreground";
 }
 
 function signalBadge(sig: JoinSignal): React.ReactNode {
   const map: Record<JoinSignal, { label: string; cls: string }> = {
-    agree_up: { label: "🟢 동행↑", cls: "text-emerald-400" },
-    agree_down: { label: "🔴 동행↓", cls: "text-rose-400" },
+    agree_up: { label: "🟢 동행↑", cls: "text-primary" },
+    agree_down: { label: "🔴 동행↓", cls: "text-warn" },
     disagree: { label: "⚪ 엇박자", cls: "text-amber-400" },
     neutral: { label: "— 횡보", cls: "text-muted-foreground" },
     no_data: { label: "—", cls: "text-muted-foreground" },

@@ -64,8 +64,8 @@ function SystemBlock({ d }: { d: TodayResponse }) {
   return (
     <div className="space-y-2">
       {failures.length > 0 && (
-        <div role="alert" className="space-y-2 rounded-lg border border-red-500/60 bg-red-500/10 p-4">
-          <p className="text-sm font-semibold text-red-600 dark:text-red-400">오늘 실패한 작업 {failures.length}건</p>
+        <div role="alert" className="space-y-2 rounded-lg border border-warn/60 bg-warn/10 p-4">
+          <p className="text-sm font-semibold text-warn">오늘 실패한 작업 {failures.length}건</p>
           <ul className="space-y-1 text-sm">
             {failures.map((f, i) => (
               <li key={`${f.title}-${i}`} className="flex flex-wrap gap-x-2">
@@ -100,9 +100,9 @@ function JudgmentsCard({ d }: { d: TodayResponse }) {
           {rows.map((j) => (
             <li key={j.id} className="flex flex-wrap items-center gap-x-3 gap-y-1 border-b border-border py-2 text-sm last:border-0">
               <StockLink ticker={j.ticker} className="font-semibold">{j.ticker}</StockLink>
-              {j.strategy && <span className="rounded-md border border-border px-2 py-0.5 text-xs">{j.strategy}</span>}
+              {j.strategy && <span className="rounded-lg border border-border px-2 py-0.5 text-xs">{j.strategy}</span>}
               <span className="tabular-nums text-muted-foreground">기한 {md(j.due_date)}</span>
-              {j.overdue && <span className="rounded-md bg-red-500/15 px-2 py-0.5 text-xs text-red-600 dark:text-red-400">기한 지남</span>}
+              {j.overdue && <span className="rounded-lg bg-warn/15 px-2 py-0.5 text-xs text-warn">기한 지남</span>}
             </li>
           ))}
         </ul>
@@ -200,7 +200,7 @@ export default function Home() {
       </header>
 
       {q.isLoading && <p className="text-sm text-muted-foreground">불러오는 중입니다</p>}
-      {q.error && <p className="text-sm text-red-600 dark:text-red-400">오늘 화면을 불러오지 못했습니다. 잠시 뒤 다시 열어 주세요.</p>}
+      {q.error && <p className="text-sm text-warn">오늘 화면을 불러오지 못했습니다. 잠시 뒤 다시 열어 주세요.</p>}
 
       {q.data && (
         <>

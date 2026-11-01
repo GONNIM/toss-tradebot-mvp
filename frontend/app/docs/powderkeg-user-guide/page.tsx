@@ -19,18 +19,18 @@ export default function PowderKegUserGuideRedirect() {
   }, []);
   return (
     <div className="flex min-h-[60vh] items-center justify-center">
-      <div className="max-w-md rounded border-2 border-purple-300 bg-white p-6 text-center shadow-lg dark:bg-slate-900">
+      <div className="max-w-md rounded-lg border-2 border-purple-300 bg-white p-6 text-center ">
         <h1 className="mb-3 text-2xl font-bold">📖 사용자 가이드</h1>
-        <p className="mb-4 text-sm text-slate-700 dark:text-slate-300">
+        <p className="mb-4 text-sm text-slate-700">
           GitHub 원본 문서로 이동 중입니다...
         </p>
         <a
           href={TARGET_URL}
-          className="inline-block rounded bg-sky-600 px-4 py-2 text-sm font-bold text-white hover:bg-sky-700"
+          className="inline-block rounded-lg bg-sky-600 px-4 py-2 text-sm font-bold text-white hover:bg-sky-700"
         >
           📄 지금 이동
         </a>
-        <p className="mt-4 text-xs text-slate-500 dark:text-slate-400">
+        <p className="mt-4 text-xs text-slate-500">
           자동 이동이 안 될 경우 · 위 버튼 클릭
         </p>
       </div>

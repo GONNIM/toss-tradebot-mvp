@@ -32,14 +32,14 @@ export function BiotechTable<Row extends Record<string, unknown>>({
 
   if (rows.length === 0) {
     return (
-      <div className="rounded border border-border bg-card p-4 text-sm text-muted-foreground">
+      <div className="rounded-lg border border-border bg-card p-4 text-sm text-muted-foreground">
         {emptyLabel}
       </div>
     );
   }
 
   return (
-    <div className="overflow-x-auto rounded border border-border">
+    <div className="overflow-x-auto rounded-lg border border-border">
       {caption && (
         <div className="border-b border-border bg-muted/50 px-3 py-2 text-xs font-semibold text-muted-foreground">
           {caption}
@@ -47,7 +47,7 @@ export function BiotechTable<Row extends Record<string, unknown>>({
       )}
       <table className="w-full border-collapse text-xs">
         <thead>
-          <tr className="bg-slate-50 dark:bg-slate-900">
+          <tr className="bg-slate-50">
             {columns.map((c) => (
               <th
                 key={c.key}

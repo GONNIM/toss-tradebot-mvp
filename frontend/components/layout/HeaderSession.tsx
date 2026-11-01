@@ -67,7 +67,7 @@ export function HeaderSession() {
     return (
       <div className="flex items-center gap-2 text-sm">
         <span className="inline-block h-2 w-2 rounded-full bg-teal-600" aria-hidden />
-        <span className="hidden text-foreground md:inline">관리자</span>
+        <span className="sr-only text-foreground md:not-sr-only">관리자</span>
         <button
           type="button"
           onClick={() => run(logout)}
@@ -76,7 +76,7 @@ export function HeaderSession() {
         >
           로그아웃
         </button>
-        {error && <span className="text-xs text-red-600">{error}</span>}
+        {error && <span className="text-xs text-warn">{error}</span>}
       </div>
     );
   }
@@ -116,7 +116,7 @@ export function HeaderSession() {
               {busy ? "확인 중…" : "로그인"}
             </button>
           </div>
-          {error && <p className="mt-2 text-xs text-red-600">{error}</p>}
+          {error && <p className="mt-2 text-xs text-warn">{error}</p>}
           <p className="mt-2 text-xs text-muted-foreground">
             편집·실주문·관리 화면 보기에 필요합니다. 로그인은 이 브라우저에서 12시간 유지됩니다.
           </p>

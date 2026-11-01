@@ -9,6 +9,7 @@ import { useState } from "react";
 import { api, type CrazyPick } from "@/lib/api";
 import { formatMarketCap, formatUSD } from "@/lib/utils";
 import { isUnauthorized, LoginNotice, OutcomeSummary, PicksSessionBar } from "@/components/lab/PickResults";
+import { upDownText } from "@/lib/updown";
 
 function parseJsonArray(s: string | null): string[] {
   if (!s) return [];
@@ -35,14 +36,14 @@ export default function CrazyPage() {
         <div>
           <h1 className="flex items-center gap-2 text-3xl font-bold">
             🎯 Crazy Picks
-            <span className="rounded bg-gray-500/20 px-2 py-0.5 text-[10px] font-semibold text-gray-400">
+            <span className="rounded-lg bg-gray-500/20 px-2 py-0.5 text-xs font-semibold text-gray-400">
               LAGGING
             </span>
           </h1>
           <p className="mt-1 text-sm text-muted-foreground">
             매일 06:30 KST · 시총 ≥ $1B 안전 universe · 정보 전용 (수동 매수) · 행 클릭 시 상세 보기
           </p>
-          <p className="mt-1 text-[11px] text-amber-400/80">
+          <p className="mt-1 text-xs text-amber-400/80">
             ⚠️ 모든 pick 의 outcome (T+7·T+30) 을 무조건 표시합니다. cherry-pick 금지 (리뷰 A 권고 2).
           </p>
         </div>
@@ -51,7 +52,7 @@ export default function CrazyPage() {
             onClick={() => setTab("today")}
             className={`rounded-lg border px-3 py-1.5 text-sm ${
               tab === "today"
-                ? "border-sky-300 bg-sky-50 text-sky-800 dark:border-sky-800 dark:bg-sky-950/40 dark:text-sky-200"
+                ? "border-sky-300 bg-sky-50 text-sky-800"
                 : "border-border text-muted-foreground hover:text-foreground"
             }`}
           >
@@ -61,7 +62,7 @@ export default function CrazyPage() {
             onClick={() => setTab("history")}
             className={`rounded-lg border px-3 py-1.5 text-sm ${
               tab === "history"
-                ? "border-sky-300 bg-sky-50 text-sky-800 dark:border-sky-800 dark:bg-sky-950/40 dark:text-sky-200"
+                ? "border-sky-300 bg-sky-50 text-sky-800"
                 : "border-border text-muted-foreground hover:text-foreground"
             }`}
           >
@@ -219,7 +220,7 @@ function PickDetail({ pick }: { pick: CrazyPick }) {
 
       {catalysts.length > 0 && (
         <div>
-          <div className="mb-1 font-semibold text-green-400">🎯 Catalysts</div>
+          <div className="mb-1 font-semibold text-primary">🎯 Catalysts</div>
           <ul className="list-inside list-disc text-muted-foreground">
             {catalysts.map((c, i) => (
               <li key={i}>{c}</li>
@@ -230,7 +231,7 @@ function PickDetail({ pick }: { pick: CrazyPick }) {
 
       {risks.length > 0 && (
         <div>
-          <div className="mb-1 font-semibold text-red-400">⚠️ Risks</div>
+          <div className="mb-1 font-semibold text-warn">⚠️ Risks</div>
           <ul className="list-inside list-disc text-muted-foreground">
             {risks.map((r, i) => (
               <li key={i}>{r}</li>
@@ -255,7 +256,7 @@ function Loading() {
 
 function ErrBox() {
   return (
-    <div className="rounded-lg border border-red-500/30 bg-red-500/10 p-4 text-sm text-red-400">
+    <div className="rounded-lg border border-warn/30 bg-warn/10 p-4 text-sm text-warn">
       API 호출 실패.
     </div>
   );
@@ -273,6 +274,6 @@ function PerfCell({ value }: { value: number | null }) {
     return <span className="text-muted-foreground/60" title="계산 대기 (cron 자동)">—</span>;
   }
   const pct = value * 100;
-  const color = pct > 0 ? "text-green-400" : pct < 0 ? "text-red-400" : "text-muted-foreground";
+  const color = upDownText(pct);
   return <span className={color}>{pct >= 0 ? "+" : ""}{pct.toFixed(2)}%</span>;
 }

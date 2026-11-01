@@ -129,7 +129,7 @@ export default function VerificationPage() {
                     <div key={t} style={{ marginBottom: 4 }}>
                       ⚠ <code>{t}</code>
                       <br />
-                      <small style={{ color: "#888" }}>{TAG_LABEL[t] || t}</small>
+                      <small style={{ color: "#888", fontSize: 12 }}>{TAG_LABEL[t] || t}</small>
                     </div>
                   ))}
                 </td>

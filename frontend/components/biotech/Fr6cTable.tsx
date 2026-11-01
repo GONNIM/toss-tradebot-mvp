@@ -11,7 +11,7 @@ export function Fr6cTable({ data }: { data: Fr6cCells | null }) {
   const rows = fr6cRows(data.cells).map(fr6cRowText);
   return (
     <div className="space-y-2 text-xs">
-      <div className="rounded border-l-4 border-slate-400 bg-slate-50 p-2 dark:border-slate-600 dark:bg-slate-900/60">{FR6C_NOTICE}</div>
+      <div className="rounded-lg border-l-4 border-slate-400 bg-slate-50 p-2">{FR6C_NOTICE}</div>
       <div className="text-muted-foreground">
         지표: {FR6C_METRIC} · {fr6cHeader(data)} · {FR6C_MIN_N}건 미만 칸은 숫자 없이 표본 수만 적습니다.
       </div>

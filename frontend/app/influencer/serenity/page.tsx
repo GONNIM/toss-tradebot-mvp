@@ -57,10 +57,12 @@ export default function SerenityLanding() {
   const [summary, setSummary] = useState<SerenitySummary | null>(null);
   const [signals, setSignals] = useState<SignalFeedItem[] | null>(null);
   const [tickers, setTickers] = useState<TickerCardItem[] | null>(null);
-  const [showAllUnranked, setShowAllUnranked] = useState(false);   // 5b · 미분류는 처음 12개만
   const [sentiment, setSentiment] = useState("");
   const [days, setDays] = useState(14);
   const [includeAvoid, setIncludeAvoid] = useState(true);
+  // 5b · 미분류는 처음 12개만 · 5c · AVOID 포함을 바꾸면 다시 접힘 (/powderkeg 와 같게)
+  const [shownAllFor, setShownAllFor] = useState<boolean | null>(null);
+  const showAllUnranked = shownAllFor === includeAvoid;
   const [err, setErr] = useState<string | null>(null);
   const [showSignals, setShowSignals] = useState(false);   // 하단 · 접힘 default
   const [showAvoid, setShowAvoid] = useState(false);       // Avoid · 접힘 default
@@ -130,13 +132,13 @@ export default function SerenityLanding() {
         <nav className="mt-3 flex flex-wrap gap-3 text-xs">
           <Link
             href="/influencer/serenity/methodology"
-            className="rounded border border-border bg-card px-2 py-1 hover:border-primary/60"
+            className="rounded-lg border border-border bg-card px-2 py-1 hover:border-primary/60"
           >
             📚 Methodology (15원칙)
           </Link>
           <Link
             href="/influencer/serenity/backtest"
-            className="rounded border border-border bg-card px-2 py-1 hover:border-primary/60"
+            className="rounded-lg border border-border bg-card px-2 py-1 hover:border-primary/60"
           >
             📊 Backtest Report
           </Link>
@@ -160,7 +162,7 @@ export default function SerenityLanding() {
       )}
 
       {err && (
-        <div className="rounded border border-red-500/40 bg-red-500/10 p-3 text-xs text-red-500">
+        <div className="rounded-lg border border-warn/40 bg-warn/10 p-3 text-xs text-warn">
           에러: {err}
         </div>
       )}
@@ -175,7 +177,7 @@ export default function SerenityLanding() {
         </div>
         {tickers === null && <div className="text-xs text-muted-foreground">로딩...</div>}
         {tickers && topPicks.length === 0 && (
-          <div className="rounded border border-dashed border-border p-4 text-center text-xs text-muted-foreground">
+          <div className="rounded-lg border border-dashed border-border p-4 text-center text-xs text-muted-foreground">
             조건 만족 종목 없음 · seed tier 확대 or bullish % 완화 필요
           </div>
         )}
@@ -201,7 +203,7 @@ export default function SerenityLanding() {
             {momentum.map(({ t, r }) => (
               <div key={t.ticker} className="relative">
                 <TickerCard item={t} />
-                <span className="absolute right-2 top-2 rounded bg-purple-500/20 px-1.5 py-0.5 text-xs font-semibold text-purple-400">
+                <span className="absolute right-2 top-2 rounded-lg bg-purple-500/20 px-1.5 py-0.5 text-xs font-semibold text-purple-400">
                   ×{r.toFixed(1)} momentum
                 </span>
               </div>
@@ -235,7 +237,7 @@ export default function SerenityLanding() {
         </div>
         {tickers === null && <div className="text-xs text-muted-foreground">로딩...</div>}
         {tickers && Object.keys(byTier).length === 0 && (
-          <div className="rounded border border-dashed border-border p-4 text-center text-xs text-muted-foreground">
+          <div className="rounded-lg border border-dashed border-border p-4 text-center text-xs text-muted-foreground">
             표시할 종목 없음
           </div>
         )}
@@ -266,7 +268,7 @@ export default function SerenityLanding() {
                 <ShowMoreButton
                   total={byTier["?"].length}
                   shown={showAllUnranked ? byTier["?"].length : Math.min(12, byTier["?"].length)}
-                  onShowAll={() => setShowAllUnranked(true)}
+                  onShowAll={() => setShownAllFor(includeAvoid)}
                 />
               </div>
             )}
@@ -280,10 +282,10 @@ export default function SerenityLanding() {
           <button
             type="button"
             onClick={() => setShowAvoid(!showAvoid)}
-            className="flex w-full items-baseline justify-between rounded border border-red-500/40 bg-red-500/5 px-3 py-2 text-left"
+            className="flex w-full items-baseline justify-between rounded-lg border border-warn/40 bg-warn/5 px-3 py-2 text-left"
           >
             <div>
-              <div className="text-sm font-semibold text-red-500">
+              <div className="text-sm font-semibold text-warn">
                 🚨 Avoid · {avoidTickers.length}개
               </div>
               <div className="text-xs text-muted-foreground">
@@ -307,7 +309,7 @@ export default function SerenityLanding() {
         <button
           type="button"
           onClick={() => setShowSignals(!showSignals)}
-          className="flex w-full items-baseline justify-between rounded border border-border bg-card px-3 py-2 text-left"
+          className="flex w-full items-baseline justify-between rounded-lg border border-border bg-card px-3 py-2 text-left"
         >
           <div>
             <div className="text-sm font-semibold">📡 Raw Signal Feed</div>
@@ -325,7 +327,7 @@ export default function SerenityLanding() {
               <select
                 value={days}
                 onChange={(e) => setDays(Number(e.target.value))}
-                className="rounded border border-border bg-background px-2 py-1"
+                className="rounded-lg border border-border bg-background px-2 py-1"
               >
                 <option value={7}>7일</option>
                 <option value={14}>14일</option>
@@ -335,7 +337,7 @@ export default function SerenityLanding() {
               <select
                 value={sentiment}
                 onChange={(e) => setSentiment(e.target.value)}
-                className="rounded border border-border bg-background px-2 py-1"
+                className="rounded-lg border border-border bg-background px-2 py-1"
               >
                 {SENTIMENT_OPTS.map((o) => (
                   <option key={o.value} value={o.value}>
@@ -348,7 +350,7 @@ export default function SerenityLanding() {
               <div className="mt-3 text-xs text-muted-foreground">로딩...</div>
             )}
             {signals && signals.length === 0 && (
-              <div className="mt-3 rounded border border-dashed border-border p-4 text-center text-xs text-muted-foreground">
+              <div className="mt-3 rounded-lg border border-dashed border-border p-4 text-center text-xs text-muted-foreground">
                 해당 조건의 signal 없음
               </div>
             )}
@@ -376,7 +378,7 @@ function SummaryStat({
   hint?: string;
 }) {
   return (
-    <div className="rounded border border-border bg-muted/20 px-3 py-2">
+    <div className="rounded-lg border border-border bg-muted/20 px-3 py-2">
       <div className="text-xs text-muted-foreground">{label}</div>
       <div className="mt-1 text-lg font-bold">{value}</div>
       {hint && <div className="text-xs text-muted-foreground">{hint}</div>}

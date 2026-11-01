@@ -9,6 +9,7 @@
 
 import { useEffect, useState } from "react";
 import { StockLink } from "@/components/stock/StockLink";
+import { upDownText } from "@/lib/updown";
 
 type Hit = {
   id: number;
@@ -51,10 +52,10 @@ export function InvalidationHitLog() {
       </div>
 
       {loading && <div className="mt-3 text-xs text-muted-foreground">로딩...</div>}
-      {error && <div className="mt-3 text-xs text-red-500">에러: {error}</div>}
+      {error && <div className="mt-3 text-xs text-warn">에러: {error}</div>}
 
       {!loading && !error && items !== null && items.length === 0 && (
-        <div className="mt-3 rounded-lg border border-dashed border-emerald-500/40 bg-emerald-500/5 p-4 text-center text-xs text-emerald-500">
+        <div className="mt-3 rounded-lg border border-dashed border-primary/40 bg-primary/5 p-4 text-center text-xs text-primary">
           ✅ 최근 90일 물타기 감지 판정 없음. 원칙 3 준수 중.
         </div>
       )}
@@ -78,14 +79,14 @@ export function InvalidationHitLog() {
                 <tr key={h.id} className="border-b border-border/40">
                   <td className="py-1.5 font-mono">#{h.id}</td>
                   <td className="py-1.5 font-mono font-bold"><StockLink ticker={h.ticker}>{h.ticker}</StockLink></td>
-                  <td className="py-1.5 text-[10px] text-muted-foreground">{h.page_source}</td>
+                  <td className="py-1.5 text-xs text-muted-foreground">{h.page_source}</td>
                   <td className="py-1.5 text-right font-mono">
                     {h.invalidation_price?.toLocaleString() ?? "—"}
                   </td>
-                  <td className="py-1.5 text-right font-mono text-red-500">
+                  <td className="py-1.5 text-right font-mono text-warn">
                     {h.invalidation_hit_low?.toLocaleString() ?? "—"}
                   </td>
-                  <td className="py-1.5 text-[10px] text-muted-foreground">
+                  <td className="py-1.5 text-xs text-muted-foreground">
                     {h.invalidation_hit_ts
                       ? new Date(h.invalidation_hit_ts).toLocaleString("ko-KR")
                       : "—"}
@@ -94,9 +95,7 @@ export function InvalidationHitLog() {
                     className={`py-1.5 text-right font-semibold ${
                       h.result_at_horizon === null
                         ? "text-muted-foreground"
-                        : h.result_at_horizon >= 0
-                        ? "text-emerald-500"
-                        : "text-red-500"
+                        : upDownText(h.result_at_horizon, "text-up")
                     }`}
                   >
                     {h.result_at_horizon !== null
