@@ -9,10 +9,19 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import warnings
 from dataclasses import dataclass
 from typing import Optional
 
 logger = logging.getLogger(__name__)
+
+# 1102-04: pytrends 내부 fillna 경고 (매시 2줄) 한 종류만 숨김 · 다른 경고는 그대로
+warnings.filterwarnings(
+    "ignore",
+    category=FutureWarning,
+    module=r"pytrends\.request",
+    message=r"Downcasting object dtype arrays",
+)
 
 _BATCH_SIZE = 5
 _BETWEEN_BATCH_SEC = 2.0

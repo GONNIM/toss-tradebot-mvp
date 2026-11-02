@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+from collections import Counter
 from dataclasses import dataclass
 from typing import Optional
 
@@ -38,7 +39,7 @@ class StocktwitsSentiment:
 
 
 async def _fetch_one(
-    ticker: str, client: httpx.AsyncClient
+    ticker: str, client: httpx.AsyncClient, failures: Optional[Counter] = None
 ) -> Optional[StocktwitsSentiment]:
     url = f"{_BASE}/streams/symbol/{ticker}.json"
     try:
@@ -53,7 +54,10 @@ async def _fetch_one(
         if e.response.status_code in (404, 422):
             # 종목 미등록 — silent skip
             return None
-        logger.warning(f"[stocktwits] {ticker} HTTP {e.response.status_code}")
+        if failures is not None:   # 1102-04: 묶음 끝에 한 줄로 모음
+            failures[f"HTTP {e.response.status_code}"] += 1
+        else:
+            logger.warning(f"[stocktwits] {ticker} HTTP {e.response.status_code}")
         return None
     except Exception as e:
         logger.warning(f"[stocktwits] {ticker} failed: {e}")
@@ -91,12 +95,13 @@ async def fetch_sentiment_batch(
     if not tickers:
         return {}
     result: dict[str, StocktwitsSentiment] = {}
+    failures: Counter = Counter()
     sem = asyncio.Semaphore(concurrency)
 
     async with httpx.AsyncClient() as client:
         async def bounded(t: str) -> tuple[str, Optional[StocktwitsSentiment]]:
             async with sem:
-                r = await _fetch_one(t, client)
+                r = await _fetch_one(t, client, failures)
                 await asyncio.sleep(_BETWEEN_REQ_SEC)
                 return t, r
 
@@ -106,6 +111,9 @@ async def fetch_sentiment_batch(
             if r is not None:
                 result[t] = r
 
+    if failures:
+        detail = " · ".join(f"{k} {n}종목" for k, n in sorted(failures.items()))
+        logger.warning(f"[stocktwits] batch 실패 {detail} (/{len(tickers)})")
     logger.info(
         f"[stocktwits] batch: {len(result)} / {len(tickers)} success"
     )

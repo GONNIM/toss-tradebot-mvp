@@ -1070,6 +1070,8 @@ if __name__ == "__main__":
         level=logging.INFO,
         format="%(asctime)s [%(name)s] %(levelname)s: %(message)s",
     )
+    # 1102-04: 잡 실행·성공 INFO 를 끔 (잡 실패는 ERROR 로 남음)
+    logging.getLogger("apscheduler.executors.default").setLevel(logging.WARNING)
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "--once",
