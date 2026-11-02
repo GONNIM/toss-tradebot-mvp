@@ -13,6 +13,11 @@ const config: Config = {
         // shadcn/ui CSS 변수 기반 (Phase H 에서 globals.css 정의)
         background: "hsl(var(--background))",
         foreground: "hsl(var(--foreground))",
+        // 1102-01: 없어서 bg-card 가 만들어지지 않았음 (모달 바탕 투명)
+        card: {
+          DEFAULT: "hsl(var(--card))",
+          foreground: "hsl(var(--card-foreground))",
+        },
         primary: {
           DEFAULT: "hsl(var(--primary))",
           foreground: "hsl(var(--primary-foreground))",
