@@ -73,6 +73,8 @@ logging.basicConfig(
     format="%(asctime)s %(levelname)s [%(name)s] %(message)s",
     force=True,
 )
+# 1102-04: 5초 잡의 「Running job / executed successfully」 INFO 를 끔 (잡 실패는 ERROR · 놓침은 WARNING 으로 남음)
+logging.getLogger("apscheduler.executors.default").setLevel(logging.WARNING)
 
 logger = logging.getLogger(__name__)
 
@@ -239,7 +241,7 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(
     title="Toss Tradebot MVP API",
-    version="0.3.29",
+    version="0.3.30",
     description="자동매매 + Crazy + Moonshot Discovery API",
     lifespan=lifespan,
 )

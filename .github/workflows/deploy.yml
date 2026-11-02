@@ -241,6 +241,14 @@ jobs:
           fi
           rm -f /tmp/biotech_cron.cur /tmp/biotech_cron.new
 
+          echo "[5.6/7] logrotate 설정 (1102-04 · deploy/logrotate/toss-tradebot · 문법 검사 실패 시 배포 중단)"
+          install -m 644 -o root -g root deploy/logrotate/toss-tradebot /etc/logrotate.d/toss-tradebot
+          if ! logrotate -d /etc/logrotate.d/toss-tradebot > /tmp/logrotate_check.txt 2>&1 \
+             || grep -qiE "^error" /tmp/logrotate_check.txt; then
+            cat /tmp/logrotate_check.txt; rm -f /etc/logrotate.d/toss-tradebot; exit 1
+          fi
+          echo "  logrotate 설정 설치 · 문법 통과"
+
           echo "[6/7] systemd restart"
           systemctl restart tradebot-api tradebot-cron
 
