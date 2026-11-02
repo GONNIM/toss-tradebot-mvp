@@ -179,7 +179,9 @@ async def get_sources() -> dict[str, Any]:
     dart_key = collecting.dart_configured()
     gov = gov_press.configured_sources()
     event_notes = []
-    if not dart_key:
+    if dart_key:
+        event_notes.append("DART 공시 (허용 목록만 점수 · 주의 공시는 따로 표시)")
+    else:
         event_notes.append("DART 키 없음")
     if not asm_key:
         event_notes.append("국회 의안 키 없음")

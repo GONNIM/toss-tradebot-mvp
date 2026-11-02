@@ -108,7 +108,7 @@ function PriceSourceBadge({
   return (
     <div className="text-xs text-primary leading-tight mt-0.5">
       {label}
-      {kstTime && <span className="text-zinc-400 ml-1">{kstTime}</span>}
+      {kstTime && <span className="text-muted-foreground ml-1">{kstTime}</span>}
     </div>
   );
 }
@@ -307,7 +307,7 @@ function Row({ it }: { it: Top10Item }) {
       <td className="px-2.5 py-2 font-bold text-primary text-base">#{it.rank}</td>
       <td className="px-2.5 py-2">
         <div className="font-semibold text-foreground leading-tight">{it.name}</div>
-        <div className="text-xs text-zinc-400 font-mono leading-tight mt-0.5">
+        <div className="text-xs text-muted-foreground font-mono leading-tight mt-0.5">
           <StockLink ticker={it.ticker}>{it.ticker}</StockLink> · {it.item}
         </div>
       </td>
@@ -339,7 +339,7 @@ function Row({ it }: { it: Top10Item }) {
           {entryStatusShort}
         </div>
         <div
-          className="text-xs text-zinc-400 font-mono leading-tight mt-0.5 cursor-help"
+          className="text-xs text-muted-foreground font-mono leading-tight mt-0.5 cursor-help"
           title={rationaleTooltip}
         >
           {rationale}
@@ -352,7 +352,7 @@ function Row({ it }: { it: Top10Item }) {
         >
           {formatKRW(it.point_price)}
         </div>
-        <div className="text-xs text-zinc-400 leading-tight mt-0.5">
+        <div className="text-xs text-muted-foreground leading-tight mt-0.5">
           {formatPct(it.point_pct, 1)} · {it.horizon_months}개월 뒤
         </div>
       </td>
@@ -361,7 +361,7 @@ function Row({ it }: { it: Top10Item }) {
           {it.stop_price !== null ? formatKRW(it.stop_price) : "—"}
         </div>
         {it.stop_pct !== null && (
-          <div className="text-xs text-zinc-400 leading-tight mt-0.5">
+          <div className="text-xs text-muted-foreground leading-tight mt-0.5">
             {formatPct(it.stop_pct, 1)}
           </div>
         )}
@@ -371,7 +371,7 @@ function Row({ it }: { it: Top10Item }) {
           {it.take_price !== null ? formatKRW(it.take_price) : "—"}
         </div>
         {it.take_pct !== null && (
-          <div className="text-xs text-zinc-400 leading-tight mt-0.5">
+          <div className="text-xs text-muted-foreground leading-tight mt-0.5">
             {formatPct(it.take_pct, 1)}
           </div>
         )}

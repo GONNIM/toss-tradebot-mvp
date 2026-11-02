@@ -609,7 +609,7 @@ function SourceStatusLine({ sources }: { sources: WatchlistSourceStatus[] }) {
             {s.collecting ? (
               <span>
                 수집 중 · 마지막 신호 {s.last_signal_at ? fmtKstDateTime(s.last_signal_at) : "최근 7일 없음"}
-                {s.last_saved_at ? ` · 마지막 저장 ${fmtKstDateTime(s.last_saved_at)}` : ""}
+                {s.last_saved_at ? ` · 마지막 실행 ${fmtKstDateTime(s.last_saved_at)}` : ""}
               </span>
             ) : (
               <span className="text-warn">수집 안 함</span>
