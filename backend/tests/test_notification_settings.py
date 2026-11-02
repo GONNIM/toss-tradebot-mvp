@@ -88,7 +88,7 @@ def test_engine_has_sqlite_busy_timeout():
     from backend.services import db
 
     if db.DATABASE_URL.startswith("sqlite"):
-        assert db._connect_args() == {"timeout": 5}
+        assert db._connect_args() == {"timeout": 30}
     assert db._connect_args_for("postgresql+asyncpg://x") == {}
 
 

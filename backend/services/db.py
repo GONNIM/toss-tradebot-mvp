@@ -31,8 +31,11 @@ DATABASE_URL = database_url()
 
 
 def _connect_args_for(url: str) -> dict:
-    """SQLite 는 api·cron·biotech 세 프로세스가 같은 파일을 쓰므로 잠금 대기 5초 (Postgres 는 없음)."""
-    return {"timeout": 5} if url.startswith("sqlite") else {}
+    """SQLite 는 api·cron 두 프로세스가 같은 파일을 쓰므로 잠금 대기 30초 (Postgres 는 없음).
+
+    1102-05: 5초면 대량 쓰기 잡(거래량 수집 등)과 겹친 짧은 주기 잡이 「database is locked」 로 실패했다.
+    """
+    return {"timeout": 30} if url.startswith("sqlite") else {}
 
 
 def _connect_args() -> dict:
