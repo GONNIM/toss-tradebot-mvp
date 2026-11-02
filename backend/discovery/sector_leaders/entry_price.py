@@ -207,7 +207,7 @@ def compute_entry_price(
     entry_gap_pct = (entry_price / current_price - 1) * 100  # 음수
 
     if entry_gap_pct >= -NEAR_ENTRY_TOLERANCE_PCT:
-        entry_status = "🟢 참고선 근처 (차이 0.5% 안)"
+        entry_status = f"🟢 참고선 근처 (차이 {NEAR_ENTRY_TOLERANCE_PCT:g}% 안)"
     else:
         entry_status = f"🟡 참고선이 {abs(entry_gap_pct):.1f}% 아래"
 

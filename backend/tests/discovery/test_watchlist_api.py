@@ -178,3 +178,13 @@ async def test_sources_never_exposes_key_value(client, monkeypatch):
     assert "dummy-not-a-real-key" not in resp.text
     by = {s["key"]: s for s in resp.json()["sources"]}
     assert by["youtube"]["collecting"] is True and by["event"]["collecting"] is True
+
+
+@pytest.mark.asyncio
+async def test_sources_event_note_names_dart_when_configured(client, monkeypatch):
+    """1102-03: DART 키가 있으면 이벤트 칸 설명이 DART 공시를 말한다."""
+    monkeypatch.setenv("DART_API_KEY", "dummy-not-a-real-key-123")
+    resp = await client.get("/api/v1/watchlist/sources")
+    by = {s["key"]: s for s in resp.json()["sources"]}
+    assert by["event"]["note"].startswith("DART 공시")
+    assert "dummy" not in resp.text
