@@ -95,6 +95,65 @@ class SniperParams:
     watchlist_execute_poll_sec: int = 30           # 30초마다 스캔
     watchlist_chase_max_change_pct: float = 10.0   # 순위 신호 추격 제외 · 당일 등락률(%)이 이 값을 넘으면 새 진입이어도 신호 안 줌 (1030-04)
 
+    def __post_init__(self) -> None:
+        """값 범위 검사 (1030-06 Fable 권고) · 어긋나면 ValueError → PUT /sniper/params 400 · 파일 로드는 기본값."""
+        errors = _range_errors(self)
+        if errors:
+            raise ValueError("; ".join(errors))
+
+
+def _hhmm(v: Any) -> Optional[int]:
+    try:
+        h, m = str(v).split(":")
+        h_i, m_i = int(h), int(m)
+    except (ValueError, AttributeError):
+        return None
+    if 0 <= h_i <= 23 and 0 <= m_i <= 59:
+        return h_i * 60 + m_i
+    return None
+
+
+def _range_errors(p: "SniperParams") -> list[str]:
+    """뜻이 깨지는 값만 막는다 (부호 · 순서 · 0 이하). 운영 값을 좁히지 않도록 범위는 넓게 둔다."""
+    e: list[str] = []
+
+    def need(ok: bool, msg: str) -> None:
+        if not ok:
+            e.append(msg)
+
+    need(p.seed_cap_krw > 0, "seed_cap_krw 는 0 보다 커야 함")
+    need(0 < p.per_order_krw <= p.seed_cap_krw, "per_order_krw 는 0 초과 · seed_cap_krw 이하")
+    need(p.max_concurrent_positions >= 1, "max_concurrent_positions 는 1 이상")
+    need(0 < p.trailing_giveback_pct < 1, "trailing_giveback_pct 는 0~1 사이 (예 0.03)")
+    need(-1 < p.hard_stop_loss_pct < 0, "hard_stop_loss_pct 는 -1~0 사이 음수 (예 -0.03)")
+    need(-1 < p.daily_loss_limit_pct < 0, "daily_loss_limit_pct 는 -1~0 사이 음수")
+    need(-1 < p.weekly_loss_limit_pct < 0, "weekly_loss_limit_pct 는 -1~0 사이 음수")
+    for name in ("active_start_kst", "active_end_kst", "force_close_kst",
+                 "watchlist_execute_start_kst", "watchlist_execute_end_kst"):
+        need(_hhmm(getattr(p, name)) is not None, f"{name} 는 HH:MM")
+    s, t = _hhmm(p.active_start_kst), _hhmm(p.active_end_kst)
+    need(s is None or t is None or s < t, "active_start_kst 는 active_end_kst 보다 앞")
+    s, t = _hhmm(p.watchlist_execute_start_kst), _hhmm(p.watchlist_execute_end_kst)
+    need(s is None or t is None or s < t, "watchlist_execute_start_kst 는 end 보다 앞")
+    for name in ("universe_market_cap_min_krw", "universe_adv_20d_min_krw", "universe_float_max_shares",
+                 "universe_price_min_krw", "universe_squeeze_float_max", "tape_score_threshold",
+                 "rank_velocity_z_min", "trades_intensity_z_min", "orderbook_z_min",
+                 "score_weight_rank", "score_weight_trades", "score_weight_orderbook",
+                 "sustained_rise_min_sec"):
+        need(getattr(p, name) >= 0, f"{name} 는 0 이상")
+    need(p.universe_market_cap_min_krw < p.universe_market_cap_max_krw, "시총 하한은 상한보다 작아야 함")
+    need(p.score_weight_rank + p.score_weight_trades + p.score_weight_orderbook > 0, "가중치 합은 0 보다 커야 함")
+    need(p.entry_return_min_pct < p.entry_return_max_pct, "entry_return_min_pct 는 max 보다 작아야 함")
+    need(p.same_ticker_daily_limit >= 1, "same_ticker_daily_limit 는 1 이상")
+    need(1 <= p.rank_target_min <= p.rank_target_max, "rank_target_min 은 1 이상 · max 이하")
+    for name in ("poll_rankings_sec", "poll_trades_sec", "poll_orderbook_sec",
+                 "poll_trailing_price_sec", "watchlist_execute_poll_sec"):
+        need(getattr(p, name) >= 1, f"{name} 는 1 이상")
+    need(p.watchlist_gap_min_pct <= p.watchlist_gap_max_pct, "watchlist_gap_min_pct 는 max 이하")
+    need(0 <= p.watchlist_min_composite_score <= 1, "watchlist_min_composite_score 는 0~1 (점수 v2)")
+    need(p.watchlist_chase_max_change_pct > 0, "watchlist_chase_max_change_pct 는 0 보다 커야 함")
+    return e
+
 
 class SniperParamsStore:
     """파일 기반 파라미터 스토어 · hot reload · thread-safe."""
