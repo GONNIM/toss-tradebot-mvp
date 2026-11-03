@@ -30,6 +30,21 @@ from backend.services.ticker_map import is_private_or_brand, to_yfinance_symbol
 logger = logging.getLogger(__name__)
 
 CONCURRENCY = 4
+RETRY_AFTER_DAYS = 7      # 1102-07: 마지막 성공(또는 처음 만든 날)이 7일 넘게 지난 실패 종목은
+RETRY_WEEKDAY = 0         #          월요일에만 다시 조회 (매일 헛호출·yfinance ERROR 줄 줄임)
+
+
+def _skip_until_weekly_retry(row, symbol: str, today) -> bool:
+    """오래 실패한 종목인지 · 심볼이 바뀌었으면 (매핑 고침) 바로 다시 조회한다."""
+    if row is None or row.close is not None or not row.error or row.error.startswith("private"):
+        return False
+    if (row.yahoo_symbol or "") != symbol:
+        return False
+    try:
+        last = datetime.strptime(row.snapshot_date, "%Y-%m-%d").date()
+    except (TypeError, ValueError):
+        return False
+    return (today - last).days >= RETRY_AFTER_DAYS and today.weekday() != RETRY_WEEKDAY
 _HISTORY_DAYS = 7
 _MAX_LOOKBACK_DAYS = 400  # first_mention_at 최대 커버 범위 (yfinance range 상한 방어)
 
@@ -261,7 +276,10 @@ async def refresh_prices(
     fm_map = await first_mention_map(tickers)
 
     sem = asyncio.Semaphore(CONCURRENCY)
-    stats = {"targets": len(tickers), "ok": 0, "failed": 0, "skipped": 0}
+    stats = {"targets": len(tickers), "ok": 0, "failed": 0, "skipped": 0, "weekly_retry_wait": 0}
+    async with get_session() as session:
+        existing = {r.ticker: r for r in (await session.execute(select(SerenityTickerPrice))).scalars().all()}
+    today = (datetime.utcnow() + timedelta(hours=9)).date()   # KST
 
     async def _one(tk: str) -> None:
         async with sem:
@@ -276,6 +294,9 @@ async def refresh_prices(
                 return
 
             symbol = to_yfinance_symbol(tk)
+            if _skip_until_weekly_retry(existing.get(tk), symbol, today):
+                stats["weekly_retry_wait"] += 1
+                return
             fm_dt = fm_map.get(tk)
             fm_date_str = fm_dt.strftime("%Y-%m-%d") if fm_dt else None
             bundle = await asyncio.to_thread(
