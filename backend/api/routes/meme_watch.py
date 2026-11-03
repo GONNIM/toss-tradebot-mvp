@@ -29,13 +29,18 @@ router = APIRouter()
 
 
 async def _sources_status() -> dict[str, str]:
-    """최근 12시간 내 각 소스가 적재된 row 가 있는지로 상태 판정."""
+    """최근 12시간 내 각 소스가 적재된 row 가 있는지로 상태 판정 · 수집을 끈 소스는 "off" (1102-06)."""
     from datetime import timedelta
+
+    from backend.discovery.meme_watch.scheduler import stocktwits_enabled
 
     cutoff = datetime.now() - timedelta(hours=12)
     out: dict[str, str] = {}
     async with get_session() as session:
         for src in ["apewisdom", "stocktwits", "google_trends", "reddit"]:
+            if src == "stocktwits" and not stocktwits_enabled():
+                out[src] = "off"
+                continue
             row = (
                 await session.execute(
                     select(MemeSocialSignal.id)

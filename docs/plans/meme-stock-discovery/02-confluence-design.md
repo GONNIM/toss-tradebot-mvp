@@ -73,6 +73,8 @@ def normalize_weights(available_signals: set[str]) -> dict[str, float]:
 
 3개 sub-source (Reddit + Stocktwits + Google Trends) → z-score 평균.
 
+> 메모 (2026-11-03 · 1102-06): 코드 (`meme_watch/top.py` · `intensity.py`) 는 apewisdom · google_trends 만 읽는다. 아래 `z_stocktwits` 는 구현된 적이 없고, stocktwits 수집은 HTTP 403 (로그 첫 기록 2026-08-22~) 으로 꺼 두었다 (`MEME_STOCKTWITS_ENABLED`).
+
 ```python
 # 24h 윈도우 - mention_count 의 30일 평균·std
 z_reddit    = (today_mentions - mean_30d) / std_30d

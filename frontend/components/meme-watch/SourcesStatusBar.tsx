@@ -21,6 +21,18 @@ export function SourcesStatusBar({
       <span className="text-muted-foreground">데이터 소스:</span>
       {entries.map(([src, st]) => {
         const ok = st === "ok";
+        if (st === "off") {
+          // 1102-06: 수집을 끈 소스 (접근 거부) · 경고색 대신 회색
+          return (
+            <span
+              key={src}
+              className="rounded-full border border-border px-2 py-0.5 text-muted-foreground"
+              title="접근 거부 (HTTP 403 · 로그 첫 기록 2026-08-22~) 로 수집을 껐습니다 · 점수에는 쓰지 않습니다"
+            >
+              {SOURCE_LABELS[src] || src} · 수집 안 함 (접근 거부)
+            </span>
+          );
+        }
         return (
           <span
             key={src}
