@@ -48,6 +48,7 @@ def _matcher(*entries: tuple[str, str]) -> TickerMatcher:
     m._entries.sort(key=lambda e: -len(e.name))
     m._name_index = [(e.name.lower(), e.ticker) for e in m._entries]
     m._aliases = {}   # 별칭 파일과 무관하게
+    m._loaded_at = datetime.now(tz=timezone.utc)   # 1103-02: ensure_loaded 가 실 코스피 목록을 받아 덮지 않게
     return m
 
 

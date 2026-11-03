@@ -96,7 +96,7 @@ async def upsert_signal(
                 and_(
                     WatchlistSignal.ticker == ticker,
                     same_source,
-                    WatchlistSignal.detected_at >= datetime.now(tz=timezone.utc) - timedelta(days=_DEDUP_URL_DAYS),
+                    WatchlistSignal.detected_at >= detected_at - timedelta(days=_DEDUP_URL_DAYS),   # 1103-02: 벽시계 대신 이 신호 시각 기준
                     WatchlistSignal.payload_json.contains(json.dumps(dedup_url, ensure_ascii=False), autoescape=True),
                 )
             ).limit(1)
