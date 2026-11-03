@@ -61,7 +61,7 @@ _YFINANCE_SYMBOL: dict[str, str] = {
     "TOSOH": "4042.T",           # Tosoh Corp JP
     "TOWA": "6315.T",            # Towa Corp JP
     "ULVAC": "6728.T",           # Ulvac JP
-    "WIN": "3105.TW",            # WIN Semiconductors TW
+    "WIN": "3105.TWO",           # WIN Semiconductors · 대만 장외 (TPEx) · 1102-07: .TW 는 0행
     "WINBOND": "2344.TW",        # Winbond Electronics TW
     "XFAB": "XFAB.PA",           # X-Fab
     "COHR": "COHR",
@@ -102,6 +102,38 @@ _YFINANCE_SYMBOL: dict[str, str] = {
     "RKLB": "RKLB",
     "ASTS": "ASTS",
     "SPCX": "SPCX",
+    # ─── 1102-07 (2026-11-03) · 서버 실패 종목 · 로컬 yfinance longName 대조로 확정 ───
+    # 같은 4자리 번호가 대만·일본 둘 다 있는 경우가 있어 자동 추측하지 않고 여기 적는다.
+    "3374": "3374.TWO",          # Xintec (TPEx) · 3374.T 는 Naigai Tec (다른 회사)
+    "XINTEC": "3374.TWO",
+    "3675": "3675.TWO",          # Eris Technology (TPEx) · 3675.T 는 Cross Marketing
+    "3675.TW": "3675.TWO",
+    "6693": "6693.TWO",          # Inergy Technology (TPEx)
+    "6693.TW": "6693.TWO",
+    "7712": "7712.TWO",          # Potens Semiconductor (TPEx)
+    "7712.TW": "7712.TWO",
+    "8147": "8147.TWO",          # Nextronics Engineering (TPEx) · 8147.T 는 Tomita
+    "NEXTRONICS": "8147.TWO",
+    "3625": "3625.TWO",          # C-Tech United (TPEx) · 3625.T 는 Techfirm
+    "6976": "6976.T",            # Taiyo Yuden (JP) · 6976.TWO 는 Acepodia (다른 회사)
+    "6976.TW": "6976.T",
+    "6315": "6315.T",            # TOWA (JP)
+    "6324": "6324.T",            # Harmonic Drive Systems (JP)
+    "4092": "4092.T",            # Nippon Chemical Industrial (JP)
+    "2768": "2768.T",            # Sojitz (JP)
+    "2481": "2481.TW",           # PANJIT (TW) · 2481.T 는 Townnews-Sha
+    "KYEC": "2449.TW",           # King Yuan Electronics
+    "PSMC": "6770.TW",           # Powerchip Semiconductor Manufacturing
+    "ETRON": "5351.TWO",         # Etron Technology (TPEx)
+    "ESMT": "3006.TW",           # Elite Semiconductor Microelectronics
+}
+
+# 「거래소:번호」 원문 (TPEX:3625 · TYO:6976) → 접미어 · 1102-07
+_EXCHANGE_PREFIX: dict[str, str] = {
+    "TPEX": ".TWO", "TWO": ".TWO",
+    "TPE": ".TW", "TWSE": ".TW",
+    "TYO": ".T", "TSE": ".T",
+    "KRX": ".KS",
 }
 
 # ─── Private / 브랜드명 / 미상장 · yfinance 호출 스킵 ────────────
@@ -119,7 +151,7 @@ _PRIVATE_OR_BRAND: frozenset[str] = frozenset({
     "ADVAN", "ALRIB", "AURO", "AUROS", "CMXT", "CNEX", "CRBS",
     "ENNR", "ENPL", "ENPLAS", "FOCI", "FON", "GNC", "HARPO",
     "HAYL", "HB", "HPELF",
-    "MSSCORP", "MSSCORPS", "NEXTRONICS",
+    "MSSCORP", "MSSCORPS",
     "OE SOLUTIONS", "SAMYANG NC CHEM", "YC CHEM",
     "RASA", "RIBER".upper() if False else "RIBER_SKIP_PLACEHOLDER",   # RIBER 는 매핑됨 · placeholder 제거
     # 일반 카테고리·약어·지수 (실 티커 아님)
@@ -127,7 +159,7 @@ _PRIVATE_OR_BRAND: frozenset[str] = frozenset({
     # Unknown / 오타 / duplicate (매핑 불가)
     "UNKNOWN", "P4O", "PLY", "PROJ", "SHA0", "SHUN", "SSDI",
     "TYNT", "VNP", "WIM", "WINS", "WSEM", "WSTM", "XINT",
-    "LPK", "LPKK", "MACOM", "TPEX:3625",
+    "LPK", "LPKK", "MACOM",
     # 상장폐지
     "SIVB",   # Silicon Valley Bank 파산 2023
     # 명확 미상장·회사명 축약 (Serenity 원문 그대로)
@@ -136,6 +168,8 @@ _PRIVATE_OR_BRAND: frozenset[str] = frozenset({
     "HPS.A", "HSP.A",
     # 800V · 규격 이름 · 티커 아님
     "800V",
+    # 1102-07: 비상장 (YMTC) · 합병 상장폐지 (SPIL → ASE 2018) · 이름만으로 회사를 못 정함 (WALSIN 1605/2492 · SUMIMOTO · MACRO)
+    "YMTC", "SPIL", "WALSIN", "SUMIMOTO", "MACRO",
 })
 # placeholder 자체는 skip 리스트에서 노출되지 않아야 · rebuild
 _PRIVATE_OR_BRAND = frozenset(x for x in _PRIVATE_OR_BRAND if x != "RIBER_SKIP_PLACEHOLDER")
@@ -183,6 +217,15 @@ def to_yfinance_symbol(raw: str) -> str:
 
     if ticker in _YFINANCE_SYMBOL:
         return _YFINANCE_SYMBOL[ticker]
+
+    # 「거래소:번호」 (1102-07) · 번호가 명시 매핑에 있으면 그것을 따른다
+    if ":" in ticker:
+        exch, _, code = ticker.partition(":")
+        if code in _YFINANCE_SYMBOL:
+            return _YFINANCE_SYMBOL[code]
+        suffix = _EXCHANGE_PREFIX.get(exch)
+        if suffix and code:
+            return code + suffix
 
     auto = _auto_suffix(ticker)
     if auto:
