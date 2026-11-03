@@ -14,6 +14,7 @@
 from __future__ import annotations
 
 import logging
+import os
 
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.cron import CronTrigger
@@ -34,6 +35,14 @@ from backend.discovery.meme_watch.volume_snapshot import (
 )
 
 logger = logging.getLogger(__name__)
+
+
+def stocktwits_enabled() -> bool:
+    """1102-06: stocktwits 는 로그 첫 기록 2026-08-22 부터 HTTP 403 (저장 0) · 밈 점수는 읽지 않음 → 기본 꺼짐.
+
+    정식 API 승인을 받으면 MEME_STOCKTWITS_ENABLED=1 로 다시 켠다.
+    """
+    return os.getenv("MEME_STOCKTWITS_ENABLED", "").strip().lower() in ("1", "true", "yes", "on")
 
 
 def register_meme_jobs(scheduler: AsyncIOScheduler) -> None:
@@ -80,14 +89,15 @@ def register_meme_jobs(scheduler: AsyncIOScheduler) -> None:
     )
     # Stocktwits — apewisdom 상위 100 ticker sentiment delta.
     # 2분 offset 으로 apewisdom 후 실행 → 최신 baseline 사용 + 외부 호출 분산.
-    scheduler.add_job(
-        build_stocktwits_signals,
-        trigger=CronTrigger(minute="2-59/5", timezone="Asia/Seoul"),
-        id="meme_social_stocktwits_5min",
-        name="5분마다 (2분 offset) — apewisdom Top 100 종목 Stocktwits sentiment",
-        replace_existing=True,
-        misfire_grace_time=300,
-    )
+    if stocktwits_enabled():
+        scheduler.add_job(
+            build_stocktwits_signals,
+            trigger=CronTrigger(minute="2-59/5", timezone="Asia/Seoul"),
+            id="meme_social_stocktwits_5min",
+            name="5분마다 (2분 offset) — apewisdom Top 100 종목 Stocktwits sentiment",
+            replace_existing=True,
+            misfire_grace_time=300,
+        )
     # Google Trends — pytrends Captcha 회피 위해 매시 15분 1회, top 30 종목만.
     scheduler.add_job(
         build_trends_signals,
@@ -126,11 +136,8 @@ def register_meme_jobs(scheduler: AsyncIOScheduler) -> None:
         misfire_grace_time=300,
     )
     # Reddit 직접 fetch (PRAW) 는 A 승인 후 활성. build_reddit_signals 함수는 보존.
+    meme_ids = [j.id for j in scheduler.get_jobs() if j.id.startswith("meme_")]
     logger.info(
-        "[meme_watch.scheduler] 5 jobs registered: "
-        "meme_universe_weekly (Sun 03:00) · "
-        "meme_volume_us_daily (06:00 KST) · "
-        "meme_social_apewisdom_5min (every 5m) · "
-        "meme_social_stocktwits_5min (5m +2 offset) · "
-        "meme_social_trends_hourly (XX:15)"
+        "[meme_watch.scheduler] %d jobs registered: %s · stocktwits=%s",
+        len(meme_ids), " · ".join(sorted(meme_ids)), "on" if stocktwits_enabled() else "off (1102-06)",
     )

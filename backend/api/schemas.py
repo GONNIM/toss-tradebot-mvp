@@ -643,7 +643,7 @@ class MemeWatchTopResponse(BaseModel):
     items: list[MemeScoreResponse]
     total: int
     computed_at: str
-    sources_status: dict[str, str]   # {"apewisdom":"ok","stocktwits":"blocked",...}
+    sources_status: dict[str, str]   # {"apewisdom":"ok","stocktwits":"off",...} · ok / blocked / off (1102-06)
 
 
 # ─── 1025-08 · 토스 실계좌 보유 (/account) ─────────────────────────────

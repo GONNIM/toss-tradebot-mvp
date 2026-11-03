@@ -1831,7 +1831,7 @@ export interface MemeWatchTopResponse {
   items: MemeScoreItem[];
   total: number;
   computed_at: string;
-  sources_status: Record<string, string>;  // {"apewisdom":"ok",...}
+  sources_status: Record<string, string>;  // ok / blocked / off (1102-06 · 수집 끔)
 }
 
 // ─────────────────────────────────────────────
