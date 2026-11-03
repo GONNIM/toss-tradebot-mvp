@@ -95,7 +95,7 @@ def main():
         "> ⚠️ **토론방 소문은 진위 미검증 · 참고용** · 매수 신호 아님 · 소액 실전 규칙 적용",
         "",
         f"- **후보 (레이더 v1.3 관찰 대상)**: {len(cands)}종목 · 시간 상태: A(뉴스 예정) {state_dist.get('A',0)} · B(뉴스 통과) {state_dist.get('B',0)} · C(해당없음) {state_dist.get('C',0)}",
-        f"- **오늘 언급 있음 (StockTwits 24h 관측)**: {len(active)}종목 · **조용 (초기 자리 후보 · baseline 미확보 포함)**: {len(quiet)}종목",
+        f"- **오늘 언급 있음 (apewisdom 24h 관측)**: {len(active)}종목 · **조용 (초기 자리 후보 · baseline 미확보 포함)**: {len(quiet)}종목",
         "",
         "## 표 1 · 소문에 살 자리 후보 (A (뉴스 예정) ∧ 조용/초기 (quiet/collecting) · 예정일 가까운 순)",
         "",
@@ -183,15 +183,15 @@ def main():
         else:
             lines.append("- (최근 20 거래일 내 F4_buy 이벤트 없음)")
 
-    # StockTwits 24h 관측 · baseline 미확보 통계 (사전 커밋 규칙 유지)
+    # 24h 언급 (st_24h = apewisdom · WP69-3d) · baseline 미확보 통계 (사전 커밋 규칙 유지)
     st_nonzero = sum(1 for c in cands if int((c["_conf"].get("st_24h") or 0) or 0) > 0)
     st_baseline_ready = sum(1 for c in cands if int((c["_conf"].get("st_baseline_n") or 0) or 0) >= 7)
     lines += [
         "",
         "## 데이터 소스 상태 (WP48v3 · 사전 커밋 규칙 유지)",
         "",
-        f"- StockTwits API 자체: **정상** (대형 바이오 MRNA/NVAX in_24h > 15 확인 · 2026-09-14)",
-        f"- 후보 79종목 중 st_24h > 0 실측: **{st_nonzero}종목** (37%)",
+        "- 언급 수 출처: **apewisdom 24시간 언급** (WP69-3d 부터 · StockTwits 는 서버 접근 거부 HTTP 403 으로 쓰지 않음 · 1103-01)",
+        f"- 후보 {len(cands)}종목 중 st_24h > 0 실측: **{st_nonzero}종목** ({(st_nonzero / len(cands) * 100) if cands else 0:.0f}%)",
         f"- baseline_n ≥ 7 (판정 활성): **{st_baseline_ready}종목** · 나머지는 collecting (30일 baseline 확보 대기)",
         f"- 위 표 '언급 있음' 은 baseline 확보된 종목만 · **st_24h > 0 이라도 baseline_n < 7 이면 collecting → quiet 로 카운트** (사전 커밋 규칙)",
         "- 30일 자동 실행 후 baseline_n ≥ 7 확보되면 판정 자동 활성화",
