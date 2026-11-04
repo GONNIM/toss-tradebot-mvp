@@ -161,14 +161,28 @@ STEP="정리"
 log "[5/5] LATEST 갱신 · 성공 스냅샷 ${BACKUP_KEEP}개만 남김..."
 ln -sfn "$TIMESTAMP" "$LATEST_LINK"
 
-# 이름 (YYYYMMDD_HHMMSS) 이 시각 순이라 거꾸로 정렬해 앞의 KEEP 개를 뺀 나머지를 지운다.
+# 이름 (YYYYMMDD_HHMMSS) 이 시각 순이고 glob 은 이름 순으로 펼쳐지므로, 앞 (오래된 쪽) 에서
+# 개수 - KEEP 개를 지운다. 배열로 받아 BACKUP_DIR 에 빈칸이 있어도 나뉘지 않는다 (1103-03 Fable 권고 1).
+list_snapshots() {
+    SNAPS=()
+    local d
+    for d in "$BACKUP_DIR"/[0-9]*_[0-9]*/; do
+        [ -d "$d" ] && SNAPS+=("$d")
+    done
+    return 0
+}
+list_snapshots
 REMOVED=0
-for d in $(ls -1d "$BACKUP_DIR"/[0-9]*_[0-9]*/ 2>/dev/null | sort -r | tail -n +$(( BACKUP_KEEP + 1 ))); do
+i=0
+while [ $(( ${#SNAPS[@]} - i )) -gt "$BACKUP_KEEP" ]; do
+    d="${SNAPS[$i]}"
+    i=$(( i + 1 ))
     [ -f "${d}.ok" ] || continue
     rm -rf "$d"
     REMOVED=$(( REMOVED + 1 ))
 done
-REMAINING=$(ls -1d "$BACKUP_DIR"/[0-9]*_[0-9]*/ 2>/dev/null | wc -l | tr -d ' ')
+list_snapshots
+REMAINING=${#SNAPS[@]}
 
 STEP="끝"
 log "backup ok dir=${SNAPSHOT_DIR} db_mb=${DB_SIZE_MB} gz_mb=${GZ_SIZE_MB} sec=$(( $(date +%s) - START_SEC )) kept=${REMAINING} removed=${REMOVED} disk=$(df -P "$BACKUP_DIR" | awk 'NR==2 {print $5}')"
