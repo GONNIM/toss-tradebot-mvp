@@ -7,7 +7,15 @@ import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api, KillSwitchStatus, SniperParams, SniperStatus } from "@/lib/api";
 import { fmtKstHm } from "@/lib/time";
-import { activePathsLabel, actorLabel, lossLimitLabel, manualEntryLabel, orderTargetLabel, safetyConclusion } from "@/lib/sniper-safety";
+import {
+  activePathsLabel,
+  actorLabel,
+  killSwitchModeLabel,
+  lossLimitLabel,
+  manualEntryLabel,
+  orderTargetLabel,
+  safetyConclusion,
+} from "@/lib/sniper-safety";
 
 const TONE = {
   stop: "border-warn/40 bg-warn/5 text-warn",
@@ -31,11 +39,14 @@ export function SafetyPanel() {
     retry: (n, e) => ![401, 404].includes(statusOf(e) ?? 0) && n < 2,
   });
   const [reason, setReason] = useState("");
+  // 1105-02 · 기본 꺼짐 = 보유 종목 손절·추적 매도는 계속
+  const [stopSells, setStopSells] = useState(false);
   const refresh = () => qc.invalidateQueries({ queryKey: ["sniper"] });
   const activate = useMutation({
-    mutationFn: (r: string) => api.sniper.killSwitch.activate(r),
+    mutationFn: (v: { reason: string; sellAllowed: boolean }) => api.sniper.killSwitch.activate(v.reason, v.sellAllowed),
     onSuccess: () => {
       setReason("");
+      setStopSells(false);
       refresh();
     },
   });
@@ -49,6 +60,7 @@ export function SafetyPanel() {
         watchlist_enabled: s.watchlist_execute?.enabled ?? false,
         router_enabled: s.signal_router_enabled,
         kill_switch_active: s.kill_switch_active,
+        kill_switch_sell_allowed: s.kill_switch_sell_allowed,
         order_target: s.order_target,
       }
     : null;
@@ -57,6 +69,7 @@ export function SafetyPanel() {
   // 조회 오류 (로그아웃 직후 401 포함) 가 있으면 지난 데이터로 버튼을 보이지 않는다
   const ksData = ks.error ? undefined : ks.data;
   const active = ksData?.active === true;
+  const sellsStopped = ksData?.sell_allowed === false;
 
   return (
     <section className="space-y-3 rounded-lg border border-border bg-card p-4">
@@ -90,6 +103,7 @@ export function SafetyPanel() {
           <dd className="font-semibold">
             {needLogin ? "관리자 로그인이 필요합니다" : ks.error ? "조회 실패" : ks.isLoading ? "확인 중…" : active ? "🚨 발동 중" : "대기"}
           </dd>
+          {active && <dd className="text-xs font-semibold">{killSwitchModeLabel(ksData?.sell_allowed)}</dd>}
           {active && ksData?.reason && (
             <dd className="text-xs text-muted-foreground">
               사유: {ksData.reason} · 누가: {actorLabel(ksData.activated_by)}
@@ -100,32 +114,53 @@ export function SafetyPanel() {
       </dl>
       {ksData && (
         active ? (
-          <button
-            type="button"
-            onClick={() => deactivate.mutate()}
-            disabled={deactivate.isPending}
-            className="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white hover:bg-primary disabled:opacity-50"
-          >
-            {deactivate.isPending ? "해제 중…" : "수동 해제"}
-          </button>
-        ) : (
           <div className="flex flex-col gap-2 sm:flex-row">
-            <input
-              type="text"
-              value={reason}
-              onChange={(e) => setReason(e.target.value)}
-              placeholder="발동 사유 (예: 시장 급락 대응)"
-              maxLength={200}
-              className="flex-1 rounded-lg border border-border bg-background px-3 py-2 text-sm"
-            />
             <button
               type="button"
-              onClick={() => reason.trim() && activate.mutate(reason.trim())}
-              disabled={activate.isPending || !reason.trim()}
-              className="rounded-lg bg-warn px-4 py-2 text-sm font-semibold text-white hover:bg-warn disabled:opacity-50"
+              onClick={() => deactivate.mutate()}
+              disabled={deactivate.isPending}
+              className="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white hover:bg-primary disabled:opacity-50"
             >
-              {activate.isPending ? "발동 중…" : "수동 발동"}
+              {deactivate.isPending ? "해제 중…" : "수동 해제"}
             </button>
+            {/* 1105-02 · 켜진 상태에서 「매도도 멈춤」 으로 좁히기 (반대로 푸는 것은 해제 뒤 재발동) */}
+            {!sellsStopped && (
+              <button
+                type="button"
+                onClick={() => activate.mutate({ reason: "보유 종목 매도도 멈춤", sellAllowed: false })}
+                disabled={activate.isPending}
+                className="rounded-lg border border-warn px-4 py-2 text-sm font-semibold text-warn disabled:opacity-50"
+              >
+                {activate.isPending ? "바꾸는 중…" : "매도도 멈춤"}
+              </button>
+            )}
+          </div>
+        ) : (
+          <div className="space-y-2">
+            <div className="flex flex-col gap-2 sm:flex-row">
+              <input
+                type="text"
+                value={reason}
+                onChange={(e) => setReason(e.target.value)}
+                placeholder="발동 사유 (예: 시장 급락 대응)"
+                maxLength={200}
+                className="flex-1 rounded-lg border border-border bg-background px-3 py-2 text-sm"
+              />
+              <button
+                type="button"
+                onClick={() => reason.trim() && activate.mutate({ reason: reason.trim(), sellAllowed: !stopSells })}
+                disabled={activate.isPending || !reason.trim()}
+                className="rounded-lg bg-warn px-4 py-2 text-sm font-semibold text-white hover:bg-warn disabled:opacity-50"
+              >
+                {activate.isPending ? "발동 중…" : "수동 발동"}
+              </button>
+            </div>
+            {/* 1105-02 ㉮ A · 기본 꺼짐 = 새 매수만 멈추고 보유 종목 손절·추적 매도는 계속 */}
+            <label className="flex min-h-[44px] items-center gap-2 text-sm">
+              <input type="checkbox" checked={stopSells} onChange={(e) => setStopSells(e.target.checked)} className="h-5 w-5" />
+              보유 종목 매도도 멈춤
+              <span className="text-xs text-muted-foreground">(끄면 새 매수만 멈추고 손절·추적 매도는 계속)</span>
+            </label>
           </div>
         )
       )}

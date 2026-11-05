@@ -119,7 +119,8 @@ class TossAdapter(OrderManager):
     # ═══════════════════════════════════════════════════════════════
     def submit_order(self, req: OrderRequest) -> OrderResult:
         # 1) Kill Switch
-        if self._ks.is_active():
+        # 켜지면 매수는 늘 막고 · 매도는 sell_allowed=False 일 때만 막음 (1105-02)
+        if self._ks.blocks(req.side):
             raise KillSwitchActive(self._ks.status().reason or "kill switch active")
 
         # 2) 정규장 게이팅 (Toss 422 order-hours-closed 방어선)

@@ -11,6 +11,8 @@ export interface SafetyInput {
   /** 신호 연결 · 서버가 아직 이 값을 주지 않으면 undefined (꺼짐으로 보지 않음) */
   router_enabled: boolean | undefined;
   kill_switch_active: boolean;
+  /** 1105-02 · 켜진 동안 보유 종목 매도 허용 · 없으면 허용 (서버 기본값) */
+  kill_switch_sell_allowed?: boolean;
   order_target?: OrderTarget;
 }
 
@@ -24,7 +26,7 @@ export function orderTargetLabel(t: OrderTarget | undefined): string {
 }
 
 export function safetyConclusion(s: SafetyInput): SafetyConclusion {
-  if (s.kill_switch_active) return { tone: "stop", text: "Kill Switch 발동 중 — 자동 주문이 멈춰 있습니다" };
+  if (s.kill_switch_active) return { tone: "stop", text: `Kill Switch 발동 중 — ${killSwitchModeLabel(s.kill_switch_sell_allowed)}` };
   const anyOn = s.sniper_enabled || s.watchlist_enabled || s.router_enabled === true;
   if (!anyOn && s.router_enabled === undefined) return { tone: "off", text: "실주문 상태 확인 중…" };
   if (!anyOn) return { tone: "off", text: "자동 진입 세 경로가 모두 꺼져 있습니다 — 자동 주문이 나가지 않습니다" };
@@ -38,6 +40,13 @@ export function activePathsLabel(s: SafetyInput): string {
   if (s.watchlist_enabled) on.push("관심 종목 자동 진입");
   if (s.router_enabled) on.push("신호 연결 (VIP·행동주의·밈·슈퍼시그널)");
   return on.length ? `켜진 자동 경로: ${on.join(" · ")}` : "켜진 자동 경로 없음";
+}
+
+/** 1105-02 · Kill Switch 가 켜졌을 때 무엇이 멈추는지. 값이 없으면 서버 기본 (매도 허용). */
+export function killSwitchModeLabel(sellAllowed: boolean | undefined): string {
+  return sellAllowed === false
+    ? "모든 주문 멈춤 (보유 종목 청산도 멈춤)"
+    : "새 진입 멈춤 · 보유 종목 손절·추적 청산은 계속";
 }
 
 /** 실주문 허용 (SNIPER_LIVE_ENABLED) 이 막는 것은 수동 진입 (POST /sniper/entry) 하나다. */
@@ -60,7 +69,11 @@ export function lossLimitLabel(v: number | null | undefined): string {
 }
 
 /** 「전역 상태」 배지 — 스나이퍼 스캔이 도는지 (실주문 허용 값과 무관 · 1025-07 최종 검토). */
-export function scanBadge(s: { sniper_enabled: boolean; kill_switch_active: boolean }): { running: boolean; label: string } {
-  if (s.kill_switch_active) return { running: false, label: "Kill Switch 발동" };
+export function scanBadge(s: { sniper_enabled: boolean; kill_switch_active: boolean; kill_switch_sell_allowed?: boolean }): {
+  running: boolean;
+  label: string;
+} {
+  if (s.kill_switch_active)
+    return { running: false, label: s.kill_switch_sell_allowed === false ? "Kill Switch · 모든 주문 멈춤" : "Kill Switch · 새 진입 멈춤" };
   return s.sniper_enabled ? { running: true, label: "스캔 중" } : { running: false, label: "꺼짐" };
 }

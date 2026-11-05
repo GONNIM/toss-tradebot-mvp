@@ -101,7 +101,7 @@
 - API 에러율 > 임계값 (60초 window, 20% 초과)
 - 수동 API `POST /api/v1/execution/kill-switch`
 
-Kill Switch 발동 시: **모든 신규 주문 차단** · 기존 미체결 취소 · Telegram 🚨 즉시 발송 · 사용자 수동 해제 필요.
+Kill Switch 발동 시: **신규 매수 차단** · 보유 종목 매도는 `sell_allowed` 일 때 허용 (기본 · False 면 매도도 차단 · 1105-02) · Telegram 🚨 즉시 발송 · 사용자 수동 해제 필요. (기존 미체결 취소는 구현 안 됨)
 
 ---
 

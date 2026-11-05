@@ -184,9 +184,10 @@ async def test_f5_activate_with_token(client):
     h = {"X-API-Token": TOKEN}
     r = await client.post("/api/v1/sniper/kill-switch", json={"reason": "시장 급락 대응", "actor": "user:tester"}, headers=h)
     assert r.status_code == 200
-    assert r.json() == {"active": True, "reason": "시장 급락 대응", "activated_by": "user:tester"}
+    assert r.json() == {"active": True, "reason": "시장 급락 대응", "activated_by": "user:tester", "sell_allowed": True}
     r = await client.get("/api/v1/sniper/kill-switch/status", headers=h)
     assert r.json()["active"] is True and r.json()["activated_by"] == "user:tester"
+    assert r.json()["sell_allowed"] is True
 
 
 @pytest.mark.asyncio
@@ -195,7 +196,22 @@ async def test_f5_activate_when_active_is_noop(client):
     client.switch.activate(reason="first", actor="auto:sniper")
     r = await client.post("/api/v1/sniper/kill-switch", json={"reason": "second"}, headers=h)
     assert r.status_code == 200
-    assert r.json() == {"active": True, "reason": "first", "activated_by": "auto:sniper"}
+    assert r.json() == {"active": True, "reason": "first", "activated_by": "auto:sniper", "sell_allowed": True}
+
+
+# 1105-02 · 켜진 상태에서 sell_allowed=False → 「매도도 멈춤」 으로 좁힘 · 응답이 실제 상태
+@pytest.mark.asyncio
+async def test_f5_narrow_to_stop_sells(client):
+    h = {"X-API-Token": TOKEN}
+    client.switch.activate(reason="first", actor="auto:sniper")
+    r = await client.post("/api/v1/sniper/kill-switch", json={"reason": "보유 종목 매도도 멈춤", "sell_allowed": False}, headers=h)
+    assert r.status_code == 200
+    body = r.json()
+    assert body["active"] is True and body["sell_allowed"] is False and body["activated_by"] == "auto:sniper"
+    r = await client.get("/api/v1/sniper/kill-switch/status", headers=h)
+    assert r.json()["sell_allowed"] is False
+    r = await client.post("/api/v1/sniper/kill-switch", json={"reason": "again", "sell_allowed": True}, headers=h)
+    assert r.json()["sell_allowed"] is False
 
 
 @pytest.mark.asyncio

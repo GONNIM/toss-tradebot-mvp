@@ -24,7 +24,7 @@
 3. **fail-safe 우선**: 어댑터 예외는 반드시 표준 예외 계층으로 정규화. 알 수 없는 예외는 `OrderExecutionError` 로 감싸 상위로.
 4. **감사 로그 필수**: 모든 주문 시도(성공/실패/취소)는 `order_audit` 테이블에 기록.
 5. **테스트 가능성**: 모든 어댑터는 동일한 contract test 스위트를 통과해야 한다.
-6. **Kill Switch 존중**: Order Manager는 매 주문 전 Kill Switch 상태를 확인, 발동 시 즉시 거부.
+6. **Kill Switch 존중**: Order Manager는 매 주문 전 Kill Switch 상태를 확인, 발동 시 매수는 즉시 거부. 매도는 `sell_allowed` 가 False 일 때만 거부 (기본 True · 보유 종목 손절·추적 매도 유지 · 1105-02).
 7. **Read-only 조회는 부작용 없음**: `get_balance` / `get_position` / `get_order_status`는 감사 로그를 남기지 않는다.
 
 ---
@@ -241,7 +241,7 @@ class OrderManager(ABC):
 
         - idempotency: 같은 `req.order_uuid` 로 재호출 시 이전 결과 반환 (신규 주문 X).
         - 실패 시 예외 (§4) 발생 또는 status=REJECTED/ERROR 반환.
-        - Kill Switch 발동 상태이면 KillSwitchActive 예외.
+        - Kill Switch 발동 상태이면 매수는 KillSwitchActive 예외 · 매도는 sell_allowed=False 일 때만 (1105-02).
         """
 
     @abstractmethod
@@ -282,7 +282,7 @@ class OrderManager(ABC):
 | **idempotency** | `submit_order` 는 `order_uuid` 기반 dedup. `data/execution_idempotency.json` 또는 SQLite 로 24h 캐시. |
 | **감사 로그** | `submit_order` / `cancel_order` 는 결과 즉시 `order_audit` 테이블 INSERT. |
 | **예외 정규화** | §4 계층으로 감싸서 raise. 원본은 `raw_response` 첨부. |
-| **Kill Switch** | `submit_order` 첫 단계에서 `KillSwitch.is_active()` 체크. |
+| **Kill Switch** | `submit_order` 첫 단계에서 `KillSwitch.blocks(req.side)` 체크 (매수는 켜지면 거부 · 매도는 sell_allowed=False 일 때만 · 1105-02). |
 | **rate limit** | Toss 응답 `Retry-After` 헤더 우선, 없으면 지수 백오프 (1s → 2s → 4s + jitter, 최대 3회). 실패 시 `RateLimitExceeded`. 09:00~09:10 KST 자동 감지 후 스로틀. |
 | **로깅** | 모든 요청/응답을 `EXECUTION_LOG_LEVEL` 이상에서 기록 (민감 정보 마스킹). |
 

@@ -947,8 +947,10 @@ export const api = {
     // 1025-01 · /lab/execution 에서 옮김 · 인증 라우트라 쿠키를 보내는 헬퍼
     killSwitch: {
       status: () => getWithSession<KillSwitchStatus>(`/sniper/kill-switch/status`),
-      activate: (reason: string, actor = "user:manual") =>
-        postWithToken<{ active: boolean; reason: string; activated_by: string }>(`/sniper/kill-switch`, "", { reason, actor }),
+      activate: (reason: string, sellAllowed = true, actor = "user:manual") =>
+        postWithToken<{ active: boolean; reason: string; activated_by: string; sell_allowed: boolean }>(
+          `/sniper/kill-switch`, "", { reason, actor, sell_allowed: sellAllowed },
+        ),
       deactivate: (actor = "user:manual") =>
         delWithToken<{ active: boolean; deactivated_by: string }>(`/sniper/kill-switch?actor=${encodeURIComponent(actor)}`, ""),
     },
@@ -1241,6 +1243,8 @@ export interface KillSwitchStatus {
   activated_by: string | null;
   deactivated_at: string | null;
   deactivated_by: string | null;
+  /** 1105-02 · 켜진 동안 보유 종목 매도 허용 (옛 서버는 없음 → 허용으로 봄) */
+  sell_allowed?: boolean;
 }
 
 export interface ExecutionStatus {
@@ -1341,6 +1345,8 @@ export interface SniperStatus {
   live_enabled: boolean;
   sniper_enabled: boolean;
   kill_switch_active: boolean;
+  /** 1105-02 · Kill Switch 켜진 동안 보유 종목 매도 허용 (옛 서버는 없음 → 허용) */
+  kill_switch_sell_allowed?: boolean;
   order_target?: "paper" | "toss";
   signal_router_enabled?: boolean; // 1025-07 · 셋째 자동 경로 (EXECUTION_ENABLED)
   universe_size: number;

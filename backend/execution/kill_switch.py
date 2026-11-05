@@ -1,6 +1,11 @@
 """Kill Switch — v2 트랙 C Phase 1.
 
-발동 시: 모든 신규 주문 차단 · 기존 미체결 취소 · 텔레그램 🚨 URGENT 발송 · 수동 해제 필요.
+발동 시: 새 매수 차단 · 보유 종목 매도는 sell_allowed 일 때 허용 (기본 · 1105-02) ·
+  sell_allowed=False 면 모든 주문 차단 · 텔레그램 🚨 URGENT 발송 · 수동 해제 필요.
+  (기존 미체결 취소는 구현 없음)
+
+상태는 파일 + 프로세스 메모리 (_cached). 운영은 uvicorn 1 워커 · 같은 프로세스 스케줄러라 문제없음.
+다른 프로세스에서 발동하면 서로 보이지 않음 (재시작 전까지).
 
 스펙: docs/plans/tradebot-mvp-v2/02-omi-interface-spec.md §8-1
      docs/plans/tradebot-mvp-v2/01-track-c-roadmap.md §2-3
@@ -11,13 +16,14 @@ import asyncio
 import json
 import logging
 import threading
-from dataclasses import dataclass, field
-from datetime import datetime, timezone
+from dataclasses import dataclass, field, replace
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Optional
 
 from backend.services.notifier import TelegramNotifier
 
+_KST = timezone(timedelta(hours=9))
 logger = logging.getLogger(__name__)
 
 
@@ -55,12 +61,17 @@ def _kill_switch_message(state) -> tuple[str, str]:
     from backend.services import alert_text as at
     from backend.services.notification_settings import SITE_BASE_URL
 
-    title = at.title("kill_switch", "새 주문 모두 멈춤", "🚨")
+    if getattr(state, "sell_allowed", True):
+        title = at.title("kill_switch", "새 매수 멈춤", "🚨")
+        rule = "직접 풀기 전까지 새 매수는 나가지 않습니다. 보유 종목의 손절·추적 매도는 계속됩니다."
+    else:
+        title = at.title("kill_switch", "모든 주문 멈춤", "🚨")
+        rule = "직접 풀기 전까지 매수와 매도 모두 나가지 않습니다. 보유 종목은 직접 정리해야 합니다."
     body = "\n".join([
         f"이유: {_reason_text(state.reason)}",
         f"누가: {_actor_text(state.activated_by or '')}",
         f"시각: {at.kst(state.activated_at)}",
-        "직접 풀기 전까지 새 주문은 나가지 않습니다.",
+        rule,
         f"풀기: {SITE_BASE_URL}/sniper 의 「수동 해제」 (관리자 로그인)",
     ])
     return title, body
@@ -74,6 +85,7 @@ class KillSwitchState:
     activated_by: Optional[str] = None       # auto:<trigger> · user:<actor>
     deactivated_at: Optional[datetime] = None
     deactivated_by: Optional[str] = None
+    sell_allowed: bool = True                # 1105-02 · 켜진 동안 매도 허용 여부 (옛 파일은 칸 없음 → True)
 
 
 class KillSwitch:
@@ -117,6 +129,7 @@ class KillSwitch:
             activated_by=raw.get("activated_by"),
             deactivated_at=_dt(raw.get("deactivated_at")),
             deactivated_by=raw.get("deactivated_by"),
+            sell_allowed=bool(raw.get("sell_allowed", True)),
         )
 
     def _save(self, state: KillSwitchState) -> None:
@@ -128,6 +141,7 @@ class KillSwitch:
             "activated_by": state.activated_by,
             "deactivated_at": state.deactivated_at.isoformat() if state.deactivated_at else None,
             "deactivated_by": state.deactivated_by,
+            "sell_allowed": state.sell_allowed,
         }
         self._path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
 
@@ -141,11 +155,38 @@ class KillSwitch:
     def is_active(self) -> bool:
         return self.status().active
 
-    def activate(self, reason: str, actor: str = "auto:unknown") -> KillSwitchState:
-        """자동/수동 공통 발동. 이미 active 이면 no-op."""
+    def blocks(self, side) -> bool:
+        """이 주문 방향을 막는지 (1105-02). 매수는 켜지면 늘 막음 · 매도는 sell_allowed 가 False 일 때만."""
+        st = self.status()
+        if not st.active:
+            return False
+        side_value = getattr(side, "value", side)
+        if side_value == "sell":
+            return not st.sell_allowed
+        return True
+
+    def activate(self, reason: str, actor: str = "auto:unknown", sell_allowed: bool = True) -> KillSwitchState:
+        """자동/수동 공통 발동.
+
+        - 꺼져 있으면 발동 (sell_allowed 그대로 기록).
+        - 이미 켜져 있고 sell_allowed=False 가 오면 「매도도 멈춤」 으로 좁힘 (1105-02 · 알림 1회).
+        - 이미 켜져 있고 sell_allowed=True 면 그대로 (False→True 로 푸는 것은 해제 뒤 재발동으로만).
+        """
         with self._lock:
             current = self.status()
             if current.active:
+                if current.sell_allowed and not sell_allowed:
+                    now = datetime.now(tz=timezone.utc)
+                    narrowed = replace(
+                        current,
+                        sell_allowed=False,
+                        reason=f"{current.reason or '—'} · 매도도 멈춤 ({actor} · {now.astimezone(_KST).strftime('%m/%d %H:%M')} KST)"[:300],
+                    )
+                    self._save(narrowed)
+                    self._cached = narrowed
+                    logger.critical("🚨 KILL SWITCH 매도도 멈춤으로 좁힘 · actor=%s", actor)
+                    self._notify_urgent(narrowed)
+                    return narrowed
                 logger.info("Kill Switch 이미 발동 상태 · reason=%s", current.reason)
                 return current
             new_state = KillSwitchState(
@@ -155,11 +196,12 @@ class KillSwitch:
                 activated_by=actor,
                 deactivated_at=None,
                 deactivated_by=None,
+                sell_allowed=sell_allowed,
             )
             self._save(new_state)
             self._cached = new_state
             logger.critical(
-                "🚨 KILL SWITCH ACTIVATED · reason=%s · actor=%s", reason, actor
+                "🚨 KILL SWITCH ACTIVATED · reason=%s · actor=%s · sell_allowed=%s", reason, actor, sell_allowed
             )
             self._notify_urgent(new_state)
             return new_state
@@ -177,6 +219,7 @@ class KillSwitch:
                 activated_by=current.activated_by,
                 deactivated_at=datetime.now(tz=timezone.utc),
                 deactivated_by=actor,
+                sell_allowed=current.sell_allowed,
             )
             self._save(new_state)
             self._cached = new_state

@@ -71,6 +71,8 @@ async def sniper_status():
         "live_enabled": is_sniper_live_enabled(),
         "sniper_enabled": params.enabled,
         "kill_switch_active": ks.active,
+        # 켜진 동안 보유 종목 매도 허용 여부 (1105-02 · 꺼져 있으면 의미 없음)
+        "kill_switch_sell_allowed": ks.sell_allowed,
         # 어댑터 종류 표시 (주문이 실제로 나가는지는 live_enabled 등이 정함 · signal_router 와 같은 규칙 · 1025-01)
         "order_target": _order_target(),
         # 셋째 자동 주문 경로 (VIP·행동주의·밈·슈퍼시그널 신호 연결) · API 프로세스 env 기준 · cron 데몬도 같은 .env (1025-07)
@@ -280,6 +282,7 @@ async def kill_switch_status():
         "activated_by": s.activated_by,
         "deactivated_at": s.deactivated_at.isoformat() if s.deactivated_at else None,
         "deactivated_by": s.deactivated_by,
+        "sell_allowed": s.sell_allowed,
     }
 
 
@@ -287,11 +290,16 @@ async def kill_switch_status():
 async def kill_switch_activate(
     reason: str = Body(..., embed=True, min_length=1, max_length=200),
     actor: str = Body("user:manual", embed=True, pattern=r"^[\w:.\-]{1,64}$"),
+    sell_allowed: bool = Body(True, embed=True),
 ):
-    """Kill Switch 수동 발동 · 인증 필수 · 이미 발동 중이면 그대로 (1022-06)."""
-    s = get_kill_switch().activate(reason=reason, actor=actor)
-    logger.warning("kill switch 발동 요청 · active=%s · actor=%s", s.active, actor)
-    return {"active": s.active, "reason": s.reason, "activated_by": s.activated_by}
+    """Kill Switch 수동 발동 · 인증 필수 (1022-06).
+
+    sell_allowed=False 면 보유 종목 매도도 멈춤. 이미 켜져 있으면: False 는 「매도도 멈춤」 으로 좁힘 ·
+    True 는 그대로 (1105-02). 응답의 sell_allowed 가 실제 상태.
+    """
+    s = get_kill_switch().activate(reason=reason, actor=actor, sell_allowed=sell_allowed)
+    logger.warning("kill switch 발동 요청 · active=%s · sell_allowed=%s · actor=%s", s.active, s.sell_allowed, actor)
+    return {"active": s.active, "reason": s.reason, "activated_by": s.activated_by, "sell_allowed": s.sell_allowed}
 
 
 @router.delete("/kill-switch", dependencies=[Depends(require_sniper_token)])

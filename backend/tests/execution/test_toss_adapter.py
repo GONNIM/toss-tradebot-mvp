@@ -299,6 +299,19 @@ async def test_toss_kill_switch_blocks(toss_adapter, toss_kill_switch):
     toss_kill_switch.deactivate("user:test")
 
 
+# 1105-02 · Toss 도 켜진 동안 매도는 통과 (기본) · sell_allowed=False 면 거부
+async def test_toss_kill_switch_allows_sell(toss_adapter, toss_kill_switch):
+    def sell():
+        return OrderRequest(ticker="005930", side=OrderSide.SELL, order_type=OrderType.MARKET, qty=1, signal_source="sniper")
+
+    toss_kill_switch.activate("test", "auto:test")
+    assert toss_adapter.submit_order(sell()).status == OrderStatus.ACCEPTED
+    toss_kill_switch.activate("narrow", "user:test", sell_allowed=False)
+    with pytest.raises(KillSwitchActive):
+        toss_adapter.submit_order(sell())
+    toss_kill_switch.deactivate("user:test")
+
+
 async def test_toss_insufficient_balance_maps(fake_toss_v2, toss_adapter):
     # create_order 응답으로 InsufficientBalance 유발
     from backend.execution.exceptions import InsufficientBalance

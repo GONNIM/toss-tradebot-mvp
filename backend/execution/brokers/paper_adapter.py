@@ -235,7 +235,8 @@ class PaperAdapter(OrderManager):
     # ─── OMI 구현 ───
     def submit_order(self, req: OrderRequest) -> OrderResult:
         # 1) Kill Switch 우선 체크
-        if self._ks.is_active():
+        # 켜지면 매수는 늘 막고 · 매도는 sell_allowed=False 일 때만 막음 (1105-02)
+        if self._ks.blocks(req.side):
             raise KillSwitchActive(self._ks.status().reason or "kill switch active")
 
         # 2) idempotency — in-process 캐시 우선 (sync 컨텍스트 안전)

@@ -155,6 +155,27 @@ async def test_kill_switch_blocks_new_orders(paper, kill_switch):
     kill_switch.deactivate(actor="user:test")
 
 
+# 1105-02 · 켜져도 보유 종목 매도는 체결 (기본 sell_allowed=True) · 매수는 거부
+async def test_kill_switch_allows_sell_by_default(paper, kill_switch):
+    assert paper.submit_order(_buy_market(TICKER_KR, qty=2)).status == OrderStatus.FILLED
+    kill_switch.activate(reason="test", actor="auto:test")
+    assert kill_switch.status().sell_allowed is True
+    r = paper.submit_order(_sell_market(TICKER_KR, qty=1))
+    assert r.status == OrderStatus.FILLED
+    with pytest.raises(KillSwitchActive):
+        paper.submit_order(_buy_market(TICKER_KR, qty=1))
+    kill_switch.deactivate(actor="user:test")
+
+
+# 1105-02 · sell_allowed=False 면 매도도 거부
+async def test_kill_switch_sell_stopped_blocks_sell(paper, kill_switch):
+    assert paper.submit_order(_buy_market(TICKER_KR, qty=1)).status == OrderStatus.FILLED
+    kill_switch.activate(reason="test", actor="user:test", sell_allowed=False)
+    with pytest.raises(KillSwitchActive):
+        paper.submit_order(_sell_market(TICKER_KR, qty=1))
+    kill_switch.deactivate(actor="user:test")
+
+
 # ═══════════════════════════════════════════════════════════════
 async def test_health_check_ok(paper):
     assert paper.health_check() is True

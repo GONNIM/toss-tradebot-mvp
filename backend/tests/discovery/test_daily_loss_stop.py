@@ -3,6 +3,7 @@
 계획: docs/plans/site-roadmap/a1-daily-loss-stop.md
 ① 끝까지 흐름 -3% 발동 ② 이익만 미발동 ③ 부분 체결 ④ 수수료 ⑤ 감사 행 없음 → 계산 불가 · 알림 하루 1회
 ⑥ REJECTED 청산 ⑦ 매도 수량 초과 ⑧ 어제 청산 제외 ⑨ risk_budget 조회 실패 → 차단 ⑩ 직접 경로 order_audit 기록
+1105-02 · 자동 정지 뒤 보유 종목 같은 주기 청산
 """
 from __future__ import annotations
 
@@ -238,3 +239,36 @@ async def test_audit_failure_does_not_block(db_ready, wired, monkeypatch):
     monkeypatch.setattr(audit_mod, "record_order_result", _boom)
     r, x = await _round_trip(adapter, ks, "000002", 10_000, 9_000)
     assert r.ok and x.ok
+
+
+# 1105-02 · 끝까지 흐름: 손실 6회 → 자동 정지 (매도 허용) → 보유 1종목이 같은 5초 주기에서 청산 · 새 진입 거부
+async def test_auto_stop_then_held_position_exits_same_cycle(db_ready, wired, store, monkeypatch):
+    from types import SimpleNamespace
+
+    adapter, ks = wired
+    store.patch({"max_concurrent_positions": 2, "enabled": True})
+    adapter._toss._prices["000007"] = 10_000
+    with mock_patch.object(entry_mod, "_is_in_active_window", return_value=True):
+        with mock_patch("backend.discovery.live_tape.entry.check_warnings", new=_pass_warnings):
+            held = await execute_entry(make_candidate("000007", 10_000), adapter, kill_switch=ks)
+    assert held.ok, held.reason
+    for i in range(1, 7):
+        await _round_trip(adapter, ks, f"{i:06d}", 10_000, 9_500)
+    assert ks.is_active() is False
+
+    async def _exit_now(signal_id):
+        return SimpleNamespace(should_exit=True, reason="hard_sl")
+
+    monkeypatch.setattr(sniper_mod, "_resolve_order_manager", lambda: adapter)
+    monkeypatch.setattr(sniper_mod, "poll_trailing", _exit_now)
+    adapter._toss._prices["000007"] = 9_800
+    stats = await sniper_mod.manage_positions()
+    assert ks.is_active() is True and ks.status().sell_allowed is True
+    assert stats["open_positions"] == 1 and stats["exited"] == 1
+    assert await sniper_mod.open_positions() == []
+    # 새 진입은 거부
+    adapter._toss._prices["000008"] = 10_000
+    with mock_patch.object(entry_mod, "_is_in_active_window", return_value=True):
+        with mock_patch("backend.discovery.live_tape.entry.check_warnings", new=_pass_warnings):
+            r = await execute_entry(make_candidate("000008", 10_000), adapter, kill_switch=ks)
+    assert r.ok is False and r.reason.startswith("kill_switch_active")
