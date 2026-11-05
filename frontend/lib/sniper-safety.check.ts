@@ -8,7 +8,12 @@ const base = { live_enabled: false, sniper_enabled: true, watchlist_enabled: fal
 
 const kill = safetyConclusion({ ...base, live_enabled: true, order_target: "toss", kill_switch_active: true });
 assert.equal(kill.tone, "stop");
-assert.equal(kill.text, "Kill Switch 발동 중 — 자동 주문이 멈춰 있습니다");
+assert.equal(kill.text, "Kill Switch 발동 중 — 새 진입 멈춤 · 보유 종목 손절·추적 청산은 계속");
+// 1105-02 · 매도도 멈춤
+const killAll = safetyConclusion({ ...base, kill_switch_active: true, kill_switch_sell_allowed: false });
+assert.equal(killAll.text, "Kill Switch 발동 중 — 모든 주문 멈춤 (보유 종목 청산도 멈춤)");
+const killAllow = safetyConclusion({ ...base, kill_switch_active: true, kill_switch_sell_allowed: true });
+assert.equal(killAllow.text, kill.text);
 
 const allOff = safetyConclusion({ ...base, live_enabled: true, order_target: "toss", sniper_enabled: false });
 assert.equal(allOff.tone, "off");
@@ -43,11 +48,15 @@ assert.equal(manualEntryLabel(true), "수동 실주문 버튼 열림 (실주문 
 assert.equal(lossLimitLabel(-0.03), "-3.0%");
 assert.equal(lossLimitLabel(undefined), "—");
 
-const all = [kill, allOff, tossLiveOff, paper].map((r) => r.text)
+const all = [kill, killAll, allOff, tossLiveOff, paper].map((r) => r.text)
   .concat([manualEntryLabel(true), manualEntryLabel(false), activePathsLabel(base), activePathsLabel({ ...base, sniper_enabled: false })]);
 for (const t of all) for (const w of ["지금", "매수", "매도", "추천"]) assert.ok(!t.includes(w), `${t} 금지어 ${w}`);
 // 최종 검토 · 「전역 상태」 배지는 실주문 허용이 아니라 스캔 스위치와 Kill Switch 로 정한다
 assert.deepEqual(scanBadge({ sniper_enabled: true, kill_switch_active: false }), { running: true, label: "스캔 중" });
-assert.deepEqual(scanBadge({ sniper_enabled: true, kill_switch_active: true }), { running: false, label: "Kill Switch 발동" });
+assert.deepEqual(scanBadge({ sniper_enabled: true, kill_switch_active: true }), { running: false, label: "Kill Switch · 새 진입 멈춤" });
+assert.deepEqual(scanBadge({ sniper_enabled: true, kill_switch_active: true, kill_switch_sell_allowed: false }), {
+  running: false,
+  label: "Kill Switch · 모든 주문 멈춤",
+});
 assert.deepEqual(scanBadge({ sniper_enabled: false, kill_switch_active: false }), { running: false, label: "꺼짐" });
 console.log("sniper-safety ok");

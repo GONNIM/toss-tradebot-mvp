@@ -32,7 +32,7 @@ class OrderManager(ABC):
         """주문 제출 (시장가/지정가 공통).
 
         - idempotency: 같은 `req.order_uuid` 로 재호출 시 이전 결과 반환.
-        - Kill Switch 발동 상태이면 KillSwitchActive 예외.
+        - Kill Switch 발동 상태이면 매수는 KillSwitchActive 예외 · 매도는 sell_allowed=False 일 때만 예외 (1105-02).
         - 실패 시 exceptions.py 예외 계층 중 하나 raise.
         """
 

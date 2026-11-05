@@ -39,13 +39,20 @@ def test_kill_switch_wording():
     state = SimpleNamespace(reason="daily_loss_limit_reached(-3.12%)", activated_by="auto:sniper",
                             activated_at=datetime(2026, 10, 23, 1, 42, 10, tzinfo=timezone.utc))
     title, body = ks._kill_switch_message(state)
-    assert title == "🚨 Kill Switch · 새 주문 모두 멈춤"
+    assert title == "🚨 Kill Switch · 새 매수 멈춤"
+    assert "보유 종목의 손절·추적 매도는 계속됩니다" in body
     assert "이유: 오늘 손실 한도 도달 (-3.12%)" in body
     assert "누가: 자동 (스나이퍼)" in body
     assert "시각: 10/23 10:42" in body
     assert "DELETE" not in body
     assert "풀기: https://optimus8.cafe24.com/sniper 의 「수동 해제」 (관리자 로그인)" in body
     assert violations(title, body) == []
+    # 1105-02 · 매도도 멈춤
+    all_state = SimpleNamespace(**{**vars(state), "sell_allowed": False})
+    t2, b2 = ks._kill_switch_message(all_state)
+    assert t2 == "🚨 Kill Switch · 모든 주문 멈춤"
+    assert "매수와 매도 모두 나가지 않습니다" in b2
+    assert violations(t2, b2) == []
 
 
 def test_kill_switch_manual_actor_escaped():
