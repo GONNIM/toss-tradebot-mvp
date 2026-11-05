@@ -37,6 +37,7 @@ from backend.execution import (
 from backend.execution.brokers.paper_adapter import PaperAdapter
 from backend.execution.brokers.toss_adapter import TossAdapter
 from backend.execution.kill_switch import KillSwitch, get_kill_switch
+from backend.execution.audit import record_direct_order
 from backend.execution.order_manager import OrderManager
 from backend.services.db import get_session
 from backend.services.models import SniperSignal
@@ -228,6 +229,8 @@ async def execute_entry(
     except ExecutionError as exc:
         logger.exception("[sniper·entry] execution error · %s", exc)
         return EntryResult(ok=False, reason=f"execution_error:{exc}")
+
+    await record_direct_order(order_manager, req, result)
 
     if result.status not in {OrderStatus.FILLED, OrderStatus.PARTIAL_FILL, OrderStatus.ACCEPTED}:
         return EntryResult(

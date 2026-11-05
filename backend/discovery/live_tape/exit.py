@@ -24,6 +24,7 @@ from backend.execution import (
     OrderStatus,
     OrderType,
 )
+from backend.execution.audit import record_direct_order
 from backend.execution.order_manager import OrderManager
 from backend.services.db import get_session
 from backend.services.models import SniperSignal
@@ -141,6 +142,8 @@ async def execute_exit(
             ok=False, reason=f"execution_error:{exc}",
             sniper_signal_id=signal_id, trigger_reason=trigger_reason,
         )
+
+    await record_direct_order(order_manager, req, result)
 
     exit_price = result.avg_fill_price
     if exit_price is None and result.status in {OrderStatus.FILLED, OrderStatus.PARTIAL_FILL}:
