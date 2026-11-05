@@ -326,7 +326,7 @@ async def test_seed_full_loss_scenario_safe_termination(db_ready, paper_adapter,
                         "kill_switch_active",
                         "seed_remain<100000",
                         "positions_full",
-                    } or r.reason.startswith("seed_remain")
+                    } or r.reason.startswith(("seed_remain", "daily_loss_near_limit"))  # 1105-04 방어 7
                     break
                 # 즉시 매도 (5% 손실)
                 adapter._toss._prices[ticker] = 9_500

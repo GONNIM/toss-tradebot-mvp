@@ -213,12 +213,18 @@ async def daily_pnl_detail(broker_kind: BrokerKind, since: datetime) -> DailyPnl
     매도 감사 행이 없는 오늘 청산은 sniper_signal 만으로는 날짜를 알 수 없어
     detected_at ≥ since 인 것만 계산 불가로 셈.
     signal_router 경로 주문 (sniper_signal 없음) 은 이 합계에 들어가지 않음.
+    1105-05 · 청산 시각 (exited_at) 이 since 이후이거나 비어 있는 (옛) 행만 읽음 · 날마다 쌓이는 행을 다시 읽지 않음.
+    날짜 판정은 아래 매도 감사 행 기준 그대로 (exited_at 은 읽는 범위만 줄임).
     """
+    from sqlalchemy import or_
+
     since_n = _naive_utc(since)
     out = DailyPnl()
     async with get_session() as session:
         rows = (await session.execute(
-            select(SniperSignal).where(SniperSignal.exit_order_uuid.is_not(None))
+            select(SniperSignal)
+            .where(SniperSignal.exit_order_uuid.is_not(None))
+            .where(or_(SniperSignal.exited_at.is_(None), SniperSignal.exited_at >= since_n))
         )).scalars().all()
         for sig in rows:
             sell = await session.get(OrderAudit, sig.exit_order_uuid)

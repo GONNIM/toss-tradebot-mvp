@@ -737,6 +737,7 @@ export interface TodaySafety {
   live_enabled: boolean;
   sniper_enabled: boolean;
   kill_switch_active: boolean;
+  kill_switch_sell_allowed?: boolean;  // 1105-05 · 없으면 서버 기본 (매도 허용)
   order_target: string;
 }
 export interface TodayFailure {

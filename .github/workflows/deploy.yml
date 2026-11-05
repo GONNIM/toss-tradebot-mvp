@@ -211,10 +211,22 @@ jobs:
           # 첫 실행: baseline stamp 없으면 e859d822c111 부터 시작 · pass (baseline)
           #          + 42970a316e10 (user_id 7 tables) 실행
           # 이후:    이미 head 면 no-op
-          .venv/bin/alembic upgrade head 2>&1 | tail -10 || {
+          # 1105-05 · 운영 API 가 5초마다 DB 에 써서 잠금에 걸릴 수 있음 → 3번까지 10초 간격 재시도 (Fable 1105-04-01 권고 3)
+          # 예전 `| tail -10 || {…}` 은 tail 의 성공으로 alembic 실패를 놓쳤음 · 이제 실패하면 배포 중단
+          ALEMBIC_OK=0
+          for TRY in 1 2 3; do
+            if .venv/bin/alembic upgrade head > /tmp/alembic_upgrade.out 2>&1; then
+              ALEMBIC_OK=1; tail -10 /tmp/alembic_upgrade.out; break
+            fi
+            tail -5 /tmp/alembic_upgrade.out
+            echo "  alembic 실패 · 재시도 $TRY/3 (DB 잠금 대기 10초)"
+            sleep 10
+          done
+          rm -f /tmp/alembic_upgrade.out
+          if [ "$ALEMBIC_OK" != 1 ]; then
             echo "❌ alembic upgrade failed · 배포 중단"
             exit 1
-          }
+          fi
 
           echo "[4/7] frontend build"
           cd ../frontend

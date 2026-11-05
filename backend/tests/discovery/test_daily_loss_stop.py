@@ -483,3 +483,44 @@ async def test_router_sell_caps_to_router_net_qty(db_ready, wired, monkeypatch):
     res = await _route_vip_sell(adapter, ks, monkeypatch)
     assert res is not None and res.filled_qty == 1
     assert await _held(adapter, "000020") == 7
+
+
+# ─── 1105-05 · 작은 고칠 점 ───
+# 6 · 청산하면 청산 시각 (exited_at) 이 채워짐 · 7 · 하루 손익은 청산 시각이 오늘 이전인 행을 읽지 않음
+async def test_exit_sets_exited_at_and_old_rows_skipped(db_ready, wired):
+    adapter, ks = wired
+    r, x = await _round_trip(adapter, ks, "000030", 10_000, 9_000)
+    async with get_session() as session:
+        row = await session.get(SniperSignal, r.sniper_signal_id)
+        assert row.exited_at is not None
+        row.exited_at = (_today0() - timedelta(days=1)).replace(tzinfo=None)   # 어제 청산으로 바꿈
+    d = await daily_pnl_detail(BrokerKind.PAPER, _today0())
+    assert d.computed == 0 and d.uncomputable == []
+
+
+# 8 · 진입 출처가 주문 기록에 남음 (관심 종목 · 수동)
+async def test_entry_source_recorded(db_ready, wired, store):
+    adapter, ks = wired
+    store.patch({"max_concurrent_positions": 3})
+    adapter._toss._prices["000031"] = 10_000
+    adapter._toss._prices["000032"] = 10_000
+    with mock_patch.object(entry_mod, "_is_in_active_window", return_value=True):
+        with mock_patch("backend.discovery.live_tape.entry.check_warnings", new=_pass_warnings):
+            w = await execute_entry(make_candidate("000031", 10_000), adapter, kill_switch=ks, source="watchlist")
+            m = await execute_entry(make_candidate("000032", 10_000), adapter, kill_switch=ks, source="manual")
+    assert w.ok and m.ok
+    async with get_session() as session:
+        assert (await session.get(OrderAudit, w.order_uuid)).signal_source == "watchlist"
+        assert (await session.get(OrderAudit, m.order_uuid)).signal_source == "manual"
+
+
+# 9 · 체결 수수료 · 응답 칸이 있으면 그 값 · 없으면 수수료율 짐작 (표식 rate_estimate)
+def test_reconciler_fee_source():
+    from backend.execution.reconciler import _fee_of
+
+    assert _fee_of({}, {"commission": "15"}, "005930", 10, 10_000.0) == (15.0, "toss_response")
+    fee, src = _fee_of({}, {}, "005930", 10, 10_000.0)
+    assert src == "rate_estimate" and fee == pytest.approx(100_000 * 0.00015)
+    fee, src = _fee_of({}, {}, "AAPL", 2, 100.0)
+    assert src == "rate_estimate" and fee == pytest.approx(200 * 0.0025)
+    assert _fee_of({}, {}, "005930", 0, None) == (0.0, "none")

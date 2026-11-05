@@ -49,6 +49,12 @@ export function killSwitchModeLabel(sellAllowed: boolean | undefined): string {
     : "새 진입 멈춤 · 보유 종목 손절·추적 청산은 계속";
 }
 
+/** 1105-05 · 홈 「오늘」 안전 줄의 긴급 정지 낱말. 켜졌으면 무엇이 멈추는지 괄호로 붙인다. */
+export function homeKillLabel(active: boolean, sellAllowed: boolean | undefined): string {
+  if (!active) return "긴급 정지 해제";
+  return sellAllowed === false ? "긴급 정지 작동 중 (모든 주문 멈춤)" : "긴급 정지 작동 중 (새 진입만 멈춤)";
+}
+
 /** 실주문 허용 (SNIPER_LIVE_ENABLED) 이 막는 것은 수동 진입 (POST /sniper/entry) 하나다. */
 export function manualEntryLabel(liveEnabled: boolean): string {
   return liveEnabled ? "수동 실주문 버튼 열림 (실주문 허용 켜짐)" : "수동 실주문 버튼 잠김 (실주문 허용 꺼짐)";

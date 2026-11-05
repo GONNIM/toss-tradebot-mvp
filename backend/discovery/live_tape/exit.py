@@ -220,6 +220,7 @@ async def execute_exit(
         row = await session.get(SniperSignal, signal_id)
         if row:
             row.exit_order_uuid = result.order_uuid
+            row.exited_at = datetime.now(tz=timezone.utc).replace(tzinfo=None)  # 1105-05 · 하루 손익이 오늘 청산분만 읽음
             row.exit_price = exit_price
             row.pnl_pct = pnl_pct
             row.reason = trigger_reason

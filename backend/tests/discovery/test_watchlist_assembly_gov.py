@@ -192,3 +192,11 @@ async def test_gov_press_processes_rss_and_stores(monkeypatch):
     tickers = {i["ticker"] for i in items}
     # 2차전지 매핑
     assert "373220" in tickers  # LG에너지솔루션
+
+
+@pytest.mark.asyncio
+async def test_assembly_non_dict_payload_is_error(monkeypatch):
+    """1105-05 · 응답이 dict 가 아니면 .get 전에 오류로 돌려줌 (예전에는 AttributeError)."""
+    monkeypatch.setenv("ASSEMBLY_API_KEY", "test_key")
+    _patch_client(monkeypatch, _StubResp(["unexpected"]), [])
+    assert await ab.poll_assembly_bills() == {"error": "unexpected_shape"}

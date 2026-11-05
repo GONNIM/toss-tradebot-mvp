@@ -32,7 +32,7 @@ def test_merge_twice_gives_five_entries_no_duplicates(tmp_path):
     assert sum("--radar-13d-weekly-only" in ln for ln in _entries(second)) == 1
 
 
-def test_empty_crontab_gets_two_lines(tmp_path):
+def test_empty_crontab_gets_all_four_lines(tmp_path):
     cur = tmp_path / "cron"
     cur.write_text("")
     assert len(_entries(_merge(cur))) == 4                         # 1103-03 03:30 백업 줄 포함

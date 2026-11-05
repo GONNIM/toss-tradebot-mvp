@@ -147,12 +147,15 @@ async def execute_entry(
     *,
     kill_switch: Optional[KillSwitch] = None,
     signal_metadata: Optional[dict] = None,
+    source: str = "sniper",
 ) -> EntryResult:
     """candidate → 매수 실행. 6단계 방어 후 순차 진입.
 
     Args:
         kill_switch: 명시 시 이 인스턴스 사용, 없으면 프로세스 싱글턴.
                      테스트 격리 · adapter 와 동일 인스턴스 공유 시 사용.
+        source: 주문 기록 (order_audit.signal_source) 에 적을 출처 (1105-05) ·
+                "sniper" (스나이퍼 자동) · "watchlist" (관심 종목) · "manual" (화면 수동 진입).
 
     Returns:
         EntryResult · ok=False 시 reason 명시.
@@ -217,14 +220,14 @@ async def execute_entry(
         side=OrderSide.BUY,
         order_type=OrderType.MARKET,
         qty=qty,
-        signal_source="sniper",
-        signal_id=f"sniper-{candidate.ticker}-{int(candidate.detected_at.timestamp())}",
+        signal_source=source,
+        signal_id=f"{source}-{candidate.ticker}-{int(candidate.detected_at.timestamp())}",
     )
 
     # gate-design-v1 §3-1 · 직접 호출 경로 감사 (SignalRouter 미경유 · 완전 강제는 부채)
     logger.warning(
-        "[direct_order_unrouted] source=sniper · ticker=%s · qty=%s · signal_id=%s",
-        req.ticker, req.qty, req.signal_id,
+        "[direct_order_unrouted] source=%s · ticker=%s · qty=%s · signal_id=%s",
+        source, req.ticker, req.qty, req.signal_id,
     )
     try:
         result = order_manager.submit_order(req)

@@ -247,7 +247,7 @@ async def execute_watchlist_scan(force_window: bool = False) -> dict[str, Any]:
             raw_trades_intensity=None,
             raw_bid_ratio=None,
         )
-        result = await execute_entry(synthetic, order_manager)
+        result = await execute_entry(synthetic, order_manager, source="watchlist")
         if result.ok:
             entered += 1
         else:
