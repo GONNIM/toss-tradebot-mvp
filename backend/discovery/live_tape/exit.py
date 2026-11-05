@@ -24,10 +24,13 @@ from backend.execution import (
     OrderStatus,
     OrderType,
 )
-from backend.execution.audit import record_direct_order
+from backend.execution.audit import bot_entry_qty, record_direct_order
 from backend.execution.order_manager import OrderManager
 from backend.services.db import get_session
 from backend.services.models import SniperSignal
+
+from .params import get_sniper_params
+from .trailing_stop import ENTRY_UNFILLED
 
 logger = logging.getLogger(__name__)
 
@@ -60,6 +63,57 @@ def _exit_message(ticker: str, name, entry_price, exit_price, qty: int, pnl_pct,
         at.link("execution"),
     ])
     return title, body
+
+# 근사 수량 알림은 신호마다 1회 (프로세스 메모리 · 재시작하면 다시 1회)
+_approx_alerted: set[int] = set()
+
+
+async def _sellable_qty(signal_id: int, ticker: str, entry_uuid, entry_price: float, held_qty: int) -> int:
+    """청산 수량 = min(계좌 보유, 봇이 산 수량) (1105-03).
+
+    반환: >0 팔 수량 · 0 = 진입이 체결 0 으로 끝나 팔 것 없음 (신호를 entry_unfilled 로 끝냄) ·
+    -1 = 봇 수량을 알 수 없음 (감사 행도 진입가도 없음 · 알림 뒤 다음 주기 재시도).
+    """
+    bot_qty = await bot_entry_qty(entry_uuid)
+    if bot_qty is None:
+        # 감사 행 없음 (1025-02 전 진입 · 기록 실패) → 한 번에 사는 금액 ÷ 진입가 로 근사
+        per_order = float(get_sniper_params().per_order_krw)
+        approx = int(per_order // entry_price) if entry_price > 0 else 0
+        logger.warning(
+            "[sniper·exit] 봇 매수 기록 없음 · 근사 수량 사용 · signal=%d · %s · 근사 %d주 · 보유 %d주",
+            signal_id, ticker, approx, held_qty,
+        )
+        await _alert_approx_once(signal_id, ticker, approx, held_qty)
+        if approx <= 0:
+            return -1
+        return min(held_qty, approx)
+    if bot_qty == 0:
+        async with get_session() as session:
+            row = await session.get(SniperSignal, signal_id)
+            if row and row.exit_order_uuid is None:
+                row.reason = ENTRY_UNFILLED
+        logger.warning("[sniper·exit] 진입 주문 체결 0 · 팔 것 없음 · signal=%d · %s", signal_id, ticker)
+        return 0
+    return min(held_qty, bot_qty)
+
+
+async def _alert_approx_once(signal_id: int, ticker: str, approx: int, held_qty: int) -> None:
+    if signal_id in _approx_alerted:
+        return
+    _approx_alerted.add(signal_id)
+    try:
+        from backend.services.notifier import TelegramNotifier
+        body = (
+            f"{ticker} 청산에서 봇이 산 수량 기록을 찾지 못했습니다. "
+            f"한 번에 사는 금액 ÷ 산 가격으로 {approx}주를 짐작해 팝니다 (계좌 보유 {held_qty}주). "
+            "짐작이 틀리면 봇 주식이 조금 남거나 직접 사신 주식이 조금 팔릴 수 있습니다."
+        )
+        if approx <= 0:
+            body = f"{ticker} 청산에서 봇이 산 수량을 알 수 없어 팔지 않았습니다 (계좌 보유 {held_qty}주). 직접 확인해 주십시오."
+        await TelegramNotifier().send_warning("청산 수량 짐작", body, category="execution")
+    except Exception as exc:  # noqa: BLE001
+        logger.debug("[sniper·exit] 근사 알림 실패 · %s", exc)
+
 
 async def execute_exit(
     signal_id: int,
@@ -107,11 +161,19 @@ async def execute_exit(
             sniper_signal_id=signal_id, trigger_reason=trigger_reason,
         )
 
+    # 1105-03 · 봇이 산 수량까지만 판다 (계좌의 같은 종목에 사용자가 직접 산 주식이 있어도 남김)
+    sell_qty = await _sellable_qty(signal_id, ticker, entry_uuid, entry_price, pos.qty)
+    if sell_qty <= 0:
+        return ExitResult(
+            ok=False, reason=ENTRY_UNFILLED if sell_qty == 0 else "bot_qty_unknown",
+            sniper_signal_id=signal_id, trigger_reason=trigger_reason,
+        )
+
     req = OrderRequest(
         ticker=ticker,
         side=OrderSide.SELL,
         order_type=OrderType.MARKET,
-        qty=pos.qty,
+        qty=sell_qty,
         signal_source="sniper",
         signal_id=f"sniper-exit-{signal_id}-{trigger_reason}",
     )
@@ -124,8 +186,8 @@ async def execute_exit(
     try:
         result = order_manager.submit_order(req)
     except KillSwitchActive:
-        # 매도는 Kill Switch 발동 상태에서도 안전측 시도가 필요 · 하지만 Router 는 차단.
-        # adapter 레벨에서 KS active 이면 예외. 여기까지 오면 실 청산 실패.
+        # 1105-02 · 어댑터는 Kill Switch 가 켜져도 매도는 허용 (sell_allowed 기본 True).
+        # 여기로 오는 것은 사람이 「매도도 멈춤」 (sell_allowed=False) 을 고른 경우뿐.
         logger.warning("[sniper·exit] Kill Switch active · %s 청산 실패", ticker)
         return ExitResult(
             ok=False, reason="kill_switch_blocks_sell",

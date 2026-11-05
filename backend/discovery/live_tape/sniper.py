@@ -168,6 +168,20 @@ async def check_daily_loss_and_trigger_ks() -> Optional[dict]:
 
 
 # ─── 관리 (Trailing · 매도 · daily loss 감시) ────────────
+async def _tickers_of(ids: list[int]) -> dict[int, str]:
+    """signal id → 종목 (1105-03 · 같은 주기 같은 종목 한 번만 청산)."""
+    if not ids:
+        return {}
+    from sqlalchemy import select
+
+    from backend.services.db import get_session
+    from backend.services.models import SniperSignal
+
+    async with get_session() as session:
+        rows = (await session.execute(select(SniperSignal.id, SniperSignal.ticker).where(SniperSignal.id.in_(ids)))).all()
+    return {r[0]: r[1] for r in rows}
+
+
 async def manage_positions() -> dict:
     """미청산 SniperSignal 순회 · trailing 판정 · 청산 실행.
 
@@ -186,8 +200,15 @@ async def manage_positions() -> dict:
 
     order_manager = _resolve_order_manager()
     stats = {"open_positions": len(ids), "checked": 0, "exited": 0, "no_action": 0}
+    # 1105-03 · 같은 종목은 한 주기에 한 번만 청산 (계좌 보유 반영이 늦으면 두 번째 청산이 사용자 주식을 팔 수 있음)
+    tickers = await _tickers_of(ids)
+    sold_tickers: set[str] = set()
 
     for signal_id in ids:
+        if tickers.get(signal_id) in sold_tickers:
+            stats.setdefault("deferred_same_ticker", 0)
+            stats["deferred_same_ticker"] += 1
+            continue
         stats["checked"] += 1
         try:
             decision = await poll_trailing(signal_id)
@@ -204,6 +225,8 @@ async def manage_positions() -> dict:
         result = await execute_exit(signal_id, order_manager, decision.reason or "unknown")
         if result.ok:
             stats["exited"] += 1
+        if result.order_uuid:
+            sold_tickers.add(tickers.get(signal_id) or "")
 
     logger.info("manage_positions · %s", stats)
     return stats

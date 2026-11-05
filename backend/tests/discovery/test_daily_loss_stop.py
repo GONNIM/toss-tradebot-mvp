@@ -272,3 +272,106 @@ async def test_auto_stop_then_held_position_exits_same_cycle(db_ready, wired, st
         with mock_patch("backend.discovery.live_tape.entry.check_warnings", new=_pass_warnings):
             r = await execute_entry(make_candidate("000008", 10_000), adapter, kill_switch=ks)
     assert r.ok is False and r.reason.startswith("kill_switch_active")
+
+
+# ─── 1105-03 · 청산은 봇이 산 수량까지만 ───
+def _manual_buy(adapter, ticker: str, qty: int, price: float):
+    """사용자가 직접 산 주식 흉내 (감사 기록·신호 없이 어댑터에 바로 매수)."""
+    adapter._toss._prices[ticker] = price
+    r = adapter.submit_order(OrderRequest(ticker=ticker, side=OrderSide.BUY, order_type=OrderType.MARKET, qty=qty))
+    assert r.filled_qty == qty
+
+
+async def _held(adapter, ticker: str) -> int:
+    pos = adapter.get_position(ticker)
+    return pos.qty if pos else 0
+
+
+async def test_exit_sells_only_bot_qty_keeps_manual_shares(db_ready, wired, store):
+    adapter, ks = wired
+    store.patch({"max_concurrent_positions": 2})                       # 직접 산 종목도 보유 칸 1개를 씀
+    _manual_buy(adapter, "000001", 20, 10_000)
+    r, x = await _round_trip(adapter, ks, "000001", 10_000, 9_500)   # 봇 10주 매수 → 청산
+    assert x.filled_qty == 10
+    assert await _held(adapter, "000001") == 20                       # 직접 산 20주는 남음
+
+
+async def _seed_signal(ticker: str, entry_uuid: str, entry_price: float = 10_000) -> int:
+    async with get_session() as session:
+        row = SniperSignal(ticker=ticker, entry_order_uuid=entry_uuid, entry_price=entry_price)
+        session.add(row)
+        await session.flush()
+        return row.id
+
+
+async def test_exit_canceled_entry_sells_nothing_and_closes(db_ready, wired):
+    from backend.discovery.live_tape.trailing_stop import open_positions
+
+    adapter, ks = wired
+    _manual_buy(adapter, "000002", 5, 10_000)
+    async with get_session() as session:
+        session.add(_audit("e-can", "buy", status="canceled", qty=10))
+    sid = await _seed_signal("000002", "e-can")
+    x = await execute_exit(sid, adapter, trigger_reason="hard_sl")
+    assert x.ok is False and x.reason == "entry_unfilled"
+    assert await _held(adapter, "000002") == 5                        # 사용자 주식 안 팜
+    assert sid not in await open_positions()                          # 5초마다 다시 시도하지 않음
+
+
+async def test_exit_accepted_entry_uses_order_qty(db_ready, wired):
+    adapter, ks = wired
+    _manual_buy(adapter, "000003", 8, 10_000)
+    async with get_session() as session:
+        session.add(_audit("e-acc", "buy", status="accepted", qty=3))
+    sid = await _seed_signal("000003", "e-acc")
+    x = await execute_exit(sid, adapter, trigger_reason="hard_sl")
+    assert x.ok and x.filled_qty == 3
+    assert await _held(adapter, "000003") == 5
+
+
+async def test_exit_without_audit_uses_approx_and_alerts_once(db_ready, wired, monkeypatch, store):
+    from backend.discovery.live_tape import exit as exit_mod
+
+    sent = []
+
+    class _FakeNotifier:
+        async def send_warning(self, title, body, category=None, dedupe_id=None):
+            sent.append(title)
+            return True
+
+    import backend.services.notifier as notifier_mod
+    monkeypatch.setattr(notifier_mod, "TelegramNotifier", _FakeNotifier)
+    monkeypatch.setattr(exit_mod, "get_sniper_params", lambda: store.get())
+    exit_mod._approx_alerted.clear()
+    adapter, ks = wired
+    _manual_buy(adapter, "000004", 30, 10_000)
+    sid = await _seed_signal("000004", "no-audit", entry_price=10_000)   # 근사 100,000 ÷ 10,000 = 10주
+    x = await execute_exit(sid, adapter, trigger_reason="hard_sl")
+    assert x.ok and x.filled_qty == 10
+    assert await _held(adapter, "000004") == 20
+    assert sent == ["청산 수량 짐작"]
+
+
+async def test_same_ticker_two_signals_exit_once_per_cycle(db_ready, wired, store, monkeypatch):
+    from types import SimpleNamespace
+
+    adapter, ks = wired
+    store.patch({"enabled": True})
+    _manual_buy(adapter, "000005", 20, 10_000)
+    async with get_session() as session:
+        session.add(_audit("e-a", "buy", qty=5))
+        session.add(_audit("e-b", "buy", qty=5))
+    await _seed_signal("000005", "e-a")
+    await _seed_signal("000005", "e-b")
+
+    async def _exit_now(signal_id):
+        return SimpleNamespace(should_exit=True, reason="hard_sl")
+
+    monkeypatch.setattr(sniper_mod, "_resolve_order_manager", lambda: adapter)
+    monkeypatch.setattr(sniper_mod, "poll_trailing", _exit_now)
+    stats = await sniper_mod.manage_positions()
+    assert stats["exited"] == 1 and stats.get("deferred_same_ticker") == 1
+    assert await _held(adapter, "000005") == 15
+    stats2 = await sniper_mod.manage_positions()                      # 다음 주기에 두 번째
+    assert stats2["exited"] == 1
+    assert await _held(adapter, "000005") == 10

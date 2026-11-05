@@ -94,6 +94,31 @@ async def record_direct_order(order_manager, req: OrderRequest, result: OrderRes
         logger.warning("[audit] 직접 주문 기록 실패 · %s · %s", req.signal_id, exc)
 
 
+# 1105-03 · 아직 체결 결과가 정해지지 않은 진입 (reconciler 가 30초마다 갱신)
+_ENTRY_OPEN = {OrderStatus.PENDING.value, OrderStatus.ACCEPTED.value, OrderStatus.PARTIAL_FILL.value}
+
+
+async def bot_entry_qty(entry_order_uuid: Optional[str]) -> Optional[int]:
+    """봇이 이 진입으로 산 수량 (1105-03 · 청산 때 이 수량까지만 판다).
+
+    - 감사 행 없음 → None (호출 쪽이 근사)
+    - 체결 수량 > 0 → 체결 수량
+    - 체결 0 이고 아직 열린 주문 (pending · accepted · partial) → 주문 수량 (reconciler 지연 대비)
+    - 체결 0 이고 끝난 주문 (canceled · rejected · error 등) → 0 (팔 것 없음)
+    """
+    if not entry_order_uuid:
+        return None
+    row = await get_order_audit(entry_order_uuid)
+    if row is None:
+        return None
+    filled = int(row.filled_qty or 0)
+    if filled > 0:
+        return filled
+    if (row.status or "") in _ENTRY_OPEN:
+        return int(row.qty or 0)
+    return 0
+
+
 async def get_order_audit(order_uuid: str) -> Optional[OrderAudit]:
     """단일 감사 로그 조회 (get_order_status 재구성용)."""
     async with get_session() as session:
