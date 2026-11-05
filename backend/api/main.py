@@ -110,11 +110,11 @@ async def lifespan(app: FastAPI):
     register_meme_jobs(scheduler)
 
     # Execution Layer — TossAdapter 사용 시 미체결 주문 30초 주기 reconcile (Phase 2)
+    # 1105-04 ㉦ · 실계좌 (EXECUTION_BROKER=toss) 면 늘 등록. 예전에는 신호 연결 (EXECUTION_ENABLED) 도 켜져야 해서
+    # 스나이퍼·관심 종목 직접 주문이 접수 상태로 남아 하루 손익 · 청산 수량이 맞지 않았음 (Fable 1105-04-01 막음 1).
+    # 열린 Toss 주문이 없으면 Toss 조회 0회.
     import os as _os
-    if (
-        _os.environ.get("EXECUTION_ENABLED", "").lower() in {"1", "true", "yes", "on"}
-        and _os.environ.get("EXECUTION_BROKER", "paper").lower() == "toss"
-    ):
+    if _os.environ.get("EXECUTION_BROKER", "paper").lower() == "toss":
         from backend.execution.reconciler import reconcile_pending_orders
 
         scheduler.add_job(
@@ -241,7 +241,7 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(
     title="Toss Tradebot MVP API",
-    version="0.3.39",
+    version="0.3.40",
     description="자동매매 + Crazy + Moonshot Discovery API",
     lifespan=lifespan,
 )

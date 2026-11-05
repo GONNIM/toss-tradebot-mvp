@@ -111,7 +111,11 @@ def _once_today(key: str) -> bool:
 
 
 async def _alert_uncomputable(items: list[tuple[int, str]]) -> None:
-    """하루 손익을 계산하지 못한 청산 알림 · signal id 마다 하루 1회."""
+    """하루 손익을 계산하지 못한 청산 알림 · signal id 마다 하루 1회.
+
+    1105-04 ㉠ · 이런 청산이 있으면 새 매수 전 검사 (`audit.pre_entry_loss_block`) 가 그날 매수를 막음.
+    체결 확인 중인 청산 (detail.pending) 은 여기 오지 않음.
+    """
     fresh = [(sid, why) for sid, why in items if _once_today(f"uncomputable:{sid}")]
     if not fresh:
         return
@@ -120,8 +124,9 @@ async def _alert_uncomputable(items: list[tuple[int, str]]) -> None:
     try:
         from backend.services.notifier import TelegramNotifier
         await TelegramNotifier().send_warning(
-            "하루 손익 계산 불가",
-            f"청산 {len(fresh)}건의 손익을 계산하지 못했습니다. 이 건은 손실 자동 정지 판단에서 빠집니다.\n{lines}",
+            "하루 손익 계산 불가 · 오늘 새 매수 멈춤",
+            f"청산 {len(fresh)}건의 손익을 계산하지 못했습니다. 손실을 알 수 없어 오늘(한국 09:00 기준) 새 매수를 멈춥니다. "
+            f"보유 종목의 손절·추적 매도는 계속됩니다.\n{lines}",
             category="execution",
         )
     except Exception as exc:  # noqa: BLE001

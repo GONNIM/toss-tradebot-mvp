@@ -10,6 +10,8 @@ candidate 감지 → 6단계 방어 통과 → TossAdapter.submit_order(MARKET B
 4. 정규장 시간? (active_start_kst ≤ now < active_end_kst) → 밖이면 스킵
 5. 이미 오늘 진입한 종목? → 스킵 (동일 종목 1일 1회)
 6. 종목별 warnings (VI · 단기과열 · 정리매매)? → 스킵
+7. 하루 손익 (1105-04 ㉠ ㉤): 오늘 손익을 계산 못 한 청산이 있거나 실현 손실이 한도의 70% 이하 → 스킵
+   (signal_router 매수 전 검사와 같은 함수 `audit.pre_entry_loss_block` · 분모는 시드)
 
 계획서: docs/plans/sniper/00-sprint1-plan.md §3-1 (6단계 매수 방어)
 """
@@ -37,7 +39,7 @@ from backend.execution import (
 from backend.execution.brokers.paper_adapter import PaperAdapter
 from backend.execution.brokers.toss_adapter import TossAdapter
 from backend.execution.kill_switch import KillSwitch, get_kill_switch
-from backend.execution.audit import record_direct_order
+from backend.execution.audit import pre_entry_loss_block, record_direct_order
 from backend.execution.order_manager import OrderManager
 from backend.services.db import get_session
 from backend.services.models import SniperSignal
@@ -197,6 +199,12 @@ async def execute_entry(
             ok=False,
             reason=f"warnings_blocked({','.join(warnings.active_types)})",
         )
+
+    # ── 방어 7: 하루 손익 (1105-04 ㉠ ㉤) ───
+    loss_block = await pre_entry_loss_block(order_manager.broker_kind, params.seed_cap_krw, params.daily_loss_limit_pct)
+    if loss_block:
+        logger.info("[sniper·entry] 하루 손익 검사 · skip · %s · %s", candidate.ticker, loss_block)
+        return EntryResult(ok=False, reason=loss_block)
 
     # ── 진입 · qty 계산 · 시장가 매수 ────────
     price = candidate.last_price

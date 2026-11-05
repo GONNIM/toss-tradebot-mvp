@@ -152,6 +152,34 @@ class SignalRouter:
             signal_id=event.signal_id,
         )
 
+    async def _cap_sell_qty(self, req: OrderRequest) -> Optional[OrderRequest]:
+        """매도 수량을 계좌 보유와 신호 연결 순수량으로 줄임 (1105-04 ㉣). 팔 것이 없으면 None."""
+        from dataclasses import replace as _replace
+
+        from .audit import router_net_qty
+
+        try:
+            held = 0
+            for pos in self._om.get_balance().positions:
+                if pos.ticker == req.ticker:
+                    held = int(pos.qty or 0)
+                    break
+            net = await router_net_qty(self._om.broker_kind, req.ticker)
+        except Exception as exc:  # noqa: BLE001
+            logger.warning("[Router] 매도 수량 확인 실패 · 건너뜀 · ticker=%s · %s", req.ticker, exc)
+            return None
+        qty = min(held, net)
+        if qty <= 0:
+            logger.info(
+                "[Router] 매도 건너뜀 · 신호 연결이 산 주식 없음 · ticker=%s · 보유=%d · 순수량=%d · source=%s",
+                req.ticker, held, net, req.signal_source,
+            )
+            return None
+        if qty != req.qty:
+            logger.info("[Router] 매도 수량 조정 · ticker=%s · %d → %d (보유 %d · 순수량 %d)", req.ticker, req.qty, qty, held, net)
+            return _replace(req, qty=qty)
+        return req
+
     # ─── Public entry ───
     async def route(self, event: SignalEvent) -> Optional[OrderResult]:
         """시그널 → 주문 라우팅.
@@ -183,6 +211,13 @@ class SignalRouter:
         req = self._to_order_request(event, market_info.last_price)
         if req is None:
             return None
+
+        # ④.1 매도 수량 = min(계좌 보유, 신호 연결이 산 순수량) (1105-04 ㉣)
+        # 사용자가 직접 산 주식 · 스나이퍼·관심 종목이 산 주식은 팔지 않음 · 0 이면 건너뜀
+        if req.side == OrderSide.SELL:
+            req = await self._cap_sell_qty(req)
+            if req is None:
+                return None
 
         # ④.5 PrinciplesGate (fail-closed 화이트리스트 · gate-design-v1 §3-1)
         # 매수 신호만 대상 (매도는 리스크 축소 · 관문 우회 · 문서 명문화)

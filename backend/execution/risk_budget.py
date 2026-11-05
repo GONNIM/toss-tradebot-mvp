@@ -13,10 +13,9 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass
-from datetime import datetime, timedelta, timezone
 from typing import Optional
 
-from .audit import daily_realized_pnl
+from .audit import pre_entry_loss_block
 from .models import Balance, BrokerKind, OrderRequest, OrderSide
 from .params import ExecutionParamsStore, get_params_store
 
@@ -78,31 +77,17 @@ class RiskBudgetChecker:
                 )
 
         # ─── ② 일일 손실 캡 (daily_loss_limit) ───
-        # 하루 실현 손익 = 오늘 청산된 진입 기록 짝의 순손익 (1025-02) · 조회 실패면 매수 차단
-        try:
-            since = datetime.now(tz=timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
-            realized = await daily_realized_pnl(broker_kind, since)
-        except Exception as exc:  # noqa: BLE001
-            logger.error("일일 손익 조회 실패 — %s · 매수 차단", exc)
+        # 1105-04 ㉠ ㉤ · 직접 진입 (entry 방어 7) 과 같은 함수 · 분모는 스나이퍼 시드 (5초 자동 정지와 같은 기준)
+        # 계산 못 한 청산이 오늘 있으면 막음 · 실현 손실이 한도의 70% 에 닿으면 막음 · 조회 실패면 막음
+        from backend.discovery.live_tape.params import get_sniper_params
+
+        block = await pre_entry_loss_block(broker_kind, get_sniper_params().seed_cap_krw, rb.daily_loss_limit)
+        if block:
             return RiskCheckResult(
                 passed=False,
                 rule="daily_loss_limit",
-                detail=f"일일 손익 조회 실패로 매수 보류: {str(exc)[:100]}",
+                detail=f"하루 손익 검사로 매수 보류: {block} (한계 {rb.daily_loss_limit*100:.1f}%)",
             )
-
-        if balance.total_equity_krw > 0:
-            realized_pct = realized / balance.total_equity_krw
-            # 70% 초과 진입 시부터 신규 매수 차단 (여유 30%)
-            trigger = rb.daily_loss_limit * 0.7
-            if realized_pct < trigger:
-                return RiskCheckResult(
-                    passed=False,
-                    rule="daily_loss_limit",
-                    detail=(
-                        f"일일 손실 캡 근접: 실현손실 {realized_pct*100:.2f}% · "
-                        f"차단 트리거 {trigger*100:.2f}% (한계 {rb.daily_loss_limit*100:.1f}%)"
-                    ),
-                )
 
         return RiskCheckResult(passed=True)
 
