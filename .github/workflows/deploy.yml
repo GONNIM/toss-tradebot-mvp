@@ -241,15 +241,21 @@ jobs:
           chmod 600 "$ENV_FILE"
           echo "  git_sha=$AFTER injected"
 
-          echo "[5.5/7] biotech crontab 줄 (WP96 · deploy/biotech_cron_lines.txt · 없으면 추가 · 있는 줄은 그대로)"
+          echo "[5.5/7] crontab 봇 구역 (1105-06 · deploy/biotech_cron_lines.txt 로 구역을 통째로 바꿈 · 구역 밖 줄은 그대로)"
           cd /root/toss-tradebot-mvp
           crontab -l > /tmp/biotech_cron.cur 2>/dev/null || : > /tmp/biotech_cron.cur
-          bash deploy/merge_cron_lines.sh /tmp/biotech_cron.cur deploy/biotech_cron_lines.txt > /tmp/biotech_cron.new
-          if cmp -s /tmp/biotech_cron.cur /tmp/biotech_cron.new; then
-            echo "  crontab 변경 없음"
+          # 안전장치 (스크립트 머리말): 봇 줄 없음 · 결과 빔 · 구역 표시 어긋남 · 구역 밖 줄 감소면 exit 3 → crontab 그대로 (배포는 계속)
+          if bash deploy/merge_cron_lines.sh /tmp/biotech_cron.cur deploy/biotech_cron_lines.txt > /tmp/biotech_cron.new; then
+            if cmp -s /tmp/biotech_cron.cur /tmp/biotech_cron.new; then
+              echo "  crontab 변경 없음"
+            else
+              mkdir -p var
+              cp /tmp/biotech_cron.cur var/crontab.before   # 되돌리기: crontab var/crontab.before
+              crontab /tmp/biotech_cron.new
+              echo "  crontab 바뀜 · 전 $(grep -cv '^[[:space:]]*$' /tmp/biotech_cron.cur || true)줄 → 후 $(grep -cv '^[[:space:]]*$' /tmp/biotech_cron.new || true)줄 · 이전 사본 var/crontab.before"
+            fi
           else
-            crontab /tmp/biotech_cron.new
-            echo "  crontab 줄 추가 · $(diff /tmp/biotech_cron.cur /tmp/biotech_cron.new | grep -c '^>') 줄"
+            echo "::warning::crontab 봇 구역 바꾸기 중단 · crontab 그대로 둠 (위 merge_cron_lines 메시지 확인)"
           fi
           rm -f /tmp/biotech_cron.cur /tmp/biotech_cron.new
 
