@@ -95,9 +95,11 @@ async def kill_switch_status():
 async def kill_switch_activate(
     reason: str = Body(..., embed=True),
     actor: str = Body("user:manual", embed=True),
+    sell_allowed: bool = Body(True, embed=True),
 ):
-    s = get_kill_switch().activate(reason=reason, actor=actor)
-    return {"active": s.active, "reason": s.reason, "activated_by": s.activated_by}
+    # 1105-05 · 이 라우터는 main.py 에 등록되어 있지 않음 · 다시 켤 때 /sniper 발동과 같은 뜻 (1105-02)
+    s = get_kill_switch().activate(reason=reason, actor=actor, sell_allowed=sell_allowed)
+    return {"active": s.active, "reason": s.reason, "activated_by": s.activated_by, "sell_allowed": s.sell_allowed}
 
 
 @router.delete("/kill-switch")

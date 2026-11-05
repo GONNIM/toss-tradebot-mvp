@@ -211,10 +211,22 @@ jobs:
           # 첫 실행: baseline stamp 없으면 e859d822c111 부터 시작 · pass (baseline)
           #          + 42970a316e10 (user_id 7 tables) 실행
           # 이후:    이미 head 면 no-op
-          .venv/bin/alembic upgrade head 2>&1 | tail -10 || {
+          # 1105-05 · 운영 API 가 5초마다 DB 에 써서 잠금에 걸릴 수 있음 → 3번까지 10초 간격 재시도 (Fable 1105-04-01 권고 3)
+          # 예전 `| tail -10 || {…}` 은 tail 의 성공으로 alembic 실패를 놓쳤음 · 이제 실패하면 배포 중단
+          ALEMBIC_OK=0
+          for TRY in 1 2 3; do
+            if .venv/bin/alembic upgrade head > /tmp/alembic_upgrade.out 2>&1; then
+              ALEMBIC_OK=1; tail -10 /tmp/alembic_upgrade.out; break
+            fi
+            tail -5 /tmp/alembic_upgrade.out
+            echo "  alembic 실패 · 재시도 $TRY/3 (DB 잠금 대기 10초)"
+            sleep 10
+          done
+          rm -f /tmp/alembic_upgrade.out
+          if [ "$ALEMBIC_OK" != 1 ]; then
             echo "❌ alembic upgrade failed · 배포 중단"
             exit 1
-          }
+          fi
 
           echo "[4/7] frontend build"
           cd ../frontend
@@ -229,15 +241,21 @@ jobs:
           chmod 600 "$ENV_FILE"
           echo "  git_sha=$AFTER injected"
 
-          echo "[5.5/7] biotech crontab 줄 (WP96 · deploy/biotech_cron_lines.txt · 없으면 추가 · 있는 줄은 그대로)"
+          echo "[5.5/7] crontab 봇 구역 (1105-06 · deploy/biotech_cron_lines.txt 로 구역을 통째로 바꿈 · 구역 밖 줄은 그대로)"
           cd /root/toss-tradebot-mvp
           crontab -l > /tmp/biotech_cron.cur 2>/dev/null || : > /tmp/biotech_cron.cur
-          bash deploy/merge_cron_lines.sh /tmp/biotech_cron.cur deploy/biotech_cron_lines.txt > /tmp/biotech_cron.new
-          if cmp -s /tmp/biotech_cron.cur /tmp/biotech_cron.new; then
-            echo "  crontab 변경 없음"
+          # 안전장치 (스크립트 머리말): 봇 줄 없음 · 결과 빔 · 구역 표시 어긋남 · 구역 밖 줄 감소면 exit 3 → crontab 그대로 (배포는 계속)
+          if bash deploy/merge_cron_lines.sh /tmp/biotech_cron.cur deploy/biotech_cron_lines.txt > /tmp/biotech_cron.new; then
+            if cmp -s /tmp/biotech_cron.cur /tmp/biotech_cron.new; then
+              echo "  crontab 변경 없음"
+            else
+              mkdir -p var
+              cp /tmp/biotech_cron.cur var/crontab.before   # 되돌리기: crontab var/crontab.before
+              crontab /tmp/biotech_cron.new
+              echo "  crontab 바뀜 · 전 $(grep -cv '^[[:space:]]*$' /tmp/biotech_cron.cur || true)줄 → 후 $(grep -cv '^[[:space:]]*$' /tmp/biotech_cron.new || true)줄 · 이전 사본 var/crontab.before"
+            fi
           else
-            crontab /tmp/biotech_cron.new
-            echo "  crontab 줄 추가 · $(diff /tmp/biotech_cron.cur /tmp/biotech_cron.new | grep -c '^>') 줄"
+            echo "::warning::crontab 봇 구역 바꾸기 중단 · crontab 그대로 둠 (위 merge_cron_lines 메시지 확인)"
           fi
           rm -f /tmp/biotech_cron.cur /tmp/biotech_cron.new
 

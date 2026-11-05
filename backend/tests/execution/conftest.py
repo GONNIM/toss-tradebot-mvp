@@ -79,6 +79,11 @@ def kill_switch(tmp_paths):
 @pytest_asyncio.fixture
 async def db_ready():
     await init_db()
+    # 1105-04 · 매수 전 하루 손익 검사 (분모 시드 100만) 가 다른 시험 파일이 남긴 청산 기록을 읽지 않게
+    from backend.services.models import SniperSignal
+
+    async with get_session() as session:
+        await session.execute(delete(SniperSignal))
     yield
 
 

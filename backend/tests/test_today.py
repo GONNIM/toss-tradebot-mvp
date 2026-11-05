@@ -89,7 +89,7 @@ async def test_anon_locked_rows_even_without_data(client):
 @pytest.mark.asyncio
 async def test_safety_public_values(client):
     b = (await client.get("/api/v1/today")).json()
-    assert set(b["safety"]) == {"live_enabled", "sniper_enabled", "kill_switch_active", "order_target"}
+    assert set(b["safety"]) == {"live_enabled", "sniper_enabled", "kill_switch_active", "kill_switch_sell_allowed", "order_target"}
     assert b["safety"]["order_target"] in ("paper", "toss")
 
 

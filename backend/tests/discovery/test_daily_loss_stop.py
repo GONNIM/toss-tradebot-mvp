@@ -69,6 +69,18 @@ def wired(monkeypatch, store, paper):
     return adapter, ks
 
 
+@pytest.fixture
+def no_pre_check(monkeypatch):
+    """매수 전 하루 손익 검사 (1105-04 방어 7 · 한도 70% 에서 멈춤) 를 끔.
+
+    자동 정지 (-3%) 까지 손실 왕복을 쌓는 시험용 · 방어 7 은 따로 시험한다.
+    """
+    async def _none(*a, **kw):
+        return None
+
+    monkeypatch.setattr(entry_mod, "pre_entry_loss_block", _none)
+
+
 @pytest_asyncio.fixture
 async def db_ready():
     await init_db()
@@ -103,7 +115,7 @@ def _audit(uuid, side, status="filled", qty=10, price=10_000.0, fee=0.0, created
 
 
 # ① 끝까지 흐름 · 시드 100만 · 주문 10만 · 5% 하락 → 왕복 1회 약 -5,029원 · 6회째 -3% 넘어 발동
-async def test_loss_rounds_trigger_kill_switch(db_ready, wired):
+async def test_loss_rounds_trigger_kill_switch(db_ready, wired, no_pre_check):
     adapter, ks = wired
     for i in range(1, 6):
         await _round_trip(adapter, ks, f"{i:06d}", 10_000, 9_500)
@@ -166,7 +178,7 @@ async def test_missing_audit_uncomputable_alert_once(db_ready, wired, monkeypatc
     assert d.uncomputable[0][1] == "buy_audit_missing"
     await sniper_mod.check_daily_loss_and_trigger_ks()
     await sniper_mod.check_daily_loss_and_trigger_ks()
-    assert sent == ["하루 손익 계산 불가"]
+    assert sent == ["하루 손익 계산 불가 · 오늘 새 매수 멈춤"]
 
 
 async def _seed_pair(buy: OrderAudit, sell: OrderAudit):
@@ -209,7 +221,7 @@ async def test_risk_budget_blocks_on_pnl_error(monkeypatch, tmp_path):
     async def _boom(*a, **kw):
         raise RuntimeError("db down")
 
-    monkeypatch.setattr(rb_mod, "daily_realized_pnl", _boom)
+    monkeypatch.setattr(audit_mod, "daily_pnl_detail", _boom)
     checker = rb_mod.RiskBudgetChecker(params_store=ExecutionParamsStore(path=tmp_path / "exec.json"))
     req = OrderRequest(ticker="000001", side=OrderSide.BUY, order_type=OrderType.MARKET, qty=1)
     bal = Balance(cash_krw=1_000_000, cash_usd=0, total_equity_krw=1_000_000)
@@ -242,7 +254,7 @@ async def test_audit_failure_does_not_block(db_ready, wired, monkeypatch):
 
 
 # 1105-02 · 끝까지 흐름: 손실 6회 → 자동 정지 (매도 허용) → 보유 1종목이 같은 5초 주기에서 청산 · 새 진입 거부
-async def test_auto_stop_then_held_position_exits_same_cycle(db_ready, wired, store, monkeypatch):
+async def test_auto_stop_then_held_position_exits_same_cycle(db_ready, wired, store, monkeypatch, no_pre_check):
     from types import SimpleNamespace
 
     adapter, ks = wired
@@ -375,3 +387,140 @@ async def test_same_ticker_two_signals_exit_once_per_cycle(db_ready, wired, stor
     stats2 = await sniper_mod.manage_positions()                      # 다음 주기에 두 번째
     assert stats2["exited"] == 1
     assert await _held(adapter, "000005") == 10
+
+
+# ─── 1105-04 · 실주문 전 결정 ───
+async def _enter(adapter, ks, ticker: str, price: float = 10_000):
+    adapter._toss._prices[ticker] = price
+    with mock_patch.object(entry_mod, "_is_in_active_window", return_value=True):
+        with mock_patch("backend.discovery.live_tape.entry.check_warnings", new=_pass_warnings):
+            return await execute_entry(make_candidate(ticker, price), adapter, kill_switch=ks)
+
+
+# ㉤ 방어 7 · 실현 손실이 시드의 -2.1% (한도 -3% × 0.7) 에 닿으면 새 진입 거부 · 그 전에는 통과
+async def test_pre_entry_blocks_at_70pct_of_limit(db_ready, wired, store):
+    adapter, ks = wired
+    for i in range(1, 6):                       # 4회 뒤 약 -2.01% → 5회째 진입 통과 · 5회 뒤 약 -2.51%
+        await _round_trip(adapter, ks, f"{i:06d}", 10_000, 9_500)
+    r6 = await _enter(adapter, ks, "000006")
+    assert r6.ok is False and r6.reason.startswith("daily_loss_near_limit"), r6.reason
+    assert ks.is_active() is False              # 자동 정지 (-3%) 는 아직
+
+
+# ㉠ 오늘 손익을 계산 못 한 청산이 있으면 새 진입 거부 (계산 불가 사유 · 하루 내내)
+async def test_uncomputable_today_blocks_entry(db_ready, wired):
+    adapter, ks = wired
+    t = (_today0() + timedelta(minutes=1)).replace(tzinfo=None)
+    await _seed_pair(_audit("b-x", "buy", created_at=t), _audit("s-x", "sell", status="rejected", created_at=t))
+    r = await _enter(adapter, ks, "000009")
+    assert r.ok is False and r.reason.startswith("pnl_uncomputable_today(1)")
+
+
+# ㉠ 체결 확인 중 (접수 · 체결 0) 인 청산은 계산 불가로 세지 않음 → 진입 막지 않음 · pending 으로 나뉨
+async def test_pending_exit_does_not_block_entry(db_ready, wired):
+    adapter, ks = wired
+    t = (_today0() + timedelta(minutes=1)).replace(tzinfo=None)
+    await _seed_pair(_audit("b-p", "buy", created_at=t), _audit("s-p", "sell", status="accepted", created_at=t))
+    d = await daily_pnl_detail(BrokerKind.PAPER, _today0())
+    assert d.uncomputable == [] and len(d.pending) == 1 and d.pending[0][1] == "pending:sell_accepted"
+    r = await _enter(adapter, ks, "000010")
+    assert r.ok, r.reason
+
+
+# ㉤ 신호 연결 매수 전 검사도 분모는 시드 (총자산 1,000만이어도 시드 100만 기준 -2.5% → 막음)
+async def test_risk_budget_uses_seed_denominator(db_ready, monkeypatch, tmp_path, store):
+    from backend.discovery.live_tape import params as sp_mod
+    from backend.execution.params import ExecutionParamsStore
+
+    monkeypatch.setattr(sp_mod, "get_sniper_params", lambda: store.get())
+    t = (_today0() + timedelta(minutes=1)).replace(tzinfo=None)
+    await _seed_pair(_audit("b-r", "buy", created_at=t), _audit("s-r", "sell", price=7_500, created_at=t))  # -25,000
+    checker = rb_mod.RiskBudgetChecker(params_store=ExecutionParamsStore(path=tmp_path / "exec.json"))
+    req = OrderRequest(ticker="000001", side=OrderSide.BUY, order_type=OrderType.MARKET, qty=1)
+    bal = Balance(cash_krw=10_000_000, cash_usd=0, total_equity_krw=10_000_000)
+    res = await checker.check(req, bal, BrokerKind.PAPER)
+    assert res.passed is False and res.rule == "daily_loss_limit" and "daily_loss_near_limit" in res.detail
+
+
+# ㉣ 신호 연결 매도 수량 = min(보유, 신호 연결이 산 순수량)
+def _router_audit(uuid, side, source, qty, status="filled", ticker="000020"):
+    return OrderAudit(
+        order_uuid=uuid, broker_kind="paper", ticker=ticker, side=side, order_type="market",
+        qty=qty, status=status, filled_qty=qty if status == "filled" else 0,
+        avg_fill_price=10_000.0 if status == "filled" else None, signal_source=source,
+    )
+
+
+async def _route_vip_sell(adapter, ks, monkeypatch, ticker="000020"):
+    from backend.execution.signal_router import SignalEvent, SignalRouter
+
+    monkeypatch.setenv("EXECUTION_ENABLED", "true")
+    adapter._toss._prices[ticker] = 10_000
+    router = SignalRouter(adapter, kill_switch=ks)
+    return await router.route(SignalEvent(ticker=ticker, action="sell", strength=100, source="vip", signal_id="vip-sell-1"))
+
+
+async def test_router_sell_skips_shares_bought_by_watchlist(db_ready, wired, monkeypatch):
+    """관심 종목으로 산 주식에 유명 투자자 매도 신호 → 팔지 않음 (Fable 1105-04-01 막음 2)."""
+    adapter, ks = wired
+    _manual_buy(adapter, "000020", 8, 10_000)
+    async with get_session() as session:
+        session.add(_router_audit("w-buy", "buy", "watchlist", 8))
+    assert await _route_vip_sell(adapter, ks, monkeypatch) is None
+    assert await _held(adapter, "000020") == 8
+
+
+async def test_router_sell_caps_to_router_net_qty(db_ready, wired, monkeypatch):
+    """신호 연결이 5주 사고 3주 팖 · 열린 매도 1주 · 실계좌 행은 안 셈 → 순 1주 · 보유 8주 중 1주만 팖."""
+    adapter, ks = wired
+    _manual_buy(adapter, "000020", 8, 10_000)
+    async with get_session() as session:
+        session.add(_router_audit("v-buy", "buy", "vip", 5))
+        session.add(_router_audit("v-sell", "sell", "meme_stock", 3))
+        session.add(_router_audit("v-sell-open", "sell", "vip", 1, status="accepted"))
+        session.add(OrderAudit(order_uuid="toss-buy", broker_kind="toss", ticker="000020", side="buy",
+                               order_type="market", qty=9, status="filled", filled_qty=9, signal_source="vip"))
+    res = await _route_vip_sell(adapter, ks, monkeypatch)
+    assert res is not None and res.filled_qty == 1
+    assert await _held(adapter, "000020") == 7
+
+
+# ─── 1105-05 · 작은 고칠 점 ───
+# 6 · 청산하면 청산 시각 (exited_at) 이 채워짐 · 7 · 하루 손익은 청산 시각이 오늘 이전인 행을 읽지 않음
+async def test_exit_sets_exited_at_and_old_rows_skipped(db_ready, wired):
+    adapter, ks = wired
+    r, x = await _round_trip(adapter, ks, "000030", 10_000, 9_000)
+    async with get_session() as session:
+        row = await session.get(SniperSignal, r.sniper_signal_id)
+        assert row.exited_at is not None
+        row.exited_at = (_today0() - timedelta(days=1)).replace(tzinfo=None)   # 어제 청산으로 바꿈
+    d = await daily_pnl_detail(BrokerKind.PAPER, _today0())
+    assert d.computed == 0 and d.uncomputable == []
+
+
+# 8 · 진입 출처가 주문 기록에 남음 (관심 종목 · 수동)
+async def test_entry_source_recorded(db_ready, wired, store):
+    adapter, ks = wired
+    store.patch({"max_concurrent_positions": 3})
+    adapter._toss._prices["000031"] = 10_000
+    adapter._toss._prices["000032"] = 10_000
+    with mock_patch.object(entry_mod, "_is_in_active_window", return_value=True):
+        with mock_patch("backend.discovery.live_tape.entry.check_warnings", new=_pass_warnings):
+            w = await execute_entry(make_candidate("000031", 10_000), adapter, kill_switch=ks, source="watchlist")
+            m = await execute_entry(make_candidate("000032", 10_000), adapter, kill_switch=ks, source="manual")
+    assert w.ok and m.ok
+    async with get_session() as session:
+        assert (await session.get(OrderAudit, w.order_uuid)).signal_source == "watchlist"
+        assert (await session.get(OrderAudit, m.order_uuid)).signal_source == "manual"
+
+
+# 9 · 체결 수수료 · 응답 칸이 있으면 그 값 · 없으면 수수료율 짐작 (표식 rate_estimate)
+def test_reconciler_fee_source():
+    from backend.execution.reconciler import _fee_of
+
+    assert _fee_of({}, {"commission": "15"}, "005930", 10, 10_000.0) == (15.0, "toss_response")
+    fee, src = _fee_of({}, {}, "005930", 10, 10_000.0)
+    assert src == "rate_estimate" and fee == pytest.approx(100_000 * 0.00015)
+    fee, src = _fee_of({}, {}, "AAPL", 2, 100.0)
+    assert src == "rate_estimate" and fee == pytest.approx(200 * 0.0025)
+    assert _fee_of({}, {}, "005930", 0, None) == (0.0, "none")

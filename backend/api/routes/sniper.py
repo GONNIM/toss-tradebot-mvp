@@ -334,7 +334,7 @@ async def manual_entry(
     else:
         om = PaperAdapter()
 
-    result = await execute_entry(signal, om)
+    result = await execute_entry(signal, om, source="manual")
     return {
         "ok": result.ok,
         "reason": result.reason,

@@ -590,6 +590,7 @@ class SniperSignal(Base):
     peak_price: Mapped[Optional[float]]                              # trailing 추적용
     pnl_pct: Mapped[Optional[float]]
     reason: Mapped[Optional[str]] = mapped_column(String(20))        # trailing · hard_sl · force_close
+    exited_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)  # 청산 주문 시각 (UTC naive · 1105-05 · 옛 행 NULL)
 
 
 # ─────────────────────────────────────────────────────────────────

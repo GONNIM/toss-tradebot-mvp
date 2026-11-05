@@ -33,6 +33,35 @@ from .models import BrokerKind, OrderStatus
 logger = logging.getLogger(__name__)
 
 
+# 1105-05 · 체결 수수료 · Toss 주문 응답에 수수료 칸이 있는지 공식 문서에 없음 (추정)
+# 있으면 그 값 (fee_source=toss_response) · 없으면 수수료율 × 체결액 (fee_source=rate_estimate · 모의 어댑터와 같은 율)
+_FEE_KEYS = ("fee", "commission", "totalFee", "totalCommission", "commissionAmount")
+_KRX_FEE_RATE = 0.00015
+_US_FEE_RATE = 0.0025
+
+
+def _fee_of(data: dict, exec_info: dict, ticker: str, filled: int, avg: Optional[float]) -> tuple[float, str]:
+    """(수수료, 출처). 응답 칸 → 개별 체결 fee 합 → 수수료율 짐작 순."""
+    for src in (exec_info, data):
+        for k in _FEE_KEYS:
+            v = src.get(k)
+            if v is not None:
+                try:
+                    return float(v), "toss_response"
+                except (TypeError, ValueError):
+                    pass
+    fills = exec_info.get("fills") or []
+    if fills and any(isinstance(f, dict) and f.get("fee") is not None for f in fills):
+        try:
+            return sum(float(f.get("fee") or 0) for f in fills if isinstance(f, dict)), "toss_response"
+        except (TypeError, ValueError):
+            pass
+    if filled <= 0 or not avg:
+        return 0.0, "none"
+    rate = _KRX_FEE_RATE if (ticker.isdigit() and len(ticker) == 6) else _US_FEE_RATE
+    return filled * avg * rate, "rate_estimate"
+
+
 _PENDING_STATUSES = {
     OrderStatus.PENDING.value,
     OrderStatus.ACCEPTED.value,
@@ -100,6 +129,8 @@ async def reconcile_pending_orders(toss_client: Optional[TossClient] = None) -> 
             row.status = new_status.value
             row.filled_qty = new_filled
             row.avg_fill_price = new_avg
+            fee, fee_source = _fee_of(data, exec_info, row.ticker or "", new_filled, new_avg)
+            row.total_fee = fee
             if data.get("canceledAt"):
                 try:
                     row.completed_at = datetime.fromisoformat(data["canceledAt"])
@@ -130,6 +161,7 @@ async def reconcile_pending_orders(toss_client: Optional[TossClient] = None) -> 
                     "at": datetime.now(tz=timezone.utc).isoformat(),
                     "request_id": env.request_id,
                     "toss_status": toss_status,
+                    "fee_source": fee_source,
                 }
             )
             row.raw_response = json.dumps(raw, ensure_ascii=False, default=str)

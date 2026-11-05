@@ -110,11 +110,11 @@ async def lifespan(app: FastAPI):
     register_meme_jobs(scheduler)
 
     # Execution Layer — TossAdapter 사용 시 미체결 주문 30초 주기 reconcile (Phase 2)
+    # 1105-04 ㉦ · 실계좌 (EXECUTION_BROKER=toss) 면 늘 등록. 예전에는 신호 연결 (EXECUTION_ENABLED) 도 켜져야 해서
+    # 스나이퍼·관심 종목 직접 주문이 접수 상태로 남아 하루 손익 · 청산 수량이 맞지 않았음 (Fable 1105-04-01 막음 1).
+    # 열린 Toss 주문이 없으면 Toss 조회 0회.
     import os as _os
-    if (
-        _os.environ.get("EXECUTION_ENABLED", "").lower() in {"1", "true", "yes", "on"}
-        and _os.environ.get("EXECUTION_BROKER", "paper").lower() == "toss"
-    ):
+    if _os.environ.get("EXECUTION_BROKER", "paper").lower() == "toss":
         from backend.execution.reconciler import reconcile_pending_orders
 
         scheduler.add_job(
@@ -126,6 +126,19 @@ async def lifespan(app: FastAPI):
             coalesce=True,
         )
         logger.info("[FastAPI] Execution reconciler 30초 주기 · Toss 미체결 주문 폴링")
+
+    # 1105-06 · 백업 지연 알림 · 매일 09:10 KST · 03:30 백업이 36시간 넘게 성공하지 않았거나 표시가 없으면 텔레그램
+    from backend.services.backup_watch import check_backup_fresh
+
+    scheduler.add_job(
+        check_backup_fresh,
+        "cron",
+        hour=9, minute=10,
+        id="backup_watch",
+        max_instances=1,
+        coalesce=True,
+    )
+    logger.info("[FastAPI] 백업 지연 알림 잡 등록 (매일 09:10 KST)")
 
     # Super Signal — 5분 주기 승격 + OCO 실행 (Phase 3) · 기본 끔 (1025-03 ③ · 켜려면 env true)
     if _os.environ.get("SUPER_SIGNAL_ENABLED", "false").lower() in {"1", "true", "yes", "on"}:
@@ -241,7 +254,7 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(
     title="Toss Tradebot MVP API",
-    version="0.3.39",
+    version="0.3.40",
     description="자동매매 + Crazy + Moonshot Discovery API",
     lifespan=lifespan,
 )

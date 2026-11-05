@@ -2,7 +2,7 @@
 // 자동 진입은 SNIPER_LIVE_ENABLED 를 보지 않는다 (live_tape/sniper.py · watchlist/execute.py · signal_router 는 EXECUTION_BROKER 만 봄).
 // 결론 = Kill Switch → 자동 진입 세 경로 → 주문 대상 · 실주문 허용은 「수동 실주문 버튼」 줄로 따로.
 import assert from "node:assert/strict";
-import { activePathsLabel, actorLabel, lossLimitLabel, manualEntryLabel, safetyConclusion, scanBadge } from "./sniper-safety";
+import { activePathsLabel, actorLabel, homeKillLabel, lossLimitLabel, manualEntryLabel, safetyConclusion, scanBadge } from "./sniper-safety";
 
 const base = { live_enabled: false, sniper_enabled: true, watchlist_enabled: false, router_enabled: false, kill_switch_active: false, order_target: "paper" as const };
 
@@ -49,7 +49,12 @@ assert.equal(lossLimitLabel(-0.03), "-3.0%");
 assert.equal(lossLimitLabel(undefined), "—");
 
 const all = [kill, killAll, allOff, tossLiveOff, paper].map((r) => r.text)
-  .concat([manualEntryLabel(true), manualEntryLabel(false), activePathsLabel(base), activePathsLabel({ ...base, sniper_enabled: false })]);
+  .concat([manualEntryLabel(true), manualEntryLabel(false), activePathsLabel(base), activePathsLabel({ ...base, sniper_enabled: false })])
+  .concat([homeKillLabel(true, true), homeKillLabel(true, false), homeKillLabel(false, undefined)]);
+// 1105-05 · 홈 긴급 정지 줄
+assert.equal(homeKillLabel(false, undefined), "긴급 정지 해제");
+assert.equal(homeKillLabel(true, undefined), "긴급 정지 작동 중 (새 진입만 멈춤)");
+assert.equal(homeKillLabel(true, false), "긴급 정지 작동 중 (모든 주문 멈춤)");
 for (const t of all) for (const w of ["지금", "매수", "매도", "추천"]) assert.ok(!t.includes(w), `${t} 금지어 ${w}`);
 // 최종 검토 · 「전역 상태」 배지는 실주문 허용이 아니라 스캔 스위치와 Kill Switch 로 정한다
 assert.deepEqual(scanBadge({ sniper_enabled: true, kill_switch_active: false }), { running: true, label: "스캔 중" });

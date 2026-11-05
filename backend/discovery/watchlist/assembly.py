@@ -76,10 +76,13 @@ async def poll_assembly_bills() -> dict[str, Any]:
     payload = resp.json()
     # open.assembly.go.kr 응답 구조: {"nzmimeepazxkubdpn":[{"head":[...]},{"row":[...]}]}
     key = "nzmimeepazxkubdpn"
+    if not isinstance(payload, dict):  # 1105-05 · dict 검사를 .get 앞에 (Fable 1030-03-01 권고)
+        logger.warning("[assembly] 응답 오류 · code=- · unexpected_shape")
+        return {"error": "unexpected_shape"}
     root = payload.get(key)
     if not isinstance(root, list) or len(root) < 2:
         # 오류 응답은 {"RESULT": {"CODE": "ERROR-300", "MESSAGE": ...}} 모양 · 키 값은 로그에 넣지 않음
-        result = payload.get("RESULT") if isinstance(payload, dict) else None
+        result = payload.get("RESULT")
         code = str((result or {}).get("CODE") or "")
         message = str((result or {}).get("MESSAGE") or "")[:100]
         if code == "INFO-200":  # 해당하는 데이터가 없습니다

@@ -90,7 +90,8 @@ async def _safety() -> Optional[dict]:
     from backend.api.routes.sniper import sniper_status
 
     st = await sniper_status()
-    return {k: st[k] for k in ("live_enabled", "sniper_enabled", "kill_switch_active", "order_target")}
+    # 1105-05 · kill_switch_sell_allowed (홈 「긴급 정지」 줄을 새 진입만 / 모든 주문으로 나눔)
+    return {k: st[k] for k in ("live_enabled", "sniper_enabled", "kill_switch_active", "kill_switch_sell_allowed", "order_target")}
 
 
 async def _failures(today: date) -> list[TodayFailure]:

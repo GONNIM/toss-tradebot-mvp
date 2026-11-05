@@ -151,11 +151,14 @@ class DailyPnl:
 
     realized_krw: 짝이 맞는 청산의 순손익 합 (손실이면 음수)
     computed: 계산한 청산 수
-    uncomputable: 계산하지 못한 청산 [(sniper_signal id, 사유)]
+    uncomputable: 계산하지 못한 청산 [(sniper_signal id, 사유)] · 있으면 그날 새 매수 멈춤 (1105-04 ㉠)
+    pending: 매수나 매도 주문이 아직 체결 확인 중인 청산 [(id, 사유)] · 계산 불가로 세지 않음
+             (reconciler 가 30초마다 확인 · 다음 계산 때 다시 봄 · Fable 1105-04-01 막음 1)
     """
     realized_krw: float = 0.0
     computed: int = 0
     uncomputable: list[tuple[int, str]] = field(default_factory=list)
+    pending: list[tuple[int, str]] = field(default_factory=list)
 
 
 _FILLED = {OrderStatus.FILLED.value, OrderStatus.PARTIAL_FILL.value}
@@ -179,6 +182,11 @@ def pair_pnl(buy: Optional[OrderAudit], sell: Optional[OrderAudit]) -> tuple[Opt
         return None, "buy_audit_missing"
     if sell is None:
         return None, "sell_audit_missing"
+    # 1105-04 · 아직 체결 확인 중 → 「pending:」 사유 (daily_pnl_detail 이 계산 불가와 나눔)
+    if buy.status in _ENTRY_OPEN and not int(buy.filled_qty or 0):
+        return None, f"pending:buy_{buy.status}"
+    if sell.status in _ENTRY_OPEN and not int(sell.filled_qty or 0):
+        return None, f"pending:sell_{sell.status}"
     if buy.status not in _FILLED:
         return None, f"buy_status:{buy.status}"
     if sell.status not in _FILLED:
@@ -205,12 +213,18 @@ async def daily_pnl_detail(broker_kind: BrokerKind, since: datetime) -> DailyPnl
     매도 감사 행이 없는 오늘 청산은 sniper_signal 만으로는 날짜를 알 수 없어
     detected_at ≥ since 인 것만 계산 불가로 셈.
     signal_router 경로 주문 (sniper_signal 없음) 은 이 합계에 들어가지 않음.
+    1105-05 · 청산 시각 (exited_at) 이 since 이후이거나 비어 있는 (옛) 행만 읽음 · 날마다 쌓이는 행을 다시 읽지 않음.
+    날짜 판정은 아래 매도 감사 행 기준 그대로 (exited_at 은 읽는 범위만 줄임).
     """
+    from sqlalchemy import or_
+
     since_n = _naive_utc(since)
     out = DailyPnl()
     async with get_session() as session:
         rows = (await session.execute(
-            select(SniperSignal).where(SniperSignal.exit_order_uuid.is_not(None))
+            select(SniperSignal)
+            .where(SniperSignal.exit_order_uuid.is_not(None))
+            .where(or_(SniperSignal.exited_at.is_(None), SniperSignal.exited_at >= since_n))
         )).scalars().all()
         for sig in rows:
             sell = await session.get(OrderAudit, sig.exit_order_uuid)
@@ -223,7 +237,9 @@ async def daily_pnl_detail(broker_kind: BrokerKind, since: datetime) -> DailyPnl
                     continue
             buy = await session.get(OrderAudit, sig.entry_order_uuid) if sig.entry_order_uuid else None
             pnl, why = pair_pnl(buy, sell)
-            if pnl is None:
+            if pnl is None and (why or "").startswith("pending:"):
+                out.pending.append((sig.id, why))
+            elif pnl is None:
                 out.uncomputable.append((sig.id, why or "unknown"))
             else:
                 out.realized_krw += pnl
@@ -234,3 +250,60 @@ async def daily_pnl_detail(broker_kind: BrokerKind, since: datetime) -> DailyPnl
 async def daily_realized_pnl(broker_kind: BrokerKind, since: datetime) -> float:
     """하루 실현 손익 합 (원 · 손실 음수). 자세한 내용은 daily_pnl_detail."""
     return (await daily_pnl_detail(broker_kind, since)).realized_krw
+
+
+# 1105-04 ㉤ · 매수 전 검사는 하루 손실 한도의 70% 에서 미리 멈춤 (실제 자동 정지는 100% · sniper.py)
+PRE_ENTRY_LOSS_FRACTION = 0.7
+
+
+async def pre_entry_loss_block(broker_kind: BrokerKind, seed_krw: float, limit_pct: float) -> Optional[str]:
+    """새 매수 전 하루 손익 검사 (1105-04 ㉠ · ㉤). 막아야 하면 사유, 아니면 None.
+
+    - 오늘 손익을 계산하지 못한 청산이 있으면 막음 (체결 확인 중인 것은 빼고 셈 · 진입마다 다시 셈)
+    - 실현 손익 ÷ 시드 ≤ 한도 × 0.7 이면 막음 (분모는 시드 · 5초 자동 정지와 같은 기준)
+    - 조회가 실패하면 막음 (안전측)
+    하루 경계는 UTC 00:00 = 한국 09:00 (daily_pnl_detail 과 같음).
+    """
+    since = datetime.now(tz=timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
+    try:
+        detail = await daily_pnl_detail(broker_kind, since)
+    except Exception as exc:  # noqa: BLE001
+        logger.error("[audit] 하루 손익 조회 실패 · 새 매수 보류 · %s", exc)
+        return f"daily_pnl_error:{type(exc).__name__}"
+    if detail.uncomputable:
+        return f"pnl_uncomputable_today({len(detail.uncomputable)})"
+    seed = seed_krw if seed_krw and seed_krw > 0 else 1.0
+    realized_pct = detail.realized_krw / seed
+    trigger = limit_pct * PRE_ENTRY_LOSS_FRACTION
+    if realized_pct <= trigger:
+        return f"daily_loss_near_limit({realized_pct*100:+.2f}%<={trigger*100:.2f}%)"
+    return None
+
+
+# 1105-04 ㉣ · 신호 연결 (signal_router) 출처 · 직접 진입 (sniper · watchlist · manual) 과 나눔
+ROUTER_SOURCES = frozenset({"vip", "super_signal", "meme_stock", "activist", "sector_leaders"})
+
+
+async def router_net_qty(broker_kind: BrokerKind, ticker: str) -> int:
+    """신호 연결 기능이 이 종목에 산 순수량 (1105-04 ㉣ · Fable 1105-04-01 막음 2).
+
+    = 신호 연결 출처 매수 체결 수량 합 − 신호 연결 출처 매도 수량 합.
+    매도는 아직 열린 주문이면 주문 수량을 뺌 (같은 주식을 두 번 팔지 않게 · 안전측).
+    매수는 체결된 수량만 셈. 같은 broker_kind 행만 셈 (모의·실계좌 섞지 않음).
+    0 아래로 내려가지 않음.
+    """
+    async with get_session() as session:
+        rows = (await session.execute(
+            select(OrderAudit.side, OrderAudit.status, OrderAudit.qty, OrderAudit.filled_qty)
+            .where(OrderAudit.broker_kind == broker_kind.value)
+            .where(OrderAudit.ticker == ticker)
+            .where(OrderAudit.signal_source.in_(list(ROUTER_SOURCES)))
+        )).all()
+    net = 0
+    for side, status, qty, filled in rows:
+        filled = int(filled or 0)
+        if side == "buy":
+            net += filled
+        elif side == "sell":
+            net -= max(filled, int(qty or 0) if status in _ENTRY_OPEN else 0)
+    return max(0, net)

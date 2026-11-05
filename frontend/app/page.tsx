@@ -16,6 +16,7 @@ import {
   TodaySafety,
 } from "@/lib/api";
 import { useSessionListener } from "@/lib/auth";
+import { homeKillLabel } from "@/lib/sniper-safety";
 import { StockLink } from "@/components/stock/StockLink";
 import { JournalKpiBadge } from "@/components/home/JournalKpiBadge";
 
@@ -54,7 +55,7 @@ function safetyText(s: TodaySafety | null): string {
   // 서버가 이 칸을 못 읽으면 null · 그 칸만 비운다 (Fable 1022-10-11)
   if (!s) return "지금 확인하지 못했습니다";
   const live = s.live_enabled ? "실거래 켜짐" : "실거래 꺼짐";
-  const kill = s.kill_switch_active ? "긴급 정지 작동 중" : "긴급 정지 해제";
+  const kill = homeKillLabel(s.kill_switch_active, s.kill_switch_sell_allowed);
   const target = s.order_target === "toss" ? "주문 대상 토스" : "주문 대상 모의";
   return `${live} · ${kill} · ${target}`;
 }
