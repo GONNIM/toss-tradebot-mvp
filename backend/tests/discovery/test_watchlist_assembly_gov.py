@@ -64,6 +64,59 @@ class _StubClient:
         return self._resp
 
 
+class _CapClient(_StubClient):
+    def __init__(self, response, seen):
+        super().__init__(response)
+        self._seen = seen
+
+    async def get(self, url, params=None, timeout=None, follow_redirects=True):
+        self._seen.append(dict(params or {}))
+        return self._resp
+
+
+def _patch_client(monkeypatch, resp, seen):
+    class _Cls:
+        def __init__(self, *a, **kw): pass
+        async def __aenter__(self): return _CapClient(resp, seen)
+        async def __aexit__(self, *a): return False
+    monkeypatch.setattr(ab.httpx, "AsyncClient", _Cls)
+
+
+@pytest.mark.asyncio
+async def test_assembly_sends_required_age(monkeypatch):
+    """1030-03 · AGE 는 국회 API 필수 값 · 기본 22 · env 로 바꿈."""
+    monkeypatch.setenv("ASSEMBLY_API_KEY", "test_key")
+    monkeypatch.delenv("ASSEMBLY_AGE", raising=False)
+    seen: list = []
+    empty = {"nzmimeepazxkubdpn": [{"head": [{"list_total_count": 0}]}, {"row": []}]}
+    _patch_client(monkeypatch, _StubResp(empty), seen)
+    await ab.poll_assembly_bills()
+    assert seen[-1]["AGE"] == "22"
+    monkeypatch.setenv("ASSEMBLY_AGE", "23")
+    await ab.poll_assembly_bills()
+    assert seen[-1]["AGE"] == "23"
+
+
+@pytest.mark.asyncio
+async def test_assembly_error_result_is_logged(monkeypatch, caplog):
+    """1030-03 · 필수 값 누락 같은 오류 응답은 코드를 돌려주고 WARNING 을 남김 · 키 값은 로그에 없음."""
+    monkeypatch.setenv("ASSEMBLY_API_KEY", "secret_test_key")
+    err = {"RESULT": {"CODE": "ERROR-300", "MESSAGE": "필수 값이 누락되어 있습니다. 요청인자를 참고 하십시오."}}
+    _patch_client(monkeypatch, _StubResp(err), [])
+    with caplog.at_level("WARNING", logger=ab.logger.name):
+        result = await ab.poll_assembly_bills()
+    assert result == {"error": "ERROR-300"}
+    assert "ERROR-300" in caplog.text
+    assert "secret_test_key" not in caplog.text
+
+
+@pytest.mark.asyncio
+async def test_assembly_no_data_result_is_zero(monkeypatch):
+    monkeypatch.setenv("ASSEMBLY_API_KEY", "test_key")
+    _patch_client(monkeypatch, _StubResp({"RESULT": {"CODE": "INFO-200", "MESSAGE": "해당하는 데이터가 없습니다."}}), [])
+    assert await ab.poll_assembly_bills() == {"fetched": 0, "matched": 0, "inserted": 0}
+
+
 @pytest.mark.asyncio
 async def test_assembly_matches_industry_and_stores(monkeypatch):
     monkeypatch.setenv("ASSEMBLY_API_KEY", "test_key")
