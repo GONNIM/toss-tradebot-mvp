@@ -4,8 +4,11 @@ open.assembly.go.kr · 최근 발의 법안 조회 · 산업 keyword 매핑.
 
 환경변수:
   · ASSEMBLY_API_KEY  (필수 · https://open.assembly.go.kr 발급)
+  · ASSEMBLY_AGE      (선택 · 국회 대수 · 기본 22 · 23대 시작 (2028-05-30) 때 바꿈)
 
-API: https://open.assembly.go.kr/portal/openapi/nzmimeepazxkubdpn?KEY={key}&Type=json&pIndex=1&pSize=100
+API: https://open.assembly.go.kr/portal/openapi/nzmimeepazxkubdpn?KEY={key}&Type=json&pIndex=1&pSize=100&AGE=22
+  · AGE 는 필수 값 · 빠지면 {"RESULT":{"CODE":"ERROR-300","MESSAGE":"필수 값이 누락…"}} (1030-03 · 11/05 확인)
+  · 결과는 발의일 최신순 (11/05 확인 · 100건 ≈ 최근 3일)
 """
 from __future__ import annotations
 
@@ -24,10 +27,15 @@ logger = logging.getLogger(__name__)
 _API_URL = "https://open.assembly.go.kr/portal/openapi/nzmimeepazxkubdpn"
 _TIMEOUT_SEC = 10
 _LOOKBACK_DAYS = 3   # 최근 3일 이내 발의
+_DEFAULT_AGE = "22"  # 22대 국회 (2024-05-30 ~ 2028-05-29)
 
 
 def _api_key() -> Optional[str]:
     return os.environ.get("ASSEMBLY_API_KEY") or None
+
+
+def _assembly_age() -> str:
+    return (os.environ.get("ASSEMBLY_AGE") or "").strip() or _DEFAULT_AGE
 
 
 def _parse_date(s: Optional[str]) -> Optional[datetime]:
@@ -53,7 +61,7 @@ async def poll_assembly_bills() -> dict[str, Any]:
         return {"error": "no_api_key"}
 
     cutoff = datetime.now(tz=timezone.utc) - timedelta(days=_LOOKBACK_DAYS)
-    params = {"KEY": api_key, "Type": "json", "pIndex": 1, "pSize": 100}
+    params = {"KEY": api_key, "Type": "json", "pIndex": 1, "pSize": 100, "AGE": _assembly_age()}
 
     async with httpx.AsyncClient() as client:
         try:
@@ -70,7 +78,14 @@ async def poll_assembly_bills() -> dict[str, Any]:
     key = "nzmimeepazxkubdpn"
     root = payload.get(key)
     if not isinstance(root, list) or len(root) < 2:
-        return {"error": "unexpected_shape"}
+        # 오류 응답은 {"RESULT": {"CODE": "ERROR-300", "MESSAGE": ...}} 모양 · 키 값은 로그에 넣지 않음
+        result = payload.get("RESULT") if isinstance(payload, dict) else None
+        code = str((result or {}).get("CODE") or "")
+        message = str((result or {}).get("MESSAGE") or "")[:100]
+        if code == "INFO-200":  # 해당하는 데이터가 없습니다
+            return {"fetched": 0, "matched": 0, "inserted": 0}
+        logger.warning("[assembly] 응답 오류 · code=%s · %s", code or "-", message or "unexpected_shape")
+        return {"error": code or "unexpected_shape"}
     rows = root[1].get("row") if isinstance(root[1], dict) else None
     if not rows:
         return {"fetched": 0, "matched": 0, "inserted": 0}
