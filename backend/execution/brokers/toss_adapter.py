@@ -5,7 +5,8 @@
 - 주문 idempotency: clientOrderId = "ttb-{uuid8}" (10분 유효 · 36자 · [a-zA-Z0-9_-])
 - 응답 { result } 래퍼 자동 언랩 (2026-07-10 실측 계약)
 - 에러 매핑 → OMI 예외 계층 (TossClient._raise_from_response 참조)
-- **주문 안전 하드 상한**: EXECUTION_MAX_ORDER_AMOUNT (기본 100_000 원) — 어댑터 레벨 강제
+- **주문 안전 하드 상한**: EXECUTION_MAX_ORDER_AMOUNT (기본 100_000 원) — 어댑터 레벨 강제 · 매수에만 (1105-03)
+  매도는 상한 면제 (봇 청산 수량은 exit.py 가 봇이 산 수량까지로 제한) · 매수 금액을 못 구하면 거부
 
 스펙: docs/plans/tradebot-mvp-v2/{02-omi-interface-spec.md §6-3, 03-toss-openapi-integration.md}
 """
@@ -132,14 +133,23 @@ class TossAdapter(OrderManager):
                 f"{req.ticker} 정규장 외 시간 · 로컬 게이팅",
             )
 
-        # 3) 어댑터 레벨 하드 상한 (실 자본 안전장치)
+        # 3) 어댑터 레벨 하드 상한 (실 자본 안전장치) · 매수에만 (1105-03)
+        #    매도는 손절·추적 청산이 막히지 않게 면제 · 봇 청산 수량 제한은 exit.py (봇이 산 수량까지)
         currency = _guess_currency(req.ticker)
-        estimated_krw = self._estimate_order_krw(req, currency)
-        if estimated_krw > self._max_order_amount_krw:
-            raise InsufficientBalance(
-                "hard-cap-max-order-amount",
-                f"주문액 {estimated_krw:,.0f}원 > 어댑터 상한 {self._max_order_amount_krw:,.0f}원",
-            )
+        estimated = self._estimate_order_krw(req, currency)
+        estimated_krw = estimated or 0.0
+        if req.side == OrderSide.BUY:
+            if estimated is None:
+                # 시세 조회 실패 → 금액을 모르면 매수 거부 (예전엔 0 으로 보고 상한을 통과했음 · fail-closed)
+                raise InsufficientBalance(
+                    "hard-cap-price-unavailable",
+                    f"{req.ticker} 시세를 받지 못해 주문액을 알 수 없음 · 매수 거부",
+                )
+            if estimated_krw > self._max_order_amount_krw:
+                raise InsufficientBalance(
+                    "hard-cap-max-order-amount",
+                    f"주문액 {estimated_krw:,.0f}원 > 어댑터 상한 {self._max_order_amount_krw:,.0f}원",
+                )
 
         # 3) idempotency — 같은 order_uuid 재제출 시 서버 조회로 상태 반환
         with self._lock:
@@ -314,14 +324,16 @@ class TossAdapter(OrderManager):
     # ═══════════════════════════════════════════════════════════════
     # 내부 헬퍼
     # ═══════════════════════════════════════════════════════════════
-    def _estimate_order_krw(self, req: OrderRequest, currency: str) -> float:
-        """주문 예상 KRW 환산액 (하드 상한 판정용)."""
+    def _estimate_order_krw(self, req: OrderRequest, currency: str) -> Optional[float]:
+        """주문 예상 KRW 환산액 (하드 상한 판정용) · 시세를 못 받으면 None (1105-03)."""
         if req.price is not None:
             base = float(req.price) * req.qty
         else:
             # 시세로 근사
             mi = self.get_market_info(req.ticker)
-            base = (mi.last_price or 0.0) * req.qty
+            if not mi.last_price:
+                return None
+            base = float(mi.last_price) * req.qty
         if currency == "USD":
             base *= self._current_fx()
         return base

@@ -33,7 +33,7 @@ from datetime import datetime, time as dtime, timezone
 from typing import Optional
 from zoneinfo import ZoneInfo
 
-from sqlalchemy import select
+from sqlalchemy import or_, select
 
 from backend.execution.brokers.toss_client import TossClient, get_toss_client
 from backend.services.db import get_session
@@ -174,6 +174,10 @@ async def poll_trailing(
     return decision
 
 
+# 1105-03 · 진입 주문이 체결 0 으로 끝나 팔 것이 없는 신호 (exit.py 가 표시)
+ENTRY_UNFILLED = "entry_unfilled"
+
+
 async def open_positions() -> list[int]:
     """미청산 SniperSignal · 오래된 순."""
     async with get_session() as session:
@@ -181,6 +185,8 @@ async def open_positions() -> list[int]:
             select(SniperSignal.id)
             .where(SniperSignal.exit_order_uuid.is_(None))
             .where(SniperSignal.entry_order_uuid.isnot(None))
+            # 1105-03 · 진입이 체결 0 으로 끝난 신호는 청산 대상 아님
+            .where(or_(SniperSignal.reason.is_(None), SniperSignal.reason != ENTRY_UNFILLED))
             .order_by(SniperSignal.detected_at.asc())
         )
         rows = (await session.execute(stmt)).all()

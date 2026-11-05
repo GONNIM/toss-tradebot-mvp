@@ -317,7 +317,7 @@ Content-Type: application/json
 
 ### 8-3. 실전 소액 검증 (5거래일)
 
-- `EXECUTION_MAX_ORDER_AMOUNT=100000` 하드코딩 (10만 원 상한)
+- `EXECUTION_MAX_ORDER_AMOUNT=100000` 하드코딩 (10만 원 상한 · 매수에만 · 매도는 면제하고 봇 청산은 봇이 산 수량까지 · 1105-03)
 - 매일 09:00 사용자 손절 리뷰
 - 일일 실현손실 -1% 초과 시 즉시 중단 (`EXECUTION_DAILY_LOSS_LIMIT=-0.03` 보다 보수적)
 - 매일 종료 후 감사 로그 요약 텔레그램 발송

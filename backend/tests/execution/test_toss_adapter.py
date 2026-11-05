@@ -9,7 +9,8 @@ Toss 전용 시나리오:
 - 422 order-hours-closed → MarketClosed
 - 422 idempotency-key-conflict → DuplicateOrderError
 - 429 rate-limit-exceeded → RateLimitExceeded
-- 하드 상한 초과 → InsufficientBalance (hard-cap-max-order-amount)
+- 하드 상한 초과 → InsufficientBalance (hard-cap-max-order-amount) · 매수에만 (1105-03)
+- 매수 시세 조회 실패 → InsufficientBalance (hard-cap-price-unavailable) · 매도는 상한 면제
 """
 from __future__ import annotations
 
@@ -400,3 +401,42 @@ async def test_toss_client_order_id_regex():
         coid = _make_client_order_id(u)
         assert 1 <= len(coid) <= 36
         assert all(c.isalnum() or c in "_-" for c in coid)
+
+
+# ─── 1105-03 · 하드 상한은 매수에만 · 매수 금액을 모르면 거부 ───
+def _small_cap_adapter(fake, ks):
+    import backend.execution.market_calendar as mc
+    mc._calendar = mc.MarketCalendar(toss_client=fake)
+    return TossAdapter(toss_client=fake, kill_switch=ks, max_order_amount_krw=100_000)
+
+
+def _req(side, ticker="005930", qty=1):
+    return OrderRequest(ticker=ticker, side=side, order_type=OrderType.MARKET, qty=qty, signal_source="sniper")
+
+
+async def test_toss_sell_over_cap_passes(fake_toss_v2, toss_kill_switch):
+    a = _small_cap_adapter(fake_toss_v2, toss_kill_switch)
+    # 3주 × 100,000 = 300,000 > 상한 100,000 · 매도는 통과
+    assert a.submit_order(_req(OrderSide.SELL, qty=3)).status == OrderStatus.ACCEPTED
+    with pytest.raises(InsufficientBalance) as e:
+        a.submit_order(_req(OrderSide.BUY, qty=3))
+    assert e.value.code == "hard-cap-max-order-amount"
+
+
+async def test_toss_buy_rejected_when_price_unavailable(fake_toss_v2, toss_kill_switch):
+    a = _small_cap_adapter(fake_toss_v2, toss_kill_switch)
+    fake_toss_v2.set_price("000660", None)                      # 시세 없음 → 예전엔 추정 0 으로 통과
+    with pytest.raises(InsufficientBalance) as e:
+        a.submit_order(_req(OrderSide.BUY, ticker="000660"))
+    assert e.value.code == "hard-cap-price-unavailable"
+    assert fake_toss_v2.request_counter == 0
+    # 매도는 시세가 없어도 막지 않음
+    assert a.submit_order(_req(OrderSide.SELL, ticker="000660")).status == OrderStatus.ACCEPTED
+
+
+async def test_toss_limit_buy_uses_limit_price_without_quote(fake_toss_v2, toss_kill_switch):
+    a = _small_cap_adapter(fake_toss_v2, toss_kill_switch)
+    fake_toss_v2.set_price("000660", None)
+    req = OrderRequest(ticker="000660", side=OrderSide.BUY, order_type=OrderType.LIMIT, qty=1, price=50_000.0,
+                       signal_source="sniper")
+    assert a.submit_order(req).status == OrderStatus.ACCEPTED
