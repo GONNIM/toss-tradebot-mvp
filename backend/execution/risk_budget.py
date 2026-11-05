@@ -78,13 +78,17 @@ class RiskBudgetChecker:
                 )
 
         # ─── ② 일일 손실 캡 (daily_loss_limit) ───
-        # daily_realized_pnl 은 감사 로그 기반 근사치 (Phase 3 정교화)
+        # 하루 실현 손익 = 오늘 청산된 진입 기록 짝의 순손익 (1025-02) · 조회 실패면 매수 차단
         try:
             since = datetime.now(tz=timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
             realized = await daily_realized_pnl(broker_kind, since)
         except Exception as exc:  # noqa: BLE001
-            logger.warning("일일 손익 조회 실패 — %s · 통과 처리", exc)
-            realized = 0.0
+            logger.error("일일 손익 조회 실패 — %s · 매수 차단", exc)
+            return RiskCheckResult(
+                passed=False,
+                rule="daily_loss_limit",
+                detail=f"일일 손익 조회 실패로 매수 보류: {str(exc)[:100]}",
+            )
 
         if balance.total_equity_krw > 0:
             realized_pct = realized / balance.total_equity_krw

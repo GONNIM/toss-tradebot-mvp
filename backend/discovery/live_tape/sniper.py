@@ -14,7 +14,7 @@ from typing import Optional
 
 from datetime import datetime, timezone
 
-from backend.execution.audit import daily_realized_pnl
+from backend.execution.audit import daily_pnl_detail
 from backend.execution.brokers.paper_adapter import PaperAdapter
 from backend.execution.brokers.toss_adapter import TossAdapter
 from backend.execution.kill_switch import get_kill_switch
@@ -93,8 +93,47 @@ async def scan_and_enter(top_n: Optional[int] = None) -> dict:
 
 
 # ─── Daily loss 자동 Kill Switch 트리거 ──────────────
+# 같은 원인 알림·로그는 하루 1회 (5초 잡 · 1025-02) · 메모리 집합 · 재시작하면 다시 1회
+_daily_once: set[str] = set()
+
+
+def _once_today(key: str) -> bool:
+    """오늘 (한국 날짜) 처음 보는 key 면 True."""
+    from zoneinfo import ZoneInfo
+    today = datetime.now(tz=ZoneInfo("Asia/Seoul")).strftime("%Y%m%d")
+    k = f"{today}:{key}"
+    if k in _daily_once:
+        return False
+    if len(_daily_once) > 5000:
+        _daily_once.clear()
+    _daily_once.add(k)
+    return True
+
+
+async def _alert_uncomputable(items: list[tuple[int, str]]) -> None:
+    """하루 손익을 계산하지 못한 청산 알림 · signal id 마다 하루 1회."""
+    fresh = [(sid, why) for sid, why in items if _once_today(f"uncomputable:{sid}")]
+    if not fresh:
+        return
+    lines = " · ".join(f"#{sid} {why}" for sid, why in fresh[:10])
+    logger.warning("[sniper] 하루 손익 계산 불가 %d건 · %s", len(fresh), lines)
+    try:
+        from backend.services.notifier import TelegramNotifier
+        await TelegramNotifier().send_warning(
+            "하루 손익 계산 불가",
+            f"청산 {len(fresh)}건의 손익을 계산하지 못했습니다. 이 건은 손실 자동 정지 판단에서 빠집니다.\n{lines}",
+            category="execution",
+        )
+    except Exception as exc:  # noqa: BLE001
+        logger.debug("[sniper] 계산 불가 알림 실패 · %s", exc)
+
+
 async def check_daily_loss_and_trigger_ks() -> Optional[dict]:
-    """일일 실현 손실이 params.daily_loss_limit_pct 초과 시 Kill Switch 자동 발동.
+    """일일 실현 손실이 params.daily_loss_limit_pct 이하면 Kill Switch 자동 발동.
+
+    손익 = 오늘 청산된 진입 기록의 (매도 − 매수 − 수수료) 합 (`daily_pnl_detail` · 1025-02).
+    하루 경계 UTC 00:00 = 한국 09:00 (한국 정규장 기준).
+    조회 오류 시 발동하지 않음 (5초 잡 오작동 방지) · ERROR 로그 하루 1회.
 
     Returns:
         {"triggered": True, "reason": ..., "realized_pct": ...} 발동 시 · None 아니면.
@@ -109,13 +148,17 @@ async def check_daily_loss_and_trigger_ks() -> Optional[dict]:
     since = datetime.now(tz=timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
 
     try:
-        realized = await daily_realized_pnl(broker_kind, since)
+        detail = await daily_pnl_detail(broker_kind, since)
     except Exception as exc:  # noqa: BLE001
-        logger.warning("daily_realized_pnl 조회 실패 · %s", exc)
+        if _once_today(f"pnl_error:{type(exc).__name__}"):
+            logger.error("[sniper] 하루 손익 조회 실패 · Kill Switch 판단 건너뜀 · %s", exc)
         return None
 
+    if detail.uncomputable:
+        await _alert_uncomputable(detail.uncomputable)
+
     seed = params.seed_cap_krw or 1.0
-    realized_pct = realized / seed
+    realized_pct = detail.realized_krw / seed
     if realized_pct <= params.daily_loss_limit_pct:
         reason = f"daily_loss_limit_reached({realized_pct*100:+.2f}%)"
         ks.activate(reason=reason, actor="auto:sniper")
