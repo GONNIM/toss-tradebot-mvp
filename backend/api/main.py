@@ -106,6 +106,10 @@ async def lifespan(app: FastAPI):
     from backend.discovery.sector_leaders.scheduler import register_monthly_jobs
 
     scheduler = AsyncIOScheduler(timezone="Asia/Seoul")
+    # 1030-03 · 정해진 시각 잡이 건너뛰면 ERROR + 텔레그램 (교훈 #3)
+    from backend.services.job_watch import GRACE_DEFAULT, attach_missed_alert
+
+    attach_missed_alert(scheduler, process="api")
     register_monthly_jobs(scheduler)
     register_meme_jobs(scheduler)
 
@@ -137,6 +141,7 @@ async def lifespan(app: FastAPI):
         id="backup_watch",
         max_instances=1,
         coalesce=True,
+        misfire_grace_time=GRACE_DEFAULT,
     )
     logger.info("[FastAPI] 백업 지연 알림 잡 등록 (매일 09:10 KST)")
 
@@ -167,6 +172,8 @@ async def lifespan(app: FastAPI):
             hour=22, minute=0,
             id="sniper_universe_refresh",
             max_instances=1,
+            coalesce=True,
+            misfire_grace_time=GRACE_DEFAULT,
         )
         logger.info("[FastAPI] Sniper jobs 등록 완료 (기본 sniper.enabled=False · UI로 활성화)")
 
@@ -216,6 +223,7 @@ async def lifespan(app: FastAPI):
             id="blue_chip_screener_nightly",
             max_instances=1,
             coalesce=True,
+            misfire_grace_time=GRACE_DEFAULT,
         )
         logger.info("[FastAPI] Blue-Chip 5단계 스크리너 · 매일 22:30 KST nightly")
 
@@ -254,7 +262,7 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(
     title="Toss Tradebot MVP API",
-    version="0.3.40",
+    version="0.3.41",
     description="자동매매 + Crazy + Moonshot Discovery API",
     lifespan=lifespan,
 )

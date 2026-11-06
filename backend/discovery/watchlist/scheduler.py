@@ -3,7 +3,7 @@
 APScheduler 잡 등록:
   · watchlist_news        5m interval  (RSS 9곳 · 상시)
   · watchlist_youtube     1h interval  (YouTube · 상시)
-  · watchlist_assembly    1d @06:00    (국회 의안 · 아침 1회)
+  · watchlist_assembly    1d @06:10    (국회 의안 · 아침 1회)
   · watchlist_gov_press   1h interval  (정부 RSS · 상시)
   · watchlist_dart_events_am/pm 08:20·20:40 KST (밈 감시가 저장한 DART 공시 읽기 · 1030-04)
   · watchlist_finalize    1d @08:30    (Top N 확정)
@@ -17,6 +17,8 @@ from __future__ import annotations
 
 import logging
 from typing import Any
+
+from backend.services.job_watch import GRACE_BEFORE_OPEN, GRACE_DEFAULT
 
 logger = logging.getLogger(__name__)
 
@@ -101,12 +103,15 @@ def register_watchlist_jobs(scheduler) -> None:
         id="watchlist_youtube", max_instances=1, coalesce=True,
     )
 
-    # 국회 의안 · 매일 06:00 KST
+    # 국회 의안 · 매일 06:10 KST
     # 스케줄러가 Asia/Seoul 이라 시각은 KST 그대로 · timezone 도 명시 (1030-02 · 07-15 부터 UTC 로 적혀 15:00 늦게 돌았음)
+    # 1030-03 · 06:00 은 serenity crawler (동기 git pull · 최대 약 70초 루프 막음) · 미국 거래량 잡과 겹쳐
+    # 10/31~11/06 매일 1.8~5초 늦어 건너뜀 → 06:10 으로 비키고 늦음 허용 30분 (교훈 #3)
     scheduler.add_job(
         poll_assembly_bills, "cron",
-        hour=6, minute=0, timezone="Asia/Seoul",
-        id="watchlist_assembly", max_instances=1,
+        hour=6, minute=10, timezone="Asia/Seoul",
+        id="watchlist_assembly", max_instances=1, coalesce=True,
+        misfire_grace_time=GRACE_DEFAULT,
     )
 
     # 정부 부처 RSS · 1시간
@@ -119,29 +124,37 @@ def register_watchlist_jobs(scheduler) -> None:
     scheduler.add_job(
         finalize_watchlist_job, "cron",
         hour=8, minute=30, timezone="Asia/Seoul",
-        id="watchlist_finalize", max_instances=1,
+        id="watchlist_finalize", max_instances=1, coalesce=True,
+        misfire_grace_time=GRACE_BEFORE_OPEN,  # 늦어도 08:40 · 09:00 개장 실행 전 (1030-03)
     )
 
     # DART 공시 읽기 · 08:20 (finalize 08:30 직전) · 20:40 (순위 잡 직후) · timezone 명시 (1030-02 교훈)
-    for job_id, hour, minute in (("watchlist_dart_events_am", 8, 20), ("watchlist_dart_events_pm", 20, 40)):
+    # 1030-03 · 아침은 finalize 08:30 앞이라 허용 10분 · 저녁은 30분
+    for job_id, hour, minute, grace in (
+        ("watchlist_dart_events_am", 8, 20, GRACE_BEFORE_OPEN),
+        ("watchlist_dart_events_pm", 20, 40, GRACE_DEFAULT),
+    ):
         scheduler.add_job(
             dart_events_job, "cron",
             hour=hour, minute=minute, timezone="Asia/Seoul",
-            id=job_id, max_instances=1,
+            id=job_id, max_instances=1, coalesce=True,
+            misfire_grace_time=grace,
         )
 
     # 토스 순위 하루 1회 · 20:30 KST (개인 순매수는 정규장 뒤 제공 · 20시경까지 변동)
     scheduler.add_job(
         rank_daily_job, "cron",
         hour=20, minute=30, timezone="Asia/Seoul",
-        id="watchlist_rank_daily", max_instances=1,
+        id="watchlist_rank_daily", max_instances=1, coalesce=True,
+        misfire_grace_time=GRACE_DEFAULT,
     )
 
     # 장중 순위 누적 · 09:05~15:05 매시 평일
     scheduler.add_job(
         rank_realtime_job, "cron",
         day_of_week="mon-fri", hour="9-15", minute=5, timezone="Asia/Seoul",
-        id="watchlist_rank_rt", max_instances=1,
+        id="watchlist_rank_rt", max_instances=1, coalesce=True,
+        misfire_grace_time=GRACE_BEFORE_OPEN,  # 다음 회차(1시간 뒤)와 겹치지 않게 10분
     )
 
     # Watchlist 개장 실행 · 30초 interval · 잡 내부에서 활성창 판정
@@ -156,7 +169,7 @@ def register_watchlist_jobs(scheduler) -> None:
 
     logger.info(
         "[watchlist] jobs 등록 · news=5m · youtube=1h · "
-        "assembly=daily 06:00 KST · gov_press=1h · dart_events=08:20·20:40 KST · finalize=daily 08:30 KST · "
+        "assembly=daily 06:10 KST · gov_press=1h · dart_events=08:20·20:40 KST · finalize=daily 08:30 KST · "
         "rank_daily=20:30 KST · rank_rt=평일 09~15시 :05 · "
         "execute=%ds (활성창 09:00~09:30 KST 내부 판정)",
         _exec_sec,

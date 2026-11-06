@@ -2,7 +2,7 @@
 
 잡 (모두 KST):
   ① meme_universe_weekly       — 매 일요일 03:00 — universe 재빌드
-  ② meme_volume_us_daily       — 매일 06:00 — US 일봉 snapshot
+  ② meme_volume_us_daily       — 매일 06:05 — US 일봉 snapshot
   ③ meme_social_apewisdom_5min — 5분마다 — apewisdom Reddit 통합 mention
   ④ meme_social_stocktwits_5min — 5분마다 (+2분 offset) — Stocktwits sentiment
   ⑤ meme_social_trends_hourly  — 매시 15분 — Google Trends 검색량
@@ -63,9 +63,10 @@ def register_meme_jobs(scheduler: AsyncIOScheduler) -> None:
     )
     scheduler.add_job(
         build_us_snapshots,
-        trigger=CronTrigger(hour=6, minute=0, timezone="Asia/Seoul"),
+        # 1030-03 · 06:00 serenity crawler (루프 막음) 와 5분 띄움 · 미국 정규장 마감(06:00 KST 겨울 · 05:00 여름) 뒤
+        trigger=CronTrigger(hour=6, minute=5, timezone="Asia/Seoul"),
         id="meme_volume_us_daily",
-        name="매일 06:00 KST — US Russell 2000 일봉 snapshot (volume z + RSI + 1D return)",
+        name="매일 06:05 KST — US Russell 2000 일봉 snapshot (volume z + RSI + 1D return)",
         replace_existing=True,
         misfire_grace_time=3600,
     )
