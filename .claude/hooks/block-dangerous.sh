@@ -2,7 +2,8 @@
 # PreToolUse(Bash) hook: 위험 명령 차단 + 커밋 전 린트·테스트.
 # stdin 으로 도구 입력 JSON 을 받는다. exit 2 = 차단(stderr 가 Claude 에게 전달됨).
 # toss-tradebot-mvp: 커밋 전 검사는 스테이징 경로별 조건 (intake 2026-10-21).
-#   backend/  → compileall(2초) + biotech 테스트(약 14초) · frontend/ → tsc --noEmit(2초)
+#   backend/  → compileall(2초) + biotech 테스트(약 14초) + 정해진 시각 작업 시험 test_job_watch(약 12초 · 1106-03 · 교훈 #3)
+#   · frontend/ → tsc --noEmit(2초)
 #   전체 pytest(211초 · 기존 실패 21건)는 걸지 않는다 — 핸드북 규칙 8.
 cmd=$(python3 -c 'import json,sys; print(json.load(sys.stdin).get("tool_input",{}).get("command",""))')
 
@@ -31,8 +32,8 @@ if echo "$cmd" | grep -Eq 'git[[:space:]]+commit'; then
   if echo "$changed" | grep -q 'backend/'; then
     if [ -x "$PY" ]; then
       (cd backend && "$PY" -m compileall -q -x 'venv' . >/dev/null) >&2 || block "backend 문법 검사 실패"
-      out=$(cd backend && "$PY" -m pytest -q -p no:cacheprovider tests/test_biotech_*.py 2>/dev/null) \
-        || { echo "$out" | tail -15 >&2; block "biotech 테스트 실패"; }
+      out=$(cd backend && "$PY" -m pytest -q -p no:cacheprovider tests/test_biotech_*.py tests/test_job_watch.py 2>/dev/null) \
+        || { echo "$out" | tail -15 >&2; block "biotech·정해진 시각 작업 테스트 실패"; }
       echo "$out" | tail -1 >&2
     else
       echo "경고: backend/venv 없음 — backend 검사 건너뜀" >&2
