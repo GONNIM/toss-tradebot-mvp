@@ -887,40 +887,44 @@ async def job_activist_us_form4():
 
 def build_scheduler() -> AsyncIOScheduler:
     scheduler = AsyncIOScheduler(timezone="Asia/Seoul")
+    # 1030-03 · 정해진 시각 잡은 늦음 허용 30분 + 건너뛰면 ERROR·텔레그램 (교훈 #3)
+    from backend.services.job_watch import GRACE_DEFAULT, attach_missed_alert
+
+    attach_missed_alert(scheduler, process="cron")
     scheduler.add_job(job_universe_refresh, CronTrigger(hour=6, minute=0),
-                      id="universe_refresh", name="Universe 갱신", replace_existing=True)
+                      id="universe_refresh", name="Universe 갱신", replace_existing=True, coalesce=True, misfire_grace_time=GRACE_DEFAULT)
     scheduler.add_job(job_crazy_picks, CronTrigger(hour=6, minute=30),
-                      id="crazy_picks", name="Crazy Picks 06:30 KST", replace_existing=True)
+                      id="crazy_picks", name="Crazy Picks 06:30 KST", replace_existing=True, coalesce=True, misfire_grace_time=GRACE_DEFAULT)
     scheduler.add_job(job_moonshot_picks, CronTrigger(hour=16, minute=50),
-                      id="moonshot_picks", name="Moonshot Picks 16:50 KST", replace_existing=True)
+                      id="moonshot_picks", name="Moonshot Picks 16:50 KST", replace_existing=True, coalesce=True, misfire_grace_time=GRACE_DEFAULT)
     scheduler.add_job(job_sector_leaders_alert_0905, CronTrigger(hour=SECTOR_SLOTS[0][0], minute=SECTOR_SLOTS[0][1]),
                       id="sector_leaders_alert_0905",
                       name="Sector Leaders Top — 09:05 KST (개장 안정)",
-                      replace_existing=True)
+                      replace_existing=True, coalesce=True, misfire_grace_time=GRACE_DEFAULT)
     scheduler.add_job(job_sector_leaders_alert_1705, CronTrigger(hour=SECTOR_SLOTS[1][0], minute=SECTOR_SLOTS[1][1]),
                       id="sector_leaders_alert_1705",
                       name="Sector Leaders Top — 17:05 KST (정규장 마감 후)",
-                      replace_existing=True)
+                      replace_existing=True, coalesce=True, misfire_grace_time=GRACE_DEFAULT)
     scheduler.add_job(job_toss_stock_codes, CronTrigger(hour=7, minute=40),
                       id="toss_stock_codes_daily",
                       name="토스증권 미국 종목 코드 07:40 KST",
-                      replace_existing=True)
+                      replace_existing=True, coalesce=True, misfire_grace_time=GRACE_DEFAULT)
     scheduler.add_job(job_holdings_snapshot_kr, CronTrigger(day_of_week="mon-fri", hour=15, minute=50),
                       id="holdings_snapshot_kr",
                       name="토스 보유 기록 국내 15:50 KST",
-                      replace_existing=True)
+                      replace_existing=True, coalesce=True, misfire_grace_time=GRACE_DEFAULT)
     scheduler.add_job(job_holdings_snapshot_us, CronTrigger(day_of_week="tue-sat", hour=7, minute=10),
                       id="holdings_snapshot_us",
                       name="토스 보유 기록 미국 07:10 KST",
-                      replace_existing=True)
+                      replace_existing=True, coalesce=True, misfire_grace_time=GRACE_DEFAULT)
     scheduler.add_job(job_outcomes, CronTrigger(hour=8, minute=10),
                       id="outcomes_daily",
                       name="판정·후보 결과 계산 08:10 KST",
-                      replace_existing=True)
+                      replace_existing=True, coalesce=True, misfire_grace_time=GRACE_DEFAULT)
     scheduler.add_job(job_notification_digest, CronTrigger(hour=18, minute=0),
                       id="notification_digest_1800",
                       name="알림 하루 요약 18:00 KST",
-                      replace_existing=True)
+                      replace_existing=True, coalesce=True, misfire_grace_time=GRACE_DEFAULT)
     # VIP 감시 (env VIP_ENABLED=true 일 때만 실효 — tick 내부에서 skip)
     scheduler.add_job(
         job_vip_price_regular,

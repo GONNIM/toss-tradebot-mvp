@@ -38,7 +38,7 @@ def test_naver_board_job_not_registered():
 
 @pytest.mark.parametrize("job_id,hour,minute", [
     ("watchlist_finalize", "8", "30"),
-    ("watchlist_assembly", "6", "0"),
+    ("watchlist_assembly", "6", "10"),
     ("watchlist_dart_events_am", "8", "20"),
     ("watchlist_dart_events_pm", "20", "40"),
     ("watchlist_rank_daily", "20", "30"),

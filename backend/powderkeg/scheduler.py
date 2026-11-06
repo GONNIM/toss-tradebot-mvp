@@ -7,7 +7,7 @@
   · powderkeg_events_poll   · **3분 주기** · DART 공시 폴링 · 자동 저장
   · powderkeg_triggers      · **1분 주기** · pending 이벤트 액션 처리 (Type A/B)
   · 최악 지연: 3분(폴링) + 1분(트리거) = **4분** (< 5분 스펙 · margin 확보)
-  · powderkeg_holding_expiry · daily 08:00 KST · 12개월 재평가 (§7-5)
+  · powderkeg_holding_expiry · daily 08:05 KST · 12개월 재평가 (§7-5)
   · powderkeg_news_poll     · 15분 주기 · 뉴스 A1/A2/A6 (§7-1-4)
 
 DART API 부하:
@@ -95,6 +95,8 @@ async def _notify_expiry(expired: list[dict]) -> None:
 
 def register_powderkeg_jobs(scheduler) -> None:
     """FastAPI lifespan 에서 호출."""
+    from backend.services.job_watch import GRACE_DEFAULT
+
     scheduler.add_job(
         poll_events_job, "interval",
         minutes=3,                       # v1.8 · 30m → 3m (§7-3 5분 스펙 준수)
@@ -109,9 +111,10 @@ def register_powderkeg_jobs(scheduler) -> None:
     )
     scheduler.add_job(
         holding_expiry_job, "cron",
-        hour=8, minute=0, timezone="Asia/Seoul",
+        hour=8, minute=5, timezone="Asia/Seoul",   # 1030-03 · 08:00 serenity scorer 와 5분 띄움
         id="powderkeg_holding_expiry",
         max_instances=1, coalesce=True,
+        misfire_grace_time=GRACE_DEFAULT,
     )
     scheduler.add_job(
         news_poll_job, "interval",
@@ -121,5 +124,5 @@ def register_powderkeg_jobs(scheduler) -> None:
     )
     logger.info(
         "[powderkeg] jobs 등록 · events_poll=3m · triggers=1m (§7-3 5분 스펙 · max 4분 지연) "
-        "· holding_expiry=daily 08:00 KST (§7-5) · news_poll=15m (§7-1-4)"
+        "· holding_expiry=daily 08:05 KST (§7-5) · news_poll=15m (§7-1-4)"
     )
