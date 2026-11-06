@@ -4,7 +4,7 @@
 # toss-tradebot-mvp: 커밋 전 검사는 스테이징 경로별 조건 (intake 2026-10-21).
 #   backend/  → compileall(2초) + biotech 테스트(약 14초) + 정해진 시각 작업 시험 test_job_watch(약 12초 · 1106-03 · 교훈 #3)
 #   · frontend/ → tsc --noEmit(2초)
-#   전체 pytest(211초 · 기존 실패 21건)는 걸지 않는다 — 핸드북 규칙 8.
+#   전체 pytest 는 걸지 않는다 — 처음엔 기존 실패 21건, 11/06 지금은 0 실패지만 약 160초라 길다 (핸드북 규칙 8 · Fable 1106-02 권고 1).
 cmd=$(python3 -c 'import json,sys; print(json.load(sys.stdin).get("tool_input",{}).get("command",""))')
 
 block() { echo "차단: $1 — 사용자 승인 후 직접 실행하십시오." >&2; exit 2; }
