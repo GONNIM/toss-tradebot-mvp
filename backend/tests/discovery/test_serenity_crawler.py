@@ -170,3 +170,50 @@ async def test_sync_tweets_invalid_id_counted(tracker_dir: Path):
     result = await sync_tweets(tracker_dir=tracker_dir)
     assert result["inserted"] == 0
     assert result["invalid"] == 1
+
+
+# ─── 1106-02 · 동기 호출이 이벤트 루프를 막지 않음 (교훈 #3) ─────────────
+
+
+@pytest.mark.asyncio
+async def test_sync_tweets_does_not_block_event_loop(tracker_dir: Path, monkeypatch):
+    """git pull·아카이브 읽기가 1초씩 걸려도 같은 루프의 다른 일이 계속 돈다.
+
+    예전처럼 동기로 부르면 2초 동안 루프가 멈춰 tick 이 거의 0 이 된다.
+    """
+    import asyncio
+    import time
+
+    import backend.discovery.serenity.crawler as crawler
+
+    real_load = crawler.load_archive_tweets
+
+    def slow_pull(_dir):
+        time.sleep(1.0)
+        return "abc1234"
+
+    def slow_load(d):
+        time.sleep(1.0)
+        return real_load(d)
+
+    monkeypatch.setattr(crawler, "_auto_pull_submodule", slow_pull)
+    monkeypatch.setattr(crawler, "load_archive_tweets", slow_load)
+
+    ticks = 0
+    stop = asyncio.Event()
+
+    async def ticker():
+        nonlocal ticks
+        while not stop.is_set():
+            await asyncio.sleep(0.05)
+            ticks += 1
+
+    t = asyncio.create_task(ticker())
+    result = await crawler.sync_tweets(tracker_dir=tracker_dir, auto_pull=True)
+    stop.set()
+    await t
+
+    assert result["submodule_sha"] == "abc1234"
+    assert result["inserted"] == 3
+    # 2초 동안 0.05초 간격 → 막히지 않으면 약 40회. 느린 기계 여유로 20 이상.
+    assert ticks >= 20, f"이벤트 루프가 막힘 · ticks={ticks}"

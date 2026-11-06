@@ -13,6 +13,7 @@ Cron: 매일 06:00 KST (Phase L8 등록 예정 · 현재는 CLI 수동)
 """
 from __future__ import annotations
 
+import asyncio
 import json
 import logging
 import os
@@ -169,9 +170,12 @@ async def sync_tweets(
     """
     resolved_dir = _resolve_tracker_dir(tracker_dir)
     submodule_sha = None
+    # 1106-02 · git pull(최대 60초)·큰 JSON 읽기는 동기 호출이라 이벤트 루프에서 그대로 부르면
+    # 같은 시각의 다른 잡이 건너뛰어진다 (교훈 #3). 별도 스레드에서 돌려 루프를 막지 않는다.
+    # 이 함수만 저장소 폴더를 만지고 잡은 max_instances=1 이라 스레드 사이 충돌은 없다.
     if auto_pull:
-        submodule_sha = _auto_pull_submodule(resolved_dir)
-    archive = load_archive_tweets(resolved_dir)
+        submodule_sha = await asyncio.to_thread(_auto_pull_submodule, resolved_dir)
+    archive = await asyncio.to_thread(load_archive_tweets, resolved_dir)
     total = len(archive)
     logger.info("[serenity] archive 로드 · total=%d", total)
 
