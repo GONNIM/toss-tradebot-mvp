@@ -96,9 +96,9 @@ export function sourceText(c: Pick<SwingCard, "close_source" | "as_of">): string
 export function peakNote(p: NonNullable<SwingCard["peak"]>): string {
   if (p.from_peak_pct === null || p.peak_close === null) return "—";
   const from = p.basis_source === "journal" ? "첫 저널 판단" : "기록 시작";
-  const basis = p.basis_date ? `기준일 ${mmdd(p.basis_date)}(${from}) 뒤 최고 종가` : "최고 종가";
+  const basis = p.basis_date ? `기준일 ${p.basis_date}(${from}) 뒤 최고 종가` : "최고 종가";
   const tail = p.peak_complete ? "" : " · 기록 전 기간 제외";
-  return `${basis}${tail}`;
+  return `${basis}${tail} · 토스 종가 기준`;
 }
 
 export function gapText(g: NonNullable<SwingCard["source_gap"]>): string {

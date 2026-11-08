@@ -12,7 +12,7 @@ assert.equal(sourceText({ close_source: "krx", as_of: "2026-11-06" }), "KRX 공�
 assert.equal(sourceText({ close_source: "toss", as_of: null }), "토스 일봉 종가");
 assert.equal(
   peakNote({ from_peak_pct: -4, peak_close: 10, peak_date: "2026-10-05", peak_complete: false, basis_date: "2026-10-01", basis_source: "record" }),
-  "기준일 10/1(기록 시작) 뒤 최고 종가 · 기록 전 기간 제외",
+  "기준일 2026-10-01(기록 시작) 뒤 최고 종가 · 기록 전 기간 제외 · 토스 종가 기준",
 );
 assert.equal(gapText({ date: "2026-11-06", toss_close: 103, official_close: 100, gap_pct: 3, flag: true }), "11/6 토스 종가가 공식 종가보다 +3.00%");
 console.log("holdings-swing ok");
