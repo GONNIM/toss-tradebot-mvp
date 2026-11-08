@@ -12,6 +12,7 @@ import Link from "next/link";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { AccountHolding, AccountHoldingsResponse, api, SniperStatus, TossStockCodeRow } from "@/lib/api";
 import { AdminSessionBar } from "@/components/admin/AdminSessionBar";
+import { HoldingSwing } from "@/components/account/HoldingSwing";
 import { PositionPlans } from "@/components/account/PositionPlans";
 import { TossSummary } from "@/components/account/TossSummary";
 import { BROKER_LABEL, SEARCH_LABEL, TOSS_ACCOUNT, TOSS_HOME, friendlyError } from "@/lib/broker-link";
@@ -119,6 +120,7 @@ function HoldingsTable({ isAdmin }: { isAdmin: boolean }) {
           <tbody>{d.holdings.map((h) => <HoldingRow key={`${h.market}-${h.symbol}`} h={h} />)}</tbody>
         </table>
       </div>
+      <HoldingSwing holdings={d.holdings} isAdmin={isAdmin} />
       <ul className="space-y-0.5 text-xs text-muted-foreground">
         <li>{fxLabel(d.fx_rate, d.fx_source)}</li>
         <li>최고가 대비 = 보유 기준일 뒤 가장 높은 종가와 현재 가격의 차이입니다 (토스 일봉 · 장 열린 날 국내 15:50 · 미국 07:10 기록).</li>

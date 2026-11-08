@@ -1,4 +1,5 @@
 import type { BrokerLinkInfo } from "@/lib/broker-link";
+import type { SwingResponse } from "@/lib/holdings-swing";
 export type { BrokerLinkInfo } from "@/lib/broker-link";
 /**
  * API 클라이언트 (FastAPI 백엔드).
@@ -934,6 +935,11 @@ export const api = {
   // 1025-08 · 토스 실계좌 보유 + 보유 일수 · 최고가 대비 (관리자 · 쿠키)
   account: {
     holdings: () => getWithSession<AccountHoldingsResponse>(`/account/holdings`),
+    // 1108-02 · 보유 종목 사실 (DB 만 읽음) + 보유 성격 바꾸기 (long · short · unset)
+    swing: () => getWithSession<SwingResponse>(`/account/swing`),
+    setHorizon: (market: string, ticker: string, horizon: "long" | "short" | "unset") =>
+      patchWithToken<{ market: string; ticker: string; horizon: string | null }>(
+        `/account/swing/${market}/${encodeURIComponent(ticker)}`, "", { horizon }),
   },
   // 1025-06 · 토스증권 이동 주소 (공개 읽기 · 관리자 수정)
   brokerLinks: {

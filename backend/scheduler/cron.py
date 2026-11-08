@@ -623,6 +623,26 @@ async def run_holdings_snapshot(market: str) -> dict:
         return await real_holdings.snapshot_market(market)
 
 
+async def run_swing_followup(market: str, hour: int, minute: int) -> None:
+    """1108-02 · 보유 기록이 끝난 뒤 이어 받기 — 공식 종가(국내) · 대형·대표 기준 값. 단계마다 따로 try.
+
+    새 정해진 시각 잡이 아니다 (기존 잡의 늦음 허용·시각을 따름). 실패해도 이미 저장된 보유 기록은 그대로이고,
+    같은 이름의 경고는 하루 1회만 나간다 (_alert_job_failure). 화면은 그 종목을 「보류」로 보인다.
+    """
+    from backend.services import holdings_swing
+
+    steps = []
+    if market == "KR":
+        steps.append(("공식 종가 받기 (국내)", holdings_swing.fill_official_closes))
+    steps.append((f"대형·대표 기준 값 ({'국내' if market == 'KR' else '미국'})", lambda: holdings_swing.refresh_references(market)))
+    for name, step in steps:
+        try:
+            await step()
+        except Exception as e:
+            logger.error(f"[cron] swing {name} failed: {e}", exc_info=True)
+            await _alert_job_failure(name, e, hour, minute)
+
+
 async def job_holdings_snapshot_kr():
     """국내 보유 기록 15:50 KST 평일 (국내 장 마감 뒤)."""
     try:
@@ -630,6 +650,7 @@ async def job_holdings_snapshot_kr():
     except Exception as e:
         logger.error(f"[cron] holdings snapshot KR failed: {e}", exc_info=True)
         await _alert_job_failure("토스 보유 기록 (국내)", e, 15, 50)
+    await run_swing_followup("KR", 15, 50)  # 보유 기록이 실패해도 시도한다 (이전 보유 종목 기준 · 서로 독립)
 
 
 async def job_holdings_snapshot_us():
@@ -639,6 +660,7 @@ async def job_holdings_snapshot_us():
     except Exception as e:
         logger.error(f"[cron] holdings snapshot US failed: {e}", exc_info=True)
         await _alert_job_failure("토스 보유 기록 (미국)", e, 7, 10)
+    await run_swing_followup("US", 7, 10)
 
 
 async def job_outcomes():
