@@ -235,6 +235,8 @@ Phase 7 완료 보고서 `docs/plans/powderkeg-screener/phase7-final-report.md` 
 ### 문제 상황
 - PR #188 병합 뒤 배포가 「Setup SOPS + age」 단계에서 세 번 실패했다 (sops 내려받기 504 두 번 · age 내려받기 504 한 번). 서버에는 닿지 않아 운영은 예전 판 그대로 정상(health 200)이었다. GitHub 상태 페이지는 그 시각 「All Systems Operational」이었다.
 
+- 4번째 (21:10 · 사용자 결정 ㉠② · Fable GO 1108-02-09): 맥에서 두 주소를 1분 간격 3번 연속 200 으로 확인한 뒤 다시 돌렸지만, 러너에서 sops 내려받기가 5분 걸린 끝에 504 로 또 멈췄다. 서버에는 닿지 않았다(health 200).
+
 ### 근본 원인 (기술)
 - deploy.yml 이 배포마다 github.com 릴리스 파일 두 개를 `curl -sSfL` 한 번으로 받는다. 다시 시도가 없어 한 번의 504 로 배포 전체가 멈춘다.
 
@@ -243,6 +245,7 @@ Phase 7 완료 보고서 `docs/plans/powderkeg-screener/phase7-final-report.md` 
 
 ### 교훈
 - 배포에 필요한 바깥 파일은 다시 시도(`curl --retry 5 --retry-all-errors`)를 붙이거나, 러너 캐시·저장소 고정 사본을 쓴다 (고치는 일은 사용자 결정 뒤 · 배포 파일 변경).
+- 맥에서 주소가 정상이라는 것은 러너에서 정상이라는 증거가 아니다. 회복 확인 뒤 다시 돌리기만으로는 막히지 않는다.
 - 배포 실패를 보면 먼저 「서버에 닿았는가」를 확인하고 health 를 잰다. 닿지 않았으면 운영 영향은 없다.
 
 ### 체크리스트 (배포 실패 때)
