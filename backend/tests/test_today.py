@@ -110,7 +110,7 @@ async def test_admin_unlocked_rows(client):
     c = _sec(b, "crazy")
     assert c["locked"] is False and c["as_of"] == "2026-10-29"
     assert [i["ticker"] for i in c["items"]] == ["CR1", "CR2", "CR3", "CR4", "CR5"]  # 최신 날짜만 · 상위 5
-    assert c["items"][0]["name"] == "크레이지1" and c["items"][0]["note"] == "1위 · 점수 69.0"
+    assert c["items"][0]["name"] == "크레이지1" and c["items"][0]["note"] == "1위 · 급등 가능성 점수 69/100"
     assert len(_sec(b, "moonshot")["items"]) == 3
     assert b["failures"] == [] and b["judgments_due"] == [] and b["holding_alerts"] == []
 
@@ -152,9 +152,9 @@ async def test_powderkeg_meme_today_only(client):
     )
     b = (await client.get("/api/v1/today")).json()
     pk = _sec(b, "powderkeg")
-    assert [i["note"] for i in pk["items"]] == ["오늘 이벤트"] and pk["as_of"] == "2026-10-30"
+    assert [i["note"] for i in pk["items"]] == ["오너 사법 리스크 · 오늘 이벤트"] and pk["as_of"] == "2026-10-30"
     me = _sec(b, "meme")
-    assert [i["ticker"] for i in me["items"]] == ["NEWM"] and me["items"][0]["note"] == "ERUPTING 알림 02:00"
+    assert [i["ticker"] for i in me["items"]] == ["NEWM"] and me["items"][0]["note"] == "지금 가격·거래가 폭등하는 중 · 02:00"
 
 
 @pytest.mark.asyncio
@@ -171,7 +171,7 @@ async def test_meme_uses_server_local_time_when_server_is_kst(client, monkeypatc
         m.MemeAlertHistory(ticker="NEWK", alert_type="BLAZING", triggered_at=local_midnight + timedelta(hours=9, minutes=5)),
     )
     me = _sec((await client.get("/api/v1/today")).json(), "meme")
-    assert [i["ticker"] for i in me["items"]] == ["NEWK"] and me["items"][0]["note"] == "BLAZING 알림 09:05"
+    assert [i["ticker"] for i in me["items"]] == ["NEWK"] and me["items"][0]["note"] == "급등 신호 여러 개가 한꺼번에 켜짐 · 09:05"
 
 
 @pytest.mark.asyncio
@@ -183,7 +183,7 @@ async def test_activist_from_state_file(client, tmp_path):
          "filing_date": "2026-10-20", "target_desc": "Acme Corp", "target_ticker": "ACME", "score": 80,
          "intensity_label": "CRITICAL", "detected_at": 5.0}]}), encoding="utf-8")
     s = _sec((await client.get("/api/v1/today")).json(), "activist")
-    assert s["as_of"] == "2026-10-20" and s["items"][0] == {"ticker": "ACME", "name": "Acme Corp", "note": "SC 13D · Trian · CRITICAL"}
+    assert s["as_of"] == "2026-10-20" and s["items"][0] == {"ticker": "ACME", "name": "Acme Corp", "note": "Trian · 경영 참여 목적 5% 이상 보유 신규 보고 (13D) · 신호 매우 강함"}
 
 
 # ─── 한 칸이 실패해도 200 ──────────────────────────────────────────────────
@@ -409,3 +409,51 @@ async def test_response_time_with_seeded_data(client, capsys):
     with capsys.disabled():
         print(f"\n[today] admin 응답 시간 ms: {[round(x) for x in ts]}")
     assert min(ts) < 2000
+
+
+# ─── 1108-01 · 쉬운 말 ────────────────────────────────────────────────────
+
+@pytest.mark.asyncio
+async def test_watchlist_note_reason_and_score100(client):
+    from backend.services import models as m
+
+    await _add(m.Watchlist(trade_date="2026-10-30", ticker="005930", rank=1, composite_score=0.48, name="삼성전자",
+                           news_score=0.2, board_score=0.9, youtube_score=0.0, event_score=0.0, prev_day_score=0.1))
+    s = _sec((await client.get("/api/v1/today")).json(), "watchlist")
+    assert s["items"][0]["note"] == "1위 · 개인 투자자 관심이 큼 · 관심 점수 48/100"
+
+
+def test_kr_form_and_target_name():
+    from backend.api.routes.today import _form_text, _target_name
+
+    assert _form_text("대량보유 (MANAGEMENT)") == "5% 이상 대량 보유 · 경영 참여 목적"
+    assert _form_text("D002 (CHANGE)") == "임원·주요주주 보유 주식 변동"
+    assert _form_text("D002 (BUY)") == "임원·주요주주가 주식을 삼"
+    assert _form_text("SCHEDULE 13D/A") == "보유 변경 보고 (13D/A)"
+    assert _form_text("XYZ") == "XYZ"
+    assert _form_text("대량보유 (MANAGEMENT) · 5.20% ▲0.50%") == "5% 이상 대량 보유 · 경영 참여 목적 · 5.20% ▲0.50%"
+    assert _form_text("Form 4 · 매수 · $1.2M") == "임원·주요주주 매매 보고 · 매수 · $1.2M"
+    assert _form_text("Form 4 · non-trade (옵션·수여·증여)") == "임원·주요주주 매매 보고 · 매매 아님 (옵션·수여·증여)"
+    assert _target_name("백금T&A — 주식등의대량보유상황보고서(일반)") == "백금T&A"
+    assert _target_name(None) is None
+
+
+def test_no_english_codes_in_notes_source():
+    """화면에 나가는 메모 글에 옛 영어 약어 틀이 남지 않았는지 (정적 검사)."""
+    import inspect
+
+    from backend.api.routes import today
+
+    src = inspect.getsource(today)
+    for old in ('{r.alert_type} 알림', '{e.form} · {e.filer_name} · {e.intensity_label}', '점수 {_f('):
+        assert old not in src
+
+
+@pytest.mark.asyncio
+async def test_meme_name_from_universe(client):
+    from backend.services import models as m
+
+    await _add(m.MemeUniverse(market="US", ticker="GMEX", name="GameStop Corp"),
+               m.MemeAlertHistory(ticker="GMEX", alert_type="BLAZING", triggered_at=datetime.now()))
+    me = _sec((await client.get("/api/v1/today")).json(), "meme")
+    assert me["items"][0]["name"] == "GameStop Corp"
