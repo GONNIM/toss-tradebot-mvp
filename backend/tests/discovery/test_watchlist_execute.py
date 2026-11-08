@@ -99,7 +99,7 @@ async def isolated_params(tmp_path, monkeypatch):
         "watchlist_gap_max_pct": 0.05,
         "watchlist_min_composite_score": 1.0,
         "watchlist_use_rankings_confirm": False,
-        # execute_entry 통과 위한 active_window 는 항상 (00:00~23:59)
+        # active_window 값은 남겨 두지만 시간 검사는 아래에서 통과로 고정한다 (1108-03)
         "active_start_kst": "00:00",
         "active_end_kst": "23:59",
         "seed_cap_krw": 1_000_000,

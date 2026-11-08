@@ -32,6 +32,8 @@ def _freeze(monkeypatch, module, fixed: datetime) -> None:
 @pytest.mark.parametrize("fixed, expected", [
     (WEEKDAY_10, True),
     (WEEKDAY_16, False),
+    (datetime(2026, 11, 9, 9, 0, tzinfo=KST), True),     # 시작 시각은 포함
+    (datetime(2026, 11, 9, 15, 20, tzinfo=KST), False),  # 끝 시각은 제외
     (SATURDAY_10, False),
     (SUNDAY_0915, False),
 ])
@@ -44,6 +46,7 @@ def test_entry_active_window(monkeypatch, fixed, expected):
 @pytest.mark.parametrize("fixed, expected", [
     (WEEKDAY_0915, True),
     (WEEKDAY_10, False),
+    (datetime(2026, 11, 9, 9, 30, tzinfo=KST), False),  # 끝 시각은 제외
     (SUNDAY_0915, False),
 ])
 def test_watchlist_execute_window(monkeypatch, fixed, expected):
