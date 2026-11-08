@@ -2027,3 +2027,47 @@ class HoldingSnapshot(Base):
     fx_rate: Mapped[Optional[float]] = mapped_column(Float, default=None)
     fx_source: Mapped[Optional[str]] = mapped_column(String(8), default=None)
     saved_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
+
+
+# ─── 1108-02 · 보유 종목 사실 (스윙 2단계) ─────────────────────────────────
+# 새 표 3개 · 기존 holding_snapshot 처럼 init_db(create_all) 로 생긴다 (이 저장소는 holding_snapshot 에 alembic 판이 없다).
+
+
+class HoldingHorizon(Base):
+    """사용자가 정한 보유 성격 (장기 / 단기). 행이 없으면 미지정. 키 = (시장, 티커)."""
+
+    __tablename__ = "holding_horizon"
+
+    market: Mapped[str] = mapped_column(String(2), primary_key=True)  # KR | US
+    ticker: Mapped[str] = mapped_column(String(16), primary_key=True)
+    horizon: Mapped[str] = mapped_column(String(8))  # long | short
+    updated_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
+
+
+class KrOfficialClose(Base):
+    """국내 KRX 공식 종가 (pykrx get_market_ohlcv_by_date · 수정주가). 토스 종가와 섞지 않는다."""
+
+    __tablename__ = "kr_official_close"
+
+    ticker: Mapped[str] = mapped_column(String(16), primary_key=True)
+    trade_date: Mapped[date] = mapped_column(Date, primary_key=True)  # pykrx 가 준 날짜 그대로 (받은 날 아님)
+    close: Mapped[float] = mapped_column(Float)
+    source: Mapped[str] = mapped_column(String(40), default="pykrx adjusted")
+    fetched_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
+
+
+class SwingReference(Base):
+    """대형·대표 기준 값 (하루 1회 잡이 저장 · 화면 요청 때는 외부 호출 없이 읽음).
+
+    item = size (국내: KOSPI 시총 순위 / 미국: 시총 USD) | earnings (최근 4분기 이익 합) | vol_median (시장 전체 · ticker '*').
+    """
+
+    __tablename__ = "swing_reference"
+
+    market: Mapped[str] = mapped_column(String(2), primary_key=True)
+    ticker: Mapped[str] = mapped_column(String(16), primary_key=True)  # '*' = 시장 전체 값
+    item: Mapped[str] = mapped_column(String(16), primary_key=True)
+    value: Mapped[Optional[float]] = mapped_column(Float, default=None)
+    as_of: Mapped[Optional[date]] = mapped_column(Date, default=None)
+    note: Mapped[Optional[str]] = mapped_column(String(200), default=None)
+    saved_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())

@@ -8,12 +8,15 @@ from __future__ import annotations
 import asyncio
 from datetime import datetime, timezone
 
-from fastapi import APIRouter, Depends
+from typing import Literal
+
+from fastapi import APIRouter, Depends, HTTPException, Path
+from pydantic import BaseModel
 from sqlalchemy import select
 
 from backend.api.auth import require_sniper_token
 from backend.api.schemas import AccountHolding, AccountHoldingsResponse, BrokerLinkOut
-from backend.services import broker_links, fx, real_holdings
+from backend.services import broker_links, fx, holdings_swing, real_holdings
 from backend.services.db import get_session
 from backend.services.models import TossStockCode
 
@@ -60,3 +63,29 @@ async def get_holdings():
             ))
     return AccountHoldingsResponse(ok=True, fetched_at=fetched_at, fx_rate=quote.rate, fx_source=quote.source,
                                    fx_valid_from=quote.valid_from, holdings=out)
+
+
+# ─── 1108-02 · 보유 종목 사실 (스윙 2단계) · DB 만 읽음 (토스·외부 호출 없음) ─────────────────
+
+class SwingHorizonBody(BaseModel):
+    horizon: Literal["long", "short", "unset"]  # 이 셋 말고는 422
+
+
+@router.get("/swing", dependencies=[Depends(require_sniper_token)])
+async def get_swing():
+    today = datetime.now(timezone.utc).astimezone(real_holdings.KST).date()
+    async with get_session() as session:
+        cards = await holdings_swing.build_cards(session, today)
+    return {"ok": True, "generated_at": datetime.now(timezone.utc), "cards": cards}
+
+
+@router.patch("/swing/{market}/{ticker}", dependencies=[Depends(require_sniper_token)])
+async def patch_swing_horizon(
+    body: SwingHorizonBody,
+    market: Literal["KR", "US"],
+    ticker: str = Path(pattern=r"^[A-Za-z0-9.\-]{1,16}$"),
+):
+    ticker = ticker.upper()
+    async with get_session() as session:
+        value = await holdings_swing.set_horizon(session, market, ticker, body.horizon)
+    return {"market": market, "ticker": ticker, "horizon": value}

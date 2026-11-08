@@ -232,8 +232,12 @@ async def test_job_retries_once_on_token_error_then_alerts(monkeypatch):
     async def fake_alert(name, exc, hour=None, minute=None):
         alerts.append((name, hour, minute))
 
+    async def no_followup(*a, **k):  # 1108-02 이어 받기는 tests/test_holdings_swing.py 에서 따로 시험
+        return None
+
     monkeypatch.setattr(rh, "snapshot_market", flaky)
     monkeypatch.setattr(cron, "_alert_job_failure", fake_alert)
+    monkeypatch.setattr(cron, "run_swing_followup", no_followup)
     await cron.job_holdings_snapshot_us()
     assert calls == ["US", "US"] and alerts == [("토스 보유 기록 (미국)", 7, 10)]
 
@@ -250,8 +254,12 @@ async def test_job_kr_success_no_alert(monkeypatch):
     async def fake_alert(*a, **k):
         alerts.append(a)
 
+    async def no_followup(*a, **k):
+        return None
+
     monkeypatch.setattr(rh, "snapshot_market", ok)
     monkeypatch.setattr(cron, "_alert_job_failure", fake_alert)
+    monkeypatch.setattr(cron, "run_swing_followup", no_followup)
     await cron.job_holdings_snapshot_kr()
     assert alerts == []
 
