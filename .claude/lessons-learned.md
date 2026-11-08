@@ -246,6 +246,7 @@ Phase 7 완료 보고서 `docs/plans/powderkeg-screener/phase7-final-report.md` 
 ### 교훈
 - 배포에 필요한 바깥 파일은 다시 시도(`curl --retry 5 --retry-all-errors`)를 붙이거나, 러너 캐시·저장소 고정 사본을 쓴다 (고치는 일은 사용자 결정 뒤 · 배포 파일 변경).
 - (11/08 21:19 사용자 지적) optimus8 은 orionhunter7 과 같은 Cafe24 서버라 PO 가 SSH 로 배포할 수 있다. CLAUDE.md 「배포 판단 흐름 2」(workflow 실패 시 수동 SSH 배포)를 먼저 봤어야 했다. 막힌 것은 러너의 sops·age 내려받기뿐이고, 서버 쪽 단계(git reset · pip · alembic · build · 재시작)는 GitHub 릴리스와 무관하다. .env.sops.yaml 이 마지막 성공 배포 뒤 바뀌지 않았으면 .env 동기화도 필요 없다.
+- 결과 (11/08 21:44~21:48 · 사용자 결정 ㉢③ · Fable GO 1108-02-10): deploy.yml 서버 단계를 그대로 옮긴 스크립트(SHA-256 앞 adc00de21de7db0e)를 사용자가 `!` 로 1회 실행 → eaf27f0 → e26441f · health 200 · 새 API 비로그인 401 · 새 표 3개 생김 · 3분 ERROR 0. 저장소 훅이 강제 되돌리기 명령을 막으므로 수동 SSH 배포는 사용자가 실행한다.
 - 맥에서 주소가 정상이라는 것은 러너에서 정상이라는 증거가 아니다. 회복 확인 뒤 다시 돌리기만으로는 막히지 않는다.
 - 배포 실패를 보면 먼저 「서버에 닿았는가」를 확인하고 health 를 잰다. 닿지 않았으면 운영 영향은 없다.
 
