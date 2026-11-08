@@ -2040,8 +2040,10 @@ class HoldingHorizon(Base):
 
     market: Mapped[str] = mapped_column(String(2), primary_key=True)  # KR | US
     ticker: Mapped[str] = mapped_column(String(16), primary_key=True)
-    horizon: Mapped[str] = mapped_column(String(8))  # long | short
+    horizon: Mapped[str] = mapped_column(String(8))  # long | short | unset (unset = 미지정 · 행·기한·메모는 보존)
     updated_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
+    deadline: Mapped[Optional[date]] = mapped_column(Date, default=None)  # 사용자 기한 (NULL = 기본값 기준일 + 1년)
+    memo: Mapped[Optional[str]] = mapped_column(String(200), default=None)  # 사용자 메모 (결론 근거로 쓰지 않음)
 
 
 class KrOfficialClose(Base):
@@ -2053,6 +2055,19 @@ class KrOfficialClose(Base):
     trade_date: Mapped[date] = mapped_column(Date, primary_key=True)  # pykrx 가 준 날짜 그대로 (받은 날 아님)
     close: Mapped[float] = mapped_column(Float)
     source: Mapped[str] = mapped_column(String(40), default="pykrx adjusted")
+    fetched_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
+
+
+class SwingLongClose(Base):
+    """긴 일봉 종가 (국내 pykrx 2000년~ · 미국 yfinance 10년). 목표까지 거리 계산용 · 화면 요청 때는 이 표만 읽는다."""
+
+    __tablename__ = "swing_long_close"
+
+    market: Mapped[str] = mapped_column(String(2), primary_key=True)
+    ticker: Mapped[str] = mapped_column(String(16), primary_key=True)
+    trade_date: Mapped[date] = mapped_column(Date, primary_key=True)
+    close: Mapped[float] = mapped_column(Float)
+    source: Mapped[str] = mapped_column(String(40))
     fetched_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
 
 

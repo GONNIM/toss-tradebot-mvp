@@ -937,9 +937,14 @@ export const api = {
     holdings: () => getWithSession<AccountHoldingsResponse>(`/account/holdings`),
     // 1108-02 · 보유 종목 사실 (DB 만 읽음) + 보유 성격 바꾸기 (long · short · unset)
     swing: () => getWithSession<SwingResponse>(`/account/swing`),
-    setHorizon: (market: string, ticker: string, horizon: "long" | "short" | "unset") =>
-      patchWithToken<{ market: string; ticker: string; horizon: string | null }>(
-        `/account/swing/${market}/${encodeURIComponent(ticker)}`, "", { horizon }),
+    // 3단계 · 본문 {horizon, deadline?, memo?} — 보내지 않은 칸은 그대로 · deadline null = 기본값 · memo "" = 지움
+    setHorizon: (
+      market: string,
+      ticker: string,
+      body: { horizon: "long" | "short" | "unset"; deadline?: string | null; memo?: string },
+    ) =>
+      patchWithToken<{ market: string; ticker: string; horizon: string | null; deadline?: string | null; memo?: string | null }>(
+        `/account/swing/${market}/${encodeURIComponent(ticker)}`, "", body),
   },
   // 1025-06 · 토스증권 이동 주소 (공개 읽기 · 관리자 수정)
   brokerLinks: {

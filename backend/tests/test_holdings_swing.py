@@ -5,6 +5,7 @@
 from __future__ import annotations
 
 import ast
+import math
 import re
 from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
@@ -19,6 +20,7 @@ from backend.services.models import (
     HoldingHorizon,
     HoldingSnapshot,
     KrOfficialClose,
+    SwingLongClose,
     SwingReference,
 )
 
@@ -36,7 +38,7 @@ async def clean(monkeypatch):
     monkeypatch.setenv("SNIPER_API_TOKEN", TOKEN)
     await init_db()
     async with get_session() as s:
-        for m in (HoldingSnapshot, HoldingHorizon, KrOfficialClose, SwingReference):
+        for m in (HoldingSnapshot, HoldingHorizon, KrOfficialClose, SwingReference, SwingLongClose):
             await s.execute(delete(m))
     yield
 
@@ -190,6 +192,7 @@ async def test_followup_failure_keeps_holding_record_and_alerts_once(clean, monk
     monkeypatch.setattr(rh, "snapshot_market", fake_snapshot)
     monkeypatch.setattr(hs, "fill_official_closes", boom)
     monkeypatch.setattr(hs, "refresh_references", refs_ok)
+    monkeypatch.setattr(hs, "fill_long_closes", refs_ok)  # 외부 호출 없음
     await cron.job_holdings_snapshot_kr()
     await cron.job_holdings_snapshot_kr()  # 같은 날 두 번째 실패
     from backend.services.db import get_session
@@ -218,13 +221,18 @@ async def test_followup_runs_separately_each_step(clean, monkeypatch):
         order.append("alert")
 
     monkeypatch.setattr(hs, "fill_official_closes", boom)
+    async def longs(market, *a, **k):
+        order.append("long")
+        return {}
+
     monkeypatch.setattr(hs, "refresh_references", refs)
+    monkeypatch.setattr(hs, "fill_long_closes", longs)
     monkeypatch.setattr(cron, "_alert_job_failure", no_alert)
     await cron.run_swing_followup("KR", 15, 50)
-    assert order == ["official", "alert", "refs"]  # 앞 단계가 실패해도 다음 단계는 돈다
+    assert order == ["official", "alert", "refs", "long"]  # 앞 단계가 실패해도 다음 단계는 돈다 · 긴 일봉은 맨 뒤
     order.clear()
     await cron.run_swing_followup("US", 7, 10)
-    assert order == ["refs"]  # 미국은 공식 종가 단계 없음
+    assert order == ["refs", "long"]  # 미국은 공식 종가 단계 없음
 
 
 @pytest.mark.asyncio
@@ -263,9 +271,9 @@ async def test_patch_horizon_values_limited_and_roundtrip(http):
     async with __import__("backend.services.db", fromlist=["get_session"]).get_session() as s:
         assert [r.horizon for r in (await s.execute(select(HoldingHorizon))).scalars().all()] == ["long"]
     gone = await http.patch(url, json={"horizon": "unset"}, headers=h)
-    assert gone.json()["horizon"] is None
+    assert gone.json()["horizon"] is None  # 응답은 unset → null
     async with __import__("backend.services.db", fromlist=["get_session"]).get_session() as s:
-        assert (await s.execute(select(HoldingHorizon))).scalars().all() == []
+        assert [r.horizon for r in (await s.execute(select(HoldingHorizon))).scalars().all()] == ["unset"]  # 행은 보존
 
 
 # ─── 사실 계산 · 보류 ───
@@ -524,3 +532,492 @@ def test_holdings_swing_frontend_helpers_check():
     r = subprocess.run(["npx", "--yes", "tsx", "lib/holdings-swing.check.ts"], cwd=fe, capture_output=True, text=True, timeout=120)
     assert r.returncode == 0, r.stderr[-800:]
     assert "holdings-swing ok" in r.stdout
+
+
+# ═══════════════════════════════════════════════════════════════
+# 3단계 · 목표까지 거리 · 기한 · 메모 (계획 6절 · 검토 1108-02-12 막음 1~6)
+# 종목 기호·가격은 모두 가짜 값이다.
+# ═══════════════════════════════════════════════════════════════
+
+from statistics import NormalDist  # noqa: E402
+
+
+def _long_dates(n, end=TODAY):
+    return _days(n, end)
+
+
+async def _seed_long(market, sym, closes, end=TODAY, source="yfinance close"):
+    days = _long_dates(len(closes), end)
+    await _add(*[SwingLongClose(market=market, ticker=sym, trade_date=d, close=c, source=source) for d, c in zip(days, closes)])
+    return days
+
+
+def _wave(n, base=100.0, amp=1.0):
+    """작은 가짜 계열: 위아래로 번갈아 움직임."""
+    return [base + (amp if i % 2 else -amp) + i * 0.01 for i in range(n)]
+
+
+async def _short_card(avg=110.0, last=100.0, long_closes=None, horizon="short", market="US", sym=US, **kw):
+    closes = [100.0] * 129 + [last]
+    cur = "USD" if market == "US" else "KRW"
+    days = _days(len(closes))
+    holds = [_hold(sym, market, days[-1], close=last, avg=avg, cur=cur)]
+    await _seed_card(market, sym, closes, horizon=horizon, hold_rows=holds, **kw)
+    if long_closes is not None:
+        await _seed_long(market, sym, long_closes)
+    return (await _cards())[(market, sym)]
+
+
+# ─── 계산 (순수 함수) ───
+
+def test_need_rise_and_breakeven_edges():
+    r = hs.need_rise(110.0, 100.0, "US")
+    assert r == pytest.approx(110.0 / (100.0 * 0.998) - 1)  # 미국 비용 0.2%
+    assert hs.need_rise(110.0, 100.0, "KR") == pytest.approx(110.0 / (100.0 * (1 - 0.00215)) - 1)  # 국내 0.215%
+    assert hs.need_rise(100.0, 101.0, "US") < 0  # 본전 위
+
+
+def test_weekdays_between_counts_weekdays_only():
+    fri = date(2026, 11, 6)
+    assert hs.weekdays_between(fri, fri) == 0
+    assert hs.weekdays_between(fri, date(2026, 11, 8)) == 0  # 토·일
+    assert hs.weekdays_between(fri, date(2026, 11, 9)) == 1
+    assert hs.weekdays_between(fri, date(2026, 11, 13)) == 5
+    assert hs.weekdays_between(fri, date(2027, 11, 6)) == 260  # 365일 = 52주 + 토요일 하루
+    assert hs.weekdays_between(date(2026, 11, 9), fri) == 0  # 지났으면 0
+
+
+def test_reflect_hit_prob_known_value():
+    sigma, days = 0.02, 100
+    r = math.exp(sigma * math.sqrt(days)) - 1  # ln(1+R) = σ√T → 2(1 − Φ(1))
+    assert hs.reflect_hit_prob(r, sigma, days) == pytest.approx(2 * (1 - NormalDist().cdf(1.0)), abs=1e-12)
+    assert hs.reflect_hit_prob(r, sigma, days) == pytest.approx(0.3173, abs=1e-4)
+    assert hs.reflect_hit_prob(0.0, sigma, days) is None and hs.reflect_hit_prob(r, 0.0, days) is None
+
+
+def test_own_history_hit_on_small_fake_series():
+    closes = [100, 101] * 5  # 100,101,100,101,...
+    frac, n = hs.own_history_hit(closes, 0.005, 2)
+    assert n == 7 and frac == pytest.approx(4 / 7)  # 100 에서 산 날만 2일 안 +0.5% 이상
+    assert hs.own_history_hit([100.0] * 3, 0.01, 5) == (None, 0)
+
+
+def test_drawdown_events_ended_and_ongoing():
+    closes = [100, 100, 60, 50, 70, 100, 90, 60, 55]
+    ev = hs.drawdown_events(closes)
+    assert [(e["start_idx"], e["days"]) for e in ev] == [(2, 3), (7, None)]  # 앞 고점 회복까지 3거래일 · 두 번째는 진행 중
+    assert ev[0]["depth"] == pytest.approx(-0.5) and ev[1]["depth"] == pytest.approx(-0.45)
+    g = hs.long_goal(closes, _long_dates(len(closes)), avg=120.0, close=55.0)
+    d = g["drawdowns"]
+    assert (d["ended"], d["recovered"], d["days_min"], d["days_max"], d["days_median"]) == (1, 1, 3, 3, 3)
+    assert d["ongoing"]["depth_pct"] == -45.0 and d["ongoing"]["start"] == _long_dates(len(closes))[7]
+    assert g["cushion_pct"] == pytest.approx((120 / 55 - 1) * 100, abs=0.01)
+    assert g["ath"]["close"] == 100 and g["ath"]["from_ath_pct"] == -45.0
+
+
+def test_default_deadline_is_basis_plus_one_year():
+    assert hs.default_deadline(date(2026, 11, 6)) == date(2027, 11, 6)
+    assert hs.default_deadline(date(2028, 2, 29)) == date(2029, 2, 28)
+    assert hs.default_deadline(None) is None
+
+
+# ─── 카드 · 목표 (DB 만 읽음) ───
+
+@pytest.mark.asyncio
+async def test_short_goal_values_and_default_deadline_with_basis(clean):
+    c = await _short_card(long_closes=_wave(400))
+    g = c["goal"]
+    assert g["kind"] == "short" and g["above_breakeven"] is False
+    assert g["need_pct"] == round((110.0 / (100.0 * 0.998) - 1) * 100, 2)
+    assert g["cost_pct"] == 0.2 and g["basis"] == {"close": 100.0, "date": TODAY, "source": "toss"}
+    assert g["deadline"] == date(2027, 11, 6) and g["deadline_source"] == "default"
+    assert g["deadline_basis_date"] == TODAY and g["deadline_basis_source"] == "record"
+    assert g["days_left"] == 260 and g["past_deadline"] is False
+    assert [w["label"] for w in g["windows"]] == ["3개월", "6개월", "기한까지"]
+    assert [w["days"] for w in g["windows"]] == [63, 126, 260]
+    assert len(g["limits"]) == 4 and g["disclaimer"] == "추정 · 보장 아님"
+    assert c["deadline"] is None and c["memo"] is None  # 사용자 값은 비어 있음
+    assert all(w["own"]["pct"] is not None and w["model"]["pct"] is not None for w in g["windows"][:2])
+
+
+@pytest.mark.asyncio
+async def test_long_goal_card_has_cushion_ath_drawdowns_and_no_short_fields(clean):
+    long_closes = [100.0, 100.0, 60.0, 50.0, 70.0, 100.0, 90.0] * 60
+    c = await _short_card(avg=120.0, last=100.0, long_closes=long_closes, horizon="long")
+    g = c["goal"]
+    assert g["kind"] == "long" and g["cushion_pct"] == 20.0
+    assert g["ath"]["close"] == 100.0 and g["ath"]["from_ath_pct"] == 0.0
+    assert g["drawdowns"]["threshold_pct"] == 30 and g["drawdowns"]["ended"] >= 1
+    assert "windows" not in g and "need_pct" not in g
+    assert g["long_series"]["n"] == len(long_closes) and g["long_series"]["source"] == "yfinance close"
+
+
+@pytest.mark.asyncio
+async def test_goal_dates_basis_uses_card_close_not_long_series(clean):
+    """막음 4: 수준 비교는 카드 기준 종가(국내 공식 · 미국 토스) — 긴 계열의 마지막 값을 쓰지 않는다."""
+    c = await _short_card(avg=120.0, last=100.0, long_closes=[50.0] * 300, horizon="long")
+    g = c["goal"]
+    assert g["basis"]["close"] == 100.0 and g["cushion_pct"] == 20.0  # 긴 계열 마지막 50 이 아님
+    assert g["ath"]["close"] == 50.0 and g["ath"]["from_ath_pct"] == 100.0  # 역대 최고는 긴 계열의 최고
+    kr = await _short_card(avg=120.0, last=100.0, long_closes=[50.0] * 300, horizon="long", market="KR", sym=KR)
+    assert kr["goal"]["basis"]["source"] == "krx"
+
+
+# ─── 경계 (막음 5) ───
+
+@pytest.mark.asyncio
+async def test_boundaries_above_breakeven_past_deadline_and_missing_series(clean):
+    above = await _short_card(avg=99.0, last=100.0, long_closes=_wave(400))
+    g = above["goal"]
+    assert g["above_breakeven"] is True and g["need_pct"] is None and g["windows"] == []  # 이미 본전 위
+    # 기한 지남 (본전 아래 종목)
+    await _short_card(avg=110.0, last=100.0, long_closes=_wave(400), sym="ZZZB")
+    async with __import__("backend.services.db", fromlist=["get_session"]).get_session() as s:
+        row = (await s.execute(select(HoldingHorizon).where(HoldingHorizon.ticker == "ZZZB"))).scalars().one()
+        row.deadline = TODAY - timedelta(days=3)
+    past = (await _cards())[("US", "ZZZB")]["goal"]
+    assert past["past_deadline"] is True and past["days_left"] == 0 and past["deadline_source"] == "user"
+    assert [w["label"] for w in past["windows"]] == ["3개월", "6개월"]  # 기한 창은 없음
+    assert past["deadline_basis_date"] is None
+
+
+@pytest.mark.asyncio
+async def test_no_long_series_only_goal_cells_say_no_data(clean):
+    c = await _short_card(avg=110.0, last=100.0, long_closes=None)
+    g = c["goal"]
+    assert c["status"] == "ok" and c["ma"]  # 앞 칸은 그대로
+    assert g["long_series"] is None and g["sigma120_pct"] is None
+    for w in g["windows"]:
+        assert w["own"]["pct"] is None and w["own"]["note"] == "자료 없음" and w["model"]["note"] == "자료 없음" and w["diff_pp"] is None
+    longc = await _short_card(avg=110.0, last=100.0, long_closes=None, horizon="long", sym="ZZZB")
+    assert longc["goal"]["ath"] is None and longc["goal"]["drawdowns"] is None and longc["goal"]["cushion_pct"] == 10.0
+
+
+@pytest.mark.asyncio
+async def test_under_120_bars_model_no_data_and_small_sample_flag(clean):
+    c = await _short_card(avg=105.0, last=100.0, long_closes=_wave(100))
+    g = c["goal"]
+    assert g["sigma120_pct"] is None
+    w = g["windows"][0]
+    assert w["model"] == {"pct": None, "note": "자료 없음"} and w["diff_pp"] is None
+    assert w["own"]["note"] == "표본 적음" and w["own"]["n"] < 250 and w["own"]["pct"] is not None  # 표본 적음이어도 값은 함께
+
+
+@pytest.mark.asyncio
+async def test_enough_history_has_both_methods_and_diff_from_unrounded(clean):
+    import random
+
+    rnd = random.Random(7)
+    closes = [100.0]
+    for _ in range(1500):
+        closes.append(closes[-1] * math.exp(rnd.gauss(0, 0.02)))
+    c = await _short_card(avg=106.0, last=100.0, long_closes=closes)
+    g = c["goal"]
+    assert g["sigma120_pct"] is not None and g["long_series"]["n"] == 1501
+    w = g["windows"][0]
+    assert w["own"]["note"] is None and w["own"]["n"] == 1501 - 63 - 1
+    frac, _ = hs.own_history_hit(closes, hs.need_rise(106.0, 100.0, "US"), 63)
+    prob = hs.reflect_hit_prob(hs.need_rise(106.0, 100.0, "US"), hs.sigma_daily(closes), 63)
+    assert w["diff_pp"] == round(abs(frac - prob) * 100, 1)  # 반올림 전 값의 차이
+
+
+# ─── 저장 · 화면 요청 때 외부 호출 없음 (막음 1 · 6) ───
+
+@pytest.mark.asyncio
+async def test_build_cards_makes_no_external_call_and_deadline_change_applies_at_once(clean, monkeypatch):
+    from backend.discovery.data_sources.krx_price import loader
+
+    await _short_card(long_closes=_wave(400))
+
+    def boom(*a, **k):
+        raise AssertionError("화면 요청 때 외부 호출 금지")
+
+    monkeypatch.setattr(loader, "_fetch_ohlcv_sync", boom)
+    monkeypatch.setattr(hs, "_default_long_fetch", boom)
+    monkeypatch.setitem(__import__("sys").modules, "yfinance", None)  # import 하면 실패
+    before = (await _cards())[("US", US)]["goal"]["days_left"]
+    async with __import__("backend.services.db", fromlist=["get_session"]).get_session() as s:
+        await hs.save_horizon(s, "US", US, "short", deadline=TODAY + timedelta(days=7), today=TODAY)
+    after = (await _cards())[("US", US)]["goal"]
+    assert before == 260 and after["days_left"] == 5 and after["deadline_source"] == "user"  # 같은 요청 흐름에서 바로 반영
+
+
+@pytest.mark.asyncio
+async def test_fill_long_closes_stores_replaces_and_skips_failed_ticker(clean):
+    await _add(_hold(US, "US", TODAY, cur="USD"), _hold("ZZZB", "US", TODAY, cur="USD"))
+    days = _days(5)
+
+    async def fetch(market, t):
+        if t == "ZZZB":
+            raise ConnectionError("blocked")
+        return [(d, 10.0 + i) for i, d in enumerate(days)]
+
+    r = await hs.fill_long_closes("US", NOW, fetch)
+    assert r["rows"] == 5 and r["failures"] == 1
+    from backend.services.db import get_session
+
+    async def stored():
+        async with get_session() as s:
+            return (await s.execute(select(SwingLongClose).order_by(SwingLongClose.trade_date))).scalars().all()
+
+    rows = await stored()
+    assert len(rows) == 5 and {x.ticker for x in rows} == {US} and rows[0].source == "yfinance close"
+    await hs.fill_long_closes("US", NOW, fetch)  # 두 번째 받기도 행 수가 늘지 않는다
+    assert len(await stored()) == 5
+
+    async def fail(market, t):
+        raise ConnectionError("blocked")
+
+    with pytest.raises(RuntimeError):  # 모두 실패 → 경고 대상 · 기존 행은 그대로
+        await hs.fill_long_closes("US", NOW, fail)
+    assert len(await stored()) == 5
+
+
+@pytest.mark.asyncio
+async def test_fill_long_closes_timeout_per_ticker_is_that_ticker_only(clean, monkeypatch):
+    import asyncio
+
+    await _add(_hold(US, "US", TODAY, cur="USD"), _hold("ZZZB", "US", TODAY, cur="USD"))
+    monkeypatch.setattr(hs, "LONG_FETCH_TIMEOUT", 0.05)
+    assert hs.LONG_FETCH_TIMEOUT == 0.05
+    days = _days(3)
+
+    async def fetch(market, t):
+        if t == US:
+            await asyncio.sleep(5)  # 초과
+        return [(d, 5.0) for d in days]
+
+    r = await hs.fill_long_closes("US", NOW, fetch)
+    assert r["failures"] == 1 and r["rows"] == 3
+
+
+def test_long_fetch_timeout_constant_is_60_seconds():
+    assert hs.LONG_FETCH_TIMEOUT == 60
+
+
+@pytest.mark.asyncio
+async def test_default_long_fetch_sources_kr_pykrx_from_2000_and_us_yfinance_unadjusted(clean, monkeypatch):
+    """막음 4: 국내 = loader.fetch_daily_candles 재사용 · 2000-01-01~ / 미국 = yfinance auto_adjust=False 10년 Close."""
+    import sys
+    import types
+
+    from backend.discovery.data_sources.krx_price import loader
+
+    seen = {}
+
+    def fake_sync(start, end, ticker):
+        seen["kr"] = (start, ticker)
+        return _frame([(TODAY, 101.0)])
+
+    monkeypatch.setattr(loader, "_fetch_ohlcv_sync", fake_sync)
+    assert await hs._default_long_fetch("KR", KR) == [(TODAY, 101.0)]
+    assert seen["kr"] == ("20000101", KR)
+
+    def fake_download(sym, **kw):
+        seen["us"] = (sym, kw)
+        return pd.DataFrame({"Close": [10.0, 11.0]}, index=pd.to_datetime(["2026-11-05", "2026-11-06"]))
+
+    monkeypatch.setitem(sys.modules, "yfinance", types.SimpleNamespace(download=fake_download))
+    out = await hs._default_long_fetch("US", "ZZZ.B")
+    assert out == [(date(2026, 11, 5), 10.0), (date(2026, 11, 6), 11.0)]
+    assert seen["us"][0] == "ZZZ-B" and seen["us"][1]["auto_adjust"] is False and seen["us"][1]["period"] == "10y"
+
+
+@pytest.mark.asyncio
+async def test_followup_long_step_failure_keeps_earlier_steps(clean, monkeypatch):
+    from backend.scheduler import cron
+
+    done, alerts = [], []
+
+    async def official(*a, **k):
+        done.append("official")
+
+    async def refs(*a, **k):
+        done.append("refs")
+
+    async def long_boom(*a, **k):
+        raise RuntimeError("긴 일봉 막힘")
+
+    async def alert(name, *a, **k):
+        alerts.append(name)
+
+    monkeypatch.setattr(hs, "fill_official_closes", official)
+    monkeypatch.setattr(hs, "refresh_references", refs)
+    monkeypatch.setattr(hs, "fill_long_closes", long_boom)
+    monkeypatch.setattr(cron, "_alert_job_failure", alert)
+    await cron.run_swing_followup("KR", 15, 50)
+    assert done == ["official", "refs"] and alerts == ["긴 일봉 받기 (국내)"]
+
+
+# ─── 보유 성격 미지정 · 기한 · 메모 (막음 2) ───
+
+@pytest.mark.asyncio
+async def test_unset_keeps_row_deadline_memo_and_card_holds_like_unspecified(clean):
+    c = await _short_card(long_closes=_wave(400))
+    async with __import__("backend.services.db", fromlist=["get_session"]).get_session() as s:
+        await hs.save_horizon(s, "US", US, "short", deadline=date(2027, 3, 5), memo="내 메모", today=TODAY)
+    async with __import__("backend.services.db", fromlist=["get_session"]).get_session() as s:
+        out = await hs.save_horizon(s, "US", US, "unset", today=TODAY)
+    assert out == {"horizon": None, "deadline": date(2027, 3, 5), "memo": "내 메모"}
+    card = (await _cards())[("US", US)]
+    assert card["horizon"] is None and card["status"] == "hold" and card["goal"] is None  # 미지정과 같게 보류
+    assert card["deadline"] == date(2027, 3, 5) and card["memo"] == "내 메모"
+    async with __import__("backend.services.db", fromlist=["get_session"]).get_session() as s:
+        rows = (await s.execute(select(HoldingHorizon))).scalars().all()
+    assert [(r.horizon, r.deadline, r.memo) for r in rows] == [("unset", date(2027, 3, 5), "내 메모")]
+    async with __import__("backend.services.db", fromlist=["get_session"]).get_session() as s:
+        await hs.save_horizon(s, "US", US, "long", today=TODAY)  # 다시 정하면 기한·메모가 살아 있다
+    again = (await _cards())[("US", US)]
+    assert again["horizon"] == "long" and again["memo"] == "내 메모" and c["status"] == "ok"
+
+
+@pytest.mark.asyncio
+async def test_patch_deadline_and_memo_semantics_and_422(http):
+    h = {"X-API-Token": TOKEN}
+    await _add(_hold(US, "US", TODAY, cur="USD"))
+    url = f"/api/v1/account/swing/US/{US}"
+    ok = await http.patch(url, json={"horizon": "short", "deadline": "2027-02-01", "memo": "  첫 메모\n둘째 줄  "}, headers=h)
+    assert ok.status_code == 200 and ok.json() == {"market": "US", "ticker": US, "horizon": "short",
+                                                    "deadline": "2027-02-01", "memo": "첫 메모\n둘째 줄"}
+    keep = await http.patch(url, json={"horizon": "long"}, headers=h)  # 보내지 않은 칸은 그대로
+    assert keep.json()["deadline"] == "2027-02-01" and keep.json()["memo"] == "첫 메모\n둘째 줄"
+    reset = await http.patch(url, json={"horizon": "long", "deadline": None}, headers=h)  # null = 기본값으로
+    assert reset.json()["deadline"] is None and reset.json()["memo"] == "첫 메모\n둘째 줄"
+    wipe = await http.patch(url, json={"horizon": "long", "memo": ""}, headers=h)  # "" = 지움
+    assert wipe.json()["memo"] is None
+    # 422: 형식 · 길이 · 제어 문자 · 기준일보다 앞선 기한
+    for body in ({"horizon": "long", "deadline": "내일"}, {"horizon": "long", "deadline": "2027-13-40"},
+                 {"horizon": "long", "memo": "가" * 201}, {"horizon": "long", "memo": "a\x00b"},
+                 {"horizon": "long", "memo": "a\x1bb"}, {"horizon": "long", "memo": "a\tb"},
+                 {"horizon": "long", "memo": 123}, {"horizon": "long", "deadline": "2026-11-05"}):
+        r = await http.patch(url, json=body, headers=h)
+        assert r.status_code == 422, body
+    assert (await http.patch(url, json={"horizon": "long", "memo": "가" * 200}, headers=h)).status_code == 200  # 경계 200자
+    assert (await http.patch(url, json={"horizon": "long", "deadline": "2026-11-06"}, headers=h)).status_code == 200  # 기준일 당일은 통과
+    # 422 뒤에도 저장값은 그대로
+    async with __import__("backend.services.db", fromlist=["get_session"]).get_session() as s:
+        row = (await s.execute(select(HoldingHorizon))).scalars().one()
+    assert row.deadline == date(2026, 11, 6) and row.memo == "가" * 200
+
+
+@pytest.mark.asyncio
+async def test_patch_unset_via_http_keeps_row_and_returns_null(http):
+    h = {"X-API-Token": TOKEN}
+    url = f"/api/v1/account/swing/KR/{KR}"
+    await http.patch(url, json={"horizon": "short", "memo": "남길 글"}, headers=h)
+    r = await http.patch(url, json={"horizon": "unset"}, headers=h)
+    assert r.json()["horizon"] is None and r.json()["memo"] == "남길 글"
+    cards = await http.get("/api/v1/account/swing", headers=h)
+    assert cards.status_code == 200
+
+
+# ─── 금지 낱말: 메모는 사용자 글이라 뺀다 (계획 6절 시험) ───
+
+@pytest.mark.asyncio
+async def test_memo_with_forbidden_words_passes_but_other_fields_still_checked(clean):
+    import json
+
+    await _short_card(long_closes=_wave(400))
+    async with __import__("backend.services.db", fromlist=["get_session"]).get_session() as s:
+        await hs.save_horizon(s, "US", US, "short", memo="sell 손절 물타기 사십시오", today=TODAY)
+    card = (await _cards())[("US", US)]
+    assert card["memo"] == "sell 손절 물타기 사십시오"  # 통과
+    assert FORBIDDEN.search(json.dumps(card, ensure_ascii=False, default=str)) is not None  # 메모를 넣으면 걸림
+    without = {k: v for k, v in card.items() if k != "memo"}
+    assert FORBIDDEN.search(json.dumps(without, ensure_ascii=False, default=str)) is None  # 다른 칸은 깨끗
+    tainted = {**without, "goal": {**card["goal"], "limits": ["지금 손절 하십시오"]}}
+    assert FORBIDDEN.search(json.dumps(tainted, ensure_ascii=False, default=str)) is not None  # 다른 칸에 있으면 여전히 걸림
+
+
+@pytest.mark.asyncio
+async def test_goal_and_cards_text_free_of_forbidden_words_and_no_command_words(clean):
+    import json
+
+    await _short_card(long_closes=_wave(400))
+    await _short_card(long_closes=_wave(400), horizon="long", sym="ZZZB")
+    for c in (await _cards()).values():
+        dump = json.dumps({k: v for k, v in c.items() if k != "memo"}, ensure_ascii=False, default=str)
+        assert FORBIDDEN.search(dump) is None
+        assert not re.search(r"팔라|사라|매도 쪽|장기로 하라|강철", dump)
+
+
+@pytest.mark.asyncio
+async def test_memo_does_not_change_any_other_value(clean):
+    await _short_card(long_closes=_wave(400))
+    base = (await _cards())[("US", US)]
+    async with __import__("backend.services.db", fromlist=["get_session"]).get_session() as s:
+        await hs.save_horizon(s, "US", US, "short", memo="아무 글이나 길게 적은 메모입니다", today=TODAY)
+    withm = (await _cards())[("US", US)]
+    assert withm["memo"] and {k: v for k, v in withm.items() if k != "memo"} == {k: v for k, v in base.items() if k != "memo"}
+
+
+# ─── 이행 · 열 추가 (막음 3) ───
+
+def _alembic(db_path, *args):
+    import os
+    import subprocess
+    import sys
+
+    backend = Path(hs.__file__).resolve().parents[1]
+    env = {**os.environ, "DATABASE_URL": f"sqlite:///{db_path}"}
+    return subprocess.run([sys.executable, "-m", "alembic", *args], cwd=backend, env=env, capture_output=True, text=True, timeout=120)
+
+
+def test_alembic_migration_noop_without_table_adds_columns_and_is_idempotent(tmp_path):
+    import sqlite3
+
+    backend = Path(hs.__file__).resolve().parents[1]
+    src = (backend / "alembic" / "versions" / "d4a9c7e15b82_holding_horizon_deadline_memo.py").read_text(encoding="utf-8")
+    assert 'down_revision: Union[str, Sequence[str], None] = "b7e2a9c41d05"' in src and "has_table" in src
+
+    empty = tmp_path / "empty.db"  # 표 없음 → 아무것도 안 함 (create_all 이 만든다)
+    assert _alembic(empty, "stamp", "b7e2a9c41d05").returncode == 0
+    r = _alembic(empty, "upgrade", "head")
+    assert r.returncode == 0, r.stderr[-600:]
+    assert "d4a9c7e15b82" in _alembic(empty, "current").stdout
+    assert sqlite3.connect(empty).execute("select count(*) from sqlite_master where name='holding_horizon'").fetchone()[0] == 0
+
+    old = tmp_path / "old.db"  # 옛 모양 표 → 두 칸 추가 · 기존 행 보존
+    con = sqlite3.connect(old)
+    con.execute("create table holding_horizon(market varchar(2), ticker varchar(16), horizon varchar(8), updated_at datetime, primary key(market, ticker))")
+    con.execute("insert into holding_horizon values('KR','000000','long','2026-11-01')")
+    con.commit()
+    con.close()
+    assert _alembic(old, "stamp", "b7e2a9c41d05").returncode == 0
+    r = _alembic(old, "upgrade", "head")
+    assert r.returncode == 0, r.stderr[-600:]
+    con = sqlite3.connect(old)
+    cols = {row[1] for row in con.execute("pragma table_info(holding_horizon)")}
+    assert {"deadline", "memo"} <= cols and con.execute("select horizon from holding_horizon").fetchall() == [("long",)]
+    con.close()
+
+    full = tmp_path / "full.db"  # create_all 이 먼저 칸을 만든 경우 → 건너뜀
+    con = sqlite3.connect(full)
+    con.execute("create table holding_horizon(market varchar(2), ticker varchar(16), horizon varchar(8), updated_at datetime, deadline date, memo varchar(200), primary key(market, ticker))")
+    con.commit()
+    con.close()
+    assert _alembic(full, "stamp", "b7e2a9c41d05").returncode == 0
+    assert _alembic(full, "upgrade", "head").returncode == 0
+
+
+@pytest.mark.asyncio
+async def test_ensure_columns_adds_deadline_memo_to_old_sqlite_table(clean):
+    from sqlalchemy import text
+
+    from backend.services import db
+
+    assert ("holding_horizon", "deadline", "DATE") in db._ADDED_COLUMNS
+    assert ("holding_horizon", "memo", "VARCHAR(200)") in db._ADDED_COLUMNS
+    async with db.engine.begin() as conn:
+        await conn.execute(text("ALTER TABLE holding_horizon DROP COLUMN memo"))
+        await conn.execute(text("ALTER TABLE holding_horizon DROP COLUMN deadline"))
+    await db.ensure_columns()
+    async with db.engine.begin() as conn:
+        cols = {r[1] for r in (await conn.execute(text("PRAGMA table_info(holding_horizon)"))).all()}
+    assert {"deadline", "memo"} <= cols
+
+
+def test_swing_long_close_table_shape():
+    t = SwingLongClose.__table__
+    assert [c.name for c in t.primary_key.columns] == ["market", "ticker", "trade_date"]
+    assert {"close", "source", "fetched_at"} <= set(t.columns.keys())

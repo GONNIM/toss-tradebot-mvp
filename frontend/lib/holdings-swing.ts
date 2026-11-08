@@ -56,7 +56,72 @@ export interface SwingCard {
     layer: SwingLayer;
   } | null;
   disclaimer: string;
+  deadline: string | null; // 사용자가 정한 기한 (없으면 null = 기본값)
+  memo: string | null;
+  goal: SwingGoal | null; // 보류 카드는 null
 }
+
+// 3단계 · 목표까지 거리 (계획 6절 「응답 모양」)
+export interface GoalBasis {
+  close: number;
+  date: string;
+  source: "krx" | "toss";
+}
+
+export interface LongSeries {
+  source: string;
+  from: string;
+  to: string;
+  n: number;
+}
+
+export interface GoalWindow {
+  label: "3개월" | "6개월" | "기한까지";
+  days: number;
+  own: { pct: number | null; n: number; note: string | null };
+  model: { pct: number | null; note: string | null };
+  diff_pp: number | null;
+}
+
+interface GoalCommon {
+  basis: GoalBasis;
+  cost_pct: number;
+  limits: string[];
+  disclaimer: string;
+}
+
+export interface GoalShort extends GoalCommon {
+  kind: "short";
+  need_pct: number | null; // null 이면 본전 위
+  above_breakeven: boolean;
+  deadline: string | null; // 기준일이 없고 사용자 기한도 없으면 null
+  deadline_source: "user" | "default";
+  deadline_basis_date: string | null;
+  deadline_basis_source: "journal" | "record" | null;
+  days_left: number | null; // 평일 수 · 지났으면 0 · 기한 없으면 null
+  past_deadline: boolean;
+  sigma120_pct: number | null;
+  long_series: LongSeries | null;
+  windows: GoalWindow[];
+}
+
+export interface GoalLong extends GoalCommon {
+  kind: "long";
+  cushion_pct: number;
+  ath: { close: number; date: string; from_ath_pct: number } | null;
+  long_series: LongSeries | null;
+  drawdowns: {
+    threshold_pct: number;
+    ended: number;
+    recovered: number;
+    days_min: number | null;
+    days_max: number | null;
+    days_median: number | null;
+    ongoing: { start: string; depth_pct: number } | null;
+  } | null;
+}
+
+export type SwingGoal = GoalShort | GoalLong;
 
 export interface SwingResponse {
   ok: boolean;
@@ -107,3 +172,93 @@ export function gapText(g: NonNullable<SwingCard["source_gap"]>): string {
 }
 
 export const STATE_MARK: Record<SwingBlueItem["state"], string> = { met: "충족", not_met: "미충족", none: "자료 없음" };
+
+// ─── 3단계 문구 도우미 ─────────────────────────────────────────
+
+/** 확률 표시용 % 한 자리. */
+export function ratioText(v: number | null | undefined): string {
+  return v === null || v === undefined ? "—" : `${v.toFixed(1)}%`;
+}
+
+/** 미국 달러 손익 — 부호 붙여 $ 표기. */
+export function usdPnlText(v: number | null | undefined): string {
+  if (v === null || v === undefined) return "—";
+  const sign = v > 0 ? "+" : v < 0 ? "-" : "";
+  return `${sign}$${Math.abs(v).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+}
+
+const FX_SOURCE_LABEL: Record<string, string> = {
+  toss: "토스 참고 환율",
+  cached: "토스 참고 환율 · 최근 값",
+  fallback: "추정 환율 · 고정값",
+};
+
+function mmddHm(iso: string): string {
+  const d = iso.slice(0, 10).split("-");
+  const t = iso.length >= 16 ? ` ${iso.slice(11, 16)}` : "";
+  return `${Number(d[1])}/${Number(d[2])}${t}`;
+}
+
+/** 미국 손익 아래 작은 줄 — 원화 환산 · 지금 환율 · 출처 · 기준 시각. */
+export function wonConvertText(
+  pnlKrw: number | null | undefined,
+  fx: { rate: number | null; source: string | null; validFrom: string | null },
+): string {
+  const won =
+    pnlKrw === null || pnlKrw === undefined
+      ? "—"
+      : `${pnlKrw < 0 ? "-" : pnlKrw > 0 ? "+" : ""}₩${Math.abs(Math.round(pnlKrw)).toLocaleString("ko-KR")}`;
+  if (fx.rate === null) return `원화 환산 ${won} · 환율 정보 없음`;
+  const rate = fx.rate.toLocaleString("ko-KR", { maximumFractionDigits: 2 });
+  const src = FX_SOURCE_LABEL[fx.source ?? ""] ?? "출처 미상";
+  const at = fx.validFrom ? ` · ${mmddHm(fx.validFrom)} 기준` : "";
+  return `원화 환산 ${won} · 지금 환율 ${rate} (${src}${at})`;
+}
+
+/** 단기 — 본전까지 필요 상승률 문장. */
+export function needText(g: GoalShort): string {
+  if (g.above_breakeven || g.need_pct === null) return "이미 본전 위";
+  return `본전까지 필요 상승률 +${g.need_pct.toFixed(2)}%`;
+}
+
+export function goalBasisText(b: GoalBasis): string {
+  const s = b.source === "krx" ? "KRX 공식 종가" : "토스 일봉 종가";
+  return `${s} ${b.close.toLocaleString("ko-KR", { maximumFractionDigits: 2 })} · ${mmdd(b.date)} 기준`;
+}
+
+export function deadlineText(g: GoalShort): string {
+  if (g.deadline === null) return "기한 없음 (기준일이 아직 없습니다 · 기한 날짜를 직접 정하면 계산합니다)";
+  if (g.deadline_source === "user") return `기한 ${g.deadline} (직접 정함)`;
+  const from = g.deadline_basis_source === "journal" ? "첫 저널 판단" : g.deadline_basis_source === "record" ? "기록 시작" : null;
+  const basis = g.deadline_basis_date ? `기준일 ${g.deadline_basis_date}${from ? `(${from})` : ""} + 1년` : "기준일 + 1년";
+  return `기한 ${g.deadline} (기본값 · ${basis})`;
+}
+
+export function daysLeftText(g: GoalShort): string {
+  if (g.past_deadline) return "기한 지남";
+  if (g.days_left === null) return "남은 거래일 계산 안 함";
+  return `약 ${g.days_left} 거래일 (평일 수 · 휴장일 안 뺌)`;
+}
+
+export function longSeriesText(s: LongSeries | null): string {
+  return s ? `긴 일봉 ${LONG_SOURCE_LABEL[s.source] ?? s.source} · ${s.from} ~ ${s.to} · ${s.n.toLocaleString("ko-KR")}일` : "긴 일봉 자료 없음";
+}
+
+export function diffText(v: number | null): string {
+  return v === null ? "—" : `${v.toFixed(1)}%p`;
+}
+
+export function drawdownText(d: NonNullable<GoalLong["drawdowns"]>): string {
+  const head = `고점 대비 -${d.threshold_pct}% 넘게 내린 일 `;
+  if (d.ended === 0) return `${head}끝난 사례 없음`;
+  const done = d.ended === d.recovered ? `끝난 ${d.ended}번 모두 앞 고점 회복` : `끝난 ${d.ended}번 · 앞 고점 회복 ${d.recovered}번`;
+  if (d.days_min === null || d.days_max === null || d.days_median === null) return `${head}${done}`;
+  const med = d.days_median.toLocaleString("ko-KR", { maximumFractionDigits: 1 });
+  return `${head}${done} · 걸린 거래일 ${d.days_min}~${d.days_max}일 (가운데 ${med}일)`;
+}
+
+/** 서버 출처 코드 → 쉬운 이름 (코드는 DB 값 그대로 · 화면만 바꿈). */
+export const LONG_SOURCE_LABEL: Record<string, string> = {
+  "pykrx adjusted": "KRX 일봉(pykrx · 수정주가)",
+  "yfinance close": "Yahoo 종가(yfinance · 배당 미조정)",
+};

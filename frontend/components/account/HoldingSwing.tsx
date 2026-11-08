@@ -4,6 +4,7 @@
 // 사실만 보인다 — 규칙 이름 · 규칙 조건까지 거리 · 수량 · 명령문을 쓰지 않는다 (계획 5절 「쓰지 않을 것」).
 // 상승(평균 위) 빨강 · 하락(평균 아래) 파랑 · 숫자는 tabular-nums.
 
+import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { AccountHolding, api } from "@/lib/api";
 import {
@@ -11,8 +12,18 @@ import {
   STATE_MARK,
   SwingCard,
   SwingResponse,
+  GoalLong,
+  GoalShort,
+  daysLeftText,
+  deadlineText,
+  diffText,
   distanceText,
+  drawdownText,
   gapText,
+  goalBasisText,
+  longSeriesText,
+  needText,
+  ratioText,
   peakNote,
   sourceText,
   toneOf,
@@ -24,7 +35,7 @@ const TONE_CLASS = { up: "text-up", down: "text-down", flat: "text-muted-foregro
 function HorizonPicker({ card }: { card: SwingCard }) {
   const qc = useQueryClient();
   const save = useMutation({
-    mutationFn: (value: "long" | "short" | "unset") => api.account.setHorizon(card.market, card.symbol, value),
+    mutationFn: (value: "long" | "short" | "unset") => api.account.setHorizon(card.market, card.symbol, { horizon: value }),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["account", "swing"] }),
   });
   const current = card.horizon ?? "unset";
@@ -109,7 +120,203 @@ function Facts({ card }: { card: SwingCard }) {
         <span className="text-muted-foreground">실질 평단 · </span>
         {card.real_avg.text}
       </div>
+      {card.goal && <GoalBox goal={card.goal} />}
       {card.profit_turn && <ProfitTurn card={card} />}
+    </div>
+  );
+}
+
+// 3단계 · 목표까지 거리 — 추정값 칸. 결론 · 명령문 없이 숫자와 한계만 보인다.
+function GoalBox({ goal }: { goal: NonNullable<SwingCard["goal"]> }) {
+  return (
+    <section className="space-y-2 rounded-md border border-border p-3" aria-label="목표까지 거리">
+      <div className="flex flex-wrap items-baseline justify-between gap-x-2">
+        <h4 className="text-xs font-semibold">목표까지 거리</h4>
+        <span className="text-[11px] text-muted-foreground">추정 포함 · 보장 아님</span>
+      </div>
+      <div className="text-[11px] text-muted-foreground">
+        기준 가격: {goalBasisText(goal.basis)} · 팔 때 비용 {goal.cost_pct}% 반영
+      </div>
+      {goal.kind === "short" ? <GoalShortBody g={goal} /> : <GoalLongBody g={goal} />}
+      <ul className="list-disc space-y-0.5 pl-4 text-[11px] text-muted-foreground">
+        {goal.limits.map((t, i) => (
+          <li key={i}>{t}</li>
+        ))}
+      </ul>
+      <div className="text-[11px] text-muted-foreground">{goal.disclaimer}</div>
+    </section>
+  );
+}
+
+function GoalShortBody({ g }: { g: GoalShort }) {
+  return (
+    <div className="space-y-2 text-sm">
+      <div className={`font-semibold tabular-nums ${g.above_breakeven ? "text-up" : ""}`}>{needText(g)}</div>
+      <div className="text-xs">
+        <span className="tabular-nums">{deadlineText(g)}</span>
+        <span className="text-muted-foreground"> · </span>
+        <span className="tabular-nums">{daysLeftText(g)}</span>
+      </div>
+      <div className="text-[11px] text-muted-foreground">
+        기간 안에 한 번이라도 필요 상승률에 닿을 가능성 · 두 방법을 나란히 보이며 평균 내지 않습니다 · {longSeriesText(g.long_series)}
+        {g.sigma120_pct !== null ? ` · 최근 120일 변동성 ${g.sigma120_pct.toFixed(2)}%` : ""}
+      </div>
+      {g.above_breakeven && <div className="text-[11px] text-muted-foreground">이미 본전 위라 닿을 가능성은 계산하지 않았습니다.</div>}
+      {g.past_deadline && !g.above_breakeven && (
+        <div className="text-[11px] text-muted-foreground">기한이 지나 「기한까지」 기간은 계산하지 않았습니다.</div>
+      )}
+      {g.windows.length > 0 && (
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-[19rem] text-xs tabular-nums">
+            <thead>
+              <tr className="border-b border-border text-left text-muted-foreground">
+                <th className="py-1 pr-2 font-normal">기간</th>
+                <th className="py-1 pr-2 text-right font-normal">자기 이력</th>
+                <th className="py-1 pr-2 text-right font-normal">변동성 모형</th>
+                <th className="py-1 text-right font-normal">차이</th>
+              </tr>
+            </thead>
+            <tbody>
+              {g.windows.map((w) => (
+                <tr key={w.label} className="border-b border-border align-top last:border-0">
+                  <td className="py-1 pr-2">
+                    {w.label}
+                    <div className="text-[11px] text-muted-foreground">{w.days}일</div>
+                  </td>
+                  <td className="py-1 pr-2 text-right">
+                    <div className="font-semibold">{ratioText(w.own.pct)}</div>
+                    <div className="text-[11px] text-muted-foreground">표본 {w.own.n.toLocaleString("ko-KR")}개</div>
+                    {w.own.note && <div className="text-[11px] text-muted-foreground">{w.own.note}</div>}
+                  </td>
+                  <td className="py-1 pr-2 text-right">
+                    <div className="font-semibold">{ratioText(w.model.pct)}</div>
+                    {w.model.note && <div className="text-[11px] text-muted-foreground">{w.model.note}</div>}
+                  </td>
+                  <td className="py-1 text-right font-semibold">{diffText(w.diff_pp)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function GoalLongBody({ g }: { g: GoalLong }) {
+  const d = g.drawdowns;
+  return (
+    <div className="space-y-2 text-sm">
+      <div className="tabular-nums">
+        <span className="text-xs text-muted-foreground">평단까지 여유 </span>
+        <span className={`font-semibold ${TONE_CLASS[toneOf(g.cushion_pct)]}`}>{pctText(g.cushion_pct)}</span>
+      </div>
+      {g.ath ? (
+        <div className="text-xs tabular-nums">
+          <span className="text-muted-foreground">역대 최고 대비 </span>
+          <span className={`font-semibold ${TONE_CLASS[toneOf(g.ath.from_ath_pct)]}`}>{pctText(g.ath.from_ath_pct)}</span>
+          <span className="text-muted-foreground">
+            {" "}
+            (최고 종가 {g.ath.close.toLocaleString("ko-KR", { maximumFractionDigits: 2 })} · {g.ath.date})
+          </span>
+        </div>
+      ) : (
+        <div className="text-xs text-muted-foreground">역대 최고 대비: 자료 없음</div>
+      )}
+      <div className="text-xs">
+        <div className="text-[11px] text-muted-foreground">같은 종목의 과거 하락 · {longSeriesText(g.long_series)}</div>
+        {d ? (
+          <>
+            <div className="tabular-nums">{drawdownText(d)}</div>
+            {d.ongoing && (
+              <div className="tabular-nums text-muted-foreground">
+                진행 중: {d.ongoing.start} 시작 · 깊이 {pctText(d.ongoing.depth_pct)}
+              </div>
+            )}
+          </>
+        ) : (
+          <div className="text-muted-foreground">자료 없음</div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// 3단계 · 기한 날짜(단기일 때) + 사용자 메모. 메모는 글자 그대로만 보인다 (HTML 해석 없음).
+const MEMO_MAX = 200;
+
+function DeadlineMemo({ card }: { card: SwingCard }) {
+  const qc = useQueryClient();
+  const [deadline, setDeadline] = useState(card.deadline ?? "");
+  const [memo, setMemo] = useState(card.memo ?? "");
+  const refresh = () => qc.invalidateQueries({ queryKey: ["account", "swing"] });
+  const horizon = card.horizon ?? "unset";
+  const saveDeadline = useMutation({
+    mutationFn: (value: string | null) => api.account.setHorizon(card.market, card.symbol, { horizon, deadline: value }),
+    onSuccess: refresh,
+  });
+  const saveMemo = useMutation({
+    mutationFn: (value: string) => api.account.setHorizon(card.market, card.symbol, { horizon, memo: value }),
+    onSuccess: refresh,
+  });
+  const isShort = card.horizon === "short";
+  return (
+    <div className="space-y-3 text-sm">
+      {isShort && (
+        <div className="space-y-1">
+          <label htmlFor={`dl-${card.market}-${card.symbol}`} className="text-xs text-muted-foreground">
+            기한 날짜 (비우고 저장하면 기본값{card.goal?.kind === "short" && card.goal.deadline_source === "default" && card.goal.deadline ? ` · 지금 ${card.goal.deadline}` : ""})
+          </label>
+          <div className="flex flex-wrap items-center gap-2">
+            <input
+              id={`dl-${card.market}-${card.symbol}`}
+              type="date"
+              value={deadline}
+              onChange={(e) => setDeadline(e.target.value)}
+              className="min-h-[44px] rounded-lg border border-border bg-background px-3 tabular-nums"
+            />
+            <button
+              type="button"
+              disabled={saveDeadline.isPending}
+              onClick={() => saveDeadline.mutate(deadline === "" ? null : deadline)}
+              className="min-h-[44px] rounded-lg border border-border px-4 text-sm font-medium hover:bg-muted disabled:opacity-60"
+            >
+              기한 저장
+            </button>
+            {saveDeadline.error && (
+              <span className="text-xs text-warn">기한을 저장하지 못했습니다. 기준일보다 앞선 날짜는 받지 않습니다.</span>
+            )}
+          </div>
+        </div>
+      )}
+      <div className="space-y-1">
+        <label htmlFor={`memo-${card.market}-${card.symbol}`} className="text-xs text-muted-foreground">
+          사용자 메모 (내가 적은 글 그대로 보이며, 위 숫자에는 영향이 없습니다)
+        </label>
+        <textarea
+          id={`memo-${card.market}-${card.symbol}`}
+          value={memo}
+          maxLength={MEMO_MAX}
+          rows={3}
+          onChange={(e) => setMemo(e.target.value)}
+          className="w-full rounded-lg border border-border bg-background p-2 text-sm"
+        />
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="text-xs tabular-nums text-muted-foreground">
+            {memo.length}/{MEMO_MAX}자
+          </span>
+          <button
+            type="button"
+            disabled={saveMemo.isPending}
+            onClick={() => saveMemo.mutate(memo)}
+            className="min-h-[44px] rounded-lg border border-border px-4 text-sm font-medium hover:bg-muted disabled:opacity-60"
+          >
+            메모 저장
+          </button>
+          {saveMemo.error && <span className="text-xs text-warn">메모를 저장하지 못했습니다. 다시 눌러 주십시오.</span>}
+          {saveMemo.isSuccess && !saveMemo.error && <span className="text-xs text-muted-foreground">저장했습니다.</span>}
+        </div>
+      </div>
     </div>
   );
 }
@@ -159,6 +366,7 @@ export function HoldingSwing({ holdings, isAdmin }: { holdings: AccountHolding[]
               ) : (
                 <>
                   <HorizonPicker card={card} />
+                  <DeadlineMemo key={`${card.deadline ?? ""}|${card.memo ?? ""}|${card.horizon ?? ""}`} card={card} />
                   {card.status === "hold" ? (
                     <p className="text-sm text-muted-foreground">보류 · {card.hold_reason}</p>
                   ) : (

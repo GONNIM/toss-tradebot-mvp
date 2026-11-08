@@ -9,18 +9,24 @@
 """
 from __future__ import annotations
 
+import asyncio
 import logging
+import math
 import statistics
+import unicodedata
 from datetime import date, datetime, timedelta, timezone
 from typing import Awaitable, Callable, Optional
 from zoneinfo import ZoneInfo
 
-from sqlalchemy import func, select
+from statistics import NormalDist
+
+from sqlalchemy import delete, func, select
 
 from backend.services.models import (
     HoldingHorizon,
     HoldingSnapshot,
     KrOfficialClose,
+    SwingLongClose,
     SwingReference,
 )
 
@@ -36,6 +42,27 @@ SOURCE_GAP_PCT = 2.0           # 토스 종가와 공식 종가 차이 — 2% �
 VOL_DAYS = 60
 SHOW_AFTER_TURN_ROWS = 5       # 흑자 전환 뒤 보유 기록 행 5개까지 3층 (조건 5)
 DISCLAIMER = "추정 · 보장 아님"
+
+# 3단계 · 목표까지 거리 (계획 6절)
+LONG_FETCH_TIMEOUT = 60        # 종목당 긴 일봉 받기 제한 (초) — 검토 조건 6
+KR_LONG_START = date(2000, 1, 1)
+US_LONG_PERIOD = "10y"
+LONG_SOURCE = {"KR": "pykrx adjusted", "US": "yfinance close"}
+MODEL_SIGMA_DAYS = 120         # 변동성 모형 σ 는 최근 120일 로그 수익
+MIN_OWN_SAMPLE = 250           # 자기 이력 표본이 이보다 적으면 「표본 적음」
+WINDOWS = (("3개월", 63), ("6개월", 126))
+DRAWDOWN_THRESHOLD = 0.30
+MEMO_MAX = 200
+SHORT_LIMITS = [
+    "기울기 0 가정: 오르내림이 중립이라고 놓고 계산한 값입니다.",
+    "두꺼운 꼬리 무시: 드물게 크게 움직이는 날을 변동성 모형은 반영하지 않습니다.",
+    "자기 이력의 생존·국면 편향: 지금까지 거래된 종목의 지난 기간만 반영하고 앞날의 국면은 다를 수 있습니다.",
+    "남은 거래일은 평일 수이며 휴장일은 빼지 않았습니다.",
+]
+LONG_LIMITS = [
+    "같은 종목 생존 자료: 지금까지 거래된 종목의 기록이라 거래가 끝난 사례는 들어 있지 않습니다.",
+    "고점 대비 하락 사건은 이 종목의 과거 기록이며 앞날을 보장하지 않습니다.",
+]
 
 # 비용 추정 (조건 5 · 계획 4절): 국내 매도 거래세+농특세 0.20% + 수수료 0.015% · 미국 매도 0.1% + 환전 0.1%
 SELL_COST = {"KR": 0.0020 + 0.00015, "US": 0.001 + 0.001}
@@ -80,22 +107,76 @@ def _utcnow() -> datetime:
 # ─────────────────────────────────────────────────────────────────
 
 
-async def set_horizon(session, market: str, ticker: str, value: str) -> Optional[str]:
-    """long / short 저장 · unset 이면 행 삭제(미지정). 저장 뒤 값을 돌려준다."""
+_KEEP = object()  # PATCH 본문에 없던 칸 = 그대로
+
+
+def clean_memo(value: Optional[str]) -> Optional[str]:
+    """메모 정리: 앞뒤 공백 제거 · 개행(\\n)만 허용 · 그 밖 제어 문자 · 200자 초과는 ValueError. 빈 글은 None(지움)."""
+    if value is None:
+        return None
+    text = value.replace("\r\n", "\n").strip()
+    if any(unicodedata.category(ch) == "Cc" and ch != "\n" for ch in text):
+        raise ValueError("메모에 쓸 수 없는 제어 문자가 있습니다")
+    if len(text) > MEMO_MAX:
+        raise ValueError(f"메모는 {MEMO_MAX}자까지입니다")
+    return text or None
+
+
+async def _basis_for(session, market: str, ticker: str, today: date) -> tuple[Optional[date], Optional[str]]:
+    """기한 기본값의 기준일과 출처 (첫 저널 · 기록 시작) — 카드 사실 칸과 같은 계산."""
+    from backend.services import real_holdings
+    from backend.services.real_holdings import HoldingRow
+
+    h = next((x for x in await _held(session, market) if x.symbol == ticker), None)
+    if h is None:
+        return None, None
+    row = HoldingRow(h.symbol, h.name, market, h.currency or "", h.qty or 0, h.avg_price or 0, h.close,
+                     h.market_value, h.purchase_amount or 0, None, None, "computed")
+    f = await real_holdings.holding_facts(session, row, today)
+    return f["basis_date"], f["basis_source"]
+
+
+def default_deadline(basis: Optional[date]) -> Optional[date]:
+    if basis is None:
+        return None
+    try:
+        return basis.replace(year=basis.year + 1)
+    except ValueError:  # 2/29
+        return basis.replace(year=basis.year + 1, day=28)
+
+
+async def save_horizon(session, market: str, ticker: str, value: str, *, deadline=_KEEP, memo=_KEEP,
+                       today: Optional[date] = None) -> dict:
+    """보유 성격 저장. unset 도 행을 지우지 않고 horizon="unset" 으로 남겨 기한·메모를 보존한다 (검토 조건 2).
+
+    deadline: _KEEP 이면 그대로 · None 이면 기본값으로 되돌림 · 날짜가 기준일보다 앞이면 ValueError.
+    memo: _KEEP 이면 그대로 · "" / None 이면 지움.
+    """
+    if value not in HORIZONS and value != "unset":
+        raise ValueError("보유 성격은 long, short, unset 만 가능")
+    if deadline is not _KEEP and deadline is not None:
+        basis, _ = await _basis_for(session, market, ticker, today or _now_kst().date())
+        if basis is not None and deadline < basis:
+            raise ValueError("기한이 기준일보다 앞입니다")
+    if memo is not _KEEP:
+        memo = clean_memo(memo)
     row = (await session.execute(select(HoldingHorizon).where(
         HoldingHorizon.market == market, HoldingHorizon.ticker == ticker))).scalar_one_or_none()
-    if value == "unset":
-        if row is not None:
-            await session.delete(row)
-        return None
-    if value not in HORIZONS:
-        raise ValueError("보유 성격은 long, short, unset 만 가능")
     if row is None:
-        session.add(HoldingHorizon(market=market, ticker=ticker, horizon=value, updated_at=_utcnow()))
+        row = HoldingHorizon(market=market, ticker=ticker, horizon=value, updated_at=_utcnow())
+        session.add(row)
     else:
-        row.horizon = value
-        row.updated_at = _utcnow()
-    return value
+        row.horizon, row.updated_at = value, _utcnow()
+    if deadline is not _KEEP:
+        row.deadline = deadline
+    if memo is not _KEEP:
+        row.memo = memo
+    return {"horizon": None if value == "unset" else value, "deadline": row.deadline, "memo": row.memo}
+
+
+async def set_horizon(session, market: str, ticker: str, value: str) -> Optional[str]:
+    """long / short 저장 · unset 이면 미지정(행은 보존). 저장 뒤 값(미지정은 None)을 돌려준다."""
+    return (await save_horizon(session, market, ticker, value))["horizon"]
 
 
 # ─────────────────────────────────────────────────────────────────
@@ -322,6 +403,67 @@ async def refresh_references(
     return {"market": market, "saved": saved, "failed": failed}
 
 
+# ─────────────────────────────────────────────────────────────────
+# 긴 일봉 받기 (3단계 · 하루 1회 · 같은 잡 끝) — 화면 요청 때는 swing_long_close 표만 읽는다
+# ─────────────────────────────────────────────────────────────────
+
+LongFetcher = Callable[[str, str], Awaitable[list]]
+
+
+async def _default_long_fetch(market: str, ticker: str) -> list[tuple[date, float]]:
+    """국내 = pykrx(loader.fetch_daily_candles 재사용 · 2000-01-01~) · 미국 = yfinance 10년 Close (auto_adjust=False)."""
+    if market == "KR":
+        from backend.discovery.data_sources.krx_price import loader
+
+        end = _now_kst().date()
+        return _frame_rows(await loader.fetch_daily_candles(ticker, KR_LONG_START, end), KR_LONG_START, end)
+
+    def _call() -> list[tuple[date, float]]:
+        import yfinance as yf
+
+        df = yf.download(ticker.replace(".", "-"), period=US_LONG_PERIOD, auto_adjust=False, progress=False)
+        close = df["Close"].squeeze().dropna()
+        return [(idx.date(), float(v)) for idx, v in close.items() if float(v) > 0]
+
+    return await asyncio.to_thread(_call)
+
+
+async def fill_long_closes(market: str, now: Optional[datetime] = None, fetch: Optional[LongFetcher] = None) -> dict:
+    """들고 있는 종목의 긴 일봉을 받아 swing_long_close 에 덮어쓴다 (종목마다: 받기 성공 뒤에만 그 종목 행을 교체).
+
+    종목당 asyncio.wait_for(LONG_FETCH_TIMEOUT) — 초과·실패는 그 종목만 건너뛰고 기존 행은 그대로 둔다.
+    한 종목도 받지 못하면 RuntimeError (cron 이 하루 1회 경고).
+    """
+    from backend.services.db import get_session
+
+    fetch = fetch or _default_long_fetch
+    written, failures, tickers = 0, 0, 0
+    async with get_session() as session:
+        held = await _held(session, market)
+    for h in held:
+        tickers += 1
+        try:
+            raw = await asyncio.wait_for(fetch(market, h.symbol), LONG_FETCH_TIMEOUT)
+            rows = sorted({d: c for d, c in raw if c and c > 0}.items())
+            if not rows:
+                raise ValueError("받은 일봉이 없음")
+        except Exception as exc:  # noqa: BLE001 — 한 종목 실패(시간 초과 포함)가 다른 종목을 막지 않는다
+            failures += 1
+            logger.warning("[swing] 긴 일봉 받기 실패 · %s", type(exc).__name__)
+            continue
+        async with get_session() as session:
+            await session.execute(delete(SwingLongClose).where(
+                SwingLongClose.market == market, SwingLongClose.ticker == h.symbol))
+            now_utc = _utcnow()
+            session.add_all([SwingLongClose(market=market, ticker=h.symbol, trade_date=d, close=c,
+                                            source=LONG_SOURCE[market], fetched_at=now_utc) for d, c in rows])
+        written += len(rows)
+    logger.info("[swing] 긴 일봉 %s %d행 · 실패 %d/%d", market, written, failures, tickers)
+    if tickers and failures == tickers:
+        raise RuntimeError("긴 일봉을 한 종목도 받지 못함")
+    return {"market": market, "tickers": tickers, "rows": written, "failures": failures}
+
+
 async def run_after_snapshot(market: str, now: Optional[datetime] = None) -> dict:
     """테스트용 한 줄 진입점 — 실제 cron 은 단계마다 따로 try 를 건다 (cron.run_swing_followup)."""
     out: dict = {}
@@ -372,6 +514,133 @@ def profit_turn(streak: list[HoldingSnapshot], market: str) -> Optional[dict]:
     if rows_since > SHOW_AFTER_TURN_ROWS:
         return None
     return {"turn_date": pts[turn][0], "rows_since": rows_since, "net_pnl_pct": round(pts[-1][1], 2)}
+
+
+# ─────────────────────────────────────────────────────────────────
+# 목표까지 거리 (3단계 · 순수 함수)
+# ─────────────────────────────────────────────────────────────────
+
+
+def weekdays_between(start: date, end: date) -> int:
+    """start 다음 날부터 end 까지 평일 수 (end <= start 이면 0). 휴장일은 빼지 않는다."""
+    if end <= start:
+        return 0
+    days = (end - start).days
+    full, rem = divmod(days, 7)
+    n = full * 5
+    d = start + timedelta(days=full * 7)
+    for _ in range(rem):
+        d += timedelta(days=1)
+        if d.weekday() < 5:
+            n += 1
+    return n
+
+
+def need_rise(avg: float, close: float, market: str) -> float:
+    """본전까지 필요 상승률 R = avg / (close × (1 − 비용)) − 1 (소수)."""
+    return avg / (close * (1 - SELL_COST[market])) - 1
+
+
+def reflect_hit_prob(r: float, sigma_daily: float, days: int) -> Optional[float]:
+    """기울기 0 로그정규에서 기간 안 한 번이라도 +R 에 닿을 확률 (반사 원리) 2(1 − Φ(ln(1+R) / (σ√T)))."""
+    if r <= 0 or sigma_daily <= 0 or days <= 0:
+        return None
+    return 2 * (1 - NormalDist().cdf(math.log(1 + r) / (sigma_daily * math.sqrt(days))))
+
+
+def sigma_daily(closes: list[float], n: int = MODEL_SIGMA_DAYS) -> Optional[float]:
+    """최근 n일 로그 수익 표준편차 (종가 n+1개 필요 · 모자라면 None)."""
+    c = closes[-(n + 1):]
+    if len(c) < n + 1:
+        return None
+    return statistics.stdev([math.log(c[i] / c[i - 1]) for i in range(1, len(c))])
+
+
+def own_history_hit(closes: list[float], r: float, days: int) -> tuple[Optional[float], int]:
+    """아무 날에 사서 days 거래일 안 최고 종가가 +R 이상인 날의 비율(0~1)과 표본 수."""
+    import numpy as np
+    from numpy.lib.stride_tricks import sliding_window_view
+
+    n = len(closes) - days - 1
+    if n <= 0:
+        return None, 0
+    a = np.asarray(closes, dtype=float)
+    peak = sliding_window_view(a[1:], days).max(axis=1)[:n]
+    hits = peak >= a[:n] * (1 + r)
+    return float(hits.mean()), int(n)
+
+
+def drawdown_events(closes: list[float], threshold: float = DRAWDOWN_THRESHOLD) -> list[dict]:
+    """고점 대비 −threshold 이하로 처음 내려간 사건. 앞 고점을 회복하면 끝난 사건(걸린 거래일 = 하락 시작 ~ 회복), 못 했으면 진행 중."""
+    events, i, n = [], 0, len(closes)
+    peak = []
+    pk = 0.0
+    for c in closes:
+        pk = max(pk, c)
+        peak.append(pk)
+    while i < n:
+        if closes[i] / peak[i] - 1 <= -threshold:
+            pk, j, trough = peak[i], i, closes[i]
+            while j < n and closes[j] < pk:
+                trough = min(trough, closes[j])
+                j += 1
+            events.append({"start_idx": i, "depth": trough / pk - 1, "days": (j - i) if j < n else None})
+            i = j
+        else:
+            i += 1
+    return events
+
+
+def _pct1(x: Optional[float]) -> Optional[float]:
+    return None if x is None else round(x * 100, 1)
+
+
+def short_goal(closes_long: list[float], dates_long: list[date], *, avg: float, close: float, market: str,
+               days_left: Optional[int]) -> dict:
+    """단기: 필요 상승률 · 기간 안 한 번이라도 닿을 가능성(자기 이력 / 변동성 모형 나란히)."""
+    r = need_rise(avg, close, market)
+    out: dict = {"need_pct": round(r * 100, 2) if r > 0 else None, "above_breakeven": r <= 0,
+                 "sigma120_pct": None, "windows": []}
+    sig = sigma_daily(closes_long) if closes_long else None
+    out["sigma120_pct"] = None if sig is None else round(sig * 100, 2)
+    if r <= 0:
+        return out
+    wins = list(WINDOWS)
+    if days_left:
+        wins.append(("기한까지", days_left))
+    for label, days in wins:
+        if closes_long:
+            frac, n = own_history_hit(closes_long, r, days)
+        else:
+            frac, n = None, 0
+        note = "자료 없음" if frac is None else ("표본 적음" if n < MIN_OWN_SAMPLE else None)
+        own = {"pct": _pct1(frac), "n": n, "note": note}
+        prob = reflect_hit_prob(r, sig, days) if sig else None
+        model = {"pct": _pct1(prob), "note": None if prob is not None else "자료 없음"}
+        diff = None if frac is None or prob is None else round(abs(frac - prob) * 100, 1)  # 반올림 전 값의 차이
+        out["windows"].append({"label": label, "days": days, "own": own, "model": model, "diff_pp": diff})
+    return out
+
+
+def long_goal(closes_long: list[float], dates_long: list[date], *, avg: float, close: float) -> dict:
+    """장기: 평단까지 여유 · 역대 최고 대비 · 고점 대비 −30% 넘는 하락 사건."""
+    out: dict = {"cushion_pct": round((avg / close - 1) * 100, 2), "ath": None, "drawdowns": None}
+    if not closes_long:
+        return out
+    k = max(range(len(closes_long)), key=lambda i: (closes_long[i], dates_long[i]))
+    out["ath"] = {"close": closes_long[k], "date": dates_long[k],
+                  "from_ath_pct": round((close / closes_long[k] - 1) * 100, 2)}
+    ev = drawdown_events(closes_long)
+    done = [e["days"] for e in ev if e["days"] is not None]
+    ongoing = next((e for e in ev if e["days"] is None), None)
+    out["drawdowns"] = {
+        "threshold_pct": int(DRAWDOWN_THRESHOLD * 100), "ended": len(done), "recovered": len(done),
+        "days_min": min(done) if done else None, "days_max": max(done) if done else None,
+        "days_median": statistics.median(done) if done else None,
+        "ongoing": None if ongoing is None else {"start": dates_long[ongoing["start_idx"]],
+                                                 "depth_pct": round(ongoing["depth"] * 100, 1)},
+    }
+    return out
 
 
 def third_layer_lines(market: str) -> dict:
@@ -441,13 +710,44 @@ def _blue_items(market, symbol, ref: dict, closes: list[float]) -> list[dict]:
     return items
 
 
+def _build_goal(market, horizon, avg, last, hr, basis_date, basis_source, long_series, today) -> Optional[dict]:
+    """카드 기준 종가(국내 공식 · 미국 토스)와 긴 일봉 표에서 계산한 「목표까지 거리」. 결론 문장은 없다."""
+    close_date, close = last
+    if avg <= 0 or close <= 0:
+        return None
+    dates, closes, src = long_series if long_series else ([], [], None)
+    goal: dict = {"kind": horizon, "basis": {"close": close, "date": close_date, "source": "krx" if market == "KR" else "toss"},
+                  "cost_pct": round(SELL_COST[market] * 100, 3), "disclaimer": DISCLAIMER,
+                  "long_series": {"source": src, "from": dates[0], "to": dates[-1], "n": len(dates)} if dates else None}
+    if horizon == "short":
+        user_deadline = hr.deadline if hr is not None else None
+        deadline = user_deadline or default_deadline(basis_date)
+        past = deadline is not None and deadline < today
+        days_left = None if deadline is None else (0 if past else weekdays_between(today, deadline))
+        goal.update(short_goal(closes, dates, avg=avg, close=close, market=market, days_left=days_left))
+        goal.update({"deadline": deadline, "deadline_source": "user" if user_deadline else "default",
+                     "deadline_basis_date": basis_date if not user_deadline else None,
+                     "deadline_basis_source": basis_source if not user_deadline else None,
+                     "days_left": days_left, "past_deadline": past, "limits": list(SHORT_LIMITS)})
+    else:
+        goal.update(long_goal(closes, dates, avg=avg, close=close))
+        goal["limits"] = list(LONG_LIMITS)
+    return goal
+
+
 async def build_cards(session, today: date) -> list[dict]:
     """보유 종목마다 「보유 종목 사실」 카드. 보유 성격이 없으면 보류."""
     from backend.services import real_holdings
     from backend.services.real_holdings import HoldingRow
 
     cards: list[dict] = []
-    horizons = {(h.market, h.ticker): h.horizon for h in (await session.execute(select(HoldingHorizon))).scalars().all()}
+    hrows = {(h.market, h.ticker): h for h in (await session.execute(select(HoldingHorizon))).scalars().all()}
+    longs: dict[tuple[str, str], tuple[list[date], list[float], str]] = {}
+    for r in (await session.execute(select(SwingLongClose).order_by(
+            SwingLongClose.market, SwingLongClose.ticker, SwingLongClose.trade_date))).scalars().all():
+        e = longs.setdefault((r.market, r.ticker), ([], [], r.source))
+        e[0].append(r.trade_date)
+        e[1].append(r.close)
     refs: dict[tuple[str, str], dict[str, SwingReference]] = {}
     for r in (await session.execute(select(SwingReference))).scalars().all():
         refs.setdefault((r.market, r.ticker), {})[r.item] = r
@@ -455,8 +755,10 @@ async def build_cards(session, today: date) -> list[dict]:
     for market in ("KR", "US"):
         for h in await _held(session, market):
             sym = h.symbol
-            horizon = horizons.get((market, sym))
+            hr = hrows.get((market, sym))
+            horizon = hr.horizon if hr is not None and hr.horizon in HORIZONS else None  # unset 은 null 로 보냄
             card = {"market": market, "symbol": sym, "horizon": horizon, "status": "hold", "hold_reason": None,
+                    "deadline": hr.deadline if hr else None, "memo": hr.memo if hr else None, "goal": None,
                     "as_of": None, "close_source": "krx" if market == "KR" else "toss", "ma": [], "peak": None,
                     "blue_chip": None, "source_gap": None, "real_avg": {"status": "hold", "text": "보류 · 판 값 기록 없음"},
                     "profit_turn": None, "disclaimer": DISCLAIMER}
@@ -489,6 +791,7 @@ async def build_cards(session, today: date) -> list[dict]:
             row = HoldingRow(sym, h.name, market, h.currency or "", h.qty or 0, h.avg_price or 0, h.close,
                              h.market_value, h.purchase_amount or 0, None, None, "computed")
             f = await real_holdings.holding_facts(session, row, today)
+            basis_date, basis_source = f["basis_date"], f["basis_source"]
             card["peak"] = {k: f[k] for k in ("from_peak_pct", "peak_close", "peak_date", "peak_complete", "basis_date", "basis_source")}
             ref = dict(refs.get((market, "*"), {}))
             ref.update(refs.get((market, sym), {}))
@@ -512,4 +815,7 @@ async def build_cards(session, today: date) -> list[dict]:
                 t = profit_turn(streak, market)
                 if t:
                     card["profit_turn"] = {**t, "cost_note": COST_NOTE[market], "layer": third_layer_lines(market)}
+
+            card["goal"] = _build_goal(market, horizon, h.avg_price or 0, series[-1], hr, basis_date, basis_source,
+                                       longs.get((market, sym)), today)
     return cards

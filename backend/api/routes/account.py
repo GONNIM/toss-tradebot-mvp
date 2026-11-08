@@ -6,12 +6,12 @@
 from __future__ import annotations
 
 import asyncio
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
 
-from typing import Literal
+from typing import Literal, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Path
-from pydantic import BaseModel
+from pydantic import BaseModel, field_validator
 from sqlalchemy import select
 
 from backend.api.auth import require_sniper_token
@@ -68,7 +68,16 @@ async def get_holdings():
 # ─── 1108-02 · 보유 종목 사실 (스윙 2단계) · DB 만 읽음 (토스·외부 호출 없음) ─────────────────
 
 class SwingHorizonBody(BaseModel):
+    """보내지 않은 칸은 그대로 · deadline null = 기본값으로 되돌림 · memo "" = 지움."""
+
     horizon: Literal["long", "short", "unset"]  # 이 셋 말고는 422
+    deadline: Optional[date] = None
+    memo: Optional[str] = None
+
+    @field_validator("memo")
+    @classmethod
+    def _memo(cls, v):
+        return holdings_swing.clean_memo(v)  # 공백 정리 · 200자 · 제어 문자 → 422
 
 
 @router.get("/swing", dependencies=[Depends(require_sniper_token)])
@@ -87,5 +96,13 @@ async def patch_swing_horizon(
 ):
     ticker = ticker.upper()
     async with get_session() as session:
-        value = await holdings_swing.set_horizon(session, market, ticker, body.horizon)
-    return {"market": market, "ticker": ticker, "horizon": value}
+        kw = {}
+        if "deadline" in body.model_fields_set:
+            kw["deadline"] = body.deadline
+        if "memo" in body.model_fields_set:
+            kw["memo"] = body.memo
+        try:
+            saved = await holdings_swing.save_horizon(session, market, ticker, body.horizon, **kw)
+        except ValueError as exc:
+            raise HTTPException(status_code=422, detail=str(exc)) from exc
+    return {"market": market, "ticker": ticker, **saved}
