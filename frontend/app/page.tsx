@@ -167,10 +167,17 @@ function CandidateBlock({ b }: { b: TodayCandidateBlock }) {
       ) : (
         <ul>
           {b.items.map((it, i) => (
-            <li key={`${it.ticker}-${i}`} className="flex flex-wrap items-baseline gap-x-2 border-b border-border py-1.5 text-sm last:border-0">
-              {it.ticker && <StockLink ticker={it.ticker} className="font-semibold">{it.ticker}</StockLink>}
-              {it.name && <span>{it.name}</span>}
-              {it.note && <span className="text-muted-foreground">{it.note}</span>}
+            // 1108-01 · 모든 후보 줄을 같은 모양으로: 이름(굵게) · 종목 번호(작게) / 왜 올라왔는지 한 줄
+            <li key={`${it.ticker}-${i}`} className="space-y-0.5 border-b border-border py-2 text-sm last:border-0">
+              <div className="flex flex-wrap items-baseline gap-x-2">
+                {it.ticker ? (
+                  <StockLink ticker={it.ticker} className="font-semibold">{it.name ?? it.ticker}</StockLink>
+                ) : (
+                  <span className="font-semibold">{it.name ?? "이름 없음"}</span>
+                )}
+                {it.ticker && it.name && <span className="text-xs tabular-nums text-muted-foreground">{it.ticker}</span>}
+              </div>
+              {it.note && <p className="text-muted-foreground">{it.note}</p>}
             </li>
           ))}
         </ul>
@@ -211,6 +218,9 @@ export default function Home() {
           <AlertsCard d={q.data} />
           <div className="space-y-3">
             <h2 className="text-base font-semibold">오늘 후보</h2>
+            <p className="text-sm text-muted-foreground">
+              점수는 모두 100점 만점인 추정값입니다. 각 후보 화면의 기준으로 매긴 값이라 서로 비교하지 않습니다. 오를 것을 보장하지 않습니다.
+            </p>
             {q.data.candidates.map((b) => (
               <CandidateBlock key={b.source} b={b} />
             ))}

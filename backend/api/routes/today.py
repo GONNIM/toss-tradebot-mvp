@@ -176,6 +176,84 @@ async def _holding_alerts(today: date) -> list[TodayHoldingAlert]:
 
 
 # ─── 후보 섹션 ───────────────────────────────────────────────────────────
+# 1108-01 · 후보 줄은 「이름 · 왜 올라왔는지 한 줄」로 통일한다 (사용자 지시 11/08).
+#   점수는 「무엇을 본 점수 N/100」 으로 보인다. 환산: Watchlist·바이오 0~1 → ×100 · Crazy·Moonshot 은 이미 0~100.
+#   영어 약어(BLAZING·13D·D002·STRONG 등)는 한국어 뜻으로 바꾼다. 판정·점수 계산은 바꾸지 않는다.
+
+def _score100(v, scale: float) -> str:
+    """점수를 0~100 정수 글자로. scale = 원래 만점 (1 또는 100)."""
+    try:
+        n = round(float(v) / scale * 100)
+    except (TypeError, ValueError):
+        return "-"
+    return str(max(0, min(100, n)))
+
+
+# Watchlist 칸 이름 → 사용자 말 (scoring.py 칸 5개)
+_WATCH_CELL = (
+    ("news_score", "뉴스가 많이 나옴"),
+    ("board_score", "개인 투자자 관심이 큼"),
+    ("youtube_score", "유튜브 영상이 많음"),
+    ("event_score", "공시·정책 소식이 있음"),
+    ("prev_day_score", "전날 거래가 늘어남"),
+)
+
+
+def _watch_reason(r) -> Optional[str]:
+    """가장 강한 칸 하나를 이유로. 모두 0 이면 None."""
+    best = max(_WATCH_CELL, key=lambda c: getattr(r, c[0], 0) or 0)
+    return best[1] if (getattr(r, best[0], 0) or 0) > 0 else None
+
+
+_MEME_ALERT = {
+    "BLAZING": "급등 신호 여러 개가 한꺼번에 켜짐",
+    "ERUPTING": "지금 가격·거래가 폭등하는 중",
+}
+
+
+def _kr_form(form: str) -> Optional[str]:
+    """국내 지분 공시·미국 Form 4 양식 → 쉬운 이름. 모르면 None."""
+    f = form or ""
+    if f.startswith("대량보유"):
+        if "MANAGEMENT" in f:
+            base = "5% 이상 대량 보유 · 경영 참여 목적"
+        elif "PASSIVE" in f:
+            base = "5% 이상 대량 보유 · 단순 투자"
+        else:
+            base = "5% 이상 대량 보유 보고"
+        # radar.py 가 붙인 지분율(「 · 5.20% ▲0.50%」)은 그대로 살린다 (Fable 1108-01-01 권고 3)
+        rest = f.split(")", 1)[1].strip() if ")" in f else ""
+        return f"{base} {rest}".strip() if rest.startswith("·") else base
+    if f.startswith("Form 4"):
+        # radar._form4_label: 「Form 4 · 매수 · $1.2M」·「Form 4 · non-trade (옵션·수여·증여)」 (권고 1)
+        rest = f[len("Form 4"):].strip(" ·")
+        rest = rest.replace("non-trade", "매매 아님")
+        return f"임원·주요주주 매매 보고 · {rest}" if rest else "임원·주요주주 매매 보고"
+    if f.startswith("D002"):
+        if "BUY" in f:
+            return "임원·주요주주가 주식을 삼"
+        if "SELL" in f:
+            return "임원·주요주주가 주식을 팖"
+        return "임원·주요주주 보유 주식 변동"
+    return None
+
+
+def _form_text(form: str) -> str:
+    from backend.services.alert_text import sec_form_text
+
+    kr = _kr_form(form)
+    if kr:
+        return kr
+    text = sec_form_text(form)
+    return text if text != form else (form or "공시")
+
+
+def _target_name(desc: Optional[str]) -> Optional[str]:
+    """「회사 — 보고서 제목」 에서 회사 이름만."""
+    if not desc:
+        return None
+    return desc.split(" — ")[0].strip() or None
+
 
 async def _watchlist(today: date):
     from backend.discovery.watchlist.store import next_trade_date
@@ -190,7 +268,7 @@ async def _watchlist(today: date):
         if not td:
             return None, []
         rows = (await s.execute(select(W).where(W.trade_date == td).order_by(W.rank).limit(n))).scalars().all()
-    return td, [TodayCandidateItem(ticker=r.ticker, name=r.name, note=f"{r.rank}위 · 점수 {_f(r.composite_score)}")
+    return td, [TodayCandidateItem(ticker=r.ticker, name=r.name, note=" · ".join(x for x in (f"{r.rank}위", _watch_reason(r), f"관심 점수 {_score100(r.composite_score, 1)}/100") if x))
                 for r in rows]
 
 
@@ -200,7 +278,17 @@ async def _powderkeg(today: date):
     async with get_session() as s:
         rows = (await s.execute(select(E).where(E.detected_at >= _kst_midnight_utc(today))
                                 .order_by(desc(E.detected_at)).limit(_LIMITS["powderkeg"]))).scalars().all()
-    return (today.isoformat() if rows else None), [TodayCandidateItem(ticker=r.ticker, note=(r.title or "")[:120]) for r in rows]
+    from backend.services.alert_text import POWDERKEG_TYPE
+    from backend.services.stock_names import lookup_kr_name
+
+    cache: dict = {}
+    items = []
+    for r in rows:
+        kind = POWDERKEG_TYPE.get(r.event_type)
+        title = (r.title or "")[:100]
+        items.append(TodayCandidateItem(ticker=r.ticker, name=await lookup_kr_name(r.ticker, cache),
+                                        note=f"{kind} · {title}" if kind else title))
+    return (today.isoformat() if rows else None), items
 
 
 def _server_tz():
@@ -217,6 +305,14 @@ async def _meme(today: date):
     async with get_session() as s:
         rows = (await s.execute(select(A).where(A.triggered_at >= cut)
                                 .order_by(desc(A.triggered_at)).limit(100))).scalars().all()
+        # 1108-01 · 밈 대상 목록의 이름 (국내·미국 모두) · 없으면 국내 이름 찾기로
+        from backend.services.models import MemeUniverse as U
+
+        tks = {r.ticker for r in rows}
+        names = dict((await s.execute(select(U.ticker, U.name).where(U.ticker.in_(tks)))).all()) if tks else {}
+    from backend.services.stock_names import lookup_kr_name
+
+    cache: dict = {}
     seen: set[str] = set()
     items: list[TodayCandidateItem] = []
     for r in rows:  # 종목마다 가장 최근 알림 1건
@@ -224,7 +320,9 @@ async def _meme(today: date):
             continue
         seen.add(r.ticker)
         kst = r.triggered_at.replace(tzinfo=local).astimezone(_KST)
-        items.append(TodayCandidateItem(ticker=r.ticker, note=f"{r.alert_type} 알림 {kst:%H:%M}"))
+        name = names.get(r.ticker) or (await lookup_kr_name(r.ticker, cache) if r.ticker.isdigit() else None)
+        what = _MEME_ALERT.get(r.alert_type, r.alert_type)
+        items.append(TodayCandidateItem(ticker=r.ticker, name=name, note=f"{what} · {kst:%H:%M}"))
         if len(items) >= _LIMITS["meme"]:
             break
     return (today.isoformat() if items else None), items
@@ -235,8 +333,17 @@ async def _activist(today: date):
     from backend.discovery.activist.state import ActivistState
 
     evs = ActivistState.load().recent_events(_LIMITS["activist"])
-    items = [TodayCandidateItem(ticker=e.target_ticker or None, name=(e.target_desc or None),
-                                note=f"{e.form} · {e.filer_name} · {e.intensity_label}") for e in evs]
+    from backend.services.alert_text import ACTIVIST_LEVEL
+
+    def note(e) -> str:
+        form = _form_text(e.form)
+        # 국내 D002: 공시한 사람이 「임원·주요주주 (회사)」 라 같은 말이 겹친다 → 양식 글만 (권고 2)
+        if (e.filer_name or "").startswith("임원·주요주주"):
+            return form
+        return f"{e.filer_name} · {form} · 신호 {ACTIVIST_LEVEL.get(e.intensity_label, e.intensity_label)}"
+
+    items = [TodayCandidateItem(ticker=e.target_ticker or None, name=_target_name(e.target_desc), note=note(e))
+             for e in evs]
     return (max((e.filing_date or "" for e in evs), default="") or None), items
 
 
@@ -248,7 +355,7 @@ async def _crazy(today: date):
         if not d:
             return None, []
         rows = (await s.execute(select(P).where(P.pick_date == d).order_by(P.rank).limit(_LIMITS["crazy"]))).scalars().all()
-    return d, [TodayCandidateItem(ticker=r.ticker, name=r.company_name, note=f"{r.rank}위 · 점수 {_f(r.composite_score)}")
+    return d, [TodayCandidateItem(ticker=r.ticker, name=r.company_name, note=f"{r.rank}위 · 급등 가능성 점수 {_score100(r.composite_score, 100)}/100")
                for r in rows]
 
 
@@ -260,7 +367,7 @@ async def _moonshot(today: date):
         if not d:
             return None, []
         rows = (await s.execute(select(P).where(P.pick_date == d).order_by(P.rank).limit(_LIMITS["moonshot"]))).scalars().all()
-    return d, [TodayCandidateItem(ticker=r.ticker, name=r.company_name, note=f"{r.rank}위 · 점수 {_f(r.composite_score)}")
+    return d, [TodayCandidateItem(ticker=r.ticker, name=r.company_name, note=f"{r.rank}위 · 급등 가능성 점수 {_score100(r.composite_score, 100)}/100")
                for r in rows]
 
 
@@ -278,20 +385,23 @@ async def _biotech(today: date):
         for idx, row in enumerate(csv.DictReader(f), 1):
             if idx > _LIMITS["biotech"]:
                 break
+            why = (row.get("why_easy") or "").strip()
+            parts = [f"{idx}위", why or None, f"점수 {_score100(row.get('score') or 0, 1)}/100"]
             items.append(TodayCandidateItem(ticker=(row.get("ticker") or "").strip().upper() or None,
-                                            note=f"{idx}위 · 점수 {_f(float(row.get('score') or 0))} · 시점 {row.get('time_state') or '-'}"))
+                                            name=(row.get("name") or "").strip() or None,
+                                            note=" · ".join(p for p in parts if p)))
     return datetime.fromtimestamp(path.stat().st_mtime, timezone.utc).date().isoformat(), items
 
 
 # 섹션 순서: (source, label, link, 읽기 함수, 관리자 전용)
 _SECTIONS = [
-    ("watchlist", "Watchlist", "/watchlist", _watchlist, False),
-    ("powderkeg", "화약고 이벤트", "/powderkeg", _powderkeg, False),
-    ("meme", "밈 워치 알림", "/lab/meme-watch", _meme, False),
-    ("activist", "행동주의 공시", "/activist-radar", _activist, False),
-    ("crazy", "Crazy 후보", "/lab/crazy", _crazy, True),
-    ("moonshot", "Moonshot 후보", "/lab/moonshot", _moonshot, True),
-    ("biotech", "바이오 레이더", "/biotech", _biotech, True),
+    ("watchlist", "국내 · 오늘 관심 종목", "/watchlist", _watchlist, False),
+    ("powderkeg", "국내 · 화약고 공시", "/powderkeg", _powderkeg, False),
+    ("meme", "밈 급등 신호 (국내·미국)", "/lab/meme-watch", _meme, False),
+    ("activist", "큰손 지분 공시 (행동주의)", "/activist-radar", _activist, False),
+    ("crazy", "미국 · 중대형주 급등 후보 (Crazy)", "/lab/crazy", _crazy, True),
+    ("moonshot", "미국 · 소형주 고위험 급등 후보 (Moonshot)", "/lab/moonshot", _moonshot, True),
+    ("biotech", "미국 · 바이오 소식 앞둔 종목", "/biotech", _biotech, True),
 ]
 
 
