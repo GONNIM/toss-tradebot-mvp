@@ -107,6 +107,11 @@ async def isolated_params(tmp_path, monkeypatch):
     })
     import backend.discovery.live_tape.params as p_mod
     monkeypatch.setattr(p_mod, "_store", store)
+    # 1108-03 · 정규장 시간 검사는 실행 날짜(토·일)·시각(23:59~)에 따라 결과가 바뀐다.
+    #   이 파일은 watchlist 실행 흐름을 보는 시험이라 그 검사를 통과로 고정한다 (test_sniper.py 와 같은 방식).
+    #   시간 검사 자체는 test_entry_window.py 가 고정 시각으로 따로 본다.
+    import backend.discovery.live_tape.entry as entry_mod
+    monkeypatch.setattr(entry_mod, "_is_in_active_window", lambda params: True)
     return store
 
 
