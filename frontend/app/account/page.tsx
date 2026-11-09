@@ -12,6 +12,7 @@ import Link from "next/link";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { AccountHolding, AccountHoldingsResponse, api, SniperStatus, TossStockCodeRow } from "@/lib/api";
 import { AdminSessionBar } from "@/components/admin/AdminSessionBar";
+import { usdPnlText, wonConvertText } from "@/lib/holdings-swing";
 import { HoldingSwing } from "@/components/account/HoldingSwing";
 import { PositionPlans } from "@/components/account/PositionPlans";
 import { TossSummary } from "@/components/account/TossSummary";
@@ -50,7 +51,8 @@ function SafetyLine() {
 
 const TONE_CLASS = { up: "text-up", down: "text-down", flat: "text-muted-foreground" } as const;
 
-function HoldingRow({ h }: { h: AccountHolding }) {
+function HoldingRow({ h, fx }: { h: AccountHolding; fx: { rate: number | null; source: string | null; validFrom: string | null } }) {
+  const isUs = h.currency === "USD";
   const tone = TONE_CLASS[pnlTone(h.pnl)];
   return (
     <tr className="border-b border-border align-top last:border-0">
@@ -64,8 +66,18 @@ function HoldingRow({ h }: { h: AccountHolding }) {
         <div className="text-xs text-muted-foreground">평단 {priceText(h.avg_price, h.currency)}</div>
       </td>
       <td className={`p-2 text-right ${tone}`}>
-        <div className="font-semibold">{pctText(h.pnl_pct)}</div>
-        <div className="text-xs">{wonText(h.pnl_krw)}</div>
+        {isUs ? (
+          <>
+            <div className="font-semibold tabular-nums">{usdPnlText(h.pnl)}</div>
+            <div className="text-xs tabular-nums">{pctText(h.pnl_pct)}</div>
+            <div className="mt-0.5 text-[11px] font-normal text-muted-foreground tabular-nums">{wonConvertText(h.pnl_krw, fx)}</div>
+          </>
+        ) : (
+          <>
+            <div className="font-semibold">{pctText(h.pnl_pct)}</div>
+            <div className="text-xs">{wonText(h.pnl_krw)}</div>
+          </>
+        )}
       </td>
       <td className="p-2 text-right">{wonText(h.market_value_krw)}</td>
       <td className="p-2">{peakLabel(h)}</td>
@@ -117,7 +129,7 @@ function HoldingsTable({ isAdmin }: { isAdmin: boolean }) {
               <th className="p-2">토스증권</th>
             </tr>
           </thead>
-          <tbody>{d.holdings.map((h) => <HoldingRow key={`${h.market}-${h.symbol}`} h={h} />)}</tbody>
+          <tbody>{d.holdings.map((h) => <HoldingRow key={`${h.market}-${h.symbol}`} h={h} fx={{ rate: d.fx_rate, source: d.fx_source, validFrom: d.fx_valid_from }} />)}</tbody>
         </table>
       </div>
       <HoldingSwing holdings={d.holdings} isAdmin={isAdmin} />

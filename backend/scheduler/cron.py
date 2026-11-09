@@ -624,7 +624,7 @@ async def run_holdings_snapshot(market: str) -> dict:
 
 
 async def run_swing_followup(market: str, hour: int, minute: int) -> None:
-    """1108-02 · 보유 기록이 끝난 뒤 이어 받기 — 공식 종가(국내) · 대형·대표 기준 값. 단계마다 따로 try.
+    """1108-02 · 보유 기록이 끝난 뒤 이어 받기 — 공식 종가(국내) · 대형·대표 기준 값 · 긴 일봉. 단계마다 따로 try.
 
     새 정해진 시각 잡이 아니다 (기존 잡의 늦음 허용·시각을 따름). 실패해도 이미 저장된 보유 기록은 그대로이고,
     같은 이름의 경고는 하루 1회만 나간다 (_alert_job_failure). 화면은 그 종목을 「보류」로 보인다.
@@ -635,6 +635,8 @@ async def run_swing_followup(market: str, hour: int, minute: int) -> None:
     if market == "KR":
         steps.append(("공식 종가 받기 (국내)", holdings_swing.fill_official_closes))
     steps.append((f"대형·대표 기준 값 ({'국내' if market == 'KR' else '미국'})", lambda: holdings_swing.refresh_references(market)))
+    # 3단계 · 긴 일봉 받기는 맨 뒤 — 종목당 60초 제한(fill_long_closes) · 실패해도 앞 단계 결과는 그대로
+    steps.append((f"긴 일봉 받기 ({'국내' if market == 'KR' else '미국'})", lambda: holdings_swing.fill_long_closes(market)))
     for name, step in steps:
         try:
             await step()

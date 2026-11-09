@@ -91,6 +91,8 @@ _ADDED_COLUMNS = [
     ("user_judgments", "result_base_price", "FLOAT"),        # 1025-05
     ("user_judgments", "result_base_source", "VARCHAR(10)"),  # 1025-05
     ("ticker_universe", "current_price", "FLOAT"),            # 1027-03
+    ("holding_horizon", "deadline", "DATE"),                  # 1108-02 3단계
+    ("holding_horizon", "memo", "VARCHAR(200)"),              # 1108-02 3단계
 ]
 
 
