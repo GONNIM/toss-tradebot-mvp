@@ -65,6 +65,16 @@ LONG_LIMITS = [
 ]
 
 # 비용 추정 (조건 5 · 계획 4절): 국내 매도 거래세+농특세 0.20% + 수수료 0.015% · 미국 매도 0.1% + 환전 0.1%
+# ─ 4단계 · 40주 평균선 (계획 7절 · 검토 1108-02-16) ─
+WEEK_MA = 40
+WEEK_SLOPE_BACK = 4            # 기울기 = 40주선이 4주 전보다 몇 % 달라졌나
+WEEK_SERIES_KEEP = 260         # 그림은 최근 5년(끝난 주 260개)
+WEEK_CHECK_YEARS = 10          # 검증 구간 — 자료가 짧으면 실제 기간
+WEEK_CHECK_MIN_YEARS = 3.0     # 이보다 짧으면 검증 줄 없음
+WEEK_CHECK_COST = 0.0025       # 바뀔 때마다 0.25%
+WEEK_WHIPSAW_WEEKS = 4
+WEEK40_SOURCE = {"KR": "KRX 일봉(pykrx · 수정주가) · 배당 미반영", "US": "Yahoo 종가(yfinance) · 배당 미반영"}
+
 SELL_COST = {"KR": 0.0020 + 0.00015, "US": 0.001 + 0.001}
 COST_NOTE = {
     "KR": "비용 추정: 매도 세금 0.20% + 수수료 0.015%",
@@ -710,6 +720,187 @@ def _blue_items(market, symbol, ref: dict, closes: list[float]) -> list[dict]:
     return items
 
 
+# ─────────────────────────────────────────────────────────────────
+# 4단계 · 40주 평균선 — 긴 일봉(swing_long_close)만 읽어 화면 요청 때 계산한다 (외부 호출 없음)
+# ─────────────────────────────────────────────────────────────────
+
+def week_friday(d: date) -> date:
+    """토~금 한 묶음의 이름 = 그 주 금요일 (pandas W-FRI 와 같음)."""
+    return d + timedelta(days=(4 - d.weekday()) % 7)
+
+
+def ended_weeks(dates: list[date], closes: list[float], local_today: date) -> list[dict]:
+    """주 묶음 가운데 끝난 주만. 주 종가 = 묶음의 마지막 자료 날 종가.
+
+    마지막 묶음은 「자료 마지막 날 >= 그 주 금요일」 또는 「현지 오늘 > 그 주 금요일 이고 자료 마지막 날 >= 그 주 월요일」
+    일 때만 끝난 주로 본다 (앞 묶음은 뒤 묶음이 있으니 늘 끝남).
+    """
+    groups: list[dict] = []
+    for i, d in enumerate(dates):
+        f = week_friday(d)
+        if groups and groups[-1]["w"] == f:
+            groups[-1]["idx"], groups[-1]["last"] = i, d
+        else:
+            groups.append({"w": f, "idx": i, "last": d, "c": 0.0})
+    for g in groups:
+        g["c"] = closes[g["idx"]]
+    if groups:
+        g = groups[-1]
+        f = g["w"]
+        if not (g["last"] >= f or (local_today > f and g["last"] >= f - timedelta(days=4))):
+            groups.pop()
+    return groups
+
+
+def week_means(weeks: list[dict]) -> list[Optional[float]]:
+    """끝난 주 종가 40개 단순평균 (40개 미만이면 None)."""
+    c = [w["c"] for w in weeks]
+    out: list[Optional[float]] = [None] * len(c)
+    if len(c) < WEEK_MA:
+        return out
+    run = sum(c[:WEEK_MA])
+    out[WEEK_MA - 1] = run / WEEK_MA
+    for i in range(WEEK_MA, len(c)):
+        run += c[i] - c[i - WEEK_MA]
+        out[i] = run / WEEK_MA
+    return out
+
+
+def week_sides(weeks: list[dict], means: list[Optional[float]]) -> list[Optional[str]]:
+    """주 종가가 선 위(above) · 아래(below). 선이 없거나 같으면 None."""
+    out: list[Optional[str]] = []
+    for w, m in zip(weeks, means):
+        out.append(None if m is None or w["c"] == m else ("above" if w["c"] > m else "below"))
+    return out
+
+
+def streak_count(sides: list[Optional[str]]) -> Optional[int]:
+    """끝난 주 전체에서 지금과 같은 쪽이 이어진 주 수 (표시 구간으로 자르지 않음)."""
+    if not sides or sides[-1] is None:
+        return None
+    n = 0
+    for s in reversed(sides):
+        if s != sides[-1]:
+            break
+        n += 1
+    return n
+
+
+def week_slope_pct(means: list[Optional[float]]) -> Optional[float]:
+    """40주선 기울기 = m[마지막] / m[4주 전] - 1 (끝난 주 44개 미만이면 None)."""
+    k = len(means) - 1 - WEEK_SLOPE_BACK
+    if k < 0 or means[k] is None or means[-1] is None or means[k] <= 0:
+        return None
+    return round((means[-1] / means[k] - 1) * 100, 1)
+
+
+def whipsaw_ratio(flip_weeks: list[int], n_weeks: int, in_window: Callable[[int], bool]) -> Optional[float]:
+    """평가 구간 안 바뀜 가운데 4주 이내 다시 바뀐 비율. 뒤 4주를 아직 못 본 마지막 바뀜은 센 쪽에서 뺀다."""
+    seen = hit = 0
+    for j, k in enumerate(flip_weeks):
+        if not in_window(k):
+            continue
+        nxt = flip_weeks[j + 1] if j + 1 < len(flip_weeks) else None
+        if nxt is not None:
+            seen += 1
+            hit += 1 if nxt - k <= WEEK_WHIPSAW_WEEKS else 0
+        elif n_weeks - 1 - k >= WEEK_WHIPSAW_WEEKS:
+            seen += 1
+    return None if seen == 0 else round(hit / seen * 100, 1)
+
+
+def week40_check(dates: list[date], closes: list[float], weeks: list[dict], means: list[Optional[float]], *,
+                 window_years: float = WEEK_CHECK_YEARS, min_years: float = WEEK_CHECK_MIN_YEARS,
+                 cost: float = WEEK_CHECK_COST) -> Optional[dict]:
+    """같은 자료로 「선 아래 주에 쉬었다면」과 「그대로」를 나란히 계산 (추정).
+
+    판정 = 끝난 주 종가 > 40주선 · 체결 = 그 주 마지막 자료 날의 다음 거래일 종가 · 첫 판정 전은 쉼 ·
+    비용 = 쉬었다 샀다 바뀔 때마다(구간 첫날 이미 들고 있으면 처음 1번 포함) · 그대로는 처음 1번 · 이자 0.
+    40주선은 전체 자료로 만들고 평가 구간만 최근 window_years.
+    """
+    n = len(dates)
+    if n < 2 or not any(m is not None for m in means):
+        return None
+    end = dates[-1]
+    try:
+        cut = end.replace(year=end.year - int(window_years))
+    except ValueError:  # 2/29
+        cut = end.replace(year=end.year - int(window_years), day=28)
+    e = next((i for i, d in enumerate(dates) if d >= cut), 0)
+    years = (end - dates[e]).days / 365.25
+    if years < min_years or e >= n - 1:
+        return None
+
+    pos_at = [0] * n
+    exec_at: dict[int, int] = {}
+    for w, m in zip(weeks, means):
+        if m is not None and w["idx"] + 1 < n:
+            exec_at[w["idx"] + 1] = 1 if w["c"] > m else 0
+    pos = 0
+    for i in range(n):
+        pos = exec_at.get(i, pos)
+        pos_at[i] = pos
+
+    rule = [1.0]
+    eq, held = 1.0, pos_at[e]
+    if held:
+        eq *= 1 - cost
+    rule.append(eq)
+    for i in range(e + 1, n):
+        if held:
+            eq *= closes[i] / closes[i - 1]
+        if pos_at[i] != held:
+            eq *= 1 - cost
+            held = pos_at[i]
+        rule.append(eq)
+    hold = [1.0] + [(1 - cost) * closes[i] / closes[e] for i in range(e, n)]
+
+    def mdd(seq: list[float]) -> float:
+        peak, worst = seq[0], 0.0
+        for v in seq:
+            peak = max(peak, v)
+            worst = max(worst, 1 - v / peak)
+        return worst
+
+    def cagr(v: float) -> float:
+        return v ** (1 / years) - 1
+
+    sigs = [None if m is None else (w["c"] > m) for w, m in zip(weeks, means)]
+    flips = [k for k in range(1, len(sigs)) if sigs[k] is not None and sigs[k - 1] is not None and sigs[k] != sigs[k - 1]]
+    whip = whipsaw_ratio(flips, len(weeks), lambda k: weeks[k]["idx"] >= e)
+    return {"from": dates[e], "to": end, "years": round(years, 1), "rule_cagr": _pct1(cagr(rule[-1])),
+            "hold_cagr": _pct1(cagr(hold[-1])), "rule_mdd": _pct1(mdd(rule)), "hold_mdd": _pct1(mdd(hold)),
+            "whipsaw_pct": whip, "cost_pct": round(cost * 100, 2)}
+
+
+def build_week40(market: str, dates: list[date], closes: list[float], local_today: date) -> Optional[dict]:
+    """카드 칸 week40. 긴 일봉이 없으면 None (화면은 「자료 없음」). 판정 문장은 만들지 않는다."""
+    if not dates:
+        return None
+    weeks = ended_weeks(dates, closes, local_today)
+    if not weeks:
+        return None
+    means = week_means(weeks)
+    sides = week_sides(weeks, means)
+    last_w, last_m = weeks[-1], means[-1]
+    out: dict = {"as_of_week": last_w["w"], "data_last_date": dates[-1], "side": sides[-1], "distance_pct": None,
+                 "streak_weeks": streak_count(sides), "slope4w_pct": week_slope_pct(means), "series": [],
+                 "check": None, "note": None}
+    if last_m is not None:
+        out["distance_pct"] = round((last_w["c"] / last_m - 1) * 100, 1)
+    else:
+        out["note"] = "40주 자료 부족"
+    start = max(0, len(weeks) - WEEK_SERIES_KEEP)
+    out["series"] = [{"w": weeks[i]["w"], "c": round(weeks[i]["c"], 4),
+                      "m": None if means[i] is None else round(means[i], 4)} for i in range(start, len(weeks))]
+    if last_m is not None:
+        chk = week40_check(dates, closes, weeks, means)
+        if chk:
+            chk["source"] = WEEK40_SOURCE[market]
+        out["check"] = chk
+    return out
+
+
 def _build_goal(market, horizon, avg, last, hr, basis_date, basis_source, long_series, today) -> Optional[dict]:
     """카드 기준 종가(국내 공식 · 미국 토스)와 긴 일봉 표에서 계산한 「목표까지 거리」. 결론 문장은 없다."""
     close_date, close = last
@@ -735,11 +926,14 @@ def _build_goal(market, horizon, avg, last, hr, basis_date, basis_source, long_s
     return goal
 
 
-async def build_cards(session, today: date) -> list[dict]:
+async def build_cards(session, today: date, now: Optional[datetime] = None) -> list[dict]:
     """보유 종목마다 「보유 종목 사실」 카드. 보유 성격이 없으면 보류."""
     from backend.services import real_holdings
     from backend.services.real_holdings import HoldingRow
 
+    from backend.services.real_holdings import _LOCAL_TZ
+
+    now_utc = now or datetime.now(timezone.utc)
     cards: list[dict] = []
     hrows = {(h.market, h.ticker): h for h in (await session.execute(select(HoldingHorizon))).scalars().all()}
     longs: dict[tuple[str, str], tuple[list[date], list[float], str]] = {}
@@ -758,7 +952,7 @@ async def build_cards(session, today: date) -> list[dict]:
             hr = hrows.get((market, sym))
             horizon = hr.horizon if hr is not None and hr.horizon in HORIZONS else None  # unset 은 null 로 보냄
             card = {"market": market, "symbol": sym, "horizon": horizon, "status": "hold", "hold_reason": None,
-                    "deadline": hr.deadline if hr else None, "memo": hr.memo if hr else None, "goal": None,
+                    "deadline": hr.deadline if hr else None, "memo": hr.memo if hr else None, "goal": None, "week40": None,
                     "as_of": None, "close_source": "krx" if market == "KR" else "toss", "ma": [], "peak": None,
                     "blue_chip": None, "source_gap": None, "real_avg": {"status": "hold", "text": "보류 · 판 값 기록 없음"},
                     "profit_turn": None, "disclaimer": DISCLAIMER}
@@ -818,4 +1012,7 @@ async def build_cards(session, today: date) -> list[dict]:
 
             card["goal"] = _build_goal(market, horizon, h.avg_price or 0, series[-1], hr, basis_date, basis_source,
                                        longs.get((market, sym)), today)
+            lg = longs.get((market, sym))
+            if lg:
+                card["week40"] = build_week40(market, lg[0], lg[1], now_utc.astimezone(_LOCAL_TZ[market]).date())
     return cards

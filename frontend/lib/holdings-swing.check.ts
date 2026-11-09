@@ -3,6 +3,8 @@ import assert from "node:assert/strict";
 import {
   daysLeftText, deadlineText, distanceText, drawdownText, gapText, needText, peakNote, sourceText, toneOf, usdPnlText, wonConvertText,
   type GoalShort,
+  type Week40,
+  week40CheckText, week40FactText, week40TipText,
 } from "./holdings-swing";
 
 assert.equal(distanceText({ days: 20, avg: 100, distance_pct: 3.2, note: null }), "위 +3.20%");
@@ -54,4 +56,24 @@ assert.equal(
 );
 assert.equal(drawdownText({ threshold_pct: 30, ended: 0, recovered: 0, days_min: null, days_max: null, days_median: null, ongoing: null }), "고점 대비 -30% 넘게 내린 일 끝난 사례 없음");
 assert.equal(daysLeftText({ ...g, deadline: null, days_left: null }), "남은 거래일 계산 안 함");
+// 4단계 · 40주 평균선 문구
+const w40 = {
+  as_of_week: "2026-11-06", data_last_date: "2026-11-06", side: "below", distance_pct: -3.46, streak_weeks: 2, slope4w_pct: 2.5,
+  series: [], check: null, note: null,
+} as Week40;
+assert.equal(week40FactText(w40), "주 종가가 40주 평균선 아래 3.5% · 2주째 · 선 기울기 +2.5%(4주 전 대비) · 11/6 끝난 주");
+assert.equal(
+  week40FactText({ ...w40, data_last_date: "2026-11-04", slope4w_pct: null }),
+  "주 종가가 40주 평균선 아래 3.5% · 2주째 · 기울기 자료 부족 · 11/6 끝난 주 · 자료 11/4 까지",
+);
+// 자료가 그 주 금요일보다 뒤(다음 주 월요일)까지 있으면 「까지」를 붙이지 않음 (11/09 PO)
+assert.equal(week40FactText({ ...w40, data_last_date: "2026-11-09" }), "주 종가가 40주 평균선 아래 3.5% · 2주째 · 선 기울기 +2.5%(4주 전 대비) · 11/6 끝난 주");
+assert.equal(week40FactText({ ...w40, side: null, distance_pct: null, streak_weeks: null, note: "40주 자료 부족" }), "40주 자료 부족");
+assert.equal(
+  week40CheckText({ from: "2016-11", to: "2026-11-06", years: 10, source: "Yahoo 종가(yfinance) · 배당 미반영", rule_cagr: 8.2, hold_cagr: 10.1,
+    rule_mdd: 20.5, hold_mdd: 35, whipsaw_pct: null, cost_pct: 0.25 }),
+  "이 종목 최근 10.0년(2016-11~2026-11 · Yahoo 종가(yfinance) · 배당 미반영): 선 아래 주에 쉬었다면 연 8.2% · 최대 낙폭 20.5% / 그대로 연 10.1% · 35.0% · 4주 안 되돌림 — · 비용 0.25%/회 · 현금 이자 0 · 추정 · 보장 아님",
+);
+assert.deepEqual(week40TipText({ w: "2026-11-06", c: 96.5, m: 100 }), ["2026-11-06 끝난 주", "종가 96.5", "40주선 100", "거리 -3.5%"]);
+assert.deepEqual(week40TipText({ w: "2026-01-02", c: 50, m: null }), ["2026-01-02 끝난 주", "종가 50", "40주선 자료 부족"]);
 console.log("holdings-swing ok");

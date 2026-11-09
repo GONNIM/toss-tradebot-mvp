@@ -481,7 +481,8 @@ async def test_card_third_layer_only_for_short_and_has_required_parts(clean):
 
 # ─── 금지 낱말 · 면책 문구 (정적 + 실제 출력) ───
 
-FORBIDDEN = re.compile(r"buy|sell|stop|trailing|추가 매수|손절|이익 보호|추적|사십시오|파십시오|장기로 하십시오|물타기", re.I)
+FORBIDDEN = re.compile(r"buy|sell|stop|trailing|추가 매수|손절|이익 보호|추적|사십시오|파십시오|장기로 하십시오|물타기"
+                       r"|신호|40주선 매매|위면 보유|아래면 현금|현금으로|사라(?!지)|팔라|매도하|매수하", re.I)
 
 
 def _module_string_literals(path: Path) -> list[str]:
@@ -503,7 +504,7 @@ def test_no_forbidden_words_in_backend_strings():
 
 def test_no_forbidden_words_in_frontend_component():
     root = Path(hs.__file__).resolve().parents[2] / "frontend"
-    for rel in ("components/account/HoldingSwing.tsx", "lib/holdings-swing.ts"):
+    for rel in ("components/account/HoldingSwing.tsx", "components/account/Week40Chart.tsx", "lib/holdings-swing.ts"):
         text = (root / rel).read_text(encoding="utf-8")
         assert FORBIDDEN.search(text) is None, rel
 
@@ -1021,3 +1022,176 @@ def test_swing_long_close_table_shape():
     t = SwingLongClose.__table__
     assert [c.name for c in t.primary_key.columns] == ["market", "ticker", "trade_date"]
     assert {"close", "source", "fetched_at"} <= set(t.columns.keys())
+
+
+# ═══════════════════════════════════════════════════════════════
+# 4단계 · 40주 평균선 (계획 7절 · 검토 1108-02-16 빠진 시험 ①~⑧) — 종목 기호·가격은 모두 가짜 값이다.
+# ═══════════════════════════════════════════════════════════════
+
+MON0 = date(2016, 1, 4)  # 월요일
+
+
+def _week_days(n_weeks, start=MON0):
+    """월~금 5일씩 n_weeks 주."""
+    return [start + timedelta(days=7 * w + k) for w in range(n_weeks) for k in range(5)]
+
+
+def _flat_weeks(values, start=MON0):
+    """주마다 값이 같은 일봉 (월~금)."""
+    d = _week_days(len(values), start)
+    return d, [float(values[i // 5]) for i in range(len(d))]
+
+
+def _ended(dates, today):
+    return hs.ended_weeks(dates, [1.0] * len(dates), today)
+
+
+def test_ended_week_rules_friday_monday_holiday_and_intraday():
+    # ① 자료가 금요일에 끝나면 그 주가 끝난 주
+    d = _week_days(3)
+    assert _ended(d, d[-1])[-1]["w"] == date(2016, 1, 22)
+    # 월요일까지만 있고 아직 그 주면 앞 주가 마지막 끝난 주
+    d2 = d + [date(2016, 1, 25)]
+    assert _ended(d2, date(2016, 1, 25))[-1]["w"] == date(2016, 1, 22)
+    # 금요일 휴장: 목요일까지 자료 · 현지 토요일 → 그 주는 끝난 주
+    d3 = d[:-1]
+    assert _ended(d3, date(2016, 1, 23))[-1]["w"] == date(2016, 1, 22)
+    # 현지 금요일 장중(자료는 목요일까지): 아직 끝나지 않음
+    assert _ended(d3, date(2016, 1, 22))[-1]["w"] == date(2016, 1, 15)
+    # 토요일 날짜는 다음 금요일 묶음 (W-FRI)
+    assert hs.week_friday(date(2016, 1, 23)) == date(2016, 1, 29) and hs.week_friday(date(2016, 1, 22)) == date(2016, 1, 22)
+
+
+@pytest.mark.asyncio
+async def test_us_judged_by_new_york_time_and_kr_by_kst(clean):
+    """② 같은 순간(UTC 11/07 03:00): 뉴욕은 아직 금요일 밤 · 서울은 이미 토요일."""
+    thu = date(2026, 11, 5)
+    for market, sym in (("KR", KR), ("US", US)):
+        await _seed_card(market, sym, [100.0 + i * 0.1 for i in range(130)])
+        await _seed_long(market, sym, [100.0 + i * 0.1 for i in range(300)], end=thu)
+    from backend.services.db import get_session
+
+    async with get_session() as s:
+        cards = {c["market"]: c for c in await hs.build_cards(s, TODAY, now=datetime(2026, 11, 7, 3, 0, tzinfo=timezone.utc))}
+    assert cards["KR"]["week40"]["as_of_week"] == date(2026, 11, 6)
+    assert cards["US"]["week40"]["as_of_week"] == date(2026, 10, 30)
+    assert cards["US"]["week40"]["data_last_date"] == thu
+
+
+@pytest.mark.asyncio
+async def test_data_stopped_on_wednesday_reports_data_last_date(clean):
+    """③ 수요일에 자료가 멈추고 현지 토요일 → 그 주는 끝난 주 · data_last_date 는 수요일 (화면이 「자료 11/4 까지」)."""
+    wed = date(2026, 11, 4)
+    await _seed_card("US", US, [100.0] * 130)
+    await _seed_long("US", US, [100.0 + i * 0.1 for i in range(300)], end=wed)
+    from backend.services.db import get_session
+
+    async with get_session() as s:
+        c = {x["symbol"]: x for x in await hs.build_cards(s, TODAY, now=datetime(2026, 11, 7, 17, 0, tzinfo=timezone.utc))}[US]
+    assert c["week40"]["as_of_week"] == date(2026, 11, 6) and c["week40"]["data_last_date"] == wed
+
+
+def test_streak_counts_over_300_weeks_and_series_is_cut_to_5_years():
+    # ④ 끝난 주 전체에서 센다 — 표시 5년(260주)으로 자르지 않음
+    d, c = _flat_weeks([100 + i for i in range(350)])
+    w = hs.build_week40("US", d, c, d[-1])
+    assert w["streak_weeks"] == 350 - 39 and w["side"] == "above" and len(w["series"]) == 260
+    assert w["series"][-1]["w"] == w["as_of_week"] and w["series"][-1]["m"] is not None
+
+
+def test_week_count_boundaries_slope_check_and_period():
+    # ⑤ 끝난 주 39 → 선 없음 · 검증 없음
+    d, c = _flat_weeks([100 + i for i in range(39)])
+    w = hs.build_week40("US", d, c, d[-1])
+    assert w["side"] is None and w["distance_pct"] is None and w["slope4w_pct"] is None and w["check"] is None
+    assert w["note"] == "40주 자료 부족" and all(p["m"] is None for p in w["series"])
+    # 40~43 → 선은 있고 기울기만 없음
+    for n in (40, 43):
+        d, c = _flat_weeks([100 + i for i in range(n)])
+        w = hs.build_week40("US", d, c, d[-1])
+        assert w["side"] == "above" and w["slope4w_pct"] is None and w["distance_pct"] is not None
+    d, c = _flat_weeks([100 + i for i in range(44)])
+    assert hs.build_week40("US", d, c, d[-1])["slope4w_pct"] is not None
+    # 3년 미만이면 검증 없음 · 3년 이상 10년 미만이면 실제 기간 · 10년 넘으면 최근 10년
+    d, c = _flat_weeks([100 + i * 0.1 for i in range(150)])  # 약 2.9년
+    assert hs.build_week40("US", d, c, d[-1])["check"] is None
+    d, c = _flat_weeks([100 + i * 0.1 for i in range(200)])  # 약 3.8년
+    ck = hs.build_week40("US", d, c, d[-1])["check"]
+    assert ck["from"] == d[0] and ck["to"] == d[-1] and ck["years"] == round((d[-1] - d[0]).days / 365.25, 1)
+    d, c = _flat_weeks([100 + i * 0.1 for i in range(700)])  # 약 13.4년
+    ck = hs.build_week40("US", d, c, d[-1])["check"]
+    assert d[-1].year - ck["from"].year in (9, 10) and ck["years"] == 10.0 and ck["from"] > d[0]
+
+
+def test_check_matches_hand_calculation_on_60_week_fake_series():
+    """⑥ 주 0~39 = 100 · 40~49 = 110 · 50~59 = 90 (주마다 값이 같은 일봉).
+    40주선: 주 40 = (39*100+110)/40 = 100.25 → 위 · 주 50 = (29*100+10*110+90)/40 = 102.25 → 아래 (주 39 는 100 = 100 이라 위 아님).
+    체결 = 다음 거래일 종가: 주 41 월요일 110 에 사고(비용 0.25%) · 주 51 월요일 90 에 팔고(비용 0.25%).
+    쉬는 쪽 = 0.9975 * 90/110 * 0.9975 = 0.814096 → 연 -16.5% · 최대 낙폭 18.6% (고점 1.0).
+    그대로 = 처음 1번만 비용: 0.9975 * 90/100 = 0.89775 → 연 -9.0% · 낙폭 = 1 - 90/110 = 18.2% (고점 0.9975*1.1).
+    기간 = 주 0 월요일 ~ 주 59 금요일 417일 = 1.1417년 · 바뀜 2번(주 40 · 50) 모두 4주 넘게 유지 → 되돌림 0%.
+    """
+    d, c = _flat_weeks([100] * 40 + [110] * 10 + [90] * 10)
+    weeks = hs.ended_weeks(d, c, d[-1])
+    means = hs.week_means(weeks)
+    assert means[40] == pytest.approx(100.25) and means[50] == pytest.approx(102.25)
+    ck = hs.week40_check(d, c, weeks, means, min_years=0.5)
+    assert ck["years"] == 1.1 and ck["from"] == d[0] and ck["to"] == d[-1]
+    assert ck["rule_cagr"] == -16.5 and ck["hold_cagr"] == -9.0
+    assert ck["rule_mdd"] == 18.6 and ck["hold_mdd"] == 18.2
+    assert ck["whipsaw_pct"] == 0.0 and ck["cost_pct"] == 0.25
+    # 기본 기준(3년)이면 이 짧은 계열은 검증 없음
+    assert hs.week40_check(d, c, weeks, means) is None
+
+
+def test_whipsaw_ratio_counts_flips_back_within_4_weeks_and_skips_unseen_tail():
+    # 바뀜 주 10 · 13(3주 뒤 되돌림) · 30 (뒤 30주를 봤고 더 바뀌지 않음)
+    assert hs.whipsaw_ratio([10, 13, 30], 60, lambda k: True) == pytest.approx(33.3)  # 10→13 만 되돌림 · 13→30 아님 · 30 아님
+    # 10→13 되돌림 · 13→30 아님 · 30→34 되돌림(4주 딱) · 34→56 아님 · 56 은 뒤가 3주뿐이라 뺌 = 2/4
+    assert hs.whipsaw_ratio([10, 13, 30, 34, 56], 60, lambda k: True) == 50.0
+    assert hs.whipsaw_ratio([56], 60, lambda k: True) is None
+    assert hs.whipsaw_ratio([10, 13], 60, lambda k: k > 11) == 0.0  # 구간 밖 바뀜은 안 센다
+
+
+@pytest.mark.asyncio
+async def test_week40_source_says_dividends_excluded_for_kr_and_us(clean):
+    # ⑦
+    for market, sym in (("KR", KR), ("US", US)):
+        await _seed_card(market, sym, [100.0] * 130)
+        await _seed_long(market, sym, [100.0 + i * 0.05 for i in range(900)])
+    cs = await _cards()
+    for key in (("KR", KR), ("US", US)):
+        ck = cs[key]["week40"]["check"]
+        assert ck is not None and "배당 미반영" in ck["source"]
+
+
+@pytest.mark.asyncio
+async def test_week40_makes_no_external_call_and_hold_cards_have_none(clean, monkeypatch):
+    # ⑧
+    from backend.discovery.data_sources.krx_price import loader
+
+    await _seed_card("US", US, [100.0] * 130)
+    await _seed_long("US", US, [100.0 + i * 0.05 for i in range(900)])
+    await _seed_card("KR", KR, [100.0] * 130, horizon=None)  # 보유 성격 미지정 = 보류
+    await _seed_long("KR", KR, [100.0 + i * 0.05 for i in range(900)])
+
+    def boom(*a, **k):
+        raise AssertionError("화면 요청 때 외부 호출 금지")
+
+    monkeypatch.setattr(loader, "_fetch_ohlcv_sync", boom)
+    monkeypatch.setattr(hs, "_default_long_fetch", boom)
+    monkeypatch.setitem(__import__("sys").modules, "yfinance", None)
+    cs = await _cards()
+    assert cs[("US", US)]["week40"]["series"] and cs[("KR", KR)]["status"] == "hold" and cs[("KR", KR)]["week40"] is None
+
+
+@pytest.mark.asyncio
+async def test_week40_null_without_long_series_and_output_has_no_forbidden_words(clean):
+    import json
+
+    await _seed_card("KR", KR, [100.0] * 130)  # 긴 일봉 없음
+    await _seed_card("US", US, [100.0] * 130)
+    await _seed_long("US", US, [100.0 + (i % 7) * 0.5 + i * 0.02 for i in range(900)])
+    cs = await _cards()
+    assert cs[("KR", KR)]["week40"] is None
+    assert FORBIDDEN.search(json.dumps(cs[("US", US)]["week40"], ensure_ascii=False, default=str)) is None
