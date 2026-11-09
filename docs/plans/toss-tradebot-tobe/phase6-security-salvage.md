@@ -122,8 +122,7 @@ git rm docs/plans/tradebot-tobe/tradebot-tobe-prompt.md.pdf
 git rmdir docs/plans/tradebot-tobe/  # 폴더 비어 있음 확증
 ```
 
-**Wiki 미러 동기화**:
-`/Users/gonnim/GON-LLM-Wiki/Works/Trading/Toss-Tradebot-MVP/toss-tradebot-tobe/` 하위에 SSOT 사본.
+**위키 사본**: 위키에는 사본을 두지 않습니다(2026-11-04 위키 정리 · 원본은 이 저장소 docs/plans/toss-tradebot-tobe/).
 
 **커밋 메시지 예**:
 ```
@@ -132,7 +131,6 @@ docs(planning): toss-tradebot-tobe SSOT 신설 · 기존 tradebot-tobe 폐기
 - 4관점 병렬 리뷰 통합 (퀀트·UX·자산화·아키텍처)
 - Stage 1~4 로드맵 · 12주 실행 계획
 - 기존 tradebot-tobe/ 폐기 · Phase 6 보안 5항만 phase6-security-salvage.md로 승계
-- Wiki 미러: GON-LLM-Wiki/Works/Trading/Toss-Tradebot-MVP/toss-tradebot-tobe/
 ```
 
 ## 4. 위임 · 다음 문서
