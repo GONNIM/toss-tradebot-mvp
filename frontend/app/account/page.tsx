@@ -12,7 +12,7 @@ import Link from "next/link";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { AccountHolding, AccountHoldingsResponse, api, SniperStatus, TossStockCodeRow } from "@/lib/api";
 import { AdminSessionBar } from "@/components/admin/AdminSessionBar";
-import { usdPnlText, wonConvertText } from "@/lib/holdings-swing";
+import { usdPnlText /* , wonConvertText */ } from "@/lib/holdings-swing";
 import { HoldingSwing } from "@/components/account/HoldingSwing";
 import { PositionPlans } from "@/components/account/PositionPlans";
 import { TossSummary } from "@/components/account/TossSummary";
@@ -68,9 +68,12 @@ function HoldingRow({ h, fx }: { h: AccountHolding; fx: { rate: number | null; s
       <td className={`p-2 text-right ${tone}`}>
         {isUs ? (
           <>
-            <div className="font-semibold tabular-nums">{usdPnlText(h.pnl)}</div>
-            <div className="text-xs tabular-nums">{pctText(h.pnl_pct)}</div>
+            {/* 11/09 사용자 지시: 손익 칸은 국내와 같게 위 %, 아래 금액 (미국은 달러) */}
+            <div className="font-semibold">{pctText(h.pnl_pct)}</div>
+            <div className="text-xs tabular-nums">{usdPnlText(h.pnl)}</div>
+            {/* 11/09 사용자 지시: 원화 환산 줄은 보이지 않음 (주석 처리 · 되살릴 때 아래 줄과 import 를 풀면 됨)
             <div className="mt-0.5 text-[11px] font-normal text-muted-foreground tabular-nums">{wonConvertText(h.pnl_krw, fx)}</div>
+            */}
           </>
         ) : (
           <>
