@@ -443,3 +443,51 @@ export function spreadLabels(ys: number[], gap: number): number[] {
   }
   return out;
 }
+
+// ─── 1110-03 · 평균선 넘은 지점 (사실 표시 · 매매 지시가 아님) ─────────
+
+export type CrossDir = "up" | "down";
+
+export interface CrossPoint {
+  date: string; // 주봉은 그 주 금요일 · 일봉은 그날
+  c: number; // 그 주(그날) 종가
+  m: number; // 그 주(그날) 평균선 값
+  dir: CrossDir; // up = 선 아래 → 위 · down = 선 위 → 아래
+}
+
+export const CROSS_NOTE = "표시는 지난 사실이며 매매 지시가 아님";
+export const CROSS_LIST_KEEP = 5;
+
+/**
+ * 종가가 평균선의 다른 쪽으로 넘어간 지점.
+ * 쪽 = 종가 > 선 이면 위 · < 이면 아래 · 선이 없거나 같으면 쪽 없음(서버 week_sides 와 같은 정의).
+ * 쪽 없는 날은 건너뛰고, 바로 앞의 「쪽 있는」 날과 쪽이 다를 때 그날을 지점으로 본다.
+ * 그림 첫 날은 앞 쪽을 모르므로 지점이 되지 않는다.
+ */
+export function crossPoints(pts: { date: string; c: number; m: number | null }[]): CrossPoint[] {
+  const out: CrossPoint[] = [];
+  let prev: "above" | "below" | null = null;
+  for (const p of pts) {
+    if (p.m === null || p.c === p.m) continue;
+    const side = p.c > p.m ? "above" : "below";
+    if (prev !== null && side !== prev) out.push({ date: p.date, c: p.c, m: p.m, dir: side === "above" ? "up" : "down" });
+    prev = side;
+  }
+  return out;
+}
+
+/** 지점 방향 글 — 모양(▲▼)과 글자로 (색만 쓰지 않음). */
+export function crossDirText(line: string, dir: CrossDir): string {
+  return dir === "up" ? `▲ ${line} 위로 올라섬` : `▼ ${line} 아래로 내려감`;
+}
+
+/** 그림 아래 「최근 지점」 한 줄 — 날짜 · 방향 · 종가 · 선 값. */
+export function crossRowText(p: CrossPoint, line: string): { date: string; dir: string; close: string; line: string } {
+  const f = (v: number) => v.toLocaleString("ko-KR", { maximumFractionDigits: 2 });
+  return { date: p.date.slice(0, 10), dir: crossDirText(line, p.dir), close: `종가 ${f(p.c)}`, line: `${line} ${f(p.m)}` };
+}
+
+/** 최근 지점 N개 (최근 것 먼저). */
+export function recentCrosses(points: CrossPoint[], keep = CROSS_LIST_KEEP): CrossPoint[] {
+  return points.slice(-keep).reverse();
+}
