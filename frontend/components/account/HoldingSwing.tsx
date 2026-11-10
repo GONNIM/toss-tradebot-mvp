@@ -28,6 +28,7 @@ import {
   sourceText,
   toneOf,
 } from "@/lib/holdings-swing";
+import { Week40Chart } from "@/components/account/Week40Chart";
 import { pctText } from "@/lib/holdings-display";
 
 const TONE_CLASS = { up: "text-up", down: "text-down", flat: "text-muted-foreground" } as const;
@@ -121,6 +122,7 @@ function Facts({ card }: { card: SwingCard }) {
         {card.real_avg.text}
       </div>
       {card.goal && <GoalBox goal={card.goal} />}
+      <Week40Chart week40={card.week40 ?? null} />
       {card.profit_turn && <ProfitTurn card={card} />}
     </div>
   );

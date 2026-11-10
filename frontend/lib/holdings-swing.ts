@@ -59,6 +59,39 @@ export interface SwingCard {
   deadline: string | null; // 사용자가 정한 기한 (없으면 null = 기본값)
   memo: string | null;
   goal: SwingGoal | null; // 보류 카드는 null
+  week40: Week40 | null; // 보류 카드 · 긴 일봉 없음은 null
+}
+
+// 4단계 · 40주 평균선 (계획 7절 「검토 조건」)
+export interface Week40Point {
+  w: string; // 그 주 금요일
+  c: number; // 주 종가
+  m: number | null; // 40주 평균선
+}
+
+export interface Week40Check {
+  from: string;
+  to: string;
+  years: number;
+  source: string;
+  rule_cagr: number | null;
+  hold_cagr: number | null;
+  rule_mdd: number | null;
+  hold_mdd: number | null;
+  whipsaw_pct: number | null;
+  cost_pct: number;
+}
+
+export interface Week40 {
+  as_of_week: string;
+  data_last_date: string;
+  side: "above" | "below" | null;
+  distance_pct: number | null;
+  streak_weeks: number | null;
+  slope4w_pct: number | null;
+  series: Week40Point[];
+  check: Week40Check | null;
+  note: string | null;
 }
 
 // 3단계 · 목표까지 거리 (계획 6절 「응답 모양」)
@@ -262,3 +295,54 @@ export const LONG_SOURCE_LABEL: Record<string, string> = {
   "pykrx adjusted": "KRX 일봉(pykrx · 수정주가)",
   "yfinance close": "Yahoo 종가(yfinance · 배당 미조정)",
 };
+
+// ─── 4단계 · 40주 평균선 문구 도우미 ────────────────────────────
+
+export const WEEK40_FIRST_LINE = "사실로 보이는 것이며 매매 규칙 적용이 아님";
+export const WEEK40_LIMIT_LINE = "공개 시세 152종목 검증: 개별 종목은 통과 기준 미통과 · 지수는 큰 낙폭을 줄임 (2026-11-09)";
+export const WEEK40_BASIS_LINE = "카드 숫자는 운영 자료 기간으로 계산 · 전체 이력과 다를 수 있음";
+
+function signed(v: number, digits = 1): string {
+  return `${v > 0 ? "+" : ""}${v.toFixed(digits)}%`;
+}
+
+/** 그림 위 사실 한 줄. 자료가 그 주 금요일보다 일찍 멈췄으면 「자료 MM/DD 까지」를 붙인다. */
+export function week40FactText(w: Week40): string {
+  if (w.side === null || w.distance_pct === null) return w.note ?? "40주 자료 부족";
+  const side = w.side === "above" ? "위" : "아래";
+  const parts = [`주 종가가 40주 평균선 ${side} ${Math.abs(w.distance_pct).toFixed(1)}%`];
+  if (w.streak_weeks !== null) parts.push(`${w.streak_weeks}주째`);
+  parts.push(w.slope4w_pct === null ? "기울기 자료 부족" : `선 기울기 ${signed(w.slope4w_pct)}(4주 전 대비)`);
+  parts.push(`${mmdd(w.as_of_week)} 끝난 주`);
+  if (w.data_last_date.slice(0, 10) < w.as_of_week.slice(0, 10)) parts.push(`자료 ${mmdd(w.data_last_date)} 까지`);
+  return parts.join(" · ");
+}
+
+function pctOrDash(v: number | null): string {
+  return v === null ? "—" : `${v.toFixed(1)}%`;
+}
+
+/** 그림 아래 첫 줄 — 규칙 쪽과 그대로 쪽을 나란히. 어느 쪽이 낫다는 말은 없다. */
+export function week40CheckText(c: Week40Check): string {
+  const ym = (iso: string) => iso.slice(0, 7);
+  return (
+    `이 종목 최근 ${c.years.toFixed(1)}년(${ym(c.from)}~${ym(c.to)} · ${c.source}): ` +
+    `선 아래 주에 쉬었다면 연 ${pctOrDash(c.rule_cagr)} · 최대 낙폭 ${pctOrDash(c.rule_mdd)} / ` +
+    `그대로 연 ${pctOrDash(c.hold_cagr)} · ${pctOrDash(c.hold_mdd)} · ` +
+    `4주 안 되돌림 ${pctOrDash(c.whipsaw_pct)} · 비용 ${c.cost_pct}%/회 · 현금 이자 0 · ${DISCLAIMER_TEXT}`
+  );
+}
+
+const DISCLAIMER_TEXT = "추정 · 보장 아님";
+
+/** 마우스 올림 글 — 날짜 · 종가 · 선 값 · 거리 (사실만). */
+export function week40TipText(p: Week40Point): string[] {
+  const lines = [`${p.w.slice(0, 10)} 끝난 주`, `종가 ${p.c.toLocaleString("ko-KR", { maximumFractionDigits: 2 })}`];
+  if (p.m === null) {
+    lines.push("40주선 자료 부족");
+  } else {
+    lines.push(`40주선 ${p.m.toLocaleString("ko-KR", { maximumFractionDigits: 2 })}`);
+    lines.push(`거리 ${signed((p.c / p.m - 1) * 100)}`);
+  }
+  return lines;
+}
