@@ -21,14 +21,16 @@ import {
   drawdownText,
   gapText,
   goalBasisText,
+  longMaSourceText,
   longSeriesText,
+  splitMa,
   needText,
   ratioText,
   peakNote,
   sourceText,
   toneOf,
 } from "@/lib/holdings-swing";
-import { Week40Chart } from "@/components/account/Week40Chart";
+import { MaChart } from "@/components/account/MaChart";
 import { pctText } from "@/lib/holdings-display";
 
 const TONE_CLASS = { up: "text-up", down: "text-down", flat: "text-muted-foreground" } as const;
@@ -66,18 +68,25 @@ function HorizonPicker({ card }: { card: SwingCard }) {
 
 function Facts({ card }: { card: SwingCard }) {
   const bc = card.blue_chip;
+  const { base, long } = splitMa(card.ma);
   return (
     <div className="space-y-3 text-sm">
       <div>
         <div className="text-xs text-muted-foreground">종가와 평균의 거리 ({sourceText(card)})</div>
         <ul className="mt-1 grid grid-cols-1 gap-1 sm:grid-cols-3">
-          {card.ma.map((m) => (
+          {base.map((m) => (
             <li key={m.days} className="flex items-baseline justify-between gap-2 rounded-md bg-muted/40 px-2 py-1">
               <span className="text-xs text-muted-foreground">{m.days}일 평균</span>
               <span className={`font-semibold tabular-nums ${TONE_CLASS[toneOf(m.distance_pct)]}`}>{distanceText(m)}</span>
             </li>
           ))}
         </ul>
+        {long && (
+          <div className="mt-1 flex flex-wrap items-baseline justify-between gap-x-2 rounded-md bg-muted/40 px-2 py-1">
+            <span className="text-xs text-muted-foreground">200일 평균 · {longMaSourceText(long)}</span>
+            <span className={`font-semibold tabular-nums ${TONE_CLASS[toneOf(long.distance_pct)]}`}>{distanceText(long)}</span>
+          </div>
+        )}
       </div>
       {card.peak && card.peak.from_peak_pct !== null && (
         <div>
@@ -122,14 +131,14 @@ function Facts({ card }: { card: SwingCard }) {
         {card.real_avg.text}
       </div>
       {card.goal && <GoalBox goal={card.goal} />}
-      <Week40Chart week40={card.week40 ?? null} />
+      <MaChart chart={card.chart ?? null} />
       {card.profit_turn && <ProfitTurn card={card} />}
     </div>
   );
 }
 
 // 3단계 · 목표까지 거리 — 추정값 칸. 결론 · 명령문 없이 숫자와 한계만 보인다.
-function GoalBox({ goal }: { goal: NonNullable<SwingCard["goal"]> }) {
+export function GoalBox({ goal }: { goal: NonNullable<SwingCard["goal"]> }) {
   return (
     <section className="space-y-2 rounded-md border border-border p-3" aria-label="목표까지 거리">
       <div className="flex flex-wrap items-baseline justify-between gap-x-2">

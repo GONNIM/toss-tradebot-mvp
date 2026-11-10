@@ -88,6 +88,26 @@ async def get_swing():
     return {"ok": True, "generated_at": datetime.now(timezone.utc), "cards": cards}
 
 
+@router.get("/vip", dependencies=[Depends(require_sniper_token)])
+async def get_vip_tabs():
+    """1110-02 · VIP 탭 목록 — 토스 보유 조회 1번 + DB (그 밖의 외부 호출 없음). 토스 값은 그대로 낸다."""
+    from backend.services import vip_tabs
+
+    fetched_at = datetime.now(timezone.utc)
+    try:
+        from backend.execution.brokers.toss_client import get_toss_client
+
+        raw = await asyncio.to_thread(get_toss_client().holdings)
+    except Exception as exc:  # noqa: BLE001
+        return {"ok": False, "error_reason": f"{type(exc).__name__}: {str(exc)[:180]}", "fetched_at": fetched_at,
+                "tabs": [], "limits": []}
+    rows = real_holdings.parse_items(raw)
+    today = fetched_at.astimezone(real_holdings.KST).date()
+    async with get_session() as session:
+        out = await vip_tabs.build_tabs(session, rows, today, fetched_at)
+    return {"ok": True, "fetched_at": fetched_at, **out}
+
+
 @router.patch("/swing/{market}/{ticker}", dependencies=[Depends(require_sniper_token)])
 async def patch_swing_horizon(
     body: SwingHorizonBody,

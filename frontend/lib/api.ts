@@ -1,5 +1,6 @@
 import type { BrokerLinkInfo } from "@/lib/broker-link";
 import type { SwingResponse } from "@/lib/holdings-swing";
+import type { VipTabsResponse } from "@/lib/vip-tabs";
 export type { BrokerLinkInfo } from "@/lib/broker-link";
 /**
  * API 클라이언트 (FastAPI 백엔드).
@@ -937,6 +938,8 @@ export const api = {
     holdings: () => getWithSession<AccountHoldingsResponse>(`/account/holdings`),
     // 1108-02 · 보유 종목 사실 (DB 만 읽음) + 보유 성격 바꾸기 (long · short · unset)
     swing: () => getWithSession<SwingResponse>(`/account/swing`),
+    // 1110-02 · VIP 적자 종목 탭 (토스 보유 조회 1번 + DB)
+    vip: () => getWithSession<VipTabsResponse>(`/account/vip`),
     // 3단계 · 본문 {horizon, deadline?, memo?} — 보내지 않은 칸은 그대로 · deadline null = 기본값 · memo "" = 지움
     setHorizon: (
       market: string,
