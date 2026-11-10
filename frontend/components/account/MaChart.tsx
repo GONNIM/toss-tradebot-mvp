@@ -17,6 +17,7 @@ import {
   WEEK40_LIMIT_LINE,
   dailySourceText,
   dailyTipText,
+  monthTicks,
   spreadLabels,
 } from "@/lib/holdings-swing";
 
@@ -71,7 +72,8 @@ function DailyChart({ chart }: { chart: Chart }) {
         <ResponsiveContainer width="100%" height="100%">
           <ComposedChart data={data} margin={{ top: 4, right: 38, bottom: 0, left: 0 }}>
             <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
-            <XAxis dataKey="d" tickFormatter={(v: string) => v.slice(2, 7)} interval="preserveStartEnd" minTickGap={40}
+            <XAxis dataKey="d" ticks={monthTicks(data.map((p) => p.d))} tickFormatter={(v: string) => v.slice(2, 7)}
+              interval="preserveStartEnd" minTickGap={24}
               tick={{ fontSize: 11 }} />
             <YAxis domain={["auto", "auto"]} width={58} tick={{ fontSize: 11 }}
               tickFormatter={(v: number) => v.toLocaleString("ko-KR", { maximumFractionDigits: 0 })} />

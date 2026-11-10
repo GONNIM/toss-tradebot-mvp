@@ -404,6 +404,20 @@ export function longMaSourceText(m: SwingMa): string {
 }
 
 /** 선 끝 글자 세로 자리 — 입력 순서 그대로 돌려주되, 가까운 글자끼리는 최소 gap(px) 벌린다(무리 가운데를 중심으로). */
+/** 일봉 x축 눈금 — 달마다 첫 거래일 하나만 (글자가 년-월이라 같은 달이 두 번 찍히지 않게). */
+export function monthTicks(dates: string[]): string[] {
+  const out: string[] = [];
+  let last = "";
+  for (const d of dates) {
+    const ym = d.slice(0, 7);
+    if (ym !== last) {
+      out.push(d);
+      last = ym;
+    }
+  }
+  return out;
+}
+
 export function spreadLabels(ys: number[], gap: number): number[] {
   const order = ys.map((y, i) => ({ y, i })).sort((a, b) => a.y - b.y);
   // 겹치는 무리를 묶어 가운데 기준으로 펼친다

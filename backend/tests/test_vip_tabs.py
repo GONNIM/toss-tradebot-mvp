@@ -133,6 +133,8 @@ async def test_config_symbol_sold_today_is_config_only_and_held_config_is_config
     await _add(*_rows([(60.0, 50.0)] * 8, E))  # 설정 종목 · 이익 · 토스에 없음 → config_only
     out = await _tabs(http, toss)
     assert [(t["symbol"], t["reason"], t["position"]) for t in out["tabs"]] == [(E, "config_only", None)]
+    # 설정 종목만 토스에 없을 때는 「오늘 판 종목은 탭에서 뺐습니다」 줄을 붙이지 않는다 (탭에 남아 있으므로)
+    assert not any("오늘 판 종목은 탭에서 뺐습니다" in s for s in out["limits"])
     toss["items"] = [_toss_item(E, last=60.0)]
     out = await _tabs(http, toss)
     assert [(t["symbol"], t["reason"]) for t in out["tabs"]] == [(E, "config")]
@@ -312,4 +314,7 @@ async def test_one_toss_holdings_call_and_no_token_issue_when_cached(http, monke
 async def test_toss_failure_returns_ok_false_and_no_tabs(http, toss):
     toss["fail"] = True
     out = (await http.get("/api/v1/account/vip", headers=HDR)).json()
-    assert out["ok"] is False and out["tabs"] == [] and "가짜 실패" in out["error_reason"]
+    assert out["ok"] is False and out["tabs"] == []
+    # 예외 글자는 응답에 내보내지 않고 고정 문구만 (서버 로그에만 남김)
+    assert out["error_reason"] == "토스 보유 조회에 실패했습니다. 잠시 뒤 다시 열어 주십시오."
+    assert "가짜 실패" not in out["error_reason"]

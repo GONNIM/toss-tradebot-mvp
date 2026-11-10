@@ -1578,7 +1578,7 @@ function NewJudgmentForm({
                 type="text"
                 value={ticker}
                 onChange={(e) => setTicker(e.target.value)}
-                placeholder="예: NBIS · 005930 · WEN"
+                placeholder="예: NBIS · 000660 · AAPL"
                 className="mt-1 w-full rounded-lg border border-border bg-background px-2 py-1 font-mono text-sm"
               />
             </label>

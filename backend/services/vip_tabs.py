@@ -68,8 +68,8 @@ async def build_tabs(session, toss_rows: list[real_holdings.HoldingRow], today: 
             is_cfg = tag is not None and market == "US" and key[1] == tag
             row = live.get(key)
             if row is None:
-                sold_today = True
                 if not is_cfg:
+                    sold_today = True  # 설정 종목이 아닌 보유 종목을 실제로 뺐을 때만 한계 줄을 붙인다
                     continue
             net = hs.net_pnl_pct(h.close, h.avg_price, market) if h.close and h.avg_price and h.avg_price > 0 else None
             reason, turn_date = None, None
