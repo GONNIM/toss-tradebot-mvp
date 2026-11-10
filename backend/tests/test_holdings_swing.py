@@ -320,7 +320,7 @@ async def test_card_holds_under_20_bars_and_partial_under_120(clean):
     days = _days(60)
     await _add(*[_candle("ZZZB", "US", d, 10.0 + i * 0.01) for i, d in enumerate(days)], _hold("ZZZB", "US", days[-1], cur="USD"))
     c = (await _cards())[("US", "ZZZB")]
-    assert c["status"] == "ok" and [m["note"] for m in c["ma"]] == [None, None, "자료 부족"]
+    assert c["status"] == "ok" and [m["note"] for m in c["ma"]] == [None, None, "자료 부족", "200일 자료 부족"]
 
 
 @pytest.mark.asyncio
@@ -355,7 +355,7 @@ async def test_kr_card_uses_official_for_averages_and_flags_gap_over_2pct(clean)
                _hold(KR, "KR", days[-1], close=103.0), HoldingHorizon(market="KR", ticker=KR, horizon="long"))
     c = (await _cards())[("KR", KR)]
     assert c["status"] == "ok" and c["close_source"] == "krx"
-    assert all(m["distance_pct"] == 0.0 for m in c["ma"])  # 평균 거리는 공식 종가로 계산
+    assert all(m["distance_pct"] == 0.0 for m in c["ma"][:3])  # 평균 거리는 공식 종가로 계산
     assert c["source_gap"]["flag"] is True and c["source_gap"]["gap_pct"] == 3.0
     assert c["real_avg"]["text"] == "보류 · 판 값 기록 없음"  # 조건 4
 
@@ -482,7 +482,7 @@ async def test_card_third_layer_only_for_short_and_has_required_parts(clean):
 # ─── 금지 낱말 · 면책 문구 (정적 + 실제 출력) ───
 
 FORBIDDEN = re.compile(r"buy|sell|stop|trailing|추가 매수|손절|이익 보호|추적|사십시오|파십시오|장기로 하십시오|물타기"
-                       r"|신호|40주선 매매|위면 보유|아래면 현금|현금으로|사라(?!지)|팔라|매도하|매수하", re.I)
+                       r"|골든|데드|크로스|교차|정배열|역배열|신호|40주선 매매|위면 보유|아래면 현금|현금으로|사라(?!지)|팔라|매도하|매수하", re.I)
 
 
 def _module_string_literals(path: Path) -> list[str]:
@@ -1073,9 +1073,9 @@ async def test_us_judged_by_new_york_time_and_kr_by_kst(clean):
 
     async with get_session() as s:
         cards = {c["market"]: c for c in await hs.build_cards(s, TODAY, now=datetime(2026, 11, 7, 3, 0, tzinfo=timezone.utc))}
-    assert cards["KR"]["week40"]["as_of_week"] == date(2026, 11, 6)
-    assert cards["US"]["week40"]["as_of_week"] == date(2026, 10, 30)
-    assert cards["US"]["week40"]["data_last_date"] == thu
+    assert cards["KR"]["chart"]["week40"]["as_of_week"] == date(2026, 11, 6)
+    assert cards["US"]["chart"]["week40"]["as_of_week"] == date(2026, 10, 30)
+    assert cards["US"]["chart"]["week40"]["data_last_date"] == thu
 
 
 @pytest.mark.asyncio
@@ -1088,7 +1088,7 @@ async def test_data_stopped_on_wednesday_reports_data_last_date(clean):
 
     async with get_session() as s:
         c = {x["symbol"]: x for x in await hs.build_cards(s, TODAY, now=datetime(2026, 11, 7, 17, 0, tzinfo=timezone.utc))}[US]
-    assert c["week40"]["as_of_week"] == date(2026, 11, 6) and c["week40"]["data_last_date"] == wed
+    assert c["chart"]["week40"]["as_of_week"] == date(2026, 11, 6) and c["chart"]["week40"]["data_last_date"] == wed
 
 
 def test_streak_counts_over_300_weeks_and_series_is_cut_to_5_years():
@@ -1161,12 +1161,12 @@ async def test_week40_source_says_dividends_excluded_for_kr_and_us(clean):
         await _seed_long(market, sym, [100.0 + i * 0.05 for i in range(900)])
     cs = await _cards()
     for key in (("KR", KR), ("US", US)):
-        ck = cs[key]["week40"]["check"]
+        ck = cs[key]["chart"]["week40"]["check"]
         assert ck is not None and "배당 미반영" in ck["source"]
 
 
 @pytest.mark.asyncio
-async def test_week40_makes_no_external_call_and_hold_cards_have_none(clean, monkeypatch):
+async def test_week40_makes_no_external_call_and_hold_cards_have_chart(clean, monkeypatch):
     # ⑧
     from backend.discovery.data_sources.krx_price import loader
 
@@ -1182,7 +1182,9 @@ async def test_week40_makes_no_external_call_and_hold_cards_have_none(clean, mon
     monkeypatch.setattr(hs, "_default_long_fetch", boom)
     monkeypatch.setitem(__import__("sys").modules, "yfinance", None)
     cs = await _cards()
-    assert cs[("US", US)]["week40"]["series"] and cs[("KR", KR)]["status"] == "hold" and cs[("KR", KR)]["week40"] is None
+    # 1110-02 · 뒤집음: 보유 성격 미지정(카드 보류)이어도 그림(chart)은 채워진다 (㉣②)
+    assert cs[("US", US)]["chart"]["week40"]["series"] and cs[("KR", KR)]["status"] == "hold"
+    assert cs[("KR", KR)]["chart"]["week40"]["series"] and cs[("KR", KR)]["chart"]["daily"]
 
 
 @pytest.mark.asyncio
@@ -1193,5 +1195,5 @@ async def test_week40_null_without_long_series_and_output_has_no_forbidden_words
     await _seed_card("US", US, [100.0] * 130)
     await _seed_long("US", US, [100.0 + (i % 7) * 0.5 + i * 0.02 for i in range(900)])
     cs = await _cards()
-    assert cs[("KR", KR)]["week40"] is None
-    assert FORBIDDEN.search(json.dumps(cs[("US", US)]["week40"], ensure_ascii=False, default=str)) is None
+    assert cs[("KR", KR)]["chart"] is None
+    assert FORBIDDEN.search(json.dumps(cs[("US", US)]["chart"]["week40"], ensure_ascii=False, default=str)) is None

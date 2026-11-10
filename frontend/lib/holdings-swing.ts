@@ -8,6 +8,8 @@ export interface SwingMa {
   avg: number | null;
   distance_pct: number | null;
   note: string | null;
+  source?: string; // 1110-02 · 200일 줄만: 긴 일봉 출처 (20·60·120일 줄은 카드 기준 종가)
+  as_of?: string | null;
 }
 
 export interface SwingBlueItem {
@@ -59,7 +61,23 @@ export interface SwingCard {
   deadline: string | null; // 사용자가 정한 기한 (없으면 null = 기본값)
   memo: string | null;
   goal: SwingGoal | null; // 보류 카드는 null
-  week40: Week40 | null; // 보류 카드 · 긴 일봉 없음은 null
+  chart: Chart | null; // 긴 일봉이 없으면 null (보유 성격 미지정 · 보류 카드도 그림은 있음)
+}
+
+// 1110-02 · 그림 자료 — 일봉 1년 + 20·50·200일선 · 주봉 40주선
+export interface DailyPoint {
+  d: string;
+  c: number;
+  m20: number | null;
+  m50: number | null;
+  m200: number | null;
+}
+
+export interface Chart {
+  daily: DailyPoint[];
+  daily_note: string | null; // 마지막 날 200일선이 비었을 때만 「자료 부족」
+  daily_source: { source: string; from: string; to: string; n: number };
+  week40: Week40 | null;
 }
 
 // 4단계 · 40주 평균선 (계획 7절 「검토 조건」)
@@ -299,7 +317,8 @@ export const LONG_SOURCE_LABEL: Record<string, string> = {
 // ─── 4단계 · 40주 평균선 문구 도우미 ────────────────────────────
 
 export const WEEK40_FIRST_LINE = "사실로 보이는 것이며 매매 규칙 적용이 아님";
-export const WEEK40_LIMIT_LINE = "공개 시세 152종목 검증: 개별 종목은 통과 기준 미통과 · 지수는 큰 낙폭을 줄임 (2026-11-09)";
+export const WEEK40_LIMIT_LINE =
+  "공개 시세 152종목 검증: 개별 종목은 통과 기준 미통과 · 지수는 큰 낙폭을 줄임 (2026-11-09) · 20·50일선 규칙도 미통과 (2026-11-10 · 공개 시세 145종목)";
 export const WEEK40_BASIS_LINE = "카드 숫자는 운영 자료 기간으로 계산 · 전체 이력과 다를 수 있음";
 
 function signed(v: number, digits = 1): string {
@@ -345,4 +364,68 @@ export function week40TipText(p: Week40Point): string[] {
     lines.push(`거리 ${signed((p.c / p.m - 1) * 100)}`);
   }
   return lines;
+}
+
+// ─── 1110-02 · 일봉 1년 + 평균선 세 줄 문구 도우미 ───────────────
+
+export const DAILY_BASIS_LINE = "그림 평균선과 카드 글자 줄은 출처가 달라 값이 조금 다를 수 있음 · 사실 표시이며 매매 지시가 아님";
+export const MA_LINES: { key: "m20" | "m50" | "m200"; label: string; width: number; dash?: string }[] = [
+  { key: "m20", label: "20일", width: 1.5 },
+  { key: "m50", label: "50일", width: 1.5, dash: "5 3" },
+  { key: "m200", label: "200일(≈40주)", width: 2.5 },
+];
+
+/** 일봉 그림 아래 출처 줄. */
+export function dailySourceText(c: Chart): string {
+  const s = c.daily_source;
+  return `일봉 출처 ${s.source} · ${s.from} ~ ${s.to} · ${s.n.toLocaleString("ko-KR")}일 · 평균선은 이 자료 전체로 계산`;
+}
+
+/** 마우스 올림 글 — 날짜 · 종가 · 세 선 값 (사실만). */
+export function dailyTipText(p: DailyPoint): string[] {
+  const f = (v: number) => v.toLocaleString("ko-KR", { maximumFractionDigits: 2 });
+  return [
+    p.d.slice(0, 10),
+    `종가 ${f(p.c)}`,
+    `20일선 ${p.m20 === null ? "자료 부족" : f(p.m20)}`,
+    `50일선 ${p.m50 === null ? "자료 부족" : f(p.m50)}`,
+    `200일선 ${p.m200 === null ? "자료 부족" : f(p.m200)}`,
+  ];
+}
+
+/** 카드 글자 줄(20·60·120일)과 200일 줄을 나눈다. 200일 줄은 출처가 따로다. */
+export function splitMa(ma: SwingMa[]): { base: SwingMa[]; long: SwingMa | null } {
+  return { base: ma.filter((m) => m.days !== 200), long: ma.find((m) => m.days === 200) ?? null };
+}
+
+export function longMaSourceText(m: SwingMa): string {
+  const at = m.as_of ? ` · ${mmdd(m.as_of)} 기준` : "";
+  return m.source ? `출처 ${m.source}${at}` : "";
+}
+
+/** 선 끝 글자 세로 자리 — 입력 순서 그대로 돌려주되, 가까운 글자끼리는 최소 gap(px) 벌린다(무리 가운데를 중심으로). */
+export function spreadLabels(ys: number[], gap: number): number[] {
+  const order = ys.map((y, i) => ({ y, i })).sort((a, b) => a.y - b.y);
+  // 겹치는 무리를 묶어 가운데 기준으로 펼친다
+  const groups: { items: { y: number; i: number }[]; center: number }[] = [];
+  for (const it of order) {
+    groups.push({ items: [it], center: it.y });
+    // 앞 무리와 겹치면 합친다 (합친 뒤 다시 앞 무리와 비교)
+    while (groups.length > 1) {
+      const b = groups[groups.length - 1];
+      const a = groups[groups.length - 2];
+      const aBottom = a.center + ((a.items.length - 1) * gap) / 2;
+      const bTop = b.center - ((b.items.length - 1) * gap) / 2;
+      if (bTop - aBottom >= gap) break;
+      const items = [...a.items, ...b.items];
+      const center = items.reduce((s, x) => s + x.y, 0) / items.length;
+      groups.splice(groups.length - 2, 2, { items, center });
+    }
+  }
+  const out = new Array<number>(ys.length);
+  for (const g of groups) {
+    const top = g.center - ((g.items.length - 1) * gap) / 2;
+    g.items.forEach((it, k) => (out[it.i] = top + k * gap));
+  }
+  return out;
 }

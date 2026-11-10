@@ -75,6 +75,12 @@ WEEK_CHECK_COST = 0.0025       # 바뀔 때마다 0.25%
 WEEK_WHIPSAW_WEEKS = 4
 WEEK40_SOURCE = {"KR": "KRX 일봉(pykrx · 수정주가) · 배당 미반영", "US": "Yahoo 종가(yfinance) · 배당 미반영"}
 
+# ─ 1110-02 · 평균선 세 줄(20·50·200일) 그림 · 카드 200일 줄 (계획 2.2·2.3) ─
+CHART_DAILY_ROWS = 252         # 일봉 그림은 최근 1년(약 252거래일)
+CHART_MAS = (20, 50, 200)      # 그림의 세 평균선 (200일 ≈ 40주)
+LONG_MA_DAYS = 200             # 카드 글자 줄 200일 (긴 일봉에서 계산)
+LONG_TEXT_SOURCE = {"KR": "KRX 일봉(pykrx · 수정주가)", "US": "Yahoo 종가(yfinance · 배당 미조정)"}
+
 SELL_COST = {"KR": 0.0020 + 0.00015, "US": 0.001 + 0.001}
 COST_NOTE = {
     "KR": "비용 추정: 매도 세금 0.20% + 수수료 0.015%",
@@ -498,6 +504,43 @@ def ma_distances(closes: list[float]) -> list[dict]:
         avg = sum(closes[-n:]) / n
         out.append({"days": n, "avg": round(avg, 4), "distance_pct": round((closes[-1] / avg - 1) * 100, 2), "note": None})
     return out
+
+
+def ma200_line(market: str, dates: list[date], closes: list[float]) -> dict:
+    """카드 글자 줄 200일: 긴 일봉에서 계산 · 출처를 줄마다 따로 적는다 (20·60·120일 줄은 카드 기준 종가)."""
+    base = {"days": LONG_MA_DAYS, "avg": None, "distance_pct": None, "note": "200일 자료 부족",
+            "source": LONG_TEXT_SOURCE[market], "as_of": None}
+    if len(closes) < LONG_MA_DAYS:
+        return base
+    avg = sum(closes[-LONG_MA_DAYS:]) / LONG_MA_DAYS
+    base.update({"avg": round(avg, 4), "distance_pct": round((closes[-1] / avg - 1) * 100, 2), "note": None,
+                 "as_of": dates[-1]})
+    return base
+
+
+def daily_ma_series(dates: list[date], closes: list[float]) -> list[dict]:
+    """최근 1년 일봉 + 20·50·200일 평균. 평균은 긴 일봉 전체에서 계산하므로 창 앞쪽도 값이 있다 (모자라면 그 점만 null)."""
+    pre = [0.0]
+    for c in closes:
+        pre.append(pre[-1] + c)
+    out = []
+    for i in range(max(0, len(closes) - CHART_DAILY_ROWS), len(closes)):
+        row: dict = {"d": dates[i], "c": round(closes[i], 4)}
+        for n in CHART_MAS:
+            row[f"m{n}"] = round((pre[i + 1] - pre[i + 1 - n]) / n, 4) if i + 1 >= n else None
+        out.append(row)
+    return out
+
+
+def build_chart(market: str, long_series, local_today: date) -> Optional[dict]:
+    """그림 자료 {daily, daily_note, daily_source, week40}. 긴 일봉이 없으면 None (화면은 「자료 없음」). 문장은 만들지 않는다."""
+    if not long_series or not long_series[0]:
+        return None
+    dates, closes, _src = long_series
+    daily = daily_ma_series(dates, closes)
+    return {"daily": daily, "daily_note": "자료 부족" if daily and daily[-1]["m200"] is None else None,
+            "daily_source": {"source": LONG_TEXT_SOURCE[market], "from": dates[0], "to": dates[-1], "n": len(dates)},
+            "week40": build_week40(market, dates, closes, local_today)}
 
 
 def split_suspect(closes: list[float]) -> bool:
@@ -952,11 +995,14 @@ async def build_cards(session, today: date, now: Optional[datetime] = None) -> l
             hr = hrows.get((market, sym))
             horizon = hr.horizon if hr is not None and hr.horizon in HORIZONS else None  # unset 은 null 로 보냄
             card = {"market": market, "symbol": sym, "horizon": horizon, "status": "hold", "hold_reason": None,
-                    "deadline": hr.deadline if hr else None, "memo": hr.memo if hr else None, "goal": None, "week40": None,
+                    "deadline": hr.deadline if hr else None, "memo": hr.memo if hr else None, "goal": None, "chart": None,
                     "as_of": None, "close_source": "krx" if market == "KR" else "toss", "ma": [], "peak": None,
                     "blue_chip": None, "source_gap": None, "real_avg": {"status": "hold", "text": "보류 · 판 값 기록 없음"},
                     "profit_turn": None, "disclaimer": DISCLAIMER}
             cards.append(card)
+            lg0 = longs.get((market, sym))
+            if lg0:  # 보유 성격·카드 보류와 상관없이 그림은 보인다 (1110-02 ㉣②)
+                card["chart"] = build_chart(market, lg0, now_utc.astimezone(_LOCAL_TZ[market]).date())
             if horizon is None:
                 card["hold_reason"] = "보유 성격을 정하면 보여 드립니다"
                 continue
@@ -982,6 +1028,10 @@ async def build_cards(session, today: date, now: Optional[datetime] = None) -> l
 
             card["status"], card["as_of"] = "ok", series[-1][0]
             card["ma"] = ma_distances(closes)
+            if lg0:
+                card["ma"].append(ma200_line(market, lg0[0], lg0[1]))
+            else:
+                card["ma"].append(ma200_line(market, [], []))
             row = HoldingRow(sym, h.name, market, h.currency or "", h.qty or 0, h.avg_price or 0, h.close,
                              h.market_value, h.purchase_amount or 0, None, None, "computed")
             f = await real_holdings.holding_facts(session, row, today)
@@ -1012,7 +1062,4 @@ async def build_cards(session, today: date, now: Optional[datetime] = None) -> l
 
             card["goal"] = _build_goal(market, horizon, h.avg_price or 0, series[-1], hr, basis_date, basis_source,
                                        longs.get((market, sym)), today)
-            lg = longs.get((market, sym))
-            if lg:
-                card["week40"] = build_week40(market, lg[0], lg[1], now_utc.astimezone(_LOCAL_TZ[market]).date())
     return cards
