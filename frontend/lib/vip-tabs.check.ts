@@ -1,7 +1,7 @@
 // 1110-02 · VIP 탭 도우미 점검 (backend/tests/test_vip_tabs.py 의 tsx 시험이 실행) · 값은 모두 가짜
 import assert from "node:assert/strict";
 import { pickTab, pnlLines, priceText, tabKey, tabLabel, type VipTab } from "./vip-tabs";
-import { dailySourceText, dailyTipText, longMaSourceText, splitMa } from "./holdings-swing";
+import { dailySourceText, dailyTipText, longMaSourceText, splitMa, spreadLabels } from "./holdings-swing";
 
 const base = {
   turn_date: null, is_vip_config: false, chart: null, goal: null, goal_hold_reason: null, horizon: null, ma_text: [] as never[], card_status: null,
@@ -52,3 +52,14 @@ assert.equal(longMaSourceText(sp.long!), "출처 KRX 일봉(pykrx · 수정주�
 assert.equal(splitMa(ma.slice(0, 3)).long, null);
 
 console.log("vip-tabs ok");
+
+// 선 끝 글자 간격: 가까운 두 글자는 12px 이상 벌어지고, 먼 글자는 그대로
+{
+  const ys = spreadLabels([100, 104, 160], 12);
+  assert.ok(Math.abs(ys[1] - ys[0]) >= 12 - 1e-9);
+  assert.equal(ys[2], 160);
+  const three = spreadLabels([50, 52, 55, 200], 12);
+  const s = [three[0], three[1], three[2]].sort((a, b) => a - b);
+  assert.ok(s[1] - s[0] >= 12 - 1e-9 && s[2] - s[1] >= 12 - 1e-9);
+  assert.equal(three[3], 200);
+}

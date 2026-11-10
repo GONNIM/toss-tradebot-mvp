@@ -6,7 +6,7 @@
 // 색: 종가 검정 · 20일 호박 · 50일 보라 · 200일 틸 (상승 빨강 · 하락 파랑과 겹치지 않음). 숫자는 tabular-nums.
 
 import { useState } from "react";
-import { CartesianGrid, ComposedChart, Line, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
+import { CartesianGrid, ComposedChart, Customized, Line, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { Week40Chart } from "@/components/account/Week40Chart";
 import {
   Chart,
@@ -17,6 +17,7 @@ import {
   WEEK40_LIMIT_LINE,
   dailySourceText,
   dailyTipText,
+  spreadLabels,
 } from "@/lib/holdings-swing";
 
 type View = "daily" | "week";
@@ -34,19 +35,35 @@ function Tip({ active, payload }: { active?: boolean; payload?: { payload: Daily
   );
 }
 
+type AxisProps = {
+  yAxisMap?: Record<string, { scale: (v: number) => number }>;
+  offset?: { left: number; width: number };
+};
+
 function DailyChart({ chart }: { chart: Chart }) {
   const data = chart.daily;
-  const last = data.length - 1;
-  const endLabel = (text: string, color: string) =>
-    // 선 끝 글자: 마지막 점 오른쪽에 선 이름을 쓴다
-    function EndLabel(p: { x?: number; y?: number; index?: number; value?: number | null }) {
-      if (p.index !== last || p.value === null || p.value === undefined || p.x === undefined || p.y === undefined) return <g />;
-      return (
-        <text x={p.x + 4} y={p.y} dy={4} fontSize={10} fill={color}>
-          {text}
-        </text>
-      );
-    };
+  const lastPt = data[data.length - 1];
+  // 선 끝 글자: 마지막 점 오른쪽에 선 이름을 쓴다. 값이 가까워 글자가 겹치면 12px 간격으로 벌린다.
+  const ends: { text: string; color: string; value: number | null }[] = [
+    { text: "종가", color: "hsl(var(--foreground))", value: lastPt?.c ?? null },
+    ...MA_LINES.map((l) => ({ text: l.key.slice(1) + "일", color: LINE_COLOR[l.key], value: lastPt?.[l.key] ?? null })),
+  ];
+  function EndLabels(props: AxisProps) {
+    const y = props.yAxisMap ? Object.values(props.yAxisMap)[0] : undefined;
+    if (!y || !props.offset) return <g />;
+    const x = props.offset.left + props.offset.width + 4;
+    const shown = ends.filter((e): e is { text: string; color: string; value: number } => e.value !== null);
+    const ys = spreadLabels(shown.map((e) => y.scale(e.value)), 12);
+    return (
+      <g data-testid="end-labels">
+        {shown.map((e, i) => (
+          <text key={e.text} x={x} y={ys[i]} dy={4} fontSize={10} fill={e.color}>
+            {e.text}
+          </text>
+        ))}
+      </g>
+    );
+  }
   return (
     <div className="space-y-2" data-testid="daily-chart">
       <div className="text-[11px] text-muted-foreground">{WEEK40_FIRST_LINE}</div>
@@ -60,12 +77,12 @@ function DailyChart({ chart }: { chart: Chart }) {
               tickFormatter={(v: number) => v.toLocaleString("ko-KR", { maximumFractionDigits: 0 })} />
             <Tooltip content={<Tip />} isAnimationActive={false} />
             <Line type="linear" dataKey="c" stroke="hsl(var(--foreground))" strokeWidth={1.25} dot={false}
-              isAnimationActive={false} label={endLabel("종가", "hsl(var(--foreground))")} />
+              isAnimationActive={false} />
             {MA_LINES.map((l) => (
               <Line key={l.key} type="linear" dataKey={l.key} stroke={LINE_COLOR[l.key]} strokeWidth={l.width}
-                strokeDasharray={l.dash} dot={false} connectNulls={false} isAnimationActive={false}
-                label={endLabel(l.key.slice(1) + "일", LINE_COLOR[l.key])} />
+                strokeDasharray={l.dash} dot={false} connectNulls={false} isAnimationActive={false} />
             ))}
+            <Customized component={EndLabels} />
           </ComposedChart>
         </ResponsiveContainer>
       </div>

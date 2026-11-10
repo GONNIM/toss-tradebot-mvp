@@ -402,3 +402,30 @@ export function longMaSourceText(m: SwingMa): string {
   const at = m.as_of ? ` · ${mmdd(m.as_of)} 기준` : "";
   return m.source ? `출처 ${m.source}${at}` : "";
 }
+
+/** 선 끝 글자 세로 자리 — 입력 순서 그대로 돌려주되, 가까운 글자끼리는 최소 gap(px) 벌린다(무리 가운데를 중심으로). */
+export function spreadLabels(ys: number[], gap: number): number[] {
+  const order = ys.map((y, i) => ({ y, i })).sort((a, b) => a.y - b.y);
+  // 겹치는 무리를 묶어 가운데 기준으로 펼친다
+  const groups: { items: { y: number; i: number }[]; center: number }[] = [];
+  for (const it of order) {
+    groups.push({ items: [it], center: it.y });
+    // 앞 무리와 겹치면 합친다 (합친 뒤 다시 앞 무리와 비교)
+    while (groups.length > 1) {
+      const b = groups[groups.length - 1];
+      const a = groups[groups.length - 2];
+      const aBottom = a.center + ((a.items.length - 1) * gap) / 2;
+      const bTop = b.center - ((b.items.length - 1) * gap) / 2;
+      if (bTop - aBottom >= gap) break;
+      const items = [...a.items, ...b.items];
+      const center = items.reduce((s, x) => s + x.y, 0) / items.length;
+      groups.splice(groups.length - 2, 2, { items, center });
+    }
+  }
+  const out = new Array<number>(ys.length);
+  for (const g of groups) {
+    const top = g.center - ((g.items.length - 1) * gap) / 2;
+    g.items.forEach((it, k) => (out[it.i] = top + k * gap));
+  }
+  return out;
+}
