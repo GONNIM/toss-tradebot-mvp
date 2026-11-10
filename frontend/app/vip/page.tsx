@@ -12,7 +12,7 @@ import {
   VipQuote,
 } from "@/lib/api";
 import { AdminSessionBar } from "@/components/admin/AdminSessionBar";
-import { editErrorMessage } from "@/lib/auth";
+import { editErrorMessage, LOGIN_REQUIRED_MESSAGE } from "@/lib/auth";
 
 // ─────────────────────────────────────────────
 // Format helpers
@@ -1079,6 +1079,10 @@ function ActivistEditor({
 // Page
 // ─────────────────────────────────────────────
 
+function isUnauthorized(err: unknown): boolean {
+  return /failed: 401\b/.test((err as Error | null)?.message ?? "");
+}
+
 export default function VipPage() {
   const qc = useQueryClient();
   const [editorOpen, setEditorOpen] = useState(false);
@@ -1086,13 +1090,16 @@ export default function VipPage() {
   const statusQ = useQuery({
     queryKey: ["vip", "status"],
     queryFn: () => api.memeWatch.vip.status(),
-    refetchInterval: 30_000,
+    // 1110-01 · 401 이면 재시도·30초 재조회를 멈춘다 (로그인하면 아래에서 다시 조회)
+    retry: false,
+    refetchInterval: (q) => (isUnauthorized(q.state.error) ? false : 30_000),
   });
 
   const configQ = useQuery({
     queryKey: ["vip", "config"],
     queryFn: () => api.memeWatch.vip.getConfig(),
     enabled: editorOpen,
+    retry: false,
   });
 
   useEffect(() => {
@@ -1119,7 +1126,10 @@ export default function VipPage() {
       </header>
 
       {/* 1028-03 · 설정 변경은 관리자 로그인 필요 */}
-      <AdminSessionBar scope="vip" />
+      <AdminSessionBar
+        scope="vip"
+        onSessionChange={() => qc.invalidateQueries({ queryKey: ["vip"] })}
+      />
 
       {statusQ.isLoading && (
         <div className="rounded-lg border border-border bg-card p-4 text-sm text-muted-foreground">
@@ -1127,7 +1137,13 @@ export default function VipPage() {
         </div>
       )}
 
-      {statusQ.isError && (
+      {statusQ.isError && isUnauthorized(statusQ.error) && (
+        <div className="rounded-lg border border-border bg-card p-4 text-sm text-muted-foreground">
+          {LOGIN_REQUIRED_MESSAGE}
+        </div>
+      )}
+
+      {statusQ.isError && !isUnauthorized(statusQ.error) && (
         <div className="rounded-lg border border-warn/50 bg-warn/10 p-4 text-sm text-warn">
           상태 조회 실패: {(statusQ.error as Error).message}
         </div>
