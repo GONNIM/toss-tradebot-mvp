@@ -887,8 +887,8 @@ export const api = {
         `/meme-watch/tickers/${encodeURIComponent(ticker)}/history?hours=${hours}`,
       ),
     vip: {
-      status: () => get<VipStatus>(`/meme-watch/vip/status`),
-      getConfig: () => get<VipConfig>(`/meme-watch/vip/config`),
+      status: () => getWithSession<VipStatus>(`/meme-watch/vip/status`),
+      getConfig: () => getWithSession<VipConfig>(`/meme-watch/vip/config`),
       patchConfig: (body: VipConfigPatch) =>
         patch<VipConfigPatchResponse>(`/meme-watch/vip/config`, body),
     },

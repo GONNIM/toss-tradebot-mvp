@@ -65,9 +65,36 @@ async def test_principles_confirm_with_token_passes_gate(client: AsyncClient):
     assert r.status_code != 401
 
 
+VIP_READS = ["/api/v1/meme-watch/vip/status", "/api/v1/meme-watch/vip/config"]
+
+
 @pytest.mark.asyncio
-async def test_reads_stay_public(client: AsyncClient):
-    """읽기 API 는 그대로 공개."""
-    for path in ("/api/v1/meme-watch/activist/universe", "/api/v1/meme-watch/vip/config"):
-        r = await client.get(path)
-        assert r.status_code != 401, path
+@pytest.mark.parametrize("path", VIP_READS)
+async def test_vip_read_without_token_is_401(client: AsyncClient, path):
+    """1110-01 · VIP 조회에는 보유 평단·수량·손익이 들어 있어 로그인 필수."""
+    assert (await client.get(path)).status_code == 401
+    r = await client.get(path, headers={"X-API-Token": "wrong"})
+    assert r.status_code == 401
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("path", VIP_READS)
+async def test_vip_read_with_token_header_passes_gate(client: AsyncClient, path):
+    r = await client.get(path, headers={"X-API-Token": TOKEN})
+    assert r.status_code != 401
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("path", VIP_READS)
+async def test_vip_read_with_cookie_passes_gate(client: AsyncClient, path):
+    lr = await client.post("/api/v1/admin/session", json={"token": TOKEN})
+    assert lr.status_code == 200, lr.text
+    r = await client.get(path)
+    assert r.status_code != 401
+
+
+@pytest.mark.asyncio
+async def test_other_reads_stay_public(client: AsyncClient):
+    """VIP 외 읽기 API 는 그대로 공개."""
+    r = await client.get("/api/v1/meme-watch/activist/universe")
+    assert r.status_code != 401

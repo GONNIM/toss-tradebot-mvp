@@ -178,7 +178,8 @@ async def get_score_history(
 # ─────────────────────────────────────────────
 
 
-@router.get("/vip/status")
+# 1110-01 · 보유 종목 평단·수량·손익이 들어 있어 조회도 관리자 로그인 필수
+@router.get("/vip/status", dependencies=[Depends(require_sniper_token)])
 async def get_vip_status():
     """VIP 감시 스냅샷 — 활성 여부·현재가·P&L·최근 이벤트·activist 최신 필링.
 
@@ -190,7 +191,7 @@ async def get_vip_status():
     return await get_status()
 
 
-@router.get("/vip/config")
+@router.get("/vip/config", dependencies=[Depends(require_sniper_token)])
 def get_vip_config():
     """편집 UI 용 — 현재 파라미터(ticker·company_name·tag·activist) + overrides 상태."""
     from backend.discovery.vip.vip_watch import get_config
