@@ -1,7 +1,10 @@
 // 1110-02 · VIP 탭 도우미 점검 (backend/tests/test_vip_tabs.py 의 tsx 시험이 실행) · 값은 모두 가짜
 import assert from "node:assert/strict";
 import { pickTab, pnlLines, priceText, tabKey, tabLabel, type VipTab } from "./vip-tabs";
-import { dailySourceText, dailyTipText, longMaSourceText, monthTicks, splitMa, spreadLabels } from "./holdings-swing";
+import {
+  CROSS_NOTE, crossDirText, crossPoints, crossRowText, dailySourceText, dailyTipText, longMaSourceText, monthTicks, recentCrosses,
+  splitMa, spreadLabels,
+} from "./holdings-swing";
 
 const base = {
   turn_date: null, is_vip_config: false, chart: null, goal: null, goal_hold_reason: null, horizon: null, ma_text: [] as never[], card_status: null,
@@ -70,3 +73,41 @@ console.log("vip-tabs ok");
   assert.deepEqual(t, ["2026-01-02", "2026-02-02", "2026-03-03"]);
   assert.equal(new Set(t.map((d) => d.slice(0, 7))).size, t.length);
 }
+
+// 1110-03 · 평균선 넘은 지점 — 앞 「쪽 있는」 날과 쪽이 다를 때만 · 선 없음·같음은 건너뜀 · 첫 날은 지점 아님
+{
+  const P = (date: string, c: number, m: number | null) => ({ date, c, m });
+  const pts = [
+    P("2026-01-02", 9, null), // 선 없음
+    P("2026-01-09", 11, 10), // 첫 쪽(위) — 지점 아님
+    P("2026-01-16", 9, 10), // 위 → 아래
+    P("2026-01-23", 10, 10), // 같음 — 건너뜀
+    P("2026-01-30", 9.5, 10), // 아래 그대로
+    P("2026-02-06", 10.5, 10), // 아래 → 위
+    P("2026-02-13", 11, 10.2), // 위 그대로
+  ];
+  const got = crossPoints(pts);
+  assert.deepEqual(got.map((g) => [g.date, g.dir]), [["2026-01-16", "down"], ["2026-02-06", "up"]]);
+  assert.deepEqual(got[1], { date: "2026-02-06", c: 10.5, m: 10, dir: "up" });
+  // 같음을 사이에 둔 같은 쪽은 지점 아님
+  assert.deepEqual(crossPoints([P("a", 9, 10), P("b", 10, 10), P("c", 9, 10)]), []);
+  // 선 없음 뒤 처음 쪽은 지점 아님
+  assert.deepEqual(crossPoints([P("a", 9, null), P("b", 11, 10)]), []);
+  assert.deepEqual(crossPoints([]), []);
+  // 마지막 지점 뒤로 같은 쪽이 이어진 수 = 서버 streak_weeks (쪽 없는 주가 없을 때)
+  const series = [11, 12, 9, 8, 7, 12, 13, 14].map((c, i) => P(`w${i}`, c, 10));
+  const last = crossPoints(series).at(-1)!;
+  assert.equal(series.length - series.findIndex((s) => s.date === last.date), 3);
+  // 최근 것 먼저 · 5개까지
+  const many = Array.from({ length: 8 }, (_, i) => P(`d${i}`, i % 2 ? 9 : 11, 10));
+  const rc = recentCrosses(crossPoints(many));
+  assert.equal(rc.length, 5);
+  assert.equal(rc[0].date, "d7");
+  assert.equal(crossDirText("40주선", "up"), "▲ 40주선 위로 올라섬");
+  assert.equal(crossDirText("200일선", "down"), "▼ 200일선 아래로 내려감");
+  assert.deepEqual(crossRowText({ date: "2026-02-06T00:00:00", c: 12345.678, m: 12000, dir: "up" }, "200일선"), {
+    date: "2026-02-06", dir: "▲ 200일선 위로 올라섬", close: "종가 12,345.68", line: "200일선 12,000",
+  });
+  assert.equal(CROSS_NOTE, "표시는 지난 사실이며 매매 지시가 아님");
+}
+console.log("cross ok");

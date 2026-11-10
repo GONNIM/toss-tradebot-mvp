@@ -504,7 +504,8 @@ def test_no_forbidden_words_in_backend_strings():
 
 def test_no_forbidden_words_in_frontend_component():
     root = Path(hs.__file__).resolve().parents[2] / "frontend"
-    for rel in ("components/account/HoldingSwing.tsx", "components/account/Week40Chart.tsx", "lib/holdings-swing.ts"):
+    for rel in ("components/account/HoldingSwing.tsx", "components/account/Week40Chart.tsx", "lib/holdings-swing.ts",
+                "components/account/CrossMarks.tsx", "components/account/MaChart.tsx"):
         text = (root / rel).read_text(encoding="utf-8")
         assert FORBIDDEN.search(text) is None, rel
 

@@ -223,7 +223,8 @@ def test_no_forbidden_words_in_new_server_strings_and_frontend_files():
         assert bad == [], (mod.name, bad)
     fe = ROOT / "frontend"
     for rel in ("components/account/MaChart.tsx", "components/account/HoldingSwing.tsx", "components/account/Week40Chart.tsx",
-                "components/vip/VipTabs.tsx", "components/vip/VipTabBody.tsx", "lib/holdings-swing.ts"):
+                "components/vip/VipTabs.tsx", "components/vip/VipTabBody.tsx", "lib/holdings-swing.ts",
+                "components/account/CrossMarks.tsx"):
         assert FORBIDDEN.search((fe / rel).read_text(encoding="utf-8")) is None, rel
     # 제외: components/vip/VipConfigPanels.tsx = 기존 VIP 칸(설정 종목의 익절·손절·추적 알림 조건 · 「선행 신호」 문구).
     # 사용자가 따로 설정한 알림이라 1108-02 문구 규칙 밖이다 — 제외 파일이 이 하나뿐인지 확인한다.
