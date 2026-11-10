@@ -383,7 +383,7 @@ export function HoldingSwing({ holdings, isAdmin }: { holdings: AccountHolding[]
                   ) : (
                     <Facts card={card} />
                   )}
-                  <p className="text-[11px] text-muted-foreground">{card.disclaimer} · 평단 대비 손익은 위 표(토스 값 그대로)를 보십시오.</p>
+                  <p className="text-[11px] text-muted-foreground">{card.disclaimer} · 평단 대비 손익은 위 표를 보십시오 (금액은 토스 값 그대로 · %는 토스 손익 금액 ÷ 토스 매입 금액).</p>
                 </>
               )}
             </article>

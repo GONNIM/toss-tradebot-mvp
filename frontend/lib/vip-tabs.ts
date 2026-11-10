@@ -90,5 +90,5 @@ export function priceText(v: number | null, currency: string): string {
     : `₩${Math.round(v).toLocaleString("ko-KR")}`;
 }
 
-export const POSITION_SOURCE_LINE = "토스 원장 값 그대로 · 사이트가 다시 계산하지 않음";
+export const POSITION_SOURCE_LINE = "평단 · 수량 · 현재가 · 손익 금액은 토스 값 그대로 · 손익 %는 토스 손익 금액 ÷ 토스 매입 금액";
 export const GOAL_HOLD_LINE = "보유 성격을 정하면 목표 칸이 보입니다";

@@ -6,6 +6,7 @@
 from __future__ import annotations
 
 import asyncio
+import logging
 from datetime import date, datetime, timezone
 
 from typing import Literal, Optional
@@ -17,6 +18,9 @@ from sqlalchemy import select
 from backend.api.auth import require_sniper_token
 from backend.api.schemas import AccountHolding, AccountHoldingsResponse, BrokerLinkOut
 from backend.services import broker_links, fx, holdings_swing, real_holdings
+
+_log = logging.getLogger(__name__)
+VIP_TOSS_ERROR = "토스 보유 조회에 실패했습니다. 잠시 뒤 다시 열어 주십시오."
 from backend.services.db import get_session
 from backend.services.models import TossStockCode
 
@@ -99,7 +103,9 @@ async def get_vip_tabs():
 
         raw = await asyncio.to_thread(get_toss_client().holdings)
     except Exception as exc:  # noqa: BLE001
-        return {"ok": False, "error_reason": f"{type(exc).__name__}: {str(exc)[:180]}", "fetched_at": fetched_at,
+        # 예외 글자에 계정 정보가 섞일 수 있어 응답에는 고정 문구만 · 자세한 내용은 서버 로그에만 (1110-02 Fable 관찰 ㉡)
+        _log.warning("[account/vip] 토스 보유 조회 실패: %s: %s", type(exc).__name__, exc)
+        return {"ok": False, "error_reason": VIP_TOSS_ERROR, "fetched_at": fetched_at,
                 "tabs": [], "limits": []}
     rows = real_holdings.parse_items(raw)
     today = fetched_at.astimezone(real_holdings.KST).date()

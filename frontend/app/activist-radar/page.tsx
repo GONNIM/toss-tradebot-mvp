@@ -774,7 +774,7 @@ function UniverseEditor({
               type="text"
               value={keywords}
               onChange={(e) => setKeywords(e.target.value)}
-              placeholder="예: WEN, WENDY"
+              placeholder="예: AAPL, APPLE"
               className="mt-1 w-full rounded-lg border border-border bg-background px-2 py-1 text-sm font-mono"
             />
           </div>
