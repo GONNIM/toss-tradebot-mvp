@@ -67,11 +67,22 @@ assert.deepEqual(hits, [], "화면 문자열에 내부 필드 이름: " + hits.j
 // WP87 · D-day
 assert.equal(dday(0), "D-0");
 assert.equal(dday(-1), "D+1");
-assert.equal(trialSentence("PHASE3", "2026-09-29", -1), "3상 시험의 종료 예정일(9월 29일)이 지났습니다. 결과 발표를 기다리는 중입니다.");
+// 1111-01 · 「결과 발표 대기」 단정 삭제 → 등록부 사실 (상태 · 마지막 갱신) · 상태 없으면 확인 못 함
+assert.equal(trialSentence("PHASE3", "2026-09-29", -1), "3상 시험의 등록부 예정일(9월 29일)이 지났습니다. 등록부 상태는 확인하지 못했습니다.");
+assert.equal(
+  trialSentence("PHASE1", "2026-10-30", -12, { overall_status: "RECRUITING", pcd_type: "ESTIMATED", last_update: "2026-06-09" }),
+  "1상 시험의 등록부 예정일(10월 30일)이 지났습니다. 등록부 상태는 「모집 중」입니다. 마지막 갱신은 6월 9일입니다.",
+);
+assert.equal(trialSentence("PHASE2", "2026-10-01", -5, { overall_status: "COMPLETED", pcd_type: "ACTUAL" }), "2상 시험이 10월 1일에 끝났다고 등록부에 적혀 있습니다. 등록부 상태는 「완료」입니다.");
+assert.ok(!/결과 발표 대기|결과 발표를 기다리/.test(trialSentence("PHASE3", "2026-09-29", -1) ?? ""));
 // WP89 · 지난 시험 · 짧은 판 · 카드 이유
-assert.equal(endLabel("2026-09-30", -1, "short"), "9월 30일 종료 예정일 지남(결과 발표 대기)");
+assert.equal(endLabel("2026-09-30", -1, "short"), "9월 30일 등록부 예정일 지남 · 상태 확인 못 함");
+assert.equal(endLabel("2026-10-30", -12, "short", { overall_status: "RECRUITING" }), "10월 30일 등록부 예정일 지남 · 상태 모집 중");
+assert.equal(endLabel("2026-10-30", -12, "long", { overall_status: "RECRUITING", last_update: "2026-06-09" }), "10월 30일 등록부 예정일 지남 · 상태 모집 중 · 마지막 갱신 6월 9일 (등록부 주간 사본 기준)");
+assert.equal(endLabel("2026-10-30", -12, "short", { overall_status: "SOME_NEW_VALUE" }), "10월 30일 등록부 예정일 지남 · 상태 SOME_NEW_VALUE");   // 사전에 없으면 원문
 assert.equal(endLabel("2026-10-03", 2, "short"), "10월 3일(D-2) 종료 예정(결과 발표일 아님)");
-assert.ok(rumorReason(-1, "quiet", 9).startsWith("이 카드에 오른 이유: 임상 종료 예정일 지남(결과 발표 대기)"));
+assert.ok(rumorReason(-1, "quiet", 9).startsWith("이 카드에 오른 이유: 임상 등록부 예정일 지남 · 상태 확인 못 함"));
+assert.ok(rumorReason(-1, "quiet", 9, { overall_status: "ACTIVE_NOT_RECRUITING" }).startsWith("이 카드에 오른 이유: 임상 등록부 예정일 지남 · 상태 모집 끝·진행 중"));
 assert.equal(stageLabel("spread"), "언급 있음(평소 수준)");
 // WP87 · 언급 카드 표현 (경보 아님 frenzy = 언급 늘어남)
 assert.ok(mentionSentence("frenzy", 8, 4, "4.0", 0.625, false).startsWith("언급 늘어남 · "));   // 24시간 4건 · 6.4배 (경보 아님)

@@ -495,6 +495,8 @@ def _trial_display(nct: str) -> dict[str, Any]:
         "allocation": m.get("allocation", ""), "allocation_ko": _ko(m.get("allocation", "")),
         "masking": m.get("masking", ""), "masking_ko": _ko(m.get("masking", "")),
         "primary_outcomes": outs, "overall_status": m.get("overall_status", ""),
+        # 1111-01 · 등록부 사실 (주간 사본) · 화면 상태 줄이 「결과 발표 대기」 대신 이 값을 그대로 씀
+        "pcd_type": m.get("primary_completion_date_type", ""), "last_update": m.get("last_update_posted_date", ""),
     }
 
 
@@ -886,6 +888,20 @@ async def post_fr6c_confirm(body: Fr6cConfirmIn, _admin: str = Depends(require_s
         code = 409 if "이미" in str(e) else 400
         raise HTTPException(status_code=code, detail=str(e))
     return {"accession": body.accession, **dec}
+
+
+@router.get("/quote/{ticker}")
+async def get_quote(ticker: str, _admin: str = Depends(require_sniper_token)) -> dict[str, Any]:
+    """1111-01 · 종목 가격·전문가 의견 칸 (관리자 전용 · 표시 전용).
+
+    저장값(하루 1회 잡) + 네이버 현재가 1건 (종목별 60초 캐시). 후보(레이더·소문 목록) 밖 기호는 404 · 바깥 호출 0.
+    """
+    from backend.services import biotech_quotes as bq
+
+    t = bq.normalize(ticker)
+    if not t or t not in await bq.candidate_set():
+        raise HTTPException(status_code=404, detail="후보 종목이 아닙니다")
+    return await bq.quote_view(t)
 
 
 @router.get("/kpi.json", response_model=BiotechKpi)

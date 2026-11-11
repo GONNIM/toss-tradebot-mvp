@@ -676,6 +676,20 @@ async def job_outcomes():
         await _alert_job_failure("판정·후보 결과 계산", e, 8, 10)
 
 
+async def job_biotech_quotes():
+    """1111-01 · 바이오 후보 종목 시세·전문가 의견·AI 요약 08:45 KST 화~토 (표시 전용 · 점수·경보 미사용).
+
+    받기는 세션 밖에서 끝내고 종목마다 짧게 쓴다 (1102-08 교훈) · 07:10 미국 보유 기록 뒤 yfinance 와 겹치지 않음.
+    """
+    try:
+        from backend.services import biotech_quotes
+
+        await biotech_quotes.run_quotes()
+    except Exception as e:
+        logger.error(f"[cron] biotech quotes failed: {e}", exc_info=True)
+        await _alert_job_failure("바이오 종목 시세·전문가 의견", e, 8, 45)
+
+
 async def job_universe_refresh():
     try:
         await run_universe_refresh()
@@ -940,6 +954,10 @@ def build_scheduler() -> AsyncIOScheduler:
     scheduler.add_job(job_holdings_snapshot_us, CronTrigger(day_of_week="tue-sat", hour=7, minute=10),
                       id="holdings_snapshot_us",
                       name="토스 보유 기록 미국 07:10 KST",
+                      replace_existing=True, coalesce=True, misfire_grace_time=GRACE_DEFAULT)
+    scheduler.add_job(job_biotech_quotes, CronTrigger(day_of_week="tue-sat", hour=8, minute=45),
+                      id="biotech_quotes",
+                      name="바이오 종목 시세·전문가 의견 08:45 KST",
                       replace_existing=True, coalesce=True, misfire_grace_time=GRACE_DEFAULT)
     scheduler.add_job(job_outcomes, CronTrigger(hour=8, minute=10),
                       id="outcomes_daily",

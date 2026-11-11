@@ -2071,6 +2071,49 @@ class SwingLongClose(Base):
     fetched_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
 
 
+class BiotechLongClose(Base):
+    """1111-01 · 바이오 후보 종목 일봉 종가 (yfinance · 배당 미조정) — swing_long_close 와 분리 (보유 종목 잡과 덮어쓰기 충돌 없음).
+
+    표시 전용: 주봉 5년·40주 / 일봉 1년 그림만 · 점수·순위·후보 선정·경보에 쓰지 않는다.
+    """
+
+    __tablename__ = "biotech_long_close"
+
+    ticker: Mapped[str] = mapped_column(String(16), primary_key=True)
+    trade_date: Mapped[date] = mapped_column(Date, primary_key=True)
+    close: Mapped[float] = mapped_column(Float)
+    fetched_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
+
+
+class BiotechQuoteDaily(Base):
+    """1111-01 · 바이오 후보 종목 하루 1회 시세·전문가 의견 원자료 + AI 요약 (표시 전용 · 조회일 = asof_date).
+
+    analyst_json = {n_opinions, rec_key, dist{...}, targets{mean,median,high,low,current}, changes[최근 5건]}
+    summary_json = {ok, lines, model, provider, sources[], made_at} · sec8k_json = {accession, filing_date, title, lead, url}
+    """
+
+    __tablename__ = "biotech_quote_daily"
+
+    ticker: Mapped[str] = mapped_column(String(16), primary_key=True)
+    asof_date: Mapped[date] = mapped_column(Date, primary_key=True)  # 조회일 (KST) · 의견이 나온 날 아님
+    fetched_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
+    exchange: Mapped[Optional[str]] = mapped_column(String(12))      # 야후 거래소 코드 (네이버 코드 고르기용)
+    price_close: Mapped[Optional[float]] = mapped_column(Float)
+    volume: Mapped[Optional[float]] = mapped_column(Float)
+    avg_volume: Mapped[Optional[float]] = mapped_column(Float)
+    market_cap: Mapped[Optional[float]] = mapped_column(Float)
+    low_52w: Mapped[Optional[float]] = mapped_column(Float)
+    high_52w: Mapped[Optional[float]] = mapped_column(Float)
+    total_cash: Mapped[Optional[float]] = mapped_column(Float)
+    short_pct_float: Mapped[Optional[float]] = mapped_column(Float)
+    short_asof: Mapped[Optional[date]] = mapped_column(Date)
+    analyst_json: Mapped[Optional[str]] = mapped_column(Text)
+    sec8k_json: Mapped[Optional[str]] = mapped_column(Text)
+    summary_json: Mapped[Optional[str]] = mapped_column(Text)
+    summary_input_hash: Mapped[Optional[str]] = mapped_column(String(64))
+    summary_checked_at: Mapped[Optional[datetime]] = mapped_column(DateTime)
+
+
 class SwingReference(Base):
     """대형·대표 기준 값 (하루 1회 잡이 저장 · 화면 요청 때는 외부 호출 없이 읽음).
 

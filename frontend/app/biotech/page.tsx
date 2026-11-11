@@ -22,6 +22,7 @@ import type { BrokerLinkInfo } from "@/lib/broker-link";
 import { RumorCard } from "@/components/biotech/RumorCard";
 import { Fr6cTable } from "@/components/biotech/Fr6cTable";
 import { ReadoutCards } from "@/components/biotech/ReadoutCards";
+import { QuotePanel } from "@/components/biotech/QuotePanel";
 import type { Fr6cCells, ReadoutRow } from "@/lib/biotech-fr6c";
 import type { SessionInfo } from "@/lib/auth";
 import { alertCriteria, cardText, checkedAtLabel, conditionsLine, redditLine, ctgovUrl, exhibitLine, inputLabel, inputsMissingLine, groupForm4, insiderSummary, insiderTxLine, LEAD_LABEL, mcapBadge, mentionSentence, multSentence, refreshLabel, rumorReason, shortName, sortFilterCards, sortLabel, summaryStatus, tickerOrUnknown, trialSentence } from "@/lib/biotech-display";
@@ -110,7 +111,11 @@ async function apiFetch<T>(path: string): Promise<T> {
 }
 
 // ── 순위표 (섹션 5) 컬럼 ────────────────────────────────
-const radarColumns = (links: Record<string, BrokerLinkInfo>): BiotechTableColumn<RadarRow>[] => [
+// 1111-01 · 티커 칸에 「가격·의견」 단추 · 누르면 그 행 아래에 접힘 칸 (열 수 ≤ 7 유지)
+const radarColumns = (
+  links: Record<string, BrokerLinkInfo>,
+  quote: { open: string | null; toggle: (ticker: string) => void },
+): BiotechTableColumn<RadarRow>[] => [
   { key: "rank", label: "#", align: "right", render: (r) => r.rank },
   {
     key: "ticker",
@@ -119,6 +124,14 @@ const radarColumns = (links: Record<string, BrokerLinkInfo>): BiotechTableColumn
       <span className="inline-flex flex-wrap items-center gap-1">
         <StockLink ticker={r.ticker} />
         <BrokerLink symbol={r.ticker} links={links} />
+        <button
+          type="button"
+          aria-expanded={quote.open === r.ticker}
+          onClick={() => quote.toggle(r.ticker)}
+          className="min-h-[32px] rounded-md border border-border px-2 text-[11px] text-primary hover:bg-muted"
+        >
+          가격·의견 {quote.open === r.ticker ? "▲" : "▼"}
+        </button>
       </span>
     ),
   },
@@ -272,7 +285,7 @@ function CompactList({ rows, emptyLabel, kind, alertTickers = [] }: { rows: Rumo
           <span className="text-slate-700">
             {kind === "mentions"
               ? mentionSentence(r.stage || r.days_hint, r.baseline_n, r.st_24h, r.mult, r.baseline_mean, alertTickers.includes(r.ticker))
-              : trialSentence(r.phase, r.event_date, r.days_to) ?? r.detail}
+              : trialSentence(r.phase, r.event_date, r.days_to, r.trial) ?? r.detail}
           </span>
         </li>
       ))}
@@ -323,6 +336,7 @@ export default function BiotechPage() {
   const [expanded, setExpanded] = useState<string | null>(null);
   const [highlight, setHighlight] = useState<string | null>(null);
   const [openRadar, setOpenRadar] = useState(false);
+  const [quoteRow, setQuoteRow] = useState<string | null>(null);   // 1111-01 · 순위표에서 펼친 종목
 
   const isAdmin = session?.role === "admin";
 
@@ -506,13 +520,17 @@ export default function BiotechPage() {
                         mcap_bucket={mcapBadge(r.mcap_bucket, r.mcap_asof) ?? ""}
                         days_hint={r.days_hint}
                         detail={r.detail}
-                        sentence={cardText(r.trial, r.phase, r.event_date, r.days_to).main ?? trialSentence(r.phase, r.event_date, r.days_to)}
+                        sentence={cardText(r.trial, r.phase, r.event_date, r.days_to).main ?? trialSentence(r.phase, r.event_date, r.days_to, r.trial)}
                         subline={cardText(r.trial, r.phase, r.event_date, r.days_to, r.theme_rank).theme}
                         sourceUrl={ctgovUrl(r.nct_id)}
                       />
                       {/* 1025-06 · 펼치지 않아도 바로 토스증권으로 (카드 펼침과 따로) */}
                       <div className="mt-1 flex justify-end" onClick={(e) => e.stopPropagation()} onKeyDown={(e) => e.stopPropagation()}>
                         <BrokerLink symbol={r.ticker} links={brokerLinks} />
+                      </div>
+                      {/* 1111-01 · 가격·전문가 의견 접힘 칸 (카드 펼침과 따로 · 표시 전용) */}
+                      <div className="mt-1" onClick={(e) => e.stopPropagation()} onKeyDown={(e) => e.stopPropagation()}>
+                        <QuotePanel ticker={r.ticker} />
                       </div>
                       {open && (
                         <div className="mt-1 rounded-lg border border-slate-200 bg-slate-50 p-3 text-xs">
@@ -531,7 +549,7 @@ export default function BiotechPage() {
                               </table>
                             </>
                           ) : (
-                            <div className="text-muted-foreground">{rumorReason(r.days_to, r.stage, r.baseline_n)}</div>
+                            <div className="text-muted-foreground">{rumorReason(r.days_to, r.stage, r.baseline_n, r.trial)}</div>
                           )}
                           {r.trial?.official_title && (
                             <div className="mt-2">
@@ -663,7 +681,12 @@ export default function BiotechPage() {
               </ul>
             </details>
           )}
-          <BiotechTable columns={radarColumns(brokerLinks)} rows={radar.rows} caption="레이더 상위 30" />
+          <BiotechTable
+            columns={radarColumns(brokerLinks, { open: quoteRow, toggle: (t) => setQuoteRow((cur) => (cur === t ? null : t)) })}
+            rows={radar.rows}
+            caption="레이더 상위 30"
+            renderBelow={(r) => (quoteRow === r.ticker ? <QuotePanel key={r.ticker} ticker={r.ticker} defaultOpen /> : null)}
+          />
         </SectionCard>
         </div>
       )}

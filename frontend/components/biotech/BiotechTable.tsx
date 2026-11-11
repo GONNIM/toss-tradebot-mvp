@@ -2,7 +2,7 @@
 // 계약: 열 ≤ 7 · 숫자 우측 font-mono · 표 안 이모지·bold 금지 · 빈 표 = 빈 상태
 "use client";
 
-import { ReactNode } from "react";
+import { Fragment, ReactNode } from "react";
 
 export type BiotechTableColumn<Row> = {
   key: string;
@@ -16,6 +16,8 @@ type Props<Row> = {
   rows: Row[];
   emptyLabel?: string;
   caption?: string;
+  // 1111-01 · 행 아래 펼침 줄 (null 이면 없음) · 열 수(≤7)에 넣지 않음
+  renderBelow?: (row: Row) => ReactNode | null;
 };
 
 export function BiotechTable<Row extends Record<string, unknown>>({
@@ -23,6 +25,7 @@ export function BiotechTable<Row extends Record<string, unknown>>({
   rows,
   emptyLabel = "표시할 행이 없습니다.",
   caption,
+  renderBelow,
 }: Props<Row>) {
   if (columns.length > 7) {
     // 계약 · 열 ≤ 7 (개발자 실수 방지 · 콘솔 경고)
@@ -62,8 +65,11 @@ export function BiotechTable<Row extends Record<string, unknown>>({
           </tr>
         </thead>
         <tbody>
-          {rows.map((row, i) => (
-            <tr key={i} className="border-b border-border last:border-0 hover:bg-muted/30">
+          {rows.map((row, i) => {
+            const below = renderBelow ? renderBelow(row) : null;
+            return (
+            <Fragment key={i}>
+            <tr className="border-b border-border last:border-0 hover:bg-muted/30">
               {columns.map((c) => {
                 const raw = row[c.key];
                 const content = c.render ? c.render(row) : (raw as ReactNode);
@@ -80,7 +86,16 @@ export function BiotechTable<Row extends Record<string, unknown>>({
                 );
               })}
             </tr>
-          ))}
+            {below && (
+              <tr className="border-b border-border last:border-0">
+                <td colSpan={columns.length} className="bg-slate-50/60 p-2">
+                  {below}
+                </td>
+              </tr>
+            )}
+            </Fragment>
+            );
+          })}
         </tbody>
       </table>
     </div>
