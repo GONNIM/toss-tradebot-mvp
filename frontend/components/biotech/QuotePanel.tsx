@@ -110,13 +110,36 @@ function Body({ v }: { v: QuoteView }) {
   );
 }
 
-export function QuotePanel({ ticker, defaultOpen = false }: { ticker: string; defaultOpen?: boolean }) {
-  const [open, setOpen] = useState(defaultOpen);
+/** 1112-02 · 카드·표 행의 단추 모양 (토스증권 단추와 같은 모양 · 터치 44px). */
+export const ROW_BUTTON_CLASS =
+  "inline-flex min-h-[44px] items-center gap-1 rounded-lg border border-border bg-white px-3 text-xs font-medium hover:bg-muted";
+
+/** 1112-02 · 「가격·전문가 의견 ▼/▲」 단추. 펼친 내용은 QuoteDetails 가 그 카드·행 안에 따로 그린다. */
+export function QuoteToggleButton({ open, onToggle }: { open: boolean; onToggle: () => void }) {
+  return (
+    <button
+      type="button"
+      aria-expanded={open}
+      onClick={(e) => {
+        e.stopPropagation();
+        onToggle();
+      }}
+      onKeyDown={(e) => e.stopPropagation()}
+      className={`${ROW_BUTTON_CLASS} text-primary`}
+    >
+      {open ? `${QUOTE_TOGGLE_CLOSE} ▲` : `${QUOTE_TOGGLE_OPEN} ▼`}
+    </button>
+  );
+}
+
+/** 1112-02 · 펼친 칸. 머리에 종목 기호·이름을 적어 어느 종목 칸인지 바로 알게 한다. 열릴 때 한 번 불러온다(60초 캐시). */
+export function QuoteDetails({ ticker, name }: { ticker: string; name?: string }) {
   const [view, setView] = useState<QuoteView | null>(null);
   const [err, setErr] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
-  async function load() {
+  useEffect(() => {
+    let alive = true;
     const hit = cache.get(ticker);
     if (hit && Date.now() - hit.at < CACHE_MS) {
       setView(hit.view);
@@ -124,54 +147,43 @@ export function QuotePanel({ ticker, defaultOpen = false }: { ticker: string; de
     }
     setLoading(true);
     setErr(null);
-    try {
-      const res = await fetch(`/api/v1/biotech/quote/${encodeURIComponent(ticker)}`, { credentials: "include", cache: "no-store" });
-      if (res.status === 401) throw new Error("로그인이 필요합니다.");
-      if (res.status === 404) throw new Error("후보 종목이 아니어서 자료가 없습니다.");
-      if (!res.ok) throw new Error(`불러오지 못했습니다 (status ${res.status}).`);
-      const j = (await res.json()) as QuoteView;
-      cache.set(ticker, { at: Date.now(), view: j });
-      setView(j);
-    } catch (e) {
-      setErr((e as Error).message);
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  useEffect(() => {
-    if (defaultOpen) load();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  function toggle() {
-    const next = !open;
-    setOpen(next);
-    if (next) load();
-  }
+    (async () => {
+      try {
+        const res = await fetch(`/api/v1/biotech/quote/${encodeURIComponent(ticker)}`, { credentials: "include", cache: "no-store" });
+        if (res.status === 401) throw new Error("로그인이 필요합니다.");
+        if (res.status === 404) throw new Error("후보 종목이 아니어서 자료가 없습니다.");
+        if (!res.ok) throw new Error(`불러오지 못했습니다 (status ${res.status}).`);
+        const j = (await res.json()) as QuoteView;
+        cache.set(ticker, { at: Date.now(), view: j });
+        if (alive) setView(j);
+      } catch (e) {
+        if (alive) setErr((e as Error).message);
+      } finally {
+        if (alive) setLoading(false);
+      }
+    })();
+    return () => {
+      alive = false;
+    };
+  }, [ticker]);
 
   return (
-    <div className="rounded-lg border border-border bg-white" data-testid={`quote-panel-${ticker}`}>
-      <button
-        type="button"
-        aria-expanded={open}
-        onClick={(e) => {
-          e.stopPropagation();
-          toggle();
-        }}
-        onKeyDown={(e) => e.stopPropagation()}
-        className="flex min-h-[44px] w-full items-center gap-2 px-3 text-left text-xs font-semibold text-primary hover:bg-muted/40"
-      >
-        {open ? `▲ ${QUOTE_TOGGLE_CLOSE}` : `▼ ${QUOTE_TOGGLE_OPEN}`}
-        <span className="font-mono text-muted-foreground">{ticker}</span>
-      </button>
-      {open && (
-        <div className="border-t border-border p-3" onClick={(e) => e.stopPropagation()} onKeyDown={(e) => e.stopPropagation()}>
-          {loading && <p className="text-xs text-muted-foreground">불러오는 중입니다.</p>}
-          {err && <p className="text-xs text-warn">{err}</p>}
-          {view && !loading && <Body v={view} />}
-        </div>
-      )}
+    <div
+      className="rounded-lg border border-primary/30 bg-white"
+      data-testid={`quote-panel-${ticker}`}
+      onClick={(e) => e.stopPropagation()}
+      onKeyDown={(e) => e.stopPropagation()}
+    >
+      <div className="flex flex-wrap items-baseline gap-2 border-b border-border bg-primary/5 px-3 py-2">
+        <span className="rounded-lg bg-primary px-2 py-0.5 font-mono text-xs font-bold text-white">{ticker}</span>
+        <span className="text-xs font-semibold">가격·전문가 의견</span>
+        {name && <span className="text-xs text-muted-foreground">{name}</span>}
+      </div>
+      <div className="p-3">
+        {loading && <p className="text-xs text-muted-foreground">불러오는 중입니다.</p>}
+        {err && <p className="text-xs text-warn">{err}</p>}
+        {view && !loading && <Body v={view} />}
+      </div>
     </div>
   );
 }

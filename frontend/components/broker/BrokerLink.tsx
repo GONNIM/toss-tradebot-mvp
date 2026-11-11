@@ -5,7 +5,7 @@
 
 import { keepPreviousData, useQueries } from "@tanstack/react-query";
 import { api } from "@/lib/api";
-import { BROKER_LABEL, BrokerLinkInfo, SEARCH_LABEL, TOSS_HOME, isKrCode, krOrderUrl, usSymbolChunks } from "@/lib/broker-link";
+import { BROKER_LABEL, COMPACT_LABEL, BrokerLinkInfo, SEARCH_LABEL, TOSS_HOME, isKrCode, krOrderUrl, usSymbolChunks } from "@/lib/broker-link";
 
 /** 한 화면의 미국 종목을 50개씩 묶어 묻는다 (국내는 묻지 않음). 다시 묻는 동안 지난 결과를 유지해 글자가 깜빡이지 않게. */
 export function useBrokerLinks(symbols: (string | null | undefined)[]): Record<string, BrokerLinkInfo> {
@@ -30,7 +30,8 @@ export function brokerLinkFor(symbol: string, links: Record<string, BrokerLinkIn
   return links[s] ?? { symbol: s, kind: "search", url: TOSS_HOME, verified: false };
 }
 
-export function BrokerLink({ symbol, links, className = "" }: { symbol: string; links: Record<string, BrokerLinkInfo>; className?: string }) {
+// 1112-02 · compact = 바이오 카드·표 단추 줄용 짧은 글자 「토스증권 ↗」 (다른 화면은 그대로 · 누르면 하는 일은 같음)
+export function BrokerLink({ symbol, links, className = "", compact = false }: { symbol: string; links: Record<string, BrokerLinkInfo>; className?: string; compact?: boolean }) {
   const l = brokerLinkFor(symbol, links);
   const search = l.kind === "search";
   return (
@@ -42,9 +43,9 @@ export function BrokerLink({ symbol, links, className = "" }: { symbol: string; 
         if (search) navigator.clipboard?.writeText(l.symbol).catch(() => undefined);
       }}
       title={search ? `누르면 ${l.symbol} 를 복사합니다 · 토스증권 검색창에 붙여 넣으십시오` : `${l.symbol} 토스증권 주문 화면`}
-      className={`inline-flex items-center rounded-lg border border-border px-2 py-1 text-xs font-medium hover:bg-muted ${className}`}
+      className={compact ? className : `inline-flex items-center rounded-lg border border-border px-2 py-1 text-xs font-medium hover:bg-muted ${className}`}
     >
-      {search ? SEARCH_LABEL : BROKER_LABEL}
+      {compact ? COMPACT_LABEL : search ? SEARCH_LABEL : BROKER_LABEL}
     </a>
   );
 }

@@ -6,6 +6,7 @@ export const TOSS_HOME = "https://www.tossinvest.com/";
 export const TOSS_ACCOUNT = "https://www.tossinvest.com/account";
 export const BROKER_LABEL = "토스증권에서 열기 ↗";
 export const SEARCH_LABEL = "토스증권 검색에서 찾기 ↗";
+export const COMPACT_LABEL = "토스증권 ↗"; // 1112-02 · 바이오 카드·표 단추 줄
 
 export interface BrokerLinkInfo {
   symbol: string;
