@@ -200,6 +200,16 @@ def test_cron_process_fixed_time_jobs_are_5min_apart():
     assert not bad, f"cron 서비스 정해진 시각 잡이 5분 안에 겹침: {bad}"
 
 
+def test_biotech_quotes_job_registered_0845_tue_sat():
+    """1111-01 · cron 서비스 08:45 화~토 · 늦음 허용 30분 · 같은 프로세스 잡과 5분 간격은 위 시험이 함께 본다."""
+    from backend.scheduler.cron import build_scheduler
+
+    job = build_scheduler().get_job("biotech_quotes")
+    assert job is not None and job.misfire_grace_time == GRACE_DEFAULT and job.coalesce is True
+    f = {x.name: str(x) for x in job.trigger.fields}
+    assert (f["hour"], f["minute"], f["day_of_week"]) == ("8", "45", "tue-sat")
+
+
 def test_assembly_moved_off_0600():
     job = _api_scheduler().get_job("watchlist_assembly")
     f = {x.name: str(x) for x in job.trigger.fields}

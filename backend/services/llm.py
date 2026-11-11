@@ -223,6 +223,22 @@ class ZaiLLM:
                 pass
             self._client = None
 
+    async def complete_text(self, system: str, user: str, max_tokens: int = 800) -> str:
+        """1111-01 · 짧은 글 요약 (JSON 아님) · 실패하면 예외 (호출 측이 처리)."""
+        if self._client is None:
+            raise RuntimeError("ZaiLLM 컨텍스트 미진입 — `async with` 사용")
+        self.last_call_failed = False
+        try:
+            completion = await self._client.chat.completions.create(
+                model=self.model,
+                messages=[{"role": "system", "content": system}, {"role": "user", "content": user}],
+                max_tokens=max_tokens, temperature=0.1,
+            )
+        except Exception:
+            self.last_call_failed = True
+            raise
+        return (completion.choices[0].message.content or "").strip()
+
     async def generate_pick_thesis(
         self,
         ticker: str,
@@ -447,6 +463,27 @@ class ClaudeLLM:
             raise LLMCallError("empty")
         return parsed
 
+    async def complete_text(self, system: str, user: str, max_tokens: int = 800) -> str:
+        """1111-01 · 짧은 글 요약 (JSON 아님) · 실패하면 LLMCallError."""
+        if self._client is None:
+            raise RuntimeError("ClaudeLLM 컨텍스트 미진입 — `async with` 사용")
+        try:
+            message = await self._client.messages.create(
+                model=self.model, max_tokens=max_tokens, output_config={"effort": "medium"},
+                system=system, messages=[{"role": "user", "content": user}],
+            )
+        except Exception as e:
+            raise LLMCallError(_classify_anthropic_error(e), f"{e.__class__.__name__}: {e}") from e
+        stop_reason = getattr(message, "stop_reason", None)
+        if stop_reason in ("refusal", "max_tokens"):
+            raise LLMCallError(stop_reason)
+        raw = "".join(
+            block.text for block in message.content if getattr(block, "type", "text") == "text" and hasattr(block, "text")
+        ).strip()
+        if not raw:
+            raise LLMCallError("empty")
+        return raw
+
     async def generate_pick_thesis(
         self,
         ticker: str,
@@ -579,6 +616,32 @@ class FallbackLLM:
             self.usage["zai"] += 1
             logger.info(f"[FallbackLLM] {ticker} provider=zai")
         return thesis
+
+    async def complete_text(self, ticker: str, system: str, user: str, max_tokens: int = 800) -> dict:
+        """1111-01 · 짧은 글 요약 · Anthropic 1순위 → Z.ai · {text, provider, model} · 둘 다 실패면 예외."""
+        self.attempts += 1
+        if not self.primary_configured:
+            self._record_failure("no_key")
+        elif not self._primary_disabled:
+            try:
+                text = await self.primary.complete_text(system, user, max_tokens)
+                self.usage["anthropic"] += 1
+                return {"text": text, "provider": "anthropic", "model": self.primary.model}
+            except LLMCallError as e:
+                self._record_failure(e.kind)
+                logger.warning(f"[FallbackLLM] {ticker} anthropic 요약 실패 ({e.kind}) → zai")
+                if e.kind in ALERT_FAILURE_KINDS:
+                    self._primary_disabled = True
+        if not self._secondary_entered:
+            await self.secondary.__aenter__()
+            self._secondary_entered = True
+        try:
+            text = await self.secondary.complete_text(system, user, max_tokens)
+        except Exception:
+            self.usage["zai_failed"] += 1
+            raise
+        self.usage["zai"] += 1
+        return {"text": text, "provider": "zai", "model": self.secondary.model}
 
     def summary(self) -> str:
         fails = ", ".join(f"{k} {v}" for k, v in sorted(self.failure_kinds.items())) or "없음"

@@ -146,8 +146,9 @@ function DailyChart({ chart }: { chart: Chart }) {
   );
 }
 
-export function MaChart({ chart }: { chart: Chart | null }) {
-  const [view, setView] = useState<View>("daily");
+// 1111-01 · initialView 로 처음 보일 그림을 고른다 (바이오 칸은 주봉 5년·40주가 기본 · 계좌 카드·VIP 는 그대로 일봉)
+export function MaChart({ chart, initialView = "daily" }: { chart: Chart | null; initialView?: View }) {
+  const [view, setView] = useState<View>(initialView);
   if (!chart || chart.daily.length === 0) {
     return (
       <div className="space-y-1 rounded-md border border-border p-3" data-testid="ma-chart-empty">

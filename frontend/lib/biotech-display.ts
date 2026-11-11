@@ -58,11 +58,47 @@ export function dday(daysTo: number): string {
   return daysTo >= 0 ? `D-${daysTo}` : `D+${-daysTo}`;
 }
 
-// WP89 · 종료 예정일 문구 · 지난 시험은 "종료 예정일 지남(결과 발표 대기)" (D+n 대신)
-export const PAST_DUE = "종료 예정일 지남(결과 발표 대기)";
+// WP89 → 1111-01 · 지난 시험 문구 · 「결과 발표 대기」 단정을 빼고 등록부 사실(상태 · 마지막 갱신)만 쓴다
+// (사용자 검증 11/11: 등록부는 「모집 중 · 6/09 이후 갱신 없음」인데 카드가 「결과 발표 대기」로 단정)
+export const PAST_DUE = "등록부 예정일 지남";
+export const REGISTRY_BASIS = "등록부 주간 사본 기준";
 
-export function endLabel(eventDate: string, daysTo: number, style: "short" | "long" | "reason" = "long"): string {
-  if (daysTo < 0) return style === "reason" ? `임상 ${PAST_DUE}` : `${ymdLabel(eventDate)} ${PAST_DUE}`;
+// 1111-01 · 등록부 상태 사전 (사전에 없는 값은 원문 그대로)
+const STATUS_KO: Record<string, string> = {
+  RECRUITING: "모집 중",
+  NOT_YET_RECRUITING: "모집 전",
+  ACTIVE_NOT_RECRUITING: "모집 끝·진행 중",
+  COMPLETED: "완료",
+  TERMINATED: "중단",
+  SUSPENDED: "일시 중지",
+  WITHDRAWN: "철회",
+  ENROLLING_BY_INVITATION: "초대 모집",
+};
+
+export type RegistryFacts = { overall_status?: string; pcd_type?: string; last_update?: string };
+
+export function statusLabel(status?: string): string | null {
+  const s = (status ?? "").trim();
+  return s ? STATUS_KO[s] ?? s : null;
+}
+
+// "상태 모집 중 · 마지막 갱신 6월 9일" (없는 칸은 생략 · 상태가 없으면 "상태 확인 못 함")
+export function registryLine(reg?: RegistryFacts, withUpdate = true): string {
+  const parts = [statusLabel(reg?.overall_status) ? `상태 ${statusLabel(reg?.overall_status)}` : "상태 확인 못 함"];
+  if (withUpdate && reg?.last_update && /^\d{4}-\d{2}-\d{2}$/.test(reg.last_update)) parts.push(`마지막 갱신 ${ymdLabel(reg.last_update)}`);
+  return parts.join(" · ");
+}
+
+function pastLabel(reg?: RegistryFacts): string {
+  return reg?.pcd_type === "ACTUAL" ? "종료(등록부 실제 날짜)" : PAST_DUE;
+}
+
+export function endLabel(eventDate: string, daysTo: number, style: "short" | "long" | "reason" = "long", reg?: RegistryFacts): string {
+  if (daysTo < 0) {
+    if (style === "reason") return `임상 ${pastLabel(reg)} · ${registryLine(reg, false)}`;
+    if (style === "short") return `${ymdLabel(eventDate)} ${pastLabel(reg)} · ${registryLine(reg, false)}`;
+    return `${ymdLabel(eventDate)} ${pastLabel(reg)} · ${registryLine(reg)} (${REGISTRY_BASIS})`;
+  }
   if (style === "reason") return `임상 종료 예정 ${dday(daysTo)}`;
   return style === "short"
     ? `${ymdLabel(eventDate)}(${dday(daysTo)}) 종료 예정(결과 발표일 아님)`
@@ -77,9 +113,17 @@ export function ymdLabel(ymd: string, now: Date = new Date()): string {
   return y === thisYear ? `${m}월 ${d}일` : `${y}년 ${m}월 ${d}일`;
 }
 
-export function trialSentence(phase?: string, eventDate?: string, daysTo?: number | null): string | null {
+export function trialSentence(phase?: string, eventDate?: string, daysTo?: number | null, reg?: RegistryFacts): string | null {
   if (!eventDate || typeof daysTo !== "number") return null;
-  if (daysTo < 0) return `${phaseLabel(phase)} 시험의 종료 예정일(${ymdLabel(eventDate)})이 지났습니다. 결과 발표를 기다리는 중입니다.`;
+  if (daysTo < 0) {
+    const st = statusLabel(reg?.overall_status);
+    const head = reg?.pcd_type === "ACTUAL"
+      ? `${phaseLabel(phase)} 시험이 ${ymdLabel(eventDate)}에 끝났다고 등록부에 적혀 있습니다.`
+      : `${phaseLabel(phase)} 시험의 등록부 예정일(${ymdLabel(eventDate)})이 지났습니다.`;
+    const status = st ? ` 등록부 상태는 「${st}」입니다.` : " 등록부 상태는 확인하지 못했습니다.";
+    const upd = reg?.last_update && /^\d{4}-\d{2}-\d{2}$/.test(reg.last_update) ? ` 마지막 갱신은 ${ymdLabel(reg.last_update)}입니다.` : "";
+    return `${head}${status}${upd}`;
+  }
   const when = daysTo === 0 ? "오늘" : `${daysTo}일 뒤`;
   return `${phaseLabel(phase)} 시험이 ${ymdLabel(eventDate)}(${when})에 끝날 예정입니다. 결과 발표일은 아닙니다.`;
 }
@@ -159,6 +203,9 @@ export type TrialDisplay = {
   allocation_ko?: string;
   primary_outcomes?: { measure: string; time_frame?: string; measure_ko?: string }[];
   official_title?: string;
+  overall_status?: string;   // 1111-01 · 등록부 상태 (주간 사본)
+  pcd_type?: string;         // ESTIMATED | ACTUAL
+  last_update?: string;      // 등록부 마지막 갱신일 (YYYY-MM-DD)
   conditions?: { en: string; ko?: string; ignored?: boolean }[];
 };
 export type ThemeRank = { theme_ko?: string; rank?: number; of?: number; quarter?: string };
@@ -185,7 +232,7 @@ export function cardText(
     if (ph0 && ph0 !== "임상") parts.push(ph0);
     const d0 = (t.interventions ?? []).find((i) => !/placebo/i.test(i.name));
     if (d0) parts.push(d0.name_ko || d0.name);
-    if (eventDate && typeof daysTo === "number") parts.push(endLabel(eventDate, daysTo, "short"));
+    if (eventDate && typeof daysTo === "number") parts.push(endLabel(eventDate, daysTo, "short", t));
     return { main: parts.length ? parts.join(" · ") : null, theme: null };
   }
   if (t.category) parts.push(t.category_auto ? `${t.category}(자동)` : categoryLabel(t.category));
@@ -211,7 +258,7 @@ export function cardText(
   const po = (t.primary_outcomes ?? [])[0];
   if (po?.measure) parts.push(`1차 목표: ${clip(po.measure_ko || po.measure, 90)}`);
   if (eventDate && typeof daysTo === "number") {
-    parts.push(endLabel(eventDate, daysTo));
+    parts.push(endLabel(eventDate, daysTo, "long", t));
   }
   const main = parts.length >= 2 ? parts.join(" · ") : null; // 필드가 거의 없으면 기존 문장 (trialSentence) 사용
   const themeLine =
@@ -288,9 +335,9 @@ export function mentionSentence(stage?: string, baselineDays?: number | null, me
 }
 
 // 소문에 살 자리 카드에 오른 이유 (API 표1 규칙: 뉴스 예정 A 상태 · 언급 단계 조용/수집 중 · 예정일 가까운 15)
-export function rumorReason(daysTo?: number | null, stage?: string, baselineDays?: number | null): string {
+export function rumorReason(daysTo?: number | null, stage?: string, baselineDays?: number | null, reg?: RegistryFacts): string {
   const parts: string[] = [];
-  if (typeof daysTo === "number") parts.push(endLabel("", daysTo, "reason"));
+  if (typeof daysTo === "number") parts.push(endLabel("", daysTo, "reason", reg));
   const st = stageLabel(stage);
   parts.push(
     stage === "collecting" && typeof baselineDays === "number"
