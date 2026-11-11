@@ -481,3 +481,24 @@ def test_frontend_quote_check_script():
     r = subprocess.run(["npx", "--yes", "tsx", "lib/biotech-quote.check.ts"], cwd=fe, capture_output=True, text=True, timeout=120)
     assert r.returncode == 0, r.stderr[-800:]
     assert r.stdout.strip().endswith("ok")
+
+
+async def test_job_stops_without_runtime_dir_or_candidates(clean, monkeypatch):
+    """Fable 3차 막음 1 · 런타임 폴더가 없거나 후보가 0개면 예외 (cron _alert_job_failure 가 알림)."""
+    from backend.scripts import _biotech_paths as P
+
+    async def _never(*_a, **_k):
+        raise AssertionError("받기가 불리면 안 됨")
+
+    monkeypatch.setattr(P, "RUNTIME_DIR", None)
+    with pytest.raises(RuntimeError, match="BIOTECH_RUNTIME_DIR"):
+        await bq.run_quotes(fetch=_never)
+
+    monkeypatch.setattr(P, "RUNTIME_DIR", Path("/nonexistent-runtime"))
+
+    async def _empty(limit=bq.MAX_TICKERS):
+        return []
+
+    monkeypatch.setattr(bq, "load_candidates", _empty)
+    with pytest.raises(RuntimeError, match="후보 종목이 0개"):
+        await bq.run_quotes(fetch=_never)

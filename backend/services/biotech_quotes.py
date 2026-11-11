@@ -330,6 +330,14 @@ async def _prune(candidates: list[str], today: date) -> dict:
     return {"dropped": len(dropped), "old_rows": res.rowcount or 0}
 
 
+def _require_runtime_dir() -> None:
+    """Fable 3차 막음 1 · cron 프로세스에 BIOTECH_RUNTIME_DIR 이 없으면 커밋된 옛 후보·따로 쓰는 SEC 장부로 조용히 돌게 된다 → 예외로 알림."""
+    from backend.scripts import _biotech_paths as P
+
+    if P.RUNTIME_DIR is None:
+        raise RuntimeError("BIOTECH_RUNTIME_DIR 이 이 프로세스에 없음 — 서버 런타임 후보·SEC 장부를 찾을 수 없어 멈춤")
+
+
 async def run_quotes(now: Optional[datetime] = None, fetch: Optional[Fetcher] = None,
                      sec_fetch: Optional[SecFetcher] = None, summarize: Optional[Summarizer] = None,
                      candidates: Optional[list[str]] = None, pause: float = PAUSE_SEC,
@@ -337,7 +345,13 @@ async def run_quotes(now: Optional[datetime] = None, fetch: Optional[Fetcher] = 
     """화~토 08:45 KST (cron 서비스). 1) 받기 → 종목마다 쓰기 2) AI 요약 (하루 30) 3) 정리."""
     fetch = fetch or default_fetch
     today = _kst_today(now)
-    cands = candidates if candidates is not None else await load_candidates()
+    if candidates is None:
+        _require_runtime_dir()
+        cands = await load_candidates()
+        if not cands:
+            raise RuntimeError("바이오 후보 종목이 0개 — 후보 파일을 찾지 못함")
+    else:
+        cands = candidates
     state = await _read_state(cands)
     ok, failures, long_rows = 0, 0, 0
     for i, t in enumerate(cands):
