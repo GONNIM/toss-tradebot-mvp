@@ -54,6 +54,8 @@ export const DIST_LABELS: { key: keyof QuoteOpinion["dist"]; label: string }[] =
 export const QUOTE_TOGGLE_OPEN = "가격·전문가 의견 보기";
 export const QUOTE_TOGGLE_CLOSE = "가격·전문가 의견 접기";
 export const NO_DATA = "자료 없음";
+// 1112-01 · 바이오 칸 그림 아래 출처 줄 (계좌 카드·VIP 의 「카드 글자 줄」 낱말을 쓰지 않음 · Fable 1111-01 권고)
+export const BIOTECH_BASIS_LINE = "그림 평균선은 하루 1회 저장한 긴 일봉으로 계산 · 사실 표시이며 매매 지시가 아님";
 
 // 달러 금액 · 큰 값은 B · M 단위 (예: 2.71B 달러)
 export function usd(v: number | null | undefined, digits = 2): string {

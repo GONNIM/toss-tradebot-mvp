@@ -111,11 +111,13 @@ async function apiFetch<T>(path: string): Promise<T> {
 }
 
 // ── 순위표 (섹션 5) 컬럼 ────────────────────────────────
+// 1112-01 · 가격·의견 칸은 행 하나를 가리키는 값(순위·기호)으로 연다
+const radarRowKey = (r: RadarRow) => `${r.rank}-${r.ticker}`;
 // 1111-01 · 티커 칸에 「가격·의견」 단추 · 누르면 그 행 아래에 접힘 칸 (열 수 ≤ 7 유지)
 // 1112-02 · 티커 아래 한 줄에 단추 둘(토스증권 ↗ · 가격·전문가 의견) · 펼친 칸은 그 행 바로 아래 전체 폭 · 머리에 기호
 const radarColumns = (
   links: Record<string, BrokerLinkInfo>,
-  quote: { open: string | null; toggle: (ticker: string) => void },
+  quote: { open: string | null; toggle: (key: string) => void },
 ): BiotechTableColumn<RadarRow>[] => [
   { key: "rank", label: "#", align: "right", render: (r) => r.rank },
   {
@@ -126,7 +128,7 @@ const radarColumns = (
         <StockLink ticker={r.ticker} className="font-mono font-semibold" />
         <div className="flex flex-wrap gap-1">
           <BrokerLink symbol={r.ticker} links={links} compact className={ROW_BUTTON_CLASS} />
-          <QuoteToggleButton open={quote.open === r.ticker} onToggle={() => quote.toggle(r.ticker)} />
+          <QuoteToggleButton open={quote.open === radarRowKey(r)} onToggle={() => quote.toggle(radarRowKey(r))} />
         </div>
       </div>
     ),
@@ -332,8 +334,8 @@ export default function BiotechPage() {
   const [expanded, setExpanded] = useState<string | null>(null);
   const [highlight, setHighlight] = useState<string | null>(null);
   const [openRadar, setOpenRadar] = useState(false);
-  const [quoteRow, setQuoteRow] = useState<string | null>(null);   // 1111-01 · 순위표에서 펼친 종목
-  const [quoteCard, setQuoteCard] = useState<string | null>(null); // 1112-02 · 소문 카드에서 가격·의견 칸을 펼친 종목 (한 번에 하나)
+  const [quoteRow, setQuoteRow] = useState<string | null>(null);   // 1111-01 · 순위표에서 펼친 행 (1112-01 순위·기호 키)
+  const [quoteCard, setQuoteCard] = useState<string | null>(null); // 1112-02 · 소문 카드에서 가격·의견 칸을 펼친 카드 (한 번에 하나 · 1112-01 카드 키)
 
   const isAdmin = session?.role === "admin";
 
@@ -499,6 +501,9 @@ export default function BiotechPage() {
                 {cards.map((r, i) => {
                   const rr = radarByTicker.get(r.ticker);
                   const open = expanded === r.ticker;
+                  // 1112-01 · 가격·의견 칸은 카드 하나를 가리키는 값으로 연다 (같은 종목 카드 두 장이 함께 열리지 않게 · Fable 1112-02 권고)
+                  //  (정렬·거르기가 바뀌어도 같은 카드를 가리키게 순번 대신 표·기호·시험 번호를 씀)
+                  const cardKey = `${r.table}-${r.ticker}-${r.nct_id ?? ""}`;
                   return (
                     <div
                       key={`${r.table}-${r.ticker}-${i}`}
@@ -525,9 +530,9 @@ export default function BiotechPage() {
                           <>
                             <div className="flex flex-wrap gap-2">
                               <BrokerLink symbol={r.ticker} links={brokerLinks} compact className={ROW_BUTTON_CLASS} />
-                              <QuoteToggleButton open={quoteCard === r.ticker} onToggle={() => setQuoteCard((cur) => (cur === r.ticker ? null : r.ticker))} />
+                              <QuoteToggleButton open={quoteCard === cardKey} onToggle={() => setQuoteCard((cur) => (cur === cardKey ? null : cardKey))} />
                             </div>
-                            {quoteCard === r.ticker && <QuoteDetails key={r.ticker} ticker={r.ticker} name={shortName(r.name)} />}
+                            {quoteCard === cardKey && <QuoteDetails key={`${cardKey}-${i}`} ticker={r.ticker} name={shortName(r.name)} />}
                           </>
                         }
                       />
@@ -684,7 +689,7 @@ export default function BiotechPage() {
             columns={radarColumns(brokerLinks, { open: quoteRow, toggle: (t) => setQuoteRow((cur) => (cur === t ? null : t)) })}
             rows={radar.rows}
             caption="레이더 상위 30"
-            renderBelow={(r) => (quoteRow === r.ticker ? <QuoteDetails key={r.ticker} ticker={r.ticker} name={shortName(r.name)} /> : null)}
+            renderBelow={(r) => (quoteRow === radarRowKey(r) ? <QuoteDetails key={radarRowKey(r)} ticker={r.ticker} name={shortName(r.name)} /> : null)}
           />
         </SectionCard>
         </div>

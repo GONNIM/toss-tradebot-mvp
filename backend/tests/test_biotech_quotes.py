@@ -502,3 +502,38 @@ async def test_job_stops_without_runtime_dir_or_candidates(clean, monkeypatch):
     monkeypatch.setattr(bq, "load_candidates", _empty)
     with pytest.raises(RuntimeError, match="후보 종목이 0개"):
         await bq.run_quotes(fetch=_never)
+
+
+# ── 11. 1112-01: SEC 장부 저장 직전 다시 읽기 · EX-99.1 우선 ─────────────────
+
+def test_ledger_save_rereads_shared_file(tmp_path):
+    from backend.scripts.biotech_sec_common import SecDailyLedger
+
+    day = "20261112"
+    mine = SecDailyLedger.load(day=day, base=tmp_path)          # 이 일이 처음 읽음 (빈 장부)
+    other = SecDailyLedger.load(day=day, base=tmp_path)         # 다른 단계가 그사이 더하고 저장
+    other.add("form4", 7)
+    other.save()
+    b = bq.SecBudget(mine)
+    for _ in range(3):
+        b.add()
+    bq.save_ledger_merged(mine, b._local)
+    saved = json.loads((tmp_path / f"sec_usage_{day}.json").read_text())
+    assert saved["counts"] == {"form4": 7, "quote_8k": 3} and saved["total"] == 10
+    assert b.used() == 3
+
+
+def test_pick_exhibit_prefers_ex_99_1():
+    idx = (
+        '<table><tr><td>1</td><td><a href="/Archives/a/main.htm">8-K</a></td><td>8-K</td></tr>'
+        '<tr><td>2</td><td><a href="/Archives/a/ex99-2.htm">ex99-2</a></td><td>EX-99.2</td></tr>'
+        '<tr><td>3</td><td><a href="/ix?doc=/Archives/a/ex99-1.htm">ex99-1</a></td><td>EX-99.1</td></tr>'
+        '<tr><td>4</td><td><a href="/Archives/a/ex99-10.htm">x</a></td><td>EX-99.10</td></tr></table>'
+    )
+    assert bq.pick_exhibit_href(idx) == "/ix?doc=/Archives/a/ex99-1.htm"
+    only_99 = '<tr><td><a href="/Archives/b/ex99.htm">x</a></td><td>EX-99</td></tr>'
+    assert bq.pick_exhibit_href(only_99) == "/Archives/b/ex99.htm"
+    only_992 = '<tr><td><a href="/Archives/c/ex99-2.htm">x</a></td><td>EX-99.2</td></tr>'
+    assert bq.pick_exhibit_href(only_992) == "/Archives/c/ex99-2.htm"
+    assert bq.pick_exhibit_href('<tr><td><a href="/x.htm">x</a></td><td>EX-10.1</td></tr>') is None
+    assert bq.pick_exhibit_href("") is None

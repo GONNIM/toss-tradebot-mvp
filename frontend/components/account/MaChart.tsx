@@ -56,7 +56,7 @@ type AxisProps = {
   offset?: { left: number; width: number };
 };
 
-function DailyChart({ chart }: { chart: Chart }) {
+function DailyChart({ chart, basisLine }: { chart: Chart; basisLine: string }) {
   const data = chart.daily;
   // 넘은 지점은 고른 선 하나만 (기본 200일 · 지점이 가장 적음). 선 값이 없는 날은 건너뜀.
   const [markKey, setMarkKey] = useState<MaKey>("m200");
@@ -141,13 +141,16 @@ function DailyChart({ chart }: { chart: Chart }) {
       {chart.daily_note && <p className="text-[11px] text-muted-foreground">200일선: {chart.daily_note} (긴 일봉이 200개 미만)</p>}
       <p className="text-[11px] text-muted-foreground tabular-nums">{dailySourceText(chart)}</p>
       <p className="text-[11px] text-muted-foreground">{WEEK40_LIMIT_LINE}</p>
-      <p className="text-[11px] text-muted-foreground">{DAILY_BASIS_LINE}</p>
+      <p className="text-[11px] text-muted-foreground">{basisLine}</p>
     </div>
   );
 }
 
 // 1111-01 · initialView 로 처음 보일 그림을 고른다 (바이오 칸은 주봉 5년·40주가 기본 · 계좌 카드·VIP 는 그대로 일봉)
-export function MaChart({ chart, initialView = "daily" }: { chart: Chart | null; initialView?: View }) {
+// 1112-01 · basisLine: 그림 아래 출처 설명 줄 (계좌 카드·VIP 는 기본값 그대로 · 바이오 칸은 「카드 글자 줄」이 없어 따로 줌)
+export function MaChart({ chart, initialView = "daily", basisLine = DAILY_BASIS_LINE }: {
+  chart: Chart | null; initialView?: View; basisLine?: string;
+}) {
   const [view, setView] = useState<View>(initialView);
   if (!chart || chart.daily.length === 0) {
     return (
@@ -180,7 +183,7 @@ export function MaChart({ chart, initialView = "daily" }: { chart: Chart | null;
       </div>
       {view === "daily" ? (
         <div className="rounded-md border border-border p-3">
-          <DailyChart chart={chart} />
+          <DailyChart chart={chart} basisLine={basisLine} />
         </div>
       ) : (
         <Week40Chart week40={chart.week40} />
