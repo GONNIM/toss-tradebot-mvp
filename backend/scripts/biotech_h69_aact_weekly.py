@@ -78,7 +78,8 @@ CANDIDATES_SEARCH = [
     PROJECT_ROOT / "backend" / "data" / "biotech" / "candidates",
 ]
 
-# AACT 실측 (2026-09-20 서버 HEAD 확증)
+# AACT 실측 (2026-09-20 서버 HEAD 확증 · 2026-11-12 고침: 10/19~10/26 사이 서명 저장소(DigitalOcean Spaces)로 넘김 ·
+# HEAD 는 403 · GET 은 됨 → 있는지 확인도 1바이트 범위 GET 으로 한다 (1112-03 · 교훈 #8))
 AACT_BASE = "https://aact.ctti-clinicaltrials.org/static/exported_files/daily"
 HEADERS = {
     "User-Agent": SEC_UA,
@@ -100,23 +101,51 @@ def _latest_candidates_csv() -> Path | None:
     return max(hits, key=lambda p: p.stat().st_mtime) if hits else None
 
 
-def _pick_aact_url() -> tuple[str, str] | None:
-    """최근 10일 중 200 OK 응답 첫 URL · (date, url) 반환."""
-    with httpx.Client(headers=HEADERS, timeout=REQUEST_TIMEOUT, follow_redirects=True) as c:
+# 마지막 확인 결과 · 실패 알림 문구에 원인을 적기 위해 (1112-03 · Fable R1)
+LAST_PROBE_STOP: str | None = None
+
+
+def _content_range_total(value: str | None) -> int:
+    """`bytes 0-0/2574652840` → 2574652840 · 없거나 해석 실패면 0 (예외 없음)."""
+    if not value or "/" not in value:
+        return 0
+    try:
+        return int(value.rsplit("/", 1)[1].strip())
+    except ValueError:
+        return 0
+
+
+def _pick_aact_url(client: httpx.Client | None = None) -> tuple[str, str] | None:
+    """최근 10일 중 받을 수 있는 첫 URL · (date, url) 반환.
+
+    확인은 내려받기와 같은 GET 으로 하되 `Range: bytes=0-0` 를 붙이고 본문은 읽지 않고 닫는다
+    (서버가 Range 를 무시하고 200 으로 2.4GB 를 보내도 메모리에 올리지 않음 · Fable M2).
+    200/206 = 있음 · 403/429 = 즉시 중단 (LAST_PROBE_STOP 에 원인) · 그 밖(404 등) = 전날 시도.
+    """
+    global LAST_PROBE_STOP
+    LAST_PROBE_STOP = None
+    own = client is None
+    c = client or httpx.Client(headers=HEADERS, timeout=REQUEST_TIMEOUT, follow_redirects=True)
+    try:
         for i in range(0, 10):
             d = (datetime.now(timezone.utc).date() - timedelta(days=i)).isoformat()
             url = f"{AACT_BASE}/{d}_daily-clinical-trials.zip"
             try:
-                r = c.head(url)
-                if r.status_code == 200:
-                    size_gb = int(r.headers.get("content-length", 0)) / (1024**3)
-                    LOG.info("AACT snapshot found · %s · %.2f GB", d, size_gb)
+                with c.stream("GET", url, headers={**HEADERS, "Range": "bytes=0-0"}) as r:
+                    status = r.status_code
+                    total = _content_range_total(r.headers.get("content-range"))
+                if status in (200, 206):
+                    LOG.info("AACT snapshot found · %s · %.2f GB (범위 확인 %d)", d, total / (1024**3), status)
                     return d, url
-                if r.status_code in (403, 429):
-                    LOG.error("AACT HEAD %d · %s · 즉시 중단", r.status_code, d)
+                if status in (403, 429):
+                    LAST_PROBE_STOP = f"접근 거부 {status} · {d} 확인 중 중단"
+                    LOG.error("AACT 범위 확인 %d · %s · 즉시 중단", status, d)
                     return None
             except httpx.HTTPError as e:
-                LOG.warning("AACT HEAD %s · %s", d, e.__class__.__name__)
+                LOG.warning("AACT 범위 확인 %s · %s", d, e.__class__.__name__)
+    finally:
+        if own:
+            c.close()
     return None
 
 
@@ -643,7 +672,7 @@ def main():
     # 1) URL 실측
     picked = _pick_aact_url()
     if not picked:
-        _notify_failure_sync("head", "최근 10일 안 200 OK 없음")
+        _notify_failure_sync("head", LAST_PROBE_STOP or "최근 10일 안 받을 수 있는 자료 없음")
         raise SystemExit(21)
     date_str, url = picked
 
