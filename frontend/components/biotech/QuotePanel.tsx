@@ -6,6 +6,7 @@
 import { useEffect, useState } from "react";
 import { MaChart } from "@/components/account/MaChart";
 import {
+  BIOTECH_BASIS_LINE,
   NO_DATA,
   QUOTE_TOGGLE_CLOSE,
   QUOTE_TOGGLE_OPEN,
@@ -42,7 +43,7 @@ function Body({ v }: { v: QuoteView }) {
   return (
     <div className="space-y-3 text-xs">
       <div className="text-sm font-semibold tabular-nums" data-testid="quote-live">{liveLine(v)}</div>
-      <MaChart chart={v.chart} initialView="week" />
+      <MaChart chart={v.chart} initialView="week" basisLine={BIOTECH_BASIS_LINE} />
       {b ? (
         <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
           <Cell label="거래량" value={shares(b.volume)} />

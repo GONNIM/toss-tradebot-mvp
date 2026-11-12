@@ -2,7 +2,7 @@
 import assert from "node:assert/strict";
 import * as fs from "node:fs";
 import * as path from "node:path";
-import { changeLine, countLine, liveLine, ratioPct, shares, targetLine, usd, type QuoteOpinion, type QuoteView } from "./biotech-quote";
+import { BIOTECH_BASIS_LINE, changeLine, countLine, liveLine, ratioPct, shares, targetLine, usd, type QuoteOpinion, type QuoteView } from "./biotech-quote";
 
 const op: QuoteOpinion = {
   head: "전문가 의견 모음 · 추정 · 보장 아님", grade_note: "증권사 표기 원문 (번역 · 해석 안 함)", n_opinions: 10,
@@ -29,6 +29,11 @@ assert.equal(
   liveLine({ ...base, live: { price: 13, change_pct: 4, market_status: "OPEN", source: "네이버 실시간" } }),
   "현재가 13.00 달러 (+4.00%) · 장중 · 네이버 실시간",
 );
+
+// 1112-01 · 바이오 칸 그림 출처 줄에 VIP·계좌 카드 낱말 없음
+assert.ok(!BIOTECH_BASIS_LINE.includes("카드 글자") && !/VIP/i.test(BIOTECH_BASIS_LINE));
+assert.ok(BIOTECH_BASIS_LINE.includes("매매 지시가 아님"));
+assert.ok(fs.readFileSync(path.resolve(__dirname, "../components/biotech/QuotePanel.tsx"), "utf8").includes("basisLine={BIOTECH_BASIS_LINE}"));
 
 // 새 화면 파일 고정 문자열에 명령문 · 신호 낱말 · 계산 낱말 없음 (서버 자료 문자열은 대상 아님)
 const SIGNAL = /골든|데드|크로스|교차|정배열|역배열|사십시오|사세요|파세요|여력|upside|downside/i;

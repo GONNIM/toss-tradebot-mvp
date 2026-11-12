@@ -446,11 +446,10 @@ async def default_sec_fetch(ticker: str, prev: Optional[dict], budget: SecBudget
                     return prev
                 idx_url = f"https://www.sec.gov/Archives/edgar/data/{int(cik)}/{acc.replace('-', '')}/{acc}-index.htm"
                 idx = _get(client, idx_url) or ""
-                m = re.search(r"<tr[^>]*>(?:(?!</tr>).)*?EX-99(?:\.1)?(?:(?!</tr>).)*?</tr>", idx, re.S | re.I)
-                href = re.search(r'href="([^"]+)"', m.group(0)) if m else None
+                href = pick_exhibit_href(idx)
                 if not href:
                     return {"accession": acc, "filing_date": rec["filingDate"][i], "title": "", "lead": "", "url": idx_url}
-                doc_url = "https://www.sec.gov" + href.group(1).replace("/ix?doc=", "")
+                doc_url = "https://www.sec.gov" + href.replace("/ix?doc=", "")
                 doc = _get(client, doc_url) or ""
                 title = exhibit_title(doc)
                 return {"accession": acc, "filing_date": rec["filingDate"][i], "title": title,
@@ -458,6 +457,34 @@ async def default_sec_fetch(ticker: str, prev: Optional[dict], budget: SecBudget
         return None
 
     return await asyncio.to_thread(_call)
+
+
+_EX_ROW_RE = re.compile(r"<tr[^>]*>(?:(?!</tr>).)*?</tr>", re.S | re.I)
+_EX991_RE = re.compile(r"EX-99\.1(?![0-9])", re.I)
+_EX99_RE = re.compile(r"EX-99(?![0-9])", re.I)
+
+
+def pick_exhibit_href(index_html: str) -> Optional[str]:
+    """8-K 문서 목록에서 보도자료 링크 · EX-99.1 행을 먼저 찾고 없으면 첫 EX-99.x 행 (Fable 1111-01 권고)."""
+    rows = [r for r in _EX_ROW_RE.findall(index_html or "") if 'href="' in r]
+    for pat in (_EX991_RE, _EX99_RE):
+        for row in rows:
+            if pat.search(row):
+                m = re.search(r'href="([^"]+)"', row)
+                if m:
+                    return m.group(1)
+    return None
+
+
+def save_ledger_merged(ledger, added: int, category: str = "quote_8k") -> None:
+    """저장 직전 공용 SEC 장부 파일을 다시 읽고 이번 실행이 쓴 수만 더해 저장 (다른 단계가 그사이 더한 수를 덮지 않음)."""
+    from backend.scripts.biotech_sec_common import SecDailyLedger
+
+    fresh = SecDailyLedger.load(day=ledger.day, base=ledger.path.parent)
+    if added:
+        fresh.add(category, added)
+    fresh.save()
+    ledger.counts = fresh.counts
 
 
 def safe_lead(lead: str) -> str:
@@ -609,9 +636,9 @@ async def run_summaries(cands: list[str], today: date, sec_fetch: Optional[SecFe
                     row.summary_input_hash = h
     if ledger is not None:
         try:
-            ledger.save()
+            save_ledger_merged(ledger, budget._local)
         except Exception:  # noqa: BLE001
-            pass
+            logger.warning("[biotech_quotes] SEC 장부 저장 실패")
     return {"picked": len(picked), "llm": called, "same_input": same, "sec_requests": budget.used(),
             "sec_errors": sec_err, "llm_errors": llm_err}
 
