@@ -2,6 +2,8 @@
 // WP74 2단계 · 문장형 본문 (sentence) · NCT 번호는 원문 링크로 숨김 · 문장에 일수가 있으면 D-day 배지 생략
 "use client";
 
+import type { ReactNode } from "react";
+
 type Props = {
   ticker: string;
   name: string;
@@ -13,9 +15,10 @@ type Props = {
   sourceUrl?: string | null; // ClinicalTrials.gov 원문
   order?: number;            // WP74 3단계 · 목록 안 순서 (정렬이 눈에 보이게)
   subline?: string | null;   // WP76 · 테마 순위 한 줄 (H6 봉인 순위 · 소속 종목만)
+  footer?: ReactNode;  // 1112-02 · 카드 테두리 안 맨 아래 (단추 줄 · 펼친 가격·의견 칸) — 다음 카드와 섞여 보이지 않게
 };
 
-export function RumorCard({ ticker, name, mcap_bucket, days_hint, detail, score, sentence, sourceUrl, order, subline }: Props) {
+export function RumorCard({ ticker, name, mcap_bucket, days_hint, detail, score, sentence, sourceUrl, order, subline, footer }: Props) {
   return (
     <div className="rounded-lg border border-slate-200 bg-white p-3 text-sm text-slate-800">
       <div className="flex items-baseline gap-2 flex-wrap">
@@ -60,6 +63,11 @@ export function RumorCard({ ticker, name, mcap_bucket, days_hint, detail, score,
         )}
       </div>
       {subline && <div className="mt-1 text-xs text-primary">{subline}</div>}
+      {footer && (
+        <div className="mt-3 space-y-2 border-t border-slate-200 pt-2" onClick={(e) => e.stopPropagation()} onKeyDown={(e) => e.stopPropagation()}>
+          {footer}
+        </div>
+      )}
     </div>
   );
 }
