@@ -238,7 +238,7 @@ export function AlertOutcomes() {
             <p className="mt-0.5 text-xs text-muted-foreground">
               나눠 볼수록 칸당 건수가 줄어 우연에 흔들립니다. 30건 미만 칸은 숫자를 숨깁니다. 보내지 않은(건너뜀·대기) 알림도 포함합니다.
             </p>
-            <div className="mt-2 grid gap-3 lg:grid-cols-2">
+            <div className="mt-2 grid grid-cols-1 gap-3 lg:grid-cols-2">
               {s.breakdowns.map((b) => (
                 <BreakdownTable key={b.key} title={b.title} cells={b.cells} />
               ))}
