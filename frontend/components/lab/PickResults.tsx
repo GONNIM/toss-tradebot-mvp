@@ -17,7 +17,7 @@ export function isUnauthorized(error: unknown): boolean {
 
 // 로그인 칸 · 로그인·로그아웃하면 이 화면 조회를 다시 부른다 (queryKey 첫 칸 = crazy | moonshot)
 // 1027-02 · 첫 로드의 세션 확인 때는 로그인 상태이고 실패한 조회만 다시 부른다 (옛 토큰 이전 전에 401 난 경우) · 성공한 조회는 두 번 부르지 않음
-export function PicksSessionBar({ queryRoot }: { queryRoot: "crazy" | "moonshot" }) {
+export function PicksSessionBar({ queryRoot }: { queryRoot: "crazy" | "moonshot" | "meme-outcomes" }) {
   const qc = useQueryClient();
   const firstCall = useRef(true);
   return (

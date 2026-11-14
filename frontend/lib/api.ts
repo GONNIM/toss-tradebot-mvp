@@ -94,6 +94,68 @@ async function del<T>(path: string): Promise<T> {
 
 export type RiskLevel = "HIGH" | "MED" | "LOW";
 
+// 1114-03 · 밈 알림 성적판 (수익률은 비용 0.25% 뺀 값 · 30건 미만 칸 숫자는 null)
+export interface MemeOutcomeCell {
+  label: string;
+  n: number;
+  median: number | null;
+  up_share: number | null;
+  median_max_down: number | null;
+  n_paired?: number;
+  diff_vs_kosdaq?: number | null;
+}
+export interface MemeOutcomeVerdict {
+  code: "hold_count" | "hold_missing" | "higher" | "none";
+  label: string;
+  horizon: number;
+  n_paired: number;
+  missing: number;
+  denominator: number;
+  missing_share: number | null;
+  net_median: number | null;
+  kosdaq_median: number | null;
+  up_share: number | null;
+  min_n: number;
+  missing_max: number;
+  up_share_min: number;
+}
+export interface MemeOutcomesSummary {
+  as_of: string;
+  horizon: number;
+  cost: number;
+  period: { start: string | null; end: string | null; distinct_dates: number; alerts: number };
+  kosdaq: { median: number | null; n: number };
+  verdict: MemeOutcomeVerdict;
+  status_counts: Record<string, number>;
+  overall: MemeOutcomeCell;
+  breakdowns: { key: string; title: string; cells: MemeOutcomeCell[] }[];
+  notes: string[];
+}
+export interface MemeOutcomeItem {
+  signal_date: string;
+  ticker: string;
+  market: "KR" | "US";
+  alert_type: string | null;
+  score: number | null;
+  signal_day_ret: number | null;
+  entry_date: string | null;
+  entry_open: number | null;
+  send_result: string | null;
+  ret_1d: number | null;
+  ret_3d: number | null;
+  ret_5d: number | null;
+  ret_10d: number | null;
+  max_up: number | null;
+  max_down: number | null;
+  status: string;
+  status_note: string | null;
+  bars_after: number;
+}
+export interface MemeOutcomesRecent {
+  cost: number;
+  items: MemeOutcomeItem[];
+}
+
 // 과거 실현 결과 요약 · 20건 미만이면 median null (1025-03)
 export type PickSummary = Record<string, { n: number; median: number | null }>;
 
@@ -887,6 +949,10 @@ export const api = {
       get<MemeScoreHistoryResponse>(
         `/meme-watch/tickers/${encodeURIComponent(ticker)}/history?hours=${hours}`,
       ),
+    outcomes: {
+      summary: (horizon = 5) => getWithSession<MemeOutcomesSummary>(`/meme-watch/outcomes/summary?horizon=${horizon}`),
+      recent: (limit = 50) => getWithSession<MemeOutcomesRecent>(`/meme-watch/outcomes/recent?limit=${limit}`),
+    },
     vip: {
       status: () => getWithSession<VipStatus>(`/meme-watch/vip/status`),
       getConfig: () => getWithSession<VipConfig>(`/meme-watch/vip/config`),

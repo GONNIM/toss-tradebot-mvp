@@ -300,6 +300,19 @@ class TossClient:
             use_account_header=False,
         )
 
+    def indicator_candles(self, symbol: str, count: int = 200) -> Any:
+        """GET /api/v1/market-indicators/{symbol}/candles · 시장 지표(KOSPI·KOSDAQ 등) 일봉 · 최신순 · 최대 200 (1114-03).
+
+        currency·adjusted 칸이 없다 · 심볼은 영문·숫자·밑줄만 (경로에 들어가므로 검사).
+        """
+        if not symbol or not all(ch.isalnum() or ch == "_" for ch in symbol):
+            raise ValueError("시장 지표 심볼 형식 오류")
+        return self.get(
+            f"/api/v1/market-indicators/{symbol}/candles",
+            params={"interval": "1d", "count": max(1, min(count, 200))},
+            use_account_header=False,
+        )
+
     def accounts(self) -> list[dict]:
         return self.get("/api/v1/accounts", use_account_header=False) or []
 

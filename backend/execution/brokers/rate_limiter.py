@@ -77,6 +77,9 @@ _PATH_GROUP_MAP: list[tuple[str, str]] = [
 
 
 def resolve_group(path: str) -> str:
+    # 1114-03 · 시장 지표 일봉(/market-indicators/{symbol}/candles)은 차트 그룹(3/s) — 지표 그룹(8/s)으로 가면 한도 초과
+    if path.startswith("/api/v1/market-indicators") and path.rstrip("/").endswith("/candles"):
+        return "MARKET_INDICATOR_CHART"
     for prefix, group in _PATH_GROUP_MAP:
         if path.startswith(prefix):
             return group

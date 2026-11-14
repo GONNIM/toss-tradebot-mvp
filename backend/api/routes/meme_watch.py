@@ -8,7 +8,7 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Optional
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel
 from sqlalchemy import desc, select
 
@@ -179,6 +179,36 @@ async def get_score_history(
 
 
 # 1110-01 · 보유 종목 평단·수량·손익이 들어 있어 조회도 관리자 로그인 필수
+@router.get("/outcomes/summary", dependencies=[Depends(require_sniper_token)])
+async def outcomes_summary(horizon: int = Query(5, description="보는 기간(거래일): 1·3·5·10")):
+    """1114-03 · 밈 알림 성적판 요약 (로그인 필요). 30건 미만 칸 숫자는 null · 지난 값 · 추정 · 보장 아님."""
+    from backend.services.meme_outcomes import HORIZONS, ensure_table, summarize_outcomes
+    from backend.services.models import MemeAlertOutcome
+
+    if horizon not in HORIZONS:
+        raise HTTPException(status_code=422, detail=f"horizon 은 {list(HORIZONS)} 중 하나")
+    await ensure_table()
+    async with get_session() as session:
+        rows = (await session.execute(select(MemeAlertOutcome))).scalars().all()
+    return summarize_outcomes(list(rows), horizon)
+
+
+@router.get("/outcomes/recent", dependencies=[Depends(require_sniper_token)])
+async def outcomes_recent(limit: int = Query(50, ge=1, le=200)):
+    """1114-03 · 최근 알림 뒤 결과 목록 (로그인 필요 · 수익률은 비용 0.25% 뺀 값)."""
+    from backend.services.meme_outcomes import COST, ensure_table, recent_rows
+    from backend.services.models import MemeAlertOutcome
+
+    await ensure_table()
+    async with get_session() as session:
+        rows = (await session.execute(
+            select(MemeAlertOutcome)
+            .order_by(desc(MemeAlertOutcome.signal_date), desc(MemeAlertOutcome.first_alert_at))
+            .limit(limit)
+        )).scalars().all()
+    return {"cost": COST, "items": recent_rows(list(rows))}
+
+
 @router.get("/vip/status", dependencies=[Depends(require_sniper_token)])
 async def get_vip_status():
     """VIP 감시 스냅샷 — 활성 여부·현재가·P&L·최근 이벤트·activist 최신 필링.

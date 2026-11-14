@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 
+import { AlertOutcomes } from "@/components/meme-watch/AlertOutcomes";
 import { MemeWatchTable } from "@/components/meme-watch/MemeWatchTable";
 import { SourcesStatusBar } from "@/components/meme-watch/SourcesStatusBar";
 import { UsageGuide } from "@/components/meme-watch/UsageGuide";
@@ -61,6 +62,8 @@ export default function MemeWatchPage() {
           <option value={100}>Top 100</option>
         </select>
       </header>
+
+      <AlertOutcomes />
 
       <UsageGuide />
 

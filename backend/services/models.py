@@ -722,6 +722,51 @@ class MemeAlertHistory(Base):
     payload: Mapped[Optional[str]] = mapped_column(Text)  # JSON
 
 
+class MemeAlertOutcome(Base):
+    """1114-03 · 밈 알림 뒤 결과 장부 — (종목, 기준일) 첫 알림 하나당 한 행.
+
+    수익률 칸은 비용 전 원값 (비용 0.25% 는 요약할 때 뺀다). 계획: docs/plans/meme-stock-discovery/08-alert-outcomes-plan-1114-03.md
+    status: ok · pending · not_buyable · no_trade · broken · unavailable
+    """
+
+    __tablename__ = "meme_alert_outcome"
+    __table_args__ = (UniqueConstraint("ticker", "signal_date", name="uq_meme_outcome_ticker_signal"),)
+
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    user_id: Mapped[str] = mapped_column(String(50), server_default="owner", default="owner", index=True)
+    ticker: Mapped[str] = mapped_column(String(20), index=True)
+    market: Mapped[str] = mapped_column(String(4))                 # "KR" / "US"
+    signal_date: Mapped[date] = mapped_column(Date, index=True)    # 알림이 쓴 종가 기준일
+    first_alert_id: Mapped[Optional[int]] = mapped_column(Integer)
+    first_alert_at: Mapped[Optional[datetime]] = mapped_column(DateTime)   # 서버 현지(KST) · 시간대 없음
+    alert_type: Mapped[Optional[str]] = mapped_column(String(30))
+    alerts_same_day: Mapped[int] = mapped_column(Integer, default=1)
+    score: Mapped[Optional[float]]
+    intensity: Mapped[Optional[float]]
+    send_result: Mapped[Optional[str]] = mapped_column(String(12))  # sent · queued · skipped · NULL(1114-02 이전)
+    prev_close: Mapped[Optional[float]]
+    signal_close: Mapped[Optional[float]]
+    signal_day_ret: Mapped[Optional[float]]
+    entry_date: Mapped[Optional[date]] = mapped_column(Date)
+    entry_open: Mapped[Optional[float]]
+    ret_1d: Mapped[Optional[float]]
+    ret_3d: Mapped[Optional[float]]
+    ret_5d: Mapped[Optional[float]]
+    ret_10d: Mapped[Optional[float]]
+    max_up: Mapped[Optional[float]]
+    max_down: Mapped[Optional[float]]
+    idx_ret_1d: Mapped[Optional[float]]
+    idx_ret_3d: Mapped[Optional[float]]
+    idx_ret_5d: Mapped[Optional[float]]
+    idx_ret_10d: Mapped[Optional[float]]
+    bars_after: Mapped[int] = mapped_column(Integer, default=0)
+    status: Mapped[str] = mapped_column(String(16), default="pending", index=True)
+    status_note: Mapped[Optional[str]] = mapped_column(String(200))
+    fail_count: Mapped[int] = mapped_column(Integer, default=0)
+    computed_at: Mapped[Optional[datetime]] = mapped_column(DateTime)
+    created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
+
+
 class MemeScoreHistory(Base):
     """Meme Score 5분 batch 이력 (Phase 4).
 

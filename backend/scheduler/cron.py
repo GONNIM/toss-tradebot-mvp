@@ -676,6 +676,17 @@ async def job_outcomes():
         await _alert_job_failure("판정·후보 결과 계산", e, 8, 10)
 
 
+async def job_meme_outcomes():
+    """밈 알림 성적판 17:35 KST 월~토 (1114-03) — 알림 뒤 결과를 토스 일봉으로 채움 · 첫 실행은 7/03 부터 · 서버에서만."""
+    try:
+        from backend.services import meme_outcomes
+
+        await meme_outcomes.run_meme_outcomes()
+    except Exception as e:
+        logger.error(f"[cron] meme outcomes failed: {e}", exc_info=True)
+        await _alert_job_failure("밈 알림 성적판", e, 17, 35)
+
+
 async def job_biotech_quotes():
     """1111-01 · 바이오 후보 종목 시세·전문가 의견·AI 요약 08:45 KST 화~토 (표시 전용 · 점수·경보 미사용).
 
@@ -963,6 +974,10 @@ def build_scheduler() -> AsyncIOScheduler:
                       id="outcomes_daily",
                       name="판정·후보 결과 계산 08:10 KST",
                       replace_existing=True, coalesce=True, misfire_grace_time=GRACE_DEFAULT)
+    scheduler.add_job(job_meme_outcomes, CronTrigger(day_of_week="mon-sat", hour=17, minute=35),
+                      id="meme_outcomes_daily",
+                      name="밈 알림 성적판 17:35 KST",
+                      replace_existing=True, coalesce=True, misfire_grace_time=GRACE_DEFAULT)
     scheduler.add_job(job_notification_digest, CronTrigger(hour=18, minute=0),
                       id="notification_digest_1800",
                       name="알림 하루 요약 18:00 KST",
@@ -1104,6 +1119,10 @@ async def main_once(target: str):
         from backend.services import outcomes
 
         print(f"✅ outcomes: {await outcomes.run_outcomes()}")
+    elif target == "meme_outcomes":
+        from backend.services import meme_outcomes
+
+        print(f"✅ meme_outcomes: {await meme_outcomes.run_meme_outcomes()}")
     elif target in ("holdings_kr", "holdings_us"):
         result = await run_holdings_snapshot(target[-2:].upper())
         print(f"✅ holdings snapshot: {result}")
@@ -1125,7 +1144,7 @@ if __name__ == "__main__":
             "universe", "crazy", "moonshot", "sector_leaders",
             "vip_price", "vip_activist", "vip_status", "vip_config",
             "activist_us", "activist_kr", "activist_us_form4", "activist_status",
-            "holdings_kr", "holdings_us", "outcomes",
+            "holdings_kr", "holdings_us", "outcomes", "meme_outcomes",
         ],
         help="1회 즉시 실행 (수동 검증). 미지정 시 데몬 모드.",
     )
