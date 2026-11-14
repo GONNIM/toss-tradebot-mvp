@@ -38,6 +38,8 @@ class Bar:
     close: float
     low: float
     high: float
+    open: Optional[float] = None     # 1114-03 · 시가 (기존 계산은 쓰지 않음)
+    volume: Optional[float] = None   # 1114-03 · 거래량 (0 이면 거래 없음)
 
 
 def _f(v) -> Optional[float]:
@@ -61,7 +63,16 @@ def base_date(created_utc: datetime, market: str) -> date:
 
 def parse_bars(resp) -> list[Bar]:
     out = []
-    for c in (resp or {}).get("candles") or [] if isinstance(resp, dict) else []:
+    # 응답 꼴이 두 가지다: {"candles": [...]} (outcomes) · [...] (rank_signals 가 보는 꼴) — 1114-03 둘 다 받는다
+    if isinstance(resp, list):
+        items = resp
+    elif isinstance(resp, dict):
+        items = resp.get("candles") or []
+    else:
+        items = []
+    for c in items:
+        if not isinstance(c, dict):
+            continue
         try:
             d = date.fromisoformat(str(c.get("timestamp"))[:10])  # 1d 봉 = 현지 거래일 자정
         except ValueError:
@@ -69,7 +80,8 @@ def parse_bars(resp) -> list[Bar]:
         close = _f(c.get("closePrice"))
         if not close:
             continue
-        out.append(Bar(d, close, _f(c.get("lowPrice")) or close, _f(c.get("highPrice")) or close))
+        out.append(Bar(d, close, _f(c.get("lowPrice")) or close, _f(c.get("highPrice")) or close,
+                       _f(c.get("openPrice")) or None, _f(c.get("volume"))))
     return sorted(out, key=lambda b: b.d)
 
 
