@@ -104,6 +104,7 @@ _ADDED_COLUMNS = [
     ("ticker_universe", "current_price", "FLOAT"),            # 1027-03
     ("holding_horizon", "deadline", "DATE"),                  # 1108-02 3단계
     ("holding_horizon", "memo", "VARCHAR(200)"),              # 1108-02 3단계
+    ("meme_volume_snapshot", "bar_date", "DATE"),             # 1114-02
 ]
 
 

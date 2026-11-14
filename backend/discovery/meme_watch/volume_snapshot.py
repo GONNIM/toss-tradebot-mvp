@@ -73,6 +73,7 @@ async def build_us_snapshots() -> dict:
                         rsi_14=rsi,
                         halt_triggered=False,
                         close=float(closes.iloc[-1]),
+                        bar_date=_last_bar_date(df),
                     )
                 )
                 stats["saved"] += 1
@@ -83,6 +84,15 @@ async def build_us_snapshots() -> dict:
 
     logger.info(f"[meme_volume] done stats={stats}")
     return stats
+
+
+def _last_bar_date(df):
+    """일봉 마지막 행의 날짜 (1114-02). 알 수 없으면 None."""
+    try:
+        idx = df.index[-1]
+        return idx.date() if hasattr(idx, "date") else idx
+    except Exception:  # noqa: BLE001
+        return None
 
 
 async def build_krx_snapshots() -> dict:
@@ -145,6 +155,7 @@ async def build_krx_snapshots() -> dict:
                         rsi_14=rsi,
                         halt_triggered=False,
                         close=float(closes.iloc[-1]),
+                        bar_date=_last_bar_date(df),
                     )
                 )
                 stats["saved"] += 1

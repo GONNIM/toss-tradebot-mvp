@@ -779,6 +779,7 @@ class MemeVolumeSnapshot(Base):
     rsi_14: Mapped[Optional[float]]
     halt_triggered: Mapped[bool] = mapped_column(Boolean, default=False)
     close: Mapped[Optional[float]]  # Phase 3-D: 일봉 마지막 종가 (UI current_price)
+    bar_date: Mapped[Optional[date]] = mapped_column(Date)  # 1114-02: 일봉 마지막 봉의 날짜 (옛 행은 NULL)
 
 
 # ─────────────────────────────────────────────────────────────────

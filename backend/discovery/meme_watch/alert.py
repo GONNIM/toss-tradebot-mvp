@@ -9,14 +9,15 @@ from __future__ import annotations
 
 import json
 import logging
-from datetime import datetime, timedelta
+from datetime import date, datetime, time, timedelta
 from typing import Optional
+from zoneinfo import ZoneInfo
 
 from sqlalchemy import select
 
 from backend.services import alert_text as at
 from backend.services.db import get_session
-from backend.services.models import MemeAlertHistory
+from backend.services.models import MemeAlertHistory, MemeVolumeSnapshot
 from backend.services.notifier import Level, TelegramNotifier
 
 logger = logging.getLogger(__name__)
@@ -30,6 +31,70 @@ _TOP_N_TO_CHECK = 50
 # 재알림 규칙 (cooldown 안이라도 시그널 급상승 시 즉시 재발송)
 _RETRIGGER_SCORE_DELTA = 0.3
 _RETRIGGER_INTENSITY_DELTA = 3.0
+
+# 1114-02 같은 자료(같은 종목·같은 기준일) 재알림 막기
+# 저장된 시각(triggered_at · snapshot_at)은 시간대 없는 값이고 서버 현지(KST)다 — 장 판정은 ZoneInfo 로 명시한다.
+_KST = ZoneInfo("Asia/Seoul")
+_ET = ZoneInfo("America/New_York")
+_SAME_DATA_LOOKBACK_DAYS = 10      # 금 16:04 알림 → 월 09:00 비교 · 연휴를 덮음
+_US_OPEN, _US_CLOSE = time(9, 30), time(16, 0)
+_KRX_CLOSE = time(15, 30)
+
+# 입력 수 문구용 한국어 라벨 (confluence 의 영어 라벨을 바꿈)
+_INPUT_LABEL_KO = {
+    "Momentum / Breakout": "가격 흐름",
+    "Catalyst": "촉매 신호",
+}
+
+
+def _prev_weekday(d: date) -> date:
+    """d 가 주말이면 직전 금요일, 아니면 d."""
+    while d.weekday() >= 5:
+        d -= timedelta(days=1)
+    return d
+
+
+def _snapshot_base_date(snapshot_at: datetime, market: str) -> date:
+    """스냅샷(시간대 없음 · KST)이 담은 마지막 봉의 날짜를 추정한다 (휴장일 보정 없음)."""
+    kst = snapshot_at.replace(tzinfo=_KST)
+    if market == "KRX":
+        d = kst.date()
+        if kst.weekday() < 5 and kst.time() < _KRX_CLOSE:
+            d -= timedelta(days=1)
+        return _prev_weekday(d)
+    et = kst.astimezone(_ET)
+    d = et.date()
+    if et.time() < _US_CLOSE:
+        d -= timedelta(days=1)
+    return _prev_weekday(d)
+
+
+def _volume_bar_date(volume, market: str) -> Optional[date]:
+    """알림에 쓴 스냅샷의 기준일 — bar_date 우선 · 없으면 snapshot_at 으로 추정."""
+    if volume is None:
+        return None
+    bd = getattr(volume, "bar_date", None)
+    if bd is not None:
+        return bd
+    at_ = getattr(volume, "snapshot_at", None)
+    if at_ is not None:
+        return _snapshot_base_date(at_, market)
+    return None
+
+
+def _us_market_open(now_kst: datetime) -> bool:
+    """미국 정규장(평일 09:30~16:00 ET) 안인가 — 시계만 본다 (휴장일 모름)."""
+    et = now_kst.replace(tzinfo=_KST).astimezone(_ET)
+    return et.weekday() < 5 and _US_OPEN <= et.time() < _US_CLOSE
+
+
+def _input_phrase(score) -> str:
+    """「입력 n가지: 라벨들」 — 실제 계산에 들어간 입력만 센다. 없으면 빈 문자열."""
+    contribs = getattr(score, "contributions", None)
+    if not contribs:
+        return ""
+    labels = [_INPUT_LABEL_KO.get(c.label, c.label) for c in contribs]
+    return f" · 입력 {len(labels)}가지: {', '.join(labels)}"
 
 
 def _format_alert(
@@ -56,13 +121,15 @@ def _format_alert(
     lines = []
     if volume is not None and volume.close is not None:
         price = f"{int(volume.close):,}원" if market == "KRX" else at.usd(volume.close)
-        day = f"오늘 {volume.return_1d_pct:+.1f}% · " if volume.return_1d_pct is not None else ""
-        lines.append(f"{day}지금 {price}")
+        bd = _volume_bar_date(volume, market)
+        basis = f"{bd:%m/%d} 종가 기준" if bd else "최근 종가 기준"
+        day = f" {volume.return_1d_pct:+.1f}% ·" if volume.return_1d_pct is not None else ""
+        lines.append(f"{basis}{day} {price}")
     if intensity is not None:
         prev = f" · 직전 {prev_intensity:.1f}" if prev_intensity is not None else ""
         lines.append(f"상승 강도 {intensity.intensity:.1f}/10 (실측{prev})")
     prev = f" · 직전 {prev_score:.2f}" if prev_score is not None else ""
-    lines.append(f"급등 전 단계 점수 {score.score:.2f} (추정{prev} · 커뮤니티 언급·거래량 등 5가지 · 보장 아님)")
+    lines.append(f"급등 전 단계 점수 {score.score:.2f} (추정{prev}{_input_phrase(score)} · 보장 아님)")
     if market:
         lines.append(f"시장: {at.esc(market)}")
     lines.append(at.link(category))
@@ -73,11 +140,17 @@ def _format_alert(
 _HANDLED = {"sent", "queued", "skipped"}
 
 
-async def check_and_send_alerts(top_n: int = _TOP_N_TO_CHECK) -> dict:
+async def check_and_send_alerts(top_n: int = _TOP_N_TO_CHECK, now: Optional[datetime] = None) -> dict:
     """Top N 종목에서 ERUPTING/BLAZING 감지 → Telegram 발송 + 이력 저장.
 
     Phase 6-D: cooldown 8h + 시그널 급상승 (Score +0.3 or Intensity +3.0) 시
     cooldown 무시 재발송 (🔺 UP 표시).
+
+    1114-02: 같은 (종목, 기준일) 자료로 다시 알리지 않는다.
+    - 국내(KRX): 시각 무관 — 이미 알렸으면 건너뜀.
+    - 미국: 정규장 밖·주말이면 건너뜀. 직전 알림보다 점수가 +0.3 이상 오르면 보냄. 장 중은 기존 동작.
+    건너뛴 알림은 SignalHit 기록·실행 계층 매수 신호도 만들지 않는다.
+    now: 시험용 현재 시각 (시간대 없음 · KST).
     """
     stats = {
         "candidates": 0,
@@ -85,6 +158,7 @@ async def check_and_send_alerts(top_n: int = _TOP_N_TO_CHECK) -> dict:
         "sent_new": 0,
         "sent_retrigger": 0,
         "skipped_cooldown": 0,
+        "skipped_same_data": 0,
         "skipped_below_threshold": 0,
         "errors": 0,
     }
@@ -100,7 +174,7 @@ async def check_and_send_alerts(top_n: int = _TOP_N_TO_CHECK) -> dict:
     if not results:
         return stats
 
-    now = datetime.now()
+    now = now or datetime.now()
     cutoff = now - timedelta(hours=_COOLDOWN_HOURS)
 
     async with get_session() as session:
@@ -121,6 +195,56 @@ async def check_and_send_alerts(top_n: int = _TOP_N_TO_CHECK) -> dict:
             except (ValueError, TypeError):
                 recent_map[(tk, at)] = {}
 
+        # 같은 자료 확인용 최근 10일 이력 — 종목별 (발송 시각, 점수, 기준일) · 기준일은 필요할 때만 구함
+        hist_rows = (
+            await session.execute(
+                select(
+                    MemeAlertHistory.ticker,
+                    MemeAlertHistory.triggered_at,
+                    MemeAlertHistory.payload,
+                ).where(
+                    MemeAlertHistory.triggered_at
+                    >= now - timedelta(days=_SAME_DATA_LOOKBACK_DAYS)
+                )
+            )
+        ).all()
+        hist_by_ticker: dict[str, list[tuple[datetime, dict]]] = {}
+        for tk, trig, pl in hist_rows:
+            try:
+                d = json.loads(pl or "{}")
+            except (ValueError, TypeError):
+                d = {}
+            hist_by_ticker.setdefault(tk, []).append((trig, d))
+        us_open = _us_market_open(now)
+
+        async def _alerted_dates(ticker: str, market: str) -> list[tuple[date, datetime, Optional[float]]]:
+            out = []
+            for trig, d in hist_by_ticker.get(ticker, []):
+                bd = None
+                if d.get("bar_date"):
+                    try:
+                        bd = date.fromisoformat(d["bar_date"])
+                    except ValueError:
+                        bd = None
+                if bd is None:
+                    # 옛 행: 그 알림 시각 이전 그 종목 마지막 스냅샷의 기준일로 추정
+                    snap = (
+                        await session.execute(
+                            select(MemeVolumeSnapshot.snapshot_at, MemeVolumeSnapshot.bar_date)
+                            .where(
+                                MemeVolumeSnapshot.ticker == ticker,
+                                MemeVolumeSnapshot.snapshot_at <= trig,
+                            )
+                            .order_by(MemeVolumeSnapshot.snapshot_at.desc())
+                            .limit(1)
+                        )
+                    ).first()
+                    if snap is not None:
+                        bd = snap[1] or _snapshot_base_date(snap[0], market)
+                if bd is not None:
+                    out.append((bd, trig, d.get("score")))
+            return out
+
         for r in results:
             score = r["score"]
             intensity = r.get("intensity")
@@ -138,6 +262,21 @@ async def check_and_send_alerts(top_n: int = _TOP_N_TO_CHECK) -> dict:
 
             stats["eligible"] += 1
             key = (score.ticker, alert_type)
+
+            # 같은 자료 재알림 막기 (1114-02)
+            mkt = (meta.market if meta else None) or ""
+            bar_date = _volume_bar_date(volume, mkt)
+            if bar_date is not None:
+                same = [h for h in await _alerted_dates(score.ticker, mkt) if h[0] == bar_date]
+                if same:
+                    if mkt == "KRX":
+                        stats["skipped_same_data"] += 1
+                        continue
+                    if not us_open:
+                        last_score = max(same, key=lambda h: h[1])[2]
+                        if last_score is None or score.score - last_score < _RETRIGGER_SCORE_DELTA:
+                            stats["skipped_same_data"] += 1
+                            continue
 
             # cooldown 판정 — 이전 발송 있으면 상승 delta 확인
             prev_score: Optional[float] = None
@@ -198,6 +337,8 @@ async def check_and_send_alerts(top_n: int = _TOP_N_TO_CHECK) -> dict:
                                 "name": (meta.name if meta else None),
                                 "market": (meta.market if meta else None),
                                 "retrigger": is_retrigger,
+                                "bar_date": bar_date.isoformat() if bar_date else None,
+                                "send_result": notifier.last_result,
                             },
                             ensure_ascii=False,
                         ),
