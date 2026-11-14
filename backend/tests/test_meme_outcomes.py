@@ -285,7 +285,7 @@ def test_summary_era_and_send_split():
     s = mo.summarize_outcomes(rows, 5)
     era = {c["label"]: c for bd in s["breakdowns"] if bd["key"] == "era" for c in bd["cells"]}
     send = {c["label"]: c for bd in s["breakdowns"] if bd["key"] == "send" for c in bd["cells"]}
-    assert era["1114-02 배포 후"]["n"] == 60 and era["1114-02 배포 전"]["n"] == 5
+    assert era["11/14 알림 고침 뒤"]["n"] == 60 and era["11/14 알림 고침 전"]["n"] == 5
     assert send["보냄"]["n"] == 30 and send["안 보냄(건너뜀·대기)"]["n"] == 30
     assert send["기록 없음(옛 알림)"]["median"] is None
 

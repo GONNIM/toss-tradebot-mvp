@@ -290,7 +290,7 @@ def _bucket_day(r: Any) -> str:
 
 def _bucket_era(r: Any) -> str:
     # 1114-02 배포 뒤에 저장된 알림만 발송 결과(send_result)가 payload 에 있다
-    return "1114-02 배포 후" if _g(r, "send_result") is not None else "1114-02 배포 전"
+    return "11/14 알림 고침 뒤" if _g(r, "send_result") is not None else "11/14 알림 고침 전"
 
 
 def _bucket_market(r: Any) -> str:
@@ -306,7 +306,7 @@ _BREAKDOWNS = (
     ("type", "알림 종류", _bucket_type, ("상승 강도 알림", "급등 전 단계 알림", "그 밖")),
     ("score", "급등 전 단계 점수", _bucket_score, ("1.0 미만", "1.0~1.2", "1.2~1.5", "1.5 이상", "점수 없음")),
     ("day", "알림 기준일의 하루 등락", _bucket_day, ("10% 미만", "10~20%", "20~29%", "29% 이상", "등락 모름")),
-    ("era", "1114-02 배포 전후", _bucket_era, ("1114-02 배포 전", "1114-02 배포 후")),
+    ("era", "11/14 알림 고침 전과 뒤", _bucket_era, ("11/14 알림 고침 전", "11/14 알림 고침 뒤")),
     ("market", "시장", _bucket_market, ("국내", "미국")),
     ("send", "텔레그램 발송 여부", _bucket_send, ("보냄", "안 보냄(건너뜀·대기)", "기록 없음(옛 알림)")),
 )

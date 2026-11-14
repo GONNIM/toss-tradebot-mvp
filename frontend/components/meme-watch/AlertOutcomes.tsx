@@ -27,8 +27,9 @@ const STATUS_LABEL: Record<string, string> = {
 
 function pct(v: number | null | undefined, digits = 1, sign = true): string {
   if (v === null || v === undefined || Number.isNaN(v)) return "—";
-  const x = v * 100;
-  return `${sign && x >= 0 ? "+" : ""}${x.toFixed(digits)}%`;
+  let t = (v * 100).toFixed(digits);
+  if (Number(t) === 0) t = (0).toFixed(digits); // 반올림 뒤 −0.0 을 0.0 으로
+  return `${sign && Number(t) > 0 ? "+" : ""}${t}%`;
 }
 
 function share(v: number | null | undefined): string {
@@ -255,7 +256,7 @@ export function AlertOutcomes() {
 
       <p className="text-xs text-muted-foreground">
         알림 뒤 처음 열린 봉의 시가에서 잰 지난 값입니다. 앞으로의 수익을 뜻하지 않으며 · 추정 · 보장 아님.
-        알림 기준일은 알림에 적힌 종가 날짜이고, 1114-02 이전 알림은 기준일을 추정했습니다.
+        알림 기준일은 알림에 적힌 종가 날짜이고, 11/14 알림 고침 전의 알림은 기준일을 추정했습니다.
       </p>
     </section>
   );
