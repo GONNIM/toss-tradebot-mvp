@@ -353,9 +353,16 @@ class FakeToss:
                             for b in reversed(bars)]}
 
     def candles(self, symbol, count=200):
+        from backend.execution.exceptions import BrokerCommunicationError, OrderRejected, RateLimitExceeded
         self.calls.append(symbol)
-        if self.fail_all or symbol not in self.by:
-            raise RuntimeError("없음")
+        if self.fail_all == "429":
+            raise RateLimitExceeded(retry_after=1.0)
+        if self.fail_all == "notfound":
+            raise OrderRejected("invalid-symbol", "없음")
+        if self.fail_all:
+            raise BrokerCommunicationError("5xx 서버 오류")
+        if symbol not in self.by:
+            raise OrderRejected("invalid-symbol", "없음")
         return self._resp(self.by[symbol])
 
     def indicator_candles(self, symbol, count=200):
@@ -464,20 +471,91 @@ async def test_us_row_has_no_index_and_us_base(clean):
 
 
 @pytest.mark.asyncio
-async def test_all_fail_raises_and_counts_then_unavailable(clean):
+@pytest.mark.parametrize("mode", [True, "429"])
+async def test_all_fail_raises_but_never_counts(clean, mode):
+    """통째 실패(5xx · 429)는 토스 장애로 보고 횟수를 올리지 않는다 (병합 검토 막음 1). 종목이 많은데 전부 「없음」인 경우는 시장 장애 시험이 본다."""
     bars = kr_bars(15)
     sig = bars[3].d
     await add_alert(KR, datetime.combine(sig, datetime.min.time()).replace(hour=16, minute=20), bar_date=sig.isoformat())
-    for expected in (1, 2, 3):
+    for _ in range(4):
         with pytest.raises(RuntimeError):
-            await mo.run_meme_outcomes(client=FakeToss({}, fail_all=True, index=mk(D0, [100.0] * 15)), now=NOW)
+            await mo.run_meme_outcomes(client=FakeToss({}, fail_all=mode, index=mk(D0, [100.0] * 15)), now=NOW)
         r = (await outcomes())[0]
-        assert r.fail_count == expected
-    assert r.status == "unavailable"
-    # 계산 불가는 끝난 행 → 다시 부르지 않는다
-    c = FakeToss({KR: bars}, index=mk(D0, [100.0] * 15))
+        assert r.fail_count == 0 and r.status == "pending"
+    # 장애가 끝나면 정상으로 계산된다
+    await mo.run_meme_outcomes(client=FakeToss({KR: bars}, index=mk(D0, [100.0] * 15)), now=NOW)
+    r = (await outcomes())[0]
+    assert r.status == "ok"
+
+
+@pytest.mark.asyncio
+async def test_transient_error_on_one_symbol_not_counted(clean):
+    from backend.execution.exceptions import RateLimitExceeded
+
+    class Flaky(FakeToss):
+        def candles(self, symbol, count=200):
+            if symbol == "900002":
+                self.calls.append(symbol)
+                raise RateLimitExceeded(retry_after=1.0)
+            return super().candles(symbol, count)
+
+    bars = kr_bars(15)
+    sig = bars[3].d
+    at = datetime.combine(sig, datetime.min.time()).replace(hour=16, minute=20)
+    await add_alert(KR, at, bar_date=sig.isoformat())
+    await add_alert("900002", at, bar_date=sig.isoformat())
+    import contextlib
+    for _ in range(3):
+        # 첫 실행 뒤에는 남은 종목이 모두 일시 오류라 실패 알림(예외)이 난다 — 그래도 세지 않아야 한다
+        with contextlib.suppress(RuntimeError):
+            await mo.run_meme_outcomes(client=Flaky({KR: bars}, index=mk(D0, [100.0] * 15)), now=NOW)
+    rows = {r.ticker: r for r in await outcomes()}
+    assert rows["900002"].fail_count == 0 and rows["900002"].status == "pending"
+    assert rows[KR].status == "ok"
+
+
+@pytest.mark.asyncio
+async def test_single_missing_symbol_counts_then_unavailable(clean):
+    """한 종목만 토스에 없으면(시장 장애 아님) 3회 뒤 계산 불가 · 그 뒤 다시 부르지 않는다."""
+    bars = kr_bars(15)
+    sig = bars[3].d
+    at = datetime.combine(sig, datetime.min.time()).replace(hour=16, minute=20)
+    await add_alert(KR, at, bar_date=sig.isoformat())
+    await add_alert("900002", at, bar_date=sig.isoformat())
+    for expected in (1, 2, 3):
+        await mo.run_meme_outcomes(client=FakeToss({KR: bars}, index=mk(D0, [100.0] * 15)), now=NOW)
+        assert {r.ticker: r for r in await outcomes()}["900002"].fail_count == expected
+    assert {r.ticker: r for r in await outcomes()}["900002"].status == "unavailable"
+    c = FakeToss({KR: bars, "900002": bars}, index=mk(D0, [100.0] * 15))
     await mo.run_meme_outcomes(client=c, now=NOW)
-    assert c.calls == []
+    assert "900002" not in c.calls
+
+
+@pytest.mark.asyncio
+async def test_market_outage_not_counted_and_raises(clean):
+    """국내 종목 6개 중 5개가 「없음」이면 시장 장애로 보고 세지 않고 실패 알림(예외)을 낸다."""
+    bars = kr_bars(15)
+    sig = bars[3].d
+    at = datetime.combine(sig, datetime.min.time()).replace(hour=16, minute=20)
+    syms = [KR] + [f"90001{i}" for i in range(5)]
+    for t in syms:
+        await add_alert(t, at, bar_date=sig.isoformat())
+    with pytest.raises(RuntimeError, match="KR"):
+        await mo.run_meme_outcomes(client=FakeToss({KR: bars}, index=mk(D0, [100.0] * 15)), now=NOW)
+    rows = {r.ticker: r for r in await outcomes()}
+    assert all(rows[t].fail_count == 0 for t in syms[1:])
+    assert rows[KR].status == "ok"
+
+
+def test_overlap_rows_not_counted_as_missing():
+    base = dict(market="KR", ret_5d=0.05, idx_ret_5d=0.0)
+    rows = [SimpleNamespace(**base, status="ok", status_note=None, signal_date=date(2026, 9, 1) + timedelta(days=i))
+            for i in range(30)]
+    rows += [SimpleNamespace(market="KR", ret_5d=None, idx_ret_5d=None, status="unavailable",
+                             status_note=f"기준일이 휴장일로 추정되나 {mo.OVERLAP_NOTE}", signal_date=date(2026, 9, 1))
+             for _ in range(10)]
+    v = mo.verdict_of(rows)
+    assert v["missing"] == 0 and v["denominator"] == 30 and v["code"] == "higher"
 
 
 @pytest.mark.asyncio

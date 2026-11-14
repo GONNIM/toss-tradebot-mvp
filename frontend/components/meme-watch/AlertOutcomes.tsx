@@ -37,7 +37,9 @@ function share(v: number | null | undefined): string {
 }
 
 function Num({ v, digits = 1 }: { v: number | null | undefined; digits?: number }) {
-  return <span className={cn("tabular-nums", upDownText(v))}>{pct(v, digits)}</span>;
+  // 글자가 0.0% 로 반올림되면 색도 붙이지 않는다
+  const shown = v === null || v === undefined || Number(pct(v, digits).replace(/[+%]/g, "")) === 0 ? null : v;
+  return <span className={cn("tabular-nums", upDownText(shown))}>{pct(v, digits)}</span>;
 }
 
 function Tile({ label, value, sub }: { label: string; value: React.ReactNode; sub?: string }) {
@@ -194,7 +196,7 @@ export function AlertOutcomes() {
             </div>
             <div className="mt-1 space-y-0.5 text-xs text-muted-foreground tabular-nums">
               <div>
-                기간 {s.period.start ?? "—"} ~ {s.period.end ?? "—"} · 서로 다른 기준일 {s.period.distinct_dates}일 · 알림 {s.period.alerts}건
+                기간 {s.period.start ?? "—"} ~ {s.period.end ?? "—"} · 국내 비교 기준일 {s.period.distinct_dates}일 · 알림 {s.period.alerts}건
               </div>
               <div>
                 짝지어 비교한 {v.n_paired}건(기준 {v.min_n}건 이상)

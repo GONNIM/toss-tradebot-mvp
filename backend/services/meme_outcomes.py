@@ -36,7 +36,25 @@ UP_SHARE_MIN = 0.5                   # 순 5일 오른 비율 기준
 MISSING_MAX = 0.10                   # 계산 불가·끊김 비율이 넘으면 판정 보류
 HORIZONS = (1, 3, 5, 10)
 MAX_BARS = 10                        # 진입 봉부터 10봉까지 채움
-MAX_FAILS = 3                        # 토스에서 못 받기를 3회 겹치면 계산 불가
+MAX_FAILS = 3                        # 토스에「없음」을 3회 겹치면 계산 불가 (일시 오류·장애는 세지 않음)
+OUTAGE_MIN_SYMBOLS = 5               # 한 시장 종목이 이만큼 이상일 때
+OUTAGE_SHARE = 0.5                   # 그 시장의 이 비율 이상이 「없음」이면 장애로 보고 세지 않음
+OVERLAP_NOTE = "앞 행과 겹침"
+
+
+def _is_missing_error(exc: BaseException) -> bool:
+    """토스가 「그 종목 자료 없음」으로 답한 경우만 True. 429·인증·연결·5xx 는 일시 오류로 본다."""
+    from backend.execution.exceptions import (
+        BrokerCommunicationError, OrderNotFound, OrderRejected, RateLimitExceeded,
+    )
+    if isinstance(exc, (RateLimitExceeded, BrokerCommunicationError)):
+        return False
+    if isinstance(exc, OrderNotFound):
+        return True
+    if isinstance(exc, OrderRejected):
+        code = (getattr(exc, "code", "") or "").lower()
+        return not (code in ("http-401", "http-403") or "token" in code or "auth" in code or "forbidden" in code)
+    return False
 KRX_JUMP = 0.305                     # 이웃 봉 종가 변동이 ±30.5% 넘으면 계산 불가 (분할·상장 의심)
 KRX_LIMIT = 0.30
 KR_ALERT_CUTOFF = time(16, 10)       # 국내 알림 시각 기준: 16:10 전이면 전날 종가 기준으로 추정
@@ -316,7 +334,9 @@ def verdict_of(rows: list[Any]) -> dict[str, Any]:
     """국내 · 순 5일 · 행마다 짝지은 코스닥 값 비교. 규칙은 계획서 「계산 규칙 · API」 + 검토 반영."""
     h = VERDICT_HORIZON
     kr = [r for r in rows if _g(r, "market") == "KR"]
-    den = [r for r in kr if _g(r, "status") != "pending" or _g(r, f"ret_{h}d") is not None]
+    # 「앞 행과 겹침」은 자료가 빠진 것이 아니라 중복이라 분모·빠진 건수 모두에서 뺀다
+    kr_real = [r for r in kr if OVERLAP_NOTE not in (_g(r, "status_note") or "")]
+    den = [r for r in kr_real if _g(r, "status") != "pending" or _g(r, f"ret_{h}d") is not None]
     missing = sum(1 for r in den if _g(r, "status") in ("unavailable", "broken"))
     share = missing / len(den) if den else None
     paired = [r for r in kr if _net(r, h) is not None and _g(r, f"idx_ret_{h}d") is not None]
@@ -375,7 +395,8 @@ def summarize_outcomes(rows: list[Any], horizon: int = 5, now: Optional[datetime
         "period": {
             "start": min(dates).isoformat() if dates else None,
             "end": max(dates).isoformat() if dates else None,
-            "distinct_dates": len({_g(r, "signal_date") for r in with_ret}),
+            # 국내 판정 줄 옆에 보이므로 코스닥과 짝지은 국내 행의 기준일 수
+            "distinct_dates": len({_g(r, "signal_date") for r in paired}),
             "alerts": len(rows),
         },
         "kosdaq": kos,
@@ -532,21 +553,45 @@ async def run_meme_outcomes(
             summary["index"] = "ok" if index_bars else "failed"
 
         bars_by: dict[str, list[Bar]] = {}
-        failed: set[str] = set()
+        failed: set[str] = set()      # 토스가 「없음」으로 답했거나 빈 봉 → 횟수에 셈
+        transient: set[str] = set()   # 429·인증·연결·5xx 등 일시 오류 → 세지 않고 다음 실행에서 다시
         for sym in symbols:
             try:
                 bars = parse_bars(await asyncio.to_thread(client.candles, sym, 200))
-            except Exception as exc:  # noqa: BLE001 — 토스에 없는 종목 등
-                logger.warning("[meme_outcomes] 일봉 없음 %s · %s", sym, type(exc).__name__)
-                bars = []
+            except Exception as exc:  # noqa: BLE001
+                if _is_missing_error(exc):
+                    logger.warning("[meme_outcomes] 일봉 없음 %s · %s", sym, type(exc).__name__)
+                    bars = []
+                else:
+                    logger.warning("[meme_outcomes] 일봉 일시 오류 %s · %s", sym, type(exc).__name__)
+                    transient.add(sym)
+                    continue
             if bars:
                 bars_by[sym] = bars
             else:
                 failed.add(sym)
         summary["fetched"] = len(bars_by)
         summary["failed"] = len(failed)
-        if symbols and len(failed) == len(symbols):
+        summary["transient"] = len(transient)
+        # 통째 실패: 모두 일시 오류이거나, 종목이 충분히 많은데 모두 못 받음 → 장애로 보고 세지 않음
+        # (종목이 몇 개 안 남았을 때 그것들이 정말 토스에 없으면 정상대로 센다)
+        if symbols and len(failed) + len(transient) == len(symbols) and (
+            not failed or len(symbols) >= OUTAGE_MIN_SYMBOLS
+        ):
             all_failed = True
+
+        # 한 시장이 통째로 「없음」이면 토스 쪽 장애로 보고 그 시장은 세지 않는다
+        market_of = {r.ticker: r.market for r in pending}
+        outage: list[str] = []
+        for mk_ in ("KR", "US"):
+            syms_m = [x for x in symbols if market_of.get(x) == mk_]
+            bad_m = [x for x in syms_m if x in failed or x in transient]
+            if len(syms_m) >= OUTAGE_MIN_SYMBOLS and len(bad_m) / len(syms_m) >= OUTAGE_SHARE:
+                outage.append(mk_)
+        summary["outage"] = outage
+        no_count = set(transient) | ({x for x in failed if market_of.get(x) in outage} if outage else set())
+        if all_failed:
+            no_count |= failed
 
         kr_index_closed = closed_bars(index_bars, "KR", now) if index_bars else []
         ref_kr = kr_index_closed[-1].d if kr_index_closed else None
@@ -557,6 +602,9 @@ async def run_meme_outcomes(
         naive_now = now.astimezone(timezone.utc).replace(tzinfo=None)
 
         for r in pending:
+            if r.ticker in no_count:
+                r.status_note = "토스 일봉 일시 오류 · 다음 실행에서 다시 받음 (횟수에 넣지 않음)"
+                continue
             if r.ticker in failed:
                 r.fail_count = (r.fail_count or 0) + 1
                 if r.fail_count >= MAX_FAILS:
@@ -568,7 +616,7 @@ async def run_meme_outcomes(
             new_sd = corrected_signal_date(bars, r.signal_date)
             if new_sd != r.signal_date:
                 if (r.ticker, new_sd) in by_key:
-                    r.status, r.status_note = "unavailable", "기준일이 휴장일로 추정되나 앞 행과 겹침"
+                    r.status, r.status_note = "unavailable", f"기준일이 휴장일로 추정되나 {OVERLAP_NOTE}"
                     continue
                 by_key.pop((r.ticker, r.signal_date), None)
                 r.signal_date = new_sd
@@ -588,6 +636,8 @@ async def run_meme_outcomes(
         summary["by_status"] = {s: sum(1 for r in by_key.values() if r.status == s) for s in STATUSES}
 
     if all_failed:
-        raise RuntimeError(f"토스 일봉 조회가 {len(symbols)}종목 모두 실패")
+        raise RuntimeError(f"토스 일봉 조회가 {len(symbols)}종목 모두 실패 · 못 받은 횟수는 올리지 않음")
+    if outage:
+        raise RuntimeError(f"토스 일봉 조회가 {','.join(outage)} 시장에서 대부분 실패 · 그 시장 횟수는 올리지 않음")
     logger.info("[meme_outcomes] %s", summary)
     return summary
