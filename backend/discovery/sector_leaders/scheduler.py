@@ -91,8 +91,11 @@ async def _krx_candles_refresh(session: AsyncSession) -> dict:
     """
     codes = sorted({t.code for t in iter_all_tickers()})
     logger.info(f"[krx_candles_refresh] {len(codes)} 종목 24M 일봉 UPSERT 시작")
-    stats = await ingest_24m_candles(session, codes)
+    await session.commit()  # 받기 전에 앞 단계의 열린 거래를 닫는다 (받는 동안 쓰기 잠금 없음)
+    stats = await ingest_24m_candles(session, codes)  # 종목마다 commit
     await session.commit()
+    if stats.get("failures", 0) > 0:
+        logger.warning(f"[krx_candles_refresh] 일부 종목 실패 failures={stats['failures']} stats={stats}")
     logger.info(f"[krx_candles_refresh] done stats={stats}")
     return stats
 
