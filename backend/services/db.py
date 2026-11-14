@@ -15,6 +15,7 @@ import logging
 from contextlib import asynccontextmanager
 from typing import AsyncIterator
 
+from sqlalchemy import event
 from sqlalchemy.ext.asyncio import (
     AsyncEngine,
     AsyncSession,
@@ -50,6 +51,16 @@ engine: AsyncEngine = create_async_engine(
     pool_pre_ping=True,
     connect_args=_connect_args(),
 )
+
+if DATABASE_URL.startswith("sqlite"):
+
+    @event.listens_for(engine.sync_engine, "connect")
+    def _sqlite_busy_timeout(dbapi_conn, _record):
+        """1102-08: connect timeout=30 과 같은 30초를 PRAGMA busy_timeout 으로도 명시한다."""
+        cur = dbapi_conn.cursor()
+        cur.execute("PRAGMA busy_timeout=30000")
+        cur.close()
+
 
 AsyncSessionLocal = async_sessionmaker(
     engine,
