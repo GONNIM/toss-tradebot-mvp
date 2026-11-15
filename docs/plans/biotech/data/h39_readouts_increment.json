@@ -357,7 +357,8 @@
         "9.01"
       ],
       "direction": "unclassified",
-      "matched_keywords": "topline"
+      "matched_keywords": "topline",
+      "merger_announcement": false
     },
     {
       "cik": "0000072444",
@@ -373,7 +374,8 @@
         "9.01"
       ],
       "direction": "unclassified",
-      "matched_keywords": "pivotal"
+      "matched_keywords": "pivotal",
+      "merger_announcement": false
     },
     {
       "cik": "0000863894",
@@ -388,7 +390,8 @@
         "9.01"
       ],
       "direction": "unclassified",
-      "matched_keywords": "topline"
+      "matched_keywords": "topline",
+      "merger_announcement": false
     },
     {
       "cik": "0000882796",
@@ -404,7 +407,8 @@
         "9.01"
       ],
       "direction": "unclassified",
-      "matched_keywords": "pivotal|top-line"
+      "matched_keywords": "pivotal|top-line",
+      "merger_announcement": false
     },
     {
       "cik": "0000906709",
@@ -419,7 +423,8 @@
         "9.01"
       ],
       "direction": "unclassified",
-      "matched_keywords": "pivotal|primary endpoint|topline"
+      "matched_keywords": "pivotal|primary endpoint|topline",
+      "merger_announcement": false
     },
     {
       "cik": "0000939767",
@@ -434,7 +439,8 @@
         "9.01"
       ],
       "direction": "positive",
-      "matched_keywords": "pivotal|primary endpoint|topline"
+      "matched_keywords": "pivotal|primary endpoint|topline",
+      "merger_announcement": false
     },
     {
       "cik": "0001053691",
@@ -449,7 +455,8 @@
         "9.01"
       ],
       "direction": "unclassified",
-      "matched_keywords": "topline"
+      "matched_keywords": "topline",
+      "merger_announcement": false
     },
     {
       "cik": "0001053691",
@@ -465,7 +472,8 @@
         "9.01"
       ],
       "direction": "unclassified",
-      "matched_keywords": "topline"
+      "matched_keywords": "topline",
+      "merger_announcement": false
     },
     {
       "cik": "0001055726",
@@ -481,7 +489,8 @@
         "9.01"
       ],
       "direction": "unclassified",
-      "matched_keywords": "pivotal"
+      "matched_keywords": "pivotal",
+      "merger_announcement": false
     },
     {
       "cik": "0001070494",
@@ -496,7 +505,8 @@
         "9.01"
       ],
       "direction": "unclassified",
-      "matched_keywords": "phase 2 results|topline"
+      "matched_keywords": "phase 2 results|topline",
+      "merger_announcement": false
     },
     {
       "cik": "0001070494",
@@ -512,7 +522,8 @@
         "9.01"
       ],
       "direction": "negative",
-      "matched_keywords": "primary endpoint|top-line|topline"
+      "matched_keywords": "primary endpoint|top-line|topline",
+      "merger_announcement": false
     },
     {
       "cik": "0001070494",
@@ -527,7 +538,8 @@
         "9.01"
       ],
       "direction": "positive",
-      "matched_keywords": "primary endpoint"
+      "matched_keywords": "primary endpoint",
+      "merger_announcement": false
     },
     {
       "cik": "0001098972",
@@ -542,7 +554,8 @@
         "9.01"
       ],
       "direction": "unclassified",
-      "matched_keywords": "primary endpoint"
+      "matched_keywords": "primary endpoint",
+      "merger_announcement": false
     },
     {
       "cik": "0001130598",
@@ -557,7 +570,8 @@
         "9.01"
       ],
       "direction": "unclassified",
-      "matched_keywords": "pivotal"
+      "matched_keywords": "pivotal",
+      "merger_announcement": false
     },
     {
       "cik": "0001157601",
@@ -572,7 +586,8 @@
         "9.01"
       ],
       "direction": "unclassified",
-      "matched_keywords": "topline"
+      "matched_keywords": "topline",
+      "merger_announcement": false
     },
     {
       "cik": "0001178253",
@@ -587,7 +602,8 @@
         "8.01"
       ],
       "direction": "unclassified",
-      "matched_keywords": "pivotal"
+      "matched_keywords": "pivotal",
+      "merger_announcement": false
     },
     {
       "cik": "0001281895",
@@ -605,7 +621,8 @@
         "9.01"
       ],
       "direction": "unclassified",
-      "matched_keywords": "pivotal|primary endpoint|topline"
+      "matched_keywords": "pivotal|primary endpoint|topline",
+      "merger_announcement": false
     },
     {
       "cik": "0001281895",
@@ -620,7 +637,8 @@
         "9.01"
       ],
       "direction": "unclassified",
-      "matched_keywords": "pivotal"
+      "matched_keywords": "pivotal",
+      "merger_announcement": false
     },
     {
       "cik": "0001326190",
@@ -635,7 +653,8 @@
         "9.01"
       ],
       "direction": "unclassified",
-      "matched_keywords": "topline"
+      "matched_keywords": "topline",
+      "merger_announcement": false
     },
     {
       "cik": "0001326190",
@@ -651,7 +670,8 @@
         "9.01"
       ],
       "direction": "unclassified",
-      "matched_keywords": "topline"
+      "matched_keywords": "topline",
+      "merger_announcement": false
     },
     {
       "cik": "0001341235",
@@ -667,7 +687,8 @@
         "9.01"
       ],
       "direction": "mixed",
-      "matched_keywords": "pivotal|primary endpoint"
+      "matched_keywords": "pivotal|primary endpoint",
+      "merger_announcement": false
     },
     {
       "cik": "0001357874",
@@ -683,7 +704,8 @@
         "9.01"
       ],
       "direction": "positive",
-      "matched_keywords": "primary endpoint|top-line"
+      "matched_keywords": "primary endpoint|top-line",
+      "merger_announcement": false
     },
     {
       "cik": "0001357874",
@@ -698,7 +720,8 @@
         "9.01"
       ],
       "direction": "unclassified",
-      "matched_keywords": "pivotal|top-line"
+      "matched_keywords": "pivotal|top-line",
+      "merger_announcement": false
     },
     {
       "cik": "0001359931",
@@ -713,7 +736,8 @@
         "9.01"
       ],
       "direction": "unclassified",
-      "matched_keywords": "pivotal"
+      "matched_keywords": "pivotal",
+      "merger_announcement": false
     },
     {
       "cik": "0001374690",
@@ -729,7 +753,8 @@
         "9.01"
       ],
       "direction": "unclassified",
-      "matched_keywords": "top-line"
+      "matched_keywords": "top-line",
+      "merger_announcement": false
     },
     {
       "cik": "0001377121",
@@ -744,7 +769,8 @@
         "9.01"
       ],
       "direction": "unclassified",
-      "matched_keywords": "phase 3 results|pivotal"
+      "matched_keywords": "phase 3 results|pivotal",
+      "merger_announcement": false
     },
     {
       "cik": "0001393434",
@@ -759,7 +785,8 @@
         "9.01"
       ],
       "direction": "unclassified",
-      "matched_keywords": "pivotal|primary endpoint|topline"
+      "matched_keywords": "pivotal|primary endpoint|topline",
+      "merger_announcement": false
     },
     {
       "cik": "0001400118",
@@ -775,7 +802,8 @@
         "9.01"
       ],
       "direction": "positive",
-      "matched_keywords": "phase 3 results|pivotal|primary endpoint|topline"
+      "matched_keywords": "phase 3 results|pivotal|primary endpoint|topline",
+      "merger_announcement": false
     },
     {
       "cik": "0001400118",
@@ -790,7 +818,8 @@
         "9.01"
       ],
       "direction": "positive",
-      "matched_keywords": "primary endpoint|topline"
+      "matched_keywords": "primary endpoint|topline",
+      "merger_announcement": false
     },
     {
       "cik": "0001400118",
@@ -806,7 +835,8 @@
         "9.01"
       ],
       "direction": "positive",
-      "matched_keywords": "primary endpoint|topline"
+      "matched_keywords": "primary endpoint|topline",
+      "merger_announcement": false
     },
     {
       "cik": "0001404644",
@@ -821,7 +851,8 @@
         "9.01"
       ],
       "direction": "unclassified",
-      "matched_keywords": "pivotal|primary endpoint|topline"
+      "matched_keywords": "pivotal|primary endpoint|topline",
+      "merger_announcement": false
     },
     {
       "cik": "0001408443",
@@ -836,7 +867,8 @@
         "9.01"
       ],
       "direction": "positive",
-      "matched_keywords": "pivotal|primary endpoint"
+      "matched_keywords": "pivotal|primary endpoint",
+      "merger_announcement": false
     },
     {
       "cik": "0001411685",
@@ -851,7 +883,8 @@
         "9.01"
       ],
       "direction": "unclassified",
-      "matched_keywords": "primary endpoint"
+      "matched_keywords": "primary endpoint",
+      "merger_announcement": false
     },
     {
       "cik": "0001411685",
@@ -866,7 +899,8 @@
         "9.01"
       ],
       "direction": "mixed",
-      "matched_keywords": "primary endpoint"
+      "matched_keywords": "primary endpoint",
+      "merger_announcement": false
     },
     {
       "cik": "0001411685",
@@ -881,7 +915,8 @@
         "9.01"
       ],
       "direction": "mixed",
-      "matched_keywords": "primary endpoint"
+      "matched_keywords": "primary endpoint",
+      "merger_announcement": false
     },
     {
       "cik": "0001411685",
@@ -896,7 +931,8 @@
         "9.01"
       ],
       "direction": "mixed",
-      "matched_keywords": "primary endpoint|topline"
+      "matched_keywords": "primary endpoint|topline",
+      "merger_announcement": false
     },
     {
       "cik": "0001422143",
@@ -911,7 +947,8 @@
         "9.01"
       ],
       "direction": "unclassified",
-      "matched_keywords": "pivotal|topline"
+      "matched_keywords": "pivotal|topline",
+      "merger_announcement": false
     },
     {
       "cik": "0001425205",
@@ -926,7 +963,8 @@
         "9.01"
       ],
       "direction": "unclassified",
-      "matched_keywords": "phase 2 results"
+      "matched_keywords": "phase 2 results",
+      "merger_announcement": false
     },
     {
       "cik": "0001425205",
@@ -941,7 +979,8 @@
         "9.01"
       ],
       "direction": "unclassified",
-      "matched_keywords": "pivotal"
+      "matched_keywords": "pivotal",
+      "merger_announcement": false
     },
     {
       "cik": "0001425205",
@@ -956,7 +995,8 @@
         "9.01"
       ],
       "direction": "unclassified",
-      "matched_keywords": "pivotal"
+      "matched_keywords": "pivotal",
+      "merger_announcement": false
     },
     {
       "cik": "0001434316",
@@ -971,7 +1011,8 @@
         "9.01"
       ],
       "direction": "unclassified",
-      "matched_keywords": "primary endpoint"
+      "matched_keywords": "primary endpoint",
+      "merger_announcement": false
     },
     {
       "cik": "0001434316",
@@ -986,7 +1027,8 @@
         "9.01"
       ],
       "direction": "unclassified",
-      "matched_keywords": "primary endpoint"
+      "matched_keywords": "primary endpoint",
+      "merger_announcement": false
     },
     {
       "cik": "0001437402",
@@ -1002,7 +1044,8 @@
         "9.01"
       ],
       "direction": "unclassified",
-      "matched_keywords": "primary endpoint|topline"
+      "matched_keywords": "primary endpoint|topline",
+      "merger_announcement": false
     },
     {
       "cik": "0001468748",
@@ -1017,7 +1060,8 @@
         "9.01"
       ],
       "direction": "positive",
-      "matched_keywords": "phase 3 results|pivotal|primary endpoint|topline"
+      "matched_keywords": "phase 3 results|pivotal|primary endpoint|topline",
+      "merger_announcement": false
     },
     {
       "cik": "0001479615",
@@ -1032,7 +1076,8 @@
         "9.01"
       ],
       "direction": "unclassified",
-      "matched_keywords": "phase 2 results|topline"
+      "matched_keywords": "phase 2 results|topline",
+      "merger_announcement": false
     },
     {
       "cik": "0001501697",
@@ -1047,7 +1092,8 @@
         "9.01"
       ],
       "direction": "unclassified",
-      "matched_keywords": "pivotal|top-line|topline"
+      "matched_keywords": "pivotal|top-line|topline",
+      "merger_announcement": false
     },
     {
       "cik": "0001501697",
@@ -1066,7 +1112,8 @@
         "9.01"
       ],
       "direction": "unclassified",
-      "matched_keywords": "pivotal|topline"
+      "matched_keywords": "pivotal|topline",
+      "merger_announcement": false
     },
     {
       "cik": "0001501697",
@@ -1081,7 +1128,8 @@
         "9.01"
       ],
       "direction": "unclassified",
-      "matched_keywords": "pivotal|top-line|topline"
+      "matched_keywords": "pivotal|top-line|topline",
+      "merger_announcement": false
     },
     {
       "cik": "0001501697",
@@ -1096,7 +1144,8 @@
         "9.01"
       ],
       "direction": "positive",
-      "matched_keywords": "pivotal|topline"
+      "matched_keywords": "pivotal|topline",
+      "merger_announcement": false
     },
     {
       "cik": "0001512762",
@@ -1112,7 +1161,8 @@
         "9.01"
       ],
       "direction": "unclassified",
-      "matched_keywords": "primary endpoint"
+      "matched_keywords": "primary endpoint",
+      "merger_announcement": false
     },
     {
       "cik": "0001526119",
@@ -1127,7 +1177,8 @@
         "9.01"
       ],
       "direction": "unclassified",
-      "matched_keywords": "pivotal|primary endpoint|topline"
+      "matched_keywords": "pivotal|primary endpoint|topline",
+      "merger_announcement": false
     },
     {
       "cik": "0001526119",
@@ -1145,7 +1196,8 @@
         "9.01"
       ],
       "direction": "unclassified",
-      "matched_keywords": "pivotal|top-line|topline"
+      "matched_keywords": "pivotal|top-line|topline",
+      "merger_announcement": false
     },
     {
       "cik": "0001528115",
@@ -1160,7 +1212,8 @@
         "9.01"
       ],
       "direction": "unclassified",
-      "matched_keywords": "pivotal|primary endpoint|topline"
+      "matched_keywords": "pivotal|primary endpoint|topline",
+      "merger_announcement": false
     },
     {
       "cik": "0001534120",
@@ -1175,7 +1228,8 @@
         "9.01"
       ],
       "direction": "unclassified",
-      "matched_keywords": "topline"
+      "matched_keywords": "topline",
+      "merger_announcement": false
     },
     {
       "cik": "0001534133",
@@ -1190,7 +1244,8 @@
         "9.01"
       ],
       "direction": "unclassified",
-      "matched_keywords": "primary endpoint"
+      "matched_keywords": "primary endpoint",
+      "merger_announcement": false
     },
     {
       "cik": "0001549595",
@@ -1205,7 +1260,8 @@
         "9.01"
       ],
       "direction": "unclassified",
-      "matched_keywords": "pivotal"
+      "matched_keywords": "pivotal",
+      "merger_announcement": false
     },
     {
       "cik": "0001557746",
@@ -1220,7 +1276,8 @@
         "9.01"
       ],
       "direction": "unclassified",
-      "matched_keywords": "phase 2 results"
+      "matched_keywords": "phase 2 results",
+      "merger_announcement": false
     },
     {
       "cik": "0001557746",
@@ -1237,7 +1294,8 @@
         "9.01"
       ],
       "direction": "negative",
-      "matched_keywords": "primary endpoint|topline"
+      "matched_keywords": "primary endpoint|topline",
+      "merger_announcement": false
     },
     {
       "cik": "0001566044",
@@ -1252,7 +1310,8 @@
         "9.01"
       ],
       "direction": "unclassified",
-      "matched_keywords": "topline"
+      "matched_keywords": "topline",
+      "merger_announcement": false
     },
     {
       "cik": "0001566044",
@@ -1267,7 +1326,8 @@
         "9.01"
       ],
       "direction": "positive",
-      "matched_keywords": "pivotal|primary endpoint|topline"
+      "matched_keywords": "pivotal|primary endpoint|topline",
+      "merger_announcement": false
     },
     {
       "cik": "0001576885",
@@ -1283,7 +1343,8 @@
         "9.01"
       ],
       "direction": "mixed",
-      "matched_keywords": "primary endpoint|topline"
+      "matched_keywords": "primary endpoint|topline",
+      "merger_announcement": false
     },
     {
       "cik": "0001576885",
@@ -1299,7 +1360,8 @@
         "9.01"
       ],
       "direction": "unclassified",
-      "matched_keywords": "pivotal|topline"
+      "matched_keywords": "pivotal|topline",
+      "merger_announcement": false
     },
     {
       "cik": "0001576885",
@@ -1314,7 +1376,8 @@
         "9.01"
       ],
       "direction": "unclassified",
-      "matched_keywords": "phase 2 results|phase 2 topline|pivotal|primary endpoint|topline"
+      "matched_keywords": "phase 2 results|phase 2 topline|pivotal|primary endpoint|topline",
+      "merger_announcement": false
     },
     {
       "cik": "0001582313",
@@ -1330,7 +1393,8 @@
         "9.01"
       ],
       "direction": "unclassified",
-      "matched_keywords": "topline"
+      "matched_keywords": "topline",
+      "merger_announcement": false
     },
     {
       "cik": "0001590750",
@@ -1346,7 +1410,8 @@
         "9.01"
       ],
       "direction": "unclassified",
-      "matched_keywords": "pivotal"
+      "matched_keywords": "pivotal",
+      "merger_announcement": false
     },
     {
       "cik": "0001590877",
@@ -1361,7 +1426,8 @@
         "9.01"
       ],
       "direction": "unclassified",
-      "matched_keywords": "pivotal|topline"
+      "matched_keywords": "pivotal|topline",
+      "merger_announcement": false
     },
     {
       "cik": "0001593899",
@@ -1376,7 +1442,8 @@
         "9.01"
       ],
       "direction": "unclassified",
-      "matched_keywords": "phase 3 results|primary endpoint|topline"
+      "matched_keywords": "phase 3 results|primary endpoint|topline",
+      "merger_announcement": false
     },
     {
       "cik": "0001595097",
@@ -1392,7 +1459,8 @@
         "9.01"
       ],
       "direction": "positive",
-      "matched_keywords": "primary endpoint|topline"
+      "matched_keywords": "primary endpoint|topline",
+      "merger_announcement": false
     },
     {
       "cik": "0001595097",
@@ -1407,7 +1475,8 @@
         "9.01"
       ],
       "direction": "unclassified",
-      "matched_keywords": "primary endpoint|topline"
+      "matched_keywords": "primary endpoint|topline",
+      "merger_announcement": false
     },
     {
       "cik": "0001595097",
@@ -1423,7 +1492,8 @@
         "9.01"
       ],
       "direction": "positive",
-      "matched_keywords": "primary endpoint|topline"
+      "matched_keywords": "primary endpoint|topline",
+      "merger_announcement": false
     },
     {
       "cik": "0001600620",
@@ -1438,7 +1508,8 @@
         "9.01"
       ],
       "direction": "unclassified",
-      "matched_keywords": "primary endpoint"
+      "matched_keywords": "primary endpoint",
+      "merger_announcement": false
     },
     {
       "cik": "0001601830",
@@ -1455,7 +1526,8 @@
         "9.01"
       ],
       "direction": "unclassified",
-      "matched_keywords": "phase 2 results|pivotal|topline"
+      "matched_keywords": "phase 2 results|pivotal|topline",
+      "merger_announcement": false
     },
     {
       "cik": "0001601830",
@@ -1473,7 +1545,8 @@
         "9.01"
       ],
       "direction": "unclassified",
-      "matched_keywords": "pivotal|topline"
+      "matched_keywords": "pivotal|topline",
+      "merger_announcement": false
     },
     {
       "cik": "0001609809",
@@ -1489,7 +1562,8 @@
         "9.01"
       ],
       "direction": "positive",
-      "matched_keywords": "phase 3 topline|pivotal|primary endpoint|top-line|topline"
+      "matched_keywords": "phase 3 topline|pivotal|primary endpoint|top-line|topline",
+      "merger_announcement": false
     },
     {
       "cik": "0001613780",
@@ -1504,7 +1578,8 @@
         "9.01"
       ],
       "direction": "unclassified",
-      "matched_keywords": "primary endpoint"
+      "matched_keywords": "primary endpoint",
+      "merger_announcement": false
     },
     {
       "cik": "0001619856",
@@ -1519,7 +1594,8 @@
         "9.01"
       ],
       "direction": "unclassified",
-      "matched_keywords": "pivotal"
+      "matched_keywords": "pivotal",
+      "merger_announcement": false
     },
     {
       "cik": "0001619856",
@@ -1537,7 +1613,8 @@
         "9.01"
       ],
       "direction": "unclassified",
-      "matched_keywords": "pivotal"
+      "matched_keywords": "pivotal",
+      "merger_announcement": false
     },
     {
       "cik": "0001626971",
@@ -1552,7 +1629,8 @@
         "9.01"
       ],
       "direction": "unclassified",
-      "matched_keywords": "primary endpoint|topline"
+      "matched_keywords": "primary endpoint|topline",
+      "merger_announcement": false
     },
     {
       "cik": "0001636282",
@@ -1567,7 +1645,8 @@
         "9.01"
       ],
       "direction": "mixed",
-      "matched_keywords": "pivotal|primary endpoint|topline"
+      "matched_keywords": "pivotal|primary endpoint|topline",
+      "merger_announcement": false
     },
     {
       "cik": "0001636282",
@@ -1583,7 +1662,8 @@
         "9.01"
       ],
       "direction": "positive",
-      "matched_keywords": "primary endpoint|topline"
+      "matched_keywords": "primary endpoint|topline",
+      "merger_announcement": false
     },
     {
       "cik": "0001638097",
@@ -1599,7 +1679,8 @@
         "9.01"
       ],
       "direction": "unclassified",
-      "matched_keywords": "topline"
+      "matched_keywords": "topline",
+      "merger_announcement": false
     },
     {
       "cik": "0001638097",
@@ -1615,7 +1696,8 @@
         "9.01"
       ],
       "direction": "unclassified",
-      "matched_keywords": "pivotal"
+      "matched_keywords": "pivotal",
+      "merger_announcement": false
     },
     {
       "cik": "0001641281",
@@ -1637,7 +1719,8 @@
         "9.01"
       ],
       "direction": "unclassified",
-      "matched_keywords": "top-line|topline"
+      "matched_keywords": "top-line|topline",
+      "merger_announcement": false
     },
     {
       "cik": "0001641489",
@@ -1652,7 +1735,8 @@
         "9.01"
       ],
       "direction": "unclassified",
-      "matched_keywords": "phase 3 topline|topline"
+      "matched_keywords": "phase 3 topline|topline",
+      "merger_announcement": false
     },
     {
       "cik": "0000879169",
@@ -1667,7 +1751,8 @@
         "9.01"
       ],
       "direction": "unclassified",
-      "matched_keywords": "topline"
+      "matched_keywords": "topline",
+      "merger_announcement": false
     },
     {
       "cik": "0001124105",
@@ -1683,7 +1768,8 @@
         "9.01"
       ],
       "direction": "unclassified",
-      "matched_keywords": "phase 3 results|pivotal|primary endpoint"
+      "matched_keywords": "phase 3 results|pivotal|primary endpoint",
+      "merger_announcement": false
     },
     {
       "cik": "0001438533",
@@ -1698,7 +1784,8 @@
         "9.01"
       ],
       "direction": "unclassified",
-      "matched_keywords": "phase 3 results|pivotal|primary endpoint|topline"
+      "matched_keywords": "phase 3 results|pivotal|primary endpoint|topline",
+      "merger_announcement": false
     },
     {
       "cik": "0001623526",
@@ -1713,7 +1800,8 @@
         "9.01"
       ],
       "direction": "unclassified",
-      "matched_keywords": "pivotal|primary endpoint"
+      "matched_keywords": "pivotal|primary endpoint",
+      "merger_announcement": false
     },
     {
       "cik": "0001645469",
@@ -1728,7 +1816,8 @@
         "9.01"
       ],
       "direction": "positive",
-      "matched_keywords": "pivotal|primary endpoint"
+      "matched_keywords": "pivotal|primary endpoint",
+      "merger_announcement": false
     },
     {
       "cik": "0001649094",
@@ -1743,7 +1832,8 @@
         "9.01"
       ],
       "direction": "negative",
-      "matched_keywords": "phase 3 results|pivotal|topline"
+      "matched_keywords": "phase 3 results|pivotal|topline",
+      "merger_announcement": false
     },
     {
       "cik": "0001649094",
@@ -1760,7 +1850,8 @@
         "9.01"
       ],
       "direction": "unclassified",
-      "matched_keywords": "topline"
+      "matched_keywords": "topline",
+      "merger_announcement": false
     },
     {
       "cik": "0001649094",
@@ -1776,7 +1867,8 @@
         "9.01"
       ],
       "direction": "mixed",
-      "matched_keywords": "pivotal|primary endpoint|topline"
+      "matched_keywords": "pivotal|primary endpoint|topline",
+      "merger_announcement": false
     },
     {
       "cik": "0001649094",
@@ -1792,7 +1884,8 @@
         "9.01"
       ],
       "direction": "unclassified",
-      "matched_keywords": "pivotal|topline"
+      "matched_keywords": "pivotal|topline",
+      "merger_announcement": false
     },
     {
       "cik": "0001649904",
@@ -1807,7 +1900,8 @@
         "9.01"
       ],
       "direction": "unclassified",
-      "matched_keywords": "pivotal|primary endpoint"
+      "matched_keywords": "pivotal|primary endpoint",
+      "merger_announcement": false
     },
     {
       "cik": "0001650648",
@@ -1822,7 +1916,8 @@
         "9.01"
       ],
       "direction": "unclassified",
-      "matched_keywords": "pivotal|primary endpoint|topline"
+      "matched_keywords": "pivotal|primary endpoint|topline",
+      "merger_announcement": false
     },
     {
       "cik": "0001650648",
@@ -1836,7 +1931,8 @@
         "8.01"
       ],
       "direction": "unclassified",
-      "matched_keywords": "primary endpoint"
+      "matched_keywords": "primary endpoint",
+      "merger_announcement": false
     },
     {
       "cik": "0001658551",
@@ -1851,7 +1947,8 @@
         "9.01"
       ],
       "direction": "positive",
-      "matched_keywords": "pivotal|primary endpoint|topline"
+      "matched_keywords": "pivotal|primary endpoint|topline",
+      "merger_announcement": false
     },
     {
       "cik": "0001660334",
@@ -1866,7 +1963,8 @@
         "9.01"
       ],
       "direction": "unclassified",
-      "matched_keywords": "pivotal|topline"
+      "matched_keywords": "pivotal|topline",
+      "merger_announcement": false
     },
     {
       "cik": "0001661998",
@@ -1881,7 +1979,8 @@
         "9.01"
       ],
       "direction": "unclassified",
-      "matched_keywords": "phase 3 results|phase 3 topline|primary endpoint|topline"
+      "matched_keywords": "phase 3 results|phase 3 topline|primary endpoint|topline",
+      "merger_announcement": false
     },
     {
       "cik": "0001661998",
@@ -1897,7 +1996,8 @@
         "9.01"
       ],
       "direction": "unclassified",
-      "matched_keywords": "topline"
+      "matched_keywords": "topline",
+      "merger_announcement": false
     },
     {
       "cik": "0001661998",
@@ -1913,7 +2013,8 @@
         "9.01"
       ],
       "direction": "unclassified",
-      "matched_keywords": "pivotal|topline"
+      "matched_keywords": "pivotal|topline",
+      "merger_announcement": false
     },
     {
       "cik": "0001662579",
@@ -1928,7 +2029,8 @@
         "9.01"
       ],
       "direction": "unclassified",
-      "matched_keywords": "pivotal|primary endpoint"
+      "matched_keywords": "pivotal|primary endpoint",
+      "merger_announcement": false
     },
     {
       "cik": "0001668243",
@@ -1943,7 +2045,8 @@
         "9.01"
       ],
       "direction": "unclassified",
-      "matched_keywords": "pivotal|primary endpoint"
+      "matched_keywords": "pivotal|primary endpoint",
+      "merger_announcement": false
     },
     {
       "cik": "0001671927",
@@ -1958,7 +2061,8 @@
         "9.01"
       ],
       "direction": "unclassified",
-      "matched_keywords": "primary endpoint|top-line|topline"
+      "matched_keywords": "primary endpoint|top-line|topline",
+      "merger_announcement": false
     },
     {
       "cik": "0001672619",
@@ -1973,7 +2077,8 @@
         "9.01"
       ],
       "direction": "unclassified",
-      "matched_keywords": "pivotal|primary endpoint|topline"
+      "matched_keywords": "pivotal|primary endpoint|topline",
+      "merger_announcement": false
     },
     {
       "cik": "0001672619",
@@ -1989,7 +2094,8 @@
         "9.01"
       ],
       "direction": "unclassified",
-      "matched_keywords": "pivotal"
+      "matched_keywords": "pivotal",
+      "merger_announcement": false
     },
     {
       "cik": "0001680367",
@@ -2004,7 +2110,8 @@
         "9.01"
       ],
       "direction": "unclassified",
-      "matched_keywords": "primary endpoint"
+      "matched_keywords": "primary endpoint",
+      "merger_announcement": false
     },
     {
       "cik": "0001680581",
@@ -2018,7 +2125,8 @@
         "8.01"
       ],
       "direction": "unclassified",
-      "matched_keywords": "topline"
+      "matched_keywords": "topline",
+      "merger_announcement": false
     },
     {
       "cik": "0001681087",
@@ -2033,7 +2141,8 @@
         "9.01"
       ],
       "direction": "unclassified",
-      "matched_keywords": "topline"
+      "matched_keywords": "topline",
+      "merger_announcement": false
     },
     {
       "cik": "0001689375",
@@ -2048,7 +2157,8 @@
         "9.01"
       ],
       "direction": "unclassified",
-      "matched_keywords": "topline"
+      "matched_keywords": "topline",
+      "merger_announcement": false
     },
     {
       "cik": "0001689375",
@@ -2064,7 +2174,8 @@
         "9.01"
       ],
       "direction": "unclassified",
-      "matched_keywords": "topline"
+      "matched_keywords": "topline",
+      "merger_announcement": false
     },
     {
       "cik": "0001689548",
@@ -2080,7 +2191,8 @@
         "9.01"
       ],
       "direction": "positive",
-      "matched_keywords": "pivotal|primary endpoint|topline"
+      "matched_keywords": "pivotal|primary endpoint|topline",
+      "merger_announcement": false
     },
     {
       "cik": "0001689548",
@@ -2095,7 +2207,8 @@
         "9.01"
       ],
       "direction": "unclassified",
-      "matched_keywords": "topline"
+      "matched_keywords": "topline",
+      "merger_announcement": false
     },
     {
       "cik": "0001690585",
@@ -2110,7 +2223,8 @@
         "9.01"
       ],
       "direction": "unclassified",
-      "matched_keywords": "top-line"
+      "matched_keywords": "top-line",
+      "merger_announcement": false
     },
     {
       "cik": "0001699382",
@@ -2125,7 +2239,8 @@
         "9.01"
       ],
       "direction": "unclassified",
-      "matched_keywords": "pivotal"
+      "matched_keywords": "pivotal",
+      "merger_announcement": false
     },
     {
       "cik": "0001699382",
@@ -2141,7 +2256,8 @@
         "9.01"
       ],
       "direction": "unclassified",
-      "matched_keywords": "pivotal"
+      "matched_keywords": "pivotal",
+      "merger_announcement": false
     },
     {
       "cik": "0001701541",
@@ -2156,7 +2272,8 @@
         "9.01"
       ],
       "direction": "unclassified",
-      "matched_keywords": "phase 2 results|pivotal|primary endpoint"
+      "matched_keywords": "phase 2 results|pivotal|primary endpoint",
+      "merger_announcement": false
     },
     {
       "cik": "0001703057",
@@ -2172,7 +2289,8 @@
         "9.01"
       ],
       "direction": "unclassified",
-      "matched_keywords": "phase 2 results|top-line"
+      "matched_keywords": "phase 2 results|top-line",
+      "merger_announcement": false
     },
     {
       "cik": "0001709941",
@@ -2187,7 +2305,8 @@
         "9.01"
       ],
       "direction": "unclassified",
-      "matched_keywords": "pivotal|primary endpoint|topline"
+      "matched_keywords": "pivotal|primary endpoint|topline",
+      "merger_announcement": false
     },
     {
       "cik": "0001709941",
@@ -2201,7 +2320,8 @@
         "8.01"
       ],
       "direction": "unclassified",
-      "matched_keywords": "primary endpoint|topline"
+      "matched_keywords": "primary endpoint|topline",
+      "merger_announcement": false
     },
     {
       "cik": "0001710072",
@@ -2216,7 +2336,8 @@
         "9.01"
       ],
       "direction": "unclassified",
-      "matched_keywords": "top-line"
+      "matched_keywords": "top-line",
+      "merger_announcement": false
     },
     {
       "cik": "0001711279",
@@ -2231,7 +2352,8 @@
         "9.01"
       ],
       "direction": "unclassified",
-      "matched_keywords": "top-line"
+      "matched_keywords": "top-line",
+      "merger_announcement": false
     },
     {
       "cik": "0001716947",
@@ -2246,7 +2368,8 @@
         "9.01"
       ],
       "direction": "unclassified",
-      "matched_keywords": "pivotal"
+      "matched_keywords": "pivotal",
+      "merger_announcement": false
     },
     {
       "cik": "0001719714",
@@ -2261,7 +2384,8 @@
         "9.01"
       ],
       "direction": "unclassified",
-      "matched_keywords": "top-line"
+      "matched_keywords": "top-line",
+      "merger_announcement": false
     },
     {
       "cik": "0001720580",
@@ -2276,7 +2400,8 @@
         "9.01"
       ],
       "direction": "unclassified",
-      "matched_keywords": "pivotal"
+      "matched_keywords": "pivotal",
+      "merger_announcement": false
     },
     {
       "cik": "0001720580",
@@ -2292,7 +2417,8 @@
         "9.01"
       ],
       "direction": "unclassified",
-      "matched_keywords": "pivotal"
+      "matched_keywords": "pivotal",
+      "merger_announcement": false
     },
     {
       "cik": "0001720580",
@@ -2307,7 +2433,8 @@
         "9.01"
       ],
       "direction": "unclassified",
-      "matched_keywords": "pivotal"
+      "matched_keywords": "pivotal",
+      "merger_announcement": false
     },
     {
       "cik": "0001725160",
@@ -2322,7 +2449,8 @@
         "7.01"
       ],
       "direction": "unclassified",
-      "matched_keywords": "pivotal|primary endpoint|topline"
+      "matched_keywords": "pivotal|primary endpoint|topline",
+      "merger_announcement": false
     },
     {
       "cik": "0001727196",
@@ -2338,7 +2466,8 @@
         "7.01"
       ],
       "direction": "unclassified",
-      "matched_keywords": "pivotal|primary endpoint|topline"
+      "matched_keywords": "pivotal|primary endpoint|topline",
+      "merger_announcement": false
     },
     {
       "cik": "0001727196",
@@ -2354,7 +2483,8 @@
         "9.01"
       ],
       "direction": "positive",
-      "matched_keywords": "pivotal|primary endpoint"
+      "matched_keywords": "pivotal|primary endpoint",
+      "merger_announcement": false
     },
     {
       "cik": "0001730430",
@@ -2369,7 +2499,8 @@
         "9.01"
       ],
       "direction": "unclassified",
-      "matched_keywords": "pivotal|top-line"
+      "matched_keywords": "pivotal|top-line",
+      "merger_announcement": false
     },
     {
       "cik": "0001730463",
@@ -2385,7 +2516,8 @@
         "9.01"
       ],
       "direction": "unclassified",
-      "matched_keywords": "pivotal"
+      "matched_keywords": "pivotal",
+      "merger_announcement": false
     },
     {
       "cik": "0001735438",
@@ -2400,7 +2532,8 @@
         "9.01"
       ],
       "direction": "positive",
-      "matched_keywords": "pivotal"
+      "matched_keywords": "pivotal",
+      "merger_announcement": false
     },
     {
       "cik": "0001737953",
@@ -2415,7 +2548,8 @@
         "9.01"
       ],
       "direction": "unclassified",
-      "matched_keywords": "primary endpoint"
+      "matched_keywords": "primary endpoint",
+      "merger_announcement": false
     },
     {
       "cik": "0001743881",
@@ -2430,7 +2564,8 @@
         "9.01"
       ],
       "direction": "unclassified",
-      "matched_keywords": "pivotal|topline"
+      "matched_keywords": "pivotal|topline",
+      "merger_announcement": false
     },
     {
       "cik": "0001743881",
@@ -2445,7 +2580,8 @@
         "9.01"
       ],
       "direction": "positive",
-      "matched_keywords": "pivotal|primary endpoint"
+      "matched_keywords": "pivotal|primary endpoint",
+      "merger_announcement": false
     },
     {
       "cik": "0001745999",
@@ -2460,7 +2596,8 @@
         "9.01"
       ],
       "direction": "unclassified",
-      "matched_keywords": "pivotal"
+      "matched_keywords": "pivotal",
+      "merger_announcement": false
     },
     {
       "cik": "0001750149",
@@ -2475,7 +2612,8 @@
         "9.01"
       ],
       "direction": "unclassified",
-      "matched_keywords": "pivotal|primary endpoint|topline"
+      "matched_keywords": "pivotal|primary endpoint|topline",
+      "merger_announcement": false
     },
     {
       "cik": "0001750149",
@@ -2491,7 +2629,8 @@
         "9.01"
       ],
       "direction": "unclassified",
-      "matched_keywords": "pivotal"
+      "matched_keywords": "pivotal",
+      "merger_announcement": false
     },
     {
       "cik": "0001750149",
@@ -2506,7 +2645,8 @@
         "9.01"
       ],
       "direction": "positive",
-      "matched_keywords": "phase 3 topline|pivotal|primary endpoint|topline"
+      "matched_keywords": "phase 3 topline|pivotal|primary endpoint|topline",
+      "merger_announcement": false
     },
     {
       "cik": "0001750284",
@@ -2521,7 +2661,8 @@
         "9.01"
       ],
       "direction": "unclassified",
-      "matched_keywords": "pivotal|top-line"
+      "matched_keywords": "pivotal|top-line",
+      "merger_announcement": false
     },
     {
       "cik": "0001759138",
@@ -2537,7 +2678,8 @@
         "9.01"
       ],
       "direction": "negative",
-      "matched_keywords": "pivotal|primary endpoint|topline"
+      "matched_keywords": "pivotal|primary endpoint|topline",
+      "merger_announcement": false
     },
     {
       "cik": "0001759138",
@@ -2552,7 +2694,8 @@
         "9.01"
       ],
       "direction": "unclassified",
-      "matched_keywords": "primary endpoint|topline"
+      "matched_keywords": "primary endpoint|topline",
+      "merger_announcement": false
     },
     {
       "cik": "0001764013",
@@ -2567,7 +2710,8 @@
         "9.01"
       ],
       "direction": "positive",
-      "matched_keywords": "primary endpoint|topline"
+      "matched_keywords": "primary endpoint|topline",
+      "merger_announcement": false
     },
     {
       "cik": "0001768446",
@@ -2583,7 +2727,8 @@
         "9.01"
       ],
       "direction": "unclassified",
-      "matched_keywords": "phase 3 results|pivotal|primary endpoint"
+      "matched_keywords": "phase 3 results|pivotal|primary endpoint",
+      "merger_announcement": false
     },
     {
       "cik": "0001768446",
@@ -2599,7 +2744,8 @@
         "9.01"
       ],
       "direction": "unclassified",
-      "matched_keywords": "phase 3 results|pivotal|primary endpoint"
+      "matched_keywords": "phase 3 results|pivotal|primary endpoint",
+      "merger_announcement": false
     },
     {
       "cik": "0001768446",
@@ -2614,7 +2760,8 @@
         "9.01"
       ],
       "direction": "unclassified",
-      "matched_keywords": "phase 3 results|pivotal|top-line|topline"
+      "matched_keywords": "phase 3 results|pivotal|top-line|topline",
+      "merger_announcement": false
     },
     {
       "cik": "0001771910",
@@ -2631,7 +2778,8 @@
         "9.01"
       ],
       "direction": "positive",
-      "matched_keywords": "primary endpoint|topline"
+      "matched_keywords": "primary endpoint|topline",
+      "merger_announcement": false
     },
     {
       "cik": "0001776111",
@@ -2647,7 +2795,8 @@
         "9.01"
       ],
       "direction": "unclassified",
-      "matched_keywords": "pivotal|primary endpoint"
+      "matched_keywords": "pivotal|primary endpoint",
+      "merger_announcement": false
     },
     {
       "cik": "0001781174",
@@ -2662,7 +2811,8 @@
         "9.01"
       ],
       "direction": "unclassified",
-      "matched_keywords": "pivotal"
+      "matched_keywords": "pivotal",
+      "merger_announcement": false
     },
     {
       "cik": "0001782223",
@@ -2676,7 +2826,8 @@
         "2.02"
       ],
       "direction": "unclassified",
-      "matched_keywords": "pivotal"
+      "matched_keywords": "pivotal",
+      "merger_announcement": false
     },
     {
       "cik": "0001782223",
@@ -2692,7 +2843,8 @@
         "9.01"
       ],
       "direction": "unclassified",
-      "matched_keywords": "pivotal|topline"
+      "matched_keywords": "pivotal|topline",
+      "merger_announcement": false
     },
     {
       "cik": "0001783183",
@@ -2707,7 +2859,8 @@
         "9.01"
       ],
       "direction": "unclassified",
-      "matched_keywords": "phase 2 results|topline"
+      "matched_keywords": "phase 2 results|topline",
+      "merger_announcement": false
     },
     {
       "cik": "0001783183",
@@ -2721,7 +2874,8 @@
         "8.01"
       ],
       "direction": "unclassified",
-      "matched_keywords": "phase 2 results|primary endpoint|topline"
+      "matched_keywords": "phase 2 results|primary endpoint|topline",
+      "merger_announcement": false
     },
     {
       "cik": "0001787306",
@@ -2736,7 +2890,8 @@
         "9.01"
       ],
       "direction": "unclassified",
-      "matched_keywords": "pivotal|topline"
+      "matched_keywords": "pivotal|topline",
+      "merger_announcement": false
     },
     {
       "cik": "0001787400",
@@ -2752,7 +2907,8 @@
         "9.01"
       ],
       "direction": "unclassified",
-      "matched_keywords": "pivotal"
+      "matched_keywords": "pivotal",
+      "merger_announcement": false
     },
     {
       "cik": "0001799448",
@@ -2767,7 +2923,8 @@
         "9.01"
       ],
       "direction": "unclassified",
-      "matched_keywords": "topline"
+      "matched_keywords": "topline",
+      "merger_announcement": false
     },
     {
       "cik": "0001806310",
@@ -2782,7 +2939,8 @@
         "9.01"
       ],
       "direction": "unclassified",
-      "matched_keywords": "pivotal|topline"
+      "matched_keywords": "pivotal|topline",
+      "merger_announcement": false
     },
     {
       "cik": "0001811063",
@@ -2797,7 +2955,8 @@
         "9.01"
       ],
       "direction": "unclassified",
-      "matched_keywords": "pivotal|primary endpoint|topline"
+      "matched_keywords": "pivotal|primary endpoint|topline",
+      "merger_announcement": false
     },
     {
       "cik": "0001815442",
@@ -2812,7 +2971,8 @@
         "9.01"
       ],
       "direction": "unclassified",
-      "matched_keywords": "topline"
+      "matched_keywords": "topline",
+      "merger_announcement": false
     },
     {
       "cik": "0001816736",
@@ -2827,7 +2987,8 @@
         "9.01"
       ],
       "direction": "positive",
-      "matched_keywords": "pivotal|topline"
+      "matched_keywords": "pivotal|topline",
+      "merger_announcement": false
     },
     {
       "cik": "0001816736",
@@ -2843,7 +3004,8 @@
         "9.01"
       ],
       "direction": "positive",
-      "matched_keywords": "pivotal|topline"
+      "matched_keywords": "pivotal|topline",
+      "merger_announcement": false
     },
     {
       "cik": "0001816736",
@@ -2859,7 +3021,8 @@
         "9.01"
       ],
       "direction": "unclassified",
-      "matched_keywords": "pivotal"
+      "matched_keywords": "pivotal",
+      "merger_announcement": false
     },
     {
       "cik": "0001817241",
@@ -2875,7 +3038,8 @@
         "9.01"
       ],
       "direction": "negative",
-      "matched_keywords": "pivotal"
+      "matched_keywords": "pivotal",
+      "merger_announcement": false
     },
     {
       "cik": "0001819133",
@@ -2890,7 +3054,8 @@
         "9.01"
       ],
       "direction": "unclassified",
-      "matched_keywords": "pivotal"
+      "matched_keywords": "pivotal",
+      "merger_announcement": false
     },
     {
       "cik": "0001819133",
@@ -2906,7 +3071,8 @@
         "9.01"
       ],
       "direction": "unclassified",
-      "matched_keywords": "pivotal"
+      "matched_keywords": "pivotal",
+      "merger_announcement": false
     },
     {
       "cik": "0001819790",
@@ -2921,7 +3087,8 @@
         "9.01"
       ],
       "direction": "positive",
-      "matched_keywords": "pivotal|primary endpoint|topline"
+      "matched_keywords": "pivotal|primary endpoint|topline",
+      "merger_announcement": false
     },
     {
       "cik": "0001819790",
@@ -2937,7 +3104,8 @@
         "9.01"
       ],
       "direction": "unclassified",
-      "matched_keywords": "topline"
+      "matched_keywords": "topline",
+      "merger_announcement": false
     },
     {
       "cik": "0001821586",
@@ -2952,7 +3120,8 @@
         "9.01"
       ],
       "direction": "positive",
-      "matched_keywords": "primary endpoint|topline"
+      "matched_keywords": "primary endpoint|topline",
+      "merger_announcement": false
     },
     {
       "cik": "0001824893",
@@ -2967,7 +3136,8 @@
         "9.01"
       ],
       "direction": "unclassified",
-      "matched_keywords": "primary endpoint|topline"
+      "matched_keywords": "primary endpoint|topline",
+      "merger_announcement": false
     },
     {
       "cik": "0001824893",
@@ -2983,7 +3153,8 @@
         "9.01"
       ],
       "direction": "unclassified",
-      "matched_keywords": "primary endpoint"
+      "matched_keywords": "primary endpoint",
+      "merger_announcement": false
     },
     {
       "cik": "0001826457",
@@ -2999,7 +3170,8 @@
         "9.01"
       ],
       "direction": "positive",
-      "matched_keywords": "primary endpoint"
+      "matched_keywords": "primary endpoint",
+      "merger_announcement": false
     },
     {
       "cik": "0001829802",
@@ -3014,7 +3186,8 @@
         "9.01"
       ],
       "direction": "unclassified",
-      "matched_keywords": "pivotal|topline"
+      "matched_keywords": "pivotal|topline",
+      "merger_announcement": false
     },
     {
       "cik": "0001829802",
@@ -3029,7 +3202,8 @@
         "9.01"
       ],
       "direction": "unclassified",
-      "matched_keywords": "phase 2 topline|topline"
+      "matched_keywords": "phase 2 topline|topline",
+      "merger_announcement": false
     },
     {
       "cik": "0001829802",
@@ -3044,7 +3218,8 @@
         "9.01"
       ],
       "direction": "unclassified",
-      "matched_keywords": "topline"
+      "matched_keywords": "topline",
+      "merger_announcement": false
     },
     {
       "cik": "0000886744",
@@ -3059,7 +3234,8 @@
         "9.01"
       ],
       "direction": "unclassified",
-      "matched_keywords": "primary endpoint"
+      "matched_keywords": "primary endpoint",
+      "merger_announcement": false
     },
     {
       "cik": "0000886744",
@@ -3074,7 +3250,8 @@
         "9.01"
       ],
       "direction": "unclassified",
-      "matched_keywords": "primary endpoint"
+      "matched_keywords": "primary endpoint",
+      "merger_announcement": false
     },
     {
       "cik": "0001650664",
@@ -3089,7 +3266,8 @@
         "9.01"
       ],
       "direction": "unclassified",
-      "matched_keywords": "topline"
+      "matched_keywords": "topline",
+      "merger_announcement": false
     },
     {
       "cik": "0001650664",
@@ -3105,7 +3283,8 @@
         "9.01"
       ],
       "direction": "unclassified",
-      "matched_keywords": "topline"
+      "matched_keywords": "topline",
+      "merger_announcement": false
     },
     {
       "cik": "0001651308",
@@ -3120,7 +3299,8 @@
         "9.01"
       ],
       "direction": "positive",
-      "matched_keywords": "pivotal|primary endpoint"
+      "matched_keywords": "pivotal|primary endpoint",
+      "merger_announcement": false
     },
     {
       "cik": "0001671927",
@@ -3135,7 +3315,8 @@
         "9.01"
       ],
       "direction": "unclassified",
-      "matched_keywords": "primary endpoint|topline"
+      "matched_keywords": "primary endpoint|topline",
+      "merger_announcement": false
     },
     {
       "cik": "0001738021",
@@ -3150,7 +3331,8 @@
         "9.01"
       ],
       "direction": "positive",
-      "matched_keywords": "primary endpoint"
+      "matched_keywords": "primary endpoint",
+      "merger_announcement": false
     },
     {
       "cik": "0001738021",
@@ -3165,7 +3347,8 @@
         "9.01"
       ],
       "direction": "mixed",
-      "matched_keywords": "primary endpoint"
+      "matched_keywords": "primary endpoint",
+      "merger_announcement": false
     },
     {
       "cik": "0001818794",
@@ -3180,7 +3363,8 @@
         "9.01"
       ],
       "direction": "unclassified",
-      "matched_keywords": "topline"
+      "matched_keywords": "topline",
+      "merger_announcement": false
     },
     {
       "cik": "0001818794",
@@ -3196,7 +3380,8 @@
         "9.01"
       ],
       "direction": "unclassified",
-      "matched_keywords": "primary endpoint|topline"
+      "matched_keywords": "primary endpoint|topline",
+      "merger_announcement": false
     },
     {
       "cik": "0001831828",
@@ -3211,7 +3396,8 @@
         "9.01"
       ],
       "direction": "unclassified",
-      "matched_keywords": "topline"
+      "matched_keywords": "topline",
+      "merger_announcement": false
     },
     {
       "cik": "0001831828",
@@ -3227,7 +3413,8 @@
         "9.01"
       ],
       "direction": "positive",
-      "matched_keywords": "topline"
+      "matched_keywords": "topline",
+      "merger_announcement": false
     },
     {
       "cik": "0001832038",
@@ -3242,7 +3429,8 @@
         "9.01"
       ],
       "direction": "positive",
-      "matched_keywords": "pivotal|primary endpoint|topline"
+      "matched_keywords": "pivotal|primary endpoint|topline",
+      "merger_announcement": false
     },
     {
       "cik": "0001835268",
@@ -3258,7 +3446,8 @@
         "9.01"
       ],
       "direction": "mixed",
-      "matched_keywords": "primary endpoint|topline"
+      "matched_keywords": "primary endpoint|topline",
+      "merger_announcement": false
     },
     {
       "cik": "0001835268",
@@ -3274,7 +3463,8 @@
         "9.01"
       ],
       "direction": "mixed",
-      "matched_keywords": "primary endpoint|topline"
+      "matched_keywords": "primary endpoint|topline",
+      "merger_announcement": false
     },
     {
       "cik": "0001835579",
@@ -3289,7 +3479,8 @@
         "9.01"
       ],
       "direction": "positive",
-      "matched_keywords": "topline"
+      "matched_keywords": "topline",
+      "merger_announcement": false
     },
     {
       "cik": "0001835597",
@@ -3306,7 +3497,8 @@
         "9.01"
       ],
       "direction": "unclassified",
-      "matched_keywords": "pivotal|topline"
+      "matched_keywords": "pivotal|topline",
+      "merger_announcement": false
     },
     {
       "cik": "0001840439",
@@ -3322,7 +3514,8 @@
         "9.01"
       ],
       "direction": "unclassified",
-      "matched_keywords": "primary endpoint|topline"
+      "matched_keywords": "primary endpoint|topline",
+      "merger_announcement": false
     },
     {
       "cik": "0001840439",
@@ -3336,7 +3529,8 @@
         "8.01"
       ],
       "direction": "unclassified",
-      "matched_keywords": "topline"
+      "matched_keywords": "topline",
+      "merger_announcement": false
     },
     {
       "cik": "0001842952",
@@ -3352,7 +3546,8 @@
         "9.01"
       ],
       "direction": "unclassified",
-      "matched_keywords": "pivotal"
+      "matched_keywords": "pivotal",
+      "merger_announcement": false
     },
     {
       "cik": "0001855175",
@@ -3367,7 +3562,8 @@
         "9.01"
       ],
       "direction": "negative",
-      "matched_keywords": "phase 2 results"
+      "matched_keywords": "phase 2 results",
+      "merger_announcement": false
     },
     {
       "cik": "0001855644",
@@ -3382,7 +3578,8 @@
         "9.01"
       ],
       "direction": "negative",
-      "matched_keywords": "primary endpoint|topline"
+      "matched_keywords": "primary endpoint|topline",
+      "merger_announcement": false
     },
     {
       "cik": "0001855644",
@@ -3398,7 +3595,8 @@
         "9.01"
       ],
       "direction": "positive",
-      "matched_keywords": "primary endpoint|topline"
+      "matched_keywords": "primary endpoint|topline",
+      "merger_announcement": false
     },
     {
       "cik": "0001858848",
@@ -3413,7 +3611,8 @@
         "9.01"
       ],
       "direction": "unclassified",
-      "matched_keywords": "pivotal|topline"
+      "matched_keywords": "pivotal|topline",
+      "merger_announcement": false
     },
     {
       "cik": "0001863127",
@@ -3428,7 +3627,8 @@
         "9.01"
       ],
       "direction": "unclassified",
-      "matched_keywords": "phase 2 results|pivotal"
+      "matched_keywords": "phase 2 results|pivotal",
+      "merger_announcement": false
     },
     {
       "cik": "0001868279",
@@ -3444,7 +3644,8 @@
         "9.01"
       ],
       "direction": "negative",
-      "matched_keywords": "pivotal|primary endpoint"
+      "matched_keywords": "pivotal|primary endpoint",
+      "merger_announcement": false
     },
     {
       "cik": "0001868279",
@@ -3459,7 +3660,8 @@
         "9.01"
       ],
       "direction": "unclassified",
-      "matched_keywords": "pivotal"
+      "matched_keywords": "pivotal",
+      "merger_announcement": false
     },
     {
       "cik": "0001868279",
@@ -3475,7 +3677,8 @@
         "9.01"
       ],
       "direction": "negative",
-      "matched_keywords": "pivotal|primary endpoint"
+      "matched_keywords": "pivotal|primary endpoint",
+      "merger_announcement": false
     },
     {
       "cik": "0001880438",
@@ -3490,7 +3693,8 @@
         "9.01"
       ],
       "direction": "unclassified",
-      "matched_keywords": "pivotal|topline"
+      "matched_keywords": "pivotal|topline",
+      "merger_announcement": false
     },
     {
       "cik": "0001888886",
@@ -3505,7 +3709,8 @@
         "9.01"
       ],
       "direction": "unclassified",
-      "matched_keywords": "topline"
+      "matched_keywords": "topline",
+      "merger_announcement": false
     },
     {
       "cik": "0001888886",
@@ -3521,7 +3726,8 @@
         "9.01"
       ],
       "direction": "unclassified",
-      "matched_keywords": "topline"
+      "matched_keywords": "topline",
+      "merger_announcement": false
     },
     {
       "cik": "0001933414",
@@ -3537,7 +3743,8 @@
         "9.01"
       ],
       "direction": "unclassified",
-      "matched_keywords": "pivotal"
+      "matched_keywords": "pivotal",
+      "merger_announcement": false
     },
     {
       "cik": "0001980845",
@@ -3554,7 +3761,8 @@
         "9.01"
       ],
       "direction": "unclassified",
-      "matched_keywords": "pivotal|primary endpoint"
+      "matched_keywords": "pivotal|primary endpoint",
+      "merger_announcement": false
     },
     {
       "cik": "0001980845",
@@ -3569,7 +3777,8 @@
         "9.01"
       ],
       "direction": "unclassified",
-      "matched_keywords": "pivotal"
+      "matched_keywords": "pivotal",
+      "merger_announcement": false
     },
     {
       "cik": "0001999480",
@@ -3584,7 +3793,8 @@
         "9.01"
       ],
       "direction": "unclassified",
-      "matched_keywords": "topline"
+      "matched_keywords": "topline",
+      "merger_announcement": false
     },
     {
       "cik": "0002007919",
@@ -3599,7 +3809,8 @@
         "9.01"
       ],
       "direction": "unclassified",
-      "matched_keywords": "primary endpoint|top-line|topline"
+      "matched_keywords": "primary endpoint|top-line|topline",
+      "merger_announcement": false
     },
     {
       "cik": "0002007919",
@@ -3615,7 +3826,8 @@
         "9.01"
       ],
       "direction": "unclassified",
-      "matched_keywords": "primary endpoint|top-line|topline"
+      "matched_keywords": "primary endpoint|top-line|topline",
+      "merger_announcement": false
     },
     {
       "cik": "0002022626",
@@ -3630,7 +3842,8 @@
         "9.01"
       ],
       "direction": "unclassified",
-      "matched_keywords": "phase 2 results|primary endpoint"
+      "matched_keywords": "phase 2 results|primary endpoint",
+      "merger_announcement": false
     },
     {
       "cik": "0002023658",
@@ -3645,7 +3858,8 @@
         "9.01"
       ],
       "direction": "unclassified",
-      "matched_keywords": "pivotal|topline"
+      "matched_keywords": "pivotal|topline",
+      "merger_announcement": false
     }
   ],
   "stats": {
@@ -3654,6 +3868,6 @@
     "kw_match": 214
   },
   "failures": [],
-  "updated_at": "2026-11-14T16:34:40+00:00",
+  "updated_at": "2026-11-15T06:52:12+00:00",
   "complete": true
 }

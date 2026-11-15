@@ -2,7 +2,7 @@
 import assert from "node:assert/strict";
 import * as fs from "node:fs";
 import * as path from "node:path";
-import { alertCriteria, cardText, conditionsLine, redditLine, daysSinceFiling, insiderTotalUsd, txCents, dday, THEME_RANK_NOTE, endLabel, stageLabel, exhibitLine, LEAD_LABEL, groupForm4, insiderSummary, insiderTxLine, mentionSentence, multSentence, trialSentence, rumorReason, shortName, summaryStatus, tickerOrUnknown } from "./biotech-display";
+import { alertCriteria, cardText, conditionsLine, redditLine, daysSinceFiling, insiderTotalUsd, txCents, dday, THEME_RANK_NOTE, endLabel, stageLabel, exhibitLine, LEAD_LABEL, groupForm4, insiderSummary, insiderTxLine, mentionSentence, multSentence, trialSentence, rumorReason, shortName, summaryStatus, tickerOrUnknown, formsText, isSecUrl, listingFixedTexts, mergingLabel, LISTING_NOTE } from "./biotech-display";
 
 const beauty = cardText({ category: "미용", interventions: [{ name: "X-1", type: "DRUG", type_ko: "약물" }] }, "PHASE2", "2026-11-30", 62);
 assert.ok(beauty.main?.startsWith("미용 · X-1 (약물) · 2상(효과 탐색)"), beauty.main ?? "null");
@@ -139,4 +139,20 @@ assert.ok(alertCriteria(3).includes("레딧 조건은 기준선 수집 중(어�
 assert.ok(alertCriteria(0).includes("레딧 조건은 기준선 수집 중(어제까지 0/7일)"));
 assert.ok(!alertCriteria(7).includes("어제까지"));
 assert.ok(alertCriteria(7).includes("레딧 24시간 매치 3건 이상이면서 레딧 평소의 2배 이상"));
+// 1114-04 · 1114-05 · 상장 상태 문구 · 금지어(신호 낱말 · 명령문 · 매수 · 매도) 없음 · 원문 링크는 sec.gov 원문 주소만
+{
+  const BAD = ["골든", "데드", "크로스", "교차", "정배열", "역배열", "매수", "매도", "사십시오", "하십시오", "추천", "목표가", "수익"];
+  for (const t of [...listingFixedTexts(), formsText([{ form: "25-NSE", date: "2026-09-23", url: "" }])])
+    for (const w of BAD) assert.ok(!t.includes(w), `${t} 금지어 ${w}`);
+  assert.equal(formsText([{ form: "25-NSE", date: "2026-09-23", url: "" }, { form: "15-12G", date: "2026-10-05", url: "" }]), "Form 25-NSE 2026-09-23 · Form 15-12G 2026-10-05");
+  assert.equal(formsText(undefined), "");
+  assert.ok(LISTING_NOTE.includes("판단이 아닙니다") && LISTING_NOTE.includes("하루 뒤부터"));
+  assert.notEqual(mergingLabel("merge_done_hold"), mergingLabel("merging_seller"));
+  assert.ok(isSecUrl("https://www.sec.gov/Archives/edgar/data/1680581/000119312526123456/d1.htm"));
+  assert.ok(!isSecUrl("https://evil.example/Archives/edgar/data/1/x.htm") && !isSecUrl("http://www.sec.gov/Archives/edgar/data/1/x") && !isSecUrl(""));
+  // 새 컴포넌트에서 링크는 isSecUrl 을 거친 것만 쓴다 · 보강: 원문 소스에 금지 낱말이 없다
+  const src = fs.readFileSync(path.join(__dirname, "../components/biotech/ExcludedList.tsx"), "utf8");
+  assert.ok(src.includes("isSecUrl(f.url)"));
+  for (const w of BAD) assert.ok(!src.replace(/\/\/[^\n]*/g, "").includes(w), `ExcludedList 금지어 ${w}`);
+}
 console.log("ok");

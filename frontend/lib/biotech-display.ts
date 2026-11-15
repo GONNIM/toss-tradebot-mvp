@@ -499,3 +499,30 @@ export function alertCriteria(redditDays?: number | null): string {
     : `레딧 조건은 기준선 수집 중(어제까지 ${Math.max(0, redditDays ?? 0)}/7일)`;
   return `기준: 기준선 7일 이상 종목 중 오늘 언급 5건 이상이면서 평소의 5배 이상, 또는 ${reddit} · 카드를 누르면 브리핑이 펼쳐집니다.`;
 }
+
+// 1114-04 · 1114-05 · 상장 상태 표시 (사실만 · 판단 · 명령문 · 신호 낱말 없음 · 원문 링크는 sec.gov 만)
+export type ListingForm = { form: string; date: string; url: string };
+export type ListingRow = { ticker: string; name: string; status: string; reason: string; status_date?: string; forms: ListingForm[] };
+
+export const LISTING_NOTE = "제출 서류 기준 사실 표시이며 판단이 아닙니다. 새로 후보가 된 종목은 하루 뒤부터 상태가 반영됩니다.";
+export const LISTING_UNKNOWN = "상장 상태 확인 못 함";
+export const EXCLUDED_TITLE = "순위에서 뺀 종목 (상장폐지)";
+export const MERGING_TITLE = "합병 진행 중";
+
+// 「Form 25-NSE 2026-09-23 · Form 15-12G 2026-10-05」
+export function formsText(forms?: ListingForm[]): string {
+  return (forms ?? []).map((f) => `Form ${f.form} ${f.date}`).join(" · ");
+}
+
+export function mergingLabel(status: string): string {
+  if (status === "merge_done_hold") return "합병 종결 뒤 이름 또는 종목 코드가 바뀐 것으로 보여 30일 동안 확인 중";
+  return "합병 서류 제출 (팔리는 쪽 양식)";
+}
+
+export function isSecUrl(url?: string): boolean {
+  return !!url && /^https:\/\/www\.sec\.gov\/Archives\/edgar\/data\/\d+\//.test(url);
+}
+
+export function listingFixedTexts(): string[] {
+  return [LISTING_NOTE, LISTING_UNKNOWN, EXCLUDED_TITLE, MERGING_TITLE, mergingLabel("merging_seller"), mergingLabel("merge_done_hold")];
+}

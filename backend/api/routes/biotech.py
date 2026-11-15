@@ -32,6 +32,7 @@ from pydantic import BaseModel
 
 from backend.api.auth import require_sniper_token
 from backend.scripts.biotech_alert_rule import judge as _alert_judge
+from backend.scripts import biotech_listing_status as _listing
 
 logger = logging.getLogger("biotech_router")
 router = APIRouter()
@@ -176,6 +177,25 @@ class RadarRow(BaseModel):
     event_date: str = ""
     days_to: Optional[int] = None
     trial: dict[str, Any] = {}
+    # 1114-04 · 1114-05 · 상장 상태 (표시 전용 · 선택 필드 · 옛 화면과 호환)
+    status_known: bool = True    # False = 상장 상태를 확인하지 못함 (판정 파일 없음 · 오래됨 · 새 후보 첫날)
+    fact_line: str = ""          # 예: 「합병 관련 서류: S-4 · 2026-11-04」 (S-4 계열만 낸 종목)
+    fact_url: str = ""           # sec.gov 원문 주소
+
+
+class ListingForm(BaseModel):
+    form: str
+    date: str
+    url: str
+
+
+class ExcludedRow(BaseModel):
+    ticker: str
+    name: str
+    status: str
+    reason: str
+    status_date: str = ""
+    forms: list[ListingForm] = []
 
 
 class RadarJson(BaseModel):
@@ -183,6 +203,8 @@ class RadarJson(BaseModel):
     source_csv: str
     rows: list[RadarRow]
     inputs_missing: list[str] = []   # WP94 · 레이더 점수 설계 입력 중 서버에 없는 파일 (표시 전용)
+    excluded: list[ExcludedRow] = []   # 1114-04 · 순위에서 뺀 종목 (상장폐지)
+    merging: list[ExcludedRow] = []    # 1114-05 · 합병 진행 중 (팔리는 쪽 서류 · 종결 뒤 30일 확인 중)
 
 
 def _radar_inputs_missing(path: Path | None) -> list[str]:
@@ -308,6 +330,43 @@ def _mcap_display(ticker: str, csv_bucket: str = "") -> tuple[str, str]:
     return _mcap_bucket_label(mcap), px_date.isoformat()
 
 
+def _fact_for_row(cik: str, status: str, evidence: str) -> tuple[str, str]:
+    """merging_fact 행의 「양식 · 날짜」 한 줄과 원문 주소 · 424B3 보다 S-4 계열을 먼저 · 가장 늦은 제출."""
+    if status != "merging_fact":
+        return "", ""
+    forms = _listing.parse_evidence(evidence, cik)
+    main = [f for f in forms if f["form"] in _listing.FACT_FORMS] or forms
+    if not main:
+        return "", ""
+    f = max(main, key=lambda x: x["date"])
+    return f"합병 관련 서류: {f['form']} · {f['date']}", f.get("url", "")
+
+
+def _excluded_lists(csv_path: Path) -> tuple[list["ExcludedRow"], list["ExcludedRow"]]:
+    """같은 날짜의 radar_excluded_<날짜>.json → (상장폐지 목록, 합병 목록) · 파일이 없거나 깨졌으면 빈 목록."""
+    m = re.search(r"radar_v1_3_(\d{8})\.csv$", csv_path.name)
+    if not m:
+        return [], []
+    hits = [d / f"{_listing.EXCLUDED_NAME}_{m.group(1)}.json" for d in _search_dirs("candidates")]
+    p = next((h for h in hits if h.exists()), None)
+    if p is None:
+        return [], []
+    try:
+        j = json.loads(p.read_text())
+    except (ValueError, OSError):
+        return [], []
+    out_x: list[ExcludedRow] = []
+    out_m: list[ExcludedRow] = []
+    for r in j.get("rows") or []:
+        row = ExcludedRow(
+            ticker=r.get("ticker", ""), name=(r.get("name") or "")[:60], status=r.get("status", ""), reason=r.get("reason", ""),
+            status_date=r.get("status_date", ""),
+            forms=[ListingForm(form=f.get("form", ""), date=f.get("date", ""), url=f.get("url", "")) for f in r.get("evidence") or []],
+        )
+        (out_x if row.status == "excluded_delisted" else out_m).append(row)
+    return out_x, out_m
+
+
 def _latest_radar_csv() -> Path | None:
     """radar CSV 최신 · WP69-3b · RUNTIME > docs > backend/data."""
     patterns: list[tuple[Path, str]] = []
@@ -356,7 +415,11 @@ async def get_radar_json(_admin: str = Depends(require_sniper_token)) -> RadarJs
                     "risk": _f("risk"),
                 },
                 tag_bonus=_f("tag_bonus"),
+                status_known=(r.get("status_checked") or "Y") != "N",   # 열이 없던 옛 파일은 알림 없음
+                **dict(zip(("fact_line", "fact_url"),
+                           _fact_for_row(r.get("cik", ""), r.get("status", ""), r.get("status_evidence", "")))),
             ))
+    excluded, merging = _excluded_lists(path)
     # WP85 · 대표 시험 (candidates v3 state_note · AACT 1차 완료 예정일) · 표시 전용
     notes = _latest_candidate_notes()
     for row in rows[:30]:
@@ -369,6 +432,7 @@ async def get_radar_json(_admin: str = Depends(require_sniper_token)) -> RadarJs
         source_csv=_rel(path),
         rows=rows[:30],  # 상위 30
         inputs_missing=_radar_inputs_missing(path),
+        excluded=excluded, merging=merging,
     )
 
 

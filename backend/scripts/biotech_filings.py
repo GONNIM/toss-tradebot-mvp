@@ -35,6 +35,7 @@ from zoneinfo import ZoneInfo
 
 from backend.scripts import _biotech_paths as _P
 from backend.scripts import biotech_atm_cover as _atm
+from backend.scripts import biotech_listing_status as _listing
 from backend.scripts import biotech_readout_text as _readout
 from backend.scripts.biotech_sec_common import (SEC_DAILY_CAP, SecBlockedError, SecDailyLedger, build_client, sec_get,
                                                sec_get_text)
@@ -200,7 +201,9 @@ def run_submissions(today: date | None = None, get: Callable[[str], dict] | None
                 continue
             rows = parse_recent(j)
             older = bool((j.get("filings") or {}).get("files"))
+            # 1114-04 · SEC 이름 · 이전 이름 (최근 2개) 도 저장 · 합병 종결 뒤 이름 변경을 알아보는 재료 (이미 받은 응답 · 새 요청 0)
             raw[cik] = {"ticker": c["ticker"], "name": c["name"], "sec_tickers": j.get("tickers") or [],
+                        "sec_name": j.get("name") or "", "former_names": (j.get("formerNames") or [])[:2],
                         "older_pages": older, "filings": [f for f in rows if f["filingDate"] >= lo]}
             derived[cik] = {"ticker": c["ticker"] or ((j.get("tickers") or [""])[0]), "ticker_in_candidates": c["ticker"],
                             **derive(rows, today, older)}
@@ -215,9 +218,11 @@ def run_submissions(today: date | None = None, get: Callable[[str], dict] | None
         LOG.error("%s · submissions 즉시 중단 (보낸 요청 %d)", blocked, sent)
     if capped:
         LOG.warning("submissions · 하루 SEC 상한 %d 도달 · %d 종목 건너뜀", SEC_DAILY_CAP, capped)
+    # 1114-04 · 상장 상태 판정 (새 요청 0 · 실패해도 제출 목록 저장은 계속) · 상한·차단으로 건너뛴 종목은 판정 없음 = 후보 단계에서 unchecked
+    listing = _listing.run_status(raw, today)
     fdir = _P.out_dir("filings")
     meta = {"date": today.isoformat(), "requests": sent, "blocked": blocked, "capped": capped, "companies": len(derived),
-            "atm_cover": atm, "readout_text": readout}
+            "atm_cover": atm, "readout_text": readout, "listing_status": listing}
     (fdir / f"submissions_{today:%Y%m%d}.json").write_text(json.dumps({**meta, "companies_raw": raw}, ensure_ascii=False))
     (fdir / f"filings_derived_{today:%Y%m%d}.json").write_text(
         json.dumps({**meta, "rows": derived}, ensure_ascii=False, indent=1))

@@ -38,6 +38,7 @@ from pathlib import Path
 from typing import Callable
 
 from backend.scripts import _biotech_paths as _P
+from backend.scripts.biotech_listing_status import is_merger_announcement
 from backend.scripts.biotech_h39_readouts import (
     KW_RE, classify_direction, extract_matched_keywords, parse_accept_dt, d_day_from_accept,
 )
@@ -194,8 +195,43 @@ def _one_company(get, cik, since, until, known, cik2tk, d, st) -> bool:
                 "session_bucket": session, "d_day": d_day, "items": items,
                 "direction": classify_direction(body),
                 "matched_keywords": "|".join(extract_matched_keywords(body)),
+                "merger_announcement": is_merger_announcement(items, body),   # 1114-05 · 합병 계약 체결 8-K 표지 (후보 단계가 이 표지로 거름)
             })
     return ok
+
+
+def mark_merger(get, d: dict, save: Callable[[], None]) -> dict:
+    """1114-05 · 표지(merger_announcement)가 없는 이벤트에 표지를 붙인다.
+
+    항목에 1.01 이 없거나 2.02 가 같이 있으면 본문 없이 거짓 (규칙 앞 두 조건). 그 밖에 1.01 이 있으면 본문 1건을 받아 판정한다 (장부 범주 readout_increment).
+    받지 못한 이벤트는 표지를 비워 둔다 = 판정 안 됨 = 거르지 않음 (거짓이 아님).
+    """
+    st = {"no_101": 0, "fetched": 0, "marked_true": 0, "failed": []}
+    try:
+        for e in d["events"]:
+            if "merger_announcement" in e:
+                continue
+            raw_items = e.get("items") or ""
+            its = {str(x).strip() for x in (raw_items if isinstance(raw_items, list) else str(raw_items).split(","))}   # EFTS 는 목록 · 이미 저장된 값은 문자열일 수도 있음
+            if "1.01" not in its or "2.02" in its:       # 규칙의 앞 두 조건 (1.01 없음 · 2.02 동반) 은 본문 없이 거짓
+                e["merger_announcement"] = False
+                st["no_101"] += 1
+                continue
+            acc, cik = e["accession"], e["cik"]
+            try:
+                r = get(f"{ARCHIVES}/{int(cik)}/{acc.replace('-', '')}/{acc}.txt")
+            except httpx.TransportError as ex:
+                st["failed"].append({"accession": acc, "status": type(ex).__name__})
+                continue
+            if r.status_code != 200:
+                st["failed"].append({"accession": acc, "status": f"HTTP {r.status_code}"})
+                continue
+            st["fetched"] += 1
+            e["merger_announcement"] = is_merger_announcement(raw_items, r.text[:MAX_BODY])
+            st["marked_true"] += int(e["merger_announcement"])
+    finally:
+        save()               # 상한 · 차단으로 멈춰도 지금까지 붙인 표지는 남김
+    return st
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -205,9 +241,26 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--since", required=True)
     ap.add_argument("--until", required=True)
     ap.add_argument("--cap", type=int, default=SEC_DAILY_CAP)
+    ap.add_argument("--mark-merger", action="store_true",
+                    help="1114-05 · 새 사건 받기 대신 · 이미 있는 이벤트에 합병 계약 체결 표지를 붙임 (1.01 이 든 이벤트만 본문 1건)")
     a = ap.parse_args(argv)
     base = load_base()
     path = out_path()
+    if a.mark_merger:
+        d = json.loads(path.read_text())
+        ledger = SecDailyLedger.load()
+        try:
+            with build_client(timeout=30.0) as client:
+                st = mark_merger(make_getter(client, ledger, a.cap), d, lambda: save_out(path, d))
+        except CapReached as e:
+            LOG.warning("하루 상한 · %s · 지금까지 붙인 표지만 저장", e)
+            return 3
+        except SecBlockedError as e:
+            LOG.error("즉시 중단 · %s · 지금까지 붙인 표지만 저장", e)
+            return 2
+        LOG.info("표지 · 1.01 없음 %d · 본문 받음 %d · 체결 표지 참 %d · 실패 %d · 장부 합계 %d",
+                 st["no_101"], st["fetched"], st["marked_true"], len(st["failed"]), ledger.total())
+        return 4 if st["failed"] else 0
     d = load_out(path, a.since, a.until)
     ledger = SecDailyLedger.load()
     code = 0

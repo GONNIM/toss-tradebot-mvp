@@ -12,6 +12,7 @@ from __future__ import annotations
 from backend.services import config  # noqa: F401
 from backend.scripts._biotech_bootstrap import require_secure_logging
 from backend.scripts import _biotech_paths as _P
+from backend.scripts import biotech_listing_status as _listing
 
 import csv
 import json
@@ -237,6 +238,14 @@ def main():
     if cp is None:
         raise SystemExit(f"biotech_candidates_{today_str}.csv 없음 (v3·v2·v1 모두)")
     cands = list(csv.DictReader(cp.open()))
+    # 1114-04 · 상장폐지 · 합병 중인 (팔리는 쪽) 종목은 점수 계산 앞에서 뺀다 (후보 파일에는 그대로 있음) · 점수 식은 바꾸지 않음
+    # BIOTECH_LISTING_FILTER=0 이면 아무것도 빼지 않는다 · 뺀 행은 radar_excluded_<날짜>.json 에 남김
+    listing_on = _listing.filter_enabled()
+    cands, removed = _listing.split_removed(cands, listing_on)
+    (_P.out_dir("candidates") / f"{_listing.EXCLUDED_NAME}_{today_str}{out_suffix}.json").write_text(
+        json.dumps(_listing.excluded_json(removed, datetime.strptime(today_str, "%Y%m%d").date(), listing_on), ensure_ascii=False, indent=1))
+    if removed:
+        LOG.info("순위에서 뺀 종목 %d · %s", len(removed), sorted(f"{r.get('ticker') or r.get('cik')}:{r.get('status')}" for r in removed))
 
     confirm_path = _P.find(f"community_confirm_{today_str}.csv", subdir="community_daily")
     if confirm_path is None:
@@ -404,6 +413,10 @@ def main():
             "why_easy": why,
             "score_version": version,
             "inputs_missing": "|".join(inputs_missing),   # WP94 · 산출 CSV 에 입력 부족 기록 (모든 행 같은 값)
+            # 1114-04 · 상장 상태 (표시 전용 · 점수에 쓰지 않음)
+            "cik": cik,
+            "status": _listing.row_status(c), "status_date": c.get("status_date", ""),
+            "status_evidence": c.get("status_evidence", ""), "status_checked": c.get("status_checked", "N") or "N",
         })
 
     state_order = {"A": 0, "B": 2, "C": 1}
