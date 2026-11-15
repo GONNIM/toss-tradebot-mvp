@@ -193,6 +193,17 @@ def source_a_readout(sha: str, days_recent: int = 90) -> list[dict]:
         if p is not None and p.exists():
             with p.open() as f:
                 events = list(csv.DictReader(f))
+    # 1112-07 · WP39 명부는 9/01 에서 멈춘 고정 파일 · 그 뒤 사건은 보충 파일에서 더함 (같은 접수번호는 한 번만)
+    inc = _find("h39_readouts_increment.json")
+    if inc is not None and inc.exists():
+        try:
+            seen = {e.get("accession") for e in events if e.get("accession")}
+            extra = [e for e in json.loads(inc.read_text()).get("events", [])
+                     if e.get("accession") and e.get("accession") not in seen]
+            events = list(events) + extra
+            LOG.info("결과 발표 보충 %s · 더한 사건 %d", inc.name, len(extra))
+        except Exception as e:  # 보충 파일이 깨져도 기존 명부로 진행
+            LOG.warning("결과 발표 보충 파일 읽기 실패 · 기존 명부만 씀 · %s", e)
     today = datetime.now(timezone.utc).date()
     cutoff = today - timedelta(days=days_recent)
     out = []
