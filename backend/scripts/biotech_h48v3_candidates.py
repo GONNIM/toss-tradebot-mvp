@@ -26,7 +26,7 @@ import csv
 import json
 import logging
 import subprocess
-from collections import defaultdict
+from collections import Counter, defaultdict
 from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 
@@ -37,6 +37,7 @@ LOG = logging.getLogger("biotech_h48v3_candidates")
 
 # WP69-3g · 경로는 공용 헬퍼 _biotech_paths 사용 (하드코딩 금지 pytest 검증)
 from backend.scripts import _biotech_paths as _P
+from backend.scripts import biotech_listing_status as _listing
 PROJECT_ROOT = _P.PROJECT_ROOT
 DATA_DIR = _P.DATA_DIR
 RUNTIME_DIR = _P.RUNTIME_DIR
@@ -182,6 +183,18 @@ def load_prices_and_mcap(sha: str) -> tuple[dict, dict]:
     return close, shares
 
 
+def _merger_exclude_set() -> frozenset[str]:
+    """거름 목록 파일이 있으면 접수번호 집합 (없으면 빈 집합 · 90일 창 안 대상이 없으면 파일을 만들지 않음)."""
+    p = _find(_listing.EXCLUDE_NAME)
+    if p is None or not p.exists():
+        return frozenset()
+    try:
+        return frozenset(json.loads(p.read_text()).get("accessions") or [])
+    except (ValueError, OSError) as e:
+        LOG.warning("합병 8-K 거름 목록 읽기 실패 · 표지만 씀 · %s", e)
+        return frozenset()
+
+
 def source_a_readout(sha: str, days_recent: int = 90) -> list[dict]:
     """WP39 결과 발표 최근 N일 · checkpoint 우선 (csv 미갱신 대응)."""
     events: list[dict] = []
@@ -204,6 +217,14 @@ def source_a_readout(sha: str, days_recent: int = 90) -> list[dict]:
             LOG.info("결과 발표 보충 %s · 더한 사건 %d", inc.name, len(extra))
         except Exception as e:  # 보충 파일이 깨져도 기존 명부로 진행
             LOG.warning("결과 발표 보충 파일 읽기 실패 · 기존 명부만 씀 · %s", e)
+    # 1114-05 · 합병 계약 체결 8-K (항목 1.01 + 체결 문구) 는 결과 발표로 세지 않는다 · WP39 명부 파일은 고치지 않고 여기서 거른다
+    # 표지(merger_announcement)가 참인 이벤트와 거름 목록(h39_merger_8k_exclude.json)의 접수번호만 뺀다 · 표지가 없으면 판정 안 됨 = 유지
+    if _listing.filter_enabled():
+        exclude = _merger_exclude_set()
+        kept = [e for e in events if not _listing.is_merger_event(e, exclude)]
+        if len(kept) != len(events):
+            LOG.info("합병 계약 체결 8-K 거름 · 뺀 사건 %d", len(events) - len(kept))
+        events = kept
     today = datetime.now(timezone.utc).date()
     cutoff = today - timedelta(days=days_recent)
     out = []
@@ -471,14 +492,22 @@ def main():
         if c["mcap_bucket"] in ("50M-300M", "300M-1B", "1B-5B", "unknown"):
             filtered.append(c)
 
+    # 1114-04 · 상장 상태 열 (가장 최근 판정 파일 · 3일 넘으면 못 쓴 것으로 보고 모두 unchecked + 텔레그램 warning 한 번)
+    run_dt = datetime.strptime(_P.today_kst_str("%Y%m%d"), "%Y%m%d").date()
+    status_rows, status_info = _listing.load_status_rows(run_dt)
+    _listing.warn_once(status_info, run_dt)
+    for c in filtered:
+        c.update(_listing.status_columns(c, status_rows, status_info))
+    listing_on = _listing.filter_enabled()
+
     # 정렬 = 소스 수 많은 순 → mcap 알려진 것 우선
     filtered.sort(key=lambda c: (-len(c["sources"]), 0 if c["mcap_bucket"] != "unknown" else 1, c["ticker"] or c["cik"]))
-    final = filtered[:80]  # 상한 80 (30~50 요구지만 소스 확장 시 여유)
+    final = _listing.cap_candidates(filtered, listing_on)  # 상한 80 (30~50 요구지만 소스 확장 시 여유) · 순위에서 빠질 행은 상한 밖 최대 20
 
     today = _P.today_kst_str("%Y%m%d")
     out_path = OUT_DIR / f"biotech_candidates_{today}.csv"
     with out_path.open("w", newline="") as f:
-        w = csv.DictWriter(f, fieldnames=["ticker", "cik", "name", "mcap_usd", "mcap_bucket", "sources", "reasons"])
+        w = csv.DictWriter(f, fieldnames=["ticker", "cik", "name", "mcap_usd", "mcap_bucket", "sources", "reasons", *_listing.STATUS_COLUMNS])
         w.writeheader()
         for c in final:
             w.writerow({
@@ -489,6 +518,7 @@ def main():
                 "mcap_bucket": c["mcap_bucket"],
                 "sources": "|".join(c["sources"]),
                 "reasons": " || ".join(c["reasons"][:5]),
+                **{k: c.get(k, "") for k in _listing.STATUS_COLUMNS},
             })
 
     src_dist = defaultdict(int)
@@ -512,6 +542,8 @@ def main():
         "over_5B_excluded": sorted(c["ticker"] or c["cik"] for c in candidates.values() if c["mcap_bucket"] == "over_5B_excluded"),
         "over_5B_kept_by_record": sorted(over5b_kept),
         "over_5B_record_expired": sorted(over5b_expired),
+        "listing_status": {"file": status_info.get("file"), "usable": status_info.get("usable"), "reason": status_info.get("reason"),
+                           "filter_on": listing_on, "by_status": dict(Counter(c.get("status", "unchecked") for c in final))},
     }
     LOG.info("summary=%s", json.dumps(summary, ensure_ascii=False, indent=2))
     print(json.dumps(summary, ensure_ascii=False, indent=2))

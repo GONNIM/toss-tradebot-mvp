@@ -23,10 +23,11 @@ import { RumorCard } from "@/components/biotech/RumorCard";
 import { Fr6cTable } from "@/components/biotech/Fr6cTable";
 import { ReadoutCards } from "@/components/biotech/ReadoutCards";
 import { QuoteDetails, QuoteToggleButton, ROW_BUTTON_CLASS } from "@/components/biotech/QuotePanel";
+import { ExcludedList } from "@/components/biotech/ExcludedList";
 import type { Fr6cCells, ReadoutRow } from "@/lib/biotech-fr6c";
 import type { SessionInfo } from "@/lib/auth";
-import { alertCriteria, cardText, checkedAtLabel, conditionsLine, redditLine, ctgovUrl, exhibitLine, inputLabel, inputsMissingLine, groupForm4, insiderSummary, insiderTxLine, LEAD_LABEL, mcapBadge, mentionSentence, multSentence, refreshLabel, rumorReason, shortName, sortFilterCards, sortLabel, summaryStatus, tickerOrUnknown, trialSentence } from "@/lib/biotech-display";
-import type { CardSort, RedditStatus, Form4Tx, ThemeRank, TrialDisplay } from "@/lib/biotech-display";
+import { LISTING_UNKNOWN, alertCriteria, cardText, checkedAtLabel, conditionsLine, redditLine, ctgovUrl, exhibitLine, inputLabel, inputsMissingLine, groupForm4, insiderSummary, insiderTxLine, LEAD_LABEL, mcapBadge, mentionSentence, multSentence, refreshLabel, rumorReason, shortName, sortFilterCards, sortLabel, summaryStatus, tickerOrUnknown, trialSentence } from "@/lib/biotech-display";
+import type { CardSort, ListingRow, RedditStatus, Form4Tx, ThemeRank, TrialDisplay } from "@/lib/biotech-display";
 
 // 백엔드 스키마
 type RadarRow = {
@@ -45,8 +46,12 @@ type RadarRow = {
   trial?: TrialDisplay;
   factors: { expert: number; crowd: number; near: number; unnoticed: number; risk: number };
   tag_bonus: number;
+  // 1114-04 · 1114-05 · 상장 상태 (선택 필드)
+  status_known?: boolean;
+  fact_line?: string;
+  fact_url?: string;
 };
-type RadarJson = { generated: string; source_csv: string; rows: RadarRow[]; inputs_missing?: string[] };
+type RadarJson = { generated: string; source_csv: string; rows: RadarRow[]; inputs_missing?: string[]; excluded?: ListingRow[]; merging?: ListingRow[] };
 
 type RumorRow = {
   table: string;
@@ -133,7 +138,24 @@ const radarColumns = (
       </div>
     ),
   },
-  { key: "name", label: "회사", render: (r) => <span className="text-muted-foreground">{shortName(r.name)}</span> },
+  {
+    key: "name",
+    label: "회사",
+    render: (r) => (
+      <div className="flex flex-col gap-0.5">
+        <span className="text-muted-foreground">{shortName(r.name)}</span>
+        {r.fact_line && (
+          <span className="text-[11px] text-muted-foreground">
+            {r.fact_line}
+            {r.fact_url && (
+              <> · <a href={r.fact_url} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">원문 ↗</a></>
+            )}
+          </span>
+        )}
+        {r.status_known === false && <span className="text-[11px] text-muted-foreground">{LISTING_UNKNOWN}</span>}
+      </div>
+    ),
+  },
   { key: "mcap_bucket", label: "시총", render: (r) => mcapBadge(r.mcap_bucket, r.mcap_asof) ?? "" },
   { key: "state", label: "상태" },
   { key: "score", label: "점수", align: "right", render: (r) => r.score.toFixed(3) },
@@ -691,6 +713,7 @@ export default function BiotechPage() {
             caption="레이더 상위 30"
             renderBelow={(r) => (quoteRow === radarRowKey(r) ? <QuoteDetails key={radarRowKey(r)} ticker={r.ticker} name={shortName(r.name)} /> : null)}
           />
+          <ExcludedList excluded={radar.excluded ?? []} merging={radar.merging ?? []} />
         </SectionCard>
         </div>
       )}
