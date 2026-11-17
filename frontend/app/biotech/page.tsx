@@ -161,8 +161,8 @@ const radarColumns = (
       </div>
     ),
   },
-  { key: "mcap_bucket", label: "시총", render: (r) => mcapBadge(r.mcap_bucket, r.mcap_asof, r.mcap_shares_asof) ?? "" },
-  { key: "state", label: "상태" },
+  { key: "mcap_bucket", label: "시총", width: "11%", render: (r) => mcapBadge(r.mcap_bucket, r.mcap_asof, r.mcap_shares_asof) ?? "" },
+  { key: "state", label: "상태", width: "8%" },
   { key: "score", label: "점수", align: "right", render: (r) => r.score.toFixed(3) },
   {
     key: "news_window",
