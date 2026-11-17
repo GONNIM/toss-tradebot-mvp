@@ -28,7 +28,7 @@ from backend.scripts.biotech_sec_common import SEC_DAILY_CAP, SecBlockedError, S
 
 LOG = logging.getLogger("biotech_going_concern")
 
-RULE_VERSION = "gc-1"
+RULE_VERSION = "gc-2"   # 11/17 표본 30건 뒤 「no longer」·「there was」 → 지난 기간
 LEDGER_CAT = "going_concern"
 STORE_NAME = "going_concern.json"
 DAILY_MAX = 15
@@ -84,6 +84,7 @@ _RAISE_ANY = _r(r"\b(?:raise[sd]?|raising)\s+(?:a\s+)?substantial doubt")
 _ALLEV = _r(r"\balleviat\w*")
 _ALLEV_BLOCK = _r(r"(?:\bnot\s+(?:\w+\s+){0,2}$|\bnot been\s+$|n't\s+(?:\w+\s+){0,2}$"
                   r"|\b(?:intended|plans?|expected|designed|attempt\w*|seek\w*|aim\w*|intends?)\s+(?:\w+\s+){0,2}to\s+$)")
+_NO_LONGER = _r(r"(?:\bno\s+longer\s+(?:\w+\s+){0,3}|\bthere\s+was\s+(?:a\s+)?)$")   # 11/17 표본: 「no longer substantial doubt」 · 「there was substantial doubt」 → 지난 기간
 _PRIOR = _r(r"\bprior (?:year|period|fiscal year|reporting period)\b|\bprevious (?:year|period)\b|\bpreviously\b")
 _MONTHS = "january|february|march|april|may|june|july|august|september|october|november|december"
 _ASOF = _r(rf"\bas of ({_MONTHS})\s+(\d{{1,2}}),\s+(\d{{4}})")
@@ -161,6 +162,8 @@ def classify_window(text: str, s: int, e: int, filing: date | None = None) -> st
     pair = bool(_GOING.search(win))
     if _POLICY.search(sent):                                          # 회계 정책 설명 · 맨 위
         return W_IGNORE
+    if pair and _NO_LONGER.search(clause):                            # 「no longer」 · 「there was」 는 부정·가정보다 먼저 (11/17 표본)
+        return W_PAST
     if _NEG_BEFORE.search(clause):
         return W_NEG
     if _MODAL_RAISE.search(clause) or _COND_RAISE.search(clause):

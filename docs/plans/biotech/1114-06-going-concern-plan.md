@@ -296,3 +296,9 @@ IFRS (Fable 막음 1): 20-F 는 IFRS 를 쓰는 회사가 많고 문구가 다�
 - backend/scripts/biotech_filings.py · biotech_sec_common.py · biotech_readout_text.py · biotech_atm_cover.py · biotech_listing_status.py · biotech_h48v3_daily_server.sh · biotech_readout_increment.py(머리글)
 - backend/api/routes/biotech.py(RadarRow · `get_radar_json` · `_fact_for_row`) · frontend/app/biotech/page.tsx · frontend/lib/biotech-display.check.ts · backend/scheduler/cron.py
 - 열지 않은 것: docs/asides/ · 부록_* · 서버 · SEC 실제 응답 · 외부 공식 문서(ASC 205-40 · EDGAR 응답 형식)
+
+## 표본 30건 결과 (11/17 21:34 · 사용자 「㉠ 적용」 1회 상한 예외 · 로컬)
+- 요청 30 · 차단 0 · 저장 30 · 모두 10-Q(20-F 0건 · IFRS 규칙은 여전히 확인 전 · ㉦① 그대로 꺼 둠). 서버 장부 381 + 로컬 30 = 411 (예외 사유는 결과 파일 gate 칸에 남김 · 결과 파일은 git 제외).
+- 판정: 있음 9 · 지난 기간만 1 · 찾지 못함 20. 「있음」 9건은 창 인용을 사람이 읽어 모두 회사 자신에 대한 확정 문장(「substantial doubt exists」 · 「there is substantial doubt」 · 「These conditions raise substantial doubt」)임을 확인. 회계 정책 문장(「evaluated whether …」)은 모두 무시로 분류됨(막음 A 동작 확인).
+- 틀린 1건: 「there was substantial doubt」 + 「no longer substantial doubt」 보고서가 「찾지 못함(가정만)」 → 규칙 고침(`_NO_LONGER` · 부정·가정보다 먼저 「지난 기간」) 후 「지난 기간만」. 같은 창 다시 판정: 30건 중 바뀐 것은 이 1건뿐.
+- 찾지 못함 19건은 본문에 「substantial doubt」 창 자체가 없음(놓침 여부는 문구 없음으로 판단 · 다른 표현은 확인 못 함).

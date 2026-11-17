@@ -359,7 +359,7 @@ def test_18_rule_version_change_refetches_within_daily_max(rt, monkeypatch):
     gc.run_daily(mk_raw(20), TODAY_SUN, get, ledger_for(rt))
     gc.run_daily(mk_raw(20), date(2026, 11, 16), get, ledger_for(rt, date(2026, 11, 16), mcap_shares=1))
     assert len(sent) == 20
-    monkeypatch.setattr(gc, "RULE_VERSION", "gc-2")
+    monkeypatch.setattr(gc, "RULE_VERSION", gc.RULE_VERSION + "-next")
     n0 = len(sent)
     res = gc.run_daily(mk_raw(20), date(2026, 11, 22), get, ledger_for(rt, date(2026, 11, 22)))
     assert res["sent"] == 15 and len(sent) - n0 == 15 and res["deferred"] == 5       # 한 번에 몰지 않음
@@ -657,3 +657,12 @@ def test_sample_stops_on_block(rt):
 
     res = smp.run_sample(_srcs(5), TODAY_SUN, get, 0, out=rt / "s.json", local_total=0)
     assert len(sent) == 1 and "403" in res["blocked"]
+
+
+def test_sample_1117_no_longer_and_there_was_are_past_only():
+    """11/17 표본 30건에서 「찾지 못함(가정만)」으로 잘못 나온 모양 (가짜 문장)."""
+    txt = ("As previously disclosed, management concluded that existing resources may not have been sufficient for one year and that "
+           "there was substantial doubt as to the Company's ability to continue as a going concern. On August 1 the Company raised funds. "
+           "As a result, management has concluded that there is no longer substantial doubt about the Company's ability to continue as a going concern.")
+    r = gc.classify_text(gc.plain_text(txt), date(2026, 11, 10))
+    assert r["state"] == gc.PAST_ONLY
