@@ -252,3 +252,9 @@
 - Olema Oncology → OLMA (사명 변경 · 공식 API 의 후원사 이름이 「Olema Oncology, Inc.」 · AACT 11/12 사본은 옛 이름으로 맞춰져 있었음)
 - 근거: 공식 API 전환 배포 전 비교 · 없으면 OLMA lead 시험 6건이 빠지고 종목 0건 가드가 첫 실행을 막음
 - 승인: 사용자 11/17 「1112-03 ①」
+
+## 2026-11-17 · sponsor_aliases.csv · 3줄 추가 (1112-03 · 공식 API 첫 실행 0건 검색어)
+- Replimune, Inc. → REPL · Adicet Therapeutics → ACET · DBV Technologies → DBVT (등록부 lead 후원사 이름 · 공식 API 조회 11/17: Replimune, Inc. 12건 · Adicet Therapeutics 6건 · DBV Technologies 16건)
+- 근거: 11/17 서버 첫 실행에서 후보 이름 검색어(replimune group · adicet bio · dbv technologies s a)가 0건 · 검색은 낱말이 모두 들어 있어야 걸림
+- 0건 7개 가운데 autolus · engene 은 sponsor_aliases_radar.csv 에 이미 별칭이 있어 별칭 검색어로 받음(추가 안 함) · gyre · imagenebio 는 등록부 후원사 0건(추가 안 함)
+- 승인: 사용자 11/17 「1112-03 ①」
