@@ -1,4 +1,8 @@
-"""WP69-3c · AACT 주간 스냅샷 잡 · 서버 파이프.
+"""WP69-3c · 임상 주간 스냅샷 잡 · 서버 파이프.
+
+**1112-03 (2026-11-17) · 받기는 공식 API(ClinicalTrials.gov v2)로 바뀜** (`biotech_ctgov_api.py`).
+AACT 사본 내려받기가 계정 로그인 뒤로 옮겨 갔다 (교훈 #10). 아래 AACT 설명 · 함수는 되돌리기용으로 남긴 것이며
+주간 main() 은 부르지 않는다. 출력 칸 · 값 모양은 같고 `source` · `api_data_timestamp` 칸만 더했다.
 
 CT.gov v2 서버 IP 차단 대안 (사용자 결정 2026-09-20):
 - AACT 주간 daily zip 다운 (실측 URL · 2026-09-19 자 ≈ 2.35 GB)
@@ -560,6 +564,8 @@ def _write_match_report(date_str: str, matches: list[dict], diag: dict) -> None:
         "tickers_collaborator_only": len(collab_tk), "tickers_with_any_trial": len(lead_tk | collab_tk),
         "reason_counts": {},
     }
+    if diag.get("note"):
+        summary["note"] = diag["note"]
     for v in reasons.values():
         summary["reason_counts"][v["reason"]] = summary["reason_counts"].get(v["reason"], 0) + 1
     (OUT_DIR / f"aact_match_report_{date_str}.json").write_text(
@@ -659,74 +665,35 @@ def _notify_failure_sync(step: str, detail: str) -> None:
 
 
 def main():
+    """1112-03 · 주간 자료는 공식 API(ClinicalTrials.gov v2)로 받는다 (biotech_ctgov_api.run_snapshot).
+
+    위쪽 AACT 함수(주소 확인 · zip · 파싱)는 되돌리기용으로 남기고 여기서 부르지 않는다 (다음 정리 때 지움 ·
+    biotech_h6_aact_theme_extract.py 가 `_download_zip` · `_notify_failure_sync` 등을 가져다 쓰므로 먼저 확인)."""
     require_secure_logging()
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
     parser = argparse.ArgumentParser()
-    parser.add_argument("--tmp-dir", default="/tmp/aact_zip", help="임시 zip 저장 폴더 (실행 후 삭제)")
+    parser.add_argument("--allow-missing-tickers", default="",
+                        help="지난 사본에 시험이 있었으나 이번에 0건인 종목을 직접 확인한 뒤 허용할 티커 (쉼표 구분)")
     args = parser.parse_args()
     t_start = time.time()   # WP81-2 · 주간 잡 전체 소요 시간 기록
 
-    tmp_dir = Path(args.tmp_dir)
-    tmp_dir.mkdir(parents=True, exist_ok=True)
-
-    # 1) URL 실측
-    picked = _pick_aact_url()
-    if not picked:
-        _notify_failure_sync("head", LAST_PROBE_STOP or "최근 10일 안 받을 수 있는 자료 없음")
-        raise SystemExit(21)
-    date_str, url = picked
-
-    # 2) 다운
-    zip_path = tmp_dir / f"aact_{date_str}.zip"
-    if zip_path.exists():
-        LOG.info("기존 zip 재사용 · %s", zip_path)
-    else:
-        ok = _download_zip(url, zip_path)
-        if not ok:
-            _notify_failure_sync("download", f"3회 재시도 실패 · {date_str}")
-            zip_path.unlink(missing_ok=True)
-            raise SystemExit(22)
-
-    # 3) 무결성
-    if not _unzip_test(zip_path):
-        _notify_failure_sync("integrity", "unzip -t 실패")
-        zip_path.unlink(missing_ok=True)
-        raise SystemExit(23)
-
-    # 4) 후보 매칭 사전 로드
-    candidate_norm_map, n_cand = _load_candidate_norm_map()
-    if not candidate_norm_map:
+    # 4) 후보 이름 · 별칭 로드
+    names = _load_candidate_names()
+    if not names:
         _notify_failure_sync("candidates", "candidates CSV 미확보")
-        zip_path.unlink(missing_ok=True)
         raise SystemExit(24)
+    n_cand = len(names)
+    LOG.info("candidates · %d 후보", n_cand)
 
-    # 5) 파싱 · 매칭 (WP78 역방향 매칭 · 별칭 · 공동연구 · 사유 진단)
-    matcher = SponsorMatcher(_load_candidate_names(), _load_aliases())
-    diag: dict = {}
-    matches = _parse_studies_and_sponsors(zip_path, candidate_norm_map, matcher=matcher, diag=diag)
-    _write_match_report(date_str, matches, diag)
-
-    # 6) JSON 저장
-    OUT_DIR.mkdir(parents=True, exist_ok=True)
-    out = {
-        "generated_utc": datetime.now(timezone.utc).isoformat(),
-        "aact_snapshot_date": date_str,
-        "candidates_v3_count": n_cand,
-        "candidate_matches": len({m["ticker"] for m in matches}),
-        "study_matches": len(matches),
-        "matches": matches,
-        "sponsor_active_counts": sponsor_active_counts(matches),   # P3a ④ · FR-6a
-    }
-    OUT_JSON.write_text(json.dumps(out, ensure_ascii=False, indent=2))
-    LOG.info("ctgov_snapshot.json 크기 · %d KB", OUT_JSON.stat().st_size // 1024)
-    # P3a ④ · 날짜별 사본 (변경 이력 · 26주 보관)
-    copy = snapshot_copy_path(date_str)
-    copy.write_text(OUT_JSON.read_text())
+    # 1~3, 5, 6) 받기 · 맞추기 · 가드 · 저장 (실패하면 알림 후 SystemExit · 파일은 쓰지 않음)
+    from backend.scripts import biotech_ctgov_api as _api   # 순환 가져오기를 피하려고 여기서
+    snap = _api.run_snapshot(names, _load_aliases(), n_cand,
+                             allow_missing=[t for t in args.allow_missing_tickers.split(",") if t.strip()])
+    matches = snap["matches"]
+    date_str = snap["aact_snapshot_date"]
     pruned = prune_snapshot_copies(datetime.now(timezone.utc).date())
-    LOG.info("날짜별 사본 · %s · 26주 지나 지운 사본 %d · 보관 사본 %d", copy.name, pruned,
-             len(list(OUT_DIR.glob("ctgov_snapshot_*.json"))))
-    LOG.info("ctgov_snapshot.json · %d study · %d unique ticker · %s",
-             len(matches), len({m["ticker"] for m in matches}), OUT_JSON)
+    LOG.info("ctgov_snapshot.json · %d study · %d unique ticker · %s · 26주 지나 지운 사본 %d · 보관 사본 %d",
+             len(matches), snap["candidate_matches"], OUT_JSON, pruned, len(list(OUT_DIR.glob("ctgov_snapshot_*.json"))))
 
     # 6-b) WP81 · 질환 분류 자동화 (수동 사전 밖 용어만 · NLM 조회는 이 주간 잡에서만 · 실패해도 주간 잡 계속)
     run_auto_category_step(OUT_JSON)
@@ -741,22 +708,16 @@ def main():
     except Exception as e:  # noqa: BLE001
         LOG.warning("시총 주식수 단계 실패 · %s", e.__class__.__name__)
 
-    # 7) zip 삭제 (사용자 지시)
-    size_mb = zip_path.stat().st_size // (1024 * 1024)
-    zip_path.unlink(missing_ok=True)
-    LOG.info("zip 삭제 · %d MB 회수", size_mb)
-
     LOG.info("주간 잡 전체 소요 · %.1f분", (time.time() - t_start) / 60)
 
     # 요약 print
     print(json.dumps({
         "aact_snapshot_date": date_str,
+        "source": snap["source"],
         "study_matches": len(matches),
-        "unique_tickers": len({m["ticker"] for m in matches}),
+        "unique_tickers": snap["candidate_matches"],
         "output": str(OUT_JSON.relative_to(PROJECT_ROOT)),
-        "zip_size_mb": size_mb,
     }, indent=2))
-
 
 if __name__ == "__main__":
     main()

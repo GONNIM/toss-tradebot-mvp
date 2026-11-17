@@ -246,3 +246,9 @@
   4. Mild Hepatic Imparement → 건강인·약동학 (자동 어간 'Hepat' → 소화기는 기각 · 사전 규칙 (6) 참가 조건 용어 · 'Hepatic Impairment' 의 철자 변형 (Imparement) 으로 등록)
 - 행 수: 1,656 → 1,660 (머리 줄 제외)
 - 한국어 (`ko_terms.csv`) 는 바꾸지 않음 (이번 승인 범위 밖 · 화면은 영어 원문 규칙 그대로)
+
+
+## 2026-11-17 · sponsor_aliases.csv · 1줄 추가 (1112-03)
+- Olema Oncology → OLMA (사명 변경 · 공식 API 의 후원사 이름이 「Olema Oncology, Inc.」 · AACT 11/12 사본은 옛 이름으로 맞춰져 있었음)
+- 근거: 공식 API 전환 배포 전 비교 · 없으면 OLMA lead 시험 6건이 빠지고 종목 0건 가드가 첫 실행을 막음
+- 승인: 사용자 11/17 「1112-03 ①」
