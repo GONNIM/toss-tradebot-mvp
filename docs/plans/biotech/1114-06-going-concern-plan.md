@@ -304,3 +304,4 @@ IFRS (Fable 막음 1): 20-F 는 IFRS 를 쓰는 회사가 많고 문구가 다�
 - 찾지 못함 19건은 본문에 「substantial doubt」 창 자체가 없음(놓침 여부는 문구 없음으로 판단 · 다른 표현은 확인 못 함).
 - Fable 1114-06-03 막음 1 고침(같은 gc-2): 「there was substantial doubt」는 같은 창에 이전 기간 표지(prior · previously · 이전 날짜)가 있을 때만 「지난 기간」 · 표지가 없으면 gc-1 과 같이 처리 · 「not/no … there was」는 부정. 표본 30건 창 다시 판정(SEC 요청 0): 바뀐 것은 앞의 1건뿐(찾지 못함 → 지난 기간만)으로 같음.
 - 다음 규칙 판 후보(Fable 권고): 정책 낱말과 결론(concluded · determined)이 한 문장에 있으면 놓침 · 「확인 못 함」 까닭 문구를 「자동 규칙이 정하지 못함」만으로 · 상한에 닿으면 종목 코드 뒤쪽이 매번 밀림(2주 연속이면 보고).
+- (Fable 1114-06-03 다시 묻기 권고 · 다음 규칙 판 후보) 6 `_NEG_WAS` 가 접속사 너머 부정어까지 잡음(「have not generated … and there was substantial doubt」 → 찾지 못함) · 부정어와 「there was」 사이를 판단 동사로 좁힘. 7 제출일보다 120일 넘게 앞선 「as of」 날짜가 같은 창 다른 문장에 있으면 「there was」 확정 문장이 지난 기간 · 이전 기간 표지를 같은 문장에서 찾기. 8 11/18 첫 실행 보고에 past_only · not_found 창 인용.

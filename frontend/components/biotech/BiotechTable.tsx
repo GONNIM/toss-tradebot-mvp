@@ -8,6 +8,7 @@ export type BiotechTableColumn<Row> = {
   key: string;
   label: string;
   align?: "left" | "right";
+  width?: string;   // 열 너비 (예 "11%") · 없으면 내용에 맞춤
   render?: (row: Row) => ReactNode;
 };
 
@@ -54,6 +55,7 @@ export function BiotechTable<Row extends Record<string, unknown>>({
             {columns.map((c) => (
               <th
                 key={c.key}
+                style={c.width ? { width: c.width } : undefined}
                 className={
                   "border-b border-border p-2 font-semibold" +
                   (c.align === "right" ? " text-right" : " text-left")
