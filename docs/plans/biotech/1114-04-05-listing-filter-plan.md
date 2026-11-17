@@ -214,6 +214,7 @@ FULC 11/12 처럼 항목 8.01 만 있는 8-K는 4.1에 걸리지 않는다. 선�
 
 ### 1114-06(㉢)이 붙을 자리 (이번에 만들지 않음)
 `listing_status_<날짜>.json` 의 `facts: []` 배열이 자리다. 항목 모양 `{kind, text, source_url, as_of}` 로 정해 두고, ㉢은 `kind="going_concern"` 항목을 같은 배열에 더한다. 카드의 사실 줄 렌더러(7절 `fact_line`)는 `facts` 를 순서대로 그리게 만들어 둔다. ㉢은 새 SEC 본문 요청이라 1112-04의 「새 외부 요청 없음」 조건과 따로 정한다.
+(11/17 정정: 1114-06 은 이 `facts[]` 자리를 쓰지 않고 별도 파일 `<RUNTIME>/filings/going_concern.json` 에 저장하며, API 가 그 파일을 CIK 로 직접 읽는다. 까닭은 `docs/plans/biotech/1114-06-going-concern-plan.md` 4절.)
 
 ## 12. 구현 착수 전 확인할 것 (읽기만)
 

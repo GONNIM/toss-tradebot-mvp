@@ -35,6 +35,7 @@ from zoneinfo import ZoneInfo
 
 from backend.scripts import _biotech_paths as _P
 from backend.scripts import biotech_atm_cover as _atm
+from backend.scripts import biotech_going_concern as _gc
 from backend.scripts import biotech_listing_status as _listing
 from backend.scripts import biotech_readout_text as _readout
 from backend.scripts.biotech_sec_common import (SEC_DAILY_CAP, SecBlockedError, SecDailyLedger, build_client, sec_get,
@@ -164,6 +165,17 @@ def derive(filings: list[dict], today: date, older_pages: bool) -> dict:
     }
 
 
+def _run_going_concern(raw: dict, cands: list[dict], today: date, get_text: Callable[[str], dict] | None,
+                       ledger: SecDailyLedger, skip: bool) -> dict:
+    """1114-06 · 어떤 예외도 바깥으로 올리지 않는다 (SecBlockedError 포함) · 로그와 {error} 만 남김."""
+    try:
+        order = [str(int(c["cik"])).zfill(10) for c in cands]          # 후보 파일 순서 = 우선순위
+        return _gc.run_daily(raw, today, get_text, ledger, order=order, skip=skip, notify=_gc.notify_warning)
+    except Exception as e:  # noqa: BLE001 · 이 단계가 제출 목록 저장을 막지 않게
+        LOG.exception("going_concern 단계 예외 · 건너뜀")
+        return {"error": e.__class__.__name__}
+
+
 def run_submissions(today: date | None = None, get: Callable[[str], dict] | None = None,
                     ledger: SecDailyLedger | None = None, cands: list[dict] | None = None,
                     get_text: Callable[[str], dict] | None = None) -> dict:
@@ -175,6 +187,9 @@ def run_submissions(today: date | None = None, get: Callable[[str], dict] | None
         client = build_client()                        # biotech_sec_common 단일 헤더 상수
         get = lambda url: sec_get(client, url)         # noqa: E731
         get_text = lambda url: sec_get_text(client, url)   # noqa: E731
+        gc_get_text = lambda url: sec_get_text(client, url, timeout=_gc.READ_TIMEOUT)   # noqa: E731 · 1114-06 큰 10-K 용
+    else:
+        gc_get_text = get_text
     raw, derived = {}, {}
     sent, blocked, capped = 0, None, 0
     lo = (today - timedelta(days=RAW_DAYS)).isoformat()
@@ -211,6 +226,9 @@ def run_submissions(today: date | None = None, get: Callable[[str], dict] | None
         atm = _atm.judge_new(derived, today, None if blocked else get_text, ledger)
         # P4-4 · 새 8-K 본문 1건씩 (하루 10 · 장부 readout_text · 최신 우선 · 30일 지나면 본문 미수신) · 멈췄으면 보내지 않음
         readout = _readout.run_daily(raw, today, None if (blocked or atm.get("blocked")) else get_text, ledger, to_et)
+        # 1114-06 · 계속기업 문구 단계 · 맨 뒤 · 자기 try 로 격리 (예외가 나도 아래 저장 · 상장 판정은 계속) · 앞 단계가 멈췄으면 요청 0
+        gc = _run_going_concern(raw, cands, today, gc_get_text, ledger,
+                                bool(blocked or atm.get("blocked") or readout.get("blocked")))
     finally:
         if client is not None:
             client.close()
@@ -222,7 +240,7 @@ def run_submissions(today: date | None = None, get: Callable[[str], dict] | None
     listing = _listing.run_status(raw, today)
     fdir = _P.out_dir("filings")
     meta = {"date": today.isoformat(), "requests": sent, "blocked": blocked, "capped": capped, "companies": len(derived),
-            "atm_cover": atm, "readout_text": readout, "listing_status": listing}
+            "atm_cover": atm, "readout_text": readout, "going_concern": gc, "listing_status": listing}
     (fdir / f"submissions_{today:%Y%m%d}.json").write_text(json.dumps({**meta, "companies_raw": raw}, ensure_ascii=False))
     (fdir / f"filings_derived_{today:%Y%m%d}.json").write_text(
         json.dumps({**meta, "rows": derived}, ensure_ascii=False, indent=1))

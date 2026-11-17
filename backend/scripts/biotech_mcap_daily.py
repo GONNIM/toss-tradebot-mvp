@@ -443,14 +443,40 @@ class _ByteCountingClient:
         return r
 
 
-def weekly_shares(cands: dict[str, str], get: Callable[[str], dict], today: date) -> dict:
+def carry_forward(res_shares: dict, tickers: list[str], mdir: Path, today: date) -> int:
+    """1117-01 ㉠① · 상한으로 못 받은 종목은 직전 주식수 파일의 값을 옮겨 담음 · 원래 기준일(shares_asof)은 그대로 ·
+    carried_from=<원래 파일 날짜> 표시 · 이전 파일에도 없으면 비워 둠 · 다음 성공 실행이 새 값으로 덮음."""
+    prev = sorted(f for f in mdir.glob("shares_[0-9]*.json") if f.stem.split("_")[1] < f"{today:%Y%m%d}")
+    if not prev or not tickers:
+        return 0
+    try:
+        old = json.loads(prev[-1].read_text()).get("shares", {})
+    except (ValueError, OSError):
+        return 0
+    n = 0
+    for tk in tickers:
+        if tk in old and tk not in res_shares:
+            d = prev[-1].stem.split("_")[1]
+            res_shares[tk] = {**old[tk], "carried_from": old[tk].get("carried_from") or f"{d[:4]}-{d[4:6]}-{d[6:]}"}
+            n += 1
+    return n
+
+
+def weekly_shares(cands: dict[str, str], get: Callable[[str], dict], today: date,
+                  can_send: Callable[[int], bool] | None = None) -> dict:
+    """can_send(이미 보낸 수) 가 거짓이면 그 자리에서 멈춘다 · 남은 종목은 보내지 않고 deferred 에 수만 남김 (1117-01)."""
     out: dict[str, dict] = {}
     finance: dict[str, dict] = {}       # P3a ③ · 같은 companyfacts 응답에서 재무 값 추출 (추가 요청 0)
     history: dict[str, dict] = {}       # P4-0 · 같은 응답의 dei 주식수 전체 이력 (추가 요청 0)
-    requests, blocked = 0, None
-    for tk, cik in sorted(cands.items()):
-        if not cik:
-            continue
+    requests, blocked, deferred, deferred_tickers = 0, None, 0, []
+    todo = [(tk, cik) for tk, cik in sorted(cands.items()) if cik]
+    for i, (tk, cik) in enumerate(todo):
+        if can_send is not None and not can_send(requests):    # 1117-01 · 요청 1건마다 하루 상한 확인
+            deferred = len(todo) - i
+            deferred_tickers = [t for t, _c in todo[i:]]
+            LOG.warning("SEC 주식수 조회 하루 상한 도달 · 보낸 %d · 남은 종목 %d 는 보내지 않음 · 받은 값으로 저장을 이어 감",
+                        requests, deferred)
+            break
         requests += 1
         try:
             r = get(SEC_FACTS_URL.format(cik=str(int(cik)).zfill(10)))
@@ -472,8 +498,8 @@ def weekly_shares(cands: dict[str, str], get: Callable[[str], dict], today: date
                        "n_values": hit["n_values"]}
     if blocked:
         LOG.error("%s · SEC 주식수 조회 즉시 중단", blocked)
-    return {"date": today.isoformat(), "requests": requests, "blocked": blocked, "shares": out, "_finance": finance,
-            "_history": history}
+    return {"date": today.isoformat(), "requests": requests, "blocked": blocked, "deferred": deferred,
+            "_deferred_tickers": deferred_tickers, "shares": out, "_finance": finance, "_history": history}
 
 
 # ── 가격 (일일) ──────────────────────────────────────────────────────
@@ -571,7 +597,8 @@ def daily_prices(tickers: list[str], key: str, get: Callable[..., Any], today: d
 def build_display(shares: dict, prices: dict) -> dict:
     """표시 파일 · 두 쪽 다 있는 종목만 (배지 12개월 / 60일 조건은 API 가 적용)."""
     return {tk: {"shares": s["shares"], "shares_asof": s["shares_asof"],
-                 "close": prices[tk]["close"], "close_date": prices[tk]["close_date"]}
+                 "close": prices[tk]["close"], "close_date": prices[tk]["close_date"],
+                 **({"carried_from": s["carried_from"]} if s.get("carried_from") else {})}   # 1117-01 · 옮겨 담은 값 표시
             for tk, s in shares.items() if tk in prices}
 
 
@@ -616,10 +643,18 @@ def run(mode: str, get_tiingo: Callable[..., Any] | None = None, get_sec: Callab
 
         targets, extra = weekly_targets(cands)
         LOG.info("SEC 주식수 대상 · 오늘 후보 %d + 5B 초과 제외 기록 %d %s = %d", len(cands), len(extra), extra, len(targets))
+        day = f"{today:%Y%m%d}"
+
+        def can_send(n_sent: int) -> bool:   # 1117-01 · 장부 합계 + 이 실행에서 이미 보낸 수 + 1 ≤ 하루 상한
+            return (ledger or SecDailyLedger.load(day)).total() + n_sent + 1 <= SEC_DAILY_CAP
+
         try:
-            res = weekly_shares(targets, counted, today)
+            res = weekly_shares(targets, counted, today, can_send)
         finally:
             _record_sec(sent["n"], today, ledger)
+        res["carried"] = carry_forward(res["shares"], res.pop("_deferred_tickers"), mdir, today) if res["deferred"] else 0
+        if res["carried"]:
+            LOG.warning("상한으로 못 받은 종목 중 직전 주식수 값을 옮겨 담음 %d (원래 기준일 유지 · carried_from 표시)", res["carried"])
         fin_path = save_finance(res.pop("_finance"), today)   # P3a ③ · <RUNTIME>/finance/companyfacts_<날짜>.json
         hist_new = res.pop("_history")
         hist_path = save_shares_history(hist_new, today)        # P4-0 · <RUNTIME>/mcap/shares_history.json
@@ -629,10 +664,11 @@ def run(mode: str, get_tiingo: Callable[..., Any] | None = None, get_sec: Callab
         res["elapsed_sec"] = round(time.time() - t0, 1)
         res["bytes_received"] = counter.bytes if counter else None
         (mdir / f"shares_{today:%Y%m%d}.json").write_text(json.dumps(res, ensure_ascii=False, indent=1))
-        LOG.info("SEC 주식수 조회 · 요청 %d · 소요 %.1f초 · 받은 용량 %s 바이트 · 종목 %d · 합산 종목 %d · 중단 %s",
+        LOG.info("SEC 주식수 조회 · 요청 %d · 소요 %.1f초 · 받은 용량 %s 바이트 · 종목 %d · 합산 종목 %d · 중단 %s · 상한으로 미룸 %d",
                  res["requests"], res["elapsed_sec"], res["bytes_received"], len(res["shares"]),
-                 sum(1 for v in res["shares"].values() if v.get("n_values", 1) > 1), res["blocked"])
-        return {"mode": mode, "requests": res["requests"], "blocked": res["blocked"], "tickers": len(res["shares"]),
+                 sum(1 for v in res["shares"].values() if v.get("n_values", 1) > 1), res["blocked"], res["deferred"])
+        return {"mode": mode, "requests": res["requests"], "blocked": res["blocked"], "deferred": res["deferred"],
+                "tickers": len(res["shares"]),
                 "elapsed_sec": res["elapsed_sec"], "bytes_received": res["bytes_received"]}
     key = (os.environ.get("TIINGO_API_KEY") or "").strip()
     if not key:

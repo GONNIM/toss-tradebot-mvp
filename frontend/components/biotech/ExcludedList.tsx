@@ -1,7 +1,7 @@
 "use client";
 
 // 1114-04 · 1114-05 · 표 아래 접힌 두 목록 · 「순위에서 뺀 종목 (상장폐지)」 · 「합병 진행 중」 (표시 전용 · 사실만)
-import { EXCLUDED_TITLE, LISTING_NOTE, MERGING_TITLE, formsText, isSecUrl, mergingLabel } from "@/lib/biotech-display";
+import { EXCLUDED_TITLE, GOING_CONCERN_NOTE, LISTING_NOTE, MERGING_TITLE, formsText, isSecUrl, mergingLabel } from "@/lib/biotech-display";
 import type { ListingRow } from "@/lib/biotech-display";
 
 function Links({ row }: { row: ListingRow }) {
@@ -51,6 +51,7 @@ export function ExcludedList({ excluded, merging }: { excluded: ListingRow[]; me
       <Block title={EXCLUDED_TITLE} rows={excluded} kind="excluded" />
       <Block title={MERGING_TITLE} rows={merging} kind="merging" />
       <p className="text-xs text-muted-foreground">{LISTING_NOTE}</p>
+      <p className="text-xs text-muted-foreground">{GOING_CONCERN_NOTE}</p>
     </div>
   );
 }

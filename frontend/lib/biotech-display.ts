@@ -30,11 +30,13 @@ export function refreshLabel(generatedIso: string, now: Date = new Date()): stri
 }
 
 // 시총 배지 문구 · 계산 불가 (빈 값) 면 null → 배지 렌더 안 함
-export function mcapBadge(bucket?: string, asof?: string): string | null {
+export function mcapBadge(bucket?: string, asof?: string, sharesAsof?: string): string | null {
   if (!bucket || bucket === "unknown" || bucket === "—") return null;
   if (!asof) return bucket;
   const [, m, d] = asof.split("-").map(Number);
-  return `${bucket} · ${m}/${d} 종가 기준`;
+  // 1117-01 · 주식수를 직전 값으로 옮겨 담았으면 그 원래 기준일을 함께 보임
+  const carried = sharesAsof ? (([, sm, sd]) => ` · 주식수 ${sm}/${sd} 기준(직전 값)`)(sharesAsof.split("-").map(Number)) : "";
+  return `${bucket} · ${m}/${d} 종가 기준${carried}`;
 }
 
 
@@ -525,4 +527,73 @@ export function isSecUrl(url?: string): boolean {
 
 export function listingFixedTexts(): string[] {
   return [LISTING_NOTE, LISTING_UNKNOWN, EXCLUDED_TITLE, MERGING_TITLE, mergingLabel("merging_seller"), mergingLabel("merge_done_hold")];
+}
+
+// 1114-06 · 계속기업 의문 문구 유무 (제출 서류 본문에 적힌 글의 유무 · 사실만 · 판단 · 명령문 · 색 없음 · 링크는 sec.gov 원문만)
+export type GoingConcern = {
+  state: string; // present · alleviated · past_only · not_found · unclear · unknown
+  reason?: string;
+  form?: string;
+  filed?: string;
+  url?: string;
+  stale?: boolean;
+  previous_report?: boolean;
+  updates_stopped?: boolean;
+  hypothetical_only?: boolean;
+};
+
+export const GOING_CONCERN_LABEL = "계속기업 의문 문구";
+export const GOING_CONCERN_NOTE =
+  "계속기업 의문 문구는 제출 서류 기준 사실 표시이며 판단이 아닙니다. 자동 규칙으로 찾은 결과이며 놓친 문구가 있을 수 있습니다. 가장 최근 분기·연간 보고서 1건만 읽습니다.";
+
+const GC_REASON: Record<string, string> = {
+  not_received: "보고서를 받지 못함",
+  gone: "보고서를 받지 못함",
+  no_financials: "재무제표가 본문에 없음",
+  short: "본문이 짧음",
+  no_target: "대상 보고서 없음",
+  foreign_unchecked: "20-F 는 표본 확인 전",
+};
+
+// 「있음」 같은 핵심 낱말과 나머지 설명을 나눠 돌려준다 (핵심 낱말만 굵게)
+export function goingConcernParts(g: GoingConcern): { head: string; tail: string } {
+  switch (g.state) {
+    case "present":
+      return { head: "있음", tail: "" };
+    case "alleviated":
+      return { head: "", tail: "의문을 일으킬 조건을 적었고, 계획으로 해소됐다고 적음" };
+    case "past_only":
+      return { head: "", tail: "지난 기간에는 있었다고 적음, 이 보고서 기준일에는 적지 않음" };
+    case "not_found":
+      return { head: "", tail: g.hypothetical_only ? "본문에서 찾지 못함(위험 요인에 가정 문장만 있음)" : "본문에서 찾지 못함" };
+    case "unclear":
+      return { head: "", tail: "확인 못 함 (까닭: 「substantial doubt」만 있고 「going concern」이 없어 자동 규칙이 정하지 못함)" };
+    default:
+      return { head: "", tail: `확인 못 함 (까닭: ${GC_REASON[g.reason ?? ""] ?? "보고서를 받지 못함"})` };
+  }
+}
+
+// 줄 끝에 붙는 꼬리: 「10-Q 2026-11-06 제출」 · 「이전 보고서」 · 「오래된 보고서」 · 「갱신 멈춤」
+export function goingConcernSuffix(g: GoingConcern): string {
+  const parts: string[] = [];
+  if (g.form && g.filed) parts.push(`${g.form} ${g.filed} 제출`);
+  if (g.previous_report) parts.push("이전 보고서");
+  if (g.updates_stopped) parts.push("갱신 멈춤");
+  else if (g.stale) parts.push("오래된 보고서");
+  return parts.join(" · ");
+}
+
+export function goingConcernText(g: GoingConcern): string {
+  const { head, tail } = goingConcernParts(g);
+  const suffix = goingConcernSuffix(g);
+  return `${GOING_CONCERN_LABEL}: ${head}${tail}${suffix ? ` · ${suffix}` : ""}`;
+}
+
+export function goingConcernFixedTexts(): string[] {
+  const states = ["present", "alleviated", "past_only", "not_found", "unclear", "unknown"];
+  const texts: string[] = [GOING_CONCERN_LABEL, GOING_CONCERN_NOTE, ...Object.values(GC_REASON)];
+  for (const state of states) {
+    for (const hyp of [false, true]) texts.push(goingConcernText({ state, hypothetical_only: hyp, form: "10-Q", filed: "2026-11-06", previous_report: true, stale: true }));
+  }
+  return texts;
 }

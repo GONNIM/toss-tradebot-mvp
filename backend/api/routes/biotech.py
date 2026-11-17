@@ -166,6 +166,7 @@ class RadarRow(BaseModel):
     name: str
     mcap_bucket: str
     mcap_asof: str = ""   # WP74 · 시총 배지 기준 종가일 (빈 값 = 배지 미표시)
+    mcap_shares_asof: str = ""   # 1117-01 · 주식수를 직전 파일에서 옮겨 담았을 때만 · 그 주식수의 원래 기준일
     score: float
     state: str            # A/B/C
     news_window: str      # why_easy 요약 (예정일 표기)
@@ -181,6 +182,20 @@ class RadarRow(BaseModel):
     status_known: bool = True    # False = 상장 상태를 확인하지 못함 (판정 파일 없음 · 오래됨 · 새 후보 첫날)
     fact_line: str = ""          # 예: 「합병 관련 서류: S-4 · 2026-11-04」 (S-4 계열만 낸 종목)
     fact_url: str = ""           # sec.gov 원문 주소
+    going_concern: Optional[GoingConcern] = None   # 1114-06 · 파일이 없거나 깨졌거나 이 CIK 가 없으면 None
+
+
+class GoingConcern(BaseModel):
+    """1114-06 · 계속기업 의문 문구 유무 (표시 전용 · 사실만 · 점수 · 순위와 무관 · 선택 필드)."""
+    state: str                    # present · alleviated · past_only · not_found · unclear · unknown
+    reason: str = ""              # unknown 일 때 까닭 (not_received · gone · no_financials · short · no_target · foreign_unchecked)
+    form: str = ""
+    filed: str = ""               # 제출일
+    url: str = ""                 # sec.gov 원문 주소
+    stale: bool = False           # 양식별 오래된 보고서 (10-Q 135일 · 10-K · 20-F 400일 넘음)
+    previous_report: bool = False  # 새 보고서가 나왔지만 아직 못 받아 옛 값을 보임
+    updates_stopped: bool = False  # 이 단계가 7일 넘게 못 돎
+    hypothetical_only: bool = False
 
 
 class ListingForm(BaseModel):
@@ -330,6 +345,12 @@ def _mcap_display(ticker: str, csv_bucket: str = "") -> tuple[str, str]:
     return _mcap_bucket_label(mcap), px_date.isoformat()
 
 
+def _mcap_shares_carried(ticker: str) -> str:
+    """1117-01 · 직전 파일에서 옮겨 담은 주식수면 그 원래 기준일 · 아니면 빈 문자열 (_mcap_display 를 부른 뒤에 호출)."""
+    r = _MCAP_CACHE["rows"].get(ticker) or {}
+    return r.get("shares_asof", "") if r.get("carried_from") else ""
+
+
 def _fact_for_row(cik: str, status: str, evidence: str) -> tuple[str, str]:
     """merging_fact 행의 「양식 · 날짜」 한 줄과 원문 주소 · 424B3 보다 S-4 계열을 먼저 · 가장 늦은 제출."""
     if status != "merging_fact":
@@ -340,6 +361,50 @@ def _fact_for_row(cik: str, status: str, evidence: str) -> tuple[str, str]:
         return "", ""
     f = max(main, key=lambda x: x["date"])
     return f"합병 관련 서류: {f['form']} · {f['date']}", f.get("url", "")
+
+
+_GC_STALE_DAYS = {"10-Q": 135, "10-K": 400, "20-F": 400}   # biotech_going_concern.STALE_DAYS 와 같은 값 (계획 1절)
+_GC_UPDATE_STOP_DAYS = 7
+
+
+def _going_concern_store() -> dict | None:
+    """going_concern.json (CIK → 행) · 없거나 깨졌으면 None · 읽기 위치는 filings 폴더 조회 순서."""
+    for d in _search_dirs("filings"):
+        p = d / "going_concern.json"
+        if not p.exists():
+            continue
+        try:
+            j = json.loads(p.read_text())
+        except (ValueError, OSError):
+            return None
+        return j if isinstance(j, dict) and isinstance(j.get("rows"), dict) else None
+    return None
+
+
+def _going_concern_for(store: dict | None, cik: str, today: datetime | None = None) -> "GoingConcern | None":
+    """한 종목의 표시 값 · 어떤 오류도 500 으로 올리지 않는다 (None)."""
+    try:
+        if not store or not cik:
+            return None
+        row = store["rows"].get(str(int(cik)).zfill(10))
+        if not row or not row.get("state"):
+            return None
+        now = (today or datetime.now(timezone(timedelta(hours=9)))).date()
+        form, filed = row.get("form") or "", row.get("filing_date") or ""
+        stale = False
+        if form in _GC_STALE_DAYS and filed:
+            stale = (now - datetime.strptime(filed[:10], "%Y-%m-%d").date()).days > _GC_STALE_DAYS[form]
+        last_run = ((store.get("meta") or {}).get("last_run_on") or "")
+        stopped = True
+        if last_run:
+            stopped = (now - datetime.strptime(last_run[:10], "%Y-%m-%d").date()).days > _GC_UPDATE_STOP_DAYS
+        latest = row.get("latest_accession") or ""
+        return GoingConcern(
+            state=str(row["state"]), reason=str(row.get("reason") or ""), form=form, filed=filed, url=str(row.get("url") or ""),
+            stale=stale and not stopped, previous_report=bool(latest and row.get("accession") and latest != row.get("accession")),
+            updates_stopped=stopped, hypothetical_only=bool((row.get("flags") or {}).get("hypothetical_only")))
+    except Exception:  # noqa: BLE001 · 깨진 행 하나가 화면 전체를 막지 않게
+        return None
 
 
 def _excluded_lists(csv_path: Path) -> tuple[list["ExcludedRow"], list["ExcludedRow"]]:
@@ -390,6 +455,7 @@ async def get_radar_json(_admin: str = Depends(require_sniper_token)) -> RadarJs
             rows=[],
         )
     rows: list[RadarRow] = []
+    ciks: list[str] = []
     with path.open() as f:
         for idx, r in enumerate(csv.DictReader(f), 1):
             def _f(k: str, d: float = 0.0) -> float:
@@ -404,6 +470,7 @@ async def get_radar_json(_admin: str = Depends(require_sniper_token)) -> RadarJs
                 name=(r.get("name") or "")[:60],
                 mcap_bucket=mb,
                 mcap_asof=masof,
+                mcap_shares_asof=_mcap_shares_carried(r.get("ticker", "")) if masof else "",
                 score=_f("score"),
                 state=r.get("time_state", "C"),
                 news_window=(r.get("why_easy") or "")[:100],
@@ -419,7 +486,12 @@ async def get_radar_json(_admin: str = Depends(require_sniper_token)) -> RadarJs
                 **dict(zip(("fact_line", "fact_url"),
                            _fact_for_row(r.get("cik", ""), r.get("status", ""), r.get("status_evidence", "")))),
             ))
+            ciks.append(r.get("cik", ""))
     excluded, merging = _excluded_lists(path)
+    # 1114-06 · 계속기업 문구 (표시 전용) · 상위 30줄 자르기 뒤 30개만 읽음 · 파일이 없으면 모두 None
+    gc_store = _going_concern_store()
+    for row, cik in zip(rows[:30], ciks[:30]):
+        row.going_concern = _going_concern_for(gc_store, cik)
     # WP85 · 대표 시험 (candidates v3 state_note · AACT 1차 완료 예정일) · 표시 전용
     notes = _latest_candidate_notes()
     for row in rows[:30]:
@@ -447,6 +519,7 @@ class RumorRow(BaseModel):
     st_24h: Optional[int] = None
     baseline_n: Optional[int] = None
     mcap_asof: str = ""   # WP74 · 시총 배지 기준 종가일 (빈 값 = 배지 미표시)
+    mcap_shares_asof: str = ""   # 1117-01 · 옮겨 담은 주식수일 때만 · 원래 기준일
     # WP74 2단계 · 카드 문장용 구조화 필드 (원문 state_note 에서 추출 · 없으면 빈 값)
     nct_id: str = ""      # ClinicalTrials.gov 임상 번호
     phase: str = ""       # PHASE3 · PHASE1/PHASE2 등 원문 표기
@@ -850,6 +923,7 @@ async def get_rumor_json(
             row.theme_rank = _theme_rank(row.ticker)
         if row.table in ("A", "표1", "표2", "표3"):
             row.mcap_bucket, row.mcap_asof = _mcap_display(row.ticker, row.mcap_bucket)
+            row.mcap_shares_asof = _mcap_shares_carried(row.ticker) if row.mcap_asof else ""
         elif row.mcap_bucket in ("unknown", "—"):
             row.mcap_bucket = ""
 
