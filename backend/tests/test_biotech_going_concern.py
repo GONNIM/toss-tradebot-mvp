@@ -607,6 +607,16 @@ def test_sample_refuses_without_server_total_or_when_over_cap(rt):
     assert sent == []
 
 
+def test_sample_over_cap_needs_reason_and_known_server_total(rt):
+    sent = []
+    get = lambda u: sent.append(u) or {"status": 200, "text": body("x")}   # noqa: E731
+    with pytest.raises(SystemExit):                                          # 서버 장부를 모르면 사유가 있어도 안 함
+        smp.run_sample(_srcs(2), TODAY_SUN, get, None, over_cap_reason="test")
+    assert sent == []
+    res = smp.run_sample(_srcs(2), TODAY_SUN, get, SEC_DAILY_CAP + 81, over_cap_reason="사용자 1회 예외")
+    assert res["sent"] == 2 and "사용자 승인 예외" in res["gate"]
+
+
 def test_sample_runs_within_gate_and_saves_sentences_only(rt):
     sent = []
     sentence = "These conditions raise substantial doubt about our ability to continue as a going concern."

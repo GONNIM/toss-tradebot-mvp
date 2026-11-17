@@ -82,7 +82,7 @@ def sample_of(text: str, form: str, filing: date) -> dict:
 
 def run_sample(raw: dict[str, dict], today: date, get_text: Callable[[str], dict], server_total: int | None,
                out: Path | None = None, limit: int = MAX_SAMPLES, ledger: SecDailyLedger | None = None,
-               local_total: int | None = None) -> dict:
+               local_total: int | None = None, over_cap_reason: str | None = None) -> dict:
     """게이트 통과 시에만 요청 · 못 통과하면 요청 0 으로 SystemExit."""
     if limit > MAX_SAMPLES:
         raise SystemExit(f"표본 상한 {MAX_SAMPLES}건 초과 요청 {limit} · 실행하지 않음")
@@ -91,7 +91,11 @@ def run_sample(raw: dict[str, dict], today: date, get_text: Callable[[str], dict
     local = read_local_ledger_total(day) if local_total is None else local_total
     ok, why = ledger_gate(server_total, local, len(targets))
     LOG.info("SEC 장부 조건 · %s", why)
-    if not ok:
+    if not ok and over_cap_reason and server_total is not None:   # 서버 장부를 모르면 예외도 없음
+        # 사용자 승인 1회 예외 (예: 11/17 「㉠ 적용」) · 상한 규칙은 그대로 · 사유를 결과 파일에 남김
+        LOG.warning("SEC 장부 조건 불충족이지만 사용자 승인 예외로 실행 · %s · 사유: %s", why, over_cap_reason)
+        why = f"{why} · 사용자 승인 예외: {over_cap_reason}"
+    elif not ok:
         raise SystemExit(f"SEC 장부 조건 불충족 · {why}")
     ledger = ledger or SecDailyLedger.load(day)
     rows, sent, blocked = {}, 0, None
@@ -135,13 +139,15 @@ def main():
     ap.add_argument("--server-total", type=int, required=True, help="서버 장부 오늘 합계 (사용자가 서버 장부를 읽어 넣음)")
     ap.add_argument("--submissions", default=None, help="로컬 submissions_<날짜>.json (기본: 최신)")
     ap.add_argument("--limit", type=int, default=MAX_SAMPLES)
+    ap.add_argument("--over-cap-reason", default=None, help="하루 상한을 넘어도 1회 실행하는 사용자 승인 사유 (없으면 상한 지킴)")
     a = ap.parse_args()
     p = Path(a.submissions) if a.submissions else _latest_local_submissions()
     if p is None or not p.exists():
         raise SystemExit("로컬 submissions 파일이 없습니다 · 실행하지 않음")
     raw = json.loads(p.read_text()).get("companies_raw") or {}
     with build_client() as client:
-        res = run_sample(raw, _kst_today(), lambda u: sec_get_text(client, u, timeout=gc.READ_TIMEOUT), a.server_total, limit=a.limit)
+        res = run_sample(raw, _kst_today(), lambda u: sec_get_text(client, u, timeout=gc.READ_TIMEOUT), a.server_total, limit=a.limit,
+                         over_cap_reason=a.over_cap_reason)
     print(json.dumps(res, ensure_ascii=False))
 
 
