@@ -390,6 +390,25 @@ def test_missing_ticker_allowed_after_manual_check(tmp_path, monkeypatch):
     assert out["study_matches"] == 2
 
 
+
+def test_ticker_left_candidates_is_not_missing(tmp_path, monkeypatch):
+    """Fable 1112-03-03 막음 1: 이번 후보에서 나간 종목은 「빠짐」이 아니다 · 막지 않고 쓴다."""
+    calls = _setup_out(tmp_path, monkeypatch)
+    _prev(tmp_path, [("ACME", "NCT80000001")] + [("GONE", f"NCT7{i:07d}") for i in range(10)])
+    out = _run(FakeApi({"acme bio": [[_study("NCT90000001")]]}), tmp_path)
+    assert out["study_matches"] == 1 and not calls["fail"]          # 30% 가드도 후보에 남은 종목(ACME 1건)만으로 본다
+
+
+def test_ticker_still_candidate_but_zero_blocks(tmp_path, monkeypatch):
+    """후보에 남아 있는데 0건이면 여전히 막는다 (후보 밖 종목이 섞여 있어도)."""
+    calls = _setup_out(tmp_path, monkeypatch)
+    _prev(tmp_path, [("ACME", "NCT80000001"), ("VRTX", "NCT80000002"), ("GONE", "NCT70000001")])
+    with pytest.raises(SystemExit):
+        _run(FakeApi({"acme bio": [[_study("NCT90000001"), _study("NCT90000002")]]}), tmp_path)
+    detail = calls["fail"][0][1]
+    assert "VRTX" in detail and "GONE" not in detail
+
+
 def test_happy_path_writes_atomically_and_extra_fields(tmp_path, monkeypatch):
     calls = _setup_out(tmp_path, monkeypatch)
     (tmp_path / "ctgov_snapshot.json").write_text(json.dumps({"matches": []}))

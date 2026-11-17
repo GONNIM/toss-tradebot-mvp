@@ -311,13 +311,23 @@ def _load_prev(path: Path) -> list[dict] | None:
         return None
 
 
-def check_guards(matches: list[dict], prev: list[dict] | None, allow_missing=()) -> None:
+def check_guards(matches: list[dict], prev: list[dict] | None, allow_missing=(), candidates=None) -> None:
+    """candidates: 이번 후보 종목 집합. 주면 지난 사본 가운데 이번 후보에 남은 종목만으로 30% · 종목 0건을 본다
+    (후보는 매일 바뀌어 후보에서 나간 종목은 「빠짐」이 아님 · Fable 1112-03-03 막음 1)."""
     if not matches:
         raise CtgovStop("guard", "받은 결과가 0 study · 이름 검색이 통째로 깨졌을 수 있어 쓰지 않음", 25)
     if not prev:
         return
+    if candidates is not None:
+        cand = {str(t).upper() for t in candidates}
+        left = {m.get("ticker") for m in prev if m.get("ticker") and str(m.get("ticker")).upper() not in cand}
+        if left:
+            LOG.info("지난 사본 종목 가운데 이번 후보에서 나간 종목 %d개 · 가드 비교에서 뺌", len(left))
+        prev = [m for m in prev if str(m.get("ticker") or "").upper() in cand]
+        if not prev:
+            return
     if len(matches) < len(prev) * DROP_RATIO:
-        raise CtgovStop("guard", f"study 수가 지난 사본 {len(prev)} → {len(matches)} 로 30% 넘게 줄어 쓰지 않음", 25)
+        raise CtgovStop("guard", f"study 수가 지난 사본(이번 후보에 남은 종목) {len(prev)} → {len(matches)} 로 30% 넘게 줄어 쓰지 않음", 25)
     before = {m.get("ticker") for m in prev if m.get("ticker")}
     after = {m["ticker"] for m in matches}
     allowed = {t.strip().upper() for t in allow_missing if t.strip()}
@@ -373,7 +383,9 @@ def _run(names, aliases, n_cand, client, today, now, allow_missing) -> dict:
     matcher = w.SponsorMatcher(names, aliases)
     matches, diag = match_studies(raw, matcher, today)
     prev = _load_prev(w.OUT_JSON)
-    check_guards(matches, prev, allow_missing)
+    if zero:
+        LOG.info("결과 0건 검색어 %d개 · %s", len(zero), ", ".join(zero))
+    check_guards(matches, prev, allow_missing, candidates=set(names))
 
     w.OUT_DIR.mkdir(parents=True, exist_ok=True)
     w._write_match_report(date_str, matches, diag)
