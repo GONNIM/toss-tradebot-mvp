@@ -47,6 +47,7 @@
 - **해석 · 발표 당시 주식수 (Fable 2026-10-21 답 4)**: 발표 당시 주식수는 기준 날짜 (end) 가 발표일 이하인 값 중 가장 늦은 것을 쓴다. 발표일은 미국 동부 시간 기준 접수일이다.
 - **fr6c 폴더 보존 (Fable 2026-10-21 답 5)**: 서버 `/root/toss-tradebot-mvp/var/biotech/fr6c/` 폴더는 365일 CSV 정리 대상에서 뺀다 (`backend/scripts/biotech_h48v3_daily_server.sh` 147행 `-not -path` 로 이미 제외). `retro_prices_v1.csv` 는 지우지 않는다. meta 파일이 있는데 csv 가 없으면 `fix_prices()` 가 SealError 로 멈춘다.
 - **가격 고정 SHA-256 (2026-10-22 서버 확정)**: `/root/toss-tradebot-mvp/var/biotech/fr6c/retro_prices_v1.csv` = 2c2f96db52d1273e841a278e7eb73961796a283ad92d55b10b6985819fcfa54f . 2026-10-22 07:00 서버 첫 실행 값이며, 로컬에서 미리 실행한 값과 같다. 코드는 csv 가 meta 파일의 SHA-256 과 다르면 SealError 로 멈춘다 (`backend/scripts/biotech_fr6c.py` `load_retro`). 서버 csv 또는 meta 의 값이 이 줄의 값과 다르면 FR-6c 판정 결과를 쓰지 않고 보고한다.
+- **해석 · 임상 자료 출처 (1112-03 · 2026-11-17)**: 설계 파일 `docs/plans/biotech/design/fr6c_design_v1.md` 6절의 "주간 AACT 단계의 ctgov_snapshot.json" 은 공식 API(ClinicalTrials.gov v2)로 받은 같은 파일로 읽는다. 파일 · 칸 · 값 모양은 같다(11/12 사본 대조: 판정 시험 84건 전부 · 종목 36개 같음 · 남은 차이는 11/12 뒤 등록부 갱신). 값 모양이 달라지면 PRD 10절 절차로 따로 승인받는다.
 
 ---
 
