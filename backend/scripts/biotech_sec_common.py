@@ -112,13 +112,15 @@ def sec_get(client: httpx.Client, url: str, params: dict | None = None) -> dict:
     return {"status": r.status_code, "json": None, "text_sig": r.text[:80].replace("\n", " ")}
 
 
-def sec_get_text(client: httpx.Client, url: str) -> dict:
+def sec_get_text(client: httpx.Client, url: str, timeout: float = 25.0) -> dict:
     """단일 SEC GET (HTML · 텍스트 원문) · 403 즉시 raise · 헤더는 build_client 단일 상수 (P3a-2 424B5 표지).
+
+    timeout 은 선택 인자 (1114-06 · 큰 10-K 용 · 기본 25초는 그대로 · 다른 호출은 영향 없음).
 
     반환 shape: {'status': int, 'text': str | None}
     """
     time.sleep(REQ_INTERVAL)
-    r = client.get(url, timeout=25.0)
+    r = client.get(url, timeout=timeout)
     if r.status_code == 403:
         sig = "Undeclared Automated Tool" if "Undeclared Automated Tool" in r.text[:2000] else r.text[:80]
         raise SecBlockedError(f"403 · {sig} · UA 순환·재시도 금지 · 대기+탐침 프로토콜 (biotech_sec_probe)")

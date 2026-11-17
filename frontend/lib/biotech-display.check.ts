@@ -2,7 +2,7 @@
 import assert from "node:assert/strict";
 import * as fs from "node:fs";
 import * as path from "node:path";
-import { alertCriteria, cardText, conditionsLine, redditLine, daysSinceFiling, insiderTotalUsd, txCents, dday, THEME_RANK_NOTE, endLabel, stageLabel, exhibitLine, LEAD_LABEL, groupForm4, insiderSummary, insiderTxLine, mentionSentence, multSentence, trialSentence, rumorReason, shortName, summaryStatus, tickerOrUnknown, formsText, isSecUrl, listingFixedTexts, mergingLabel, LISTING_NOTE } from "./biotech-display";
+import { alertCriteria, cardText, conditionsLine, redditLine, daysSinceFiling, insiderTotalUsd, txCents, dday, THEME_RANK_NOTE, endLabel, stageLabel, exhibitLine, LEAD_LABEL, groupForm4, insiderSummary, insiderTxLine, mentionSentence, multSentence, trialSentence, rumorReason, shortName, summaryStatus, tickerOrUnknown, formsText, isSecUrl, listingFixedTexts, mergingLabel, LISTING_NOTE, goingConcernText, goingConcernFixedTexts, goingConcernParts, goingConcernSuffix, GOING_CONCERN_NOTE } from "./biotech-display";
 
 const beauty = cardText({ category: "미용", interventions: [{ name: "X-1", type: "DRUG", type_ko: "약물" }] }, "PHASE2", "2026-11-30", 62);
 assert.ok(beauty.main?.startsWith("미용 · X-1 (약물) · 2상(효과 탐색)"), beauty.main ?? "null");
@@ -154,5 +154,30 @@ assert.ok(alertCriteria(7).includes("레딧 24시간 매치 3건 이상이면서
   const src = fs.readFileSync(path.join(__dirname, "../components/biotech/ExcludedList.tsx"), "utf8");
   assert.ok(src.includes("isSecUrl(f.url)"));
   for (const w of BAD) assert.ok(!src.replace(/\/\/[^\n]*/g, "").includes(w), `ExcludedList 금지어 ${w}`);
+}
+// 1114-06 · 계속기업 문구 · 금지어(신호 낱말 · 명령문 · 해석 낱말) 없음 · 문구 틀 · 「확인 못 함」 줄이 숨겨지지 않음 · 색 클래스 없음
+{
+  const BAD = ["골든", "데드", "크로스", "교차", "정배열", "역배열", "매수", "매도", "사십시오", "하십시오", "추천", "목표가", "수익", "주의", "부도", "파산", "위험합니다", "상장폐지", "경고", "안전"];
+  for (const t of goingConcernFixedTexts()) for (const w of BAD) assert.ok(!t.includes(w), `${t} 금지어 ${w}`);
+  const base = { form: "10-Q", filed: "2026-11-06" };
+  assert.equal(goingConcernText({ state: "present", ...base }), "계속기업 의문 문구: 있음 · 10-Q 2026-11-06 제출");
+  assert.equal(goingConcernText({ state: "not_found", form: "10-K", filed: "2026-03-12" }), "계속기업 의문 문구: 본문에서 찾지 못함 · 10-K 2026-03-12 제출");
+  assert.equal(goingConcernText({ state: "not_found", hypothetical_only: true, form: "10-K", filed: "2026-03-12" }), "계속기업 의문 문구: 본문에서 찾지 못함(위험 요인에 가정 문장만 있음) · 10-K 2026-03-12 제출");
+  assert.ok(goingConcernText({ state: "alleviated", ...base }).includes("의문을 일으킬 조건을 적었고, 계획으로 해소됐다고 적음"));
+  assert.ok(goingConcernText({ state: "past_only", ...base }).includes("지난 기간에는 있었다고 적음, 이 보고서 기준일에는 적지 않음"));
+  assert.ok(goingConcernText({ state: "unclear" }).includes("자동 규칙이 정하지 못함"));
+  for (const [reason, why] of [["not_received", "보고서를 받지 못함"], ["no_financials", "재무제표가 본문에 없음"], ["no_target", "대상 보고서 없음"], ["foreign_unchecked", "20-F 는 표본 확인 전"], ["short", "본문이 짧음"]])
+    assert.equal(goingConcernText({ state: "unknown", reason }), `계속기업 의문 문구: 확인 못 함 (까닭: ${why})`);
+  assert.equal(goingConcernSuffix({ state: "present", ...base, previous_report: true }), "10-Q 2026-11-06 제출 · 이전 보고서");
+  assert.equal(goingConcernSuffix({ state: "present", ...base, stale: true }), "10-Q 2026-11-06 제출 · 오래된 보고서");
+  assert.equal(goingConcernSuffix({ state: "present", ...base, stale: true, updates_stopped: true }), "10-Q 2026-11-06 제출 · 갱신 멈춤");
+  assert.equal(goingConcernParts({ state: "present" }).head, "있음");
+  assert.ok(GOING_CONCERN_NOTE.includes("판단이 아닙니다") && GOING_CONCERN_NOTE.includes("놓친 문구가 있을 수 있습니다") && GOING_CONCERN_NOTE.includes("1건만"));
+  // 화면 소스 · 줄 컴포넌트는 값이 있으면 항상 그림(확인 못 함 포함) · 색으로 칠하지 않음 · 링크는 isSecUrl 을 거친 것만
+  const page = fs.readFileSync(path.join(__dirname, "../app/biotech/page.tsx"), "utf8");
+  const fn = page.slice(page.indexOf("function GoingConcernLine"), page.indexOf("// ── WP74 4단계"));
+  assert.ok(fn.includes("isSecUrl(g.url)") && !/return null/.test(fn) && !/text-(red|blue|rose|sky|orange|yellow|green|emerald)|bg-(red|blue|rose)/.test(fn));
+  assert.ok(page.includes("{r.going_concern && <GoingConcernLine"));
+  for (const w of BAD) assert.ok(!fn.replace(/\/\/[^\n]*/g, "").includes(w), `GoingConcernLine 금지어 ${w}`);
 }
 console.log("ok");

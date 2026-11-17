@@ -26,8 +26,8 @@ import { QuoteDetails, QuoteToggleButton, ROW_BUTTON_CLASS } from "@/components/
 import { ExcludedList } from "@/components/biotech/ExcludedList";
 import type { Fr6cCells, ReadoutRow } from "@/lib/biotech-fr6c";
 import type { SessionInfo } from "@/lib/auth";
-import { LISTING_UNKNOWN, alertCriteria, cardText, checkedAtLabel, conditionsLine, redditLine, ctgovUrl, exhibitLine, inputLabel, inputsMissingLine, groupForm4, insiderSummary, insiderTxLine, LEAD_LABEL, mcapBadge, mentionSentence, multSentence, refreshLabel, rumorReason, shortName, sortFilterCards, sortLabel, summaryStatus, tickerOrUnknown, trialSentence } from "@/lib/biotech-display";
-import type { CardSort, ListingRow, RedditStatus, Form4Tx, ThemeRank, TrialDisplay } from "@/lib/biotech-display";
+import { LISTING_UNKNOWN, alertCriteria, goingConcernParts, goingConcernSuffix, GOING_CONCERN_LABEL, isSecUrl, cardText, checkedAtLabel, conditionsLine, redditLine, ctgovUrl, exhibitLine, inputLabel, inputsMissingLine, groupForm4, insiderSummary, insiderTxLine, LEAD_LABEL, mcapBadge, mentionSentence, multSentence, refreshLabel, rumorReason, shortName, sortFilterCards, sortLabel, summaryStatus, tickerOrUnknown, trialSentence } from "@/lib/biotech-display";
+import type { CardSort, GoingConcern, ListingRow, RedditStatus, Form4Tx, ThemeRank, TrialDisplay } from "@/lib/biotech-display";
 
 // 백엔드 스키마
 type RadarRow = {
@@ -50,6 +50,8 @@ type RadarRow = {
   status_known?: boolean;
   fact_line?: string;
   fact_url?: string;
+  // 1114-06 · 계속기업 의문 문구 유무 (선택 필드 · 없으면 줄을 그리지 않음)
+  going_concern?: GoingConcern | null;
 };
 type RadarJson = { generated: string; source_csv: string; rows: RadarRow[]; inputs_missing?: string[]; excluded?: ListingRow[]; merging?: ListingRow[] };
 
@@ -153,6 +155,7 @@ const radarColumns = (
           </span>
         )}
         {r.status_known === false && <span className="text-[11px] text-muted-foreground">{LISTING_UNKNOWN}</span>}
+        {r.going_concern && <GoingConcernLine g={r.going_concern} />}
       </div>
     ),
   },
@@ -165,6 +168,22 @@ const radarColumns = (
     render: (r) => cardText(r.trial, r.phase, r.event_date, r.days_to, undefined, { short: true }).main ?? "대표 시험 정보 없음",
   },
 ];
+
+// 1114-06 · 계속기업 문구 한 줄 · 작은 글씨 · 「있음」만 굵게 · 색으로 칠하지 않음 · 「확인 못 함」도 그대로 보임
+function GoingConcernLine({ g }: { g: GoingConcern }) {
+  const { head, tail } = goingConcernParts(g);
+  const suffix = goingConcernSuffix(g);
+  return (
+    <span className="text-[11px] text-muted-foreground">
+      {GOING_CONCERN_LABEL}: {head && <strong className="font-semibold text-foreground">{head}</strong>}
+      {tail}
+      {suffix && <> · {suffix}</>}
+      {isSecUrl(g.url) && (
+        <> · <a href={g.url} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">원문 ↗</a></>
+      )}
+    </span>
+  );
+}
 
 // ── WP74 4단계 · 점수 5요소 이름 (쉬운 말) ─────────────────
 const FACTOR_KO: { key: keyof RadarRow["factors"]; label: string }[] = [
