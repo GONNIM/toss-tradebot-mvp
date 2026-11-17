@@ -230,10 +230,10 @@ def convert_study(study: dict, ticker: str, role: str, method: str, today: date)
         except ValueError:
             pcd, days_to = "", None
     enroll = _g(design, "enrollmentInfo", "count")
-    outcomes = [{"measure": (o.get("measure") or "")[:300], "time_frame": (o.get("timeFrame") or "")[:200]}
+    outcomes = [{"measure": _txt(o.get("measure"))[:300], "time_frame": _txt(o.get("timeFrame"))[:200]}
                 for o in (_g(ps, "outcomesModule", "primaryOutcomes") or [])][:3]
     meshes = _g(study, "derivedSection", "conditionBrowseModule", "meshes") or []
-    return {
+    out = {
         "ticker": ticker,
         "nct_id": ident.get("nctId", ""),
         "role": role,
@@ -245,19 +245,27 @@ def convert_study(study: dict, ticker: str, role: str, method: str, today: date)
         "last_update_posted_date": norm_date(_g(status, "lastUpdatePostDateStruct", "date")),
         "completion_date_type": cd_s.get("type") or "",
         "days_to": days_to,
-        "brief_title": (ident.get("briefTitle") or "")[:300],
-        "official_title": (ident.get("officialTitle") or "")[:500],
+        "brief_title": _txt(ident.get("briefTitle"))[:300],
+        "official_title": _txt(ident.get("officialTitle"))[:500],
         "enrollment": "" if enroll is None else str(enroll),
         "enrollment_type": _g(design, "enrollmentInfo", "type") or "",
         "study_type": design.get("studyType") or "",
-        "conditions": list(_g(ps, "conditionsModule", "conditions") or []),
-        "mesh_terms": [m.get("term", "") for m in meshes if isinstance(m, dict)],
-        "interventions": [{"name": i.get("name", ""), "type": i.get("type", "")}
+        "conditions": [_txt(c) for c in (_g(ps, "conditionsModule", "conditions") or [])],
+        "mesh_terms": [_txt(m.get("term")) for m in meshes if isinstance(m, dict)],
+        "interventions": [{"name": _txt(i.get("name")), "type": i.get("type", "")}
                           for i in (_g(ps, "armsInterventionsModule", "interventions") or [])],
-        "allocation": _g(design, "designInfo", "allocation") or "",
-        "masking": _g(design, "designInfo", "maskingInfo", "masking") or "",
         "primary_outcomes": outcomes,
     }
+    # AACT 는 설계 행(designs)이 없는 시험에 allocation · masking 칸 자체가 없었다 (11/12 사본 11건) · 같은 모양으로 둔다
+    if isinstance(design.get("designInfo"), dict):
+        out["allocation"] = _g(design, "designInfo", "allocation") or ""
+        out["masking"] = _g(design, "designInfo", "maskingInfo", "masking") or ""
+    return out
+
+
+def _txt(s) -> str:
+    """AACT 내보내기 글은 큰따옴표가 빠져 있다 (11/12 사본 대조 · 제목 · 1차 목표) · 같은 모양으로 맞춘다."""
+    return (s or "").replace('"', "")
 
 
 # ── 맞추기 ────────────────────────────────────────────────────────────────────

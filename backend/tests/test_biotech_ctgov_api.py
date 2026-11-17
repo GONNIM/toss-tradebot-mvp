@@ -147,6 +147,28 @@ def test_output_fields_match_aact_output_fields():
     assert set(m) - aact_cols == set()
 
 
+
+def test_text_quotes_removed_like_aact():
+    """11/12 비교: AACT 글에는 큰따옴표가 없다 (제목 · 1차 목표) · 새 출력도 뺀다."""
+    s = _study()
+    s["protocolSection"]["identificationModule"]["briefTitle"] = '"Natural History" Study'
+    s["protocolSection"]["outcomesModule"]["primaryOutcomes"] = [{"measure": 'graded per "CTCAE"', "timeFrame": '"6" months'}]
+    m = api.convert_study(s, "ACME", "lead", "legacy", TODAY)
+    assert m["brief_title"] == "Natural History Study"
+    assert m["primary_outcomes"] == [{"measure": "graded per CTCAE", "time_frame": "6 months"}]
+
+
+def test_no_design_info_has_no_allocation_keys():
+    """11/12 비교: AACT 는 설계 행이 없으면 allocation · masking 칸이 없었다 · 설계가 있고 값만 비면 빈칸."""
+    s = _study()
+    del s["protocolSection"]["designModule"]["designInfo"]
+    m = api.convert_study(s, "ACME", "lead", "legacy", TODAY)
+    assert "allocation" not in m and "masking" not in m
+    s2 = _study()
+    s2["protocolSection"]["designModule"]["designInfo"] = {"allocation": "NA"}
+    m2 = api.convert_study(s2, "ACME", "lead", "legacy", TODAY)
+    assert m2["allocation"] == "NA" and m2["masking"] == ""
+
 # ── 2. 쪽 넘기기 ──────────────────────────────────────────────────────────────
 
 def test_follow_next_page_token_three_pages():

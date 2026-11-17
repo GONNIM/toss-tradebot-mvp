@@ -86,7 +86,10 @@ def compare(old: dict, new_matches: list[dict], new_counts: dict, raw_ncts: set[
     # 4) 종목별 가장 가까운 예정 시험 · sponsor_active_counts
     on, nn = nearest_upcoming(list(om.values()), ref), nearest_upcoming(new_matches, ref)
     diff_near = {t: {"old": on.get(t), "new": nn.get(t)} for t in sorted(set(on) | set(nn)) if on.get(t) != nn.get(t)}
-    oc, nc = old.get("sponsor_active_counts", {}), new_counts
+    def _ns(d):   # NCT 목록은 순서가 아니라 집합으로 본다 (AACT 는 파일 순서 · 새 코드는 번호 순)
+        return {k: ({**v, "lead_phase2_plus_ncts": sorted(v.get("lead_phase2_plus_ncts") or [])} if isinstance(v, dict) else v)
+                for k, v in (d or {}).items()}
+    oc, nc = _ns(old.get("sponsor_active_counts", {})), _ns(new_counts)
     diff_cnt = {t: {"old": oc.get(t), "new": nc.get(t)} for t in sorted(set(oc) | set(nc)) if oc.get(t) != nc.get(t)}
     res["c4_nearest_diff"], res["c4_active_counts_diff"] = diff_near, diff_cnt
     res["c4_pass"] = not diff_near and not diff_cnt
@@ -102,7 +105,7 @@ def compare(old: dict, new_matches: list[dict], new_counts: dict, raw_ncts: set[
     updated_ok: dict[str, int] = {}
     for n in sorted(got):
         o, x = om[n], nm[n]
-        recently = (x.get("last_update_posted_date") or "") > ref.isoformat()
+        recently = (x.get("last_update_posted_date") or "") >= ref.isoformat()   # 11/12 사본은 그날 갱신 전 자료일 수 있어 같은 날도 갱신으로 본다
         for k in sorted((set(o) | set(x)) - SKIP_FIELDS):
             if o.get(k) == x.get(k):
                 continue
