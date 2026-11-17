@@ -666,3 +666,16 @@ def test_sample_1117_no_longer_and_there_was_are_past_only():
            "As a result, management has concluded that there is no longer substantial doubt about the Company's ability to continue as a going concern.")
     r = gc.classify_text(gc.plain_text(txt), date(2026, 11, 10))
     assert r["state"] == gc.PAST_ONLY
+
+
+def test_there_was_without_prior_marker_is_not_past_only():
+    """Fable 1114-06-03 막음 1 · 이번 기간 확정 문장을 「지난 기간」으로 내지 않음 (가짜 문장)."""
+    for txt in ("Management concluded that there was substantial doubt about the Company's ability to continue as a going concern "
+                "within one year after the date these financial statements were issued.",
+                "As of September 30, 2026, there was substantial doubt about the Company's ability to continue as a going concern."):
+        assert gc.classify_text(gc.plain_text(txt), date(2026, 11, 10))["state"] != gc.PAST_ONLY
+
+
+def test_negated_there_was_is_not_past_only():
+    txt = "We do not believe there was substantial doubt about our ability to continue as a going concern in the prior period."
+    assert gc.classify_text(gc.plain_text(txt), date(2026, 11, 10))["state"] != gc.PAST_ONLY
