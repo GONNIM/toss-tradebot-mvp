@@ -36,6 +36,7 @@ type RadarRow = {
   name: string;
   mcap_bucket: string;
   mcap_asof?: string;
+  mcap_shares_asof?: string;
   score: number;
   state: string;
   news_window: string;
@@ -65,6 +66,7 @@ type RumorRow = {
   st_24h?: number | null;
   baseline_n?: number | null;
   mcap_asof?: string;
+  mcap_shares_asof?: string;
   nct_id?: string;
   phase?: string;
   event_date?: string;
@@ -159,7 +161,7 @@ const radarColumns = (
       </div>
     ),
   },
-  { key: "mcap_bucket", label: "시총", render: (r) => mcapBadge(r.mcap_bucket, r.mcap_asof) ?? "" },
+  { key: "mcap_bucket", label: "시총", render: (r) => mcapBadge(r.mcap_bucket, r.mcap_asof, r.mcap_shares_asof) ?? "" },
   { key: "state", label: "상태" },
   { key: "score", label: "점수", align: "right", render: (r) => r.score.toFixed(3) },
   {
@@ -316,9 +318,9 @@ function CompactList({ rows, emptyLabel, kind, alertTickers = [] }: { rows: Rumo
             <StockLink ticker={r.ticker}>{r.ticker}</StockLink>
           </span>
           <span className="text-muted-foreground">{shortName(r.name)}</span>
-          {mcapBadge(r.mcap_bucket, r.mcap_asof) && (
+          {mcapBadge(r.mcap_bucket, r.mcap_asof, r.mcap_shares_asof) && (
             <span className="rounded-lg bg-slate-50 px-1 py-0.5 text-xs font-mono text-slate-600">
-              {mcapBadge(r.mcap_bucket, r.mcap_asof)}
+              {mcapBadge(r.mcap_bucket, r.mcap_asof, r.mcap_shares_asof)}
             </span>
           )}
           <span className="text-slate-700">
@@ -339,9 +341,9 @@ function Form4Card({ rows }: { rows: RumorRow[] }) {
     <div className="rounded-lg border border-slate-200 bg-white p-3 text-sm">
       <div className="flex items-baseline gap-2 flex-wrap">
         <span className="rounded-lg bg-primary px-2 py-0.5 font-mono text-xs font-bold text-white">{tickerOrUnknown(rows[0].ticker)}</span>
-        {mcapBadge(rows[0].mcap_bucket, rows[0].mcap_asof) && (
+        {mcapBadge(rows[0].mcap_bucket, rows[0].mcap_asof, rows[0].mcap_shares_asof) && (
           <span className="rounded-lg bg-slate-100 px-1.5 py-0.5 text-xs font-mono text-slate-700">
-            {mcapBadge(rows[0].mcap_bucket, rows[0].mcap_asof)}
+            {mcapBadge(rows[0].mcap_bucket, rows[0].mcap_asof, rows[0].mcap_shares_asof)}
           </span>
         )}
       </div>
@@ -560,7 +562,7 @@ export default function BiotechPage() {
                         order={i + 1}
                         ticker={r.ticker}
                         name={r.name}
-                        mcap_bucket={mcapBadge(r.mcap_bucket, r.mcap_asof) ?? ""}
+                        mcap_bucket={mcapBadge(r.mcap_bucket, r.mcap_asof, r.mcap_shares_asof) ?? ""}
                         days_hint={r.days_hint}
                         detail={r.detail}
                         sentence={cardText(r.trial, r.phase, r.event_date, r.days_to).main ?? trialSentence(r.phase, r.event_date, r.days_to, r.trial)}

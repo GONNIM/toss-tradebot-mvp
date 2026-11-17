@@ -2,7 +2,7 @@
 import assert from "node:assert/strict";
 import * as fs from "node:fs";
 import * as path from "node:path";
-import { alertCriteria, cardText, conditionsLine, redditLine, daysSinceFiling, insiderTotalUsd, txCents, dday, THEME_RANK_NOTE, endLabel, stageLabel, exhibitLine, LEAD_LABEL, groupForm4, insiderSummary, insiderTxLine, mentionSentence, multSentence, trialSentence, rumorReason, shortName, summaryStatus, tickerOrUnknown, formsText, isSecUrl, listingFixedTexts, mergingLabel, LISTING_NOTE, goingConcernText, goingConcernFixedTexts, goingConcernParts, goingConcernSuffix, GOING_CONCERN_NOTE } from "./biotech-display";
+import { alertCriteria, cardText, conditionsLine, redditLine, daysSinceFiling, insiderTotalUsd, txCents, dday, THEME_RANK_NOTE, endLabel, stageLabel, exhibitLine, LEAD_LABEL, groupForm4, insiderSummary, insiderTxLine, mentionSentence, multSentence, trialSentence, rumorReason, shortName, summaryStatus, tickerOrUnknown, formsText, isSecUrl, listingFixedTexts, mergingLabel, LISTING_NOTE, mcapBadge, goingConcernText, goingConcernFixedTexts, goingConcernParts, goingConcernSuffix, GOING_CONCERN_NOTE } from "./biotech-display";
 
 const beauty = cardText({ category: "미용", interventions: [{ name: "X-1", type: "DRUG", type_ko: "약물" }] }, "PHASE2", "2026-11-30", 62);
 assert.ok(beauty.main?.startsWith("미용 · X-1 (약물) · 2상(효과 탐색)"), beauty.main ?? "null");
@@ -180,4 +180,8 @@ assert.ok(alertCriteria(7).includes("레딧 24시간 매치 3건 이상이면서
   assert.ok(page.includes("{r.going_concern && <GoingConcernLine"));
   for (const w of BAD) assert.ok(!fn.replace(/\/\/[^\n]*/g, "").includes(w), `GoingConcernLine 금지어 ${w}`);
 }
+// 1117-01 · 옮겨 담은 주식수는 원래 기준일을 배지에 함께 보임 · 아닌 줄은 그대로
+assert.equal(mcapBadge("50M-300M", "2026-11-14"), "50M-300M · 11/14 종가 기준");
+assert.equal(mcapBadge("50M-300M", "2026-11-14", ""), "50M-300M · 11/14 종가 기준");
+assert.equal(mcapBadge("50M-300M", "2026-11-14", "2026-03-31"), "50M-300M · 11/14 종가 기준 · 주식수 3/31 기준(직전 값)");
 console.log("ok");

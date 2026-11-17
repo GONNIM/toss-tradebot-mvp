@@ -166,6 +166,7 @@ class RadarRow(BaseModel):
     name: str
     mcap_bucket: str
     mcap_asof: str = ""   # WP74 · 시총 배지 기준 종가일 (빈 값 = 배지 미표시)
+    mcap_shares_asof: str = ""   # 1117-01 · 주식수를 직전 파일에서 옮겨 담았을 때만 · 그 주식수의 원래 기준일
     score: float
     state: str            # A/B/C
     news_window: str      # why_easy 요약 (예정일 표기)
@@ -344,6 +345,12 @@ def _mcap_display(ticker: str, csv_bucket: str = "") -> tuple[str, str]:
     return _mcap_bucket_label(mcap), px_date.isoformat()
 
 
+def _mcap_shares_carried(ticker: str) -> str:
+    """1117-01 · 직전 파일에서 옮겨 담은 주식수면 그 원래 기준일 · 아니면 빈 문자열 (_mcap_display 를 부른 뒤에 호출)."""
+    r = _MCAP_CACHE["rows"].get(ticker) or {}
+    return r.get("shares_asof", "") if r.get("carried_from") else ""
+
+
 def _fact_for_row(cik: str, status: str, evidence: str) -> tuple[str, str]:
     """merging_fact 행의 「양식 · 날짜」 한 줄과 원문 주소 · 424B3 보다 S-4 계열을 먼저 · 가장 늦은 제출."""
     if status != "merging_fact":
@@ -463,6 +470,7 @@ async def get_radar_json(_admin: str = Depends(require_sniper_token)) -> RadarJs
                 name=(r.get("name") or "")[:60],
                 mcap_bucket=mb,
                 mcap_asof=masof,
+                mcap_shares_asof=_mcap_shares_carried(r.get("ticker", "")) if masof else "",
                 score=_f("score"),
                 state=r.get("time_state", "C"),
                 news_window=(r.get("why_easy") or "")[:100],
@@ -511,6 +519,7 @@ class RumorRow(BaseModel):
     st_24h: Optional[int] = None
     baseline_n: Optional[int] = None
     mcap_asof: str = ""   # WP74 · 시총 배지 기준 종가일 (빈 값 = 배지 미표시)
+    mcap_shares_asof: str = ""   # 1117-01 · 옮겨 담은 주식수일 때만 · 원래 기준일
     # WP74 2단계 · 카드 문장용 구조화 필드 (원문 state_note 에서 추출 · 없으면 빈 값)
     nct_id: str = ""      # ClinicalTrials.gov 임상 번호
     phase: str = ""       # PHASE3 · PHASE1/PHASE2 등 원문 표기
@@ -914,6 +923,7 @@ async def get_rumor_json(
             row.theme_rank = _theme_rank(row.ticker)
         if row.table in ("A", "표1", "표2", "표3"):
             row.mcap_bucket, row.mcap_asof = _mcap_display(row.ticker, row.mcap_bucket)
+            row.mcap_shares_asof = _mcap_shares_carried(row.ticker) if row.mcap_asof else ""
         elif row.mcap_bucket in ("unknown", "—"):
             row.mcap_bucket = ""
 

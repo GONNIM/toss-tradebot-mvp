@@ -30,11 +30,13 @@ export function refreshLabel(generatedIso: string, now: Date = new Date()): stri
 }
 
 // 시총 배지 문구 · 계산 불가 (빈 값) 면 null → 배지 렌더 안 함
-export function mcapBadge(bucket?: string, asof?: string): string | null {
+export function mcapBadge(bucket?: string, asof?: string, sharesAsof?: string): string | null {
   if (!bucket || bucket === "unknown" || bucket === "—") return null;
   if (!asof) return bucket;
   const [, m, d] = asof.split("-").map(Number);
-  return `${bucket} · ${m}/${d} 종가 기준`;
+  // 1117-01 · 주식수를 직전 값으로 옮겨 담았으면 그 원래 기준일을 함께 보임
+  const carried = sharesAsof ? (([, sm, sd]) => ` · 주식수 ${sm}/${sd} 기준(직전 값)`)(sharesAsof.split("-").map(Number)) : "";
+  return `${bucket} · ${m}/${d} 종가 기준${carried}`;
 }
 
 
