@@ -28,7 +28,7 @@ from backend.scripts.biotech_sec_common import SEC_DAILY_CAP, SecBlockedError, S
 
 LOG = logging.getLogger("biotech_going_concern")
 
-RULE_VERSION = "gc-3"   # 11/18 판단 동사 부정(「does not believe that … exists」) → 부정 · 「있음」 행을 먼저 다시 받음
+RULE_VERSION = "gc-4"   # 11/18 1118-02 판단 동사 부정 뒤에 「alleviated · mitigated · resolved」 가 오면 부정 아님 → 사람 확인 (gc-3: 판단 동사 부정 → 부정 · 「있음」 행 먼저 다시 받음)
 LEDGER_CAT = "going_concern"
 STORE_NAME = "going_concern.json"
 DAILY_MAX = 15
@@ -74,6 +74,8 @@ _BOUNDARY = re.compile(r"[.;:]\s+(?=[A-Z(\"'])")
 _MODAL_RAISE = _r(r"\b(?:could|may|might|would|can)\b(?:\s+\w+){0,3}\s+(?:raise|raises|cast|casts|create|creates)\s+(?:a\s+|further\s+|significant\s+|serious\s+)*$")
 _COND_RAISE = _r(r"\b(?:if|unless)\b(?:\s+\w+){0,5}\s+(?:raise|raises|cast|casts|create|creates)\s+(?:a\s+|further\s+)*$")
 _NEG_JUDGE = _r(r"(?:\bnot\b|n't\b)\s+(?:\w+\s+)?(?:believe[sd]?|conclude[sd]?|determine[sd]?|think|consider|expect)\s+(?:that\s+)?(?:there\s+(?:is|are|exists?)\s+)?(?:a\s+|any\s+)?$")   # 11/18 서버 표본 「does not believe that substantial doubt exists」
+_THERE_FORM = _r(r"\bthere\s+(?:is|are|exists?)\s+(?:a\s+|any\s+)?$")   # 「not believe there is substantial doubt」 = 의문의 존재를 부정 → 뒤 낱말과 상관없이 부정 (Fable 1118-02-02)
+_UNRESOLVED_AFTER = _r(r"^(?:(?!\bexist|\bremain)[^.;]){0,160}?\b(?:alleviat|mitigat|resolv)\w*")   # 1118-02 「does not believe that substantial doubt … has been alleviated」 = 의문이 남음 · 「exists · remains」 가 먼저 오면 부정 (Fable 1118-02-02)
 _NEG_BEFORE = _r(r"(?:\bno\s+|\bwithout\s+(?:a\s+)?|\bnot\s+(?:\w+\s+){0,2}?(?:raise|raises|cast|casts|create|creates)\s+(?:a\s+)?)$")
 _POLICY = _r(r"\bwhether\b|\bevaluat(?:e|es|ing)\b")
 _CONF_VERB = _r(r"(?:\braise[sd]?|\braising|\brise to|\bcast(?:s|ing)?|\bcreat(?:e|es|ed|ing)|\bindicat\w+|\bthere is|\bthere exists?"
@@ -144,15 +146,22 @@ def _prior_dates(win: str, filing: date | None) -> bool:
     return False
 
 
+_JUDGE_NEG_SENT = _r(r"(?:\bnot\b|n't\b)\s+(?:\w+\s+)?(?:believe|conclude|determine|think|consider|expect)\w*\s+(?:that\s+)?(?:a\s+|any\s+|the\s+)?substantial doubt(?:(?!\bexist|\bremain)[^.;])*$")   # 판단 동사의 목적어가 substantial doubt 일 때만 · 「there is」 꼴과 「… exists · remains」(부정)는 막지 않음 (Fable 1118-02-01 · 02) · 한계: 판단 동사와 alleviated 사이 220자 넘으면 못 막음
+
+
+def _alleviation_blocked_at(win: str, pos: int) -> bool:
+    """「not … alleviated」(40자 안) 또는 같은 문장 앞쪽 「does not believe that substantial doubt … has been alleviated」(1118-02 · gc-4)."""
+    if _ALLEV_BLOCK.search(win[max(0, pos - 40):pos]):
+        return True
+    return bool(_JUDGE_NEG_SENT.search(win[max(0, pos - 220):pos]))
+
+
 def _effective_alleviation(win: str) -> bool:
-    for m in _ALLEV.finditer(win):
-        if not _ALLEV_BLOCK.search(win[max(0, m.start() - 40):m.start()]):
-            return True
-    return False
+    return any(not _alleviation_blocked_at(win, m.start()) for m in _ALLEV.finditer(win))
 
 
 def _blocked_alleviation(win: str) -> bool:
-    return any(_ALLEV_BLOCK.search(win[max(0, m.start() - 40):m.start()]) for m in _ALLEV.finditer(win))
+    return any(_alleviation_blocked_at(win, m.start()) for m in _ALLEV.finditer(win))
 
 
 def classify_window(text: str, s: int, e: int, filing: date | None = None) -> str:
@@ -168,6 +177,8 @@ def classify_window(text: str, s: int, e: int, filing: date | None = None) -> st
     if pair and _NO_LONGER.search(clause):                            # 「no longer」 는 부정·가정보다 먼저 (11/17 표본)
         return W_PAST
     if _NEG_JUDGE.search(clause):                                     # 「does not believe that」 · 「did not conclude that」 → 부정 (gc-3)
+        if not _THERE_FORM.search(clause) and _UNRESOLVED_AFTER.search(text[e:e + 200]):                 # 뒤에 「… alleviated / mitigated / resolved」 → 의문이 남았다는 뜻 · 사람 확인 (1118-02 · gc-4)
+            return W_UNCLEAR
         return W_NEG
     if _NEG_WAS.search(clause):                                       # 「do not believe there was」 → 부정
         return W_NEG

@@ -755,3 +755,45 @@ def test_41_rule_change_refetches_present_rows_first(rt):
         assert f"/data/{int(ciks[-1])}/" in sent[0]
     finally:
         m.RULE_VERSION = old
+
+
+def test_42_judgment_negation_with_unresolved_is_not_negative():
+    """1118-02 · 「does not believe that substantial doubt … has been alleviated」 는 의문이 남았다는 뜻 → 부정 아님 (사람 확인)."""
+    for txt in ("Management does not believe that substantial doubt about the Company's ability to continue as a going concern has been alleviated.",
+                "We do not expect substantial doubt regarding our ability to continue as a going concern to be resolved within one year.",
+                "The Company does not consider substantial doubt about its ability to continue as a going concern to be mitigated by these plans."):
+        assert gc.classify_text(gc.plain_text(txt), date(2026, 11, 10))["state"] != gc.NOT_FOUND, txt
+    # 확정 창이 함께 있으면 「있음」
+    both = ("Our recurring losses raise substantial doubt about our ability to continue as a going concern. "
+            "Management does not believe that substantial doubt about our ability to continue as a going concern has been alleviated.")
+    assert gc.classify_text(gc.plain_text(both), date(2026, 11, 10))["state"] == gc.PRESENT
+    # gc-3 부정은 그대로
+    neg = "As of the report date, the Company does not believe that substantial doubt exists about its ability to continue as a going concern."
+    assert gc.classify_text(gc.plain_text(neg), date(2026, 11, 10))["state"] != gc.PRESENT
+
+
+def test_43_judge_neg_block_only_when_doubt_is_object():
+    """Fable 1118-02-01 막음 1 · 다른 목적어의 부정이나 「doubt exists」 부정은 뒤의 진짜 완화를 막지 않는다."""
+    tail = " about the Company's ability to continue as a going concern"
+    a2 = f"We do not believe our cash is sufficient, which raised substantial doubt{tail}, however management's plans have alleviated the substantial doubt."
+    a3 = f"Although we do not expect revenue soon and conditions raised substantial doubt{tail}, we concluded our plans alleviated that substantial doubt."
+    n4 = f"Management does not believe that substantial doubt exists{tail}, as management's plans have alleviated the conditions that raised substantial doubt."
+    for txt in (a2, a3, n4):
+        assert gc.classify_text(gc.plain_text(txt), date(2026, 11, 10))["state"] != gc.PRESENT, txt
+    # 「does not believe that substantial doubt exists … because its plans mitigate …」 는 부정 그대로 (사람 확인으로 가지 않음)
+    n2 = f"The Company does not believe that substantial doubt exists{tail} because its plans mitigate the conditions."
+    assert gc.classify_text(gc.plain_text(n2), date(2026, 11, 10))["state"] == gc.NOT_FOUND
+
+
+def test_44_there_is_and_remains_forms_stay_negative():
+    """Fable 1118-02-02 막음 1 · 「not believe there is」 · 「… exists」 · 「… remains」 부정은 gc-3 과 같게 (있음으로 가지 않음)."""
+    tail = " about the Company's ability to continue as a going concern"
+    allev = ", as management's plans have alleviated the conditions that raised substantial doubt."
+    t1 = f"Management does not believe there is substantial doubt{tail}{allev}"
+    t2 = f"Management does not believe that substantial doubt{tail} exists{allev}"
+    t6 = f"Management did not conclude that there is substantial doubt{tail}, since the financing alleviated the substantial doubt raised in prior periods."
+    t9 = f"The Company does not believe that substantial doubt{tail} remains, as its plans alleviated the conditions that raised substantial doubt."
+    for txt in (t1, t2, t6, t9):
+        assert gc.classify_text(gc.plain_text(txt), date(2026, 11, 10))["state"] != gc.PRESENT, txt
+    t3 = f"The Company does not believe there is substantial doubt{tail} because its plans mitigate the conditions."
+    assert gc.classify_text(gc.plain_text(t3), date(2026, 11, 10))["state"] == gc.NOT_FOUND
