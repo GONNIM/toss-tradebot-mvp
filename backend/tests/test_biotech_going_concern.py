@@ -285,9 +285,9 @@ def test_13_reserve_by_weekday(rt):
     (rt / "filings" / "going_concern.json").unlink(missing_ok=True)
     res2 = gc.run_daily(mk_raw(20), TODAY_TUE, ok_text(), led2)
     assert res2["sent"] == 15
-    # 화 · 보도자료가 이미 쓴 만큼은 몫에서 뺀다
+    # 화 · 보도자료 잡이 이미 돌았으면(장부에 quote_8k) 더 남기지 않음 (1114-06 ㉠ 11/18)
     led3 = ledger_for(rt, TODAY_TUE, form4=63, quote_8k=60)
-    assert gc._quota_reserve(TODAY_TUE, led3, 80) == 30
+    assert gc._quota_reserve(TODAY_TUE, led3, 80) == 0
     # 월 · 주식수가 장부에 없으면 후보 수 + 약 10 · 있으면 0 · 일 0
     assert gc._quota_reserve(TODAY_MON, ledger_for(rt, TODAY_MON, form4=1), 80) == 90
     assert gc._quota_reserve(TODAY_MON, ledger_for(rt, TODAY_MON, mcap_shares=91), 80) == 0
@@ -690,3 +690,36 @@ def test_36_not_requested_yet_is_not_yet_and_failed_stays_not_received():
     assert g({"state": "unknown", "reason": "not_received", "tries": 1}).reason == "not_received"
     assert g({"state": "unknown", "reason": "gone", "tries": 0}).reason == "gone"
     assert g({"state": "not_found", "reason": "", "tries": 0}).reason == ""
+
+
+def test_37_order_radar_first_then_candidates(tmp_path):
+    """1114-06 ㉡ (11/18) · 순위표 행 순서가 먼저 · 겹치면 한 번만 · 순위표에 없는 후보는 뒤에 후보 파일 순서."""
+    p = tmp_path / "radar_v1_3_20261118.csv"
+    p.write_text("ticker,name,cik\nBBB,b,2\nCCC,c,3\nXXX,x,\n")
+    cands = [{"cik": "1", "ticker": "AAA", "name": "a"}, {"cik": "2", "ticker": "BBB", "name": "b"}, {"cik": "4", "ticker": "DDD", "name": "d"}]
+    assert bf.gc_order(cands, p) == ["0000000002", "0000000003", "0000000001", "0000000004"]
+    assert bf.gc_order(cands, tmp_path / "none.csv") == ["0000000001", "0000000002", "0000000004"]
+
+
+def test_38_radar_order_changes_which_15_are_sent(rt):
+    """순위표 뒤쪽 회사가 후보 파일 앞에 있어도 순위표 위쪽부터 보낸다."""
+    raw = mk_raw(20)
+    ciks = sorted(raw)
+    order = list(reversed(ciks))
+    sent = []
+    gc.run_daily(raw, TODAY_SUN, lambda u: sent.append(u) or {"status": 200, "text": body("Nothing here.")}, ledger_for(rt), order=order)
+    assert len(sent) == 15 and all(str(int(c)) in sent[0] or True for c in order[:1])
+    assert any(str(int(order[0])) in u for u in sent[:1])
+
+
+def test_39_going_concern_only_needs_todays_submissions(rt, monkeypatch):
+    """수동 실행 · 오늘 submissions 파일이 없으면 요청 0 으로 멈춤 · 있으면 계속기업 단계만."""
+    with pytest.raises(SystemExit):
+        bf.run_going_concern_only(TODAY_TUE, get_text=lambda u: pytest.fail("요청하면 안 됨"), ledger=ledger_for(rt, TODAY_TUE))
+    (rt / "filings").mkdir(exist_ok=True)
+    (rt / "filings" / f"submissions_{TODAY_TUE:%Y%m%d}.json").write_text(json.dumps({"companies_raw": mk_raw(3)}))
+    monkeypatch.setattr(bf, "load_candidates", lambda: [])
+    sent = []
+    res = bf.run_going_concern_only(TODAY_TUE, get_text=lambda u: sent.append(u) or {"status": 200, "text": body("Nothing here.")},
+                                    ledger=ledger_for(rt, TODAY_TUE, quote_8k=65))
+    assert res["sent"] == 3 and len(sent) == 3 and res["reserve"] == 0

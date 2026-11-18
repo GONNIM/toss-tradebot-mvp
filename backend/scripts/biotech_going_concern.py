@@ -278,10 +278,11 @@ def save_store(store: dict, today: date) -> None:
 
 
 def _quota_reserve(today: date, ledger: SecDailyLedger, n_companies: int) -> int:
-    """그날 남길 몫 (계획 2절) · 화~토 08:45 보도자료 · 월 주식수(장부에 아직 없을 때) · 일 0."""
+    """그날 남길 몫 (계획 2절) · 화~토 08:45 보도자료(이미 돌았으면 0) · 월 주식수(장부에 아직 없을 때) · 일 0."""
     wd = today.weekday()
     if 1 <= wd <= 5:
-        return max(0, QUOTE_RESERVE - ledger.counts.get("quote_8k", 0))
+        # 1114-06 ㉠ (11/18) · 08:45 보도자료 잡이 그날 이미 돌았으면(장부에 quote_8k 가 있음) 더 남기지 않음
+        return 0 if ledger.counts.get("quote_8k", 0) > 0 else QUOTE_RESERVE
     if wd == 0 and not ledger.counts.get("mcap_shares", 0):
         return n_companies + SHARES_EXTRA
     return 0
