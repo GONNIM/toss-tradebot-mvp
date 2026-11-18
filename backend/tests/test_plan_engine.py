@@ -553,11 +553,10 @@ async def test_three_modify_errors_halt(plan_db):
         plan = await seed_holding(s, eng)
         await eng.ensure_ladder(s, plan)
         leg = (await legs_of(s, plan))[0]
-        raw.fail_modify = 3
+        raw.modify_reject = True                                     # 분명한 거절(만들어지지 않음)이 3번 이어지면 정지
         for _ in range(3):
             assert await eng._modify_leg(s, plan, leg, qty=10) is False
         assert plan.state == state.HALTED
-        assert (await s.scalars(select(PlanLegPending).where(PlanLegPending.leg_id == leg.id))).first() is not None
 
 
 async def test_stop_plan_keeps_sell_legs(plan_db):

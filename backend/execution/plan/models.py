@@ -230,3 +230,30 @@ class PlanExecutorHeartbeat(Base):
     buying_power_at: Mapped[Optional[datetime]] = mapped_column(DateTime)
     app_conds_json: Mapped[Optional[str]] = mapped_column(Text)               # {종목: 계획 밖(앱) 조건주문 수}
     app_conds_at: Mapped[Optional[datetime]] = mapped_column(DateTime)
+
+
+class PlanOrderBook(Base):
+    """주문 장부 · 토스로 보낼 때마다 한 줄 (결과를 모르는 주문을 한 곳에서 대조 · orderbook.py)."""
+
+    __tablename__ = "plan_order_book"
+
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    plan_id: Mapped[int] = mapped_column(Integer, index=True)
+    client_order_id: Mapped[str] = mapped_column(String(48), index=True)
+    kind: Mapped[str] = mapped_column(String(8))                  # cond(조건주문) | limit(일반)
+    role: Mapped[str] = mapped_column(String(8))                  # buy | sl | tp1 | sell
+    side: Mapped[str] = mapped_column(String(4), default="SELL")
+    qty: Mapped[int] = mapped_column(Integer)
+    price: Mapped[Optional[float]] = mapped_column(Float)
+    watch_price: Mapped[Optional[float]] = mapped_column(Float)
+    toss_id: Mapped[Optional[str]] = mapped_column(String(64), index=True)
+    parent_id: Mapped[Optional[int]] = mapped_column(Integer)     # 자식 주문이면 부모 조건주문 줄
+    replaces_id: Mapped[Optional[int]] = mapped_column(Integer)   # 수정이면 바꾸려던 옛 줄 (옛 줄은 닫히기 전까지 살아 있는 것으로 둔다)
+    leg_id: Mapped[Optional[int]] = mapped_column(Integer, index=True)
+    reservation_id: Mapped[Optional[int]] = mapped_column(Integer)
+    state: Mapped[str] = mapped_column(String(14), default="sent_unknown", index=True)  # sent_unknown | open | closed | not_created | needs_human
+    sent_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
+    resolved_at: Mapped[Optional[datetime]] = mapped_column(DateTime)
+    filled_qty: Mapped[int] = mapped_column(Integer, default=0)
+    acct_before: Mapped[Optional[int]] = mapped_column(Integer)   # 매수를 보낼 때 계좌 보유 (경보에만 쓴다 · 체결 근거 아님)
+    note: Mapped[Optional[str]] = mapped_column(Text)             # 사유 · 후보 · 사람의 결정 (JSON)

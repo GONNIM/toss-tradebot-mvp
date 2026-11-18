@@ -14,11 +14,11 @@ from backend.execution.plan.brokers import DirectionGate, RawBroker
 from backend.execution.plan.engine import PlanEngine
 from backend.execution.plan.models import (
     Plan, PlanConfirmChallenge, PlanEvent, PlanExecutorHeartbeat, PlanFill, PlanLeg, PlanLegPending,
-    PlanPaperOrder, PlanPaperPosition, PlanRequest, PlanSellReservation, PlanSwitchAudit,
+    PlanOrderBook, PlanPaperOrder, PlanPaperPosition, PlanRequest, PlanSellReservation, PlanSwitchAudit,
 )
 
 PLAN_TABLES = (Plan, PlanLeg, PlanFill, PlanSellReservation, PlanEvent, PlanRequest, PlanLegPending,
-               PlanPaperPosition, PlanPaperOrder, PlanSwitchAudit, PlanConfirmChallenge, PlanExecutorHeartbeat)
+               PlanPaperPosition, PlanPaperOrder, PlanSwitchAudit, PlanConfirmChallenge, PlanExecutorHeartbeat, PlanOrderBook)
 
 D = Decimal
 
@@ -59,6 +59,11 @@ class FakeRaw(RawBroker):
         self.create_no_id = False        # 조건주문을 만들고도 응답에 번호가 없는 것처럼 오류 (불확실한 실패)
         self.create_timeout = False      # 조건주문을 만들기 전에 시간 초과 오류
         self.limit_uncertain = False     # 지정가 주문을 만들고도 응답이 오류 (불확실한 실패)
+        self.modify_reject = False       # 수정이 분명한 거절로 끝남 (만들어지지 않음)
+        self.list_hide_client_id = False  # 목록 응답에 clientOrderId 칸이 없다 (U6)
+        self.list_hidden_ids: set = set()  # 목록에 아직 안 나타난 번호 (늦게 나타남)
+        self.list_limit: Optional[int] = None  # 목록이 앞 N줄에서 잘림 (쪽 나눔)
+        self.get_blind: set = set()      # 단건 조회가 빈 값(None)인 번호
 
     def _id(self, p):
         self.n += 1
@@ -88,6 +93,8 @@ class FakeRaw(RawBroker):
 
     async def cond_modify(self, s, cond_id, *, plan_id, symbol, side, qty, watch, order, client_id, expire):
         self.calls.append(("cond_modify", cond_id, qty, D(watch), D(order), client_id))
+        if self.modify_reject:
+            raise OrderRejected("modify-restricted", "거절")
         if self.fail_modify > 0:
             self.fail_modify -= 1
             raise ExecutionError("수정 실패")
@@ -106,12 +113,20 @@ class FakeRaw(RawBroker):
             self.conds[cond_id]["status"] = "CANCELED"
 
     async def cond_get(self, s, cond_id):
+        if cond_id in self.get_blind:
+            return None
         c = self.conds.get(cond_id)
         return dict(c) if c else None
 
+    def _shown(self, rows):
+        out = [r for r in rows if r.get("id") not in self.list_hidden_ids]
+        if self.list_hide_client_id:
+            out = [{**r, "client_id": None} for r in out]
+        return out[: self.list_limit] if self.list_limit is not None else out
+
     async def cond_open_list(self, s, symbol=None):
-        return [dict(c) for c in self.conds.values()
-                if c["status"] == "WATCHING" and (symbol is None or c["symbol"] == symbol)]
+        return self._shown([dict(c) for c in self.conds.values()
+                            if c["status"] == "WATCHING" and (symbol is None or c["symbol"] == symbol)])
 
     async def limit_create(self, s, *, plan_id, symbol, side, qty, price, client_id):
         self.calls.append(("limit_create", side, qty, D(price), client_id))
@@ -136,18 +151,18 @@ class FakeRaw(RawBroker):
         return dict(o) if o else None
 
     async def limit_open_list(self, s, symbol=None):
-        return [{"id": k, "client_id": o.get("client_id"), "symbol": o["symbol"], "side": o["side"], "qty": o["qty"],
-                 "price": o["price"]} for k, o in self.limits.items()
-                if o["status"] == "OPEN" and (symbol is None or o["symbol"] == symbol)]
+        return self._shown([{"id": k, "client_id": o.get("client_id"), "symbol": o["symbol"], "side": o["side"], "qty": o["qty"],
+                             "price": o["price"]} for k, o in self.limits.items()
+                            if o["status"] == "OPEN" and (symbol is None or o["symbol"] == symbol)])
 
     async def cond_closed_list(self, s, symbol=None):
-        return [dict(c) for c in self.conds.values()
-                if c["status"] != "WATCHING" and (symbol is None or c["symbol"] == symbol)]
+        return self._shown([dict(c) for c in self.conds.values()
+                            if c["status"] != "WATCHING" and (symbol is None or c["symbol"] == symbol)])
 
     async def limit_closed_list(self, s, symbol=None):
-        return [{"id": k, "client_id": o.get("client_id"), "symbol": o["symbol"], "side": o["side"], "qty": o["qty"],
-                 "price": o["price"]} for k, o in self.limits.items()
-                if o["status"] != "OPEN" and (symbol is None or o["symbol"] == symbol)]
+        return self._shown([{"id": k, "client_id": o.get("client_id"), "symbol": o["symbol"], "side": o["side"], "qty": o["qty"],
+                             "price": o["price"]} for k, o in self.limits.items()
+                            if o["status"] != "OPEN" and (symbol is None or o["symbol"] == symbol)])
 
     # ── 시험 조작 ──
     def trigger(self, cond_id, *, fill=True):

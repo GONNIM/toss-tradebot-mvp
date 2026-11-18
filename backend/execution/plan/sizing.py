@@ -54,6 +54,12 @@ def must_use_tp1_watch(account_qty: int, plan_qty: int) -> bool:
     return account_qty > plan_qty
 
 
+def exposure_over(confirmed_sum: int, unknown_new: int, target: int) -> bool:
+    """수정하다 결과를 모르는 줄이 있을 때의 넘침 검사 · 확인된 다리와 새 줄을 둘 다 세어 목표를 넘는가.
+    (보호 수량에는 확인된 것만 센다 · 이 함수는 넘침 가능성만 본다)"""
+    return confirmed_sum + unknown_new > target
+
+
 @dataclass(frozen=True)
 class InvariantReport:
     status: str          # ok | shortage | excess

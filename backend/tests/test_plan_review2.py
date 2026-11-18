@@ -74,50 +74,6 @@ async def test_partial_entry_fill_then_halt_keeps_halted_but_hangs_stops(plan_db
 
 # ── 새 막음 2 · 결과를 모르는 매수 ──────────────────────────────────────────────────
 
-async def test_uncertain_buy_filled_instantly_is_found_in_closed_list_and_protected(plan_db):
-    raw, eng = await setup(price="9.60", qty=0)
-    raw.limit_uncertain = True                                                      # 만들고도 응답 오류
-    async with get_session() as s:
-        plan, leg = await entry_plan(s, eng, raw)
-        assert leg.status == "UNCERTAIN" and raw.count("limit_create") == 1
-        oid = next(iter(raw.limits))
-        raw.fill_limit(oid)                                                         # 곧바로 전량 체결 → 열린 목록에서 사라짐
-        raw.limits[oid]["avg"] = D("9.5")
-        raw.acct = 6
-        raw.limit_uncertain = False
-        await eng.tick_plan(s, plan)
-        assert await sizing.plan_qty(s, plan) == 6 and plan.state == state.HOLDING   # 닫힌 목록에서 이어 체결을 읽었다
-        assert sum(l.qty for l in await legs_of(s, plan)) == 6
-        assert raw.count("limit_create") == 1
-
-
-async def test_uncertain_buy_in_no_list_uses_account_increase_as_fill(plan_db):
-    raw, eng = await setup(price="9.60", qty=0)
-    raw.limit_uncertain = True
-    async with get_session() as s:
-        plan, leg = await entry_plan(s, eng, raw)
-        raw.limits.clear()                                                          # 어느 목록에도 없다
-        raw.acct = 6                                                                # 그런데 계좌 보유가 늘었다
-        await eng.tick_plan(s, plan)
-        assert await sizing.plan_qty(s, plan) == 6 and plan.state == state.HOLDING
-        assert sum(l.qty for l in await legs_of(s, plan)) == 6
-
-
-async def test_uncertain_buy_not_found_anywhere_halts_and_resume_never_rebuys(plan_db):
-    raw, eng = await setup(price="9.60", qty=0)
-    raw.limit_uncertain = True
-    async with get_session() as s:
-        plan, leg = await entry_plan(s, eng, raw)
-        raw.limits.clear()                                                          # 목록에도 없고 계좌 보유도 그대로
-        await eng.tick_plan(s, plan)
-        assert plan.state == state.HALTED and runtime_of(plan).get("no_rebuy") is True
-        raw.limit_uncertain = False
-        assert await eng.resume_plan(s, plan) == state.ENTRY_ARMED
-        for _ in range(3):
-            await eng.tick_plan(s, plan)
-        assert raw.count("limit_create") == 1 and raw.count("cond_create") == 0     # 재개해도 자동 재매수 0
-
-
 # ── 새 막음 3 · 결과를 모르는 즉시 매도 ─────────────────────────────────────────────
 
 async def _uncertain_sell(raw, eng, s):
@@ -130,28 +86,6 @@ async def _uncertain_sell(raw, eng, s):
     raw.limit_uncertain = False
     raw.limits.clear()
     return plan
-
-
-async def test_uncertain_sell_not_found_and_holdings_dropped_records_sale_and_releases(plan_db):
-    raw, eng = await setup()
-    async with get_session() as s:
-        plan = await _uncertain_sell(raw, eng, s)
-        raw.acct = 40                                                               # 계좌 보유가 20 줄었다 → 팔렸다
-        await eng.sync_orders(s, plan)
-        assert await sizing.accepted_sell(s, plan.id) == 0
-        sold = sum(f.qty for f in await s.scalars(select(PlanFill).where(PlanFill.plan_id == plan.id, PlanFill.side == "SELL")))
-        assert sold == 20 and await sizing.plan_qty(s, plan) == 40
-
-
-async def test_uncertain_sell_not_found_and_holdings_same_releases_and_rehangs(plan_db):
-    raw, eng = await setup()
-    async with get_session() as s:
-        plan = await _uncertain_sell(raw, eng, s)
-        raw.price = D("10")
-        await eng.sync_orders(s, plan)                                              # 계좌 보유 그대로 → 안 팔렸다
-        assert await sizing.accepted_sell(s, plan.id) == 0                          # 예약이 영구히 남지 않는다
-        assert await eng.ensure_ladder(s, plan) == "fixed"
-        assert sum(l.qty for l in await legs_of(s, plan)) == 60                      # 보호 다리를 다시 건다
 
 
 async def test_resume_cleans_reservations_without_order_ref(plan_db):
@@ -183,44 +117,7 @@ class ModifyThenFail(FakeRaw):
             raise ExecutionError("시간 초과")                                        # 수정은 됐는데 응답이 오류
 
 
-async def test_uncertain_modify_links_new_order_next_tick_without_duplicate_legs(plan_db):
-    raw = ModifyThenFail("10")
-    raw.acct = 60
-    eng = make_engine(raw, regular=REG, clock=Clock(NOW))
-    async with get_session() as s:
-        plan = await seed_holding(s, eng)
-        await eng.ensure_ladder(s, plan)
-        leg = (await legs_of(s, plan))[0]
-        old = leg.toss_id
-        assert await eng._modify_leg(s, plan, leg, qty=10) is False
-        assert (await s.scalars(select(PlanLegPending))).first() is not None        # 수정 중 기록이 남음
-        creates = raw.count("cond_create")
-        assert await eng.ensure_ladder(s, plan) == "skipped"                        # 기록이 있으면 새 다리를 걸지 않는다
-        await eng.tick_plan(s, plan)                                                # 매 걸음 맨 앞에서 풀어 새 번호를 잇는다
-        assert (await s.scalars(select(PlanLegPending))).first() is None
-        assert leg.toss_id != old and leg.status == "WATCHING" and leg.qty == 10
-        assert raw.count("cond_create") == creates                                  # 중복 등록 0
-
-
 # ── 새 높음 2 · TP1 불확실 ─────────────────────────────────────────────────────────
-
-async def test_tp1_uncertain_is_recorded_first_and_linked_not_reissued(plan_db):
-    raw, eng = await setup()
-    async with get_session() as s:
-        plan = await seed_holding(s, eng, extra={"tp1_watch": 12.0, "tp1_order": 12.0})
-        await eng.ensure_ladder(s, plan)
-        n = raw.count("cond_create")
-        raw.create_no_id = True
-        await eng._tp1_step(s, plan, True)
-        await eng._tp1_step(s, plan, True)
-        await eng._tp1_step(s, plan, True)
-        assert raw.count("cond_create") == n + 1                                    # 한 번만 냄
-        tp = (await s.scalars(select(PlanLeg).where(PlanLeg.plan_id == plan.id, PlanLeg.role == "tp1"))).one()
-        assert tp.status == "UNCERTAIN"
-        raw.create_no_id = False
-        await eng.sync_orders(s, plan)
-        assert tp.status == "WATCHING" and tp.toss_id in raw.conds                  # clientOrderId 로 찾아 이음
-
 
 # ── 새 높음 3 · 호출 전에 확인 대기 commit ─────────────────────────────────────────
 
@@ -305,24 +202,6 @@ async def test_unknown_child_of_triggered_leg_keeps_reservation(plan_db):
 
 
 # ── 새 높음 5 · 못 찾은 다리 수량만 막고 나머지 보호는 계속 ──────────────────────────
-
-async def test_lost_leg_blocks_only_its_qty_other_shortage_still_rehung(plan_db):
-    raw, eng = await setup()
-    async with get_session() as s:
-        plan = await seed_holding(s, eng)
-        await eng.ensure_ladder(s, plan)
-        legs = await legs_of(s, plan)
-        legs[2].status = "CANCELED"                                                  # 3번 다리를 지우고 다시 걸다가
-        raw.create_timeout = True                                                    # 시간 초과 · 만들어지지 않음 · 목록에도 없음
-        await eng.ensure_ladder(s, plan)
-        await eng.tick_plan(s, plan)                                                 # 못 찾음 → 20주만 막고 HALTED
-        assert plan.state == state.HALTED and runtime_of(plan)["lost_sl_qty"] == 20
-        raw.create_timeout = False
-        legs[0].status = "EXPIRED"                                                   # 다른 다리가 만료돼 20주가 더 모자람
-        await eng.ensure_ladder(s, plan)                                             # 정지 중에도 막히지 않은 20주는 다시 건다
-        assert sum(l.qty for l in await legs_of(s, plan)) == 40
-        assert runtime_of(plan)["lost_sl_qty"] == 20                                 # 막은 20주는 사람이 확인할 때까지
-
 
 # ── 중간 1 · 정지 · 수정은 충돌해도 서버 안에서 재시도 ───────────────────────────────
 

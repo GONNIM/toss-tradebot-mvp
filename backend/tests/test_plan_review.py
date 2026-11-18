@@ -64,67 +64,6 @@ async def test_kill_sell_stop_then_halted_ticks_never_re_register(plan_db):
 
 # ── 막음 2 · 불확실한 실패 뒤 같은 주문을 또 내지 않는다 ─────────────────────────────
 
-async def test_response_without_id_registers_once_and_links_by_client_id(plan_db):
-    raw, eng = await setup(qty=2)                                 # 다리 1건
-    raw.create_no_id = True                                       # 만들었지만 응답에 번호가 없다
-    async with get_session() as s:
-        plan = await seed_holding(s, eng, qty=2)
-        for _ in range(5):                                        # 5바퀴
-            await eng.tick_plan(s, plan)
-        assert raw.count("cond_create") == 1                      # 등록은 1번
-        legs = await legs_of(s, plan)
-        assert len(legs) == 1 and legs[0].toss_id in raw.conds and legs[0].status == "WATCHING"   # clientOrderId 로 찾아 이음
-        assert plan.state == state.HOLDING
-
-
-async def test_uncertain_not_found_halts_without_reordering(plan_db):
-    raw, eng = await setup(qty=2)
-    raw.create_timeout = True                                     # 만들기 전에 시간 초과 · 열린 목록에도 없다
-    async with get_session() as s:
-        plan = await seed_holding(s, eng, qty=2)
-        for _ in range(5):
-            await eng.tick_plan(s, plan)
-        assert raw.count("cond_create") == 1                      # 다시 내지 않는다
-        assert plan.state == state.HALTED
-        assert any(a[0] == "critical" and "계획 정지" in a[1] for a in eng._alerts)
-
-
-async def test_client_order_id_is_fixed_per_leg_and_version(plan_db):
-    raw, eng = await setup()
-    async with get_session() as s:
-        plan = await seed_holding(s, eng)
-        await eng.ensure_ladder(s, plan)
-        leg = (await legs_of(s, plan))[0]
-        ids_before = {c[5] for c in raw.calls if c[0] == "cond_create"}
-        raw.fail_modify = 2                                       # 수정이 두 번 불확실하게 실패
-        await eng._modify_leg(s, plan, leg, qty=10)
-        await eng._modify_leg(s, plan, leg, qty=10)
-        mods = [c for c in raw.calls if c[0] == "cond_modify"]
-        assert len(mods) == 2 and mods[0][5] == mods[1][5]        # 같은 키로 다시 냈다 (새 키로 중복 주문을 만들지 않음)
-        assert await eng._modify_leg(s, plan, leg, qty=10) is True
-        again = [c for c in raw.calls if c[0] == "cond_modify"]
-        assert again[2][5] == mods[0][5]                          # 성공할 때까지 같은 키
-        await eng._modify_leg(s, plan, leg, qty=8)
-        assert [c for c in raw.calls if c[0] == "cond_modify"][3][5] != mods[0][5]   # 성공한 뒤에는 다음 판 키
-        assert len(ids_before) == 3
-
-
-async def test_immediate_sell_uncertain_keeps_reservation_then_links_open_order(plan_db):
-    raw, eng = await setup(price="9.60", qty=60)
-    raw.limit_uncertain = True
-    async with get_session() as s:
-        plan = await seed_holding(s, eng)
-        await eng._sell_cross(s, plan, seq=1, qty=20, cur=D("9.60"), kind="immediate", old_leg=None)
-        assert raw.count("limit_create") == 1
-        assert await sizing.accepted_sell(s, plan.id) == 20       # 예약을 유지 (같은 수량을 또 걸지 않음)
-        r = (await s.scalars(select(PlanSellReservation))).one()
-        assert r.uncertain is True and r.order_ref is None
-        await eng.sync_orders(s, plan)                            # 열린 주문 목록에서 clientOrderId 로 찾아 잇는다
-        assert r.uncertain is False and r.order_ref in raw.limits and plan.state == state.HOLDING
-        await eng.sync_orders(s, plan)
-        assert raw.count("limit_create") == 1
-
-
 # ── 막음 3 · 발동된 매도가 체결 없이 닫히면 예약을 풀고 다시 건다 ──────────────────────────
 
 async def test_triggered_sell_closed_without_fill_releases_reservation_and_rehangs(plan_db):

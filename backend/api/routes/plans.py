@@ -22,6 +22,7 @@ from sqlalchemy import func, select
 from backend.api.auth import require_plan_cookie, require_plan_write, require_sniper_token
 from backend.execution.exceptions import ExecutionError
 from backend.execution.plan import heartbeat, sizing, state
+from backend.execution.plan import orderbook as ob
 from backend.execution.plan import switches as sw
 from backend.execution.plan.brokers import DirectionGate, RawBroker
 from backend.execution.plan.engine import PlanEngine, approval_values, derive_qty, params_of, parse_dt, runtime_of
@@ -260,6 +261,7 @@ async def plan_detail(plan_id: int, _: str = Depends(require_sniper_token)) -> d
                 "outside_qty": max(0, acct - base) if acct is not None else None,
             },
             "adopt": adopt,
+            "unknown_orders": len(await ob.unresolved_lines(s, p.id)),
         }
 
 
@@ -296,6 +298,9 @@ async def edit_plan(plan_id: int, body: PlanEdit, src: str = Depends(require_pla
     async def _do():
         async with get_session() as s:
             p = await _get_plan(s, plan_id)
+            if p.state != state.DRAFT and src != "cookie" and set(body.values) <= {"announce_at"}:
+                # 승인 뒤 발표 시각 수정(시간 손절 시작 기준)은 쿠키 전용 + Origin · 텔레그램 코드는 없음 (11/18 사용자 결정 ㉠)
+                raise HTTPException(status_code=403, detail="승인 뒤 발표 시각은 화면(쿠키 로그인)에서만 고칠 수 있습니다.")
             await eng.update_draft(s, p, body.values)
             return {"plan": _plan_json(p)}
 
@@ -550,6 +555,50 @@ async def approve_plan(plan_id: int, body: ConfirmBody, src: str = Depends(requi
             return {"plan": _plan_json(p), "judgment_saved": bool(wants_judgment)}
     except state.TransitionError as exc:
         raise HTTPException(status_code=409, detail=str(exc))
+
+
+def _line_json(l) -> dict:
+    import json as _json
+
+    note = {}
+    try:
+        note = _json.loads(l.note or "{}")
+    except ValueError:
+        pass
+    return {"id": l.id, "role": l.role, "side": l.side, "kind": l.kind, "qty": l.qty, "price": l.price, "watch": l.watch_price,
+            "state": l.state, "client_order_id": l.client_order_id, "toss_id": l.toss_id, "leg_id": l.leg_id,
+            "replaces_id": l.replaces_id, "parent_id": l.parent_id, "sent_at": l.sent_at.isoformat() if l.sent_at else None,
+            "reason": note.get("reason"), "candidates": note.get("candidates") or [], "human": note.get("human")}
+
+
+@router.get("/{plan_id:int}/unknown-orders")
+async def unknown_orders(plan_id: int, _: str = Depends(require_sniper_token)) -> dict:
+    """결과 모르는 주문 목록 (조회) · 사람이 「체결 n주 / 안 만들어짐 / 열려 있음」 을 정한다."""
+    async with get_session() as s:
+        p = await _get_plan(s, plan_id)
+        return {"orders": [_line_json(l) for l in await ob.unresolved_lines(s, p.id)],
+                "settle_sec": ob.settle_sec(), "list_searchable": ob.list_searchable(),
+                "list_paging_known": ob.list_paging_known()}
+
+
+class ResolveBody(ConfirmBody):
+    decision: str = Field(..., pattern="^(filled|not_created|open)$")
+    filled_qty: Optional[int] = Field(None, ge=1)
+    toss_id: Optional[str] = Field(None, max_length=64)
+
+
+@router.post("/{plan_id:int}/unknown-orders/{line_id:int}/resolve")
+async def resolve_unknown_order(plan_id: int, line_id: int, body: ResolveBody, src: str = Depends(require_plan_cookie)) -> dict:
+    """확정 · 쿠키 전용 + Origin · 실전 · 시험 계획이면 기존 「정지 풀기」 와 같은 텔레그램 확인 코드(action=resume)가 필요하다.
+    DB 만 고친다(토스를 부르지 않음). 체결을 확정하면 그 수량만 장부(체결 줄)에 적고 손절은 실행기가 다음 걸음에 건다."""
+    async with get_session() as s:
+        p = await _get_plan(s, plan_id)
+        await _verify(s, p, "resume", body)
+        try:
+            line = await ob.human_resolve(s, p, line_id, body.decision, filled_qty=body.filled_qty, toss_id=body.toss_id)
+        except ob.ResolveError as exc:
+            raise HTTPException(status_code=400, detail={"reason": "resolve", "message": str(exc)})
+        return {"order": _line_json(line), "remaining": len(await ob.unresolved_lines(s, p.id))}
 
 
 @router.post("/{plan_id:int}/resume")
