@@ -391,3 +391,15 @@ Phase 7 완료 보고서 `docs/plans/powderkeg-screener/phase7-final-report.md` 
 ### 교훈
 - 배포 보고의 「다음」 칸에 정기 실행 날짜를 쓰기 전에, 지금 서버 값으로 할 수 있는 확인과 오늘 당길 수 있는 승인된 일을 먼저 적는다.
 - 화면 확인을 부탁할 때는 실제 행(종목 · 순위)을 목록으로 준다.
+
+## 교훈 #15: 「있음」이 틀려 화면에 나감 — 「does not believe that substantial doubt exists」(부정)를 확정으로 판정
+- 11/18 13:24 수동 실행 뒤 순위표 18위 ACRS 가 「계속기업 의문 문구: 있음」으로 나갔다. 저장된 인용 문장은 「As of the report date, the Company does not believe that substantial doubt exists …」로, 회사가 의문이 없다고 적은 문장이다(사용자 읽기 명령 · 11/18 13시대).
+- 부정 규칙(_NEG_BEFORE)은 「no · without · not raise/cast/create」만 보았고, 「not believe/conclude/determine that」 같은 판단 동사 부정을 몰랐다. 뒤의 「exists」 때문에 확정으로 갔다.
+
+### 근본 원인 (일하는 방식)
+- 표본 30건과 Fable 시험 문장 15개에 판단 동사 부정 모양이 없었다. 「있음」 9건을 사람이 읽었지만, 확정 문장만 있었기 때문에 이 빈틈이 드러나지 않았다.
+- 배포 뒤 「있음」으로 나간 행의 인용 문장을 읽는 확인(Fable 권고 8)을 다음 날 보고로 미뤘다. 오늘 바로 읽어서 찾았다.
+
+### 교훈
+- 「있음」처럼 화면에 굵게 나가는 판정은 배포 당일 실제 인용 문장을 사람이 읽는다.
+- 규칙 표본에는 부정 · 가정 · 과거 모양을 일부러 넣어 본다(판단 동사 부정 · 「do not believe」 · 「no longer」).
