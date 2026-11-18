@@ -441,3 +441,20 @@ async def test_concurrent_requests_ok(client):
 
     rs = await asyncio.gather(*[client.get("/api/v1/stock/ZZCR") for _ in range(8)])
     assert all(r.status_code == 200 for r in rs)
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("path", ["/api/v1/crazy", "/api/v1/moonshot", "/api/v1/biotech/radar.json"])
+async def test_signal_link_admin_only_pages_need_login(client, path):
+    """화면 page.tsx 의 ADMIN_ONLY_LINKS (/lab/crazy · /lab/moonshot · /biotech) 근거 · 비로그인은 401."""
+    assert (await client.get(path)).status_code == 401
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("path", [
+    "/api/v1/watchlist", "/api/v1/powderkeg/list", "/api/v1/rulebook/blue-chip/list",
+    "/api/v1/principles/screener/latest", "/api/v1/serenity/summary", "/api/v1/sector-leaders/top10",
+    "/api/v1/meme-watch/top", "/api/v1/meme-watch/activist/status", "/api/v1/sniper/status"])
+async def test_signal_link_public_pages_not_login_gated(client, path):
+    """위 목록 밖 링크 화면의 읽기 API 는 비로그인도 읽는다 (401 · 403 이 아님)."""
+    assert (await client.get(path)).status_code not in (401, 403)

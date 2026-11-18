@@ -158,7 +158,7 @@ function CatalystCard({ list }: { list: StockCatalyst[] | null | undefined }) {
       ) : (
         <ul className="space-y-1">
           {list.map((c) => (
-            <li key={c.nct_id} className={`text-sm tabular-nums ${c.past ? "text-muted-foreground" : ""}`}>{catalystLine(c)}</li>
+            <li key={`${c.nct_id}-${c.event_date}`} className={`text-sm tabular-nums ${c.past ? "text-muted-foreground" : ""}`}>{catalystLine(c)}</li>
           ))}
         </ul>
       )}
@@ -217,6 +217,14 @@ function SourceCard({ d }: { d: StockOverview }) {
   );
 }
 
+// 1119-01 · 「자세히」 링크가 가는 화면이 관리자 전용이면 비로그인에게는 링크를 숨긴다 (열면 로그인 안내만 나옴).
+// 근거 (코드로 확인 11/19 · 시험 test_signal_link_pages_api_guard):
+//   /lab/crazy · /lab/moonshot : 라우터 전체 dependencies=[Depends(require_sniper_token)] (routes/crazy.py:16 · moonshot.py:16)
+//   /biotech : 자료 API 12개 중 12개가 Depends(require_sniper_token) (routes/biotech.py:105-125 …) · 화면도 비로그인 잠금 배너 (app/biotech/page.tsx:460)
+// 나머지 10곳(/lab/meme-watch · /activist-radar · /influencer/serenity/* · /powderkeg · /rulebook · /principles/screener ·
+//   /sector-leaders · /watchlist · /sniper)은 읽기 API 가 공개 (편집 버튼만 관리자). 새 신호 출처를 더하면 여기도 확인.
+const ADMIN_ONLY_LINKS = new Set<string>(["/lab/crazy", "/lab/moonshot", "/biotech"]);
+
 function SignalRow({ s, isAdmin }: { s: StockSignal; isAdmin: boolean }) {
   return (
     <li className="space-y-1 border-b border-border py-2 last:border-0">
@@ -226,7 +234,7 @@ function SignalRow({ s, isAdmin }: { s: StockSignal; isAdmin: boolean }) {
       </div>
       <p className="text-sm tabular-nums">{s.summary}</p>
       {s.explain && <p className="text-xs text-muted-foreground">{s.explain}</p>}
-      {isAdmin && s.link && (
+      {s.link && (isAdmin || !ADMIN_ONLY_LINKS.has(s.link)) && (
         <Link href={s.link} className="inline-flex min-h-[44px] items-center text-sm text-primary underline">
           자세히
         </Link>
