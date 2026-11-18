@@ -1040,17 +1040,25 @@ def build_scheduler() -> AsyncIOScheduler:
         max_instances=1,
         coalesce=True,
     )
-    # 1116-01 · 계획 실행기 자동 초안 (07:15 · 이후 10분 간격 최대 6번) · 실행기가 켜진 곳(TOSS_TOKEN_ISSUE=1)에서만
-    from backend.execution.plan.runner import executor_enabled, job_plan_draft
+    # 1116-01 · 계획 실행기 자동 초안 · 실행기가 켜진 곳(TOSS_TOKEN_ISSUE=1)에서만 등록
+    from backend.execution.plan.runner import executor_enabled
 
     if executor_enabled():
-        scheduler.add_job(job_plan_draft, CronTrigger(hour=7, minute="15,25,35,45,55"),
-                          id="plan_draft_a", name="계획 자동 초안 07시대", replace_existing=True,
-                          coalesce=True, misfire_grace_time=GRACE_DEFAULT)
-        scheduler.add_job(job_plan_draft, CronTrigger(hour=8, minute=5),
-                          id="plan_draft_b", name="계획 자동 초안 08:05 (마지막)", replace_existing=True,
-                          coalesce=True, misfire_grace_time=GRACE_DEFAULT)
+        register_plan_jobs(scheduler)
     return scheduler
+
+
+def register_plan_jobs(scheduler) -> None:
+    """계획 실행기 자동 초안 잡 (07:15 · 이후 10분 간격 최대 6번). 키 없이도 부를 수 있어 시험(test_job_watch)이 목록을 본다."""
+    from backend.execution.plan.runner import job_plan_draft
+    from backend.services.job_watch import GRACE_DEFAULT
+
+    scheduler.add_job(job_plan_draft, CronTrigger(hour=7, minute="15,25,35,45,55"),
+                      id="plan_draft_a", name="계획 자동 초안 07시대", replace_existing=True,
+                      coalesce=True, misfire_grace_time=GRACE_DEFAULT)
+    scheduler.add_job(job_plan_draft, CronTrigger(hour=8, minute=5),
+                      id="plan_draft_b", name="계획 자동 초안 08:05 (마지막)", replace_existing=True,
+                      coalesce=True, misfire_grace_time=GRACE_DEFAULT)
 
 
 async def main_daemon():

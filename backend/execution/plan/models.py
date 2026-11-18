@@ -70,6 +70,7 @@ class PlanLeg(Base):
     tag: Mapped[str] = mapped_column(String(12), default="")           # regular | offhours | trail | lift | emergency
     expire_date: Mapped[Optional[str]] = mapped_column(String(10))
     error_count: Mapped[int] = mapped_column(Integer, default=0)       # 같은 다리 오류 3번 → HALTED
+    acct_before: Mapped[Optional[int]] = mapped_column(Integer)        # 매수를 내기 직전 계좌 보유 (결과를 모를 때 체결 확인)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
     updated_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow, onupdate=utcnow)
 
@@ -107,6 +108,7 @@ class PlanSellReservation(Base):
     retries: Mapped[int] = mapped_column(Integer, default=0)
     client_order_id: Mapped[Optional[str]] = mapped_column(String(40))   # 낸 주문의 고정 열쇠 (불확실한 실패 뒤 찾을 때)
     uncertain: Mapped[bool] = mapped_column(Boolean, default=False)      # 낸 결과가 불확실 (번호 없음 · 시간 초과) · 확인 대기
+    acct_before: Mapped[Optional[int]] = mapped_column(Integer)          # 매도를 내기 직전 계좌 보유 (결과를 모를 때 체결 확인)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
 
 

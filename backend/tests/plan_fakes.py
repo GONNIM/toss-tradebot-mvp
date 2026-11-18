@@ -140,6 +140,15 @@ class FakeRaw(RawBroker):
                  "price": o["price"]} for k, o in self.limits.items()
                 if o["status"] == "OPEN" and (symbol is None or o["symbol"] == symbol)]
 
+    async def cond_closed_list(self, s, symbol=None):
+        return [dict(c) for c in self.conds.values()
+                if c["status"] != "WATCHING" and (symbol is None or c["symbol"] == symbol)]
+
+    async def limit_closed_list(self, s, symbol=None):
+        return [{"id": k, "client_id": o.get("client_id"), "symbol": o["symbol"], "side": o["side"], "qty": o["qty"],
+                 "price": o["price"]} for k, o in self.limits.items()
+                if o["status"] != "OPEN" and (symbol is None or o["symbol"] == symbol)]
+
     # ── 시험 조작 ──
     def trigger(self, cond_id, *, fill=True):
         c = self.conds[cond_id]

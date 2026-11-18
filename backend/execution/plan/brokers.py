@@ -74,6 +74,13 @@ class RawBroker:
         """열린 일반 주문 목록 · [{id, client_id, symbol, side, qty, price}] (찾지 못하면 빈 목록)."""
         return []
 
+    async def cond_closed_list(self, s, symbol: Optional[str] = None) -> list[dict]:
+        """닫힌 조건주문 목록(체결 · 취소 · 만료) · 낸 결과를 모를 때 clientOrderId 로 찾는다."""
+        return []
+
+    async def limit_closed_list(self, s, symbol: Optional[str] = None) -> list[dict]:
+        return []
+
     async def buying_power_usd(self, s) -> Optional[float]:
         """계좌 USD 매수 가능 금액 (모의 · 시험 도구는 None = 확인 못 함)."""
         return None
@@ -121,6 +128,27 @@ class RealRaw(RawBroker):
             if it.get("symbol") == symbol:
                 return _to_int(it.get("quantity"))
         return 0
+
+    async def cond_closed_list(self, s, symbol=None):
+        env = await self._run(self._c().list_conditional_orders, "CLOSED")
+        res = env.result
+        items = res if isinstance(res, list) else ((res or {}).get("items") or (res or {}).get("conditionalOrders") or [])
+        out = [self._norm_cond(i) for i in items if isinstance(i, dict)]
+        return [o for o in out if symbol is None or o["symbol"] == symbol]
+
+    async def limit_closed_list(self, s, symbol=None):
+        env = await self._run(self._c().list_orders, "CLOSED")
+        res = env.result
+        items = res if isinstance(res, list) else ((res or {}).get("items") or (res or {}).get("orders") or [])
+        out = []
+        for d in items:
+            if isinstance(d, dict):
+                o = {"id": str(d.get("orderId") or d.get("id") or ""), "client_id": d.get("clientOrderId"),
+                     "symbol": d.get("symbol"), "side": str(d.get("side") or "").upper(),
+                     "qty": _to_int(d.get("quantity")), "price": d.get("price")}
+                if o["id"] and (symbol is None or o["symbol"] == symbol):
+                    out.append(o)
+        return out
 
     async def limit_open_list(self, s, symbol=None):
         """GET /orders?status=OPEN 을 너그럽게 읽는다(열쇠 이름 미확인 · 모르면 빈 목록 → 확인 못 함 쪽으로 안전하게)."""
@@ -351,6 +379,19 @@ class PaperRaw(RawBroker):
         return [{"id": f"P{r.id}", "client_id": r.client_order_id, "symbol": r.symbol, "side": r.side, "qty": r.qty,
                  "price": r.order_price} for r in await s.scalars(q)]
 
+    async def cond_closed_list(self, s, symbol=None):
+        q = select(PlanPaperOrder).where(PlanPaperOrder.kind == "cond", PlanPaperOrder.status != "OPEN")
+        if symbol:
+            q = q.where(PlanPaperOrder.symbol == symbol)
+        return [await self.cond_get(s, f"P{r.id}") for r in await s.scalars(q)]
+
+    async def limit_closed_list(self, s, symbol=None):
+        q = select(PlanPaperOrder).where(PlanPaperOrder.kind == "limit", PlanPaperOrder.status != "OPEN")
+        if symbol:
+            q = q.where(PlanPaperOrder.symbol == symbol)
+        return [{"id": f"P{r.id}", "client_id": r.client_order_id, "symbol": r.symbol, "side": r.side, "qty": r.qty,
+                 "price": r.order_price} for r in await s.scalars(q)]
+
     # ── 가상 체결 ──
     async def on_price(self, s, symbol: str, price) -> None:
         """시세 한 번에 가상 주문을 평가한다(조건 닿음 → 지정가 생성 → 주문가에 닿으면 체결)."""
@@ -576,6 +617,17 @@ class DirectionGate:
 
     async def limit_open_list(self, s, symbol: Optional[str] = None) -> list[dict]:
         return await self.raw.limit_open_list(s, symbol)
+
+    async def cond_closed_list(self, s, symbol: Optional[str] = None) -> list[dict]:
+        return await self.raw.cond_closed_list(s, symbol)
+
+    async def limit_closed_list(self, s, symbol: Optional[str] = None) -> list[dict]:
+        return await self.raw.limit_closed_list(s, symbol)
+
+    def end_tick(self) -> None:
+        """걸음이 끝나면 캐시를 끄고 비운다 (다시 맞추기 · 화면 요청이 걸음 캐시를 쓰지 않게)."""
+        self._tick_active = False
+        self._acct_cache = {}
 
 
 def tick_of(price) -> Decimal:  # 편의

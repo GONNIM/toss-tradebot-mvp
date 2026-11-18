@@ -68,6 +68,7 @@ async def _resolve_pending(s, eng: PlanEngine, plan: Plan, open_conds: list[dict
 
 async def resync_plan(s, eng: PlanEngine, plan: Plan, now: Optional[datetime] = None) -> dict:
     now = now or eng.clock()
+    eng.gate.end_tick()                                  # 걸음 캐시를 쓰지 않는다 (계좌 보유를 새로 읽는다)
     rep: dict = {"plan_id": plan.id, "ok": True}
     if plan.state not in _ACTIVE_STATES:
         return rep

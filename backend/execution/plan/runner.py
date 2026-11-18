@@ -221,8 +221,11 @@ class PlanExecutor:
                         px = await self.paper_raw.last_price_rest(s, plan.symbol)
                         if px is not None:
                             await self.paper_raw.on_price(s, plan.symbol, px)
-                    await self._engine(plan).tick_plan(s, plan)
-                    await self._record_runtime(s, plan)
+                    try:
+                        await self._engine(plan).tick_plan(s, plan)
+                        await self._record_runtime(s, plan)
+                    finally:
+                        self._engine(plan).gate.end_tick()       # 걸음 캐시가 다시 맞추기 · 화면 요청으로 새지 않게
             except Exception as exc:  # noqa: BLE001 — 한 계획의 오류(낙관적 잠금 충돌 포함)가 다른 계획을 멈추지 않는다
                 logger.error("[plan] tick 실패 · 계획 %s · %s", pid, exc.__class__.__name__)
 
@@ -340,12 +343,23 @@ async def start_executor(stop: asyncio.Event) -> Optional[asyncio.Task]:
     if not executor_enabled():
         logger.info("[plan] TOSS_TOKEN_ISSUE 없음 · 계획 실행기를 시작하지 않음")
         return None
-    try:                                        # cron 프로세스에는 create_all 이 없다 → 계획 표를 여기서 만든다 (이미 있으면 그대로)
-        from backend.services.db import init_db
+    from backend.services import db as _db
 
-        await init_db()
-    except Exception as exc:  # noqa: BLE001
-        logger.error("[plan] 표 만들기 실패 · %s · 실행기를 시작하지 않음", exc.__class__.__name__)
+    created = False
+    for attempt in range(1, 4):                 # cron 에는 create_all 이 없다 → 계획 표를 여기서 만든다 · api 와 동시에 만들다 겹쳐 실패할 수 있어 재시도
+        try:
+            await _db.init_db()
+            created = True
+            break
+        except Exception as exc:  # noqa: BLE001
+            logger.error("[plan] 표 만들기 실패 %s/3 · %s", attempt, exc.__class__.__name__)
+            if attempt < 3:
+                await asyncio.sleep(attempt)
+    if not created:
+        try:
+            await default_notify("warning", "계획 실행기 시작 안 함", "계획 표를 만들지 못해 실행기를 시작하지 않았습니다.", "system")
+        except Exception:  # noqa: BLE001
+            pass
         return None
     fd = acquire_lock()
     if fd is None:

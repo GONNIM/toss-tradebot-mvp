@@ -292,11 +292,15 @@ class PlanEdit(BaseModel):
 async def edit_plan(plan_id: int, body: PlanEdit, src: str = Depends(require_plan_write)) -> dict:
     _check_dates(body.values)
     eng = _engine()
-    try:
+
+    async def _do():
         async with get_session() as s:
             p = await _get_plan(s, plan_id)
             await eng.update_draft(s, p, body.values)
             return {"plan": _plan_json(p)}
+
+    try:
+        return await _retry_stale(_do)
     except state.TransitionError as exc:
         raise HTTPException(status_code=409, detail=str(exc))
 
@@ -308,14 +312,33 @@ async def _queue(s, plan: Plan, action: str, who: str) -> PlanRequest:
     return req
 
 
+async def _retry_stale(fn, tries: int = 5):
+    """실행기가 같은 계획을 막 고쳐 낙관적 잠금에 걸리면(StaleDataError) 서버 안에서 다시 읽고 재시도한다.
+    정지처럼 위험을 줄이는 동작이 충돌 때문에 거부되지 않게 한다."""
+    import asyncio
+
+    from sqlalchemy.orm.exc import StaleDataError
+
+    for i in range(tries):
+        try:
+            return await fn()
+        except StaleDataError:
+            if i == tries - 1:
+                raise
+            await asyncio.sleep(0.05 * (i + 1))
+
+
 @router.post("/{plan_id:int}/stop")
 async def stop_plan(plan_id: int, src: str = Depends(require_plan_write)) -> dict:
     """계획 정지 · 헤더도 허용 · 새 등록 · 매수를 멈춘다(HALTED) · 대기 매수 취소는 실행기가 · 매도 다리는 지우지 않는다."""
-    async with get_session() as s:
-        p = await _get_plan(s, plan_id)
-        stopped = await state.halt(s, p, "계획 정지 (화면)")
-        await _queue(s, p, "stop", src)
-        return {"halted": stopped, "plan": _plan_json(p)}
+    async def _do():
+        async with get_session() as s:
+            p = await _get_plan(s, plan_id)
+            stopped = await state.halt(s, p, "계획 정지 (화면)")
+            await _queue(s, p, "stop", src)
+            return {"halted": stopped, "plan": _plan_json(p)}
+
+    return await _retry_stale(_do)
 
 
 @router.post("/{plan_id:int}/adopt-cancel")
