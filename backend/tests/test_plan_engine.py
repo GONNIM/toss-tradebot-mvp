@@ -9,7 +9,7 @@ import pytest
 from sqlalchemy import select
 
 from backend.execution.plan import sizing, state
-from backend.execution.plan.engine import params_of
+from backend.execution.plan.engine import params_of, runtime_of
 from backend.execution.plan.models import Plan, PlanLeg, PlanLegPending, PlanSellReservation
 from backend.execution.plan.pricing import D
 from backend.services.db import get_session
@@ -107,7 +107,7 @@ async def test_crossed_leg_at_registration_goes_to_limit_sell_and_reserves(plan_
         legs = await legs_of(s, plan)
         assert [l.seq for l in legs] == [2, 3]                  # 9.70 은 현재가 위 → 조건주문 아님
         sells = [c for c in raw.calls if c[0] == "limit_create"]
-        assert len(sells) == 1 and sells[0][2:] == (20, D("9.40"))
+        assert len(sells) == 1 and sells[0][2:4] == (20, D("9.40"))
         assert await sizing.accepted_sell(s, plan.id) == 20
         assert await eng.ensure_ladder(s, plan) == "ok"         # 불변식 A: 40 = 60 − 20
 
@@ -163,11 +163,11 @@ async def test_reject_counter_resets_after_normal_registration(plan_db):
     async with get_session() as s:
         plan = await seed_holding(s, eng)
         await eng._sell_cross(s, plan, seq=1, qty=20, cur=D("9.60"), kind="immediate", old_leg=None)
-        assert params_of(plan)["reject_loops"]["1"] == 1
+        assert runtime_of(plan)["reject_loops"]["1"] == 1
         leg = (await legs_of(s, plan))[0]
         raw.price = D("10")
         assert await eng._modify_leg(s, plan, leg, vals=eng._values_for(plan, 1, "regular", D("10")))
-        assert "1" not in (params_of(plan).get("reject_loops") or {})      # 초기화
+        assert "1" not in (runtime_of(plan).get("reject_loops") or {})      # 초기화
 
 
 async def test_pending_buy_is_cancelled_before_plan_sell(plan_db):
@@ -383,23 +383,61 @@ async def test_tp1_then_drop_below_average_waits(plan_db):
         assert legs and sum(l.qty for l in legs) == 30
 
 
-async def test_trail_raise_only_up_and_min_step(plan_db):
+async def test_trail_raise_only_up_and_min_step_with_minute_close_peak(plan_db):
     raw, eng = await setup(price="14")
+    t0 = datetime(2026, 11, 20, 15, 0)
     async with get_session() as s:
         plan = await seed_holding(s, eng)
         plan.state, plan.peak_price = state.TRAILING, 14.0
         await eng.ensure_ladder(s, plan)
-        legs = await legs_of(s, plan)
-        assert {D(l.watch_price) for l in legs} == {D("11.90")}
+        assert {D(l.watch_price) for l in await legs_of(s, plan)} == {D("11.90")}
         before = raw.count("cond_modify")
-        await eng._trail_step(s, plan, NOW)                  # 고점 그대로 → 올릴 것 없음
+        await eng._trail_step(s, plan, t0)                       # 고점 그대로 → 올릴 것 없음
         assert raw.count("cond_modify") == before
-        raw.price = D("16")                                  # 고점 갱신 (10% 안쪽 아님 → 보류)
+        # 고점은 정규장 1분봉 종가로만 · 한 분 동안 마지막 값이 그 분의 종가
+        for i, price in enumerate(("14.5", "14.6")):
+            raw.price = D(price)
+            await eng._track_peak(s, plan, t0 + timedelta(minutes=i))
+        assert plan.peak_price == 14.5                           # 첫 분 종가 14.5 만 반영 · 두 번째 분의 값은 진행 중
+        raw.price = D("14.6")
+        await eng._track_peak(s, plan, t0 + timedelta(minutes=2))
+        assert plan.peak_price == 14.6                           # 직전 분 종가 14.6 반영 (10% 안쪽)
+        raw.price = D("14.6")
+        await eng._trail_step(s, plan, t0 + timedelta(minutes=2, seconds=5))
+        assert {D(l.watch_price) for l in await legs_of(s, plan)} == {D("12.41")}   # 14.6 × 0.85 올림 · 위로만
+        # 10% 넘게 튄 종가는 다음 1분봉 종가가 3% 안에서 확인해 줄 때까지 보류
+        for i, price in enumerate(("20", "20.1"), start=3):
+            raw.price = D(price)
+            await eng._track_peak(s, plan, t0 + timedelta(minutes=i))
+        assert plan.pending_peak == 20.0 and plan.peak_price == 14.6
+        raw.price = D("20.2")
+        await eng._track_peak(s, plan, t0 + timedelta(minutes=5))
+        assert plan.peak_price == 20.0 and plan.pending_peak is None
+
+
+async def test_peak_ignores_off_hours_prices(plan_db):
+    raw, eng = await setup(price="14", regular=None)
+    async with get_session() as s:
+        plan = await seed_holding(s, eng)
+        plan.peak_price = 14.0
+        for i, price in enumerate(("30", "31", "32")):
+            raw.price = D(price)
+            await eng._track_peak(s, plan, NOW + timedelta(minutes=i))
+        assert plan.peak_price == 14.0                            # 정규장 밖 체결가는 고점에 쓰지 않는다
+
+
+async def test_trail_order_price_uses_lowered_watch(plan_db):
+    """추적 상향 주문가는 낮춘(현재가 − 2틱 한도) 감시가 기준으로 계산한다."""
+    raw, eng = await setup(price="12.00")
+    async with get_session() as s:
+        plan = await seed_holding(s, eng)
+        plan.state, plan.peak_price = state.TRAILING, 14.0       # 추적 감시가 11.90 → 한도 min(11.90, 12.00 − 0.02)
+        await eng.ensure_ladder(s, plan)
+        plan.peak_price = 14.2                                    # 12.07 → 현재가 12.00 보다 높아 한도(11.98)로 낮춘다
         await eng._trail_step(s, plan, NOW)
-        assert plan.pending_peak == 16.0 and plan.peak_price == 14.0
-        raw.price = D("15.5")
-        await eng._trail_step(s, plan, NOW)                  # 15.5 는 보류 값 16 의 3% 안 → 16 확정 안 됨 (|15.5−16|/16 = 3.1%)
-        assert plan.peak_price in (14.0, 15.5)
+        legs = await legs_of(s, plan)
+        assert {D(l.watch_price) for l in legs} == {D("11.98")}
+        assert {D(l.order_price) for l in legs} == {D("11.74")}   # 11.98 × 0.98 = 11.7404 내림 (원래 감시가 12.07 기준이면 11.82)
 
 
 # ── 시간 손절 ──────────────────────────────────────────────────

@@ -56,6 +56,9 @@ class FakeRaw(RawBroker):
         self.reject_cond_code: Optional[str] = None
         self.reject_cond_sides: tuple = ("BUY", "SELL")
         self.cancel_fail = False
+        self.create_no_id = False        # 조건주문을 만들고도 응답에 번호가 없는 것처럼 오류 (불확실한 실패)
+        self.create_timeout = False      # 조건주문을 만들기 전에 시간 초과 오류
+        self.limit_uncertain = False     # 지정가 주문을 만들고도 응답이 오류 (불확실한 실패)
 
     def _id(self, p):
         self.n += 1
@@ -70,17 +73,21 @@ class FakeRaw(RawBroker):
         return self.acct
 
     async def cond_create(self, s, *, plan_id, symbol, side, qty, watch, order, client_id, expire):
-        self.calls.append(("cond_create", side, qty, D(watch), D(order)))
+        self.calls.append(("cond_create", side, qty, D(watch), D(order), client_id))
         if self.reject_cond_code and side in self.reject_cond_sides:
             raise OrderRejected(self.reject_cond_code, "거절")
+        if self.create_timeout:
+            raise ExecutionError("시간 초과")
         cid = self._id("C")
         self.conds[cid] = dict(id=cid, status="WATCHING", symbol=symbol, side=side, qty=qty, watch=D(watch),
                                order=D(order), client_id=client_id, order_id=None, filled=0, remaining=qty, avg=None,
                                expire=expire)
+        if self.create_no_id:
+            raise ExecutionError("토스 응답에 번호가 없습니다")
         return cid
 
     async def cond_modify(self, s, cond_id, *, plan_id, symbol, side, qty, watch, order, client_id, expire):
-        self.calls.append(("cond_modify", cond_id, qty, D(watch), D(order)))
+        self.calls.append(("cond_modify", cond_id, qty, D(watch), D(order), client_id))
         if self.fail_modify > 0:
             self.fail_modify -= 1
             raise ExecutionError("수정 실패")
@@ -107,12 +114,14 @@ class FakeRaw(RawBroker):
                 if c["status"] == "WATCHING" and (symbol is None or c["symbol"] == symbol)]
 
     async def limit_create(self, s, *, plan_id, symbol, side, qty, price, client_id):
-        self.calls.append(("limit_create", side, qty, D(price)))
+        self.calls.append(("limit_create", side, qty, D(price), client_id))
         if side == "SELL" and self.reject_sell:
             raise OrderRejected(self.reject_sell, "거절")
         oid = self._id("L")
         self.limits[oid] = dict(status="OPEN", symbol=symbol, side=side, qty=qty, price=D(price), filled=0,
-                                remaining=qty, avg=None)
+                                remaining=qty, avg=None, client_id=client_id)
+        if self.limit_uncertain:
+            raise ExecutionError("시간 초과")
         return oid
 
     async def limit_cancel(self, s, order_id):
@@ -125,6 +134,11 @@ class FakeRaw(RawBroker):
     async def limit_get(self, s, order_id):
         o = self.limits.get(order_id)
         return dict(o) if o else None
+
+    async def limit_open_list(self, s, symbol=None):
+        return [{"id": k, "client_id": o.get("client_id"), "symbol": o["symbol"], "side": o["side"], "qty": o["qty"],
+                 "price": o["price"]} for k, o in self.limits.items()
+                if o["status"] == "OPEN" and (symbol is None or o["symbol"] == symbol)]
 
     # ── 시험 조작 ──
     def trigger(self, cond_id, *, fill=True):

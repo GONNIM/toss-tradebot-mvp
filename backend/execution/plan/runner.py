@@ -142,17 +142,25 @@ class PlanExecutor:
         return self.engines[plan.mode]
 
     # ── 스위치 변화 ──
-    async def handle_switch_changes(self, s) -> None:
+    async def handle_switch_changes(self) -> None:
         sw = read_switches()
         if self._prev_sw["live"] and not sw["live"]:
-            plans = await s.scalars(select(Plan).where(Plan.mode.in_(("live", "test")), Plan.state.in_(_LIVE_ACTIVE)))
-            for p in list(plans):
-                await self.engines["live"].cancel_buys_on_switch_off(s, p)
+            for pid in await self._plan_ids(("live", "test")):
+                async with self.gs() as s:                      # 계획마다 세션 (토스 호출 동안 다른 계획의 쓰기를 막지 않는다)
+                    p = await s.get(Plan, pid)
+                    if p is not None:
+                        await self.engines["live"].cancel_buys_on_switch_off(s, p)
         if self._prev_sw["paper"] and not sw["paper"]:
-            plans = await s.scalars(select(Plan).where(Plan.mode == "paper", Plan.state.in_(_LIVE_ACTIVE)))
-            for p in list(plans):
-                await self._virtual_close(s, p)    # 모의 스위치를 끄면 남은 모의 계획을 가상 정리(CLOSED)
+            for pid in await self._plan_ids(("paper",)):
+                async with self.gs() as s:
+                    p = await s.get(Plan, pid)
+                    if p is not None:
+                        await self._virtual_close(s, p)         # 모의 스위치를 끄면 남은 모의 계획을 가상 정리(CLOSED)
         self._prev_sw = {"live": sw["live"], "paper": sw["paper"]}
+
+    async def _plan_ids(self, modes: tuple) -> list[int]:
+        async with self.gs() as s:
+            return list(await s.scalars(select(Plan.id).where(Plan.mode.in_(modes), Plan.state.in_(_LIVE_ACTIVE)).order_by(Plan.id)))
 
     async def _virtual_close(self, s, plan: Plan) -> None:
         for o in await s.scalars(select(PlanPaperOrder).where(PlanPaperOrder.plan_id == plan.id,
@@ -164,50 +172,59 @@ class PlanExecutor:
         await state.event(s, plan.id, "paper_closed", "모의 스위치 꺼짐 · 가상 정리")
 
     # ── 화면 요청 ──
-    async def process_requests(self, s) -> int:
-        rows = list(await s.scalars(select(PlanRequest).where(PlanRequest.status == "pending").order_by(PlanRequest.id)))
-        for r in rows:
-            plan = await s.get(Plan, r.plan_id) if r.plan_id else None
-            try:
-                if plan is None:
-                    raise ValueError("계획 없음")
-                eng = self._engine(plan)
-                if r.action == "stop":
-                    await eng._cancel_pending_buys(s, plan)
-                elif r.action == "resume":
-                    r.result = await eng.resume_plan(s, plan)
-                elif r.action == "adopt_cancel":
-                    if plan.state == state.ADOPT_PENDING:
-                        await state.transition(s, plan, state.CANCELLED, reason="인수 취소")
-                elif r.action == "resync":
-                    r.result = json.dumps(await resync.resync_plan(s, eng, plan), ensure_ascii=False, default=str)[:300]
-                elif r.action == "timestop_stop":
-                    await eng.stop_timestop(s, plan)
-                else:
-                    raise ValueError("알 수 없는 요청")
-                r.status = "done"
-            except Exception as exc:  # noqa: BLE001
-                r.status, r.result = "failed", f"{exc.__class__.__name__}: {exc}"[:300]
-            r.done_at = utcnow()
-        await s.flush()
-        return len(rows)
+    async def process_requests(self) -> int:
+        """화면이 남긴 요청을 하나씩 · 요청마다 세션을 따로 쓴다."""
+        async with self.gs() as s:
+            ids = list(await s.scalars(select(PlanRequest.id).where(PlanRequest.status == "pending").order_by(PlanRequest.id)))
+        for rid in ids:
+            async with self.gs() as s:
+                r = await s.get(PlanRequest, rid)
+                if r is None or r.status != "pending":
+                    continue
+                plan = await s.get(Plan, r.plan_id) if r.plan_id else None
+                try:
+                    if plan is None:
+                        raise ValueError("계획 없음")
+                    eng = self._engine(plan)
+                    if r.action == "stop":
+                        await eng._cancel_pending_buys(s, plan)
+                    elif r.action == "resume":
+                        r.result = await eng.resume_plan(s, plan)
+                    elif r.action == "adopt_cancel":
+                        if plan.state == state.ADOPT_PENDING:
+                            await state.transition(s, plan, state.CANCELLED, reason="인수 취소")
+                    elif r.action == "resync":
+                        r.result = json.dumps(await resync.resync_plan(s, eng, plan), ensure_ascii=False, default=str)[:300]
+                    elif r.action == "timestop_stop":
+                        await eng.stop_timestop(s, plan)
+                    else:
+                        raise ValueError("알 수 없는 요청")
+                    r.status = "done"
+                except Exception as exc:  # noqa: BLE001
+                    r.status, r.result = "failed", f"{exc.__class__.__name__}: {exc}"[:300]
+                r.done_at = utcnow()
+        return len(ids)
 
     # ── 한 바퀴 ──
     async def tick_once(self) -> None:
+        await self.handle_switch_changes()
+        await self.process_requests()
         async with self.gs() as s:
-            await self.handle_switch_changes(s)
-            await self.process_requests(s)
-            plans = list(await s.scalars(select(Plan).where(Plan.state.in_(_LIVE_ACTIVE))))
-            for plan in plans:
-                try:
+            ids = list(await s.scalars(select(Plan.id).where(Plan.state.in_(_LIVE_ACTIVE)).order_by(Plan.id)))
+        for pid in ids:
+            try:
+                async with self.gs() as s:                      # 계획마다 세션 · 토스 호출 결과는 엔진이 바로 commit
+                    plan = await s.get(Plan, pid)
+                    if plan is None:
+                        continue
                     if plan.mode == "paper":
                         px = await self.paper_raw.last_price_rest(s, plan.symbol)
                         if px is not None:
                             await self.paper_raw.on_price(s, plan.symbol, px)
                     await self._engine(plan).tick_plan(s, plan)
                     await self._record_runtime(s, plan)
-                except Exception as exc:  # noqa: BLE001 — 한 계획의 오류가 다른 계획을 멈추지 않는다
-                    logger.error("[plan] tick 실패 · 계획 %s · %s", plan.id, exc.__class__.__name__)
+            except Exception as exc:  # noqa: BLE001 — 한 계획의 오류(낙관적 잠금 충돌 포함)가 다른 계획을 멈추지 않는다
+                logger.error("[plan] tick 실패 · 계획 %s · %s", pid, exc.__class__.__name__)
 
     async def _record_runtime(self, s, plan: Plan) -> None:
         """화면용 마지막 값: 현재가 · 다음 시간대 전환 시각(KST) · 토스 연결 상태 (읽기만 · 실패해도 계획 처리는 계속)."""
@@ -245,31 +262,58 @@ class PlanExecutor:
             logger.warning("[plan] 화면용 스냅샷 실패 · %s", exc.__class__.__name__)
             await heartbeat.mark_toss(s, False)
 
-    async def resync_once(self) -> int:
-        async with self.gs() as s:
-            total = 0
-            for mode, eng in (("live", self.engines["live"]), ("paper", self.engines["paper"])):
-                plans = list(await s.scalars(select(Plan).where(
-                    Plan.mode.in_(("live", "test") if mode == "live" else ("paper",)), Plan.state.in_(_LIVE_ACTIVE))))
-                for p in plans:
+    async def resync_once(self) -> tuple[int, int]:
+        """모든 열린 계획을 하나씩(계획마다 세션) 다시 맞춘다. 반환: (일치한 손절 다리 수, 불변식을 통과 못 한 계획 수)."""
+        total = bad = 0
+        for mode_modes, eng in ((("live", "test"), self.engines["live"]), (("paper",), self.engines["paper"])):
+            for pid in await self._plan_ids(mode_modes):
+                async with self.gs() as s:
+                    p = await s.get(Plan, pid)
+                    if p is None:
+                        continue
                     rep = await resync.resync_plan(s, eng, p)
-                    if rep.get("ok"):
+                    if rep.get("ok") and rep.get("ladder") in ("ok", "fixed", "skipped"):
                         total += len(await sizing.live_sl_legs(s, p.id))
+                    else:
+                        bad += 1
+        async with self.gs() as s:
             await self._snapshot_for_screen(s)
             await heartbeat.write(s, ws_status=self.ws.status, last_resync_at=utcnow())
-            return total
+        return total, bad
 
     async def _send_urgent(self, title: str, body: str) -> bool:
         await self.notify("critical", title, body, "execution")
         return True
 
+    async def _startup_resync(self, stop: asyncio.Event) -> tuple[int, int]:
+        """기동 다시 맞추기. 토스 · DB 가 잠깐 안 되어도 실행기가 죽지 않고 성공할 때까지 되풀이한다(1·2·4…초 · 최대 60초)."""
+        attempt = 0
+        while not stop.is_set():
+            try:
+                return await self.resync_once()
+            except Exception as exc:  # noqa: BLE001
+                logger.error("[plan] 기동 다시 맞추기 실패 · %s · 다시 시도", exc.__class__.__name__)
+                attempt += 1
+                try:
+                    await asyncio.wait_for(stop.wait(), timeout=min(2 ** attempt, 60))
+                except asyncio.TimeoutError:
+                    pass
+        return 0, 0
+
     async def run(self, stop: asyncio.Event) -> None:
         import time
 
         ws_task = asyncio.create_task(self.ws.run(stop))     # 웹소켓 1연결 (끊기면 스스로 다시 연결 · REST 가 대신 읽음)
-        n = await self.resync_once()       # 기동 · 다시 맞추기 → 불변식 통과 확인 → 복구 알림
         async with self.gs() as s:
-            await heartbeat.notify_recovered(s, self._send_urgent, n)
+            await heartbeat.write(s, ws_status=self.ws.status)   # 기록이 있어야 서버 쪽 끊김 감시가 시작된다
+        n, bad = await self._startup_resync(stop)
+        if not stop.is_set():
+            if bad == 0:                                         # 불변식을 확인한 뒤에만 「복구」 알림 (9절)
+                async with self.gs() as s:
+                    await heartbeat.notify_recovered(s, self._send_urgent, n)
+            else:
+                await self.notify("critical", "실행기 시작 · 불변식 확인 필요",
+                                  f"실행기를 시작했지만 계획 {bad}건이 불변식 확인을 통과하지 못했습니다. 화면에서 확인해 주십시오.", "execution")
         last_hb = last_rs = time.monotonic()
         while not stop.is_set():
             try:
@@ -295,6 +339,13 @@ async def start_executor(stop: asyncio.Event) -> Optional[asyncio.Task]:
     """cron 데몬이 부른다. 키가 없으면 로그 1줄만 · 잠금을 못 잡으면 시스템 경고 · 아니면 실행기 task."""
     if not executor_enabled():
         logger.info("[plan] TOSS_TOKEN_ISSUE 없음 · 계획 실행기를 시작하지 않음")
+        return None
+    try:                                        # cron 프로세스에는 create_all 이 없다 → 계획 표를 여기서 만든다 (이미 있으면 그대로)
+        from backend.services.db import init_db
+
+        await init_db()
+    except Exception as exc:  # noqa: BLE001
+        logger.error("[plan] 표 만들기 실패 · %s · 실행기를 시작하지 않음", exc.__class__.__name__)
         return None
     fd = acquire_lock()
     if fd is None:

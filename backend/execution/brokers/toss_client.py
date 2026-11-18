@@ -288,14 +288,18 @@ class TossClient:
             used_path, used = getattr(_tl, "used", (None, None))
             if used_path != str(self._token_cache_path):
                 used = None            # 다른 저장 파일을 쓴 요청의 토큰은 비교하지 않는다
-            keep = False
-            if used is not None:
-                try:
-                    keep = json.loads(self._token_cache_path.read_text(encoding="utf-8")).get("access_token") != used
-                except (OSError, ValueError):
+            try:
+                with self._token_lock():       # 비교 · 지움을 잠금 안에서 (다른 프로세스가 새 토큰을 쓰는 순간과 겹치지 않게)
                     keep = False
-            if not keep:
-                self._token_cache_path.unlink(missing_ok=True)
+                    if used is not None:
+                        try:
+                            keep = json.loads(self._token_cache_path.read_text(encoding="utf-8")).get("access_token") != used
+                        except (OSError, ValueError):
+                            keep = False
+                    if not keep:
+                        self._token_cache_path.unlink(missing_ok=True)
+            except BrokerCommunicationError:
+                pass                           # 잠금을 못 잡으면 지우지 않는다 (다음 호출이 잠금 안에서 다시 읽는다)
             raise BrokerCommunicationError(
                 f"토큰 만료 — 재시도 필요: {self._error_summary(resp)}",
                 raw_response=body,

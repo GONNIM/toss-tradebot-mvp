@@ -10,7 +10,11 @@ from __future__ import annotations
 from datetime import datetime, timedelta
 from typing import Awaitable, Callable, Optional
 
-from .models import PlanExecutorHeartbeat, utcnow
+from sqlalchemy import select
+
+from .models import PlanEvent, PlanExecutorHeartbeat, utcnow
+
+_PROCESS_STARTED = utcnow()
 
 STALE_AFTER = timedelta(minutes=2)
 WRITE_EVERY_SEC = 30
@@ -45,7 +49,17 @@ async def check_stale(s, send: Send, now: Optional[datetime] = None) -> bool:
     now = now or utcnow()
     row = await s.get(PlanExecutorHeartbeat, 1)
     if row is None:
-        return False
+        # 실행기가 한 번도 기록하지 않았다 (시작 실패 · 표 없음 · 잠금 못 잡음). 서버가 막 떠서 실행기보다 먼저 확인한 경우를 피해
+        # 이 프로세스가 뜬 지 2분이 지난 뒤에만, 한 번만 알린다 (알림 1번은 사건 기록으로 막는다).
+        if now - _PROCESS_STARTED <= STALE_AFTER:
+            return False
+        done = await s.scalar(select(PlanEvent.id).where(PlanEvent.kind == "heartbeat_none_alert").limit(1))
+        if done is not None:
+            return False
+        s.add(PlanEvent(plan_id=None, kind="heartbeat_none_alert", ts=now, detail=""))
+        await s.flush()
+        await send("실행기 기록 없음", "계획 실행기가 아직 한 번도 기록을 남기지 않았습니다. 실행기가 시작되지 않았을 수 있습니다.")
+        return True
     if now - row.ts <= STALE_AFTER:
         return False
     if row.stale_alerted_at is not None and row.stale_alerted_at >= row.ts:

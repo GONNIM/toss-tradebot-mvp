@@ -292,6 +292,16 @@ app = FastAPI(
 # CORS — Next.js 프론트엔드
 # 허용 origin 은 CORS_ORIGINS 환경변수(쉼표 구분) 로 제어. 미설정 시 기본값 사용.
 # 프론트 포트 변경 시 코드 수정 없이 .env 만 갱신 → 재기동으로 반영.
+from fastapi.responses import JSONResponse  # noqa: E402
+from sqlalchemy.orm.exc import StaleDataError  # noqa: E402
+
+
+@app.exception_handler(StaleDataError)
+async def _stale_data(request, exc):
+    """1116-01 · 화면과 실행기가 같은 계획을 동시에 고쳤을 때(낙관적 잠금) · 다시 읽고 다시 시도하면 된다."""
+    return JSONResponse(status_code=409, content={"detail": {"reason": "stale", "message": "다른 곳에서 같은 계획이 막 바뀌었습니다. 화면을 새로 읽고 다시 시도해 주십시오."}})
+
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=config.cors_origins(),

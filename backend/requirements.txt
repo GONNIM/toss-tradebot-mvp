@@ -53,4 +53,4 @@ requests>=2.32.0
 sentry-sdk[fastapi]>=2.19.0
 
 # 1116-01 · 토스 웹소켓 (uvicorn[standard] 가 이미 끌어오지만 직접 쓰므로 명시)
-websockets>=12.0
+websockets>=14.0

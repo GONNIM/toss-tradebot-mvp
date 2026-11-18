@@ -92,6 +92,20 @@ def update_peak(peak: Optional[float], pending: Optional[float], close: float) -
     return close, None
 
 
+def hold_jump(last: Optional[float], pending: Optional[float], price: float) -> tuple[float, Optional[float]]:
+    """현재가 이상값 보류 (6-1 · 7-3). 직전 채택값보다 10% 넘게 튄 값은 다음 읽기가 그 값의 3% 안에서 확인할 때까지 쓰지 않는다.
+    반환: (이번에 쓸 값, 보류 중인 값)."""
+    if last is None:
+        return price, None
+    if pending is not None:
+        if abs(price - pending) / pending <= 0.03:
+            return pending, None
+        pending = None
+    if abs(price - last) / last <= 0.10:
+        return price, None
+    return last, price
+
+
 # ─── 시간 손절 (7-4) ───────────────────────────────────────────
 
 def add_trading_days(start: date, n: int, holidays: frozenset[date] = frozenset()) -> date:

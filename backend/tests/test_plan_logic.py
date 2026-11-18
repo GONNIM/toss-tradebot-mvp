@@ -153,7 +153,12 @@ async def test_heartbeat_stale_alert_once_and_recovery(plan_db):
 
     t0 = datetime(2026, 11, 20, 15, 0, 0)
     async with get_session() as s:
-        assert await heartbeat.check_stale(s, send, t0) is False            # 기록 없음
+        started = heartbeat._PROCESS_STARTED
+        assert await heartbeat.check_stale(s, send, started + timedelta(minutes=1)) is False   # 막 떠서 실행기보다 먼저 본 경우
+        assert await heartbeat.check_stale(s, send, started + timedelta(minutes=3)) is True    # 기록이 한 번도 없음 → 알림 1번
+        assert await heartbeat.check_stale(s, send, started + timedelta(minutes=9)) is False   # 반복 안 함
+        assert sent == ["실행기 기록 없음"]
+        sent.clear()
         await heartbeat.write(s, ws_status="none", now=t0)
         assert await heartbeat.check_stale(s, send, t0 + timedelta(seconds=119)) is False
         assert await heartbeat.check_stale(s, send, t0 + timedelta(seconds=121)) is True

@@ -30,6 +30,9 @@ from .switches import content_hash_of
 
 logger = logging.getLogger(__name__)
 
+# 보유 전 단계 (정지돼도 보호 다리 · 닫기 · 인수 대신 다리 걸기를 하지 않는다)
+PRE_HOLD_STATES = (state.APPROVED, state.ENTRY_ARMED, state.ENTRY_RETRY, state.ADOPT_PENDING)
+
 SELL_EXPIRE_DAYS = 90            # 매도 다리 만료 = 등록일 + 90일 (6-1)
 EXPIRE_EXTEND_BELOW_DAYS = 10    # 남은 기간이 10일 아래면 같은 값으로 수정해 연장
 MAX_REJECT_LOOPS = 3             # 같은 다리 거절 · 다시 걸기 3번 → HALTED (6-1)
@@ -48,17 +51,18 @@ def parse_dt(raw) -> datetime:
 
 
 def runtime_of(plan: Plan) -> dict:
-    """실행기가 남긴 마지막 값(현재가 · 실제 다리 · 계좌 수량 …) · 승인 대상 값이 아니라 내용 해시에 들어가지 않는다."""
-    r = params_of(plan).get("_runtime")
+    """실행기가 남긴 마지막 값 · 별도 칸(runtime_json) · 승인 대상 값이 아니라 내용 해시에 들어가지 않는다."""
+    try:
+        r = json.loads(plan.runtime_json or "{}")
+    except ValueError:
+        return {}
     return r if isinstance(r, dict) else {}
 
 
 def set_runtime(plan: Plan, **kv) -> None:
-    p = params_of(plan)
-    r = dict(p.get("_runtime") or {})
+    r = runtime_of(plan)
     r.update(kv)
-    p["_runtime"] = r
-    set_params(plan, p)
+    plan.runtime_json = json.dumps(r, ensure_ascii=False, default=str)
 
 
 def params_of(plan: Plan) -> dict:
@@ -75,6 +79,9 @@ def set_params(plan: Plan, p: dict) -> None:
 APPROVAL_KEYS = ("symbol", "mode", "budget_usd", "buy_watch", "buy_order", "qty", "tp1_watch", "tp1_order",
                  "ladder_pcts", "announce_at", "entry_close_at", "entry_window_end", "adopt")
 
+
+# 계획을 만들 때 받는 값 (그 밖의 키는 버린다)
+PARAM_ALLOWED = set(APPROVAL_KEYS) | {"avg_price", "buy_expire", "tp1_qty", "tp1_mode", "rationale", "warnings", "user_edited"}
 
 # 자동 초안에서 대표가 바꿀 수 있는 값 (v4 7절 · 바꾸면 「사용자 수정」 표시 · 매일 다시 계산해도 유지)
 USER_EDITABLE_KEYS = ("budget_usd", "buy_watch", "buy_order", "qty", "tp1_watch", "tp1_order", "ladder_pcts")
@@ -103,6 +110,13 @@ def derive_qty(params: dict) -> Optional[int]:
     except (TypeError, ValueError):
         return None
     return qty_for_budget(b, floor_tick(px))
+
+
+def definitely_not_created(exc: Exception) -> bool:
+    """토스가 분명히 받지 않은 실패(거절 · 한도 초과)인가. 그 밖(시간 초과 · 5xx · 번호 없는 응답)은 만들어졌는지 모른다."""
+    from backend.execution.exceptions import OrderRejected, RateLimitExceeded
+
+    return isinstance(exc, (OrderRejected, RateLimitExceeded))
 
 
 def _num(v):
@@ -153,11 +167,33 @@ class PlanEngine:
                 await self._alert(plan, "critical", "계획 정지", reason)
 
     def _cid(self, plan: Plan, role: str, seq: int) -> str:
-        p = params_of(plan)
-        n = int(p.get("cid_n", 0)) + 1
-        p["cid_n"] = n
-        set_params(plan, p)
-        return f"{plan.id}-{role}{seq}-{n}"[:36]
+        """주문 고유 키는 「다리 + 판」 단위로 고정한다. 같은 판을 다시 낼 때(불확실한 실패 뒤) 같은 키를 쓰고,
+        성공하거나 확실히 거절된 뒤에만 판이 올라간다 (_bump_cid)."""
+        ver = int((runtime_of(plan).get("cid_ver") or {}).get(f"{role}{seq}", 1))
+        return f"{plan.id}-{role}{seq}-v{ver}"[:36]
+
+    def _bump_cid(self, plan: Plan, role: str, seq: int) -> None:
+        rt = runtime_of(plan)
+        vers = dict(rt.get("cid_ver") or {})
+        vers[f"{role}{seq}"] = int(vers.get(f"{role}{seq}", 1)) + 1
+        set_runtime(plan, cid_ver=vers)
+
+    def _sell_stopped(self, plan: Plan) -> bool:
+        """Kill Switch 「매도도 멈춤」 · 이때는 어떤 경로로도 등록 · 수정 · 매도를 내지 않는다 (실거래 계획만)."""
+        killed, sell_allowed = self.kill_state()
+        return bool(killed and not sell_allowed and plan.mode != "paper")
+
+    async def _alert_once(self, s, plan: Plan, key: str, level: str, title: str, body: str, every_sec: int = 3600) -> None:
+        """같은 경고를 every_sec 안에 두 번 보내지 않는다 (실행기 값 칸에 마지막 시각을 남김)."""
+        rt = runtime_of(plan)
+        last = (rt.get("alert_at") or {}).get(key)
+        now = self.clock()
+        if last and (now - parse_dt(last)).total_seconds() < every_sec:
+            return
+        at = dict(rt.get("alert_at") or {})
+        at[key] = now.isoformat()
+        set_runtime(plan, alert_at=at)
+        await self._alert(plan, level, title, body)
 
     def _expire(self, days: int = SELL_EXPIRE_DAYS) -> str:
         return (self.clock() + timedelta(days=days)).strftime("%Y-%m-%d")
@@ -173,7 +209,7 @@ class PlanEngine:
         if await sizing.open_plan_exists(s, symbol):
             raise state.TransitionError("같은 종목에 열린 계획이 이미 있습니다")
         plan = Plan(mode=mode, source=source, symbol=symbol, state=state.DRAFT, revision=1)
-        p = dict(params)
+        p = {k: v for k, v in params.items() if k in PARAM_ALLOWED}      # 허용 목록 밖 키는 버린다 (실행기 내부 값 덮어쓰기 막음)
         q = derive_qty(p)
         if q is not None:
             p["qty"] = q                      # 화면이 보낸 qty 와 달라도 서버 계산값을 쓴다
@@ -275,9 +311,9 @@ class PlanEngine:
             await self._event(s, plan, kind, detail)
 
     async def _place_buy(self, s, plan: Plan) -> Optional[PlanLeg]:
-        """매수 주문은 계획당 동시에 1개 (5절 8항)."""
+        """매수 주문은 계획당 동시에 1개 (5절 8항). 낸 결과가 불확실하면 「확인 대기」 로 두고 다음 걸음에 찾아 잇는다."""
         existing = await s.scalar(select(PlanLeg).where(
-            PlanLeg.plan_id == plan.id, PlanLeg.role == "buy", PlanLeg.status == "WATCHING"))
+            PlanLeg.plan_id == plan.id, PlanLeg.role == "buy", PlanLeg.status.in_(("WATCHING", "UNCERTAIN"))))
         if existing:
             return existing
         p = params_of(plan)
@@ -287,29 +323,77 @@ class PlanEngine:
         watch, order = floor_tick(p["buy_watch"]), floor_tick(p["buy_order"])
         cid = self._cid(plan, "buy", 1)
         expire = p.get("buy_expire") or self._expire(7)
-        res = await self.gate.place_buy(s, plan_id=plan.id, symbol=plan.symbol, qty=qty, watch=watch, order=order,
-                                        client_id=cid, expire=expire, check=lambda cur: sanity.check_band(watch, cur, "매수 감시"))
+        leg = PlanLeg(plan_id=plan.id, role="buy", seq=1, kind="cond", side="BUY", client_order_id=cid, qty=qty,
+                      watch_price=float(watch), order_price=float(order), status="UNCERTAIN", expire_date=expire)
+        s.add(leg)
+        await s.commit()                       # 토스를 부르기 전에 기록을 남긴다 (끊겨도 짝을 찾을 수 있게)
+        try:
+            res = await self.gate.place_buy(s, plan_id=plan.id, symbol=plan.symbol, qty=qty, watch=watch, order=order,
+                                            client_id=cid, expire=expire,
+                                            check=lambda cur: sanity.check_band(watch, cur, "매수 감시"))
+        except ExecutionError as exc:
+            return await self._after_register_failure(s, plan, leg, "buy", 1, exc)
         if res.kind == "invalid":
+            await s.delete(leg)
+            await s.commit()
             await self._sanity_reject(s, plan, "매수", res.reason)
             return None
-        leg = PlanLeg(plan_id=plan.id, role="buy", seq=1, kind=res.kind if res.kind in ("cond", "limit") else "cond",
-                      side="BUY", toss_id=res.id, client_order_id=cid, qty=qty, watch_price=float(watch),
-                      order_price=float(order), status="WATCHING", expire_date=expire)
-        s.add(leg)
-        await s.flush()
+        leg.kind = res.kind if res.kind in ("cond", "limit") else "cond"
+        leg.toss_id, leg.status = res.id, "WATCHING"
+        self._bump_cid(plan, "buy", 1)
+        await s.commit()
         return leg
+
+    async def _after_register_failure(self, s, plan: Plan, leg: PlanLeg, role: str, seq: int, exc: Exception):
+        """등록 실패 처리. 분명히 거절됐으면 기록을 지우고 다음 판 키로 · 불확실하면 「확인 대기」 로 둔다(같은 키로 다시 내지 않음)."""
+        if definitely_not_created(exc):
+            await s.delete(leg)
+            self._bump_cid(plan, role, seq)
+            await s.commit()
+            await self._event(s, plan, "leg_register_fail", f"{role}{seq} {exc.__class__.__name__}")
+            return None
+        leg.status = "UNCERTAIN"
+        await self._event(s, plan, "leg_uncertain", f"{role}{seq} {exc.__class__.__name__} · 확인 대기")
+        await s.commit()
+        return None
+
+    async def _final_read_leg(self, s, plan: Plan, leg: PlanLeg) -> dict:
+        """취소 전 · 후에 그 다리의 마지막 체결을 다시 읽어 장부에 더한다 (5절 10항). 읽기 실패는 빈 값."""
+        if not leg.toss_id:
+            return {}
+        try:
+            g = await (self.gate.limit_get(s, leg.toss_id) if leg.kind == "limit" else self.gate.cond_get(s, leg.toss_id))
+        except ExecutionError:
+            return {}
+        if not g:
+            return {}
+        filled = int(g.get("filled") or 0)
+        if filled:
+            side = "BUY" if leg.role == "buy" else "SELL"
+            await self._record_fill(s, plan, side, leg.toss_id, filled, g.get("avg"))
+        return g
+
+    async def _cancel_leg_orders(self, s, plan: Plan, leg: PlanLeg) -> None:
+        """다리 하나를 토스에서 지운다. 읽기 → 취소 → 읽기. 조건이 이미 닿아 자식 주문이 생겼으면 자식 주문(cancel_limit)을 취소한다."""
+        g = await self._final_read_leg(s, plan, leg)
+        child = (g or {}).get("order_id") if leg.kind != "limit" else None
+        if child and (g or {}).get("status") == "TRIGGERED":
+            await self.gate.cancel_limit(s, child)
+        elif leg.kind == "limit":
+            await self.gate.cancel_limit(s, leg.toss_id)
+        else:
+            await self.gate.cancel_cond(s, leg.toss_id)
+        await self._final_read_leg(s, plan, leg)            # 취소 도중 부분 체결이 있었는지
 
     async def _cancel_pending_buys(self, s, plan: Plan) -> int:
         """계획 매도를 내기 전에 · 실거래 끌 때 · 마감 처리 때 대기 매수(조건주문 · 일반 주문)를 취소한다."""
         n = 0
+        await self._resolve_uncertain(s, plan)                  # 낸 결과를 모르는 매수가 있으면 먼저 찾아 잇는다
         legs = await s.scalars(select(PlanLeg).where(
-            PlanLeg.plan_id == plan.id, PlanLeg.role == "buy", PlanLeg.status == "WATCHING"))
+            PlanLeg.plan_id == plan.id, PlanLeg.role == "buy", PlanLeg.status.in_(("WATCHING", "UNCERTAIN"))))
         for leg in list(legs):
             if leg.toss_id:
-                if leg.kind == "limit":
-                    await self.gate.cancel_limit(s, leg.toss_id)
-                else:
-                    await self.gate.cancel_cond(s, leg.toss_id)
+                await self._cancel_leg_orders(s, plan, leg)
             leg.status = "CANCELED"
             n += 1
         await s.flush()
@@ -342,9 +426,51 @@ class PlanEngine:
         await s.flush()
         return delta
 
+    async def _resolve_uncertain(self, s, plan: Plan) -> bool:
+        """낸 결과가 불확실한 다리 · 지정가를 열린 조건주문 · 주문 목록에서 clientOrderId 로 찾아 잇는다.
+        못 찾으면 HALTED + ⑨ (다시 내지 않는다 · 같은 주문이 둘 걸리는 것을 막는다). 반환: 아직 불확실한 것이 남았는가."""
+        legs = list(await s.scalars(select(PlanLeg).where(PlanLeg.plan_id == plan.id, PlanLeg.status == "UNCERTAIN")))
+        resv = list(await s.scalars(select(PlanSellReservation).where(
+            PlanSellReservation.plan_id == plan.id, PlanSellReservation.active.is_(True),
+            PlanSellReservation.uncertain.is_(True))))
+        if not legs and not resv:
+            return False
+        conds = {o["client_id"]: o for o in await self.gate.cond_open_list(s, plan.symbol) if o and o.get("client_id")}
+        orders = {o["client_id"]: o for o in await self.gate.limit_open_list(s, plan.symbol) if o and o.get("client_id")}
+        lost = False
+        for leg in legs:
+            hit = conds.get(leg.client_order_id) if leg.kind != "limit" else None
+            hit_o = orders.get(leg.client_order_id)
+            if hit:
+                leg.toss_id, leg.status, leg.kind = hit["id"], "WATCHING", "cond"
+                self._bump_cid(plan, leg.role, leg.seq)
+                await self._event(s, plan, "leg_uncertain_linked", f"{leg.role}{leg.seq}")
+            elif hit_o:
+                leg.toss_id, leg.status, leg.kind = hit_o["id"], "WATCHING", "limit"
+                self._bump_cid(plan, leg.role, leg.seq)
+                await self._event(s, plan, "leg_uncertain_linked", f"{leg.role}{leg.seq}")
+            else:
+                leg.status = "CANCELED"
+                lost = True
+                self._bump_cid(plan, leg.role, leg.seq)           # 사람이 확인한 뒤 재개하면 다음 판 키로 새로 건다
+                await self._event(s, plan, "leg_uncertain_lost", f"{leg.role}{leg.seq}")
+        for r in resv:
+            hit_o = orders.get(r.client_order_id or "")
+            if hit_o:
+                r.order_ref, r.uncertain = hit_o["id"], False
+            else:
+                r.uncertain = False        # 예약은 그대로 둔다(같은 수량을 또 걸지 않게) · 사람이 확인
+                lost = True
+        await s.flush()
+        if lost:
+            set_runtime(plan, uncertain_lost=True)                # 사람이 확인하고 재개할 때까지 자동으로 다시 걸지 않는다
+            await self._halt(s, plan, "낸 주문의 결과를 확인하지 못했습니다 · 열린 주문 목록에 없음 · 직접 확인해 주십시오")
+        return False
+
     async def sync_orders(self, s, plan: Plan) -> dict:
         """토스(또는 모의)에서 다리 · 예약 상태를 읽어 장부에 맞춘다."""
         out = {"buy_filled": 0, "tp1_filled": False, "sold": 0}
+        await self._resolve_uncertain(s, plan)
         legs = list(await s.scalars(select(PlanLeg).where(
             PlanLeg.plan_id == plan.id, PlanLeg.status.in_(("WATCHING", "TRIGGERED")))))
         for leg in legs:
@@ -352,12 +478,14 @@ class PlanEngine:
                 continue
             g = await (self.gate.limit_get(s, leg.toss_id) if leg.kind == "limit" else self.gate.cond_get(s, leg.toss_id))
             if g is None:
+                if leg.status == "TRIGGERED":
+                    await sizing.release(s, plan.id, leg.toss_id)
                 leg.status = "CANCELED"
                 await self._event(s, plan, "leg_missing", f"{leg.role}{leg.seq}")
                 continue
             st = g.get("status")
             filled = int(g.get("filled") or 0)
-            ref = (g.get("order_id") or leg.toss_id)
+            ref = leg.toss_id                              # 체결 장부 열쇠는 다리 번호로 고정 (조건 → 자식 주문으로 바뀌어도 같은 열쇠)
             if leg.role == "buy":
                 if filled:
                     out["buy_filled"] += await self._record_fill(s, plan, "BUY", ref, filled, g.get("avg"))
@@ -382,10 +510,39 @@ class PlanEngine:
                 if st == "FILLED":
                     leg.status = "FILLED"
                     await sizing.release(s, plan.id, ref)
-            elif st in ("CANCELED", "EXPIRED"):
-                leg.status = st
-                await self._event(s, plan, "leg_" + st.lower(), f"{leg.role}{leg.seq}")
-        # 접수된 지정가 매도(예약)
+                elif leg.status == "TRIGGERED":
+                    await self._check_triggered_child(s, plan, leg, g, ref, out)
+            elif st in ("CANCELED", "EXPIRED", "REJECTED", "UNKNOWN"):
+                if leg.status == "TRIGGERED":
+                    await self._check_triggered_child(s, plan, leg, g, ref, out)
+                elif st != "UNKNOWN":
+                    leg.status = st if st in ("CANCELED", "EXPIRED") else "CANCELED"
+                    await self._event(s, plan, "leg_" + leg.status.lower(), f"{leg.role}{leg.seq}")
+        await self._sync_reservations(s, plan, out)
+        await s.flush()
+        return out
+
+    async def _check_triggered_child(self, s, plan: Plan, leg: PlanLeg, g: dict, ref: str, out: dict) -> None:
+        """발동된 조건주문의 자식 주문이 체결 없이 닫혔으면(취소 · 만료 · 거절 · 모름) 접수 예약을 풀어 모자람으로 다시 걸게 한다."""
+        child = g.get("order_id")
+        info = None
+        if child:
+            try:
+                info = await self.gate.limit_get(s, child)
+            except ExecutionError:
+                return                                  # 읽지 못하면 그대로 둔다 (다음 걸음에 다시)
+        if info and info.get("status") == "OPEN":
+            return                                      # 자식 주문이 아직 살아 있음
+        if info is None and g.get("status") not in ("CANCELED", "EXPIRED", "REJECTED"):
+            return                                      # 자식 주문 번호를 모르고 조건 상태도 모호 → 건드리지 않음 (확인 못 함)
+        f = int((info or g).get("filled") or 0)
+        if f:
+            out["sold"] += await self._record_fill(s, plan, "SELL", ref, f, (info or g).get("avg"))
+        await sizing.release(s, plan.id, ref)
+        leg.status = "FILLED" if (info or {}).get("status") == "FILLED" else "CANCELED"
+        await self._event(s, plan, "triggered_closed", f"{leg.role}{leg.seq} 체결 {f}")
+
+    async def _sync_reservations(self, s, plan: Plan, out: dict) -> None:
         resvs = list(await s.scalars(select(PlanSellReservation).where(
             PlanSellReservation.plan_id == plan.id, PlanSellReservation.active.is_(True),
             PlanSellReservation.kind != "triggered")))
@@ -403,12 +560,10 @@ class PlanEngine:
                 r.active = False
                 if r.kind == "tp1_watch":
                     out["tp1_filled"] = True
-            elif g["status"] == "CANCELED":
+            elif g["status"] in ("CANCELED", "UNKNOWN"):
                 r.active = False
             else:
                 r.qty = int(g.get("remaining") or r.qty)
-        await s.flush()
-        return out
 
     async def _sync_reservation_qty(self, s, plan: Plan, ref: str, remaining: int, st: str) -> None:
         rows = await s.scalars(select(PlanSellReservation).where(
@@ -423,11 +578,16 @@ class PlanEngine:
     def _session(self, now: datetime) -> str:
         return sess.leg_session(now, self.regular_window(now))
 
+    @staticmethod
+    def _kind_state(plan: Plan) -> str:
+        """다리 값 종류를 정하는 상태 · HALTED 면 정지 직전 상태(추적 중이었으면 추적 값)."""
+        return (plan.prev_state or state.HOLDING) if plan.state == state.HALTED else plan.state
+
     def _values_for(self, plan: Plan, seq: int, session: str, cur: Decimal) -> Values:
         p = params_of(plan)
         if session == "off":
             return sess.emergency_values(cur)
-        if plan.state == state.TRAILING:
+        if self._kind_state(plan) == state.TRAILING:
             return sess.trail_values(plan.avg_price or 0, plan.peak_price or cur)
         pcts = tuple(D(x) for x in p.get("ladder_pcts") or sess.DEFAULT_LADDER_PCTS)
         return sess.ladder_values(plan.avg_price or cur, pcts)[min(seq, len(pcts)) - 1]
@@ -435,71 +595,103 @@ class PlanEngine:
     # ───────────────── 다리 등록 · 수정 · 취소 ─────────────────
     async def _cancel_leg(self, s, plan: Plan, leg: PlanLeg) -> None:
         if leg.toss_id and leg.status == "WATCHING":
-            await self.gate.cancel_cond(s, leg.toss_id)
+            await self._cancel_leg_orders(s, plan, leg)
         leg.status = "CANCELED"
         await s.flush()
 
-    async def _register_leg(self, s, plan: Plan, seq: int, qty: int, vals: Values, tag: str) -> Optional[PlanLeg]:
+    def _avg_missing(self, plan: Plan) -> bool:
+        """평균가가 없으면 사다리 · 추적 값을 계산할 수 없다 (0 으로 대신하지 않는다)."""
+        return not plan.avg_price
+
+    async def _register_leg(self, s, plan: Plan, seq: int, qty: int, vals: Values, tag: str,
+                            allow_cross: bool = True, reset_loops: bool = True) -> Optional[PlanLeg]:
+        if self._sell_stopped(plan):
+            return None
+        if str(seq) in (runtime_of(plan).get("cross_blocked") or []):
+            return None                                       # 거절 3번 되풀이로 멈춘 다리 번호 · 정지를 풀 때까지 다시 시도하지 않음
         cid = self._cid(plan, "sl", seq)
+        leg = PlanLeg(plan_id=plan.id, role="sl", seq=seq, kind="cond", client_order_id=cid, qty=qty,
+                      watch_price=float(vals.watch), order_price=float(vals.order), status="UNCERTAIN", tag=tag,
+                      expire_date=self._expire())
+        s.add(leg)
+        await s.commit()                                      # 토스 호출 전에 기록 (끊겨도 clientOrderId 로 찾는다)
         try:
             res = await self.gate.place_stop(s, plan_id=plan.id, symbol=plan.symbol, qty=qty, watch=vals.watch,
                                              order=vals.order, client_id=cid, expire=self._expire(),
                                              check=self._stop_check(plan, vals.watch))
         except ExecutionError as exc:
-            await self._event(s, plan, "leg_register_fail", f"sl{seq} {exc.__class__.__name__}")
-            return None
+            return await self._after_register_failure(s, plan, leg, "sl", seq, exc)
+        if res.kind == "cond":
+            leg.toss_id, leg.status = res.id, "WATCHING"
+            self._bump_cid(plan, "sl", seq)
+            if reset_loops:                                   # 거절 뒤 다시 거는 중이면 횟수를 지우지 않는다 (3번 되풀이 세기)
+                self._reset_reject_loops(plan, seq)
+            await s.commit()
+            return leg
+        await s.delete(leg)                                   # 조건주문이 만들어지지 않았다 (이미 넘음 · 점검 실패 · 확인 못 함)
+        await s.commit()
         if res.kind == "invalid":
             await self._sanity_reject(s, plan, f"손절 다리 {seq}", res.reason)
             return None
-        if res.kind == "cond":
-            leg = PlanLeg(plan_id=plan.id, role="sl", seq=seq, kind="cond", toss_id=res.id, client_order_id=cid,
-                          qty=qty, watch_price=float(vals.watch), order_price=float(vals.order), status="WATCHING",
-                          tag=tag, expire_date=self._expire())
-            s.add(leg)
-            await s.flush()
-            self._reset_reject_loops(plan, seq)
-            return leg
-        if res.kind == "cross":
+        if res.kind == "cross" and allow_cross:
             await self._sell_cross(s, plan, seq=seq, qty=qty, cur=res.cur, kind="immediate", old_leg=None, tag=tag)
         return None   # unconfirmed · 다음 걸음에 모자람으로 다시 본다
 
     async def _modify_leg(self, s, plan: Plan, leg: PlanLeg, *, qty: Optional[int] = None,
                           vals: Optional[Values] = None) -> bool:
-        """수정(취소 뒤 새로 만들기) · 수정 중 기록을 먼저 쓴다(7-2) · 방향 문(6-1)을 거친다."""
+        """수정(취소 뒤 새로 만들기) · 수정 중 기록을 먼저 쓴다(7-2) · 방향 문(6-1)을 거친다.
+        반환: 수정했거나, 이미 넘어 즉시 매도로 처리했으면 True (호출 쪽이 같은 일을 다시 시도하지 않게). 못 했으면 False."""
+        if self._sell_stopped(plan):
+            return False
         v = vals or Values(D(leg.watch_price), D(leg.order_price))
         q = int(qty if qty is not None else leg.qty)
-        cid = self._cid(plan, "sl", leg.seq)
-        pend = PlanLegPending(leg_id=leg.id, plan_id=plan.id, old_toss_id=leg.toss_id, new_watch=float(v.watch),
-                              new_order=float(v.order), qty=q, client_order_id=cid)
-        s.add(pend)
-        await s.flush()
+        pend = await s.scalar(select(PlanLegPending).where(PlanLegPending.leg_id == leg.id))
+        if pend is None:
+            cid = self._cid(plan, "sl", leg.seq)
+            pend = PlanLegPending(leg_id=leg.id, plan_id=plan.id, old_toss_id=leg.toss_id, new_watch=float(v.watch),
+                                  new_order=float(v.order), qty=q, client_order_id=cid)
+            s.add(pend)
+        else:                                                 # 이전 시도가 불확실하게 끝났다 → 같은 키 · 같은 값으로 이어서
+            cid = pend.client_order_id or self._cid(plan, "sl", leg.seq)
+            pend.new_watch, pend.new_order, pend.qty = float(v.watch), float(v.order), q
+        await s.commit()                                      # 토스 호출 전에 수정 중 기록을 남긴다
         try:
             res = await self.gate.place_stop(s, plan_id=plan.id, symbol=plan.symbol, qty=q, watch=v.watch,
                                              order=v.order, client_id=cid, expire=self._expire(),
                                              modify_id=leg.toss_id, check=self._stop_check(plan, v.watch))
         except ExecutionError as exc:
             leg.error_count += 1
+            if definitely_not_created(exc):
+                await s.delete(pend)                          # 분명히 거절 · 옛 다리 그대로 · 다음 판 키로
+                self._bump_cid(plan, "sl", leg.seq)
             await self._event(s, plan, "leg_modify_fail", f"sl{leg.seq} {exc.__class__.__name__} #{leg.error_count}")
             if leg.error_count >= MAX_LEG_ERRORS:
                 await self._halt(s, plan, f"다리 sl{leg.seq} 수정 {MAX_LEG_ERRORS}번 실패")
-            return False   # 수정 중 기록은 남겨 다시 맞추기가 짝을 잇는다
+            await s.commit()
+            return False   # 불확실하면 수정 중 기록을 남겨 다시 맞추기가 짝을 잇는다
         await s.delete(pend)
         if res.kind == "invalid":
+            await s.commit()
             await self._sanity_reject(s, plan, f"손절 다리 {leg.seq} 수정", res.reason)
             return False       # 옛 다리는 그대로 둔다
         if res.kind == "cond":
             leg.toss_id, leg.qty = res.id, q
             leg.watch_price, leg.order_price, leg.client_order_id = float(v.watch), float(v.order), cid
+            leg.expire_date = self._expire()                  # 수정은 취소 뒤 새로 만들기라 만료일도 다시 적는다 (필수 칸)
             leg.error_count = 0
+            self._bump_cid(plan, "sl", leg.seq)
             self._reset_reject_loops(plan, leg.seq)
-            await s.flush()
+            await s.commit()
             return True
         if res.kind == "cross":
             if res.old_gone:
                 leg.status = "CANCELED"
-            await self._sell_cross(s, plan, seq=leg.seq, qty=q, cur=res.cur, kind="immediate",
-                                   old_leg=None if res.old_gone else leg, tag=leg.tag)
-            return False
+                await self._event(s, plan, "leg_old_gone", f"sl{leg.seq} 수정 도중 방향이 뒤집혀 옛 다리도 새 다리도 없음 · 즉시 매도로 처리")
+            await s.commit()
+            handled = await self._sell_cross(s, plan, seq=leg.seq, qty=q, cur=res.cur, kind="immediate",
+                                             old_leg=None if res.old_gone else leg, tag=leg.tag)
+            return handled                                    # 처리됐으면 True · 호출 쪽이 다시 시도하지 않는다
+        await s.commit()
         return False  # unconfirmed · 옛 다리는 그대로 둔다
 
     def _stop_check(self, plan: Plan, watch):
@@ -514,29 +706,29 @@ class PlanEngine:
 
     # ───────────────── 6-1 이미 넘은 다리 → 즉시 지정가 매도 ─────────────────
     def _reset_reject_loops(self, plan: Plan, seq: int) -> None:
-        p = params_of(plan)
-        loops = p.get("reject_loops") or {}
+        loops = dict(runtime_of(plan).get("reject_loops") or {})
         if str(seq) in loops:
             loops.pop(str(seq))
-            p["reject_loops"] = loops
-            set_params(plan, p)
+            set_runtime(plan, reject_loops=loops)
 
     def _bump_reject_loops(self, plan: Plan, seq: int) -> int:
-        p = params_of(plan)
-        loops = p.get("reject_loops") or {}
+        loops = dict(runtime_of(plan).get("reject_loops") or {})
         loops[str(seq)] = int(loops.get(str(seq), 0)) + 1
-        p["reject_loops"] = loops
-        set_params(plan, p)
+        set_runtime(plan, reject_loops=loops)
         return loops[str(seq)]
 
     async def _sell_cross(self, s, plan: Plan, *, seq: int, qty: int, cur: Decimal, kind: str,
                           old_leg: Optional[PlanLeg], tag: str = "") -> bool:
         """이미 넘은 다리 처리: 대기 매수 취소 → 그 다리를 먼저 줄임 → 바로 지정가 매도 · 예약 장부에 올림."""
+        if self._sell_stopped(plan):
+            return False
+        if str(seq) in (runtime_of(plan).get("cross_blocked") or []):
+            return False                                      # 거절 3번 되풀이로 멈춘 번호 (정지를 풀 때까지 반복하지 않음)
         now = self.clock()
         f = self.limit_factor(now)
         if f is None:
-            await self._alert(plan, "critical", "지정가를 낼 수 없는 시간대",
-                              f"손절 다리 {seq} 가 이미 넘었지만 지금은 지정가를 낼 수 없어 기존 다리를 그대로 둡니다.")
+            await self._alert_once(s, plan, f"limit_unavail:{seq}", "critical", "지정가를 낼 수 없는 시간대",
+                                   f"손절 다리 {seq} 가 이미 넘었지만 지금은 지정가를 낼 수 없어 기존 다리를 그대로 둡니다.")
             return False
         # 주문가는 직전에 받은 값이 아니라 방금 다시 읽은 현재가로 정한다 (읽기 실패면 넘겨받은 값)
         try:
@@ -555,25 +747,39 @@ class PlanEngine:
         if old_leg is not None:
             await self._cancel_leg(s, plan, old_leg)       # 다리를 먼저 줄인다 (매도 합 ≤ 보유)
         price = sell_order(D(cur) * f)
-        resv = await sizing.reserve(s, plan.id, kind, qty, None)
-        resv.leg_seq, resv.order_price = seq, float(price)
         cid = self._cid(plan, "x", seq)
+        resv = await sizing.reserve(s, plan.id, kind, qty, None)
+        resv.leg_seq, resv.order_price, resv.client_order_id = seq, float(price), cid
+        await s.commit()                                      # 토스 호출 전에 예약 기록
         try:
             oid = await self.gate.sell_limit(s, plan_id=plan.id, symbol=plan.symbol, qty=qty, price=price,
                                              client_id=cid)
-        except (OrderRejected, ExecutionError) as exc:
+        except ExecutionError as exc:
+            if not definitely_not_created(exc):               # 낸 결과를 모른다 → 예약을 그대로 두고 확인 대기
+                resv.uncertain = True
+                await self._event(s, plan, "sell_uncertain", f"sl{seq} {exc.__class__.__name__} · 확인 대기")
+                await s.commit()
+                return True
             resv.active = False
+            self._bump_cid(plan, "x", seq)
             await self._event(s, plan, "sell_rejected", f"sl{seq} {exc.__class__.__name__}")
+            await s.commit()
             await self._after_reject(s, plan, seq=seq, qty=qty, old=old_leg, tag=tag)
             return False
         resv.order_ref = oid
+        self._bump_cid(plan, "x", seq)
         await self._event(s, plan, "sell_cross", f"sl{seq} qty {qty}")
+        await s.commit()
         return True
 
     async def _after_reject(self, s, plan: Plan, *, seq: int, qty: int, old: Optional[PlanLeg], tag: str) -> None:
-        """매도 거절 → 그 수량의 다리를 「6-1 을 통과하는 값」으로 다시 건다. 같은 다리에서 3번 되풀이되면 HALTED."""
+        """매도 거절 → 그 수량의 다리를 「6-1 을 통과하는 값」으로 다시 건다. 같은 다리에서 3번 되풀이되면 HALTED · 그 번호는 멈춤."""
         loops = self._bump_reject_loops(plan, seq)
         if loops >= MAX_REJECT_LOOPS:
+            blocked = list(runtime_of(plan).get("cross_blocked") or [])
+            if str(seq) not in blocked:
+                blocked.append(str(seq))
+                set_runtime(plan, cross_blocked=blocked)       # 정지 상태에서도 같은 즉시 매도를 되풀이하지 않는다
             await self._halt(s, plan, f"손절 다리 {seq} 매도 거절 {MAX_REJECT_LOOPS}번 되풀이 · 통과하는 다리만 남김")
             return
         cur = await self.gate.current(s, plan.symbol)
@@ -583,18 +789,12 @@ class PlanEngine:
         emergency_w = ceil_tick(cur * sess.EMERGENCY_FACTOR)
         tried.append(Values(emergency_w, order_price_from_watch(emergency_w, sess.OFFHOURS_FACTOR)))
         for v in tried:
-            cid = self._cid(plan, "sl", seq)
-            try:
-                res = await self.gate.place_stop(s, plan_id=plan.id, symbol=plan.symbol, qty=qty, watch=v.watch,
-                                                 order=v.order, client_id=cid, expire=self._expire())
-            except ExecutionError:
-                continue
-            if res.kind == "cond":
-                s.add(PlanLeg(plan_id=plan.id, role="sl", seq=seq, kind="cond", toss_id=res.id, client_order_id=cid,
-                              qty=qty, watch_price=float(v.watch), order_price=float(v.order), status="WATCHING",
-                              tag="emergency", expire_date=self._expire()))
-                await s.flush()
+            leg = await self._register_leg(s, plan, seq, qty, v, tag="emergency", allow_cross=False, reset_loops=False)
+            if leg is not None:
                 return
+            if any(l.status == "UNCERTAIN" for l in await s.scalars(select(PlanLeg).where(
+                    PlanLeg.plan_id == plan.id, PlanLeg.seq == seq, PlanLeg.role == "sl"))):
+                return                                         # 낸 결과를 모르면 더 시도하지 않고 확인을 기다린다
         await self._halt(s, plan, f"손절 다리 {seq} 를 다시 걸지 못함")
 
     # ───────────────── 불변식 · 사다리 ─────────────────
@@ -612,6 +812,19 @@ class PlanEngine:
         emergency=True 면 모자란 수량을 비상 손절 값(7-1)의 다리로 건다 (시간 손절 종료 1분 전 되돌림)."""
         if plan.state in (state.DRAFT, state.APPROVED, state.CLOSED, state.CANCELLED, state.ENTRY_ARMED,
                           state.ENTRY_RETRY, state.ADOPT_PENDING):
+            return "skipped"
+        if self._sell_stopped(plan):
+            return "skipped"                    # Kill Switch 「매도도 멈춤」 · 어떤 경로로도 다리를 다시 걸지 않는다
+        if plan.state == state.HALTED and plan.prev_state in PRE_HOLD_STATES:
+            return "skipped"                    # 보유 전 정지(인수 대기 · 진입) 는 보호할 보유가 없다
+        if runtime_of(plan).get("uncertain_lost"):
+            return "skipped"                    # 낸 주문을 찾지 못해 멈춘 상태 · 직접 확인하고 재개할 때까지 같은 주문을 다시 내지 않는다
+        if await s.scalar(select(PlanLeg.id).where(PlanLeg.plan_id == plan.id, PlanLeg.status == "UNCERTAIN",
+                                                   PlanLeg.role == "sl").limit(1)) is not None:
+            return "skipped"                    # 낸 결과를 모르는 다리가 있으면 찾아 이을 때까지 새로 걸지 않는다 (중복 방지)
+        if self._avg_missing(plan):
+            await self._alert_once(s, plan, "avg_missing", "critical", "평균가 없음",
+                                   "평균가를 알 수 없어 손절 다리를 계산하지 못했습니다. 등록을 멈추고 직접 확인해 주십시오.")
             return "skipped"
         base, acc, pq = await self._base_and_accepted(s, plan)
         legs = await sizing.live_sl_legs(s, plan.id)
@@ -683,10 +896,16 @@ class PlanEngine:
             return
         sw_live = self._live_on(plan)
         killed, sell_allowed = self.kill_state()
-        if killed and not sell_allowed and plan.state != state.HALTED and plan.mode != "paper":
+        if self._sell_stopped(plan):
+            # 매도도 멈춤 · 상태와 상관없이(정지 중에도) 등록 · 수정 · 매도 없이 남은 주문만 지운다
             await self._kill_all(s, plan)
             return
+        self.gate.begin_tick()                      # 이 걸음 안에서는 계좌 보유를 한 번만 읽는다
         out = await self.sync_orders(s, plan)
+        if plan.state == state.HALTED and plan.prev_state == state.ADOPT_PENDING:
+            await self._cancel_pending_buys(s, plan)
+            await state.transition(s, plan, state.CANCELLED, reason="인수 대기 중 정지 = 인수 취소")
+            return
 
         if plan.state == state.APPROVED:
             if plan.source != "adopt":       # 인수 계획은 APPROVED → ADOPT_PENDING 으로 바로 간다 (매수 없음)
@@ -702,9 +921,13 @@ class PlanEngine:
         pq = await sizing.plan_qty(s, plan)
         if out["tp1_filled"] and plan.state == state.HOLDING:
             await self._on_tp1_filled(s, plan)
+        pre_hold_halt = plan.state == state.HALTED and plan.prev_state in PRE_HOLD_STATES
+        if pre_hold_halt:
+            return                                  # 보유 전에 정지된 계획은 닫지도 보호하지도 않는다 (재개하면 진입으로 돌아감)
         if pq <= 0 and not await self._active_reservations(s, plan):
             await self._close(s, plan)
             return
+        await self._track_peak(s, plan, now)
         if plan.state == state.HALTED:
             await self.ensure_ladder(s, plan)     # HALTED 에서도 보호 다리 다시 걸기 · 넘친 다리 축소
             await self._swap_session(s, plan, now)
@@ -724,13 +947,11 @@ class PlanEngine:
         return await sizing.accepted_sell(s, plan.id)
 
     async def _close(self, s, plan: Plan) -> None:
-        legs = await s.scalars(select(PlanLeg).where(PlanLeg.plan_id == plan.id, PlanLeg.status == "WATCHING"))
+        legs = await s.scalars(select(PlanLeg).where(PlanLeg.plan_id == plan.id, PlanLeg.status.in_(("WATCHING", "UNCERTAIN"))))
         for leg in list(legs):
             try:
-                if leg.kind == "limit":
-                    await self.gate.cancel_limit(s, leg.toss_id)
-                else:
-                    await self.gate.cancel_cond(s, leg.toss_id)
+                if leg.toss_id:
+                    await self._cancel_leg_orders(s, plan, leg)
             except ExecutionError:
                 pass
             leg.status = "CANCELED"
@@ -738,18 +959,17 @@ class PlanEngine:
             await state.transition(s, plan, state.CLOSED, reason="plan_qty 0")
 
     async def _kill_all(self, s, plan: Plan) -> None:
-        """Kill Switch 「매도도 멈춤」 · 계획의 모든 조건주문 취소 · HALTED (1절 4항)."""
-        legs = await s.scalars(select(PlanLeg).where(PlanLeg.plan_id == plan.id, PlanLeg.status == "WATCHING"))
+        """Kill Switch 「매도도 멈춤」 · 계획의 모든 조건주문 취소 · HALTED (1절 4항). 정지 중에도 남은 주문을 계속 지운다."""
+        legs = await s.scalars(select(PlanLeg).where(PlanLeg.plan_id == plan.id, PlanLeg.status.in_(("WATCHING", "UNCERTAIN"))))
         for leg in list(legs):
             try:
-                if leg.kind == "limit":
-                    await self.gate.cancel_limit(s, leg.toss_id)
-                else:
-                    await self.gate.cancel_cond(s, leg.toss_id)
+                if leg.toss_id:
+                    await self._cancel_leg_orders(s, plan, leg)
                 leg.status = "CANCELED"
             except ExecutionError:
                 pass
-        await self._halt(s, plan, "Kill Switch · 모든 주문 멈춤")
+        if plan.state != state.HALTED:
+            await self._halt(s, plan, "Kill Switch · 모든 주문 멈춤")
 
     # ── 진입 ──
     async def _tick_entry(self, s, plan: Plan, out: dict, now: datetime, sw_live: bool, killed: bool) -> None:
@@ -759,10 +979,14 @@ class PlanEngine:
         p = params_of(plan)
         close_at = p.get("entry_close_at")
         buy_leg = await s.scalar(select(PlanLeg).where(
-            PlanLeg.plan_id == plan.id, PlanLeg.role == "buy", PlanLeg.status == "WATCHING"))
+            PlanLeg.plan_id == plan.id, PlanLeg.role == "buy", PlanLeg.status.in_(("WATCHING", "UNCERTAIN"))))
         if killed or not sw_live:
             if buy_leg:
                 await self.cancel_buys_on_switch_off(s, plan)
+            return
+        if plan.state == state.ENTRY_ARMED and buy_leg is None and not (close_at and now >= parse_dt(close_at)) \
+                and await sizing.plan_qty(s, plan) <= 0:
+            await self._place_buy(s, plan)                    # 정지 · 스위치 끄기로 지워졌다면 재개 때 다시 건다
             return
         if plan.state == state.ENTRY_ARMED and close_at and now >= parse_dt(close_at):
             await self._cancel_pending_buys(s, plan)           # 마감 처리
@@ -820,10 +1044,17 @@ class PlanEngine:
             await self._alert(plan, "critical", "인수 대기 중", f"앱 조건주문 {foreign}건 남음 · 인수 대기 중")
 
     async def _foreign_conds(self, s, plan: Plan) -> tuple[int, list[dict]]:
+        """그 종목의 계획 밖 조건주문과 계획 밖 일반 매도 주문(앱에서 건 것)을 센다 (8-1)."""
         own = {l.toss_id for l in await s.scalars(select(PlanLeg).where(PlanLeg.plan_id == plan.id)) if l.toss_id}
-        lst = await self.gate.cond_open_list(s, plan.symbol)
+        own |= {r.order_ref for r in await s.scalars(select(PlanSellReservation).where(
+            PlanSellReservation.plan_id == plan.id)) if r.order_ref}
         rows = [{"toss_id": o.get("id"), "qty": o.get("qty"), "watch": _num(o.get("watch")), "order": _num(o.get("order")),
-                 "side": o.get("side")} for o in lst if o and o.get("id") not in own]
+                 "side": o.get("side"), "kind": "cond"}
+                for o in await self.gate.cond_open_list(s, plan.symbol) if o and o.get("id") not in own]
+        rows += [{"toss_id": o.get("id"), "qty": o.get("qty"), "watch": None, "order": _num(o.get("price")),
+                  "side": o.get("side"), "kind": "order"}
+                 for o in await self.gate.limit_open_list(s, plan.symbol)
+                 if o and o.get("id") not in own and str(o.get("side") or "").upper() == "SELL"]
         return len(rows), rows
 
     # ── TP1 ──
@@ -845,12 +1076,13 @@ class PlanEngine:
         if qty <= 0:
             return
         watch, order = ceil_tick(p["tp1_watch"]), floor_tick(p.get("tp1_order") or p["tp1_watch"])
+        if self._avg_missing(plan):
+            await self._alert_once(s, plan, "avg_missing", "critical", "평균가 없음", "평균가를 알 수 없어 TP1 을 등록하지 않았습니다.")
+            return
         why = sanity.check_tp1(watch, plan.avg_price or 0)
         if why:                                  # 7-6: 위반이면 등록 거부 + 알림 (같은 사유로 반복 알리지 않음)
-            if not params_of(plan).get("tp1_sanity_alerted"):
-                pp = params_of(plan)
-                pp["tp1_sanity_alerted"] = True
-                set_params(plan, pp)
+            if not runtime_of(plan).get("tp1_sanity_alerted"):
+                set_runtime(plan, tp1_sanity_alerted=True)
                 await self._sanity_reject(s, plan, "TP1", why)
             return
         if sizing.must_use_tp1_watch(acct, pq) or p.get("tp1_mode") == "watch":
@@ -862,11 +1094,13 @@ class PlanEngine:
                                             client_id=self._cid(plan, "tp", 1), expire=self._expire())
         except OrderRejected:
             # U1: 합이 보유를 넘는 등록 거절 → TP1 감시 모드
+            self._bump_cid(plan, "tp", 1)
             await self._tp1_watch_mode(s, plan, qty, watch)
             return
         except ExecutionError:
-            return
+            return                                   # 불확실한 실패는 같은 키(고정)로 다음 걸음에 다시 · 중복 등록은 토스가 막는다 (확인 못 함 · U6)
         if res.kind == "cond":
+            self._bump_cid(plan, "tp", 1)
             set_runtime(plan, tp1_mode="register")
             s.add(PlanLeg(plan_id=plan.id, role="tp1", seq=1, kind="cond", toss_id=res.id, qty=qty,
                           watch_price=float(watch), order_price=float(order), status="WATCHING",
@@ -888,22 +1122,64 @@ class PlanEngine:
         legs = await sizing.live_sl_legs(s, plan.id)
         await self._shrink_sl(s, plan, legs, sizing.sl_target(base, acc + qty))    # 5절 7항: 매도 전에 다리 먼저 축소
         price = sell_order(watch)
+        cid = self._cid(plan, "tp", 2)
         resv = await sizing.reserve(s, plan.id, "tp1_watch", qty, None)
-        resv.order_price = float(price)
+        resv.order_price, resv.client_order_id = float(price), cid
+        await s.commit()
         try:
             resv.order_ref = await self.gate.sell_limit(s, plan_id=plan.id, symbol=plan.symbol, qty=qty, price=price,
-                                                        client_id=self._cid(plan, "tp", 2))
-        except (OrderRejected, ExecutionError):
+                                                        client_id=cid)
+        except ExecutionError as exc:
+            if not definitely_not_created(exc):
+                resv.uncertain = True                # 낸 결과를 모른다 → 확인 대기 (다음 걸음에 clientOrderId 로 찾음)
+                await s.commit()
+                return
             resv.active = False
+            self._bump_cid(plan, "tp", 2)
             await self.ensure_ladder(s, plan)     # 거절 → 다리 원래대로
             return
+        self._bump_cid(plan, "tp", 2)
         await self._event(s, plan, "tp1_watch_sell", f"qty {qty}")
+
+    def _held_price(self, plan: Plan, cur: Decimal, now: datetime) -> Decimal:
+        """6-1 · 7-3 현재가 이상값 보류: 직전 값보다 10% 넘게 튄 값은 다음 읽기가 3% 안에서 확인해 줄 때까지 쓰지 않는다.
+        같은 걸음 안에서는 한 번만 갱신한다 (두 번 불러도 자기 자신을 확인해 주지 않게)."""
+        rt = runtime_of(plan)
+        if rt.get("fp_at") == now.isoformat() and rt.get("fp") is not None:
+            return D(rt["fp"])
+        last, pend = sess.hold_jump(rt.get("fp"), rt.get("fp_pending"), float(cur))
+        set_runtime(plan, fp=last, fp_pending=pend, fp_at=now.isoformat())
+        return D(last)
+
+    async def _track_peak(self, s, plan: Plan, now: datetime) -> None:
+        """고점 = 정규장 1분봉 종가의 최고값 (7-3). 한 분 동안 마지막으로 읽은 값을 그 분의 종가로 보고, 분이 바뀔 때 반영한다.
+        10% 넘게 튄 값은 다음 1분봉 종가가 3% 안에서 확인할 때까지 보류 · 정규장 밖 값은 쓰지 않는다."""
+        try:
+            cur = await self.gate.current(s, plan.symbol)
+        except ExecutionError:
+            return
+        reg = self.regular_window(now)
+        in_reg = bool(reg and reg[0] <= now < reg[1])
+        minute = now.replace(second=0, microsecond=0).isoformat()
+        rt = runtime_of(plan)
+        bucket = rt.get("minute") or {}
+        if bucket.get("m") and bucket["m"] != minute:
+            if bucket.get("regular"):
+                plan.peak_price, plan.pending_peak = sess.update_peak(plan.peak_price, plan.pending_peak, float(bucket["last"]))
+            bucket = {}
+        if not bucket:
+            bucket = {"m": minute}
+        bucket["last"], bucket["regular"] = float(cur), in_reg
+        set_runtime(plan, minute=bucket)
 
     async def _on_tp1_filled(self, s, plan: Plan) -> None:
         """TP1 체결 → 추적 감시가 = max(평단, 정규장 고점 × 0.85) · 감시가 ≤ 현재가 − 1틱이면 추적 전환 · 아니면 익절 뒤 대기 (7-3)."""
         cur = await self.gate.current(s, plan.symbol)
+        if self._avg_missing(plan):
+            await self._halt(s, plan, "평균가를 알 수 없어 추적 값을 계산하지 못함")
+            return
         peak = plan.peak_price or float(cur)
-        v = sess.trail_values(plan.avg_price or 0, peak)
+        v = sess.trail_values(plan.avg_price, peak)
         from .pricing import below_by_tick
 
         if below_by_tick(v.watch, cur):
@@ -928,15 +1204,14 @@ class PlanEngine:
         await self.ensure_ladder(s, plan)
 
     async def _trail_step(self, s, plan: Plan, now: datetime) -> None:
-        """추적 상향: 위로만 · 최소 폭 $0.005 또는 감시가의 0.5% 중 큰 값 (7-3)."""
+        """추적 상향: 위로만 · 최소 폭 $0.005 또는 감시가의 0.5% 중 큰 값 (7-3). 현재가는 이상값 보류를 거친 값."""
         from .pricing import below_by_tick
 
-        cur = await self.gate.current(s, plan.symbol)
-        # 고점은 정규장 체결가로만 (장외 · 특수 체결 제외) · 정규장 밖이면 갱신하지 않는다
-        reg = self.regular_window(now)
-        if reg and reg[0] <= now < reg[1]:
-            plan.peak_price, plan.pending_peak = sess.update_peak(plan.peak_price, plan.pending_peak, float(cur))
-        v = sess.trail_values(plan.avg_price or 0, plan.peak_price or cur)
+        if self._avg_missing(plan):
+            await self._alert_once(s, plan, "avg_missing", "critical", "평균가 없음", "평균가를 알 수 없어 추적을 멈춥니다.")
+            return
+        cur = self._held_price(plan, await self.gate.current(s, plan.symbol), now)
+        v = sess.trail_values(plan.avg_price, plan.peak_price or cur)
         if plan.state == state.TP1_WAIT:
             if below_by_tick(v.watch, cur):
                 await state.transition(s, plan, state.TRAILING, reason="추적 전환")
@@ -946,15 +1221,18 @@ class PlanEngine:
         if not legs or self._session(now) == "off":
             return
         old = D(legs[0].watch_price)
-        vv = Values(min(v.watch, sess.cap_sell_watch(v.watch, cur)), v.order)
+        w = min(v.watch, sess.cap_sell_watch(v.watch, cur))
+        vv = Values(w, order_price_from_watch(w, sess.REGULAR_FACTOR))      # 주문가는 낮춘 감시가 기준
         if vv.watch > old and sess.trail_should_raise(old, vv.watch):
             for leg in legs:
                 await self._modify_leg(s, plan, leg, vals=vv)    # 3건 하나씩 차례로
 
     # ── 세션 교대 ──
     async def _swap_session(self, s, plan: Plan, now: datetime) -> None:
-        """시간대가 바뀌면 같은 3건을 수정한다 (정규장 사다리 ↔ 정규장 밖 비상 손절)."""
+        """시간대가 바뀌면 같은 3건을 수정한다 (정규장 사다리 ↔ 정규장 밖 비상 손절). 정지 중에는 값을 위로만 올린다."""
         if plan.state in (state.ENTRY_ARMED, state.ENTRY_RETRY, state.ADOPT_PENDING):
+            return
+        if self._avg_missing(plan):
             return
         session = self._session(now)
         legs = await sizing.live_sl_legs(s, plan.id)
@@ -966,10 +1244,10 @@ class PlanEngine:
                 continue
             if leg.tag == "emergency" and plan.timestop_stage == "clean" and session == "regular":
                 continue          # 시간 손절 종료 직전 비상 다리는 정규장이 끝날 때까지 그대로
-            if plan.state == state.TRAILING and session == "regular":
-                v = sess.trail_values(plan.avg_price or 0, plan.peak_price or cur)
-            else:
-                v = self._values_for(plan, leg.seq, session, cur)
+            v = self._values_for(plan, leg.seq, session, cur)         # HALTED 면 정지 직전 상태(추적 등)의 값 종류
+            if plan.state == state.HALTED and v.watch < D(leg.watch_price):
+                leg.tag = session                                     # 정지 중에는 보호를 낮추지 않는다 (위로만)
+                continue
             if await self._modify_leg(s, plan, leg, vals=v):
                 leg.tag = session
 
@@ -999,6 +1277,9 @@ class PlanEngine:
 
     async def _cancel_and_reprice(self, s, plan: Plan, r: PlanSellReservation, cur: Decimal) -> None:
         try:
+            before = await self.gate.limit_get(s, r.order_ref) or {}       # 취소 전 마지막 체결 읽기
+            if int(before.get("filled") or 0):
+                await self._record_fill(s, plan, "SELL", r.order_ref, int(before["filled"]), before.get("avg"))
             await self.gate.cancel_limit(s, r.order_ref)
         except ExecutionError:
             return
@@ -1027,13 +1308,21 @@ class PlanEngine:
         if remaining <= 0:
             return
         price = sell_order(D(cur) * Decimal("0.95"))
+        cid = self._cid(plan, "x", r.leg_seq or 0)
         new = await sizing.reserve(s, plan.id, r.kind, remaining, None)
-        new.leg_seq, new.order_price, new.retries = r.leg_seq, float(price), r.retries + 1
+        new.leg_seq, new.order_price, new.retries, new.client_order_id = r.leg_seq, float(price), r.retries + 1, cid
+        await s.commit()
         try:
             new.order_ref = await self.gate.sell_limit(s, plan_id=plan.id, symbol=plan.symbol, qty=remaining,
-                                                       price=price, client_id=self._cid(plan, "x", r.leg_seq or 0))
-        except (OrderRejected, ExecutionError):
+                                                       price=price, client_id=cid)
+            self._bump_cid(plan, "x", r.leg_seq or 0)
+        except ExecutionError as exc:
+            if not definitely_not_created(exc):
+                new.uncertain = True
+                await s.commit()
+                return
             new.active = False
+            self._bump_cid(plan, "x", r.leg_seq or 0)
             await self.ensure_ladder(s, plan)
             await self._alert(plan, "critical", "다시 내기 실패", f"{remaining}주 매도를 다시 내지 못해 보호 다리를 다시 겁니다.")
 
@@ -1051,16 +1340,15 @@ class PlanEngine:
             return
         w = sess.timestop_window(reg)
         today = now.strftime("%Y-%m-%d")
-        cur = await self.gate.current(s, plan.symbol)
+        cur = self._held_price(plan, await self.gate.current(s, plan.symbol), now)     # 이상값 보류 (7-3)
         legs = await sizing.live_sl_legs(s, plan.id)
         if plan.timestop_stage in ("none", "lift") and plan.timestop_lift_session in (None, today) \
                 and w.lift_from <= now < w.clean_from:
-            last = p.get("lift_last")
+            last = runtime_of(plan).get("lift_last")
             if last and (now - datetime.fromisoformat(str(last))).total_seconds() < 15 * 60:
                 return                                   # 15분마다 같은 계산으로 위로만 다시 수정
             plan.timestop_stage, plan.timestop_lift_session = "lift", today
-            p["lift_last"] = now.isoformat()
-            set_params(plan, p)
+            set_runtime(plan, lift_last=now.isoformat())
             v = sess.lift_values(cur)
             for leg in legs:
                 if v.watch > D(leg.watch_price):
@@ -1078,8 +1366,16 @@ class PlanEngine:
                 PlanSellReservation.plan_id == plan.id, PlanSellReservation.kind == "time_stop",
                 PlanSellReservation.active.is_(True)))
             for r in list(rows):
+                if not r.order_ref:
+                    continue
                 try:
+                    before = await self.gate.limit_get(s, r.order_ref) or {}   # 취소 전 마지막 체결 읽기
+                    if int(before.get("filled") or 0):
+                        await self._record_fill(s, plan, "SELL", r.order_ref, int(before["filled"]), before.get("avg"))
                     await self.gate.cancel_limit(s, r.order_ref)
+                    after = await self.gate.limit_get(s, r.order_ref) or {}    # 취소 도중 부분 체결 확인
+                    if int(after.get("filled") or 0):
+                        await self._record_fill(s, plan, "SELL", r.order_ref, int(after["filled"]), after.get("avg"))
                     r.active = False
                 except ExecutionError:
                     pass
@@ -1103,6 +1399,11 @@ class PlanEngine:
 
     async def resume_plan(self, s, plan: Plan) -> str:
         """HALTED → 이전 상태. 다시 맞춘 뒤 불변식이 통과해야 한다."""
+        if self._sell_stopped(plan):
+            raise state.TransitionError("Kill Switch 「매도도 멈춤」 중에는 재개할 수 없습니다")
+        set_runtime(plan, cross_blocked=[], reject_loops={}, uncertain_lost=False)
+        if plan.state == state.HALTED and plan.prev_state in PRE_HOLD_STATES:
+            return await state.resume(s, plan)              # 보유 전 정지는 불변식 대상이 아니다 (진입으로 돌아감)
         await self.ensure_ladder(s, plan)
         if plan.state != state.HALTED:
             raise state.TransitionError("다시 맞추는 중 다시 정지되었습니다")

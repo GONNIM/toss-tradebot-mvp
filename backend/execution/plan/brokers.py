@@ -70,6 +70,10 @@ class RawBroker:
     async def limit_cancel(self, s, order_id: str) -> None: ...
     async def limit_get(self, s, order_id: str) -> Optional[dict]: ...
 
+    async def limit_open_list(self, s, symbol: Optional[str] = None) -> list[dict]:
+        """열린 일반 주문 목록 · [{id, client_id, symbol, side, qty, price}] (찾지 못하면 빈 목록)."""
+        return []
+
     async def buying_power_usd(self, s) -> Optional[float]:
         """계좌 USD 매수 가능 금액 (모의 · 시험 도구는 None = 확인 못 함)."""
         return None
@@ -117,6 +121,22 @@ class RealRaw(RawBroker):
             if it.get("symbol") == symbol:
                 return _to_int(it.get("quantity"))
         return 0
+
+    async def limit_open_list(self, s, symbol=None):
+        """GET /orders?status=OPEN 을 너그럽게 읽는다(열쇠 이름 미확인 · 모르면 빈 목록 → 확인 못 함 쪽으로 안전하게)."""
+        env = await self._run(self._c().list_orders, "OPEN")
+        res = env.result
+        items = res if isinstance(res, list) else ((res or {}).get("items") or (res or {}).get("orders") or [])
+        out = []
+        for d in items:
+            if not isinstance(d, dict):
+                continue
+            o = {"id": str(d.get("orderId") or d.get("id") or ""), "client_id": d.get("clientOrderId"),
+                 "symbol": d.get("symbol"), "side": str(d.get("side") or "").upper(),
+                 "qty": _to_int(d.get("quantity")), "price": d.get("price")}
+            if o["id"] and (symbol is None or o["symbol"] == symbol):
+                out.append(o)
+        return out
 
     async def buying_power_usd(self, s):
         """토스 buying-power(USD) · 응답 열쇠 이름은 미확인이라 흔한 이름 몇 개만 보고 없으면 None (확인 못 함)."""
@@ -167,7 +187,7 @@ class RealRaw(RawBroker):
             "WATCHING": "WATCHING", "PAUSED": "WATCHING", "PENDING": "WATCHING", "OPEN": "WATCHING",
             "TRIGGERED": "TRIGGERED", "ORDERED": "TRIGGERED",
             "FILLED": "FILLED", "COMPLETED": "FILLED",
-            "CANCELED": "CANCELED", "CANCELLED": "CANCELED", "EXPIRED": "EXPIRED",
+            "CANCELED": "CANCELED", "CANCELLED": "CANCELED", "EXPIRED": "EXPIRED", "REJECTED": "REJECTED",
         }.get(raw, "UNKNOWN")
         first = d.get("first") or {}
         ex = d.get("execution") or {}
@@ -324,6 +344,13 @@ class PaperRaw(RawBroker):
         return {"status": status, "filled": filled, "remaining": row.qty - filled,
                 "avg": row.order_price if filled else None, "symbol": row.symbol, "side": row.side}
 
+    async def limit_open_list(self, s, symbol=None):
+        q = select(PlanPaperOrder).where(PlanPaperOrder.kind == "limit", PlanPaperOrder.status == "OPEN")
+        if symbol:
+            q = q.where(PlanPaperOrder.symbol == symbol)
+        return [{"id": f"P{r.id}", "client_id": r.client_order_id, "symbol": r.symbol, "side": r.side, "qty": r.qty,
+                 "price": r.order_price} for r in await s.scalars(q)]
+
     # ── 가상 체결 ──
     async def on_price(self, s, symbol: str, price) -> None:
         """시세 한 번에 가상 주문을 평가한다(조건 닿음 → 지정가 생성 → 주문가에 닿으면 체결)."""
@@ -381,6 +408,16 @@ class DirectionGate:
         self.raw = raw
         self.feed = feed or PriceStore()
         self.ws_max_age = ws_max_age
+        self._tick_active = False
+        self._acct_cache: dict[tuple[int, str], int] = {}
+
+    def begin_tick(self) -> None:
+        """한 걸음 동안 계좌 보유 조회를 한 번만 한다 (조회 한도 절약). 주문을 내거나 취소하면 캐시를 비운다."""
+        self._tick_active = True
+        self._acct_cache = {}
+
+    def _dirty(self) -> None:
+        self._acct_cache = {}
 
     @property
     def mode(self) -> str:
@@ -422,6 +459,7 @@ class DirectionGate:
 
         check(현재가) 는 7-6 sanity · 조건주문으로 걸 때만 본다(이미 넘은 다리의 즉시 매도는 막지 않는다).
         """
+        self._dirty()
         cur = await self.current(s, symbol)
         if not below_by_tick(watch, cur):
             if await self.confirmed_cross(s, symbol, watch):
@@ -455,6 +493,7 @@ class DirectionGate:
         """감시가 ≥ 현재가 + 1틱 이면 조건주문. 아니면 이미 넘음 → cross (TP1 감시 모드 처리)."""
         from .pricing import above_by_tick
 
+        self._dirty()
         cur = await self.current(s, symbol)
         if not above_by_tick(watch, cur):
             return GateResult("cross", cur=cur)
@@ -480,6 +519,7 @@ class DirectionGate:
                         client_id: str, expire: str,
                         check: Optional[Callable[[Decimal], Optional[str]]] = None) -> GateResult:
         """감시가 ≤ 현재가 − 1틱 이면 매수 조건주문. 아니면 일반 지정가(DAY) 매수. check 는 7-6 sanity."""
+        self._dirty()
         cur = await self.current(s, symbol)
         if check is not None:
             why = check(cur)
@@ -503,14 +543,17 @@ class DirectionGate:
 
     # ── 즉시 지정가 매도 (이미 넘은 다리 · TP1 감시 · 시간 손절) ──
     async def sell_limit(self, s, *, plan_id: int, symbol: str, qty: int, price: Decimal, client_id: str) -> str:
+        self._dirty()
         return await self.raw.limit_create(s, plan_id=plan_id, symbol=symbol, side="SELL", qty=qty, price=price,
                                            client_id=client_id)
 
     # ── 조회 · 취소 (방향과 무관) ──
     async def cancel_cond(self, s, cond_id: str) -> None:
+        self._dirty()
         await self.raw.cond_cancel(s, cond_id)
 
     async def cancel_limit(self, s, order_id: str) -> None:
+        self._dirty()
         await self.raw.limit_cancel(s, order_id)
 
     async def cond_get(self, s, cond_id: str) -> Optional[dict]:
@@ -523,7 +566,16 @@ class DirectionGate:
         return await self.raw.cond_open_list(s, symbol)
 
     async def account_qty(self, s, plan_id: int, symbol: str) -> int:
-        return await self.raw.account_qty(s, plan_id, symbol)
+        key = (plan_id, symbol)
+        if self._tick_active and key in self._acct_cache:
+            return self._acct_cache[key]
+        v = await self.raw.account_qty(s, plan_id, symbol)
+        if self._tick_active:
+            self._acct_cache[key] = v
+        return v
+
+    async def limit_open_list(self, s, symbol: Optional[str] = None) -> list[dict]:
+        return await self.raw.limit_open_list(s, symbol)
 
 
 def tick_of(price) -> Decimal:  # 편의

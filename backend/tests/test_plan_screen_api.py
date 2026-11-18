@@ -8,7 +8,7 @@ import pytest
 from sqlalchemy import select
 
 from backend.execution.plan import heartbeat, state
-from backend.execution.plan.engine import parse_dt, params_of, set_runtime
+from backend.execution.plan.engine import parse_dt, params_of, runtime_of, set_runtime
 from backend.execution.plan.models import Plan, PlanFill, PlanLeg, PlanRequest
 from backend.services.db import get_session
 from backend.services.models import UserJudgment
@@ -266,17 +266,16 @@ async def test_executor_processes_resync_and_records_runtime_for_screen(plan_db)
                                  client_id="app", order_id=None, filled=0, remaining=5, avg=None)
         s.add(PlanRequest(plan_id=plan.id, action="resync", requested_by="header"))
         pid = plan.id
-    async with get_session() as s:
-        assert await ex.process_requests(s) == 1
+    assert await ex.process_requests() == 1
     async with get_session() as s:
         p = await s.get(Plan, pid)
         req = (await s.scalars(select(PlanRequest))).one()
         assert req.status == "done"
-        rt = params_of(p)["_runtime"]
+        rt = runtime_of(p)
         assert sorted(a["role"] for a in rt["actual_legs"]) == ["sl", "sl", "sl"] and rt["account_qty"] == 60
         assert rt["actual_legs"][0]["watch"] == 9.7 and rt["actual_legs"][0]["order"] == 9.5
         await ex._record_runtime(s, p)
-        rt = params_of(p)["_runtime"]
+        rt = runtime_of(p)
         assert rt["price"] == 10.0 and rt["next_swap_at"].endswith("+09:00")                # 다음 전환 시각(KST)
         await ex._snapshot_for_screen(s)
         from backend.execution.plan.models import PlanExecutorHeartbeat

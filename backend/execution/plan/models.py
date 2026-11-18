@@ -41,8 +41,14 @@ class Plan(Base):
     timestop_stage: Mapped[str] = mapped_column(String(12), default="none")  # none | lift | clean | stopped
     timestop_lift_session: Mapped[Optional[str]] = mapped_column(String(10))  # 끌어올리기를 한 거래일
     adopt_notified: Mapped[bool] = mapped_column(Boolean, default=False)
+    # 실행기만 쓰는 값(현재가 · 실제 다리 · 주문 번호 판 · 거절 횟수 …) · 화면이 고치는 params_json 과 칸을 나눠 서로 덮어쓰지 않는다
+    runtime_json: Mapped[str] = mapped_column(Text, default="{}")
+    # 낙관적 잠금 · 화면(승인 · 정지 · 수정)과 실행기가 같은 계획을 동시에 고치면 한쪽이 StaleDataError 로 다시 읽는다
+    row_version: Mapped[int] = mapped_column(Integer, default=1)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
     updated_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow, onupdate=utcnow)
+
+    __mapper_args__ = {"version_id_col": row_version}
 
 
 class PlanLeg(Base):
@@ -60,7 +66,7 @@ class PlanLeg(Base):
     qty: Mapped[int] = mapped_column(Integer, default=0)
     watch_price: Mapped[Optional[float]] = mapped_column(Float)
     order_price: Mapped[Optional[float]] = mapped_column(Float)
-    status: Mapped[str] = mapped_column(String(12), default="WATCHING")  # WATCHING | TRIGGERED | FILLED | CANCELED | EXPIRED
+    status: Mapped[str] = mapped_column(String(12), default="WATCHING")  # WATCHING | TRIGGERED | FILLED | CANCELED | EXPIRED | UNCERTAIN(확인 대기)
     tag: Mapped[str] = mapped_column(String(12), default="")           # regular | offhours | trail | lift | emergency
     expire_date: Mapped[Optional[str]] = mapped_column(String(10))
     error_count: Mapped[int] = mapped_column(Integer, default=0)       # 같은 다리 오류 3번 → HALTED
@@ -99,6 +105,8 @@ class PlanSellReservation(Base):
     restore_order: Mapped[Optional[float]] = mapped_column(Float)
     below_since: Mapped[Optional[datetime]] = mapped_column(DateTime)  # 현재가가 주문가 아래로 내려간 때 (10초 다시 내기)
     retries: Mapped[int] = mapped_column(Integer, default=0)
+    client_order_id: Mapped[Optional[str]] = mapped_column(String(40))   # 낸 주문의 고정 열쇠 (불확실한 실패 뒤 찾을 때)
+    uncertain: Mapped[bool] = mapped_column(Boolean, default=False)      # 낸 결과가 불확실 (번호 없음 · 시간 초과) · 확인 대기
     created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
 
 

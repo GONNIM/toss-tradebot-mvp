@@ -48,7 +48,7 @@ jobs:
           case "$max" in ''|*[!0-9]*) echo "::error::PLAN_WATCH_MAX_AGE_SEC 가 숫자가 아닙니다"; exit 1 ;; esac
           body=""
           for i in 1 2 3; do
-            if body=$(curl -fsS --max-time 20 "${HEALTH_URL%/}/health"); then break; fi
+            if body=$(curl -fs --max-time 20 "${HEALTH_URL%/}/health" 2>/dev/null); then break; fi   # -s · 오류 문구에 주소가 찍히지 않게
             body=""
             sleep 10
           done
