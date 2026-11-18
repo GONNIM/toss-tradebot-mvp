@@ -703,7 +703,8 @@ class StockSignal(BaseModel):
     as_of: Optional[str] = None
     summary: str
     link: str
-    locked: bool = False
+    locked: bool = False   # 1119-01 · 잠금 행은 없앴다 (항상 False · 옛 화면 호환용 칸)
+    explain: Optional[str] = None   # 1119-01 · 뜻 설명 (기준이 코드에 있는 것만)
 
 
 class StockHolding(BaseModel):
@@ -730,6 +731,21 @@ class StockJudgment(BaseModel):
     result_at_horizon: Optional[float] = None
 
 
+class StockCatalyst(BaseModel):
+    """1119-01 · 임상 완료 예정일 한 줄 (결과 발표일이 아님 · 공개 자료)."""
+    nct_id: str
+    phase: str = ""
+    event_date: str
+    days_to: int           # 음수 = 이미 지남
+    past: bool
+
+
+class StockGoingConcern(BaseModel):
+    """1119-01 · 계속기업 의문 문구 (SEC 공개 자료). scope=out 이면 장부에 이 회사 행이 없음 (확인 대상 밖)."""
+    scope: str             # "checked" | "out"
+    detail: Optional[dict] = None   # biotech.GoingConcern 과 같은 칸 (scope=checked 일 때만)
+
+
 class StockOverview(BaseModel):
     ticker: str
     market: str  # "KR" | "US"
@@ -740,6 +756,10 @@ class StockOverview(BaseModel):
     holding: Optional[StockHolding] = None
     judgments: Optional[list[StockJudgment]] = None
     signals: list[StockSignal]
+    # 1119-01 · null = 자료를 못 읽었거나 해당 없음 (화면은 그 칸을 숨김)
+    catalysts: Optional[list[StockCatalyst]] = None
+    going_concern: Optional[StockGoingConcern] = None
+    quote_available: Optional[bool] = None   # 바이오 후보 여부 · 로그인 화면이 가격 칸을 열지 정함
 
 
 # ─── 오늘 홈 (1022-10 4단계) · GET /api/v1/today ───────────────────────────

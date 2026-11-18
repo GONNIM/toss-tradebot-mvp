@@ -134,7 +134,16 @@ export function QuoteToggleButton({ open, onToggle }: { open: boolean; onToggle:
 }
 
 /** 1112-02 · 펼친 칸. 머리에 종목 기호·이름을 적어 어느 종목 칸인지 바로 알게 한다. 열릴 때 한 번 불러온다(60초 캐시). */
-export function QuoteDetails({ ticker, name }: { ticker: string; name?: string }) {
+export function QuoteDetails({
+  ticker,
+  name,
+  errorText,
+}: {
+  ticker: string;
+  name?: string;
+  /** 1119-01 · 종목 한 장 화면이 401 · 404 문구를 자기 말로 바꿀 때 (없으면 /biotech 기본 문구) */
+  errorText?: { 401?: string; 404?: string };
+}) {
   const [view, setView] = useState<QuoteView | null>(null);
   const [err, setErr] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -151,8 +160,8 @@ export function QuoteDetails({ ticker, name }: { ticker: string; name?: string }
     (async () => {
       try {
         const res = await fetch(`/api/v1/biotech/quote/${encodeURIComponent(ticker)}`, { credentials: "include", cache: "no-store" });
-        if (res.status === 401) throw new Error("로그인이 필요합니다.");
-        if (res.status === 404) throw new Error("후보 종목이 아니어서 자료가 없습니다.");
+        if (res.status === 401) throw new Error(errorText?.[401] ?? "로그인이 필요합니다.");
+        if (res.status === 404) throw new Error(errorText?.[404] ?? "후보 종목이 아니어서 자료가 없습니다.");
         if (!res.ok) throw new Error(`불러오지 못했습니다 (status ${res.status}).`);
         const j = (await res.json()) as QuoteView;
         cache.set(ticker, { at: Date.now(), view: j });

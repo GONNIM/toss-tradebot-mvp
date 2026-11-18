@@ -54,17 +54,57 @@ async def test_anon_hides_admin_data_and_sets_cache_headers(client):
     b = r.json()
     assert b["ticker"] == "ZZCR" and b["market"] == "US" and b["is_admin"] is False
     assert b["holding"] is None and b["judgments"] is None
+    # 1119-01 · 잠금 행 없음 · 자체 계산 신호는 비로그인에게도 보인다
     sig = _by_source(b)
-    for k in ("crazy", "moonshot", "biotech"):
-        assert sig[k]["locked"] is True and sig[k]["as_of"] is None and sig[k]["summary"] == "로그인하면 보입니다"
-    assert "72.4" not in r.text and "3위" not in r.text and "소문자" not in r.text
+    assert all(x["locked"] is False for x in b["signals"])
+    assert "로그인하면 보입니다" not in r.text
+    assert "3위" in sig["crazy"]["summary"] and "72.4" in sig["crazy"]["summary"]
+    assert sig["crazy"]["explain"] and "0~100" in sig["crazy"]["explain"]
+    # 보유 · 판단 기록은 새지 않음 (수량 · 평단 · 소문자 판정 본문)
+    assert "소문자" not in r.text and "12.5" not in r.text and '"qty"' not in r.text
 
 
 @pytest.mark.asyncio
-async def test_anon_locked_rows_even_without_data(client):
+async def test_anon_no_locked_rows_when_no_data(client):
     b = (await client.get("/api/v1/stock/NODATA")).json()
-    sig = _by_source(b)
-    assert sig["crazy"]["locked"] and sig["moonshot"]["locked"] and sig["biotech"]["locked"]
+    assert b["signals"] == []  # 옛 규칙(잠금 행 3개) 폐지
+
+
+ANON_TOP_KEYS = {"ticker", "market", "name", "is_admin", "fetched_at", "broker_link", "holding", "judgments",
+                 "signals", "catalysts", "going_concern", "quote_available"}
+ANON_SIGNAL_KEYS = {"source", "label", "as_of", "summary", "link", "locked", "explain"}
+YAHOO_KEYS = ("close", "last_price", "target", "market_cap", "high_52w", "low_52w", "short_pct", "total_cash",
+              "avg_volume", "opinion", "summary_lines", "avg_price", "analyst", "yahoo", "live", "chart")
+
+
+@pytest.mark.asyncio
+async def test_anon_response_key_list_is_fixed(client):
+    """Fable 권고 5 · 비로그인 응답 키 목록 고정 · 야후 값 키 0."""
+    b = (await client.get("/api/v1/stock/ZZCR")).json()
+    assert set(b) == ANON_TOP_KEYS
+    for sg in b["signals"]:
+        assert set(sg) == ANON_SIGNAL_KEYS
+    low = json.dumps(b).lower()
+    for k in YAHOO_KEYS:
+        assert f'"{k}"' not in low, k
+
+
+@pytest.mark.asyncio
+async def test_no_yahoo_or_naver_call_and_quote_view_untouched(client, monkeypatch):
+    from backend.services import biotech_quotes as bq
+
+    calls = {"n": 0}
+
+    async def spy(*a, **k):
+        calls["n"] += 1
+        raise AssertionError("종목 API 가 시세 함수를 불렀다")
+
+    for name in ("quote_view", "live_price"):
+        if hasattr(bq, name):
+            monkeypatch.setattr(bq, name, spy)
+    for h in ({}, H):
+        assert (await client.get("/api/v1/stock/ZZCR", headers=h)).status_code == 200
+    assert calls["n"] == 0
 
 
 @pytest.mark.asyncio
@@ -105,7 +145,7 @@ async def test_unknown_ticker_200_empty(client):
     assert r.status_code == 200
     b = r.json()
     assert b["name"] is None and b["holding"] is None and b["judgments"] == []
-    assert [x["source"] for x in b["signals"]] == []  # 관리자: 잠금 행 없음 · 자료 없음
+    assert [x["source"] for x in b["signals"]] == []  # 자료 없음
     assert b["broker_link"]["kind"] == "search"
 
 
@@ -164,3 +204,220 @@ async def test_no_outbound_http(client, monkeypatch):
     monkeypatch.setattr(httpx.AsyncHTTPTransport, "handle_async_request", fail)  # 실제 네트워크 전송만 막음 (ASGI 는 무관)
     monkeypatch.setattr(httpx.HTTPTransport, "handle_request", fail)
     assert (await client.get("/api/v1/stock/005930", headers=H)).status_code == 200
+
+
+# ─── 1119-01 · 새 칸 (일정 · 계속기업 · 후보 여부 · 스나이퍼 가림) · 가짜 종목 TESTA / TESTB ─────────
+
+FORBIDDEN = ("골든", "데드", "크로스", "교차", "정배열", "역배열", "하십시오", "사십시오", "매수", "매도")
+
+
+def _raise(e):
+    def f(*a, **k):
+        raise e
+    return f
+
+
+def _patch_bio(monkeypatch, *, cands=("TESTA",), notes=None, store="missing", radar_rows=None, tmp_path=None):
+    """후보 목록 · 후보 파일 일정 · 계속기업 장부 · 레이더 행을 가짜로 바꾼다."""
+    from backend.api.routes import biotech as R
+    from backend.services import biotech_quotes as bq
+
+    async def fake_set():
+        if isinstance(cands, Exception):
+            raise cands
+        return set(cands)
+
+    monkeypatch.setattr(bq, "candidate_set", fake_set)
+    monkeypatch.setattr(R, "_latest_candidate_notes", _raise(notes) if isinstance(notes, Exception) else (lambda: notes))
+    monkeypatch.setattr(R, "_going_concern_store", lambda: None if store == "missing" else store)
+    p = None
+    if radar_rows is not None:
+        p = tmp_path / "radar.csv"
+        p.write_text("ticker,cik,score,time_state\n" + "\n".join(radar_rows) + "\n", encoding="utf-8")
+    monkeypatch.setattr(R, "_latest_radar_csv", lambda: p)
+    monkeypatch.setattr(R, "_cik_ticker_map", lambda: {})
+
+
+@pytest.mark.asyncio
+async def test_candidate_anon_gets_catalysts_going_concern_and_quote_flag(client, monkeypatch, tmp_path):
+    from datetime import timedelta
+    from backend.api.routes import biotech as R
+
+    soon = (R._today_kst() + timedelta(days=10)).isoformat()
+    past = (R._today_kst() - timedelta(days=3)).isoformat()
+    note = f"NCT00000001 · D-10 ({soon} · PHASE3) / NCT00000002 · D-3 ({past} · PHASE2)"
+    store = {"rows": {"0000000123": {"state": "present", "form": "10-Q", "filing_date": R._today_kst().isoformat(),
+                                    "url": "https://www.sec.gov/Archives/edgar/data/123/x/"}}, "meta": {}}
+    _patch_bio(monkeypatch, notes={"TESTA": note}, store=store, radar_rows=["TESTA,0000000123,50.0,A"], tmp_path=tmp_path)
+    b = (await client.get("/api/v1/stock/TESTA")).json()
+    assert b["quote_available"] is True
+    assert [c["nct_id"] for c in b["catalysts"]] == ["NCT00000002", "NCT00000001"]
+    assert b["catalysts"][0]["past"] is True and b["catalysts"][1]["past"] is False and b["catalysts"][1]["days_to"] == 10
+    assert b["going_concern"]["scope"] == "checked" and b["going_concern"]["detail"]["state"] == "present"
+    assert set(b) == ANON_TOP_KEYS
+
+
+@pytest.mark.asyncio
+async def test_not_candidate_and_kr_hide_bio_columns(client, monkeypatch):
+    _patch_bio(monkeypatch, cands=("TESTA",), notes={"TESTB": "x"}, store={"rows": {}})
+    b = (await client.get("/api/v1/stock/TESTB")).json()
+    assert b["quote_available"] is False and b["catalysts"] is None and b["going_concern"] is None
+    k = (await client.get("/api/v1/stock/005930")).json()
+    assert k["quote_available"] is False and k["catalysts"] is None and k["going_concern"] is None
+
+
+@pytest.mark.asyncio
+async def test_no_catalyst_rows_is_empty_list(client, monkeypatch):
+    _patch_bio(monkeypatch, notes={"OTHER": "x"}, store={"rows": {}})
+    b = (await client.get("/api/v1/stock/TESTA")).json()
+    assert b["catalysts"] == []
+
+
+@pytest.mark.asyncio
+async def test_unparseable_catalyst_note_gives_empty_and_200(client, monkeypatch):
+    _patch_bio(monkeypatch, notes={"TESTA": "형식이 다른 문장"}, store={"rows": {}})
+    r = await client.get("/api/v1/stock/TESTA")
+    assert r.status_code == 200 and r.json()["catalysts"] == []
+
+
+@pytest.mark.asyncio
+async def test_one_bad_catalyst_line_is_dropped_others_stay(client, monkeypatch):
+    from datetime import timedelta
+    from backend.api.routes import biotech as R
+
+    ok = (R._today_kst() + timedelta(days=5)).isoformat()
+    note = f"NCT00000009 · D-5 ({ok} · PHASE1) / NCT00000008 · D-5 (2026-13-99 · PHASE1)"
+    _patch_bio(monkeypatch, notes={"TESTA": note}, store={"rows": {}})
+    c = (await client.get("/api/v1/stock/TESTA")).json()["catalysts"]
+    # 날짜 해석이 안 되는 줄은 기존 규칙(_note_fields)이 노트의 D-n 으로 대신하므로 줄 수는 1~2 · 200 이고 첫 줄은 남는다
+    assert c and c[0]["nct_id"] in ("NCT00000009", "NCT00000008")
+
+
+@pytest.mark.asyncio
+async def test_candidate_files_missing_gives_nulls(client, monkeypatch):
+    _patch_bio(monkeypatch, cands=(), notes={}, store="missing")
+    b = (await client.get("/api/v1/stock/TESTA")).json()
+    assert b["quote_available"] is None and b["catalysts"] is None and b["going_concern"] is None
+
+
+@pytest.mark.asyncio
+async def test_candidate_set_exception_nulls_only_quote_available(client, monkeypatch):
+    _patch_bio(monkeypatch, cands=RuntimeError("x"), notes={"TESTA": ""}, store={"rows": {}})
+    r = await client.get("/api/v1/stock/ZZCR")
+    assert r.status_code == 200
+    b = r.json()
+    assert b["quote_available"] is None and b["signals"]  # 신호 칸은 정상
+
+
+@pytest.mark.asyncio
+async def test_going_concern_not_in_ledger_is_out_and_not_found_is_distinct(client, monkeypatch, tmp_path):
+    store = {"rows": {"0000000456": {"state": "not_found", "form": "10-K", "filing_date": "2026-03-01"}}, "meta": {}}
+    _patch_bio(monkeypatch, notes={"TESTA": ""}, store=store, radar_rows=["TESTA,0000000999,1.0,A"], tmp_path=tmp_path)
+    assert (await client.get("/api/v1/stock/TESTA")).json()["going_concern"] == {"scope": "out", "detail": None}
+    _patch_bio(monkeypatch, notes={"TESTA": ""}, store=store, radar_rows=["TESTA,0000000456,1.0,A"], tmp_path=tmp_path)
+    g = (await client.get("/api/v1/stock/TESTA")).json()["going_concern"]
+    assert g["scope"] == "checked" and g["detail"]["state"] == "not_found"
+
+
+@pytest.mark.asyncio
+async def test_going_concern_stale_flag_from_old_report(client, monkeypatch, tmp_path):
+    from datetime import datetime
+
+    store = {"rows": {"0000000456": {"state": "present", "form": "10-Q", "filing_date": "2020-01-01"}},
+             "meta": {"last_run_on": datetime.now().date().isoformat()}}
+    _patch_bio(monkeypatch, notes={"TESTA": ""}, store=store, radar_rows=["TESTA,0000000456,1.0,A"], tmp_path=tmp_path)
+    d = (await client.get("/api/v1/stock/TESTA")).json()["going_concern"]["detail"]
+    assert d["stale"] is True and d["filed"] == "2020-01-01"
+
+
+@pytest.mark.asyncio
+async def test_catalyst_reader_exception_nulls_only_that_column(client, monkeypatch):
+    _patch_bio(monkeypatch, notes=RuntimeError("busy"), store={"rows": {}})
+    r = await client.get("/api/v1/stock/TESTA")
+    assert r.status_code == 200 and r.json()["catalysts"] is None and r.json()["quote_available"] is True
+
+
+@pytest.mark.asyncio
+async def test_db_exception_in_signal_source_keeps_200(client, monkeypatch):
+    from backend.api.routes import stock
+
+    async def busy(t, kr):
+        raise TimeoutError("database is locked")
+
+    monkeypatch.setattr(stock, "_crazy", busy)
+    r = await client.get("/api/v1/stock/ZZCR")
+    assert r.status_code == 200 and "crazy" not in _by_source(r.json())
+
+
+@pytest.mark.asyncio
+async def test_kr_sniper_state_words_admin_only(client):
+    from datetime import datetime
+    from backend.services.db import get_session
+    from backend.services import models as m
+
+    async with get_session() as s:
+        await s.execute(delete(m.SniperSignal))
+        s.add(m.SniperSignal(ticker="005930", detected_at=datetime(2026, 11, 18, 10, 0), tape_score=70.0,
+                             entry_price=100.0, exit_price=110.0))
+    anon = (await client.get("/api/v1/stock/005930")).json()
+    adm = (await client.get("/api/v1/stock/005930", headers=H)).json()
+    sa = _by_source(anon)["sniper"]["summary"]
+    assert "진입" not in sa and "청산" not in sa and "11/18" in sa and "70.0" in sa
+    assert "청산" in _by_source(adm)["sniper"]["summary"]
+
+
+@pytest.mark.asyncio
+async def test_admin_response_has_holding_and_quote_flag_true(client, monkeypatch):
+    _patch_bio(monkeypatch, cands=("ZZCR",), notes={"ZZCR": ""}, store={"rows": {}})
+    b = (await client.get("/api/v1/stock/ZZCR", headers=H)).json()
+    assert b["holding"]["qty"] == 25.0 and len(b["judgments"]) == 1 and b["quote_available"] is True
+
+
+@pytest.mark.asyncio
+async def test_explain_texts_have_no_forbidden_words(client):
+    from datetime import datetime
+    from backend.services.db import get_session
+    from backend.services import models as m
+
+    async with get_session() as s:
+        await s.execute(delete(m.MemeScoreHistory))
+        s.add(m.MemeScoreHistory(ticker="ZZCR", snapshot_at=datetime(2026, 11, 18), score=0.8, label="HOT"))
+        s.add(m.MemeScoreHistory(ticker="ZZOLD", snapshot_at=datetime(2026, 11, 18), score=0.8, label="옛낱말"))
+    texts = []
+    for t in ("ZZCR", "005930"):
+        b = (await client.get(f"/api/v1/stock/{t}")).json()
+        texts += [x["explain"] for x in b["signals"] if x["explain"]]
+    assert texts and any("HOT" in x for x in texts)
+    for x in texts:
+        for w in FORBIDDEN:
+            assert w not in x, (w, x)
+    old = _by_source((await client.get("/api/v1/stock/ZZOLD")).json())
+    assert old["meme"]["explain"] is None  # 표에 없는 옛 낱말은 설명 생략
+
+
+@pytest.mark.asyncio
+async def test_candidate_set_caches_empty_result(monkeypatch):
+    """Fable 권고 3 · 후보 0개도 5분 기억 (요청마다 파일을 다시 읽지 않음)."""
+    from backend.services import biotech_quotes as bq
+
+    n = {"c": 0}
+
+    async def empty(limit=0):
+        n["c"] += 1
+        return []
+
+    monkeypatch.setattr(bq, "load_candidates", empty)
+    bq._CAND_CACHE.update({"at": 0.0, "list": []})
+    await bq.candidate_set()
+    await bq.candidate_set()
+    await bq.candidate_set()
+    assert n["c"] == 1
+    bq._CAND_CACHE.update({"at": 0.0, "list": []})
+
+
+@pytest.mark.asyncio
+async def test_concurrent_requests_ok(client):
+    import asyncio
+
+    rs = await asyncio.gather(*[client.get("/api/v1/stock/ZZCR") for _ in range(8)])
+    assert all(r.status_code == 200 for r in rs)
