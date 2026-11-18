@@ -284,7 +284,13 @@ async def test_by_design_modify_line_with_closed_old_leg_counts_as_bound(plan_db
 
 # ── 낮음 · 「판정 한 곳」 구조 시험 (금지 모양 · 허용 곳은 파일:함수로 명시) ──────────────────────
 
-ALLOWED = {"engine.py:_cancel_leg_keep_unknown", "engine.py:_close"}       # UNCERTAIN 을 보고도 상태를 CANCELED/FILLED 로 쓰는 곳 (취소 처리 · 알림 동반)
+# UNCERTAIN 을 보고도 상태를 CANCELED/FILLED 로 쓰는 곳 · 함수 안 (UNCERTAIN 검사 수, 닫는 대입 수) 까지 못 박는다 (판정이 더해지면 실패)
+ALLOWED = {"engine.py:_cancel_leg_keep_unknown": (2, 2), "engine.py:_close": (2, 1)}
+BLANK_NAMES = ("g", "info", "before", "after", "found", "res")
+
+
+def _is_empty_dict(n):
+    return isinstance(n, ast.Dict) and not n.keys
 
 
 def find_violations(src: str, fname: str) -> list[str]:
@@ -294,27 +300,36 @@ def find_violations(src: str, fname: str) -> list[str]:
         if not isinstance(fn, (ast.AsyncFunctionDef, ast.FunctionDef)):
             continue
         key = f"{fname}:{fn.name}"
-        consts = {n.value for n in ast.walk(fn) if isinstance(n, ast.Constant) and isinstance(n.value, str)}
+        n_unc = sum(1 for n in ast.walk(fn) if isinstance(n, ast.Constant) and n.value == "UNCERTAIN")
         closes = [n for n in ast.walk(fn) if isinstance(n, ast.Assign) and isinstance(n.value, ast.Constant)
                   and n.value.value in ("CANCELED", "FILLED")
                   and any(isinstance(t, ast.Attribute) and t.attr == "status" for t in n.targets)]
-        if "UNCERTAIN" in consts and closes and key not in ALLOWED:
-            out.append(f"{key} · UNCERTAIN 을 보고 상태를 닫음")
+        if n_unc and closes:
+            allow = ALLOWED.get(key)
+            if allow is None or n_unc > allow[0] or len(closes) > allow[1]:
+                out.append(f"{key} · UNCERTAIN 을 보고 상태를 닫음 (검사 {n_unc} · 닫는 대입 {len(closes)})")
         for n in ast.walk(fn):
-            # 단건 조회가 빈 값이면 바로 예약을 풀거나 다리를 닫는 모양: if x is None: ... r.active = False / leg.status = ...
+            # 빈 조회(is None)를 보고 바로 예약을 풀거나 다리를 닫는 모양 (변수 이름이 무엇이든)
             if isinstance(n, ast.If) and isinstance(n.test, ast.Compare) and len(n.test.ops) == 1 \
                     and isinstance(n.test.ops[0], ast.Is) and isinstance(n.test.comparators[0], ast.Constant) \
                     and n.test.comparators[0].value is None:
+                left = n.test.left
+                blank = isinstance(left, ast.Name) and left.id in BLANK_NAMES
                 for m in ast.walk(n):
-                    if isinstance(m, ast.Assign) and isinstance(m.value, ast.Constant) and any(
+                    if blank and isinstance(m, ast.Assign) and isinstance(m.value, ast.Constant) and any(
                             isinstance(t, ast.Attribute) and t.attr in ("active", "status") for t in m.targets) \
                             and m.value.value in (False, "CANCELED", "FILLED"):
-                        if "get" in ast.dump(n.test.left) or isinstance(n.test.left, ast.Name) and n.test.left.id in ("g", "info", "before", "after"):
-                            out.append(f"{key} · 빈 조회를 보고 바로 닫음")
-            # limit_get(...) or {} : 빈 조회를 체결 0 으로 보는 모양
-            if isinstance(n, ast.BoolOp) and isinstance(n.op, ast.Or) and len(n.values) == 2 \
-                    and isinstance(n.values[1], ast.Dict) and not n.values[1].keys and "limit_get" in ast.dump(n.values[0]):
-                out.append(f"{key} · limit_get(...) or {{}}")
+                        out.append(f"{key} · 빈 조회를 보고 바로 닫음")
+            # if not g: return {} · 빈 조회를 체결 없음으로 돌려주는 모양
+            if isinstance(n, ast.If) and isinstance(n.test, ast.UnaryOp) and isinstance(n.test.op, ast.Not) \
+                    and isinstance(n.test.operand, ast.Name) and n.test.operand.id in BLANK_NAMES:
+                if any(isinstance(m, ast.Return) and (_is_empty_dict(m.value)) for m in ast.walk(n)):
+                    out.append(f"{key} · if not {n.test.operand.id}: return 빈 값")
+            # X or {} : 빈 조회를 체결 0 으로 보는 모양 (limit_get / cond_get / g / (g or {}))
+            if isinstance(n, ast.BoolOp) and isinstance(n.op, ast.Or) and len(n.values) == 2 and _is_empty_dict(n.values[1]):
+                left = n.values[0]
+                if "_get" in ast.dump(left) or (isinstance(left, ast.Name) and left.id in BLANK_NAMES):
+                    out.append(f"{key} · 조회 or {{}}")
     return out
 
 
@@ -322,7 +337,7 @@ def test_unknown_order_judgment_lives_only_in_orderbook_module():
     root = pathlib.Path(__file__).resolve().parents[1] / "execution" / "plan"
     bad = []
     for f in sorted(root.glob("*.py")):
-        if f.name == "orderbook.py":
+        if f.name in ("orderbook.py", "brokers.py"):        # 장부 모듈 · 응답 해석 계층(브로커 어댑터)은 제외
             continue
         bad += find_violations(f.read_text(), f.name)                       # engine.py 포함
     assert bad == [], bad
@@ -340,6 +355,72 @@ async def h(self, s, plan, r, leg):
 async def k(self, s, plan, leg):
     if leg.status == "UNCERTAIN":
         leg.status = "CANCELED"
+async def m(self, s, plan, leg):
+    g = await self.gate.cond_get(s, leg.toss_id)
+    if not g:
+        return {}
+async def n(self, s, plan, leg):
+    c = (g or {}).get("order_id")
+async def q(self, s, plan, leg):
+    x = await self.gate.cond_get(s, leg.toss_id) or {}
 '''
     found = find_violations(planted, "engine.py")
-    assert any("빈 조회" in x for x in found) and any("or {}" in x for x in found) and any("UNCERTAIN" in x for x in found)
+    for needle in ("빈 조회를 보고 바로 닫음", "limit_get", "UNCERTAIN", "return 빈 값", "조회 or"):
+        assert any(needle in x for x in found) or needle == "limit_get", (needle, found)
+    assert sum("조회 or" in x for x in found) == 3                       # limit_get(...) or {} · (g or {}) · cond_get(...) or {}
+    # 허용 함수 안에 UNCERTAIN 검사가 하나 더해져도 실패한다
+    extra = '''
+async def _close(self, s, plan):
+    if a.status == "UNCERTAIN": pass
+    if b.status == "UNCERTAIN": pass
+    if c.status == "UNCERTAIN": pass
+    leg.status = "CANCELED"
+'''
+    assert find_violations(extra, "engine.py")
+
+
+# ── 높음 (6차) · 첫 읽기가 비어도 아는 번호로 취소는 반드시 부른다 ───────────────────────────────
+
+async def test_kill_cancels_reserved_sell_even_when_first_lookup_is_blank(plan_db, monkeypatch):
+    cfg(monkeypatch, settle=0)
+    raw = FakeRaw("9.60")
+    raw.acct = 60
+    kill = [(False, True)]
+    eng = make_engine(raw, regular=REG, clock=Clock(NOW))
+    eng.kill_state = lambda: kill[0]
+    async with get_session() as s:
+        plan = await seed_holding(s, eng)
+        await eng.ensure_ladder(s, plan)
+        leg = (await legs_of(s, plan))[0]
+        await eng._sell_cross(s, plan, seq=1, qty=20, cur=D("9.60"), kind="immediate", old_leg=leg)
+        oid = next(iter(raw.limits))
+
+        async def none_get(s_, i):
+            return None
+
+        raw.limit_get = none_get                                              # 단건 조회가 비었다
+        raw.list_hidden_ids.add(oid)                                           # 목록 확인도 못 한다
+        kill[0] = (True, False)
+        for _ in range(4):
+            eng.clock.advance(seconds=5)
+            await eng.tick_plan(s, plan)
+        assert raw.count("limit_cancel") >= 1                                  # 아는 번호로 취소는 불렀다
+        assert raw.limits[oid]["status"] == "CANCELED"
+        r = (await s.scalars(select(PlanSellReservation).where(PlanSellReservation.plan_id == plan.id))).first()
+        assert r.active is True                                                # 체결 수량 판정은 대조로 · 예약은 유지
+        check_sells(raw)
+
+
+async def test_final_read_blank_is_not_reported_as_no_fill(plan_db, monkeypatch):
+    cfg(monkeypatch, settle=0)
+    raw = FakeRaw("10")
+    raw.acct = 60
+    eng = make_engine(raw, regular=REG, clock=Clock(NOW))
+    async with get_session() as s:
+        plan = await seed_holding(s, eng)
+        await eng.ensure_ladder(s, plan)
+        leg = (await legs_of(s, plan))[0]
+        raw.get_blind.add(leg.toss_id)
+        assert await eng._final_read_leg(s, plan, leg) is None                 # 체결 없음({})이 아니라 모름
+        assert runtime_of(plan)["miss"][f"l{leg.id}"] == 1                     # 대조 모듈이 빈 조회를 셌다
+        check_sells(raw)

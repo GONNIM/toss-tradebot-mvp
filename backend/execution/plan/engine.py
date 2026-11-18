@@ -363,16 +363,18 @@ class PlanEngine:
         """등록 실패 처리는 장부 모듈이 판정한다 (거절이면 지움 · 모르면 확인 대기)."""
         return await ob.after_send_failure(s, self, plan, leg, role, seq, exc, line)
 
-    async def _final_read_leg(self, s, plan: Plan, leg: PlanLeg) -> dict:
-        """취소 전 · 후에 그 다리의 마지막 체결을 다시 읽어 장부에 더한다 (5절 10항). 읽기 실패는 빈 값."""
+    async def _final_read_leg(self, s, plan: Plan, leg: PlanLeg) -> Optional[dict]:
+        """취소 전 · 후에 그 다리의 마지막 체결을 다시 읽어 장부에 더한다 (5절 10항).
+        빈 조회는 「체결 없음」 이 아니라 모름이라 장부 대조 모듈(on_missing)로 보내고 None 을 돌려준다. 읽기 오류도 None."""
         if not leg.toss_id:
-            return {}
+            return None
         try:
             g = await (self.gate.limit_get(s, leg.toss_id) if leg.kind == "limit" else self.gate.cond_get(s, leg.toss_id))
         except ExecutionError:
-            return {}
-        if not g:
-            return {}
+            return None
+        if g is None:
+            await ob.on_missing(s, self, plan, leg)
+            return None
         filled = int(g.get("filled") or 0)
         if filled:
             side = "BUY" if leg.role == "buy" else "SELL"
@@ -380,10 +382,11 @@ class PlanEngine:
         return g
 
     async def _cancel_leg_orders(self, s, plan: Plan, leg: PlanLeg) -> None:
-        """다리 하나를 토스에서 지운다. 읽기 → 취소 → 읽기. 조건이 이미 닿아 자식 주문이 생겼으면 자식 주문(cancel_limit)을 취소한다."""
+        """다리 하나를 토스에서 지운다. 읽기 → 취소 → 읽기. 조건이 이미 닿아 자식 주문이 생겼으면 자식 주문(cancel_limit)을 취소한다.
+        첫 읽기가 비어도 아는 번호로 취소는 반드시 부른다."""
         g = await self._final_read_leg(s, plan, leg)
-        child = (g or {}).get("order_id") if leg.kind != "limit" else None
-        if child and (g or {}).get("status") == "TRIGGERED":
+        child = g.get("order_id") if (g is not None and leg.kind != "limit") else None
+        if child and g.get("status") == "TRIGGERED":
             await self.gate.cancel_limit(s, child)
         elif leg.kind == "limit":
             await self.gate.cancel_limit(s, leg.toss_id)
@@ -399,7 +402,8 @@ class PlanEngine:
         if leg.toss_id:
             await self._cancel_leg_orders(s, plan, leg)
         if not unknown:
-            leg.status = "CANCELED"
+            if leg.status in ("WATCHING", "TRIGGERED"):      # 취소 도중 대조가 FILLED 등으로 닫았으면 덮어쓰지 않는다
+                leg.status = "CANCELED"
             return True
         if known and leg.role != "buy" and leg.status != "UNCERTAIN":
             leg.status = "CANCELED"                          # 알던 옛 번호는 지웠다 · 모르는 새 줄은 장부가 묶는다
@@ -409,16 +413,14 @@ class PlanEngine:
         return False
 
     async def _cancel_resv(self, s, plan: Plan, r: PlanSellReservation) -> Optional[dict]:
-        """접수된 지정가 매도 취소: 읽기 → 취소 → 읽기. 빈 조회는 체결 0 이 아니라 모름이라 대조 모듈로 보낸다(None · 예약 유지 · 다시 팔지 않음)."""
+        """접수된 지정가 매도 취소: 읽기 → 취소 → 읽기. 첫 읽기가 비어도 아는 번호(r.order_ref)로 취소는 반드시 부른다.
+        빈 조회는 체결 0 이 아니라 모름이라 체결 수량 판정만 대조 모듈(on_missing_reservation)로 보낸다(None · 예약 유지 · 다시 팔지 않음)."""
         before = await self.gate.limit_get(s, r.order_ref)
-        if before is None:
-            await ob.on_missing_reservation(s, self, plan, r)
-            return None
-        if int(before.get("filled") or 0):
+        if before is not None and int(before.get("filled") or 0):
             await self._record_fill(s, plan, "SELL", r.order_ref, int(before["filled"]), before.get("avg"))
         await self.gate.cancel_limit(s, r.order_ref)
         after = await self.gate.limit_get(s, r.order_ref)
-        if after is None:
+        if before is None or after is None:
             await ob.on_missing_reservation(s, self, plan, r)
             return None
         if int(after.get("filled") or 0):
