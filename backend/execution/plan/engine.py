@@ -337,8 +337,7 @@ class PlanEngine:
         except ExecutionError:
             acct_before = None
         leg = PlanLeg(plan_id=plan.id, role="buy", seq=1, kind="cond", side="BUY", client_order_id=cid, qty=qty,
-                      watch_price=float(watch), order_price=float(order), status="UNCERTAIN", expire_date=expire,
-                      acct_before=acct_before)
+                      watch_price=float(watch), order_price=float(order), status="UNCERTAIN", expire_date=expire)
         s.add(leg)
         await s.flush()
         line = await ob.send(s, plan, cid=cid, kind="cond", role="buy", side="BUY", qty=qty, price=order, watch=watch,
@@ -413,6 +412,8 @@ class PlanEngine:
         legs = await s.scalars(select(PlanLeg).where(
             PlanLeg.plan_id == plan.id, PlanLeg.role == "buy", PlanLeg.status.in_(("WATCHING", "UNCERTAIN"))))
         for leg in list(legs):
+            if leg.status == "UNCERTAIN" or await ob.has_unresolved_for_leg(s, leg.id):
+                continue                                         # 결과 모르는 주문은 CANCELED 로 두지 않는다 (대조가 판정 · 그동안 다시 사지 않음)
             if leg.toss_id:
                 await self._cancel_leg_orders(s, plan, leg)
             leg.status = "CANCELED"
@@ -458,6 +459,9 @@ class PlanEngine:
         """토스(또는 모의)에서 다리 · 예약 상태를 읽어 장부에 맞춘다."""
         out = {"buy_filled": 0, "tp1_filled": False, "sold": 0}
         await ob.reconcile(s, self, plan, self.clock())    # 결과 모르는 주문(다리 · 예약 · 수정)은 장부 대조 한 곳에서 판정
+        if runtime_of(plan).get("tp1_filled_human"):       # 사람이 TP1 체결을 확정했다 → 추적 전환을 한 번 탄다
+            set_runtime(plan, tp1_filled_human=False)
+            out["tp1_filled"] = True
         legs = list(await s.scalars(select(PlanLeg).where(
             PlanLeg.plan_id == plan.id, PlanLeg.status.in_(("WATCHING", "TRIGGERED")))))
         for leg in legs:
@@ -518,7 +522,7 @@ class PlanEngine:
                 continue
             g = await self.gate.limit_get(s, r.order_ref)
             if g is None:
-                r.active = False
+                await ob.on_missing_reservation(s, self, plan, r)    # 조회가 비면 목록 확인 → 사람 확인 (예약은 유지)
                 continue
             filled = int(g.get("filled") or 0)
             if filled:
@@ -813,12 +817,9 @@ class PlanEngine:
         exp = await ob.exposure(s, plan.id)                     # 결과 모르는 손절 줄 (묶인 새 다리 · 수정 중 새 줄)
         unc_seqs = {l.seq for l in await s.scalars(select(PlanLeg).where(
             PlanLeg.plan_id == plan.id, PlanLeg.role == "sl", PlanLeg.status == "UNCERTAIN"))}
+        unc_seqs |= await ob.bound_seqs(s, plan.id)             # 결과 모르는 줄이 걸린 번호는 새로 등록하지 않는다
+        modifying = await ob.modifying_leg_ids(s, plan.id)      # 수정 결과를 모르는 다리는 건드리지 않는다
         target = sizing.sl_target(base, acc)
-        if exp["unknown_modify"] and sizing.exposure_over(sum(l.qty for l in legs), exp["unknown_modify"], target):
-            await self._alert_once(s, plan, "exposure_possible", "critical", "손절 합이 넘칠 수 있음",
-                                   "수정한 주문의 결과를 모르는데 옛 다리가 살아 있다면 매도 합이 보유를 넘습니다. 결과를 확인할 때까지 새로 걸지 않습니다.",
-                                   every_sec=ob.REPEAT_ALERT_SEC)
-            return "skipped"                                    # 넘침 검사에는 옛 다리와 새 줄을 둘 다 센다
         rep = sizing.check_invariants(base=base, accepted_sell=acc, sl_qtys=[l.qty for l in legs], dup_pairs=dup)   # 보호 수량에는 확인된 것만
         if rep.status == "ok":
             return "ok"
@@ -830,7 +831,12 @@ class PlanEngine:
             if dup:
                 await self._halt(s, plan, "같은 번호의 손절 다리가 둘 이상 (짝이 여럿)")
                 return "halted"
-            return await self._shrink_sl(s, plan, legs, rep.target)
+            return await self._shrink_sl(s, plan, legs, rep.target, skip_ids=modifying)    # 줄이기는 허용 (수정 중 다리만 뺀다)
+        if exp["unknown_modify"] and sizing.exposure_over(sum(l.qty for l in legs), exp["unknown_modify"], target):
+            await self._alert_once(s, plan, "exposure_possible", "critical", "손절 합이 넘칠 수 있음",
+                                   "수정한 주문의 결과를 모르는데 옛 다리가 살아 있다면 매도 합이 보유를 넘습니다. 결과를 확인할 때까지 새로 걸지 않습니다.",
+                                   every_sec=ob.REPEAT_ALERT_SEC)
+            return "skipped"                                    # 새 모자람 등록만 막는다 (넘침 검사에는 옛 다리와 새 줄을 둘 다 센다)
         # 모자람 · HALTED 에서도 허용 · ⑨ 알림
         if plan.state == state.HALTED and not self._live_on(plan):
             pass  # 보호 다리 다시 걸기는 스위치와 무관하게 허용 (손절을 지우면 위험이 커진다)
@@ -849,18 +855,23 @@ class PlanEngine:
                 await self._register_leg(s, plan, free[0], missing, self._values_for(plan, free[0], session, cur),
                                          tag=tag)
             else:
-                last = legs[-1]
+                cand = [l for l in legs if l.id not in modifying]
+                if not cand:
+                    return "skipped"
+                last = cand[-1]
                 await self._modify_leg(s, plan, last, qty=last.qty + missing,
                                        vals=self._values_for(plan, last.seq, session, cur))
                 last.tag = tag
         return "fixed"
 
-    async def _shrink_sl(self, s, plan: Plan, legs: list[PlanLeg], target: int) -> str:
+    async def _shrink_sl(self, s, plan: Plan, legs: list[PlanLeg], target: int, skip_ids: Optional[set] = None) -> str:
         """넘친 다리 축소 (마지막 번호부터) · 정상 넘침(발동 직후)은 바로 줄인다 · 줄이기가 3번 실패하면 HALTED."""
         extra = sum(l.qty for l in legs) - target
         for leg in sorted(legs, key=lambda l: -l.seq):
             if extra <= 0:
                 break
+            if skip_ids and leg.id in skip_ids:
+                continue                                         # 수정 결과를 모르는 다리는 건드리지 않는다
             cut = min(leg.qty, extra)
             ok = False
             for _ in range(3):
@@ -946,6 +957,8 @@ class PlanEngine:
     async def _close(self, s, plan: Plan) -> None:
         legs = await s.scalars(select(PlanLeg).where(PlanLeg.plan_id == plan.id, PlanLeg.status.in_(("WATCHING", "UNCERTAIN"))))
         for leg in list(legs):
+            if leg.status == "UNCERTAIN" or await ob.has_unresolved_for_leg(s, leg.id):
+                continue                                         # 결과 모르는 다리는 대조가 판정한다
             try:
                 if leg.toss_id:
                     await self._cancel_leg_orders(s, plan, leg)
@@ -959,6 +972,8 @@ class PlanEngine:
         """Kill Switch 「매도도 멈춤」 · 계획의 모든 조건주문 취소 · HALTED (1절 4항). 정지 중에도 남은 주문을 계속 지운다."""
         legs = await s.scalars(select(PlanLeg).where(PlanLeg.plan_id == plan.id, PlanLeg.status.in_(("WATCHING", "UNCERTAIN"))))
         for leg in list(legs):
+            if leg.status == "UNCERTAIN" or await ob.has_unresolved_for_leg(s, leg.id):
+                continue                                         # 결과 모르는 다리는 대조가 판정한다 (CANCELED 로 두면 다시 사게 됨)
             try:
                 if leg.toss_id:
                     await self._cancel_leg_orders(s, plan, leg)

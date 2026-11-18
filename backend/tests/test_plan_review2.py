@@ -11,7 +11,7 @@ from sqlalchemy import select
 from backend.execution.exceptions import ExecutionError
 from backend.execution.plan import sizing, state
 from backend.execution.plan.engine import runtime_of, set_runtime
-from backend.execution.plan.models import Plan, PlanFill, PlanLeg, PlanLegPending, PlanSellReservation
+from backend.execution.plan.models import Plan, PlanFill, PlanLeg, PlanSellReservation
 from backend.services.db import get_session
 from backend.tests.plan_fakes import Clock, FakeRaw, make_engine, plan_db, seed_holding  # noqa: F401
 

@@ -478,7 +478,7 @@ async def _open_total(s) -> float:
 # ─── 확인 코드 요청 · 승인 · 인수 · 재개 (쿠키만 + Origin) ─────────────────
 
 class ConfirmChallengeReq(BaseModel):
-    action: str = Field(..., pattern="^(approve|adopt|resume)$")
+    action: str = Field(..., pattern="^(approve|adopt|resume|resolve_order)$")
     plan_id: int
 
 
@@ -584,18 +584,22 @@ async def unknown_orders(plan_id: int, _: str = Depends(require_sniper_token)) -
 class ResolveBody(ConfirmBody):
     decision: str = Field(..., pattern="^(filled|not_created|open)$")
     filled_qty: Optional[int] = Field(None, ge=1)
-    toss_id: Optional[str] = Field(None, max_length=64)
+    toss_id: Optional[str] = Field(None, max_length=64, pattern="^[A-Za-z0-9-]+$")
+    kind: Optional[str] = Field(None, pattern="^(cond|limit)$")    # 「열려 있음」 일 때 토스 주문 종류 (조건주문 / 일반 주문 · 없으면 줄의 종류)
+    remainder_cancelled: bool = False       # 일부만 체결(n < 주문 수량)일 때 「남은 주문을 토스 앱에서 취소했음」 확인
 
 
 @router.post("/{plan_id:int}/unknown-orders/{line_id:int}/resolve")
 async def resolve_unknown_order(plan_id: int, line_id: int, body: ResolveBody, src: str = Depends(require_plan_cookie)) -> dict:
-    """확정 · 쿠키 전용 + Origin · 실전 · 시험 계획이면 기존 「정지 풀기」 와 같은 텔레그램 확인 코드(action=resume)가 필요하다.
+    """확정 · 쿠키 전용 + Origin · 실전 · 시험 계획이면 텔레그램 확인 코드(action=resolve_order · 「결과 모르는 주문 확정」)가 필요하다.
     DB 만 고친다(토스를 부르지 않음). 체결을 확정하면 그 수량만 장부(체결 줄)에 적고 손절은 실행기가 다음 걸음에 건다."""
     async with get_session() as s:
         p = await _get_plan(s, plan_id)
-        await _verify(s, p, "resume", body)
+        await _verify(s, p, "resolve_order", body)
+        await s.commit()                    # 코드 사용 기록은 입력 오류(ResolveError)로 되돌려지지 않게 먼저 남긴다
         try:
-            line = await ob.human_resolve(s, p, line_id, body.decision, filled_qty=body.filled_qty, toss_id=body.toss_id)
+            line = await ob.human_resolve(s, p, line_id, body.decision, filled_qty=body.filled_qty, toss_id=body.toss_id,
+                                          remainder_cancelled=body.remainder_cancelled, kind=body.kind)
         except ob.ResolveError as exc:
             raise HTTPException(status_code=400, detail={"reason": "resolve", "message": str(exc)})
         return {"order": _line_json(line), "remaining": len(await ob.unresolved_lines(s, p.id))}

@@ -9,7 +9,7 @@ from sqlalchemy import select
 
 from backend.execution.plan import drafts, heartbeat, resync, sessions as sess, sizing, state
 from backend.execution.plan import pricing as pr
-from backend.execution.plan.models import PlanLeg, PlanLegPending, PlanExecutorHeartbeat
+from backend.execution.plan.models import PlanLeg, PlanExecutorHeartbeat
 from backend.services.db import get_session
 from backend.tests.plan_fakes import Clock, FakeRaw, make_engine, plan_db, seed_holding  # noqa: F401
 

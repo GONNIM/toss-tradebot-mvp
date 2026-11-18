@@ -13,11 +13,11 @@ from backend.execution.plan import state
 from backend.execution.plan.brokers import DirectionGate, RawBroker
 from backend.execution.plan.engine import PlanEngine
 from backend.execution.plan.models import (
-    Plan, PlanConfirmChallenge, PlanEvent, PlanExecutorHeartbeat, PlanFill, PlanLeg, PlanLegPending,
+    Plan, PlanConfirmChallenge, PlanEvent, PlanExecutorHeartbeat, PlanFill, PlanLeg,
     PlanOrderBook, PlanPaperOrder, PlanPaperPosition, PlanRequest, PlanSellReservation, PlanSwitchAudit,
 )
 
-PLAN_TABLES = (Plan, PlanLeg, PlanFill, PlanSellReservation, PlanEvent, PlanRequest, PlanLegPending,
+PLAN_TABLES = (Plan, PlanLeg, PlanFill, PlanSellReservation, PlanEvent, PlanRequest,
                PlanPaperPosition, PlanPaperOrder, PlanSwitchAudit, PlanConfirmChallenge, PlanExecutorHeartbeat, PlanOrderBook)
 
 D = Decimal
@@ -64,6 +64,7 @@ class FakeRaw(RawBroker):
         self.list_hidden_ids: set = set()  # 목록에 아직 안 나타난 번호 (늦게 나타남)
         self.list_limit: Optional[int] = None  # 목록이 앞 N줄에서 잘림 (쪽 나눔)
         self.get_blind: set = set()      # 단건 조회가 빈 값(None)인 번호
+        self.list_fail = False           # 목록 읽기가 오류
 
     def _id(self, p):
         self.n += 1
@@ -119,6 +120,8 @@ class FakeRaw(RawBroker):
         return dict(c) if c else None
 
     def _shown(self, rows):
+        if self.list_fail:
+            raise ExecutionError("목록 읽기 실패")
         out = [r for r in rows if r.get("id") not in self.list_hidden_ids]
         if self.list_hide_client_id:
             out = [{**r, "client_id": None} for r in out]
@@ -161,7 +164,8 @@ class FakeRaw(RawBroker):
 
     async def limit_closed_list(self, s, symbol=None):
         return self._shown([{"id": k, "client_id": o.get("client_id"), "symbol": o["symbol"], "side": o["side"], "qty": o["qty"],
-                             "price": o["price"]} for k, o in self.limits.items()
+                             "price": o["price"], "status": o["status"], "filled": o.get("filled"), "avg": o.get("avg")}
+                            for k, o in self.limits.items()
                             if o["status"] != "OPEN" and (symbol is None or o["symbol"] == symbol)])
 
     # ── 시험 조작 ──

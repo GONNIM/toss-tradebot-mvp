@@ -137,7 +137,7 @@ async def test_human_filled_writes_only_the_confirmed_qty_and_open_links_the_id(
         ln = (await lines(s, plan, state="needs_human"))[0]
         with pytest.raises(ob.ResolveError):
             await ob.human_resolve(s, plan, ln.id, "filled", filled_qty=25)          # 주문 수량 초과
-        await ob.human_resolve(s, plan, ln.id, "filled", filled_qty=12)
+        await ob.human_resolve(s, plan, ln.id, "filled", filled_qty=12, remainder_cancelled=True)
         fills = list(await s.scalars(select(PlanFill).where(PlanFill.plan_id == plan.id, PlanFill.side == "SELL")))
         assert [f.qty for f in fills] == [12] and fills[0].order_ref == f"human{ln.id}"   # 사람이 정한 수량만
         assert ln.state == "closed" and ln.filled_qty == 12
@@ -194,8 +194,7 @@ async def test_modify_unknown_keeps_old_open_and_new_unknown_together(plan_db, m
         before = raw.count("cond_modify")
         assert await eng._modify_leg(s, plan, leg, qty=10) is False                    # 판정될 때까지 새로 보내지 않는다
         assert raw.count("cond_modify") == before
-        assert await eng.ensure_ladder(s, plan) == "skipped"
-        assert any(a[1] == "손절 합이 넘칠 수 있음" for a in eng._alerts)
+        assert await eng.ensure_ladder(s, plan) == "ok"                                # 모자람이 없으면 그대로 (줄이기도 막지 않는다)
 
 
 async def test_modify_unknown_links_by_client_id_when_list_searchable(plan_db, monkeypatch):
@@ -340,7 +339,7 @@ async def test_unknown_buy_never_writes_fill_from_account_change_alerts_and_huma
         await eng.tick_plan(s, plan)
         assert len([a for a in eng._alerts if a[1] == "매수 체결 가능성"]) == n          # 되풀이는 600초 간격
         ln = (await lines(s, plan, state="needs_human"))[0]
-        await ob.human_resolve(s, plan, ln.id, "filled", filled_qty=3)                  # 사람이 체결 수량을 확정
+        await ob.human_resolve(s, plan, ln.id, "filled", filled_qty=3, remainder_cancelled=True)      # 사람이 체결 수량을 확정
         assert await sizing.plan_qty(s, plan) == 3
         await eng.tick_plan(s, plan)                                                    # 그러면 손절이 걸린다
         assert sum(l.qty for l in await legs_of(s, plan)) == 3
@@ -361,9 +360,9 @@ async def test_unknown_sell_keeps_reservation_and_never_records_sale_from_holdin
         eng.clock.advance(seconds=1)
         await eng.tick_plan(s, plan)
         assert not list(await s.scalars(select(PlanFill).where(PlanFill.plan_id == plan.id, PlanFill.side == "SELL")))
-        assert await sizing.accepted_sell(s, plan.id) == 20                             # 예약 유지 · 그 수량만 묶음
-        ln = (await lines(s, plan, state="needs_human"))[0]
-        await ob.human_resolve(s, plan, ln.id, "not_created")
+        assert await sizing.accepted_sell(s, plan.id) == 40                             # 모르는 예약 둘 다 유지 (조회가 비어도 풀지 않음)
+        for ln in await lines(s, plan, state="needs_human"):
+            await ob.human_resolve(s, plan, ln.id, "not_created")
         assert await sizing.accepted_sell(s, plan.id) == 0
         raw.acct = 60
         assert await eng.ensure_ladder(s, plan) in ("fixed", "ok")
@@ -471,7 +470,7 @@ async def test_unknown_orders_api_list_and_resolve_rules(api):
     assert (await api.post(url, json={"decision": "maybe"}, headers=OK_ORIGIN)).status_code == 422
     r = await api.post(url, json={"decision": "filled", "filled_qty": 9}, headers=OK_ORIGIN)
     assert r.status_code == 400 and r.json()["detail"]["reason"] == "resolve"          # 주문 수량 초과
-    r = await api.post(url, json={"decision": "filled", "filled_qty": 4}, headers=OK_ORIGIN)
+    r = await api.post(url, json={"decision": "filled", "filled_qty": 4, "remainder_cancelled": True}, headers=OK_ORIGIN)
     assert r.status_code == 200 and r.json()["remaining"] == 0 and r.json()["order"]["state"] == "closed"
     async with get_session() as s:
         assert [f.qty for f in await s.scalars(select(PlanFill).where(PlanFill.plan_id == plan["id"]))] == [4]
@@ -487,7 +486,7 @@ async def test_unknown_orders_resolve_needs_telegram_code_for_live_plan(api):
     url = f"/api/v1/plans/{plan['id']}/unknown-orders/{lid}/resolve"
     r = await api.post(url, json={"decision": "not_created"}, headers=OK_ORIGIN)
     assert r.status_code == 400 and r.json()["detail"]["reason"] == "code_required"     # 실전 · 시험은 확인 코드
-    c = await api.post("/api/v1/plans/confirm/challenge", json={"action": "resume", "plan_id": plan["id"]}, headers=OK_ORIGIN)
+    c = await api.post("/api/v1/plans/confirm/challenge", json={"action": "resolve_order", "plan_id": plan["id"]}, headers=OK_ORIGIN)
     r = await api.post(url, json={"decision": "not_created", "challenge_id": c.json()["challenge_id"], "code": api.phone.code},
                        headers=OK_ORIGIN)
     assert r.status_code == 200 and r.json()["order"]["state"] == "not_created"

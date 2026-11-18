@@ -37,8 +37,8 @@ REQUEST_LIMIT = 3            # 구현자 값 (계획서 4-2-1 · 동작 종류�
 DAILY_FAIL_LOCK = 10         # 실거래 켜기와 세 동작을 합쳐 센다
 KST = timezone(timedelta(hours=9))
 
-CONFIRM_ACTIONS = ("live_on", "approve", "adopt", "resume")
-ACTION_LABEL = {"live_on": "실거래 켜기", "approve": "계획 승인", "adopt": "보유 인수", "resume": "정지 풀기"}
+CONFIRM_ACTIONS = ("live_on", "approve", "adopt", "resume", "resolve_order")
+ACTION_LABEL = {"live_on": "실거래 켜기", "approve": "계획 승인", "adopt": "보유 인수", "resume": "정지 풀기", "resolve_order": "결과 모르는 주문 확정"}
 
 
 def switch_path() -> Path:

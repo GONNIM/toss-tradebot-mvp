@@ -10,7 +10,7 @@ from sqlalchemy import select
 
 from backend.execution.plan import sizing, state
 from backend.execution.plan.engine import params_of, runtime_of
-from backend.execution.plan.models import Plan, PlanLeg, PlanLegPending, PlanSellReservation
+from backend.execution.plan.models import Plan, PlanLeg, PlanSellReservation
 from backend.execution.plan.pricing import D
 from backend.services.db import get_session
 from backend.tests.plan_fakes import Clock, FakeRaw, make_engine, plan_db, seed_holding  # noqa: F401
