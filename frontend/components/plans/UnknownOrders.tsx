@@ -66,6 +66,11 @@ export function UnknownOrdersPanel({
           결과를 모르는 주문 {count}건 · 이 수량에는 손절이 걸리지 않을 수 있습니다 · 토스 앱 주문 내역과 맞춰 확정해 주십시오
         </Notice>
       )}
+      {count > 0 && (
+        <Notice testid="unknown-pause-note">
+          확정 전까지 이 계획은 정지 상태라 시간 손절 · 고점 따라 손절 올림 · 1차 익절이 돌지 않습니다. 손절 다리는 그대로 걸려 있습니다.
+        </Notice>
+      )}
       {done && <Notice testid="unknown-done">{done}</Notice>}
       {q.error && <Notice tone="warn" testid="unknown-error">{errText(q.error)}</Notice>}
       {q.data && !q.data.list_searchable && (
