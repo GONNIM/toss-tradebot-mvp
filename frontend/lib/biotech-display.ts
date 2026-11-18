@@ -546,6 +546,9 @@ export const GOING_CONCERN_LABEL = "계속기업 의문 문구";
 export const GOING_CONCERN_NOTE =
   "계속기업 의문 문구는 제출 서류 기준 사실 표시이며 판단이 아닙니다. 자동 규칙으로 찾은 결과이며 놓친 문구가 있을 수 있습니다. 가장 최근 분기·연간 보고서 1건만 읽습니다.";
 
+// 1114-06 ㉠ (11/18) · 한 번도 요청하지 않은 회사 · 「확인 못 함」이 아니라 차례를 기다린다는 사실
+export const GOING_CONCERN_NOT_YET = "아직 받지 않음 (하루 15곳씩 차례로 받습니다)";
+
 const GC_REASON: Record<string, string> = {
   not_received: "보고서를 받지 못함",
   gone: "보고서를 받지 못함",
@@ -569,6 +572,7 @@ export function goingConcernParts(g: GoingConcern): { head: string; tail: string
     case "unclear":
       return { head: "", tail: "확인 못 함 (까닭: 「substantial doubt」만 있고 「going concern」이 없어 자동 규칙이 정하지 못함)" };
     default:
+      if (g.reason === "not_yet") return { head: "", tail: GOING_CONCERN_NOT_YET };
       return { head: "", tail: `확인 못 함 (까닭: ${GC_REASON[g.reason ?? ""] ?? "보고서를 받지 못함"})` };
   }
 }
@@ -591,7 +595,7 @@ export function goingConcernText(g: GoingConcern): string {
 
 export function goingConcernFixedTexts(): string[] {
   const states = ["present", "alleviated", "past_only", "not_found", "unclear", "unknown"];
-  const texts: string[] = [GOING_CONCERN_LABEL, GOING_CONCERN_NOTE, ...Object.values(GC_REASON)];
+  const texts: string[] = [GOING_CONCERN_LABEL, GOING_CONCERN_NOTE, GOING_CONCERN_NOT_YET, ...Object.values(GC_REASON)];
   for (const state of states) {
     for (const hyp of [false, true]) texts.push(goingConcernText({ state, hypothetical_only: hyp, form: "10-Q", filed: "2026-11-06", previous_report: true, stale: true }));
   }
