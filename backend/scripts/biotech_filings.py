@@ -165,11 +165,58 @@ def derive(filings: list[dict], today: date, older_pages: bool) -> dict:
     }
 
 
+def gc_order(cands: list[dict], radar: Path | None = None) -> list[str]:
+    """1114-06 ㉡ (11/18) · 계속기업 요청 순서 = 최신 순위표(radar_v1_3) 행 순서 먼저 · 그다음 후보 파일 순서.
+
+    화면 순위표 위쪽이 먼저 채워지게 한다 · 순위표가 없거나 깨졌으면 후보 파일 순서만 (요청 수는 같음)."""
+    out: list[str] = []
+    try:
+        p = radar if radar is not None else _P.find_glob("radar_v1_3_????????.csv", subdir="candidates")
+        if p is not None:
+            with p.open() as f:
+                for r in csv.DictReader(f):
+                    c = (r.get("cik") or "").strip()
+                    if c.isdigit():
+                        k = c.zfill(10)
+                        if k not in out:
+                            out.append(k)
+    except (OSError, ValueError, csv.Error):
+        LOG.warning("going_concern · 순위표 순서 읽기 실패 · 후보 파일 순서만 씀")
+        out = []
+    for c in cands:
+        k = str(int(c["cik"])).zfill(10)
+        if k not in out:
+            out.append(k)
+    return out
+
+
+def run_going_concern_only(today: date | None = None, get_text: Callable[[str], dict] | None = None,
+                           ledger: SecDailyLedger | None = None) -> dict:
+    """1114-06 ㉠ (11/18) · 수동 실행용 · 그날 저장한 submissions_<오늘>.json 으로 계속기업 단계만 돈다 (제출 목록 요청 0).
+
+    오늘 파일이 없으면 아무 요청도 하지 않고 멈춘다 · 장부 · 하루 15 · 남길 몫 규칙은 정기 실행과 같다."""
+    today = today or _kst_today()
+    p = _P.find_glob(f"submissions_{today:%Y%m%d}.json", subdir="filings")
+    if p is None:
+        raise SystemExit(f"submissions_{today:%Y%m%d}.json 없음 · 오늘 07:00 실행 전에는 수동 실행하지 않음")
+    raw = json.loads(p.read_text()).get("companies_raw") or {}
+    ledger = ledger or SecDailyLedger.load(f"{today:%Y%m%d}")
+    client = None
+    if get_text is None:
+        client = build_client()
+        get_text = lambda url: sec_get_text(client, url, timeout=_gc.READ_TIMEOUT)   # noqa: E731
+    try:
+        return _run_going_concern(raw, load_candidates(), today, get_text, ledger, False)
+    finally:
+        if client is not None:
+            client.close()
+
+
 def _run_going_concern(raw: dict, cands: list[dict], today: date, get_text: Callable[[str], dict] | None,
                        ledger: SecDailyLedger, skip: bool) -> dict:
     """1114-06 · 어떤 예외도 바깥으로 올리지 않는다 (SecBlockedError 포함) · 로그와 {error} 만 남김."""
     try:
-        order = [str(int(c["cik"])).zfill(10) for c in cands]          # 후보 파일 순서 = 우선순위
+        order = gc_order(cands)                                            # ㉡ 순위표 먼저 · 나머지는 후보 파일 순서
         return _gc.run_daily(raw, today, get_text, ledger, order=order, skip=skip, notify=_gc.notify_warning)
     except Exception as e:  # noqa: BLE001 · 이 단계가 제출 목록 저장을 막지 않게
         LOG.exception("going_concern 단계 예외 · 건너뜀")
@@ -554,9 +601,10 @@ def main():
     require_secure_logging()
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
     ap = argparse.ArgumentParser()
-    ap.add_argument("mode", choices=["submissions"])
-    ap.parse_args()
-    print(json.dumps(run_submissions(), ensure_ascii=False))
+    ap.add_argument("mode", choices=["submissions", "going-concern"])
+    a = ap.parse_args()
+    out = run_going_concern_only() if a.mode == "going-concern" else run_submissions()
+    print(json.dumps(out, ensure_ascii=False))
 
 
 if __name__ == "__main__":
