@@ -246,7 +246,7 @@ export const plansApi = {
     id: number,
     lineId: number,
     b: { decision: "filled" | "not_created" | "open"; filled_qty?: number; toss_id?: string; kind?: "cond" | "limit"; remainder_cancelled?: boolean; challenge_id?: number; code?: string; approver?: string },
-  ) => call<{ order: UnknownOrder; remaining: number }>("POST", `/${id}/unknown-orders/${lineId}/resolve`, { approver: "대표", ...b }),
+  ) => call<{ order: UnknownOrder; remaining: number; warning?: string | null }>("POST", `/${id}/unknown-orders/${lineId}/resolve`, { approver: "대표", ...b }),
   resync: (id: number) => call<{ queued: number }>("POST", `/${id}/resync`),
   approve: (
     id: number,

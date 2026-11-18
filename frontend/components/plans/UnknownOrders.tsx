@@ -55,6 +55,7 @@ export function UnknownOrdersPanel({
   const [remCancelled, setRemCancelled] = useState(false);
   const [kindSel, setKindSel] = useState<"cond" | "limit">("cond");
   const [done, setDone] = useState<string | null>(null);
+  const [warning, setWarning] = useState<string | null>(null);
 
   useEffect(() => {
     if (sel) {
@@ -65,7 +66,7 @@ export function UnknownOrdersPanel({
     }
   }, [sel]);
 
-  if (count <= 0 && !done) return null;
+  if (count <= 0 && !done && !warning) return null;
   const orders = q.data?.orders ?? [];
   const fq = num(qtyIn);
   const partial = !!sel && sel.decision === "filled" && fq !== null && fq < sel.line.qty;
@@ -87,6 +88,7 @@ export function UnknownOrdersPanel({
         </Notice>
       )}
       {done && <Notice testid="unknown-done">{done}</Notice>}
+      {warning && <Notice tone="warn" testid="unknown-warning">{warning}</Notice>}
       {q.error && <Notice tone="warn" testid="unknown-error">{errText(q.error)}</Notice>}
       {q.data && !q.data.list_searchable && (
         <Notice testid="unknown-nosearch">토스 주문 목록에서 자동으로 찾지 못하는 상태입니다. 토스 앱 주문 내역을 보고 직접 확정해 주십시오.</Notice>
@@ -130,12 +132,13 @@ export function UnknownOrdersPanel({
           const s = sel;
           await guard(async () => {
             try {
-              await plansApi.resolveOrder(planId, s.line.id, {
+              const r = await plansApi.resolveOrder(planId, s.line.id, {
                 decision: s.decision,
                 ...(s.decision === "filled" ? { filled_qty: fq ?? undefined, remainder_cancelled: partial ? remCancelled : false } : {}),
                 ...(s.decision === "open" ? { toss_id: tossId.trim(), kind: kindSel } : {}),
                 ...c,
               });
+              setWarning(r.warning ?? null);
             } catch (e) {
               // 입력 오류(400 resolve)면 쓴 코드는 다시 못 쓴다 → 새 코드를 받게 안내한다
               if (e instanceof PlanApiError && e.status === 400 && e.reason === "resolve") {
