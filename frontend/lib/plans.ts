@@ -308,6 +308,12 @@ export function heartbeatText(sec: number | null | undefined): string {
 /** 실행기가 멈춘 것으로 보는 기준 (초) · 화면 표시용 · 서버 기준과 같지 않을 수 있다 */
 export const HEARTBEAT_STALE_SEC = 120;
 
+/** 낙관적 잠금: 화면과 실행기가 같은 계획을 동시에 고치면 서버가 409 stale 을 준다 (자동 재시도 없음) */
+export const STALE_MSG = "다른 곳에서 값이 바뀌어 새로 읽었습니다 · 확인 뒤 다시 눌러 주십시오";
+export function isStale(e: unknown): boolean {
+  return e instanceof PlanApiError && e.status === 409 && e.reason === "stale";
+}
+
 /** 서버 오류 반응이 확인 코드 거부일 때 쓰는 문구 보강 */
 export function errText(e: unknown): string {
   if (e instanceof PlanApiError) return e.message;

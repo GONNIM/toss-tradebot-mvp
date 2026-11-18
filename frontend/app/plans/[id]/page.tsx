@@ -9,7 +9,7 @@ import { useParams } from "next/navigation";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   plansApi, MODE_LABEL, STATE_LABEL, STATE_FLOW, TERMINAL_STATES, ROLE_LABEL, LEG_STATUS_LABEL, TAG_LABEL, VALUE_LABEL, PLAN_SOURCE_LABEL,
-  errText, kst, num, pct, shares, usd, TP1_MODE_LABEL,
+  errText, isStale, STALE_MSG, kst, num, pct, shares, usd, TP1_MODE_LABEL,
 } from "@/lib/plans";
 import type { ActualLeg, Leg, Plan, PlanDetail } from "@/lib/plans";
 import { upDownText } from "@/lib/updown";
@@ -251,13 +251,29 @@ export default function PlanDetailPage() {
   const pnl = live?.pnl ?? null;
   const kstNow = (iso: string | null | undefined) => (iso ? kst(iso) : "확인 못 함");
 
+  /** 409 stale: 재시도하지 않고 계획을 다시 읽어 새 값으로 바꾼 뒤 안내한다 (대화상자는 닫는다) */
+  async function guarded(fn: () => Promise<void>): Promise<void> {
+    try {
+      await fn();
+    } catch (e) {
+      if (!isStale(e)) throw e;
+      await qc.invalidateQueries({ queryKey: ["plans"] });
+      await q.refetch();
+      setDlg(null);
+      setEditErr(null);
+      setMsg(STALE_MSG);
+    }
+  }
+
   async function resync() {
     setResyncBusy(true);
     setEditErr(null);
     try {
-      await plansApi.resync(id);
-      setMsg("토스와 다시 맞추기를 요청했습니다. 실행기가 처리한 뒤 위 값이 바뀝니다.");
-      await refresh();
+      await guarded(async () => {
+        await plansApi.resync(id);
+        setMsg("토스와 다시 맞추기를 요청했습니다. 실행기가 처리한 뒤 위 값이 바뀝니다.");
+        await refresh();
+      });
     } catch (e) {
       setEditErr(errText(e));
     } finally {
@@ -268,10 +284,12 @@ export default function PlanDetailPage() {
   async function saveAnnounce() {
     setEditErr(null);
     try {
-      await plansApi.edit(id, { announce_at: announce ? `${announce}:00+09:00` : null });
-      setMsg("발표 시각을 저장했습니다. 판 번호가 바뀌었으면 승인 때 새 값으로 확인 코드를 받습니다.");
-      setAnnounce("");
-      await refresh();
+      await guarded(async () => {
+        await plansApi.edit(id, { announce_at: announce ? `${announce}:00+09:00` : null });
+        setMsg("발표 시각을 저장했습니다. 판 번호가 바뀌었으면 승인 때 새 값으로 확인 코드를 받습니다.");
+        setAnnounce("");
+        await refresh();
+      });
     } catch (e) {
       setEditErr(errText(e));
     }
@@ -279,6 +297,7 @@ export default function PlanDetailPage() {
 
   async function doApprove(c: { challenge_id?: number; code?: string }) {
     if (!p) return;
+    await guarded(async () => {
     // 판단 3줄은 승인 요청 본문으로 보낸다 · 서버가 승인과 한 번에 저장한다 (둘 중 하나가 실패하면 둘 다 남지 않는다)
     await plansApi.approve(id, {
       ...c, approver: isPaper ? approver : "대표",
@@ -286,6 +305,7 @@ export default function PlanDetailPage() {
     });
     setMsg(isAdopt ? "인수를 승인했습니다. 실행기가 앱 조건주문을 확인합니다." : "승인했습니다. 실거래 스위치가 꺼져 있으면 주문은 나가지 않습니다.");
     await refresh();
+    });
   }
 
   const approveReady =
@@ -421,8 +441,8 @@ export default function PlanDetailPage() {
             </button>
           )}
           {HALTABLE.includes(p.state) && (
-            <button type="button" onClick={() => setDlg("stop")} aria-label="이 계획 정지" data-testid="btn-stop" className={BTN_WARN}>
-              이 계획 정지
+            <button type="button" onClick={() => setDlg("stop")} aria-label={p.state === "ADOPT_PENDING" ? "인수 취소로 정지" : "이 계획 정지"} data-testid="btn-stop" className={BTN_WARN}>
+              {p.state === "ADOPT_PENDING" ? "정지 (인수 취소)" : "이 계획 정지"}
             </button>
           )}
           {!terminal && p.state !== "DRAFT" && (
@@ -522,9 +542,11 @@ export default function PlanDetailPage() {
         renderValues={(v) => <ValuesList values={v} />}
         confirmLabel="재개하기"
         onConfirm={async (c) => {
-          await plansApi.resume(id, c);
-          setMsg("재개를 요청했습니다. 실행기가 토스와 맞춘 뒤 불변식을 통과하면 이어 갑니다.");
-          await refresh();
+          await guarded(async () => {
+            await plansApi.resume(id, c);
+            setMsg("재개를 요청했습니다. 실행기가 토스와 맞춘 뒤 수량 점검을 통과하면 이어 갑니다.");
+            await refresh();
+          });
         }}
       >
         <Notice>재개 요청은 실행기가 처리합니다. 정지된 사이에도 손절 다리 다시 걸기는 계속됩니다.</Notice>
@@ -534,16 +556,24 @@ export default function PlanDetailPage() {
         testid="dlg-stop"
         open={dlg === "stop"}
         onClose={() => setDlg(null)}
-        title="이 계획 정지"
+        title={p.state === "ADOPT_PENDING" ? "인수 취소" : "이 계획 정지"}
         requireCode={false}
-        confirmLabel="정지하기"
+        confirmLabel={p.state === "ADOPT_PENDING" ? "인수 취소하기" : "정지하기"}
         onConfirm={async () => {
-          await plansApi.stop(id);
-          setMsg("계획을 정지했습니다. 대기 중인 매수 취소는 실행기가 처리합니다. 매도 다리는 지우지 않았습니다.");
-          await refresh();
+          await guarded(async () => {
+            await plansApi.stop(id);
+            setMsg(p.state === "ADOPT_PENDING"
+              ? "인수를 취소했습니다. 앱에서 건 조건주문은 건드리지 않았습니다."
+              : "계획을 정지했습니다. 대기 중인 매수 취소는 실행기가 처리합니다. 매도 다리는 지우지 않았습니다.");
+            await refresh();
+          });
         }}
       >
-        <p className="text-sm">새 등록과 매수를 멈추고 대기 중인 매수를 취소합니다. 걸린 매도 다리는 지우지 않습니다.</p>
+        {p.state === "ADOPT_PENDING" ? (
+          <p className="text-sm">인수를 취소합니다. 인수 대기가 끝나고 계획이 취소됨으로 바뀝니다. 앱에서 건 조건주문은 이 화면에서 건드리지 않습니다.</p>
+        ) : (
+          <p className="text-sm">새 등록과 매수를 멈추고 대기 중인 매수를 취소합니다. 걸린 매도 다리는 지우지 않습니다.</p>
+        )}
       </CodeDialog>
 
       <CodeDialog
@@ -554,9 +584,11 @@ export default function PlanDetailPage() {
         requireCode={false}
         confirmLabel="인수 취소하기"
         onConfirm={async () => {
-          await plansApi.adoptCancel(id);
-          setMsg("인수 취소를 요청했습니다.");
-          await refresh();
+          await guarded(async () => {
+            await plansApi.adoptCancel(id);
+            setMsg("인수 취소를 요청했습니다.");
+            await refresh();
+          });
         }}
       >
         <p className="text-sm">인수 대기를 끝냅니다. 앱에서 건 조건주문은 이 화면에서 건드리지 않습니다.</p>
@@ -570,9 +602,11 @@ export default function PlanDetailPage() {
         requireCode={false}
         confirmLabel="시간 손절 중지하기"
         onConfirm={async () => {
-          await plansApi.timestopStop(id);
-          setMsg("시간 손절 중지를 요청했습니다.");
-          await refresh();
+          await guarded(async () => {
+            await plansApi.timestopStop(id);
+            setMsg("시간 손절 중지를 요청했습니다.");
+            await refresh();
+          });
         }}
       >
         <p className="text-sm">이 계획의 시간 손절 단계를 더 진행하지 않도록 실행기에 요청합니다.</p>
