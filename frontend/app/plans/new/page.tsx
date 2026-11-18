@@ -127,7 +127,7 @@ function NewPlanForm() {
   return (
     <form onSubmit={save} className="space-y-4" aria-label="새 계획 초안 입력">
       <h2 className="text-xl font-bold">새 계획 초안</h2>
-      <Notice>저장하면 초안이 됩니다. 주문은 승인한 뒤에 시작됩니다. 값은 입력한 그대로 저장하며 추정 · 보장 아님.</Notice>
+      <Notice>저장하면 초안이 됩니다. 주문은 승인한 뒤에 시작됩니다. 수량은 예산과 매수 주문가로 서버가 다시 정하므로 입력과 다를 수 있습니다(예산 · 매수가가 없을 때만 입력한 수량을 씁니다). 추정 · 보장 아님.</Notice>
       <div className="grid gap-3 sm:grid-cols-2">
         <Field label="종목 이름 (예 TESTA)">
           <input value={symbol} onChange={(e) => setSymbol(e.target.value)} aria-label="종목 이름" data-testid="in-symbol" className={INPUT} autoCapitalize="characters" placeholder="TESTA" />

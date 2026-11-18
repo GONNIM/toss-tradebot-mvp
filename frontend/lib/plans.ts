@@ -261,6 +261,15 @@ export const STATE_FLOW = ["DRAFT", "APPROVED", "ENTRY_ARMED", "HOLDING", "TP1_W
 export const TERMINAL_STATES = ["CLOSED", "CANCELLED"];
 
 export const ROLE_LABEL: Record<string, string> = { buy: "매수", sl: "손절", tp1: "1차 익절" };
+/** 손절 다리에 붙는 시간대 이름표 (regular = 정규장 사다리 · emergency = 정규장 밖 비상 손절) */
+export const TAG_LABEL: Record<string, string> = { regular: "정규장", emergency: "정규장 밖 비상", pre: "장 시작 전", after: "장 마감 뒤" };
+export const WS_LABEL: Record<string, string> = { connected: "연결됨", down: "끊김", none: "확인 못 함" };
+export const PLAN_SOURCE_LABEL: Record<string, string> = { manual: "직접 입력", adopt: "보유 인수" };
+export const VALUE_LABEL: Record<string, string> = {
+  symbol: "종목", mode: "종류", budget_usd: "예산", buy_watch: "매수 감시가", buy_order: "매수 주문가", qty: "수량",
+  tp1_watch: "1차 익절 감시가", tp1_order: "1차 익절 주문가", announce_at: "발표 시각", entry_close_at: "매수 마감",
+  entry_window_end: "진입 창 끝", ladder_pcts: "손절 폭 목록", adopt: "인수 값",
+};
 export const LEG_STATUS_LABEL: Record<string, string> = {
   WATCHING: "감시 중",
   TRIGGERED: "조건 닿음",

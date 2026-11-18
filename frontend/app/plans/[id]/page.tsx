@@ -8,7 +8,7 @@ import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
-  plansApi, MODE_LABEL, STATE_LABEL, STATE_FLOW, TERMINAL_STATES, ROLE_LABEL, LEG_STATUS_LABEL,
+  plansApi, MODE_LABEL, STATE_LABEL, STATE_FLOW, TERMINAL_STATES, ROLE_LABEL, LEG_STATUS_LABEL, TAG_LABEL, VALUE_LABEL, PLAN_SOURCE_LABEL,
   errText, kst, num, pct, shares, usd, TP1_MODE_LABEL,
 } from "@/lib/plans";
 import type { ActualLeg, Leg, Plan, PlanDetail } from "@/lib/plans";
@@ -22,17 +22,55 @@ const POSITION_STATES = ["HOLDING", "TP1_WAIT", "TRAILING"];
 
 const TIMESTOP_LABEL: Record<string, string> = { none: "해당 없음", lift: "손절 끌어올림", clean: "정리 중", stopped: "중지됨" };
 
-/** 이벤트 한 줄의 글: 상태 바뀜은 한국어로 풀어 쓴다 */
-function eventText(kind: string, detail: string): string {
+const EVENT_LABEL: Record<string, string> = {
+  state: "단계 바뀜", draft: "초안 만듦", draft_edit: "초안 고침", leg_missing: "다리 안 보임", leg_triggered: "조건 닿음",
+  leg_filled: "체결", leg_canceled: "취소", leg_expired: "만료", leg_register_fail: "등록 실패", leg_modify_fail: "수정 실패",
+  sanity_reject: "값 점검 막음", sell_qty_capped: "매도 수량 줄임", sell_rejected: "매도 거부", sell_cross: "즉시 매도",
+  account_short: "계좌 보유 부족", tp1_watch_sell: "1차 익절 매도", timestop_stopped: "시간 손절 중지",
+  switch_off_wait: "스위치 꺼짐 대기", kill_wait: "Kill Switch 대기", confirm_fail: "확인 코드 실패",
+  draft_done: "자동 초안 끝", draft_none: "자동 초안 없음",
+};
+
+function legName(raw: string): string {
+  const m = /^(sl|tp1|buy)(\d+)$/.exec(raw);
+  return m ? `${ROLE_LABEL[m[1]] ?? m[1]} ${m[2]}번` : raw;
+}
+
+function reasonKo(reason: string): string {
+  const m = /^approved by (.+)$/.exec(reason);
+  return m ? `${m[1]} 승인` : reason;
+}
+
+/** 이벤트 한 줄: 한국어 문장 + (원문이 다르면) 접힌 「자세히」 · 모르는 종류는 「기타 기록」 */
+function eventView(kind: string, detail: string): { label: string; text: string; raw: string | null } {
+  const label = EVENT_LABEL[kind] ?? "기타 기록";
+  const d = detail ?? "";
+  let m: RegExpExecArray | null;
+  let text: string | null = null;
   if (kind === "state") {
     try {
-      const j = JSON.parse(detail) as { from?: string; to?: string; reason?: string };
-      return `${STATE_LABEL[j.from ?? ""] ?? j.from} → ${STATE_LABEL[j.to ?? ""] ?? j.to}${j.reason ? ` · ${j.reason}` : ""}`;
-    } catch {
-      return detail;
-    }
-  }
-  return detail;
+      const j = JSON.parse(d) as { from?: string; to?: string; reason?: string };
+      text = `${STATE_LABEL[j.from ?? ""] ?? "알 수 없는 단계"} → ${STATE_LABEL[j.to ?? ""] ?? "알 수 없는 단계"}${j.reason ? ` · ${reasonKo(j.reason)}` : ""}`;
+    } catch { /* 아래 기타 처리 */ }
+  } else if (kind === "draft") text = `초안을 만들었습니다 (${PLAN_SOURCE_LABEL[d] ?? "자동"})`;
+  else if ((m = /^revision (\d+)$/.exec(d)) && kind === "draft_edit") text = `초안 값을 고쳤습니다 (판 번호 ${m[1]})`;
+  else if (kind === "leg_missing") text = `${legName(d)} 다리가 토스에서 보이지 않습니다`;
+  else if (kind === "leg_triggered") text = `${legName(d)} 조건에 닿았습니다`;
+  else if (kind === "leg_filled") text = `${legName(d)} 체결되었습니다`;
+  else if (kind === "leg_canceled") text = `${legName(d)} 취소되었습니다`;
+  else if (kind === "leg_expired") text = `${legName(d)} 만료되었습니다`;
+  else if ((m = /^(\S+) (\S+)$/.exec(d)) && kind === "leg_register_fail") text = `${legName(m[1])} 조건주문 등록에 실패했습니다`;
+  else if ((m = /^(\S+) (\S+) #(\d+)$/.exec(d)) && kind === "leg_modify_fail") text = `${legName(m[1])} 조건주문 수정에 실패했습니다 (연속 ${m[3]}번째)`;
+  else if (kind === "sanity_reject") text = `값 점검에서 막았습니다 · ${d}`;
+  else if ((m = /^(\S+) (\d+) → (\d+)$/.exec(d)) && kind === "sell_qty_capped") text = `${legName(m[1])} 매도 수량을 ${m[2]}주에서 ${m[3]}주로 줄였습니다`;
+  else if ((m = /^(\S+) (\S+)$/.exec(d)) && kind === "sell_rejected") text = `${legName(m[1])} 매도 주문이 거부되었습니다`;
+  else if ((m = /^(\S+) qty (\d+)$/.exec(d)) && kind === "sell_cross") text = `${legName(m[1])} 즉시 매도 ${m[2]}주를 요청했습니다`;
+  else if ((m = /^plan_qty (\d+) account (\d+)$/.exec(d)) && kind === "account_short") text = `계좌 보유가 계획 수량보다 적습니다 (계획 ${m[1]}주 · 계좌 ${m[2]}주)`;
+  else if ((m = /^qty (\d+)$/.exec(d)) && kind === "tp1_watch_sell") text = `1차 익절 감시가에 닿아 ${m[1]}주 매도를 요청했습니다`;
+  else if (kind === "timestop_stopped") text = "시간 손절을 중지했습니다";
+  else if (["switch_off_wait", "kill_wait", "confirm_fail", "draft_done", "draft_none"].includes(kind)) text = d || label;
+  if (text === null) return { label: "기타 기록", text: "자세한 내용은 아래 「자세히」 에서 볼 수 있습니다", raw: `${kind} · ${d}` };
+  return { label, text, raw: d && d !== text && !/[가-힣]/.test(d) ? d : null };
 }
 
 type Dlg = null | "approve" | "resume" | "stop" | "adopt-cancel" | "timestop";
@@ -41,21 +79,32 @@ function legKey(l: { qty: number; watch: number | null; order: number | null }):
   return `${l.qty}|${l.watch ?? ""}|${l.order ?? ""}`;
 }
 
+function valueText(k: string, v: unknown): string {
+  if (v === null || v === undefined) return "—";
+  if (k === "mode") return MODE_LABEL[String(v)] ?? "알 수 없는 종류";
+  if (k === "adopt" && typeof v === "object") {
+    const a = v as { qty?: unknown; avg_price?: unknown; trailing?: boolean; peak?: unknown };
+    return `수량 ${shares(a.qty)} · 평균 단가 ${usd(a.avg_price, 4)}${a.trailing ? ` · 고점 ${usd(a.peak, 4)}부터 따라 올림` : ""}`;
+  }
+  if (k === "ladder_pcts" && Array.isArray(v)) return v.map((x) => `${(Number(x) * 100).toFixed(1).replace(/\.0$/, "")}%`).join(" · ");
+  if (k.endsWith("_at") || k === "entry_window_end") return kst(String(v));
+  if (["budget_usd", "buy_watch", "buy_order", "tp1_watch", "tp1_order"].includes(k)) return usd(v, 4);
+  if (k === "qty") return shares(v);
+  return typeof v === "object" ? "기타 값" : String(v);
+}
+
 function ValuesList({ values }: { values: Record<string, unknown> | undefined }) {
   if (!values) return <p className="text-sm text-muted-foreground">값이 없습니다</p>;
-  const label: Record<string, string> = {
-    symbol: "종목", mode: "종류", budget_usd: "예산", buy_watch: "매수 감시가", buy_order: "매수 주문가", qty: "수량",
-    tp1_watch: "1차 익절 감시가", tp1_order: "1차 익절 주문가", announce_at: "발표 시각", entry_close_at: "매수 마감",
-    entry_window_end: "진입 창 끝", ladder_pcts: "손절 폭 목록", adopt: "인수 값",
-  };
+  const label = VALUE_LABEL;
+
   return (
     <dl>
       {Object.entries(values).map(([k, v]) => (
         <Row
           key={k}
-          k={label[k] ?? k}
+          k={label[k] ?? "기타 값"}
           testid={`val-${k}`}
-          v={k === "mode" ? MODE_LABEL[String(v)] ?? String(v) : typeof v === "object" && v !== null ? JSON.stringify(v) : String(v ?? "—")}
+          v={valueText(k, v)}
         />
       ))}
     </dl>
@@ -73,7 +122,7 @@ function LegTable({ legs, testid, label }: { legs: { key: string; role: string; 
         <tbody className="tabular-nums">
           {legs.map((l) => (
             <tr key={l.key} className="border-t border-border/60">
-              <td className="py-1.5 pr-2">{ROLE_LABEL[l.role] ?? l.role}{l.extra ? <span className="ml-1 text-xs text-muted-foreground">{l.extra}</span> : null}</td>
+              <td className="py-1.5 pr-2">{ROLE_LABEL[l.role] ?? "기타"}{l.extra ? <span className="ml-1 text-xs text-muted-foreground">{TAG_LABEL[l.extra] ?? l.extra}</span> : null}</td>
               <td className="pr-2 text-right">{shares(l.qty)}</td>
               <td className="pr-2 text-right">{usd(l.watch, 4)}</td>
               <td className="text-right">{usd(l.order, 4)}</td>
@@ -256,7 +305,7 @@ export default function PlanDetailPage() {
 
       <header className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
         <h2 className="text-xl font-bold" data-testid="plan-title">#{p.id} {p.symbol}</h2>
-        <span data-testid="plan-state" className="text-sm font-semibold">{STATE_LABEL[p.state] ?? p.state}</span>
+        <span data-testid="plan-state" className="text-sm font-semibold">{STATE_LABEL[p.state] ?? "알 수 없는 단계"}</span>
         <span className="text-xs tabular-nums text-muted-foreground">판 번호 {p.revision} · 내용 확인값 {d.content_hash}</span>
       </header>
 
@@ -281,7 +330,7 @@ export default function PlanDetailPage() {
           <Row k="고점" v={usd(p.peak_price, 4)} testid="val-peak" />
           <Row k="발표 시각" v={kst(p.params.announce_at as string | null)} testid="val-announce" />
           <Row k="매수 마감 · 진입 창 끝" v={`${kst(p.params.entry_close_at as string | null)} · ${kst(p.params.entry_window_end as string | null)}`} testid="val-close" />
-          <Row k="시간 손절 단계" v={TIMESTOP_LABEL[p.timestop_stage] ?? p.timestop_stage} testid="val-timestop" />
+          <Row k="시간 손절 단계" v={TIMESTOP_LABEL[p.timestop_stage] ?? "알 수 없음"} testid="val-timestop" />
           <Row k="승인한 사람" v={p.approved_by ?? "아직 승인 전"} testid="val-approver" />
         </dl>
       </section>
@@ -297,7 +346,7 @@ export default function PlanDetailPage() {
           />
           <Row k="다음 시간대 전환 시각 (한국 시각)" v={kstNow(live?.next_swap_at)} testid="val-next-switch" />
           <Row k="1차 익절까지 %" v={live?.tp1_gap_pct != null ? pct(live.tp1_gap_pct) : "확인 못 함"} testid="val-to-tp1" />
-          <Row k="1차 익절 방식" v={live?.tp1_mode ? TP1_MODE_LABEL[live.tp1_mode] ?? live.tp1_mode : "아직 정해지지 않음"} testid="val-tp1-mode" />
+          <Row k="1차 익절 방식" v={live?.tp1_mode ? TP1_MODE_LABEL[live.tp1_mode] ?? "알 수 없음" : "아직 정해지지 않음"} testid="val-tp1-mode" />
           {live?.trailing && (
             <Row k="고점 · 따라 올린 손절 감시가" v={`${usd(live.trailing.peak, 4)} · ${usd(live.trailing.stop, 4)}`} testid="val-trailing" />
           )}
@@ -317,7 +366,7 @@ export default function PlanDetailPage() {
         {(legMismatch || invBad) && (
           <Notice tone="warn" testid="leg-mismatch">
             {legMismatch ? "불일치: 두 목록이 다릅니다. " : ""}
-            {invBad ? `수량 점검 ${d.invariant.status === "shortage" ? "부족" : d.invariant.status === "excess" ? "초과" : d.invariant.status}: 손절 합계 ${shares(d.invariant.sl_sum)} · 목표 ${shares(d.invariant.target)}` : ""}
+            {invBad ? `수량 점검 ${d.invariant.status === "shortage" ? "부족" : d.invariant.status === "excess" ? "초과" : "이상"}: 손절 합계 ${shares(d.invariant.sl_sum)} · 목표 ${shares(d.invariant.target)}` : ""}
           </Notice>
         )}
         <div className="grid gap-3 md:grid-cols-2">
@@ -342,7 +391,7 @@ export default function PlanDetailPage() {
           <ul data-testid="legs-all" className="mt-2 space-y-1 tabular-nums">
             {d.legs.map((l) => (
               <li key={l.id}>
-                {ROLE_LABEL[l.role] ?? l.role} {l.seq} · {shares(l.qty)} · 감시 {usd(l.watch, 4)} · 주문 {usd(l.order, 4)} · {LEG_STATUS_LABEL[l.status] ?? l.status}
+                {ROLE_LABEL[l.role] ?? "기타"} {l.seq} · {shares(l.qty)} · 감시 {usd(l.watch, 4)} · 주문 {usd(l.order, 4)} · {LEG_STATUS_LABEL[l.status] ?? "기타 상태"}
               </li>
             ))}
           </ul>
@@ -406,8 +455,21 @@ export default function PlanDetailPage() {
             {d.events.map((e, i) => (
               <li key={`${e.ts}-${i}`} className="px-3 py-2 text-sm">
                 <span className="tabular-nums text-muted-foreground">{kst(e.ts)}</span>
-                <span className="ml-2 text-xs text-muted-foreground">{e.kind}</span>
-                {e.detail && <p className="break-words">{eventText(e.kind, e.detail)}</p>}
+                {(() => {
+                  const v = eventView(e.kind, e.detail);
+                  return (
+                    <>
+                      <span className="ml-2 text-xs text-muted-foreground">{v.label}</span>
+                      <p className="break-words">{v.text}</p>
+                      {v.raw && (
+                        <details className="text-xs text-muted-foreground">
+                          <summary className="cursor-pointer" aria-label="이 기록의 원문 펼치기">자세히</summary>
+                          <p className="break-all tabular-nums">{v.raw}</p>
+                        </details>
+                      )}
+                    </>
+                  );
+                })()}
               </li>
             ))}
           </ul>

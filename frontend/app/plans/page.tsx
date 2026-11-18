@@ -4,7 +4,7 @@
 // 걸린 조건주문 수 · 토스 API 마지막 성공 시각 · 1차 익절 방식 · 마지막 현재가는 서버 값이고 null 이면 「확인 못 함」.
 import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
-import { plansApi, MODE_LABEL, STATE_LABEL, TERMINAL_STATES, TP1_MODE_LABEL, errText, kst, shares, usd } from "@/lib/plans";
+import { plansApi, MODE_LABEL, STATE_LABEL, TERMINAL_STATES, TP1_MODE_LABEL, WS_LABEL, errText, kst, shares, usd } from "@/lib/plans";
 import { usePlanStatus } from "@/components/plans/ModeBand";
 import { BTN_LINE, BTN_PRIMARY, Chip, Notice } from "@/components/plans/ui";
 
@@ -21,7 +21,7 @@ export default function PlansPage() {
   return (
     <div className="space-y-4">
       <section aria-label="실행기 상태 칩" className="flex flex-wrap gap-2" data-testid="plans-chips">
-        <Chip testid="chip-ws">시세 연결 {st?.ws_status ?? "확인 못 함"}</Chip>
+        <Chip testid="chip-ws">시세 연결 {WS_LABEL[st?.ws_status ?? "none"] ?? "확인 못 함"}</Chip>
         <Chip testid="chip-resync">토스와 마지막으로 맞춘 시각 {kst(st?.last_resync_at)}</Chip>
         <Chip testid="chip-toss" tone={q.data?.toss?.status === "ok" ? "plain" : "warn"}>
           토스 API 연결 {q.data?.toss?.status === "ok" ? "정상" : q.data?.toss?.status === "error" ? "오류" : "확인 못 함"} · 마지막 성공 {kst(q.data?.toss?.last_ok_at ?? st?.toss?.last_ok_at)}
@@ -73,11 +73,11 @@ function PlanList({ title, rows, testid }: { title: string; rows: import("@/lib/
                 <span className="flex flex-wrap items-center gap-2">
                   <span className="text-sm tabular-nums text-muted-foreground">#{p.id}</span>
                   <span className="font-bold">{p.symbol}</span>
-                  <span className="text-xs text-muted-foreground">{MODE_LABEL[p.mode] ?? p.mode}</span>
+                  <span className="text-xs text-muted-foreground">{MODE_LABEL[p.mode] ?? "알 수 없는 종류"}</span>
                   {p.source === "adopt" && <span className="text-xs text-muted-foreground">보유 인수</span>}
                 </span>
                 <span className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm tabular-nums">
-                  <span className={warn ? "font-semibold text-warn" : "font-semibold"}>{STATE_LABEL[p.state] ?? p.state}</span>
+                  <span className={warn ? "font-semibold text-warn" : "font-semibold"}>{STATE_LABEL[p.state] ?? "알 수 없는 단계"}</span>
                   <span>수량 {shares(qty)}</span>
                   <span>매수 주문가 {usd(p.params.buy_order ?? p.avg_price)}</span>
                   <span data-testid={`row-conds-${p.id}`}>걸린 조건주문 {p.live_cond_count ?? "확인 못 함"}{typeof p.live_cond_count === "number" ? "건" : ""}</span>
