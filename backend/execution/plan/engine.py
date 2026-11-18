@@ -19,6 +19,7 @@ from sqlalchemy import select
 
 from backend.execution.exceptions import ExecutionError, OrderRejected
 
+from . import sanity
 from . import sessions as sess
 from . import sizing, state
 from .brokers import DirectionGate, GateResult
@@ -222,7 +223,10 @@ class PlanEngine:
         cid = self._cid(plan, "buy", 1)
         expire = p.get("buy_expire") or self._expire(7)
         res = await self.gate.place_buy(s, plan_id=plan.id, symbol=plan.symbol, qty=qty, watch=watch, order=order,
-                                        client_id=cid, expire=expire)
+                                        client_id=cid, expire=expire, check=lambda cur: sanity.check_band(watch, cur, "매수 감시"))
+        if res.kind == "invalid":
+            await self._sanity_reject(s, plan, "매수", res.reason)
+            return None
         leg = PlanLeg(plan_id=plan.id, role="buy", seq=1, kind=res.kind if res.kind in ("cond", "limit") else "cond",
                       side="BUY", toss_id=res.id, client_order_id=cid, qty=qty, watch_price=float(watch),
                       order_price=float(order), status="WATCHING", expire_date=expire)
@@ -374,9 +378,13 @@ class PlanEngine:
         cid = self._cid(plan, "sl", seq)
         try:
             res = await self.gate.place_stop(s, plan_id=plan.id, symbol=plan.symbol, qty=qty, watch=vals.watch,
-                                             order=vals.order, client_id=cid, expire=self._expire())
+                                             order=vals.order, client_id=cid, expire=self._expire(),
+                                             check=self._stop_check(plan, vals.watch))
         except ExecutionError as exc:
             await self._event(s, plan, "leg_register_fail", f"sl{seq} {exc.__class__.__name__}")
+            return None
+        if res.kind == "invalid":
+            await self._sanity_reject(s, plan, f"손절 다리 {seq}", res.reason)
             return None
         if res.kind == "cond":
             leg = PlanLeg(plan_id=plan.id, role="sl", seq=seq, kind="cond", toss_id=res.id, client_order_id=cid,
@@ -403,7 +411,7 @@ class PlanEngine:
         try:
             res = await self.gate.place_stop(s, plan_id=plan.id, symbol=plan.symbol, qty=q, watch=v.watch,
                                              order=v.order, client_id=cid, expire=self._expire(),
-                                             modify_id=leg.toss_id)
+                                             modify_id=leg.toss_id, check=self._stop_check(plan, v.watch))
         except ExecutionError as exc:
             leg.error_count += 1
             await self._event(s, plan, "leg_modify_fail", f"sl{leg.seq} {exc.__class__.__name__} #{leg.error_count}")
@@ -411,6 +419,9 @@ class PlanEngine:
                 await self._halt(s, plan, f"다리 sl{leg.seq} 수정 {MAX_LEG_ERRORS}번 실패")
             return False   # 수정 중 기록은 남겨 다시 맞추기가 짝을 잇는다
         await s.delete(pend)
+        if res.kind == "invalid":
+            await self._sanity_reject(s, plan, f"손절 다리 {leg.seq} 수정", res.reason)
+            return False       # 옛 다리는 그대로 둔다
         if res.kind == "cond":
             leg.toss_id, leg.qty = res.id, q
             leg.watch_price, leg.order_price, leg.client_order_id = float(v.watch), float(v.order), cid
@@ -425,6 +436,16 @@ class PlanEngine:
                                    old_leg=None if res.old_gone else leg, tag=leg.tag)
             return False
         return False  # unconfirmed · 옛 다리는 그대로 둔다
+
+    def _stop_check(self, plan: Plan, watch):
+        """7-6: 사다리 · 비상 · 시간 손절 = 직전가 ±40% · 추적 = 감시가 ≤ 현재가 − 1틱."""
+        if plan.state == state.TRAILING:
+            return lambda cur: sanity.check_trail(watch, cur)
+        return lambda cur: sanity.check_band(watch, cur, "손절 감시")
+
+    async def _sanity_reject(self, s, plan: Plan, what: str, why: str) -> None:
+        await self._event(s, plan, "sanity_reject", f"{what}: {why}")
+        await self._alert(plan, "warning", "등록 거부 · 값 점검", f"{what} 등록을 거부했습니다. {why}")
 
     # ───────────────── 6-1 이미 넘은 다리 → 즉시 지정가 매도 ─────────────────
     def _reset_reject_loops(self, plan: Plan, seq: int) -> None:
@@ -739,6 +760,14 @@ class PlanEngine:
         if qty <= 0:
             return
         watch, order = ceil_tick(p["tp1_watch"]), floor_tick(p.get("tp1_order") or p["tp1_watch"])
+        why = sanity.check_tp1(watch, plan.avg_price or 0)
+        if why:                                  # 7-6: 위반이면 등록 거부 + 알림 (같은 사유로 반복 알리지 않음)
+            if not params_of(plan).get("tp1_sanity_alerted"):
+                pp = params_of(plan)
+                pp["tp1_sanity_alerted"] = True
+                set_params(plan, pp)
+                await self._sanity_reject(s, plan, "TP1", why)
+            return
         if sizing.must_use_tp1_watch(acct, pq) or p.get("tp1_mode") == "watch":
             await self._tp1_watch_mode(s, plan, qty, watch)
             return

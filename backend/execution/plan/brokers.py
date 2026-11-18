@@ -42,6 +42,13 @@ def is_sell_blocked_by_opposite(exc: Exception) -> bool:
     return "opposite-pending-order-exists" in str(exc)
 
 
+def access_token() -> str:
+    """웹소켓 접속용 토큰 (REST 와 같은 토큰 · 발급은 toss_client 의 잠금 · 가드 안에서만)."""
+    from backend.execution.brokers.toss_client import get_toss_client
+
+    return get_toss_client().access_token()
+
+
 # ─── 원시 브로커 ────────────────────────────────────────────────
 
 class RawBroker:
@@ -348,6 +355,7 @@ class GateResult:
     id: Optional[str] = None    # cond 번호 · limit 번호
     cur: Optional[Decimal] = None
     old_gone: bool = False      # 수정(취소 뒤 새로 만들기) 뒤 방향이 뒤집혀 취소해, 옛 다리도 이미 없다
+    reason: str = ""            # kind == "invalid" (7-6 sanity 위반) 일 때 사유
 
 
 class DirectionGate:
@@ -392,13 +400,21 @@ class DirectionGate:
 
     # ── 매도 손절 · 추적 · 비상 · 시간 손절 다리 ──
     async def place_stop(self, s, *, plan_id: int, symbol: str, qty: int, watch: Decimal, order: Decimal,
-                         client_id: str, expire: str, modify_id: Optional[str] = None) -> GateResult:
-        """감시가가 현재가 아래(≤ 현재가 − 1틱)면 조건주문. 아니면 이미 넘은 다리 → cross (두 값 확인 뒤)."""
+                         client_id: str, expire: str, modify_id: Optional[str] = None,
+                         check: Optional[Callable[[Decimal], Optional[str]]] = None) -> GateResult:
+        """감시가가 현재가 아래(≤ 현재가 − 1틱)면 조건주문. 아니면 이미 넘은 다리 → cross (두 값 확인 뒤).
+
+        check(현재가) 는 7-6 sanity · 조건주문으로 걸 때만 본다(이미 넘은 다리의 즉시 매도는 막지 않는다).
+        """
         cur = await self.current(s, symbol)
         if not below_by_tick(watch, cur):
             if await self.confirmed_cross(s, symbol, watch):
                 return GateResult("cross", cur=cur)
             return GateResult("unconfirmed", cur=cur)
+        if check is not None:
+            why = check(cur)
+            if why:
+                return GateResult("invalid", cur=cur, reason=why)
         try:
             if modify_id:
                 cid = await self.raw.cond_modify(s, modify_id, plan_id=plan_id, symbol=symbol, side="SELL", qty=qty,
@@ -445,9 +461,14 @@ class DirectionGate:
 
     # ── 매수 ──
     async def place_buy(self, s, *, plan_id: int, symbol: str, qty: int, watch: Decimal, order: Decimal,
-                        client_id: str, expire: str) -> GateResult:
-        """감시가 ≤ 현재가 − 1틱 이면 매수 조건주문. 아니면 일반 지정가(DAY) 매수."""
+                        client_id: str, expire: str,
+                        check: Optional[Callable[[Decimal], Optional[str]]] = None) -> GateResult:
+        """감시가 ≤ 현재가 − 1틱 이면 매수 조건주문. 아니면 일반 지정가(DAY) 매수. check 는 7-6 sanity."""
         cur = await self.current(s, symbol)
+        if check is not None:
+            why = check(cur)
+            if why:
+                return GateResult("invalid", cur=cur, reason=why)
         if below_by_tick(watch, cur):
             try:
                 cid = await self.raw.cond_create(s, plan_id=plan_id, symbol=symbol, side="BUY", qty=qty,

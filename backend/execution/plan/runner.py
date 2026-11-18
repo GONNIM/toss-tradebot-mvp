@@ -19,7 +19,7 @@ from typing import Optional
 from sqlalchemy import select
 
 from . import drafts, heartbeat, resync, sizing, state
-from .brokers import DirectionGate, PaperRaw, RealRaw
+from .brokers import DirectionGate, PaperRaw, RealRaw, access_token as _token
 from .engine import PlanEngine
 from .models import Plan, PlanEvent, PlanLeg, PlanPaperOrder, PlanRequest, utcnow
 from .switches import read_switches
@@ -112,7 +112,7 @@ class PlanExecutor:
         self.gs = session_factory or get_session
         self.notify = notify
         self.store = store or PriceStore()
-        self.ws = PlanWsClient(self.store)
+        self.ws = PlanWsClient(self.store, token_fn=_token, symbols_fn=self._open_symbols)
         self._prev_sw = {"live": False, "paper": False}
         self._last_resync = 0.0
         self._recovered_sent = False
@@ -132,6 +132,11 @@ class PlanExecutor:
                       regular_window=_regular_window_from_calendar, kill_state=_kill_state)
         return cls(real_engine=PlanEngine(live_gate, **common), paper_engine=PlanEngine(paper_gate, **common),
                    paper_raw=paper_raw, notify=notify, store=store)
+
+    async def _open_symbols(self) -> list[str]:
+        async with self.gs() as s:
+            rows = await s.scalars(select(Plan.symbol).where(Plan.state.in_(_LIVE_ACTIVE)))
+            return sorted(set(rows))
 
     def _engine(self, plan: Plan) -> PlanEngine:
         return self.engines[plan.mode]
@@ -221,6 +226,7 @@ class PlanExecutor:
     async def run(self, stop: asyncio.Event) -> None:
         import time
 
+        ws_task = asyncio.create_task(self.ws.run(stop))     # 웹소켓 1연결 (끊기면 스스로 다시 연결 · REST 가 대신 읽음)
         n = await self.resync_once()       # 기동 · 다시 맞추기 → 불변식 통과 확인 → 복구 알림
         async with self.gs() as s:
             await heartbeat.notify_recovered(s, self._send_urgent, n)
@@ -242,6 +248,7 @@ class PlanExecutor:
                 await asyncio.wait_for(stop.wait(), timeout=TICK_SEC)
             except asyncio.TimeoutError:
                 pass
+        await asyncio.gather(ws_task, return_exceptions=True)
 
 
 async def start_executor(stop: asyncio.Event) -> Optional[asyncio.Task]:

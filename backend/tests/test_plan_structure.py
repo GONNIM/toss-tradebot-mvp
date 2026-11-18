@@ -150,10 +150,3 @@ def test_draft_jobs_register_only_with_issue_key_and_follow_job_rules(monkeypatc
     assert (f["hour"], f["minute"]) == ("7", "15,25,35,45,55")
     g = {x.name: str(x) for x in b.trigger.fields}
     assert (g["hour"], g["minute"]) == ("8", "5")
-
-
-def test_no_ws_connection_is_started_and_markers_exist():
-    """웹소켓은 명세 확인 전 미구현 · 보고서 「안 함」 표시가 코드에 남아 있다."""
-    src = (PLAN_DIR / "ws.py").read_text(encoding="utf-8")
-    assert "미구현" in src and "NotImplementedError" in src
-    assert "websockets" not in src and "wss://" not in src
