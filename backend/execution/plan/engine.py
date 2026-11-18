@@ -24,7 +24,7 @@ from . import sessions as sess
 from . import sizing, state
 from .brokers import DirectionGate, GateResult
 from .models import Plan, PlanFill, PlanLeg, PlanLegPending, PlanSellReservation, utcnow
-from .pricing import D, ceil_tick, floor_tick, order_price_from_watch, sell_order
+from .pricing import D, ceil_tick, floor_tick, order_price_from_watch, qty_for_budget, sell_order
 from .sessions import Values
 from .switches import content_hash_of
 
@@ -89,6 +89,20 @@ def approval_values(plan: Plan) -> dict:
 
 def refresh_hash(plan: Plan) -> None:
     plan.content_hash = content_hash_of(approval_values(plan))
+
+
+def derive_qty(params: dict) -> Optional[int]:
+    """수량을 정하는 서버 한 곳 (계획서 6절): 예산 ÷ (매수가 × 1.001) 을 6 의 배수로 내림 (pricing.qty_for_budget).
+    예산 · 매수가가 없으면 계산할 수 없어 None (이때만 받은 수량을 그대로 둔다). 보유 인수 계획은 인수 수량을 쓰므로 None."""
+    if params.get("adopt"):
+        return None
+    budget = params.get("budget_usd")
+    price = params.get("buy_order") if params.get("buy_order") is not None else params.get("buy_watch")
+    try:
+        b, px = float(budget), float(price)
+    except (TypeError, ValueError):
+        return None
+    return qty_for_budget(b, floor_tick(px))
 
 
 def _num(v):
@@ -160,6 +174,9 @@ class PlanEngine:
             raise state.TransitionError("같은 종목에 열린 계획이 이미 있습니다")
         plan = Plan(mode=mode, source=source, symbol=symbol, state=state.DRAFT, revision=1)
         p = dict(params)
+        q = derive_qty(p)
+        if q is not None:
+            p["qty"] = q                      # 화면이 보낸 qty 와 달라도 서버 계산값을 쓴다
         set_params(plan, p)
         if p.get("avg_price") is not None:
             plan.avg_price = float(p["avg_price"])
@@ -188,6 +205,9 @@ class PlanEngine:
             if edited:
                 p["user_edited"] = sorted(edited)
         p.update({k: v for k, v in values.items() if k in APPROVAL_KEYS})
+        q = derive_qty(p)
+        if q is not None:
+            p["qty"] = q
         set_params(plan, p)
         if "avg_price" in values:
             plan.avg_price = float(values["avg_price"])

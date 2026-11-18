@@ -24,7 +24,7 @@ from backend.execution.exceptions import ExecutionError
 from backend.execution.plan import heartbeat, sizing, state
 from backend.execution.plan import switches as sw
 from backend.execution.plan.brokers import DirectionGate, RawBroker
-from backend.execution.plan.engine import PlanEngine, approval_values, params_of, parse_dt, runtime_of
+from backend.execution.plan.engine import PlanEngine, approval_values, derive_qty, params_of, parse_dt, runtime_of
 from backend.execution.plan.models import (
     Plan, PlanEvent, PlanExecutorHeartbeat, PlanLeg, PlanRequest, PlanSwitchAudit, PlanSellReservation,
 )
@@ -369,7 +369,9 @@ async def validate_plan(body: PlanCreate, _: str = Depends(require_sniper_token)
     except HTTPException as exc:
         add("dates", "날짜 형식", "fail", exc.detail["message"])
     adopt = body.source == "adopt"
-    qty = int(_f(prm.get("qty") or (prm.get("adopt") or {}).get("qty")) or 0)
+    given_qty = int(_f(prm.get("qty") or (prm.get("adopt") or {}).get("qty")) or 0)
+    server_qty = derive_qty(prm)                      # 수량은 서버 한 곳에서 정한다 (계획서 6절)
+    qty = server_qty if server_qty is not None else given_qty
     bw, bo = _f(prm.get("buy_watch")), _f(prm.get("buy_order"))
     tw, to = _f(prm.get("tp1_watch")), _f(prm.get("tp1_order"))
     # 가격 단위
@@ -377,6 +379,11 @@ async def validate_plan(body: PlanCreate, _: str = Depends(require_sniper_token)
            if v is not None and pr.floor_tick(v) != pr.D(v)]
     add("tick", "가격 단위", "fail" if bad else "ok",
         ("가격 단위(1달러 미만 0.0001 · 이상 0.01)에 맞지 않는 칸: " + ", ".join(bad)) if bad else "")
+    if server_qty is not None:
+        why = "" if qty > 0 else "예산이 매수가보다 작아 수량이 0 입니다"
+        extra = f" (보낸 수량 {given_qty} 는 쓰지 않습니다)" if given_qty and given_qty != qty else ""
+        add("qty", "수량", "ok" if qty > 0 else "fail",
+            why or f"예산 ÷ (매수가 × 1.001) 을 6 의 배수로 내림 = {qty}주{extra}")
     async with get_session() as s:
         open_exists = await sizing.open_plan_exists(s, sym)
         add("open_plan", "같은 종목 열린 계획", "fail" if open_exists else "ok", "같은 종목에 열린 계획이 이미 있습니다" if open_exists else "")
@@ -428,7 +435,8 @@ async def validate_plan(body: PlanCreate, _: str = Depends(require_sniper_token)
     else:
         add("sanity", "값 점검(sanity)", "ok", "")
     return {"ok": not any(c["status"] == "fail" for c in checks), "checks": checks,
-            "values": {"order_usd": round(order_usd, 4), "qty": qty}}
+            "values": {"order_usd": round(order_usd, 4), "qty": qty, "qty_source": "server" if server_qty is not None else "given",
+                       "qty_given": given_qty}}
 
 
 async def _open_total(s) -> float:

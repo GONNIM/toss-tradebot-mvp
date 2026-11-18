@@ -188,7 +188,7 @@ async def test_validate_unknown_when_executor_left_nothing_and_saves_nothing(api
     assert c["buying_power"]["status"] == "unknown" and "확인 못 함" in c["buying_power"]["message"]
     assert c["app_conds"]["status"] == "unknown" and c["sanity"]["status"] == "unknown"
     assert c["caps"]["status"] == "ok" and c["tick"]["status"] == "ok" and c["open_plan"]["status"] == "ok"
-    assert r.json()["ok"] is True and r.json()["values"] == {"order_usd": 114.0, "qty": 12}
+    assert r.json()["ok"] is True and r.json()["values"] == {"order_usd": 114.0, "qty": 12, "qty_source": "given", "qty_given": 12}
     async with get_session() as s:
         assert (await s.scalars(select(Plan))).first() is None             # 아무것도 저장하지 않음
 
@@ -334,6 +334,44 @@ async def test_failed_approval_leaves_no_judgment(api, monkeypatch):
     async with get_session() as s:
         assert (await s.scalars(select(UserJudgment).where(UserJudgment.page_source == "plans"))).first() is None                                # 판단 기록도 남지 않음
         assert (await s.get(Plan, plan["id"])).state == state.DRAFT
+
+
+def test_derive_qty_rule_and_edge_cases():
+    from backend.execution.plan.engine import derive_qty
+
+    assert derive_qty({"budget_usd": 1000, "buy_order": 10}) == 96                     # 1000 ÷ 10.01 = 99 → 6 의 배수 96
+    assert derive_qty({"budget_usd": 100, "buy_watch": 9.459}) == 6                    # 매수가는 내림(9.45) · 100 ÷ 9.4594 = 10 → 6
+    assert derive_qty({"budget_usd": 5, "buy_order": 10}) == 0                         # 예산이 모자라면 0
+    assert derive_qty({"budget_usd": 1000}) is None and derive_qty({"buy_order": 10}) is None   # 계산 못 하면 None
+    assert derive_qty({"adopt": {"qty": 30}, "budget_usd": 1000, "buy_order": 10}) is None      # 보유 인수는 인수 수량
+
+
+async def test_validate_computes_qty_from_budget_and_ignores_client_qty(api):
+    body = {"symbol": "TESTA", "mode": "paper", "params": {"budget_usd": 1000, "buy_watch": 10, "buy_order": 10, "qty": 7}}
+    r = await api.post("/api/v1/plans/validate", json=body, headers=hdr())
+    v = r.json()["values"]
+    assert v["qty"] == 96 and v["qty_source"] == "server" and v["qty_given"] == 7 and v["order_usd"] == 960.0
+    q = {c["key"]: c for c in r.json()["checks"]}["qty"]
+    assert q["status"] == "ok" and "96주" in q["message"] and "보낸 수량 7" in q["message"]
+    small = await api.post("/api/v1/plans/validate", json={**body, "params": {**body["params"], "budget_usd": 5}}, headers=hdr())
+    assert small.json()["values"]["qty"] == 0 and small.json()["ok"] is False
+    nobudget = await api.post("/api/v1/plans/validate", json={**body, "params": {"buy_order": 10, "qty": 12}}, headers=hdr())
+    assert nobudget.json()["values"]["qty"] == 12 and nobudget.json()["values"]["qty_source"] == "given"
+
+
+async def test_create_and_patch_store_server_qty(api):
+    cookie(api)
+    r = await api.post("/api/v1/plans", json={"symbol": "TESTA", "mode": "paper",
+                                              "params": {"budget_usd": 1000, "buy_watch": 10, "buy_order": 10, "qty": 7}}, headers=OK_ORIGIN)
+    plan = r.json()["plan"]
+    assert plan["qty"] == 96 and plan["params"]["qty"] == 96                           # 화면이 7 을 보내도 96
+    rev = plan["revision"]
+    r = await api.patch(f"/api/v1/plans/{plan['id']}", json={"values": {"qty": 3}}, headers=OK_ORIGIN)
+    assert r.json()["plan"]["qty"] == 96 and r.json()["plan"]["revision"] == rev      # qty 만 보내면 서버 값 그대로 · 판 번호 안 바뀜
+    r = await api.patch(f"/api/v1/plans/{plan['id']}", json={"values": {"budget_usd": 100}}, headers=OK_ORIGIN)
+    assert r.json()["plan"]["qty"] == 6 and r.json()["plan"]["revision"] == rev + 1   # 예산이 바뀌면 수량도 다시 계산
+    r = await api.patch(f"/api/v1/plans/{plan['id']}", json={"values": {"buy_order": 5, "buy_watch": 5}}, headers=OK_ORIGIN)
+    assert r.json()["plan"]["qty"] == 18                                               # 100 ÷ 5.005 = 19 → 18
 
 
 async def test_live_approve_with_code_saves_both(api):
