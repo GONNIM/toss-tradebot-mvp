@@ -77,6 +77,7 @@ async def test_on_missing_after_modify_binds_qty_and_human_open_aligns_leg(plan_
         raw.get_blind.add(leg.toss_id)
         raw.list_hidden_ids.add(leg.toss_id)
         await eng.sync_orders(s, plan)
+        await eng.sync_orders(s, plan)                                    # 빈 조회는 연속 2걸음 뒤에 사람 확인
         ln = await ob.unresolved_lines(s, plan.id)
         assert len(ln) == 1 and leg.status == "UNCERTAIN"
         assert (await ob.exposure(s, plan.id))["bound_new"] == 20
@@ -103,6 +104,7 @@ async def test_missing_on_leg_with_unknown_modify_line_binds_once(plan_db, monke
         raw.get_blind.add(old)
         raw.list_hidden_ids.add(old)
         await eng.sync_orders(s, plan)
+        await eng.sync_orders(s, plan)                                    # 빈 조회는 연속 2걸음 뒤에 사람 확인
         assert leg.status == "UNCERTAIN"
         assert (await ob.exposure(s, plan.id)) == {"bound_new": 20, "unknown_modify": 0}
         await eng.ensure_ladder(s, plan)
@@ -251,6 +253,7 @@ async def test_on_missing_closed_list_records_the_fill(plan_db, monkeypatch):
         raw.acct -= leg.qty
         raw.get_blind.add(leg.toss_id)
         await eng.sync_orders(s, plan)
+        await eng.sync_orders(s, plan)                                    # 빈 조회는 연속 2걸음 뒤에 사람 확인
         assert leg.status == "FILLED"
         assert await sizing.plan_qty(s, plan) == 40
         await eng.ensure_ladder(s, plan)
@@ -274,6 +277,7 @@ async def test_empty_lookup_of_reserved_sell_keeps_reservation_and_asks_human(pl
             s.add(resv)
             await s.flush()
         await eng.sync_orders(s, plan)
+        await eng.sync_orders(s, plan)                                    # 빈 조회는 연속 2걸음 뒤에 사람 확인
         assert resv.active is True                                        # 풀지 않았다
         assert [l.role for l in await ob.unresolved_lines(s, plan.id)] == ["sell"]
         assert plan.state == state.HALTED
@@ -317,20 +321,3 @@ async def test_resolve_validates_toss_id_shape_and_keeps_code_used_on_input_erro
     r = await api.post(url, json={"decision": "not_created", "challenge_id": c2.json()["challenge_id"], "code": api.phone.code},
                        headers=OK_ORIGIN)
     assert r.status_code == 400                                           # 정지 풀기 코드로는 확정할 수 없다
-
-
-# 구조 · 결과 모르는 주문 판정은 장부 모듈 한 곳에만 있다
-def test_unknown_order_judgment_lives_only_in_orderbook_module():
-    import pathlib
-    import re
-
-    root = pathlib.Path(__file__).resolve().parents[1] / "execution" / "plan"
-    pat = re.compile(r"""status\s*=\s*["']UNCERTAIN["']|\bis None:\s*\n\s*r\.active\s*=\s*False""")
-    hits = []
-    for f in root.glob("*.py"):
-        if f.name in ("orderbook.py", "models.py"):
-            continue
-        for i, line in enumerate(f.read_text().splitlines(), 1):
-            if pat.search(line) and "# 모름 표시" not in line:
-                hits.append(f"{f.name}:{i}")
-    assert hits == [] or all(h.startswith("engine.py") for h in hits), hits

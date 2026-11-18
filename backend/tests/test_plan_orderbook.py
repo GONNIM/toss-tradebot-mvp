@@ -359,6 +359,7 @@ async def test_unknown_sell_keeps_reservation_and_never_records_sale_from_holdin
         raw.acct = 40                                                                   # 보유가 줄었지만 체결 근거가 아니다
         eng.clock.advance(seconds=1)
         await eng.tick_plan(s, plan)
+        await eng.tick_plan(s, plan)                                                    # 빈 조회는 연속 2걸음 뒤에 사람 확인으로
         assert not list(await s.scalars(select(PlanFill).where(PlanFill.plan_id == plan.id, PlanFill.side == "SELL")))
         assert await sizing.accepted_sell(s, plan.id) == 40                             # 모르는 예약 둘 다 유지 (조회가 비어도 풀지 않음)
         for ln in await lines(s, plan, state="needs_human"):
@@ -397,6 +398,8 @@ async def test_empty_single_lookup_goes_through_the_reconcile_not_instant_cancel
         raw.get_blind = {leg.toss_id}                                                   # 단건 조회가 빈 값
         raw.list_hidden_ids = {leg.toss_id}                                             # 목록에도 없다
         await eng.sync_orders(s, plan)
+        assert leg.status == "WATCHING"                                                # 한 번 빈 조회로는 바꾸지 않는다
+        await eng.sync_orders(s, plan)
         assert leg.status == "UNCERTAIN" and plan.state == state.HALTED                 # 바로 CANCELED 가 아니다
         assert any(l.state == "needs_human" for l in await lines(s, plan))
     raw2, eng2 = await setup()
@@ -406,6 +409,7 @@ async def test_empty_single_lookup_goes_through_the_reconcile_not_instant_cancel
         leg = (await legs_of(s, plan))[0]
         raw2.conds[leg.toss_id]["status"] = "CANCELED"
         raw2.get_blind = {leg.toss_id}                                                  # 조회는 비었지만 닫힌 목록에서 확인된다
+        await eng2.sync_orders(s, plan)
         await eng2.sync_orders(s, plan)
         assert leg.status == "CANCELED" and plan.state == state.HOLDING
 

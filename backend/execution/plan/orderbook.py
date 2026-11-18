@@ -35,6 +35,8 @@ logger = logging.getLogger(__name__)
 SENT_UNKNOWN, OPEN, CLOSED, NOT_CREATED, NEEDS_HUMAN = "sent_unknown", "open", "closed", "not_created", "needs_human"
 UNRESOLVED = (SENT_UNKNOWN, NEEDS_HUMAN)
 REPEAT_ALERT_SEC = 600
+MISS_CONFIRM_STEPS = 2          # 단건 조회가 연속으로 이만큼 비어야 사람 확인으로 보낸다 (한 번 빈 것은 일시 오류일 수 있음)
+OPEN_GRACE_SEC = 600            # 사람이 「열려 있음」 으로 확정한 번호는 이 시간 동안 빈 조회로 다시 묻지 않는다
 TOSS_ID_RE = re.compile(r"^[A-Za-z0-9-]{1,64}$")          # 토스 번호는 영문 · 숫자 · - 만
 
 
@@ -344,18 +346,39 @@ async def _find_in_lists(s, eng, plan, toss_id: Optional[str]):
     return None
 
 
+def _bump_miss(plan, key: str) -> int:
+    from .engine import runtime_of, set_runtime
+
+    m = dict(runtime_of(plan).get("miss") or {})
+    m[key] = int(m.get(key, 0)) + 1
+    set_runtime(plan, miss=m)
+    return m[key]
+
+
+def clear_miss(plan, key: str) -> None:
+    """조회가 다시 읽히면 연속 빈 조회 횟수를 지운다."""
+    from .engine import runtime_of, set_runtime
+
+    m = dict(runtime_of(plan).get("miss") or {})
+    if key in m:
+        m.pop(key)
+        set_runtime(plan, miss=m)
+
+
 async def _new_missing_line(s, plan, *, leg: Optional[PlanLeg], resv: Optional[PlanSellReservation], role: str, side: str,
-                            qty: int, price, toss_id: Optional[str], reason: str) -> PlanOrderBook:
+                            qty: int, price, toss_id: Optional[str], reason: str) -> Optional[PlanOrderBook]:
     """단건 조회가 빈 값일 때의 사람 확인 줄 · 수정 줄을 재사용하지 않고 원래 다리 수량 그대로 따로 둔다."""
     ident = f"{'r' + str(resv.id) if resv is not None else 'l' + str(leg.id)}"
-    n = await s.scalar(select(PlanOrderBook.id).where(PlanOrderBook.plan_id == plan.id,
-                                                     PlanOrderBook.client_order_id.like(f"missing-{ident}-%")).limit(1))
-    if n is not None:
-        existing = await s.get(PlanOrderBook, n)
-        if existing.state in UNRESOLVED:
-            return existing
-    cnt = len(list(await s.scalars(select(PlanOrderBook.id).where(PlanOrderBook.plan_id == plan.id,
-                                                                  PlanOrderBook.client_order_id.like(f"missing-{ident}-%")))))
+    same = list(await s.scalars(select(PlanOrderBook).where(
+        PlanOrderBook.plan_id == plan.id, PlanOrderBook.client_order_id.like(f"missing-{ident}-%")).order_by(PlanOrderBook.id)))
+    for e in same:                                      # 미확정 같은 이름 줄이 하나라도 있으면 새로 쌓지 않는다
+        if e.state in UNRESOLVED:
+            return e
+    now = utcnow()
+    for e in same:                                      # 사람이 방금 「열려 있음」 으로 확정한 번호는 한동안 다시 묻지 않는다
+        if e.state == OPEN and e.resolved_at is not None and (now - e.resolved_at).total_seconds() < OPEN_GRACE_SEC:
+            return None
+    cnt = len(same)
     line = PlanOrderBook(plan_id=plan.id, client_order_id=f"missing-{ident}-{cnt + 1}", kind="cond" if leg is not None else "limit",
                          role=role, side=side, qty=int(qty), price=price, toss_id=toss_id,
                          leg_id=leg.id if leg is not None else None, reservation_id=resv.id if resv is not None else None,
@@ -379,6 +402,8 @@ async def on_missing(s, eng, plan, leg: PlanLeg) -> None:
     """단건 조회가 빈 값인 다리. 바로 CANCELED 로 두지 않는다 · 열린 · 닫힌 목록에서 번호를 찾고 못 찾으면 사람 확인(그 수량을 묶음)."""
     from . import sizing
 
+    if _bump_miss(plan, f"l{leg.id}") < MISS_CONFIRM_STEPS:
+        return                                              # 한 번 빈 조회로는 아직 아무것도 바꾸지 않는다
     try:
         found = await _find_in_lists(s, eng, plan, leg.toss_id)
     except Exception as exc:  # noqa: BLE001 — 목록을 못 읽으면 이 다리만 미룬다
@@ -396,8 +421,10 @@ async def on_missing(s, eng, plan, leg: PlanLeg) -> None:
         return
     if found is not None:
         return                                              # 열린 목록에 있다 → 단건 조회만 비었다 · 그대로 둔다
-    await _new_missing_line(s, plan, leg=leg, resv=None, role=leg.role, side=leg.side, qty=leg.qty, price=leg.order_price,
-                            toss_id=leg.toss_id, reason="단건 조회가 비었고 목록에도 없음")
+    made = await _new_missing_line(s, plan, leg=leg, resv=None, role=leg.role, side=leg.side, qty=leg.qty, price=leg.order_price,
+                                   toss_id=leg.toss_id, reason="단건 조회가 비었고 목록에도 없음")
+    if made is None:
+        return                                              # 사람이 방금 열려 있음으로 확정한 번호
     leg.status = "UNCERTAIN"                                # 보호에 세지 않고 그 수량을 묶는다
     await eng._event(s, plan, "leg_missing", f"{leg.role}{leg.seq} · 사람 확인으로 보냄")
     await eng._halt(s, plan, f"{leg.role}{leg.seq} 주문이 조회되지 않습니다 · 화면에서 확인해 주십시오")
@@ -405,6 +432,8 @@ async def on_missing(s, eng, plan, leg: PlanLeg) -> None:
 
 async def on_missing_reservation(s, eng, plan, r: PlanSellReservation) -> None:
     """접수된 매도의 단건 조회가 빈 값. 예약을 바로 풀지 않는다 · 목록에서 확인하고 못 찾으면 예약을 유지한 채 사람 확인."""
+    if _bump_miss(plan, f"r{r.id}") < MISS_CONFIRM_STEPS:
+        return
     try:
         found = await _find_in_lists(s, eng, plan, r.order_ref)
     except Exception as exc:  # noqa: BLE001
@@ -418,8 +447,10 @@ async def on_missing_reservation(s, eng, plan, r: PlanSellReservation) -> None:
         return
     if found is not None:
         return
-    await _new_missing_line(s, plan, leg=None, resv=r, role="sell", side="SELL", qty=r.qty, price=r.order_price,
-                            toss_id=r.order_ref, reason="접수된 매도의 단건 조회가 비었고 목록에도 없음")
+    made = await _new_missing_line(s, plan, leg=None, resv=r, role="sell", side="SELL", qty=r.qty, price=r.order_price,
+                                   toss_id=r.order_ref, reason="접수된 매도의 단건 조회가 비었고 목록에도 없음")
+    if made is None:
+        return
     await eng._halt(s, plan, "접수된 매도 주문이 조회되지 않습니다 · 예약을 유지합니다 · 화면에서 확인해 주십시오")
 
 

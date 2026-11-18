@@ -597,12 +597,22 @@ async def resolve_unknown_order(plan_id: int, line_id: int, body: ResolveBody, s
         p = await _get_plan(s, plan_id)
         await _verify(s, p, "resolve_order", body)
         await s.commit()                    # 코드 사용 기록은 입력 오류(ResolveError)로 되돌려지지 않게 먼저 남긴다
-        try:
-            line = await ob.human_resolve(s, p, line_id, body.decision, filled_qty=body.filled_qty, toss_id=body.toss_id,
-                                          remainder_cancelled=body.remainder_cancelled, kind=body.kind)
-        except ob.ResolveError as exc:
-            raise HTTPException(status_code=400, detail={"reason": "resolve", "message": str(exc)})
-        return {"order": _line_json(line), "remaining": len(await ob.unresolved_lines(s, p.id))}
+
+    async def _write():                     # 코드 검증 뒤의 쓰기만 충돌 재시도 (실행기가 같은 계획을 막 고친 경우)
+        async with get_session() as s2:
+            p2 = await _get_plan(s2, plan_id)
+            try:
+                line = await ob.human_resolve(s2, p2, line_id, body.decision, filled_qty=body.filled_qty, toss_id=body.toss_id,
+                                              remainder_cancelled=body.remainder_cancelled, kind=body.kind)
+            except ob.ResolveError as exc:
+                raise HTTPException(status_code=400, detail={"reason": "resolve", "message": str(exc)})
+            out = {"order": _line_json(line), "remaining": len(await ob.unresolved_lines(s2, p2.id))}
+            if body.decision == "filled" and body.filled_qty and body.filled_qty < line.qty:
+                out["warning"] = ("남은 주문이 실제로 살아 있으면 보유와 어긋나게 팔릴 수 있습니다. "
+                                  "토스 앱에서 남은 주문이 취소됐는지 꼭 확인해 주십시오. 다음 다시 맞추기에서도 합계를 점검해 경고합니다.")
+            return out
+
+    return await _retry_stale(_write)
 
 
 @router.post("/{plan_id:int}/resume")

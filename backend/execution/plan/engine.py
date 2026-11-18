@@ -113,11 +113,7 @@ def derive_qty(params: dict) -> Optional[int]:
     return qty_for_budget(b, floor_tick(px))
 
 
-def definitely_not_created(exc: Exception) -> bool:
-    """토스가 분명히 받지 않은 실패(거절 · 한도 초과)인가. 그 밖(시간 초과 · 5xx · 번호 없는 응답)은 만들어졌는지 모른다."""
-    from backend.execution.exceptions import OrderRejected, RateLimitExceeded
-
-    return isinstance(exc, (OrderRejected, RateLimitExceeded))
+definitely_not_created = ob.definitely_not_created      # 판정은 장부 모듈 한 곳 (같은 함수)
 
 
 def _num(v):
@@ -364,18 +360,8 @@ class PlanEngine:
         return leg
 
     async def _after_register_failure(self, s, plan: Plan, leg: PlanLeg, role: str, seq: int, exc: Exception, line=None):
-        """등록 실패 처리. 분명히 거절됐으면 기록을 지우고 · 결과를 모르면 「확인 대기」 로 두고 장부 대조에 맡긴다(같은 키로 다시 내지 않음)."""
-        if definitely_not_created(exc):
-            if line is not None:
-                ob.mark_not_created(line)
-            await s.delete(leg)
-            await s.commit()
-            await self._event(s, plan, "leg_register_fail", f"{role}{seq} {exc.__class__.__name__}")
-            return None
-        leg.status = "UNCERTAIN"
-        await self._event(s, plan, "leg_uncertain", f"{role}{seq} {exc.__class__.__name__} · 확인 대기")
-        await s.commit()
-        return None
+        """등록 실패 처리는 장부 모듈이 판정한다 (거절이면 지움 · 모르면 확인 대기)."""
+        return await ob.after_send_failure(s, self, plan, leg, role, seq, exc, line)
 
     async def _final_read_leg(self, s, plan: Plan, leg: PlanLeg) -> dict:
         """취소 전 · 후에 그 다리의 마지막 체결을 다시 읽어 장부에 더한다 (5절 10항). 읽기 실패는 빈 값."""
@@ -405,6 +391,40 @@ class PlanEngine:
             await self.gate.cancel_cond(s, leg.toss_id)
         await self._final_read_leg(s, plan, leg)            # 취소 도중 부분 체결이 있었는지
 
+    async def _cancel_leg_keep_unknown(self, s, plan: Plan, leg: PlanLeg) -> bool:
+        """알고 있는 주문 번호는 취소한다. 결과 모르는 줄이 있으면 상태를 CANCELED 로 확정하지 않고
+        「새 주문이 있을 수 있음」 ⑨ 긴급 알림을 보낸다. 반환: 닫았는가(True) / 모름이 남았는가(False). 취소 오류는 그대로 올린다."""
+        unknown = leg.status == "UNCERTAIN" or await ob.has_unresolved_for_leg(s, leg.id)
+        known = bool(leg.toss_id) and not (leg.client_order_id or "").startswith("missing-")
+        if leg.toss_id:
+            await self._cancel_leg_orders(s, plan, leg)
+        if not unknown:
+            leg.status = "CANCELED"
+            return True
+        if known and leg.role != "buy" and leg.status != "UNCERTAIN":
+            leg.status = "CANCELED"                          # 알던 옛 번호는 지웠다 · 모르는 새 줄은 장부가 묶는다
+        await self._alert_once(s, plan, f"unknown_new:{leg.id}", "critical", "새 주문이 있을 수 있음",
+                               f"{leg.role}{leg.seq} 주문의 결과를 모릅니다. 아는 번호는 취소했지만 새 주문이 토스에 남아 있을 수 있습니다. 토스 앱에서 확인해 주십시오.",
+                               every_sec=ob.REPEAT_ALERT_SEC)
+        return False
+
+    async def _cancel_resv(self, s, plan: Plan, r: PlanSellReservation) -> Optional[dict]:
+        """접수된 지정가 매도 취소: 읽기 → 취소 → 읽기. 빈 조회는 체결 0 이 아니라 모름이라 대조 모듈로 보낸다(None · 예약 유지 · 다시 팔지 않음)."""
+        before = await self.gate.limit_get(s, r.order_ref)
+        if before is None:
+            await ob.on_missing_reservation(s, self, plan, r)
+            return None
+        if int(before.get("filled") or 0):
+            await self._record_fill(s, plan, "SELL", r.order_ref, int(before["filled"]), before.get("avg"))
+        await self.gate.cancel_limit(s, r.order_ref)
+        after = await self.gate.limit_get(s, r.order_ref)
+        if after is None:
+            await ob.on_missing_reservation(s, self, plan, r)
+            return None
+        if int(after.get("filled") or 0):
+            await self._record_fill(s, plan, "SELL", r.order_ref, int(after["filled"]), after.get("avg"))
+        return after
+
     async def _cancel_pending_buys(self, s, plan: Plan) -> int:
         """계획 매도를 내기 전에 · 실거래 끌 때 · 마감 처리 때 대기 매수(조건주문 · 일반 주문)를 취소한다."""
         n = 0
@@ -412,12 +432,8 @@ class PlanEngine:
         legs = await s.scalars(select(PlanLeg).where(
             PlanLeg.plan_id == plan.id, PlanLeg.role == "buy", PlanLeg.status.in_(("WATCHING", "UNCERTAIN"))))
         for leg in list(legs):
-            if leg.status == "UNCERTAIN" or await ob.has_unresolved_for_leg(s, leg.id):
-                continue                                         # 결과 모르는 주문은 CANCELED 로 두지 않는다 (대조가 판정 · 그동안 다시 사지 않음)
-            if leg.toss_id:
-                await self._cancel_leg_orders(s, plan, leg)
-            leg.status = "CANCELED"
-            n += 1
+            if await self._cancel_leg_keep_unknown(s, plan, leg):      # 모름이 남으면 CANCELED 로 두지 않는다 (대조가 판정 · 다시 사지 않음)
+                n += 1
         await s.flush()
         return n
 
@@ -459,8 +475,7 @@ class PlanEngine:
         """토스(또는 모의)에서 다리 · 예약 상태를 읽어 장부에 맞춘다."""
         out = {"buy_filled": 0, "tp1_filled": False, "sold": 0}
         await ob.reconcile(s, self, plan, self.clock())    # 결과 모르는 주문(다리 · 예약 · 수정)은 장부 대조 한 곳에서 판정
-        if runtime_of(plan).get("tp1_filled_human"):       # 사람이 TP1 체결을 확정했다 → 추적 전환을 한 번 탄다
-            set_runtime(plan, tp1_filled_human=False)
+        if runtime_of(plan).get("tp1_filled_human"):       # 사람이 TP1 체결을 확정했다 → 추적 전환을 탄다 (표시는 _on_tp1_filled 가 돈 뒤에만 지움)
             out["tp1_filled"] = True
         legs = list(await s.scalars(select(PlanLeg).where(
             PlanLeg.plan_id == plan.id, PlanLeg.status.in_(("WATCHING", "TRIGGERED")))))
@@ -471,6 +486,7 @@ class PlanEngine:
             if g is None:
                 await ob.on_missing(s, self, plan, leg)    # 바로 CANCELED 로 두지 않는다 (목록 확인 → 사람 확인)
                 continue
+            ob.clear_miss(plan, f"l{leg.id}")
             st = g.get("status")
             filled = int(g.get("filled") or 0)
             if st == "FILLED" and not filled:
@@ -524,6 +540,7 @@ class PlanEngine:
             if g is None:
                 await ob.on_missing_reservation(s, self, plan, r)    # 조회가 비면 목록 확인 → 사람 확인 (예약은 유지)
                 continue
+            ob.clear_miss(plan, f"r{r.id}")
             filled = int(g.get("filled") or 0)
             if filled:
                 out["sold"] += await self._record_fill(s, plan, "SELL", r.order_ref, filled, g.get("avg"))
@@ -957,14 +974,15 @@ class PlanEngine:
     async def _close(self, s, plan: Plan) -> None:
         legs = await s.scalars(select(PlanLeg).where(PlanLeg.plan_id == plan.id, PlanLeg.status.in_(("WATCHING", "UNCERTAIN"))))
         for leg in list(legs):
-            if leg.status == "UNCERTAIN" or await ob.has_unresolved_for_leg(s, leg.id):
-                continue                                         # 결과 모르는 다리는 대조가 판정한다
             try:
-                if leg.toss_id:
-                    await self._cancel_leg_orders(s, plan, leg)
+                await self._cancel_leg_keep_unknown(s, plan, leg)
             except ExecutionError:
-                pass
-            leg.status = "CANCELED"
+                if not (leg.status == "UNCERTAIN" or await ob.has_unresolved_for_leg(s, leg.id)):
+                    leg.status = "CANCELED"
+        if await ob.unresolved_lines(s, plan.id):                 # 모름 줄이 남으면 닫지 않고 정지 · 사람 확인 대기
+            if plan.state != state.HALTED:
+                await self._halt(s, plan, "결과 모르는 주문이 남아 있어 닫지 않습니다 · 화면에서 확인해 주십시오")
+            return
         if plan.state != state.CLOSED:
             await state.transition(s, plan, state.CLOSED, reason="plan_qty 0")
 
@@ -972,12 +990,8 @@ class PlanEngine:
         """Kill Switch 「매도도 멈춤」 · 계획의 모든 조건주문 취소 · HALTED (1절 4항). 정지 중에도 남은 주문을 계속 지운다."""
         legs = await s.scalars(select(PlanLeg).where(PlanLeg.plan_id == plan.id, PlanLeg.status.in_(("WATCHING", "UNCERTAIN"))))
         for leg in list(legs):
-            if leg.status == "UNCERTAIN" or await ob.has_unresolved_for_leg(s, leg.id):
-                continue                                         # 결과 모르는 다리는 대조가 판정한다 (CANCELED 로 두면 다시 사게 됨)
             try:
-                if leg.toss_id:
-                    await self._cancel_leg_orders(s, plan, leg)
-                leg.status = "CANCELED"
+                await self._cancel_leg_keep_unknown(s, plan, leg)    # 아는 번호는 취소 · 모름 줄이 있으면 상태는 확정하지 않고 알림
             except ExecutionError:
                 pass
         resv = list(await s.scalars(select(PlanSellReservation).where(
@@ -985,14 +999,8 @@ class PlanEngine:
             PlanSellReservation.kind != "triggered", PlanSellReservation.order_ref.is_not(None))))
         for r in resv:                                  # 접수된 지정가 매도도 멈춘다 (취소 전 · 후 체결을 읽어 장부에 더함)
             try:
-                before = await self.gate.limit_get(s, r.order_ref) or {}
-                if int(before.get("filled") or 0):
-                    await self._record_fill(s, plan, "SELL", r.order_ref, int(before["filled"]), before.get("avg"))
-                await self.gate.cancel_limit(s, r.order_ref)
-                after = await self.gate.limit_get(s, r.order_ref) or {}
-                if int(after.get("filled") or 0):
-                    await self._record_fill(s, plan, "SELL", r.order_ref, int(after["filled"]), after.get("avg"))
-                r.active = False
+                if await self._cancel_resv(s, plan, r) is not None:
+                    r.active = False
             except ExecutionError:
                 pass
         if plan.state != state.HALTED:
@@ -1248,6 +1256,8 @@ class PlanEngine:
         else:
             await state.transition(s, plan, state.TP1_WAIT, reason="TP1 체결 · 익절 뒤 대기")
             await self.ensure_ladder(s, plan)    # 손절 다리 3건 수량만 불변식 A 로 줄임
+        if runtime_of(plan).get("tp1_filled_human"):
+            set_runtime(plan, tp1_filled_human=False)       # 실제로 처리한 뒤에만 표시를 지운다
 
     async def _convert_to_trail(self, s, plan: Plan, v: Values) -> None:
         """추적 손절도 3건 유지: 남은 수량을 불변식 A 로 3건에 나눈 뒤 3건의 값을 하나씩 차례로 수정 (한 건 수정 중 다른 2건은 걸려 있음)."""
@@ -1337,16 +1347,12 @@ class PlanEngine:
 
     async def _cancel_and_reprice(self, s, plan: Plan, r: PlanSellReservation, cur: Decimal) -> None:
         try:
-            before = await self.gate.limit_get(s, r.order_ref) or {}       # 취소 전 마지막 체결 읽기
-            if int(before.get("filled") or 0):
-                await self._record_fill(s, plan, "SELL", r.order_ref, int(before["filled"]), before.get("avg"))
-            await self.gate.cancel_limit(s, r.order_ref)
+            g = await self._cancel_resv(s, plan, r)                        # 읽기 → 취소 → 읽기 (빈 조회는 모름)
         except ExecutionError:
             return
-        g = await self.gate.limit_get(s, r.order_ref) or {}
+        if g is None:
+            return                                                         # 취소 뒤 확인 실패 → 다시 팔지 않고 예약을 묶어 둔다 (장부가 사람 확인으로)
         filled = int(g.get("filled") or 0)
-        if filled:
-            await self._record_fill(s, plan, "SELL", r.order_ref, filled, g.get("avg"))
         remaining = int(g.get("remaining") if g.get("remaining") is not None else r.qty - filled)
         r.active = False
         r.below_since = None
@@ -1434,14 +1440,8 @@ class PlanEngine:
                 if not r.order_ref:
                     continue
                 try:
-                    before = await self.gate.limit_get(s, r.order_ref) or {}   # 취소 전 마지막 체결 읽기
-                    if int(before.get("filled") or 0):
-                        await self._record_fill(s, plan, "SELL", r.order_ref, int(before["filled"]), before.get("avg"))
-                    await self.gate.cancel_limit(s, r.order_ref)
-                    after = await self.gate.limit_get(s, r.order_ref) or {}    # 취소 도중 부분 체결 확인
-                    if int(after.get("filled") or 0):
-                        await self._record_fill(s, plan, "SELL", r.order_ref, int(after["filled"]), after.get("avg"))
-                    r.active = False
+                    if await self._cancel_resv(s, plan, r) is not None:       # 빈 조회는 예약을 풀지 않는다
+                        r.active = False
                 except ExecutionError:
                     pass
             await self.ensure_ladder(s, plan, emergency=True)    # 그 수량은 비상 손절 값의 다리로 (6-1 거침)
@@ -1487,4 +1487,7 @@ class PlanEngine:
         rep = sizing.check_invariants(base=base, accepted_sell=acc, sl_qtys=[l.qty for l in legs])
         if rep.status != "ok":
             raise state.TransitionError("불변식을 통과하지 못해 재개할 수 없습니다")
-        return await state.resume(s, plan)
+        res = await state.resume(s, plan)
+        if runtime_of(plan).get("tp1_filled_human") and plan.state == state.HOLDING:
+            await self._on_tp1_filled(s, plan)               # 정지 중에 확정된 TP1 체결은 재개 때 처리한다 (TP1 을 다시 내지 않음)
+        return res
