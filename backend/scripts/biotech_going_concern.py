@@ -74,6 +74,7 @@ _BOUNDARY = re.compile(r"[.;:]\s+(?=[A-Z(\"'])")
 _MODAL_RAISE = _r(r"\b(?:could|may|might|would|can)\b(?:\s+\w+){0,3}\s+(?:raise|raises|cast|casts|create|creates)\s+(?:a\s+|further\s+|significant\s+|serious\s+)*$")
 _COND_RAISE = _r(r"\b(?:if|unless)\b(?:\s+\w+){0,5}\s+(?:raise|raises|cast|casts|create|creates)\s+(?:a\s+|further\s+)*$")
 _NEG_JUDGE = _r(r"(?:\bnot\b|n't\b)\s+(?:\w+\s+)?(?:believe[sd]?|conclude[sd]?|determine[sd]?|think|consider|expect)\s+(?:that\s+)?(?:there\s+(?:is|are|exists?)\s+)?(?:a\s+|any\s+)?$")   # 11/18 서버 표본 「does not believe that substantial doubt exists」
+_DOUBT_EXISTS = _r(r"^\s+exist")   # 「substantial doubt exists」 = 판단 대상이 의문의 존재 → 뒤 낱말과 상관없이 부정 (Fable 권고 3)
 _UNRESOLVED_AFTER = _r(r"^[^.;]{0,160}?\b(?:alleviat|mitigat|resolv)\w*")   # 1118-02 「does not believe that substantial doubt … has been alleviated」 = 의문이 남음
 _NEG_BEFORE = _r(r"(?:\bno\s+|\bwithout\s+(?:a\s+)?|\bnot\s+(?:\w+\s+){0,2}?(?:raise|raises|cast|casts|create|creates)\s+(?:a\s+)?)$")
 _POLICY = _r(r"\bwhether\b|\bevaluat(?:e|es|ing)\b")
@@ -145,7 +146,7 @@ def _prior_dates(win: str, filing: date | None) -> bool:
     return False
 
 
-_JUDGE_NEG_SENT = _r(r"(?:\bnot\b|n't\b)\s+(?:\w+\s+)?(?:believe|conclude|determine|think|consider|expect)\w*\b[^.;]{0,40}?substantial doubt[^.;]*$")
+_JUDGE_NEG_SENT = _r(r"(?:\bnot\b|n't\b)\s+(?:\w+\s+)?(?:believe|conclude|determine|think|consider|expect)\w*\s+(?:that\s+)?(?:there\s+(?:is|are|exists?)\s+)?(?:a\s+|any\s+|the\s+)?substantial doubt(?!\s+exist)[^.;]*$")   # 판단 동사의 목적어가 substantial doubt 일 때만 · 「… doubt exists」(부정)는 막지 않음 (Fable 1118-02-01 막음 1) · 한계: 판단 동사와 alleviated 사이 220자 넘으면 못 막음
 
 
 def _alleviation_blocked_at(win: str, pos: int) -> bool:
@@ -176,7 +177,7 @@ def classify_window(text: str, s: int, e: int, filing: date | None = None) -> st
     if pair and _NO_LONGER.search(clause):                            # 「no longer」 는 부정·가정보다 먼저 (11/17 표본)
         return W_PAST
     if _NEG_JUDGE.search(clause):                                     # 「does not believe that」 · 「did not conclude that」 → 부정 (gc-3)
-        if _UNRESOLVED_AFTER.search(text[e:e + 200]):                 # 뒤에 「… alleviated / mitigated / resolved」 → 의문이 남았다는 뜻 · 사람 확인 (1118-02 · gc-4)
+        if not _DOUBT_EXISTS.search(text[e:e + 20]) and _UNRESOLVED_AFTER.search(text[e:e + 200]):                 # 뒤에 「… alleviated / mitigated / resolved」 → 의문이 남았다는 뜻 · 사람 확인 (1118-02 · gc-4)
             return W_UNCLEAR
         return W_NEG
     if _NEG_WAS.search(clause):                                       # 「do not believe there was」 → 부정
