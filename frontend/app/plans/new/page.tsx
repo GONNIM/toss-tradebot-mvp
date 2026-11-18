@@ -44,13 +44,18 @@ function NewPlanForm() {
   const w = num(buyWatch);
   const t1w = num(tp1Watch);
   const t1o = num(tp1Order);
-  // 수량은 화면에서 계산하지 않는다. 대표가 직접 넣고, 서버 점검의 values.qty 로 같은 값을 되돌려 확인한다
-  // (서버 /plans/validate 는 수량을 받은 대로 돌려줄 뿐 예산에서 정하지 않는다 · 보고 참고)
   const [qtyIn, setQtyIn] = useState("");
-  const qty = num(qtyIn);
   const [vr, setVr] = useState<ValidateResult | null>(null);
   const [vErr, setVErr] = useState<string | null>(null);
   const [vBusy, setVBusy] = useState(false);
+  // 수량은 서버 한 곳(engine.derive_qty)에서 정한다: 예산 ÷ (매수가 × 1.001) 을 6 의 배수로 내림.
+  // 서버 점검 values.qty_source 가 "server" 이면 읽기 전용으로 보이고, "given"(예산 · 매수가 없음)일 때만 직접 넣는다.
+  const hasBase = b !== null && b > 0 && o !== null && o > 0;
+  const given = {
+    editable: vr ? vr.values.qty_source === "given" : !hasBase,
+    serverQty: vr && vr.values.qty_source === "server" ? vr.values.qty : null,
+  };
+  const qty = given.editable ? num(qtyIn) : given.serverQty;
 
   const problems = useMemo(() => {
     const p: string[] = [];
@@ -60,12 +65,12 @@ function NewPlanForm() {
     if (b !== null && b <= 0) p.push("예산(달러)은 0 보다 커야 합니다.");
     if (o === null || o <= 0) p.push("매수 주문가는 0 보다 커야 합니다.");
     if (w === null || w <= 0) p.push("매수 감시가는 0 보다 커야 합니다.");
-    if (qty === null || qty < 1 || !Number.isInteger(qty)) p.push("수량은 1 이상의 정수여야 합니다.");
+    if (given.editable && (qty === null || qty < 1 || !Number.isInteger(qty))) p.push("수량은 1 이상의 정수여야 합니다.");
     if (vr && !vr.ok) p.push("서버 점검에서 막힌 항목이 있습니다. 아래 점검 결과를 확인해 주십시오.");
     if (t1w !== null && t1w <= 0) p.push("1차 익절 감시가는 0 보다 커야 합니다.");
     if (t1o !== null && t1o <= 0) p.push("1차 익절 주문가는 0 보다 커야 합니다.");
     return p;
-  }, [sym, dup, b, o, w, qty, t1w, t1o, vr]);
+  }, [sym, dup, b, o, w, qty, given.editable, t1w, t1o, vr]);
 
   const soft: string[] = [];
   if (o !== null && t1w !== null && t1w <= o) soft.push("1차 익절 감시가가 매수 주문가 이하입니다. 값이 맞는지 확인해 주십시오.");
@@ -79,10 +84,11 @@ function NewPlanForm() {
   }
 
   // 입력이 멈추고 0.6초 뒤 서버 점검을 부른다 · 서버가 정한 수량은 values.qty
-  // (수량은 서버가 예산 ÷ 주문가로 정해야 하므로 점검 요청에는 qty 를 보내지 않고 budget_usd 를 같이 보낸다)
-  const valKey = JSON.stringify([sym, mode, qty, b, o, w, t1w, t1o, announce, close, windowEnd]);
+  // (예산 · 매수가가 있으면 서버가 수량을 정하고, 없을 때만 직접 넣은 수량을 받는다)
+  const valKey = JSON.stringify([sym, mode, qtyIn, b, o, w, t1w, t1o, announce, close, windowEnd]);
   useEffect(() => {
-    if (!sym || qty === null || qty < 1 || !Number.isInteger(qty) || o === null || o <= 0) {
+    const qn = num(qtyIn);
+    if (!sym || o === null || o <= 0 || (!hasBase && (qn === null || qn < 1 || !Number.isInteger(qn)))) {
       setVr(null); setVErr(null);
       return;
     }
@@ -90,7 +96,7 @@ function NewPlanForm() {
     const t = setTimeout(async () => {
       setVBusy(true);
       try {
-        const r = await plansApi.validate({ symbol: sym, mode, source: "manual", params: buildParams(qty) });
+        const r = await plansApi.validate({ symbol: sym, mode, source: "manual", params: buildParams(qn !== null && Number.isInteger(qn) && qn >= 1 ? qn : null) });
         if (dead) return;
         setVr(r); setVErr(null);
       } catch (e2) {
@@ -133,12 +139,18 @@ function NewPlanForm() {
             {(paperOk || mode === "paper") && <option value="paper">{MODE_LABEL.paper}</option>}
           </select>
         </Field>
-        <Field label="예산 (달러 · 기록용)">
+        <Field label="예산 (달러)">
           <input inputMode="decimal" value={budget} onChange={(e) => setBudget(e.target.value)} aria-label="예산 달러" data-testid="in-budget" className={INPUT} placeholder="100" />
         </Field>
-        <Field label="수량 (주)" hint="규칙: 예산 ÷ (매수가 × 1.001) 을 6 의 배수로 내림. 주문 금액은 아래 서버 점검에서 확인합니다.">
-          <input inputMode="numeric" value={qtyIn} onChange={(e) => setQtyIn(e.target.value)} aria-label="수량" data-testid="in-qty" className={INPUT} placeholder="6" />
-        </Field>
+        {given.editable ? (
+          <Field label="수량 (주) · 예산 · 매수가가 없어 직접 넣은 값" hint="예산과 매수 주문가를 넣으면 서버가 수량을 정합니다(예산 ÷ (매수가 × 1.001) 을 6 의 배수로 내림).">
+            <input inputMode="numeric" value={qtyIn} onChange={(e) => setQtyIn(e.target.value)} aria-label="수량 직접 입력" data-testid="in-qty" className={INPUT} placeholder="6" />
+          </Field>
+        ) : (
+          <Field label="서버가 정한 수량" hint="예산 ÷ (매수가 × 1.001) 을 6 의 배수로 내린 값입니다. 저장할 때 보내는 수량이 달라도 서버가 정한 값이 쓰입니다.">
+            <output data-testid="out-qty" aria-label="서버가 정한 수량" className={`${INPUT} flex items-center`}>{given.serverQty === null ? "확인하는 중" : shares(given.serverQty)}</output>
+          </Field>
+        )}
         <Field label="매수 감시가 (달러)">
           <input inputMode="decimal" value={buyWatch} onChange={(e) => setBuyWatch(e.target.value)} aria-label="매수 감시가" data-testid="in-buy-watch" className={INPUT} placeholder="1.00" />
         </Field>
@@ -171,7 +183,7 @@ function NewPlanForm() {
       <section aria-label="서버 점검 결과" data-testid="new-validate" className="space-y-2">
         <h3 className="text-sm font-bold">서버 점검 결과 {vBusy && <span className="font-normal text-muted-foreground">· 확인하는 중</span>}</h3>
         {vErr && <Notice tone="warn" testid="new-validate-error">점검을 하지 못했습니다 · {vErr}</Notice>}
-        {!vr && !vErr && !vBusy && <Notice testid="new-validate-empty">종목 · 수량 · 매수 주문가를 넣으면 서버가 한도 · 매수 가능 금액 · 가격 단위 · 값 이상 여부 · 앱 조건주문을 점검합니다.</Notice>}
+        {!vr && !vErr && !vBusy && <Notice testid="new-validate-empty">종목 · 예산 · 매수 주문가를 넣으면 서버가 한도 · 매수 가능 금액 · 가격 단위 · 값 이상 여부 · 앱 조건주문을 점검합니다.</Notice>}
         {vr && (
           <ul className="divide-y divide-border rounded-[14px] border border-border bg-card">
             {vr.checks.map((c) => (

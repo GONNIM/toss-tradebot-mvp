@@ -121,7 +121,7 @@ export interface ValidateCheck {
 export interface ValidateResult {
   ok: boolean;
   checks: ValidateCheck[];
-  values: { order_usd: number; qty: number };
+  values: { order_usd: number; qty: number; qty_source?: "server" | "given"; qty_given?: number | null };
 }
 
 export interface PlanDetail {
