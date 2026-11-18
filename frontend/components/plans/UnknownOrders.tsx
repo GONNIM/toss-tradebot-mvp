@@ -12,11 +12,21 @@ import { BTN_LINE, Field, INPUT, Notice } from "@/components/plans/ui";
 type Decision = "filled" | "not_created" | "open";
 const ORDER_STATE_LABEL: Record<string, string> = { sent_unknown: "결과 모름", needs_human: "사람 확인 필요" };
 
-const DECISION_TEXT: Record<Decision, string> = {
-  filled: "체결됨으로 확정하면 입력한 수량을 보유로 보고 그 수량에 손절을 겁니다.",
-  not_created: "만들어지지 않음으로 확정하면 묶여 있던 수량을 풀고 손절을 다시 겁니다.",
-  open: "아직 열려 있음으로 확정하면 입력한 토스 주문 번호의 주문이 살아 있다고 보고 그대로 이어서 관리합니다.",
-};
+/** 결정이 하는 일 한 문장 · 서버 orderbook.human_resolve 동작과 맞춤 (매수와 매도가 다르다) */
+function decisionText(d: Decision, o: UnknownOrder): string {
+  const buy = o.side === "BUY";
+  if (d === "filled") {
+    if (buy) return "체결됨으로 확정하면 입력한 수량이 매수된 것으로 보고 보유에 더한 뒤 그 수량에 손절을 겁니다.";
+    if (o.replaces_id != null) return "체결됨으로 확정하면 입력한 수량이 팔린 것으로 보고 계획 보유에서 뺍니다. 고치려던 다리는 끝나고 남은 보유에는 손절이 계속 걸립니다.";
+    return `체결됨으로 확정하면 입력한 수량이 팔린 것으로 보고 계획 보유에서 뺍니다. ${o.role === "tp1" ? "1차 익절 뒤 단계로 넘어갑니다. " : ""}남은 보유에는 손절이 계속 걸립니다.`;
+  }
+  if (d === "not_created") {
+    if (buy) return "만들어지지 않음으로 확정하면 이 매수 주문은 없던 것으로 보고 묶인 수량을 풀어 줍니다. 보유는 늘지 않습니다.";
+    if (o.replaces_id != null) return "만들어지지 않음으로 확정하면 고치려던 주문은 없던 것으로 보고 기존 주문을 그대로 둡니다.";
+    return `만들어지지 않음으로 확정하면 이 매도 주문은 없던 것으로 보고 묶인 수량을 풀어 손절을 다시 겁니다.${o.role === "tp1" ? " 1차 익절은 아직 나가지 않은 것으로 봅니다." : ""}`;
+  }
+  return `아직 열려 있음으로 확정하면 입력한 토스 주문 번호의 주문이 살아 있다고 보고 이어서 관리합니다. 체결 수량은 토스 주문 상태에서 읽습니다.${o.replaces_id != null ? " 기존 주문은 닫힌 것으로 봅니다." : ""}`;
+}
 
 function lineText(o: UnknownOrder): string {
   const role = ORDER_ROLE_LABEL[o.role] ?? "기타";
@@ -140,7 +150,7 @@ export function UnknownOrdersPanel({
       >
         {sel && (
           <>
-            <p className="text-sm" data-testid="dlg-unknown-effect">{DECISION_TEXT[sel.decision]}</p>
+            <p className="text-sm" data-testid="dlg-unknown-effect">{decisionText(sel.decision, sel.line)}</p>
             <p className="text-xs tabular-nums text-muted-foreground">{lineText(sel.line)}</p>
             {sel.decision === "filled" && (
               <Field label={`체결된 수량 (1 ~ ${sel.line.qty}주)`}>
