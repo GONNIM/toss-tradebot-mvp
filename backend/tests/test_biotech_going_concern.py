@@ -679,3 +679,14 @@ def test_there_was_without_prior_marker_is_not_past_only():
 def test_negated_there_was_is_not_past_only():
     txt = "We do not believe there was substantial doubt about our ability to continue as a going concern in the prior period."
     assert gc.classify_text(gc.plain_text(txt), date(2026, 11, 10))["state"] != gc.PAST_ONLY
+
+
+def test_36_not_requested_yet_is_not_yet_and_failed_stays_not_received():
+    """1114-06 ㉠ (11/18) · 한 번도 요청하지 않은 행 = not_yet · 받기에 실패한 행(tries ≥ 1) 은 그대로 not_received."""
+    def g(row):
+        return api._going_concern_for({"meta": {"last_run_on": "2026-11-18"}, "rows": {"0000000001": row}}, "1")
+    assert g({"state": "unknown", "reason": "not_received", "tries": 0}).reason == "not_yet"
+    assert g({"state": "unknown", "reason": "not_received"}).reason == "not_yet"
+    assert g({"state": "unknown", "reason": "not_received", "tries": 1}).reason == "not_received"
+    assert g({"state": "unknown", "reason": "gone", "tries": 0}).reason == "gone"
+    assert g({"state": "not_found", "reason": "", "tries": 0}).reason == ""

@@ -188,7 +188,7 @@ class RadarRow(BaseModel):
 class GoingConcern(BaseModel):
     """1114-06 · 계속기업 의문 문구 유무 (표시 전용 · 사실만 · 점수 · 순위와 무관 · 선택 필드)."""
     state: str                    # present · alleviated · past_only · not_found · unclear · unknown
-    reason: str = ""              # unknown 일 때 까닭 (not_received · gone · no_financials · short · no_target · foreign_unchecked)
+    reason: str = ""              # unknown 일 때 까닭 (not_yet · not_received · gone · no_financials · short · no_target · foreign_unchecked)
     form: str = ""
     filed: str = ""               # 제출일
     url: str = ""                 # sec.gov 원문 주소
@@ -399,8 +399,11 @@ def _going_concern_for(store: dict | None, cik: str, today: datetime | None = No
         if last_run:
             stopped = (now - datetime.strptime(last_run[:10], "%Y-%m-%d").date()).days > _GC_UPDATE_STOP_DAYS
         latest = row.get("latest_accession") or ""
+        reason = str(row.get("reason") or "")
+        if row["state"] == "unknown" and reason == "not_received" and not row.get("tries"):
+            reason = "not_yet"   # 1114-06 ㉠ (11/18) · 한 번도 요청하지 않음 = 차례 기다림 · 받기 실패와 나눔
         return GoingConcern(
-            state=str(row["state"]), reason=str(row.get("reason") or ""), form=form, filed=filed, url=str(row.get("url") or ""),
+            state=str(row["state"]), reason=reason, form=form, filed=filed, url=str(row.get("url") or ""),
             stale=stale and not stopped, previous_report=bool(latest and row.get("accession") and latest != row.get("accession")),
             updates_stopped=stopped, hypothetical_only=bool((row.get("flags") or {}).get("hypothetical_only")))
     except Exception:  # noqa: BLE001 · 깨진 행 하나가 화면 전체를 막지 않게

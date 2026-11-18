@@ -168,6 +168,7 @@ assert.ok(alertCriteria(7).includes("레딧 24시간 매치 3건 이상이면서
   assert.ok(goingConcernText({ state: "unclear" }).includes("자동 규칙이 정하지 못함"));
   for (const [reason, why] of [["not_received", "보고서를 받지 못함"], ["no_financials", "재무제표가 본문에 없음"], ["no_target", "대상 보고서 없음"], ["foreign_unchecked", "20-F 는 표본 확인 전"], ["short", "본문이 짧음"]])
     assert.equal(goingConcernText({ state: "unknown", reason }), `계속기업 의문 문구: 확인 못 함 (까닭: ${why})`);
+  assert.equal(goingConcernText({ state: "unknown", reason: "not_yet" }), "계속기업 의문 문구: 아직 받지 않음 (하루 15곳씩 차례로 받습니다)");
   assert.equal(goingConcernSuffix({ state: "present", ...base, previous_report: true }), "10-Q 2026-11-06 제출 · 이전 보고서");
   assert.equal(goingConcernSuffix({ state: "present", ...base, stale: true }), "10-Q 2026-11-06 제출 · 오래된 보고서");
   assert.equal(goingConcernSuffix({ state: "present", ...base, stale: true, updates_stopped: true }), "10-Q 2026-11-06 제출 · 갱신 멈춤");
