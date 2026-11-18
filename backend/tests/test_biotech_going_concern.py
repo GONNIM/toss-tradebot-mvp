@@ -755,3 +755,18 @@ def test_41_rule_change_refetches_present_rows_first(rt):
         assert f"/data/{int(ciks[-1])}/" in sent[0]
     finally:
         m.RULE_VERSION = old
+
+
+def test_42_judgment_negation_with_unresolved_is_not_negative():
+    """1118-02 · 「does not believe that substantial doubt … has been alleviated」 는 의문이 남았다는 뜻 → 부정 아님 (사람 확인)."""
+    for txt in ("Management does not believe that substantial doubt about the Company's ability to continue as a going concern has been alleviated.",
+                "We do not expect substantial doubt regarding our ability to continue as a going concern to be resolved within one year.",
+                "The Company does not consider substantial doubt about its ability to continue as a going concern to be mitigated by these plans."):
+        assert gc.classify_text(gc.plain_text(txt), date(2026, 11, 10))["state"] != gc.NOT_FOUND, txt
+    # 확정 창이 함께 있으면 「있음」
+    both = ("Our recurring losses raise substantial doubt about our ability to continue as a going concern. "
+            "Management does not believe that substantial doubt about our ability to continue as a going concern has been alleviated.")
+    assert gc.classify_text(gc.plain_text(both), date(2026, 11, 10))["state"] == gc.PRESENT
+    # gc-3 부정은 그대로
+    neg = "As of the report date, the Company does not believe that substantial doubt exists about its ability to continue as a going concern."
+    assert gc.classify_text(gc.plain_text(neg), date(2026, 11, 10))["state"] != gc.PRESENT
