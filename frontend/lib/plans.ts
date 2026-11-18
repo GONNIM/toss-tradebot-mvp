@@ -38,6 +38,21 @@ export interface Plan {
   params: PlanParams;
   created_at: string | null;
   updated_at: string | null;
+  approved_at?: string | null;
+  qty?: number | string | null;
+}
+
+/** 목록 한 줄 · 서버가 더해 준 칸 (live_cond_count · tp1_mode · price · price_at) */
+export interface PlanRow extends Plan {
+  live_cond_count?: number;
+  tp1_mode?: "register" | "watch" | null;
+  price?: number | null;
+  price_at?: string | null;
+}
+
+export interface TossState {
+  status: string;
+  last_ok_at: string | null;
 }
 
 export interface Leg {
@@ -66,6 +81,49 @@ export interface ActualLeg {
   order: number | null;
 }
 
+export interface ForeignCond {
+  toss_id?: string;
+  qty: number;
+  watch: number | null;
+  order: number | null;
+  side?: string;
+}
+
+export interface PlanLive {
+  price: number | null;
+  price_at: string | null;
+  pnl: { usd: number; pct: number; estimate: boolean } | null;
+  next_swap_at: string | null;
+  tp1_gap_pct: number | null;
+  trailing: { peak: number | null; stop: number | null } | null;
+  tp1_mode: "register" | "watch" | null;
+  plan_qty: number | null;
+  account_qty: number | null;
+  account_qty_at: string | null;
+  outside_qty: number | null;
+}
+
+export interface AdoptWait {
+  foreign_conds: ForeignCond[];
+  checked_at: string | null;
+  seconds_left: number | null;
+  max_gap_sec: number;
+  waiting_minutes: number | null;
+}
+
+export interface ValidateCheck {
+  key: string;
+  label: string;
+  status: "ok" | "warn" | "fail" | "unknown" | string;
+  message: string;
+}
+
+export interface ValidateResult {
+  ok: boolean;
+  checks: ValidateCheck[];
+  values: { order_usd: number; qty: number };
+}
+
 export interface PlanDetail {
   plan: Plan;
   approval_values: Record<string, unknown>;
@@ -73,8 +131,11 @@ export interface PlanDetail {
   legs: Leg[];
   events: PlanEventRow[];
   invariant: { status: "ok" | "shortage" | "excess" | string; plan_qty: number; accepted_sell: number; sl_sum: number; target: number };
-  /** 아직 서버가 주지 않는 값 (필요한 API) · 오면 이 값으로 나란히 비교한다 */
-  actual_legs?: ActualLeg[];
+  /** 실행기가 토스에서 마지막으로 읽은 다리 · null 이면 확인 못 함 */
+  actual_legs?: ActualLeg[] | null;
+  actual_at?: string | null;
+  live?: PlanLive;
+  adopt?: AdoptWait | null;
 }
 
 export interface ExecutorStatus {
@@ -84,8 +145,9 @@ export interface ExecutorStatus {
   heartbeat_age_sec: number | null;
   ws_status: string | null;
   last_resync_at: string | null;
-  /** PLAN_PAPER_TEST_ENABLED · 아직 서버가 주지 않음 (없으면 모의 만들기를 보인다) */
+  /** PLAN_PAPER_TEST_ENABLED 이거나 모의 스위치가 켜졌을 때만 true */
   paper_test_enabled?: boolean;
+  toss?: TossState;
 }
 
 export interface Challenge {
@@ -137,7 +199,7 @@ async function call<T>(method: string, path: string, body?: unknown): Promise<T>
 }
 
 export const plansApi = {
-  list: () => call<{ plans: Plan[] }>("GET", ""),
+  list: () => call<{ plans: PlanRow[]; toss?: TossState }>("GET", ""),
   detail: (id: number) => call<PlanDetail>("GET", `/${id}`),
   status: () => call<ExecutorStatus>("GET", "/executor/status"),
   create: (b: { symbol: string; mode: PlanMode; source: "manual" | "adopt"; params: PlanParams }) =>
@@ -148,8 +210,16 @@ export const plansApi = {
   timestopStop: (id: number) => call<{ queued: number }>("POST", `/${id}/timestop-stop`),
   confirmChallenge: (action: "approve" | "adopt" | "resume", plan_id: number) =>
     call<Challenge>("POST", "/confirm/challenge", { action, plan_id }),
-  approve: (id: number, b: { challenge_id?: number; code?: string; approver: string }) =>
-    call<{ plan: Plan }>("POST", `/${id}/approve`, b),
+  validate: (b: { symbol: string; mode: PlanMode; source: "manual" | "adopt"; params: PlanParams }) =>
+    call<ValidateResult>("POST", "/validate", b),
+  resync: (id: number) => call<{ queued: number }>("POST", `/${id}/resync`),
+  approve: (
+    id: number,
+    b: {
+      challenge_id?: number; code?: string; approver: string;
+      ticker?: string; thesis?: string; invalidation_price?: number | null; target_price?: number | null;
+    },
+  ) => call<{ plan: Plan; judgment_saved?: boolean }>("POST", `/${id}/approve`, b),
   resume: (id: number, b: { challenge_id?: number; code?: string }) =>
     call<{ queued: number }>("POST", `/${id}/resume`, { approver: "대표", ...b }),
   liveChallenge: () => call<Challenge>("POST", "/switches/live/challenge"),
@@ -157,6 +227,13 @@ export const plansApi = {
     call<{ live: boolean; previous: boolean }>("POST", "/switches/live", b),
   setPaper: (b: { on: boolean; reason: string }) => call<{ paper: boolean; previous: boolean }>("POST", "/switches/paper", b),
 };
+
+export const TP1_MODE_LABEL: Record<string, string> = { register: "조건주문 등록", watch: "감시 모드" };
+
+export function pct(v: unknown, digits = 2): string {
+  const n = num(v);
+  return n === null ? "확인 못 함" : `${n > 0 ? "+" : ""}${n.toFixed(digits)}%`;
+}
 
 export const MODE_LABEL: Record<string, string> = {
   live: "실전",

@@ -1,10 +1,10 @@
 "use client";
 
 // /plans · 계획 목록 (계획서 11절 · v4 8절)
-// 걸린 조건주문 수 · 토스 API 마지막 성공 시각 · TP1 등록/감시 모드는 목록 API 가 아직 주지 않는다 (보고 「필요한 API」).
+// 걸린 조건주문 수 · 토스 API 마지막 성공 시각 · 1차 익절 방식 · 마지막 현재가는 서버 값이고 null 이면 「확인 못 함」.
 import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
-import { plansApi, MODE_LABEL, STATE_LABEL, TERMINAL_STATES, errText, kst, shares, usd } from "@/lib/plans";
+import { plansApi, MODE_LABEL, STATE_LABEL, TERMINAL_STATES, TP1_MODE_LABEL, errText, kst, shares, usd } from "@/lib/plans";
 import { usePlanStatus } from "@/components/plans/ModeBand";
 import { BTN_LINE, BTN_PRIMARY, Chip, Notice } from "@/components/plans/ui";
 
@@ -12,7 +12,7 @@ export default function PlansPage() {
   const status = usePlanStatus();
   const q = useQuery({ queryKey: ["plans", "list"], queryFn: () => plansApi.list(), refetchInterval: 20_000, staleTime: 0, retry: false });
   const st = status.data;
-  const paperOk = st ? st.paper_test_enabled !== false : false; // 서버가 값을 주지 않으면 보인다 (필요한 API)
+  const paperOk = st?.paper_test_enabled === true; // 서버가 true 일 때만 모의 만들기를 보인다
 
   const rows = q.data?.plans ?? [];
   const open = rows.filter((p) => !TERMINAL_STATES.includes(p.state));
@@ -23,7 +23,9 @@ export default function PlansPage() {
       <section aria-label="실행기 상태 칩" className="flex flex-wrap gap-2" data-testid="plans-chips">
         <Chip testid="chip-ws">시세 연결 {st?.ws_status ?? "확인 못 함"}</Chip>
         <Chip testid="chip-resync">토스와 마지막으로 맞춘 시각 {kst(st?.last_resync_at)}</Chip>
-        <Chip testid="chip-tp1">1차 익절 방식 · 서버가 아직 주지 않음</Chip>
+        <Chip testid="chip-toss" tone={q.data?.toss?.status === "ok" ? "plain" : "warn"}>
+          토스 API 연결 {q.data?.toss?.status === "ok" ? "정상" : q.data?.toss?.status === "error" ? "오류" : "확인 못 함"} · 마지막 성공 {kst(q.data?.toss?.last_ok_at ?? st?.toss?.last_ok_at)}
+        </Chip>
       </section>
 
       <div className="flex flex-wrap gap-2">
@@ -50,7 +52,7 @@ export default function PlansPage() {
   );
 }
 
-function PlanList({ title, rows, testid }: { title: string; rows: import("@/lib/plans").Plan[]; testid: string }) {
+function PlanList({ title, rows, testid }: { title: string; rows: import("@/lib/plans").PlanRow[]; testid: string }) {
   return (
     <section aria-label={title} className="space-y-2">
       <h2 className="text-base font-bold">
@@ -78,7 +80,9 @@ function PlanList({ title, rows, testid }: { title: string; rows: import("@/lib/
                   <span className={warn ? "font-semibold text-warn" : "font-semibold"}>{STATE_LABEL[p.state] ?? p.state}</span>
                   <span>수량 {shares(qty)}</span>
                   <span>매수 주문가 {usd(p.params.buy_order ?? p.avg_price)}</span>
-                  <span className="text-muted-foreground">걸린 조건주문 상세에서 확인</span>
+                  <span data-testid={`row-conds-${p.id}`}>걸린 조건주문 {p.live_cond_count ?? "확인 못 함"}{typeof p.live_cond_count === "number" ? "건" : ""}</span>
+                  <span data-testid={`row-tp1-${p.id}`} className="text-muted-foreground">1차 익절 {p.tp1_mode ? TP1_MODE_LABEL[p.tp1_mode] : "정해지지 않음"}</span>
+                  <span data-testid={`row-price-${p.id}`} className="text-muted-foreground">현재가 {p.price != null ? `${usd(p.price, 4)} · ${kst(p.price_at)}` : "확인 못 함"}</span>
                 </span>
               </Link>
             </li>

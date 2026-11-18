@@ -1,21 +1,21 @@
 "use client";
 
 // /plans/[id] · 계획 상세 (계획서 11절 · v4 8절 · 8-1)
-// 서버가 아직 주지 않는 값(현재가 · 평가 손익 · 다음 전환 시각 · 토스에 실제 걸린 다리 · 계좌 보유 · 앱 조건주문 목록)은
-// 「—」 와 안내 문구로 보이고, 값을 지어내지 않는다 (보고 「필요한 API」).
+// 현재가 · 평가 손익 · 다음 전환 시각 · 토스에 실제 걸린 다리 · 계좌 보유 · 앱 조건주문 목록은 서버 값(live · actual_legs · adopt)이다.
+// 값이 null 이면 지어내지 않고 「확인 못 함」 으로 보인다.
 // 실거래 · 모의 스위치와 Kill Switch 해제는 이 화면에 두지 않는다 (관리자 설정 화면).
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   plansApi, MODE_LABEL, STATE_LABEL, STATE_FLOW, TERMINAL_STATES, ROLE_LABEL, LEG_STATUS_LABEL,
-  errText, kst, num, shares, usd,
+  errText, kst, num, pct, shares, usd, TP1_MODE_LABEL,
 } from "@/lib/plans";
 import type { ActualLeg, Leg, Plan, PlanDetail } from "@/lib/plans";
 import { upDownText } from "@/lib/updown";
 import { AdoptNotice } from "@/components/plans/AdoptNotice";
 import { CodeDialog } from "@/components/plans/CodeDialog";
-import { BTN_LINE, BTN_PRIMARY, BTN_WARN, Field, INPUT, NEED_API, Notice, Row } from "@/components/plans/ui";
+import { BTN_LINE, BTN_PRIMARY, BTN_WARN, Field, INPUT, Notice, Row } from "@/components/plans/ui";
 
 const HALTABLE = ["APPROVED", "ENTRY_ARMED", "ENTRY_RETRY", "HOLDING", "TP1_WAIT", "TRAILING", "ADOPT_PENDING"];
 const POSITION_STATES = ["HOLDING", "TP1_WAIT", "TRAILING"];
@@ -85,6 +85,43 @@ function LegTable({ legs, testid, label }: { legs: { key: string; role: string; 
   );
 }
 
+function AdoptList({ adopt }: { adopt: PlanDetail["adopt"] }) {
+  if (!adopt) return <Notice testid="adopt-pending-list">확인 못 함 · 앱 조건주문 목록을 실행기가 아직 남기지 않았습니다.</Notice>;
+  const conds = adopt.foreign_conds;
+  return (
+    <div data-testid="adopt-pending-list" className="space-y-2 rounded-[14px] border border-border bg-card p-3">
+      <h4 className="text-sm font-semibold">앱에 남은 조건주문 {conds.length}건</h4>
+      {conds.length === 0 ? (
+        <p data-testid="adopt-conds-empty" className="text-sm text-muted-foreground">남은 앱 조건주문이 없습니다.</p>
+      ) : (
+        <div className="overflow-x-auto" aria-label="앱에 남은 조건주문">
+          <table data-testid="adopt-conds" className="w-full text-sm">
+            <thead className="text-left text-xs text-muted-foreground">
+              <tr><th className="py-1 pr-2">방향</th><th className="pr-2 text-right">수량</th><th className="pr-2 text-right">감시가</th><th className="text-right">주문가</th></tr>
+            </thead>
+            <tbody className="tabular-nums">
+              {conds.map((c, i) => (
+                <tr key={c.toss_id ?? i} className="border-t border-border/60">
+                  <td className="py-1.5 pr-2">{c.side === "BUY" ? "매수" : c.side === "SELL" ? "매도" : c.side ?? "—"}</td>
+                  <td className="pr-2 text-right">{shares(c.qty)}</td>
+                  <td className="pr-2 text-right">{usd(c.watch, 4)}</td>
+                  <td className="text-right">{usd(c.order, 4)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+      <p data-testid="adopt-seconds" className="text-sm tabular-nums">
+        {adopt.seconds_left != null ? `다음 확인까지 최대 ${adopt.seconds_left}초 (확인 간격 ${adopt.max_gap_sec}초)` : "마지막 확인 시각 확인 못 함"}
+        {adopt.checked_at ? ` · 마지막 확인 ${kst(adopt.checked_at)}` : ""}
+        {adopt.waiting_minutes != null ? ` · 대기 ${adopt.waiting_minutes}분` : ""}
+      </p>
+      <p className="text-xs text-muted-foreground">지운 뒤 실행기가 10초마다 확인합니다. 10분이 넘어도 대기를 유지하고 알림이 한 번 갑니다.</p>
+    </div>
+  );
+}
+
 function Progress({ plan }: { plan: Plan }) {
   const side = plan.state === "HALTED" || plan.state === "CANCELLED" || plan.state === "ADOPT_PENDING";
   const idx = STATE_FLOW.indexOf(plan.state);
@@ -124,6 +161,7 @@ export default function PlanDetailPage() {
   const [msg, setMsg] = useState<string | null>(null);
   const [announce, setAnnounce] = useState("");
   const [editErr, setEditErr] = useState<string | null>(null);
+  const [resyncBusy, setResyncBusy] = useState(false);
 
   // 승인 대화상자 입력
   const [tickerIn, setTickerIn] = useState("");
@@ -131,7 +169,6 @@ export default function PlanDetailPage() {
   const [invalid, setInvalid] = useState("");
   const [target, setTarget] = useState("");
   const [approver, setApprover] = useState("대표");
-  const judgmentDone = useRef(false);
 
   const d: PlanDetail | undefined = q.data;
   const p = d?.plan;
@@ -154,13 +191,30 @@ export default function PlanDetailPage() {
   const isAdopt = p.source === "adopt";
   const terminal = TERMINAL_STATES.includes(p.state);
   const expectedLegs = d.legs.filter((l: Leg) => l.status === "WATCHING");
-  const actual: ActualLeg[] | undefined = d.actual_legs;
+  const actual: ActualLeg[] | null = Array.isArray(d.actual_legs) ? d.actual_legs : null;
+  const live = d.live;
+  const adopt = d.adopt ?? null;
   const expectedKeys = expectedLegs.map((l) => legKey(l)).sort();
   const actualKeys = actual ? actual.map((l) => legKey(l)).sort() : [];
-  const legMismatch = actual !== undefined && expectedKeys.join(",") !== actualKeys.join(",");
+  const legMismatch = actual !== null && expectedKeys.join(",") !== actualKeys.join(",");
   const invBad = d.invariant.status !== "ok";
-  const qty = num(p.params.qty ?? p.params.adopt?.qty);
-  const pnl = null as number | null; // 현재가를 서버가 주지 않아 계산하지 않는다
+  const qty = num(p.qty ?? p.params.qty ?? p.params.adopt?.qty);
+  const pnl = live?.pnl ?? null;
+  const kstNow = (iso: string | null | undefined) => (iso ? kst(iso) : "확인 못 함");
+
+  async function resync() {
+    setResyncBusy(true);
+    setEditErr(null);
+    try {
+      await plansApi.resync(id);
+      setMsg("토스와 다시 맞추기를 요청했습니다. 실행기가 처리한 뒤 위 값이 바뀝니다.");
+      await refresh();
+    } catch (e) {
+      setEditErr(errText(e));
+    } finally {
+      setResyncBusy(false);
+    }
+  }
 
   async function saveAnnounce() {
     setEditErr(null);
@@ -176,23 +230,11 @@ export default function PlanDetailPage() {
 
   async function doApprove(c: { challenge_id?: number; code?: string }) {
     if (!p) return;
-    if (!judgmentDone.current) {
-      const inv = num(invalid);
-      const res = await fetch("/api/v1/judgments", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({
-          ticker: p.symbol, page_source: "plans", hypothesis_id: "plan-executor-1116-01",
-          thesis_md: thesis, invalidation_price: inv, target_price: num(target), strategy: "event", horizon_days: 7, mood: "neutral", qty: num(p.params.qty ?? p.params.adopt?.qty),
-          entry_price: num(p.params.buy_order ?? p.avg_price),
-        }),
-      });
-      if (!res.ok) throw new Error(`판단 기록을 저장하지 못했습니다 (${res.status}). 승인은 하지 않았습니다.`);
-      judgmentDone.current = true;
-    }
-    await plansApi.approve(id, { ...c, approver: isPaper ? approver : "대표" });
-    judgmentDone.current = false;
+    // 판단 3줄은 승인 요청 본문으로 보낸다 · 서버가 승인과 한 번에 저장한다 (둘 중 하나가 실패하면 둘 다 남지 않는다)
+    await plansApi.approve(id, {
+      ...c, approver: isPaper ? approver : "대표",
+      ticker: tickerIn.trim().toUpperCase(), thesis: thesis.trim(), invalidation_price: num(invalid), target_price: num(target),
+    });
     setMsg(isAdopt ? "인수를 승인했습니다. 실행기가 앱 조건주문을 확인합니다." : "승인했습니다. 실거래 스위치가 꺼져 있으면 주문은 나가지 않습니다.");
     await refresh();
   }
@@ -224,7 +266,7 @@ export default function PlanDetailPage() {
       {p.state === "ADOPT_PENDING" && (
         <section className="space-y-2" aria-label="인수 대기">
           <AdoptNotice />
-          <Notice testid="adopt-pending-list">앱 조건주문 남은 목록 · 남은 초: {NEED_API} · 지운 뒤 실행기가 10초마다 확인합니다. 10분이 넘어도 대기를 유지하고 알림이 한 번 갑니다.</Notice>
+          <AdoptList adopt={adopt} />
         </section>
       )}
       {p.state === "DRAFT" && !isPaper && <Notice testid="no-live-warn">{noLiveWarn}</Notice>}
@@ -246,13 +288,28 @@ export default function PlanDetailPage() {
 
       <section aria-label="시세 기준 값" className="rounded-[14px] border border-border bg-card px-3">
         <dl>
-          <Row k="현재가" v="—" testid="val-price" />
-          <Row k="계획 평가 손익" v="—" testid="val-pnl" tone={upDownText(pnl)} />
-          <Row k="다음 시간대 전환 시각 (한국 시각)" v="—" testid="val-next-switch" />
-          <Row k="1차 익절까지 %" v="—" testid="val-to-tp1" />
-          <Row k="계획 보유 / 계좌 보유 / 계획 밖 보유" v="— / — / —" testid="val-holdings" />
+          <Row k="현재가" v={live?.price != null ? `${usd(live.price, 4)} · ${kstNow(live.price_at)}` : "확인 못 함"} testid="val-price" />
+          <Row
+            k="계획 평가 손익 (추정 · 보장 아님)"
+            v={pnl ? `${pnl.usd > 0 ? "+" : ""}${usd(pnl.usd)} · ${pct(pnl.pct)}` : "확인 못 함"}
+            testid="val-pnl"
+            tone={upDownText(pnl ? pnl.usd : null)}
+          />
+          <Row k="다음 시간대 전환 시각 (한국 시각)" v={kstNow(live?.next_swap_at)} testid="val-next-switch" />
+          <Row k="1차 익절까지 %" v={live?.tp1_gap_pct != null ? pct(live.tp1_gap_pct) : "확인 못 함"} testid="val-to-tp1" />
+          <Row k="1차 익절 방식" v={live?.tp1_mode ? TP1_MODE_LABEL[live.tp1_mode] ?? live.tp1_mode : "아직 정해지지 않음"} testid="val-tp1-mode" />
+          {live?.trailing && (
+            <Row k="고점 · 따라 올린 손절 감시가" v={`${usd(live.trailing.peak, 4)} · ${usd(live.trailing.stop, 4)}`} testid="val-trailing" />
+          )}
+          <Row
+            k="계획 보유 / 계좌 보유 / 계획 밖 보유"
+            v={`${shares(live?.plan_qty)} / ${live?.account_qty != null ? shares(live.account_qty) : "확인 못 함"} / ${live?.outside_qty != null ? shares(live.outside_qty) : "확인 못 함"}`}
+            testid="val-holdings"
+          />
         </dl>
-        <p className="pb-2 text-xs text-muted-foreground">위 값은 {NEED_API}라 비워 둡니다. 값은 규칙 계산이며 추정 · 보장 아님.</p>
+        <p className="pb-2 text-xs text-muted-foreground">
+          값은 규칙 계산이며 추정 · 보장 아님. 현재가와 계좌 보유는 실행기가 마지막으로 남긴 값입니다 (계좌 보유 확인 {kstNow(live?.account_qty_at)}).
+        </p>
       </section>
 
       <section aria-label="다리 비교" className="space-y-2">
@@ -270,10 +327,13 @@ export default function PlanDetailPage() {
           </div>
           <div className={`rounded-[14px] border bg-card p-3 ${legMismatch ? "border-warn/60" : "border-border"}`}>
             <h4 className="mb-1 text-sm font-semibold">토스에 실제 걸린 다리</h4>
-            {actual === undefined ? (
-              <p data-testid="legs-actual-unknown" className="text-sm text-muted-foreground">확인 못 함 · 토스에서 읽은 값은 {NEED_API}입니다. 값이 오면 이 자리에서 바로 비교합니다.</p>
+            {actual === null ? (
+              <p data-testid="legs-actual-unknown" className="text-sm text-muted-foreground">확인 못 함 · 실행기가 토스에서 읽은 값이 아직 없습니다.</p>
             ) : (
-              <LegTable testid="legs-actual" label="토스에 실제 걸린 다리" legs={actual.map((l, i) => ({ key: l.toss_id ?? String(i), role: l.role ?? "", qty: l.qty, watch: l.watch, order: l.order }))} />
+              <>
+                <LegTable testid="legs-actual" label="토스에 실제 걸린 다리" legs={actual.map((l, i) => ({ key: l.toss_id ?? String(i), role: l.role ?? "", qty: l.qty, watch: l.watch, order: l.order }))} />
+                <p data-testid="legs-actual-at" className="mt-1 text-xs text-muted-foreground">마지막 확인 {kstNow(d.actual_at)}</p>
+              </>
             )}
           </div>
         </div>
@@ -316,9 +376,9 @@ export default function PlanDetailPage() {
               이 계획 정지
             </button>
           )}
-          {!terminal && (
-            <button type="button" disabled aria-disabled="true" aria-label="토스와 다시 맞추기 (준비 중)" data-testid="btn-resync" title="서버에 이 요청 길이 아직 없습니다" className={BTN_LINE}>
-              토스와 다시 맞추기 · 준비 중
+          {!terminal && p.state !== "DRAFT" && (
+            <button type="button" onClick={resync} disabled={resyncBusy} aria-label="토스와 다시 맞추기" data-testid="btn-resync" className={BTN_LINE}>
+              {resyncBusy ? "요청 중" : "토스와 다시 맞추기"}
             </button>
           )}
         </div>
