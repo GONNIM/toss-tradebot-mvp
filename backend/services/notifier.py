@@ -269,6 +269,15 @@ class TelegramNotifier:
     async def send_info(self, title: str, body: str, category: Optional[str] = None, dedupe_id: Optional[str] = None) -> bool:
         return await self.send(Level.INFO, title, body, category=category, dedupe_id=dedupe_id)
 
+    async def send_immediate(self, title: str, body: str, category: str = "execution",
+                             dedupe_id: Optional[str] = None) -> bool:
+        """1116-01 · 확인 코드용 · 알림 설정(하루 요약 · 최소 등급 · 재발송 간격)과 프로필 필터 · 중복 억제를 모두 건너뛰고 즉시 보낸다.
+
+        기록(notification_log)에는 제목만 남는다 — 코드가 든 본문은 기록 · 로그에 남기지 않는다.
+        """
+        return await self.send(Level.INFO, title, body, force=True, category=category,
+                               dedupe_id=dedupe_id, gate=False)
+
     @classmethod
     def _infer_category(cls, title: str) -> str:
         """category 를 넘기지 않은 호출 — 제목으로 확실한 것만 추정, 나머지는 unknown (항상 발송)."""

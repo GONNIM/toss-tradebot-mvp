@@ -1040,12 +1040,27 @@ def build_scheduler() -> AsyncIOScheduler:
         max_instances=1,
         coalesce=True,
     )
+    # 1116-01 · 계획 실행기 자동 초안 (07:15 · 이후 10분 간격 최대 6번) · 실행기가 켜진 곳(TOSS_TOKEN_ISSUE=1)에서만
+    from backend.execution.plan.runner import executor_enabled, job_plan_draft
+
+    if executor_enabled():
+        scheduler.add_job(job_plan_draft, CronTrigger(hour=7, minute="15,25,35,45,55"),
+                          id="plan_draft_a", name="계획 자동 초안 07시대", replace_existing=True,
+                          coalesce=True, misfire_grace_time=GRACE_DEFAULT)
+        scheduler.add_job(job_plan_draft, CronTrigger(hour=8, minute=5),
+                          id="plan_draft_b", name="계획 자동 초안 08:05 (마지막)", replace_existing=True,
+                          coalesce=True, misfire_grace_time=GRACE_DEFAULT)
     return scheduler
 
 
 async def main_daemon():
     scheduler = build_scheduler()
     scheduler.start()
+    # 1116-01 · 계획 실행기 · TOSS_TOKEN_ISSUE=1 일 때만 시작 (아니면 로그 1줄) · 잠금 파일로 하나만
+    from backend.execution.plan.runner import start_executor
+
+    _plan_stop = asyncio.Event()
+    _plan_task = await start_executor(_plan_stop)
     logger.info("[cron] Scheduler 시작 — 등록 job:")
     for job in scheduler.get_jobs():
         logger.info(f"  - {job.id}: {job.name} → next {job.next_run_time}")
@@ -1058,6 +1073,9 @@ async def main_daemon():
     for sig in (signal.SIGINT, signal.SIGTERM):
         loop.add_signal_handler(sig, _shutdown)
     await stop.wait()
+    _plan_stop.set()
+    if _plan_task is not None:
+        await asyncio.gather(_plan_task, return_exceptions=True)
     scheduler.shutdown(wait=True)
     logger.info("[cron] Shutdown complete")
 

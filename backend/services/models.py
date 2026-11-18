@@ -2175,3 +2175,10 @@ class SwingReference(Base):
     as_of: Mapped[Optional[date]] = mapped_column(Date, default=None)
     note: Mapped[Optional[str]] = mapped_column(String(200), default=None)
     saved_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
+
+
+# 1116-01 · 계획 실행기 표 (create_all 이 함께 만듦 · 순환 import 는 이 줄이 맨 아래라 안전)
+# alembic 은 backend/ 를 경로에 넣고 `services.models` 로 불러오므로(backend 패키지 이름 없음) 그때는 건너뛴다 —
+# 새 표는 init_db 의 create_all 로 생기고 alembic 대상이 아니다 (기존 표 열 추가 없음).
+if __name__.startswith("backend."):
+    from backend.execution.plan import models as _plan_models  # noqa: E402,F401

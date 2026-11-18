@@ -16,7 +16,9 @@ from __future__ import annotations
 import json
 import logging
 import os
+import threading
 import time
+from contextlib import contextmanager
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
@@ -56,6 +58,15 @@ def _extract_rate_headers(resp: httpx.Response) -> dict[str, str]:
 
 logger = logging.getLogger(__name__)
 
+try:  # 1116-01 · 토큰 잠금 (POSIX) · 없는 환경이면 잠금 없이 동작
+    import fcntl
+except ImportError:  # pragma: no cover
+    fcntl = None  # type: ignore[assignment]
+
+_LOCK_WAIT_SEC = 10.0          # 잠금 대기 시한 (9-1 · 넘으면 그 호출만 오류)
+_tl = threading.local()        # 이 스레드가 마지막 요청에 쓴 토큰 (token-revoked 때 같은 토큰인지 비교)
+_guard_alert_day: Optional[str] = None
+
 _BASE_URL = "https://openapi.tossinvest.com"
 _TIMEOUT_SEC = 10.0
 _PROJECT_ROOT = Path(__file__).resolve().parents[3]
@@ -90,9 +101,96 @@ class TossClient:
             self._token_cache_path = p if p.is_absolute() else _PROJECT_ROOT / p
 
     # ─── 인증 ───────────────────────────────
+    def _lock_path(self) -> Path:
+        return self._token_cache_path.parent / "toss_token.lock"
+
+    @contextmanager
+    def _token_lock(self):
+        """토큰 발급 잠금 (flock) · 대기 시한 10초 · 넘으면 BrokerCommunicationError (1116-01 9-1)."""
+        if fcntl is None:  # pragma: no cover
+            yield
+            return
+        path = self._lock_path()
+        path.parent.mkdir(parents=True, exist_ok=True)
+        fd = os.open(str(path), os.O_CREAT | os.O_RDWR, 0o600)
+        try:
+            deadline = time.monotonic() + _LOCK_WAIT_SEC
+            while True:
+                try:
+                    fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+                    break
+                except BlockingIOError:
+                    if time.monotonic() >= deadline:
+                        raise BrokerCommunicationError("토큰 잠금 대기 시간 초과 · 이 호출만 실패")
+                    time.sleep(0.05)
+            try:
+                yield
+            finally:
+                fcntl.flock(fd, fcntl.LOCK_UN)
+        finally:
+            os.close(fd)
+
+    def _read_valid_cache(self) -> Optional[str]:
+        """저장 파일에 만료 5분 넘게 남은 토큰이 있으면 그것을, 아니면 None."""
+        try:
+            cached = json.loads(self._token_cache_path.read_text(encoding="utf-8"))
+            if cached.get("expires_at", 0) - time.time() > 300:
+                return cached["access_token"]
+        except (OSError, json.JSONDecodeError, KeyError, TypeError) as exc:
+            if self._token_cache_path.exists():
+                logger.warning("토큰 캐시 무효 (%s) — 재발급", exc)
+        return None
+
+    @staticmethod
+    def _issue_allowed() -> bool:
+        """새 토큰 발급 가드 · TOSS_TOKEN_ISSUE=1 이 있는 곳(운영 서버 SOPS)에서만 (1116-01 9-1).
+
+        토스는 클라이언트당 토큰 1개라 로컬이 발급하면 운영 토큰이 끊긴다 (10/28 로컬 발급 18회).
+        APP_ENV 는 운영 서버에 없어 쓰지 않는다. TOSS_CLIENT_ID 와 같은 config.get 길로 읽는다.
+        """
+        return (config.get("TOSS_TOKEN_ISSUE") or "").strip() == "1"
+
+    @staticmethod
+    def _alert_guard_blocked_once_a_day() -> None:
+        """가드가 발급을 막았음을 ⑨ 알림 하루 1번 (이 프로세스 기준 · 실패해도 호출을 막지 않음)."""
+        global _guard_alert_day
+        today = datetime.now(timezone.utc).strftime("%Y%m%d")
+        if _guard_alert_day == today:
+            return
+        _guard_alert_day = today
+        try:
+            import asyncio
+
+            from backend.services.notifier import TelegramNotifier
+
+            coro = TelegramNotifier().send_critical(
+                "토스 토큰 발급 막힘",
+                "TOSS_TOKEN_ISSUE 설정이 없어 새 토큰을 받지 못했습니다. 저장된 토큰이 끝나면 토스 호출이 멈춥니다.",
+                category="execution", dedupe_id=f"toss_token_guard:{today}",
+            )
+            try:
+                loop = asyncio.get_running_loop()
+            except RuntimeError:
+                asyncio.run(coro)
+            else:
+                loop.create_task(coro)
+        except Exception as exc:  # noqa: BLE001
+            logger.warning("[toss_client] 발급 가드 알림 실패 · %s", exc)
+
     def _refresh_token(self) -> str:
         if not self._client_id or not self._client_secret:
             raise ExecutionError("TOSS_CLIENT_ID/SECRET 미설정 (SOPS 복호화 확인)")
+        with self._token_lock():
+            # 다른 프로세스가 이미 새 토큰을 받았으면 그것을 쓴다 (잠금 안에서 저장 파일을 다시 읽음)
+            cached = self._read_valid_cache()
+            if cached:
+                return cached
+            if not self._issue_allowed():
+                self._alert_guard_blocked_once_a_day()
+                raise ExecutionError("토큰 발급 가드 · TOSS_TOKEN_ISSUE=1 설정이 없어 새로 발급하지 않음")
+            return self._issue_token_locked()
+
+    def _issue_token_locked(self) -> str:
         logger.info("POST /oauth2/token")
         # AUTH 그룹 rate limit 준수
         from .rate_limiter import get_rate_limiter
@@ -117,8 +215,11 @@ class TossClient:
         expires_in = int(payload.get("expires_in", 3600))
         now = time.time()
         self._token_cache_path.parent.mkdir(parents=True, exist_ok=True)
-        self._token_cache_path.write_text(
-            json.dumps(
+        # 임시 파일에 쓰고 이름 바꾸기 (원자적) · 권한 600 (2026-08-14 · 자동 갱신 시 644 로 덮이는 문제 방지)
+        tmp = self._token_cache_path.with_name(self._token_cache_path.name + ".tmp")
+        fd = os.open(str(tmp), os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+        with os.fdopen(fd, "w", encoding="utf-8") as f:
+            f.write(json.dumps(
                 {
                     "access_token": token,
                     "token_type": payload.get("token_type", "Bearer"),
@@ -128,11 +229,8 @@ class TossClient:
                 },
                 ensure_ascii=False,
                 indent=2,
-            ),
-            encoding="utf-8",
-        )
-        # 권한 600 유지 (2026-08-14 · 자동 갱신 시 리셋 방지 · task #24)
-        # 서버 초기 배포 시 chmod 600 수동 · 갱신 시 write_text 가 644 로 덮음 발견
+            ))
+        os.replace(tmp, self._token_cache_path)
         try:
             os.chmod(self._token_cache_path, 0o600)
         except OSError as exc:  # noqa: BLE001 · 권한 실패는 write 흐름 막지 않음
@@ -140,20 +238,17 @@ class TossClient:
         return token
 
     def access_token(self) -> str:
-        """캐시 재사용 · 만료 5분 전 pre-emptive refresh."""
-        now = time.time()
-        if self._token_cache_path.exists():
-            try:
-                cached = json.loads(self._token_cache_path.read_text(encoding="utf-8"))
-                if cached.get("expires_at", 0) - now > 300:
-                    return cached["access_token"]
-            except (json.JSONDecodeError, KeyError) as exc:
-                logger.warning("토큰 캐시 무효 (%s) — 재발급", exc)
+        """캐시 재사용 · 만료 5분 전 pre-emptive refresh (발급은 잠금 + 가드 안에서만)."""
+        cached = self._read_valid_cache()
+        if cached:
+            return cached
         return self._refresh_token()
 
     # ─── HTTP 헬퍼 ──────────────────────────
     def _headers(self, *, use_account_header: bool) -> dict[str, str]:
-        headers = {"Authorization": f"Bearer {self.access_token()}"}
+        token = self.access_token()
+        _tl.used = (str(self._token_cache_path), token)
+        headers = {"Authorization": f"Bearer {token}"}
         if use_account_header:
             if not self._account_seq:
                 raise ExecutionError("TOSS_ACCOUNT_SEQ 미설정 (사용자 액션 필요)")
@@ -189,7 +284,18 @@ class TossClient:
         # token-revoked: client 당 토큰 1개 · 다른 곳에서 재발급하면 이전 토큰이 즉시 무효 (토스 명세 · 1025-06)
         if resp.status_code in {401} and code in {"invalid-token", "expired-token", "token-revoked"}:
             # 자동 재발급 후 재시도는 상위 로직에서 (일단 예외)
-            self._token_cache_path.unlink(missing_ok=True)
+            # 1116-01 · 저장 파일의 토큰이 이 요청이 쓴 토큰과 다르면 다른 프로세스가 이미 새로 받은 것 → 지우지 않는다
+            used_path, used = getattr(_tl, "used", (None, None))
+            if used_path != str(self._token_cache_path):
+                used = None            # 다른 저장 파일을 쓴 요청의 토큰은 비교하지 않는다
+            keep = False
+            if used is not None:
+                try:
+                    keep = json.loads(self._token_cache_path.read_text(encoding="utf-8")).get("access_token") != used
+                except (OSError, ValueError):
+                    keep = False
+            if not keep:
+                self._token_cache_path.unlink(missing_ok=True)
             raise BrokerCommunicationError(
                 f"토큰 만료 — 재시도 필요: {self._error_summary(resp)}",
                 raw_response=body,
@@ -407,6 +513,18 @@ class TossClient:
         """DELETE /api/v1/conditional-orders/{id}."""
         return self.request_envelope(
             "DELETE", f"/api/v1/conditional-orders/{conditional_order_id}"
+        )
+
+    def modify_conditional_order(self, conditional_order_id: str, body: dict) -> TossEnvelope:
+        """POST /api/v1/conditional-orders/{id}/modify (취소 뒤 새 번호 · WATCHING·PAUSED 만 · 1116-01)."""
+        return self.request_envelope(
+            "POST", f"/api/v1/conditional-orders/{conditional_order_id}/modify", json_body=body
+        )
+
+    def get_conditional_order(self, conditional_order_id: str) -> TossEnvelope:
+        """GET /api/v1/conditional-orders/{id} (1116-01)."""
+        return self.request_envelope(
+            "GET", f"/api/v1/conditional-orders/{conditional_order_id}"
         )
 
     def list_conditional_orders(self, status: str = "OPEN") -> TossEnvelope:
