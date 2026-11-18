@@ -23,6 +23,21 @@ logger = logging.getLogger(__name__)
 
 _INITIALIZED = False
 
+_SENSITIVE_HEADERS = {"x-api-token", "authorization", "cookie", "set-cookie"}
+
+
+def scrub_event(event: dict, hint=None) -> dict:
+    """Sentry 로 가는 사건에서 요청 본문(확인 코드 · 판단 기록 포함) · 쿠키 · 인증 헤더를 지운다 (1116-01)."""
+    req = event.get("request")
+    if isinstance(req, dict):
+        req.pop("data", None)
+        req.pop("cookies", None)
+        req.pop("query_string", None)
+        hdrs = req.get("headers")
+        if isinstance(hdrs, dict):
+            req["headers"] = {k: ("[지움]" if k.lower() in _SENSITIVE_HEADERS else v) for k, v in hdrs.items()}
+    return event
+
 
 def init_sentry() -> bool:
     """Sentry 초기화 · 성공 시 True · DSN 없거나 오류 시 False.
@@ -57,6 +72,8 @@ def init_sentry() -> bool:
             ],
             # 세션 토큰·감사 이벤트는 detail 필드에 담김. 필요 시 PII 스크러버 확장.
             send_default_pii=False,
+            max_request_body_size="never",   # 요청 본문은 보내지 않는다 (확인 코드 · 판단 기록)
+            before_send=scrub_event,
         )
         _INITIALIZED = True
         logger.info(

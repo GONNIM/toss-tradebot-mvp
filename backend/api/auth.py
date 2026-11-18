@@ -253,3 +253,67 @@ def clear_session_cookie(response: Response) -> None:
         secure=_cookie_secure(),
         samesite="lax",
     )
+
+
+# ─────────────────────────────────────────────────────────────────
+# 1116-01 · 계획 실행기 인증 (계획서 3절) — 새 인증이 아니라 기존 관리자 확인의 출처 구분을 그대로 쓴다.
+# - 조회: require_sniper_token (쿠키 · 헤더 · Origin 검사 없음)
+# - 쓰기(위험 줄이는 동작 · 초안 수정 · 정지): 쿠키 · 헤더 모두 · 쿠키일 때 Origin 검사
+# - 쿠키 전용(승인 · 인수 · 재개 · 스위치 · 코드 요청): 헤더면 403 · Origin 없거나 다르면 403
+# ─────────────────────────────────────────────────────────────────
+
+
+def _origin_allowed(request: Request) -> bool:
+    """Origin(없으면 Referer 의 origin)이 허용 목록(CORS_ORIGINS · 운영 주소 + 로컬)과 같은가."""
+    from urllib.parse import urlsplit
+
+    from backend.services import config
+
+    raw = request.headers.get("Origin") or request.headers.get("Referer")
+    if not raw:
+        return False
+    parts = urlsplit(raw)
+    if not parts.scheme or not parts.netloc:
+        return False
+    origin = f"{parts.scheme}://{parts.netloc}".lower()
+    return origin in {o.rstrip("/").lower() for o in config.cors_origins()}
+
+
+async def _plan_auth(request: Request, x_api_token: Optional[str], sniper_session: Optional[str],
+                     *, cookie_only: bool) -> str:
+    candidate, source = _pick_token(sniper_session, x_api_token)
+    try:
+        _verify_token(request, candidate, source)
+    except HTTPException as exc:
+        if exc.status_code == status.HTTP_401_UNAUTHORIZED:
+            await _record_access(request, event="auth_fail", role="anon", token_source=source)
+        raise
+    if cookie_only and source != "cookie":
+        await _record_access(request, event="plan_block", role="admin", token_source=source,
+                             detail="쿠키 전용 동작에 헤더 사용")
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN,
+                            detail="이 동작은 화면(쿠키 로그인)에서만 할 수 있습니다.")
+    if source == "cookie" and not _origin_allowed(request):
+        await _record_access(request, event="plan_block", role="admin", token_source=source,
+                             detail="Origin 검사 실패")
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="요청 출처가 허용되지 않습니다.")
+    await _record_access(request, event="auth_ok", role="admin", token_source=source)
+    return source
+
+
+async def require_plan_write(
+    request: Request,
+    x_api_token: Optional[str] = Header(None, alias="X-API-Token"),
+    sniper_session: Optional[str] = Cookie(None, alias=SESSION_COOKIE_NAME),
+) -> str:
+    """쿠키 · 헤더 모두 허용 · 쿠키일 때만 Origin 검사. 출처('cookie'|'header')를 돌려준다."""
+    return await _plan_auth(request, x_api_token, sniper_session, cookie_only=False)
+
+
+async def require_plan_cookie(
+    request: Request,
+    x_api_token: Optional[str] = Header(None, alias="X-API-Token"),
+    sniper_session: Optional[str] = Cookie(None, alias=SESSION_COOKIE_NAME),
+) -> str:
+    """쿠키 전용 + Origin 검사. 헤더 토큰이면 403."""
+    return await _plan_auth(request, x_api_token, sniper_session, cookie_only=True)

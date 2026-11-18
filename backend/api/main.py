@@ -39,6 +39,7 @@ from backend.api.routes import (
     meme_watch,
     moonshot,
     notifications,
+    plans,
     positions,
     powderkeg,
     principles,
@@ -250,6 +251,27 @@ async def lifespan(app: FastAPI):
         )
         logger.info("[FastAPI] WATCH 프로파일 30분 배치 요약 잡 등록")
 
+    # 1116-01 9절 · 실행기 하트비트 감시 · 60초마다 · 실행기가 켜진 곳(TOSS_TOKEN_ISSUE=1)에서만 · 2분 넘게 낡으면 ⑨ 긴급 1번
+    from backend.execution.plan.runner import executor_enabled as _plan_enabled
+
+    if _plan_enabled():
+        from backend.execution.plan import heartbeat as _plan_hb
+        from backend.services.db import get_session as _plan_gs
+        from backend.services.notifier import TelegramNotifier as _PlanNotifier
+
+        async def _plan_heartbeat_watch():
+            async with _plan_gs() as _s:
+                async def _send(title: str, body: str) -> bool:
+                    return await _PlanNotifier().send_critical(title, body, category="execution")
+
+                await _plan_hb.check_stale(_s, _send)
+
+        scheduler.add_job(
+            _plan_heartbeat_watch, "interval", seconds=_plan_hb.CHECK_EVERY_SEC,
+            id="plan_executor_heartbeat_watch", max_instances=1, coalesce=True,
+        )
+        logger.info("[FastAPI] 계획 실행기 하트비트 감시 60초 주기 등록")
+
     scheduler.start()
     app.state.scheduler = scheduler
     logger.info("[FastAPI] APScheduler started — sector_leaders(3) + meme_watch(1) jobs registered")
@@ -262,7 +284,7 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(
     title="Toss Tradebot MVP API",
-    version="0.3.64",
+    version="0.3.65",
     description="자동매매 + Crazy + Moonshot Discovery API",
     lifespan=lifespan,
 )
@@ -270,6 +292,16 @@ app = FastAPI(
 # CORS — Next.js 프론트엔드
 # 허용 origin 은 CORS_ORIGINS 환경변수(쉼표 구분) 로 제어. 미설정 시 기본값 사용.
 # 프론트 포트 변경 시 코드 수정 없이 .env 만 갱신 → 재기동으로 반영.
+from fastapi.responses import JSONResponse  # noqa: E402
+from sqlalchemy.orm.exc import StaleDataError  # noqa: E402
+
+
+@app.exception_handler(StaleDataError)
+async def _stale_data(request, exc):
+    """1116-01 · 화면과 실행기가 같은 계획을 동시에 고쳤을 때(낙관적 잠금) · 다시 읽고 다시 시도하면 된다."""
+    return JSONResponse(status_code=409, content={"detail": {"reason": "stale", "message": "다른 곳에서 같은 계획이 막 바뀌었습니다. 화면을 새로 읽고 다시 시도해 주십시오."}})
+
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=config.cors_origins(),
@@ -314,6 +346,7 @@ app.include_router(
 )
 # ── 관리
 app.include_router(settings.router, prefix="/api/v1/settings", tags=["settings"])
+app.include_router(plans.router, prefix="/api/v1/plans", tags=["plans"])  # 1116-01 · 계획 실행기
 app.include_router(notifications.router, prefix="/api/v1/notifications", tags=["notifications"])
 from backend.api.routes import broker_links as _broker_links  # noqa: E402 · 1025-06
 app.include_router(_broker_links.router, prefix="/api/v1/broker-links", tags=["broker-links"])
@@ -346,7 +379,17 @@ else:
 
 @app.get("/health")
 async def health():
-    return {"status": "ok", "service": "toss-tradebot-mvp"}
+    out = {"status": "ok", "service": "toss-tradebot-mvp"}
+    # 1116-01 9-2 · 실행기 하트비트 나이(초) 숫자 하나만 · 계획 · 종목 · 계좌 정보 없음 · 읽기 실패면 null
+    try:
+        from backend.execution.plan import heartbeat as _plan_hb
+        from backend.services.db import get_session as _gs
+
+        async with _gs() as _s:
+            out["plan_executor_heartbeat_age_sec"] = await _plan_hb.age_seconds(_s)
+    except Exception:  # noqa: BLE001
+        out["plan_executor_heartbeat_age_sec"] = None
+    return out
 
 
 @app.get("/")

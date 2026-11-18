@@ -210,6 +210,20 @@ def test_biotech_quotes_job_registered_0845_tue_sat():
     assert (f["hour"], f["minute"], f["day_of_week"]) == ("8", "45", "tue-sat")
 
 
+def test_plan_draft_jobs_are_checked_even_without_the_issue_key():
+    """1116-01 · 자동 초안 잡은 실행기 키가 있을 때만 등록되지만, 키 없는 시험 환경에서도 등록 함수를 불러 같은 규칙을 본다."""
+    from backend.scheduler.cron import build_scheduler, register_plan_jobs
+
+    s = build_scheduler()
+    register_plan_jobs(s)
+    assert {"plan_draft_a", "plan_draft_b"} <= {j.id for j in s.get_jobs()}
+    for jid in ("plan_draft_a", "plan_draft_b"):
+        j = s.get_job(jid)
+        assert j.misfire_grace_time == GRACE_DEFAULT and j.coalesce is True and isinstance(j.trigger, CronTrigger)
+    bad = _too_close(_fixed_times(s.get_jobs()))
+    assert not bad, f"계획 자동 초안 잡이 cron 서비스의 다른 정해진 시각 잡과 5분 안에 겹침: {bad}"
+
+
 def test_assembly_moved_off_0600():
     job = _api_scheduler().get_job("watchlist_assembly")
     f = {x.name: str(x) for x in job.trigger.fields}

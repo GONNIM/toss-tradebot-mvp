@@ -1,0 +1,68 @@
+# 1116-01 9-2 · 서버 밖 감시 (2026-11-18 사용자 승인: GitHub Actions 예약)
+#
+# 서버 전체나 두 프로세스가 같이 멈추면 서버 안 하트비트 알림이 나지 않는다. 이 작업이 밖에서 /health 를 본다.
+# 동작: 15분마다(정각을 피한 7 · 22 · 37 · 52분) 공개 /health 의 `plan_executor_heartbeat_age_sec` 를 읽는다.
+#       응답이 없거나 · 숫자가 없거나 · 기준(기본 300초)을 넘으면 이 워크플로가 실패한다 → GitHub 실패 알림.
+# 서버 주소: 파일에 쓰지 않고 Actions 변수 PLAN_WATCH_HEALTH_URL 로 읽는다 (예: https://호스트 · 끝 슬래시 없이).
+#            변수가 비어 있으면 아무것도 하지 않고 성공한다(변수를 넣기 전까지 꺼져 있는 셈).
+# 선택 변수: PLAN_WATCH_MAX_AGE_SEC (기본 300).
+# 비밀값 없음. 운영 방법: docs/operations/plan-executor-watch.md
+name: Plan executor watch (실행기 하트비트 서버 밖 감시)
+
+on:
+  schedule:
+    - cron: '7,22,37,52 * * * *'
+  workflow_dispatch:
+    inputs:
+      force_fail:
+        description: '일부러 실패시켜 GitHub 실패 알림이 오는지 확인'
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+jobs:
+  watch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      HEALTH_URL: ${{ vars.PLAN_WATCH_HEALTH_URL }}
+      MAX_AGE: ${{ vars.PLAN_WATCH_MAX_AGE_SEC }}
+      FORCE_FAIL: ${{ inputs.force_fail }}
+    steps:
+      - name: 일부러 실패 (수동 실행 확인용)
+        if: env.FORCE_FAIL == 'true'
+        run: |
+          echo "::error::일부러 실패 입력값이 켜져 있어 실패시킵니다 (실패 알림 확인용)"
+          exit 1
+
+      - name: 하트비트 나이 확인
+        run: |
+          set -u
+          if [ -z "${HEALTH_URL:-}" ]; then
+            echo "::notice::Actions 변수 PLAN_WATCH_HEALTH_URL 이 비어 있어 확인하지 않습니다"
+            exit 0
+          fi
+          max="${MAX_AGE:-300}"
+          case "$max" in ''|*[!0-9]*) echo "::error::PLAN_WATCH_MAX_AGE_SEC 가 숫자가 아닙니다"; exit 1 ;; esac
+          body=""
+          for i in 1 2 3; do
+            if body=$(curl -fs --max-time 20 "${HEALTH_URL%/}/health" 2>/dev/null); then break; fi   # -s · 오류 문구에 주소가 찍히지 않게
+            body=""
+            sleep 10
+          done
+          if [ -z "$body" ]; then
+            echo "::error::/health 응답이 없습니다 (3번 시도)"
+            exit 1
+          fi
+          age=$(printf '%s' "$body" | python3 -c 'import sys,json; v=json.load(sys.stdin).get("plan_executor_heartbeat_age_sec"); print("" if v is None else int(v))' 2>/dev/null || true)
+          if [ -z "$age" ]; then
+            echo "::error::하트비트 나이가 응답에 없거나 비어 있습니다 (실행기 기록 없음)"
+            exit 1
+          fi
+          echo "하트비트 나이 ${age}초 (기준 ${max}초)"
+          if [ "$age" -gt "$max" ]; then
+            echo "::error::실행기 하트비트가 ${age}초 동안 갱신되지 않았습니다 (기준 ${max}초)"
+            exit 1
+          fi

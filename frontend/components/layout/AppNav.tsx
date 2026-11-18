@@ -53,6 +53,17 @@ const GROUPS: Group[] = [
     ],
   },
   {
+    key: "plans",
+    label: "계획",
+    href: "/plans",
+    // 1116-01 계획 실행기 · 화면은 관리자 로그인 때만 내용이 보인다
+    tabs: [
+      { href: "/plans", label: "계획 목록" },
+      { href: "/plans/new", label: "새 계획" },
+      { href: "/plans/adopt", label: "보유 인수" },
+    ],
+  },
+  {
     key: "account",
     label: "내 계좌",
     href: "/account",
