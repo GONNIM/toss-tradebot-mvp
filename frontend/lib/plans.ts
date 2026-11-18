@@ -219,6 +219,7 @@ async function call<T>(method: string, path: string, body?: unknown): Promise<T>
     } catch {
       // 본문이 없으면 기본 문구
     }
+    if (res.status === 422) message = "입력한 값의 형식이 서버 기준에 맞지 않습니다 · 값을 다시 확인해 주십시오 (토스 주문 번호는 영문 · 숫자 · - 만 쓸 수 있습니다).";
     if (res.status === 401) message = "관리자 로그인이 필요합니다. 오른쪽 위 「관리자 로그인」 에서 로그인한 뒤 다시 하십시오.";
     if (res.status === 403) message = "이 동작은 같은 주소에서 로그인한 브라우저(쿠키)로만 됩니다.";
     throw new PlanApiError(res.status, reason, message);
@@ -236,7 +237,7 @@ export const plansApi = {
   stop: (id: number) => call<{ halted: boolean; plan: Plan }>("POST", `/${id}/stop`),
   adoptCancel: (id: number) => call<{ queued: number }>("POST", `/${id}/adopt-cancel`),
   timestopStop: (id: number) => call<{ queued: number }>("POST", `/${id}/timestop-stop`),
-  confirmChallenge: (action: "approve" | "adopt" | "resume", plan_id: number) =>
+  confirmChallenge: (action: "approve" | "adopt" | "resume" | "resolve_order", plan_id: number) =>
     call<Challenge>("POST", "/confirm/challenge", { action, plan_id }),
   validate: (b: { symbol: string; mode: PlanMode; source: "manual" | "adopt"; params: PlanParams }) =>
     call<ValidateResult>("POST", "/validate", b),
@@ -244,7 +245,7 @@ export const plansApi = {
   resolveOrder: (
     id: number,
     lineId: number,
-    b: { decision: "filled" | "not_created" | "open"; filled_qty?: number; toss_id?: string; challenge_id?: number; code?: string; approver?: string },
+    b: { decision: "filled" | "not_created" | "open"; filled_qty?: number; toss_id?: string; kind?: "cond" | "limit"; remainder_cancelled?: boolean; challenge_id?: number; code?: string; approver?: string },
   ) => call<{ order: UnknownOrder; remaining: number }>("POST", `/${id}/unknown-orders/${lineId}/resolve`, { approver: "대표", ...b }),
   resync: (id: number) => call<{ queued: number }>("POST", `/${id}/resync`),
   approve: (

@@ -4,7 +4,7 @@
 // 확인 코드 흐름은 재개와 같다(CodeDialog 재사용 · 실전 · 시험 계획만 코드). 영어 내부 이름은 한국어 이름표로만 보인다.
 import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { plansApi, ORDER_KIND_LABEL, ORDER_ROLE_LABEL, ORDER_SIDE_LABEL, errText, kst, num, shares, usd } from "@/lib/plans";
+import { PlanApiError, plansApi, ORDER_KIND_LABEL, ORDER_ROLE_LABEL, ORDER_SIDE_LABEL, errText, kst, num, shares, usd } from "@/lib/plans";
 import type { UnknownOrder } from "@/lib/plans";
 import { CodeDialog } from "@/components/plans/CodeDialog";
 import { BTN_LINE, Field, INPUT, Notice } from "@/components/plans/ui";
@@ -42,11 +42,15 @@ export function UnknownOrdersPanel({
   const [sel, setSel] = useState<{ line: UnknownOrder; decision: Decision } | null>(null);
   const [qtyIn, setQtyIn] = useState("");
   const [tossId, setTossId] = useState("");
+  const [remCancelled, setRemCancelled] = useState(false);
+  const [kindSel, setKindSel] = useState<"cond" | "limit">("cond");
   const [done, setDone] = useState<string | null>(null);
 
   useEffect(() => {
     if (sel) {
       setQtyIn("");
+      setRemCancelled(false);
+      setKindSel(sel.line.kind === "limit" ? "limit" : "cond");
       setTossId(sel.line.candidates.length === 1 ? sel.line.candidates[0].toss_id : "");
     }
   }, [sel]);
@@ -54,9 +58,10 @@ export function UnknownOrdersPanel({
   if (count <= 0 && !done) return null;
   const orders = q.data?.orders ?? [];
   const fq = num(qtyIn);
+  const partial = !!sel && sel.decision === "filled" && fq !== null && fq < sel.line.qty;
   const ready = !sel ? false
-    : sel.decision === "filled" ? fq !== null && Number.isInteger(fq) && fq >= 1 && fq <= sel.line.qty
-      : sel.decision === "open" ? tossId.trim().length > 0
+    : sel.decision === "filled" ? fq !== null && Number.isInteger(fq) && fq >= 1 && fq <= sel.line.qty && (!partial || remCancelled)
+      : sel.decision === "open" ? /^[A-Za-z0-9-]+$/.test(tossId.trim())
         : true;
 
   return (
@@ -81,9 +86,9 @@ export function UnknownOrdersPanel({
           <li key={o.id} className="space-y-2 px-3 py-3 text-sm" data-testid={`unknown-${o.id}`}>
             <p className="font-semibold tabular-nums">{lineText(o)}</p>
             <p className="text-muted-foreground">
-              상태: {ORDER_STATE_LABEL[o.state] ?? "기타"} · 왜 모르는지: {o.reason && /[가-힣]/.test(o.reason) ? o.reason : "기록된 까닭이 없습니다"}
+              상태: {ORDER_STATE_LABEL[o.state] ?? "기타"} · 왜 모르는지: {o.client_order_id?.startsWith("missing-") ? "토스 조회에서 주문이 보이지 않아 확인이 필요한 주문입니다" : o.reason && /[가-힣]/.test(o.reason) ? o.reason : "기록된 까닭이 없습니다"}
             </p>
-            {o.reason && !/[가-힣]/.test(o.reason) && (
+            {o.reason && !/[가-힣]/.test(o.reason) && !o.client_order_id?.startsWith("missing-") && (
               <details className="text-xs text-muted-foreground"><summary className="cursor-pointer" aria-label="까닭 원문 펼치기">자세히</summary><p className="break-all">{o.reason}</p></details>
             )}
             <div className="flex flex-wrap gap-2">
@@ -107,19 +112,27 @@ export function UnknownOrdersPanel({
         onClose={() => setSel(null)}
         title={sel ? `결과 모르는 주문 확정 · ${sel.decision === "filled" ? "체결됨" : sel.decision === "not_created" ? "만들어지지 않음" : "아직 열려 있음"}` : "결과 모르는 주문 확정"}
         requireCode={!isPaper}
-        requestCode={() => plansApi.confirmChallenge("resume", planId)}
+        requestCode={() => plansApi.confirmChallenge("resolve_order", planId)}
         confirmLabel="확정하기"
         extraReady={ready}
         onConfirm={async (c) => {
           if (!sel) return;
           const s = sel;
           await guard(async () => {
-            await plansApi.resolveOrder(planId, s.line.id, {
-              decision: s.decision,
-              ...(s.decision === "filled" ? { filled_qty: fq ?? undefined } : {}),
-              ...(s.decision === "open" ? { toss_id: tossId.trim() } : {}),
-              ...c,
-            });
+            try {
+              await plansApi.resolveOrder(planId, s.line.id, {
+                decision: s.decision,
+                ...(s.decision === "filled" ? { filled_qty: fq ?? undefined, remainder_cancelled: partial ? remCancelled : false } : {}),
+                ...(s.decision === "open" ? { toss_id: tossId.trim(), kind: kindSel } : {}),
+                ...c,
+              });
+            } catch (e) {
+              // 입력 오류(400 resolve)면 쓴 코드는 다시 못 쓴다 → 새 코드를 받게 안내한다
+              if (e instanceof PlanApiError && e.status === 400 && e.reason === "resolve") {
+                throw new Error(`${e.message} · 사용한 확인 코드는 다시 쓸 수 없습니다. 코드를 다시 받아 주십시오 (아래 「코드 다시 받기」).`);
+              }
+              throw e;
+            }
             setDone(`주문 ${s.line.id}번 줄을 확정했습니다. 손절은 실행기가 다음 걸음에 겁니다.`);
             await onChanged();
           });
@@ -131,11 +144,26 @@ export function UnknownOrdersPanel({
             <p className="text-xs tabular-nums text-muted-foreground">{lineText(sel.line)}</p>
             {sel.decision === "filled" && (
               <Field label={`체결된 수량 (1 ~ ${sel.line.qty}주)`}>
-                <input inputMode="numeric" value={qtyIn} onChange={(e) => setQtyIn(e.target.value)} aria-label="체결된 수량" data-testid="in-unknown-qty" className={INPUT} />
+                <input inputMode="numeric" value={qtyIn} onChange={(e) => { setQtyIn(e.target.value); setRemCancelled(false); }} aria-label="체결된 수량" data-testid="in-unknown-qty" className={INPUT} />
               </Field>
+            )}
+            {partial && sel && (
+              <div className="space-y-1" data-testid="unknown-partial">
+                <label className="flex min-h-[44px] items-center gap-2 text-sm font-semibold">
+                  <input type="checkbox" checked={remCancelled} onChange={(e) => setRemCancelled(e.target.checked)} aria-label="남은 주문을 토스 앱에서 취소했습니다" data-testid="in-unknown-rem" className="h-5 w-5" />
+                  남은 주문을 토스 앱에서 취소했습니다
+                </label>
+                <p className="text-xs text-muted-foreground">남은 주문이 아직 살아 있으면 취소하지 말고 「아직 열려 있음」에 토스 주문 번호를 넣어 계속 관리하게 하십시오.</p>
+              </div>
             )}
             {sel.decision === "open" && (
               <>
+                <Field label="토스 주문 종류">
+                  <select value={kindSel} onChange={(e) => setKindSel(e.target.value === "limit" ? "limit" : "cond")} aria-label="토스 주문 종류" data-testid="in-unknown-kind" className={INPUT}>
+                    <option value="cond">{ORDER_KIND_LABEL.cond}</option>
+                    <option value="limit">일반 지정가 주문</option>
+                  </select>
+                </Field>
                 {sel.line.candidates.length > 0 ? (
                   <Field label="후보 목록에서 고르기">
                     <select value={tossId} onChange={(e) => setTossId(e.target.value)} aria-label="후보 주문 고르기" data-testid="in-unknown-cand" className={INPUT}>
@@ -146,8 +174,8 @@ export function UnknownOrdersPanel({
                     </select>
                   </Field>
                 ) : (
-                  <Field label="토스 앱에서 본 주문 번호를 입력하십시오" hint="후보가 없어 직접 입력합니다.">
-                    <input value={tossId} onChange={(e) => setTossId(e.target.value)} aria-label="토스 주문 번호" data-testid="in-unknown-tossid" className={INPUT} autoComplete="off" />
+                  <Field label="토스 앱에서 본 주문 번호를 입력하십시오" hint="후보가 없어 직접 입력합니다. 영문 · 숫자 · - 만 넣을 수 있습니다.">
+                    <input value={tossId} onChange={(e) => setTossId(e.target.value.replace(/[^A-Za-z0-9-]/g, ""))} aria-label="토스 주문 번호" data-testid="in-unknown-tossid" className={INPUT} autoComplete="off" />
                   </Field>
                 )}
               </>
