@@ -436,3 +436,4 @@ Phase 7 완료 보고서 `docs/plans/powderkeg-screener/phase7-final-report.md` 
 ### 교훈
 - 배포 절차는 계획서의 배포 절(9-1 · 13절)을 그대로 옮겨 적는다. 설정 키를 끄거나 뺄 때는 `grep -rn <키>` 로 그 키를 읽는 모든 곳을 먼저 본다.
 - 진행 기록 행을 고칠 때 칸 전체를 새로 쓰지 말고 앞에 덧붙인다(11/18 이전 결정 줄을 지웠다가 되살림).
+- (11/19 · #7 재발) 1116-01 배포 확인에 `journalctl -u tradebot-cron` 명령을 드려 빈 출력이 나왔다. 앱 로그는 `/var/log/toss-tradebot/cron.error.log` 파일에 있다. 서버 로그 명령을 만들 때 메모리 post-deploy-verification-limits 를 먼저 본다.
