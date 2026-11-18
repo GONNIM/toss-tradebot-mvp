@@ -100,6 +100,7 @@ function MineCard({ d }: { d: StockOverview }) {
 
 const PRICE_LOGIN_NOTE = "가격 · 전문가 의견은 로그인하면 보입니다 (자료 제공처 약관상 공개 게시 불가)";
 const PRICE_NONE_NOTE = "이 사이트는 이 종목의 가격 자료를 모으지 않습니다";
+const PRICE_KR_NOTE = "국내 종목 가격 · 전문가 의견은 이 화면에 아직 없습니다 · 토스에서 보실 수 있습니다";
 const NO_CATALYST_NOTE = "등록된 일정이 없습니다";
 
 function BrokerLink({ d }: { d: StockOverview }) {
@@ -118,7 +119,8 @@ function PriceCard({ d }: { d: StockOverview }) {
   if (!d.quote_available) {
     return (
       <Card title="가격 · 전문가 의견">
-        <p className="text-sm text-muted-foreground">{PRICE_NONE_NOTE}</p>
+        <p className="text-sm text-muted-foreground">{d.market === "KR" ? PRICE_KR_NOTE : PRICE_NONE_NOTE}</p>
+        {d.market === "KR" && <BrokerLink d={d} />}
       </Card>
     );
   }
@@ -173,8 +175,15 @@ function RiskCard({ g }: { g: StockGoingConcern | null | undefined }) {
   const suffix = det ? goingConcernSuffix(det) : "";
   return (
     <Card title="위험 (공개 자료)">
-      {g.scope === "out" || !det ? (
-        <p className="text-sm text-muted-foreground">{GOING_CONCERN_LABEL}: 확인 대상 밖 (이 회사는 확인 목록에 없습니다)</p>
+      {g.scope !== "checked" || !det ? (
+        <p className="text-sm text-muted-foreground">
+          {GOING_CONCERN_LABEL}:{" "}
+          {g.scope === "unreadable"
+            ? "자료를 읽지 못했습니다"
+            : g.scope === "no_cik"
+              ? "회사 번호를 찾지 못해 확인하지 못했습니다"
+              : "확인 대상 밖 (이 회사는 확인 목록에 없습니다)"}
+        </p>
       ) : (
         <p className="text-sm">
           {GOING_CONCERN_LABEL}: {head && <strong className="font-semibold">{head}</strong>}

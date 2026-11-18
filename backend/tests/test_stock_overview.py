@@ -262,7 +262,7 @@ async def test_not_candidate_and_kr_hide_bio_columns(client, monkeypatch):
     _patch_bio(monkeypatch, cands=("TESTA",), notes={"TESTB": "x"}, store={"rows": {}})
     b = (await client.get("/api/v1/stock/TESTB")).json()
     assert b["quote_available"] is False and b["catalysts"] is None and b["going_concern"] is None
-    k = (await client.get("/api/v1/stock/005930")).json()
+    k = (await client.get("/api/v1/stock/000000")).json()
     assert k["quote_available"] is False and k["catalysts"] is None and k["going_concern"] is None
 
 
@@ -289,8 +289,27 @@ async def test_one_bad_catalyst_line_is_dropped_others_stay(client, monkeypatch)
     note = f"NCT00000009 · D-5 ({ok} · PHASE1) / NCT00000008 · D-5 (2026-13-99 · PHASE1)"
     _patch_bio(monkeypatch, notes={"TESTA": note}, store={"rows": {}})
     c = (await client.get("/api/v1/stock/TESTA")).json()["catalysts"]
-    # 날짜 해석이 안 되는 줄은 기존 규칙(_note_fields)이 노트의 D-n 으로 대신하므로 줄 수는 1~2 · 200 이고 첫 줄은 남는다
-    assert c and c[0]["nct_id"] in ("NCT00000009", "NCT00000008")
+    assert [x["nct_id"] for x in c] == ["NCT00000009"]  # 날짜가 깨진 줄은 빠진다
+
+
+@pytest.mark.asyncio
+async def test_broken_ledger_row_is_unreadable_not_out(client, monkeypatch, tmp_path):
+    _patch_bio(monkeypatch, notes={"TESTA": ""}, store={"rows": {"0000000456": {"state": ""}}, "meta": {}},
+               radar_rows=["TESTA,0000000456,1,A"], tmp_path=tmp_path)
+    assert (await client.get("/api/v1/stock/TESTA")).json()["going_concern"] == {"scope": "unreadable", "detail": None}
+
+
+@pytest.mark.asyncio
+async def test_cik_missing_everywhere_is_no_cik(client, monkeypatch, tmp_path):
+    _patch_bio(monkeypatch, notes={"TESTA": ""}, store={"rows": {"0000000456": {"state": "present"}}, "meta": {}},
+               radar_rows=["TESTA,,1,A"], tmp_path=tmp_path)
+    assert (await client.get("/api/v1/stock/TESTA")).json()["going_concern"] == {"scope": "no_cik", "detail": None}
+
+
+@pytest.mark.asyncio
+async def test_invalid_ticker_message(client):
+    r = await client.get("/api/v1/stock/AB CD")
+    assert r.status_code == 400 and r.json()["detail"] == "종목 코드 형식이 아닙니다."
 
 
 @pytest.mark.asyncio
@@ -357,10 +376,10 @@ async def test_kr_sniper_state_words_admin_only(client):
 
     async with get_session() as s:
         await s.execute(delete(m.SniperSignal))
-        s.add(m.SniperSignal(ticker="005930", detected_at=datetime(2026, 11, 18, 10, 0), tape_score=70.0,
+        s.add(m.SniperSignal(ticker="000000", detected_at=datetime(2026, 11, 18, 10, 0), tape_score=70.0,
                              entry_price=100.0, exit_price=110.0))
-    anon = (await client.get("/api/v1/stock/005930")).json()
-    adm = (await client.get("/api/v1/stock/005930", headers=H)).json()
+    anon = (await client.get("/api/v1/stock/000000")).json()
+    adm = (await client.get("/api/v1/stock/000000", headers=H)).json()
     sa = _by_source(anon)["sniper"]["summary"]
     assert "진입" not in sa and "청산" not in sa and "11/18" in sa and "70.0" in sa
     assert "청산" in _by_source(adm)["sniper"]["summary"]
@@ -382,9 +401,10 @@ async def test_explain_texts_have_no_forbidden_words(client):
     async with get_session() as s:
         await s.execute(delete(m.MemeScoreHistory))
         s.add(m.MemeScoreHistory(ticker="ZZCR", snapshot_at=datetime(2026, 11, 18), score=0.8, label="HOT"))
+        s.add(m.BlueChipCandidate(run_id="r9", ticker="000000", tier="entry", pass_count=3))
         s.add(m.MemeScoreHistory(ticker="ZZOLD", snapshot_at=datetime(2026, 11, 18), score=0.8, label="옛낱말"))
     texts = []
-    for t in ("ZZCR", "005930"):
+    for t in ("ZZCR", "000000"):
         b = (await client.get(f"/api/v1/stock/{t}")).json()
         texts += [x["explain"] for x in b["signals"] if x["explain"]]
     assert texts and any("HOT" in x for x in texts)

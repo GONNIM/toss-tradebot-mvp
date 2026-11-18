@@ -795,7 +795,7 @@ export interface StockCatalyst {
 }
 // 1119-01 · 계속기업 문구 · scope=out 이면 장부에 이 회사 행이 없음 (확인 대상 밖)
 export interface StockGoingConcern {
-  scope: "checked" | "out";
+  scope: "checked" | "out" | "unreadable" | "no_cik";
   detail: import("./biotech-display").GoingConcern | null;
 }
 export interface StockOverview {

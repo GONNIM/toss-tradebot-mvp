@@ -742,7 +742,7 @@ class StockCatalyst(BaseModel):
 
 class StockGoingConcern(BaseModel):
     """1119-01 · 계속기업 의문 문구 (SEC 공개 자료). scope=out 이면 장부에 이 회사 행이 없음 (확인 대상 밖)."""
-    scope: str             # "checked" | "out"
+    scope: str             # "checked" | "out" (장부에 행 없음) | "unreadable" (행은 있는데 읽지 못함) | "no_cik" (회사 번호 못 찾음)
     detail: Optional[dict] = None   # biotech.GoingConcern 과 같은 칸 (scope=checked 일 때만)
 
 

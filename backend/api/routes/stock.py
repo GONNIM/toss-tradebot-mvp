@@ -10,7 +10,7 @@
 from __future__ import annotations
 
 import logging
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
 from typing import Awaitable, Callable, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Response
@@ -285,6 +285,7 @@ def _catalysts(t: str) -> Optional[list[StockCatalyst]]:
                 f = R._note_fields(m.group(0))
                 if not f:
                     continue
+                date.fromisoformat(f["event_date"])  # 날짜가 깨진 줄은 종목 API 쪽에서 뺀다 (공용 _note_fields 는 그대로)
                 out.append(StockCatalyst(nct_id=f["nct_id"], phase=f["phase"], event_date=f["event_date"],
                                          days_to=int(f["days_to"]), past=int(f["days_to"]) < 0))
             except Exception as e:  # noqa: BLE001
@@ -321,9 +322,17 @@ def _going_concern(t: str) -> Optional[StockGoingConcern]:
                         break
         if not cik:
             cik = next((c for c, tk in R._cik_ticker_map().items() if tk == t), "")
-        gc = R._going_concern_for(store, cik) if cik else None
+        if not cik:
+            return StockGoingConcern(scope="no_cik")   # 회사 번호를 못 찾음 (장부에 없음과 구별)
+        try:
+            row = store["rows"].get(str(int(cik)).zfill(10))
+        except (ValueError, TypeError, KeyError, AttributeError):
+            return StockGoingConcern(scope="no_cik")
+        if not row:
+            return StockGoingConcern(scope="out")      # 장부에 이 회사 행 없음
+        gc = R._going_concern_for(store, cik)
         if gc is None:
-            return StockGoingConcern(scope="out")
+            return StockGoingConcern(scope="unreadable")  # 행은 있는데 state 가 비었거나 깨짐
         return StockGoingConcern(scope="checked", detail=gc.model_dump())
     except Exception as e:  # noqa: BLE001
         logger.warning("[stock] 계속기업 읽기 실패 (%s): %s", t, e)
@@ -403,7 +412,7 @@ async def get_stock(ticker: str, response: Response, role: str = Depends(get_cur
     try:
         t = normalize_symbol(ticker)
     except ValueError as e:
-        raise HTTPException(status_code=400, detail="종목 기호 형식이 올바르지 않습니다.", headers=_NO_STORE) from e
+        raise HTTPException(status_code=400, detail="종목 코드 형식이 아닙니다.", headers=_NO_STORE) from e
     response.headers.update(_NO_STORE)
 
     admin = role == "admin"
