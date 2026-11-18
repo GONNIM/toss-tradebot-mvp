@@ -28,7 +28,7 @@ from backend.scripts.biotech_sec_common import SEC_DAILY_CAP, SecBlockedError, S
 
 LOG = logging.getLogger("biotech_going_concern")
 
-RULE_VERSION = "gc-2"   # 11/17 표본 30건 뒤 「no longer」 → 지난 기간 · 「there was」 는 이전 기간 표지 있을 때만
+RULE_VERSION = "gc-3"   # 11/18 판단 동사 부정(「does not believe that … exists」) → 부정 · 「있음」 행을 먼저 다시 받음
 LEDGER_CAT = "going_concern"
 STORE_NAME = "going_concern.json"
 DAILY_MAX = 15
@@ -73,6 +73,7 @@ _ABBR = re.compile(r"(?:(?i:\b(?:inc|corp|co|ltd|dr|mr|ms|no|vs|st|u\.s|e\.g|i\.
 _BOUNDARY = re.compile(r"[.;:]\s+(?=[A-Z(\"'])")
 _MODAL_RAISE = _r(r"\b(?:could|may|might|would|can)\b(?:\s+\w+){0,3}\s+(?:raise|raises|cast|casts|create|creates)\s+(?:a\s+|further\s+|significant\s+|serious\s+)*$")
 _COND_RAISE = _r(r"\b(?:if|unless)\b(?:\s+\w+){0,5}\s+(?:raise|raises|cast|casts|create|creates)\s+(?:a\s+|further\s+)*$")
+_NEG_JUDGE = _r(r"(?:\bnot\b|n't\b)\s+(?:\w+\s+)?(?:believe[sd]?|conclude[sd]?|determine[sd]?|think|consider|expect)\s+(?:that\s+)?(?:there\s+(?:is|are|exists?)\s+)?(?:a\s+|any\s+)?$")   # 11/18 서버 표본 「does not believe that substantial doubt exists」
 _NEG_BEFORE = _r(r"(?:\bno\s+|\bwithout\s+(?:a\s+)?|\bnot\s+(?:\w+\s+){0,2}?(?:raise|raises|cast|casts|create|creates)\s+(?:a\s+)?)$")
 _POLICY = _r(r"\bwhether\b|\bevaluat(?:e|es|ing)\b")
 _CONF_VERB = _r(r"(?:\braise[sd]?|\braising|\brise to|\bcast(?:s|ing)?|\bcreat(?:e|es|ed|ing)|\bindicat\w+|\bthere is|\bthere exists?"
@@ -166,6 +167,8 @@ def classify_window(text: str, s: int, e: int, filing: date | None = None) -> st
         return W_IGNORE
     if pair and _NO_LONGER.search(clause):                            # 「no longer」 는 부정·가정보다 먼저 (11/17 표본)
         return W_PAST
+    if _NEG_JUDGE.search(clause):                                     # 「does not believe that」 · 「did not conclude that」 → 부정 (gc-3)
+        return W_NEG
     if _NEG_WAS.search(clause):                                       # 「do not believe there was」 → 부정
         return W_NEG
     if pair and _THERE_WAS.search(clause) and (_PRIOR.search(win) or _prior_dates(win, filing)):
@@ -352,14 +355,16 @@ def run_daily(raw: dict[str, dict], today: date, get_text: Callable[[str], dict]
         row.update(latest_info)
         why = needs_request(row, latest, today)
         if why:
-            work.append((rank.get(cik, 10**6), kinds_order[why], cik, latest))
-    work.sort(key=lambda w: (w[0], w[1], w[2]))
+            # 규칙 판이 바뀌면 지금 「있음」 행을 맨 먼저 다시 받는다 (틀린 「있음」이 화면에 오래 남지 않게 · gc-3)
+            first = 0 if (why == "rule" and row.get("state") == PRESENT) else 1
+            work.append((first, rank.get(cik, 10**6), kinds_order[why], cik, latest))
+    work.sort(key=lambda w: (w[0], w[1], w[2], w[3]))
     sent = received = capped = 0
     blocked = None
     gone = 0
     reserve = _quota_reserve(today, ledger, len(raw))
     if get_text is not None and not skip:
-        for i, (_r, _k, cik, latest) in enumerate(work):
+        for i, (_f, _r, _k, cik, latest) in enumerate(work):
             if sent >= DAILY_MAX:
                 break
             if ledger.total() + 1 + reserve > SEC_DAILY_CAP:          # 요청 1건마다 · 그날 남길 몫까지 본다

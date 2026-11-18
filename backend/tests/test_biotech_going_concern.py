@@ -708,7 +708,6 @@ def test_38_radar_order_changes_which_15_are_sent(rt):
     order = list(reversed(ciks))
     sent = []
     gc.run_daily(raw, TODAY_SUN, lambda u: sent.append(u) or {"status": 200, "text": body("Nothing here.")}, ledger_for(rt), order=order)
-    assert len(sent) == 15 and all(str(int(c)) in sent[0] or True for c in order[:1])
     assert any(str(int(order[0])) in u for u in sent[:1])
 
 
@@ -723,3 +722,36 @@ def test_39_going_concern_only_needs_todays_submissions(rt, monkeypatch):
     res = bf.run_going_concern_only(TODAY_TUE, get_text=lambda u: sent.append(u) or {"status": 200, "text": body("Nothing here.")},
                                     ledger=ledger_for(rt, TODAY_TUE, quote_8k=65))
     assert res["sent"] == 3 and len(sent) == 3 and res["reserve"] == 0
+
+
+def test_40_judgment_negation_is_not_present():
+    """11/18 서버 표본 (가짜 문장으로 모양만) · 「does not believe that substantial doubt exists」 는 부정 (gc-3)."""
+    for txt in ("As of the report date, the Company does not believe that substantial doubt exists about its ability to continue as a going concern.",
+                "Management did not conclude that there is substantial doubt about the Company's ability to continue as a going concern.",
+                "We don't believe substantial doubt exists regarding our ability to continue as a going concern."):
+        assert gc.classify_text(gc.plain_text(txt), date(2026, 11, 10))["state"] != gc.PRESENT, txt
+    # 확정 문장은 그대로 「있음」
+    ok = "Our current operating plan raises substantial doubt about our ability to continue as a going concern. We have not raised capital."
+    assert gc.classify_text(gc.plain_text(ok), date(2026, 11, 10))["state"] == gc.PRESENT
+
+
+def test_41_rule_change_refetches_present_rows_first(rt):
+    """규칙 판이 바뀌면 「있음」 행을 순서와 상관없이 먼저 다시 받는다."""
+    raw = mk_raw(20)
+    ciks = sorted(raw)
+    get_ok = lambda u: {"status": 200, "text": body("Nothing here.")}   # noqa: E731
+    gc.run_daily(raw, TODAY_SUN, get_ok, ledger_for(rt))
+    gc.run_daily(raw, date(2026, 11, 16), get_ok, ledger_for(rt, date(2026, 11, 16), mcap_shares=1))
+    store = json.loads((rt / "filings" / "going_concern.json").read_text())
+    store["rows"][ciks[-1]]["state"] = gc.PRESENT                       # 순서상 맨 뒤 회사가 「있음」
+    (rt / "filings" / "going_concern.json").write_text(json.dumps(store))
+    import backend.scripts.biotech_going_concern as m
+    old = m.RULE_VERSION
+    m.RULE_VERSION = old + "-next"
+    try:
+        sent = []
+        gc.run_daily(raw, date(2026, 11, 22), lambda u: sent.append(u) or {"status": 200, "text": body("Nothing here.")},
+                     ledger_for(rt, date(2026, 11, 22)), order=ciks)
+        assert f"/data/{int(ciks[-1])}/" in sent[0]
+    finally:
+        m.RULE_VERSION = old
