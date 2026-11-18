@@ -19,7 +19,7 @@ from typing import Optional
 from sqlalchemy import select
 
 from . import drafts, heartbeat, resync, sizing, state
-from .brokers import DirectionGate, PaperRaw, RealRaw, access_token as _token
+from .brokers import DirectionGate, PaperRaw, RawBroker, RealRaw, access_token as _token
 from .engine import PlanEngine
 from .models import Plan, PlanEvent, PlanLeg, PlanPaperOrder, PlanRequest, utcnow
 from .switches import read_switches
@@ -271,6 +271,11 @@ async def start_executor(stop: asyncio.Event) -> Optional[asyncio.Task]:
 
 # ─── 자동 초안 잡 (cron 프로세스 · 실행기가 켜진 곳에서만 등록) ───────────────
 
+def _draft_loader(symbol: str) -> dict:
+    """촉매 · 제외 · 경고 · 기준가 출처 (이 저장소에는 판정 출처가 없어 기본은 「자료 없음」 · drafts.py 머리말)."""
+    return drafts.no_data_loader(symbol)
+
+
 async def job_plan_draft(now_utc: Optional[datetime] = None) -> str:
     """오늘 레이더가 나왔는지 보고 초안을 만든다. 반환: skip | wait | no_rule | warned."""
     from backend.services.db import get_session
@@ -285,12 +290,17 @@ async def job_plan_draft(now_utc: Optional[datetime] = None) -> str:
         if done is not None:
             return "skip"
         if drafts.radar_ready(drafts.radar_dir(), today):
-            cands = drafts.select_candidates(drafts.radar_dir(), today)
             s.add(PlanEvent(plan_id=None, kind="draft_done", detail=key))
-            if not cands:
-                s.add(PlanEvent(plan_id=None, kind="draft_no_rule", detail="후보 선정 규칙 미구현 또는 후보 0건"))
-                return "no_rule"
-            return "skip"
+            eng = PlanEngine(DirectionGate(RawBroker.__new__(RawBroker)), notify=default_notify)   # DB 만 쓴다 (브로커 부르지 않음)
+            symbols = drafts.radar_symbols(drafts.radar_dir(), today)
+            decisions, expired = await drafts.run_draft_cycle(s, eng, today=today, symbols=symbols, loader=_draft_loader)
+            summary = drafts.build_summary(decisions, expired)
+            if summary:
+                await default_notify("info", summary[0], summary[1], "biotech")      # 「바이오」 범주 1건 요약
+            if any(d.action in ("create", "update") for d in decisions):
+                return "drafted"
+            s.add(PlanEvent(plan_id=None, kind="draft_none", detail=f"후보 {len(symbols)}건 · 만든 초안 0건"))
+            return "no_rule"
         if n == drafts.MAX_ATTEMPTS:
             s.add(PlanEvent(plan_id=None, kind="draft_done", detail=key))
             await default_notify("warning", "자동 초안 없음", "오늘 날짜 레이더 파일이 08:05 까지 없어 초안을 만들지 않았습니다.", "system")

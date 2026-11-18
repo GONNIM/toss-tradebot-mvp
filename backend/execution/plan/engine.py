@@ -54,6 +54,10 @@ APPROVAL_KEYS = ("symbol", "mode", "budget_usd", "buy_watch", "buy_order", "qty"
                  "ladder_pcts", "announce_at", "entry_close_at", "entry_window_end", "adopt")
 
 
+# 자동 초안에서 대표가 바꿀 수 있는 값 (v4 7절 · 바꾸면 「사용자 수정」 표시 · 매일 다시 계산해도 유지)
+USER_EDITABLE_KEYS = ("budget_usd", "buy_watch", "buy_order", "qty", "tp1_watch", "tp1_order", "ladder_pcts")
+
+
 def approval_values(plan: Plan) -> dict:
     p = params_of(plan)
     v = {k: p.get(k) for k in APPROVAL_KEYS if k in p}
@@ -136,12 +140,22 @@ class PlanEngine:
         await self._event(s, plan, "draft", source)
         return plan
 
-    async def update_draft(self, s, plan: Plan, values: dict) -> Plan:
-        """DRAFT 만 값 수정 · 값이 바뀌면 판(revision)이 1 늘고 내용 해시가 다시 계산된다."""
+    async def update_draft(self, s, plan: Plan, values: dict, *, by_user: bool = True) -> Plan:
+        """DRAFT 만 값 수정 · 값이 바뀌면 판(revision)이 1 늘고 내용 해시가 다시 계산된다.
+
+        by_user=True 이면 대표가 바꾼 값(예산 · 매수가 · TP1 · 손절 폭)을 「사용자 수정」으로 표시한다 (v4 7절).
+        """
         if plan.state not in state.EDITABLE:
             raise state.TransitionError("초안(DRAFT)만 값을 고칠 수 있습니다")
         p = params_of(plan)
         before = approval_values(plan)
+        if by_user:
+            edited = set(p.get("user_edited") or [])
+            for k in USER_EDITABLE_KEYS:
+                if k in values and values[k] != p.get(k):
+                    edited.add(k)
+            if edited:
+                p["user_edited"] = sorted(edited)
         p.update({k: v for k, v in values.items() if k in APPROVAL_KEYS})
         set_params(plan, p)
         if "avg_price" in values:
@@ -473,6 +487,19 @@ class PlanEngine:
             await self._alert(plan, "critical", "지정가를 낼 수 없는 시간대",
                               f"손절 다리 {seq} 가 이미 넘었지만 지금은 지정가를 낼 수 없어 기존 다리를 그대로 둡니다.")
             return False
+        # 주문가는 직전에 받은 값이 아니라 방금 다시 읽은 현재가로 정한다 (읽기 실패면 넘겨받은 값)
+        try:
+            cur = await self.gate.current(s, plan.symbol)
+        except ExecutionError:
+            pass
+        # 수량 상한 = min(요청 수량, 계획 수량 · 계좌 보유 중 작은 값 − 이미 접수된 매도) · 0 이면 내지 않는다
+        base, accepted, _ = await self._base_and_accepted(s, plan)
+        cap = max(0, base - accepted)
+        if qty > cap:
+            await self._event(s, plan, "sell_qty_capped", f"sl{seq} {qty} → {cap}")
+            qty = cap
+        if qty <= 0:
+            return False
         await self._cancel_pending_buys(s, plan)
         if old_leg is not None:
             await self._cancel_leg(s, plan, old_leg)       # 다리를 먼저 줄인다 (매도 합 ≤ 보유)
@@ -528,8 +555,10 @@ class PlanEngine:
             await self._event(s, plan, "account_short", f"plan_qty {pq} account {acct}")
         return sizing.compute_base(pq, acct), acc, pq
 
-    async def ensure_ladder(self, s, plan: Plan) -> str:
-        """체결 · 전이 · 다시 맞추기 직후 불변식 검사 (5절 10항). 반환: ok | fixed | halted | skipped."""
+    async def ensure_ladder(self, s, plan: Plan, *, emergency: bool = False) -> str:
+        """체결 · 전이 · 다시 맞추기 직후 불변식 검사 (5절 10항). 반환: ok | fixed | halted | skipped.
+
+        emergency=True 면 모자란 수량을 비상 손절 값(7-1)의 다리로 건다 (시간 손절 종료 1분 전 되돌림)."""
         if plan.state in (state.DRAFT, state.APPROVED, state.CLOSED, state.CANCELLED, state.ENTRY_ARMED,
                           state.ENTRY_RETRY, state.ADOPT_PENDING):
             return "skipped"
@@ -541,7 +570,8 @@ class PlanEngine:
         if rep.status == "ok":
             return "ok"
         now = self.clock()
-        session = self._session(now)
+        session = "off" if emergency else self._session(now)
+        tag = "emergency" if emergency else session
         cur = await self.gate.current(s, plan.symbol)
         if rep.status == "excess":
             if dup:
@@ -556,16 +586,17 @@ class PlanEngine:
         if not legs:
             seq_qty = list(enumerate(sizing.split_ladder(missing), start=1))
             for seq, q in seq_qty:
-                await self._register_leg(s, plan, seq, q, self._values_for(plan, seq, session, cur), tag=session)
+                await self._register_leg(s, plan, seq, q, self._values_for(plan, seq, session, cur), tag=tag)
         else:
             free = [i for i in (1, 2, 3) if i not in seqs]
             if free:
                 await self._register_leg(s, plan, free[0], missing, self._values_for(plan, free[0], session, cur),
-                                         tag=session)
+                                         tag=tag)
             else:
                 last = legs[-1]
                 await self._modify_leg(s, plan, last, qty=last.qty + missing,
                                        vals=self._values_for(plan, last.seq, session, cur))
+                last.tag = tag
         return "fixed"
 
     async def _shrink_sl(self, s, plan: Plan, legs: list[PlanLeg], target: int) -> str:
@@ -877,6 +908,8 @@ class PlanEngine:
         for leg in legs:
             if leg.tag == session:
                 continue
+            if leg.tag == "emergency" and plan.timestop_stage == "clean" and session == "regular":
+                continue          # 시간 손절 종료 직전 비상 다리는 정규장이 끝날 때까지 그대로
             if plan.state == state.TRAILING and session == "regular":
                 v = sess.trail_values(plan.avg_price or 0, plan.peak_price or cur)
             else:
@@ -928,6 +961,14 @@ class PlanEngine:
         if r.retries >= 1:                         # 다시 내기가 2번 실패 → 예약을 풀고 보호 다리를 다시 건 뒤 ⑨ 긴급
             await self.ensure_ladder(s, plan)
             await self._alert(plan, "critical", "다시 내기 실패", f"{remaining}주 매도를 다시 내지 못해 보호 다리를 다시 겁니다.")
+            return
+        try:
+            cur = await self.gate.current(s, plan.symbol)       # 다시 내는 가격도 방금 읽은 현재가로
+        except ExecutionError:
+            pass
+        base, accepted, _ = await self._base_and_accepted(s, plan)
+        remaining = min(remaining, max(0, base - accepted))     # 수량 상한 (계획 수량 · 계좌 보유 − 접수된 매도)
+        if remaining <= 0:
             return
         price = sell_order(D(cur) * Decimal("0.95"))
         new = await sizing.reserve(s, plan.id, r.kind, remaining, None)
@@ -986,7 +1027,7 @@ class PlanEngine:
                     r.active = False
                 except ExecutionError:
                     pass
-            await self.ensure_ladder(s, plan)
+            await self.ensure_ladder(s, plan, emergency=True)    # 그 수량은 비상 손절 값의 다리로 (6-1 거침)
 
     async def stop_timestop(self, s, plan: Plan) -> None:
         """대표가 「시간 손절 중지」 → 끌어올리기 · 정리를 멈추고 남은 다리를 시간대 값으로 되돌린다 (위험 줄이는 동작)."""

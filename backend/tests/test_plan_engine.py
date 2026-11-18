@@ -440,6 +440,11 @@ async def test_timestop_lift_one_session_then_clean_then_cancel_back_to_emergenc
         legs = await legs_of(s, plan)
         assert sum(l.qty for l in legs) == 60
         assert plan.timestop_stage == "clean"
+        emerg = [l for l in legs if l.tag == "emergency"]
+        assert len(emerg) == 1 and emerg[0].qty == 40 and {D(l.watch_price) for l in emerg} == {D("8.93")}     # 현재가 10.50 × 0.85 올림 (비상 값)
+        assert {D(l.order_price) for l in emerg} == {D("8.66")}                          # 감시가 × 0.97 내림
+        await eng._swap_session(s, plan, clock())                                         # 정규장이 끝날 때까지 되돌리지 않음
+        assert {D(l.watch_price) for l in await legs_of(s, plan) if l.tag == "emergency"} == {D("8.93")}
 
 
 async def test_timestop_not_before_due_and_not_when_halted(plan_db):
@@ -764,3 +769,36 @@ async def test_paper_full_flow_never_touches_toss_and_follows_gap_rule(plan_db):
         await eng.tick_plan(s, plan)
         assert await sizing.plan_qty(s, plan) == 20                      # 가격이 1번 주문가(9.03)에 닿아 체결
         assert all(a[3] == "system" and "[모의 시험]" in a[1] for a in alerts)   # 모의 알림은 시스템 범주 · 표시
+
+
+# ── 즉시 매도 경로: 가격은 방금 읽은 현재가 · 수량은 상한 안 (㉤) ─────────────────
+
+async def test_immediate_sell_price_uses_freshly_read_price_not_stale_argument(plan_db):
+    raw, eng = await setup(price="10")
+    async with get_session() as s:
+        plan = await seed_holding(s, eng)
+        raw.price = D("9.00")                                  # 결정한 뒤 그사이 가격이 더 내려감
+        await eng._sell_cross(s, plan, seq=1, qty=20, cur=D("10"), kind="immediate", old_leg=None)
+        sell = [c for c in raw.calls if c[0] == "limit_create"][0]
+        assert sell[3] == D("8.82")                            # 9.00 × 0.98 내림 · 넘겨받은 10 × 0.98 = 9.80 이 아님
+
+
+async def test_immediate_sell_qty_capped_by_account_and_accepted(plan_db):
+    raw, eng = await setup(price="9.00", qty=30)               # 계획 60 · 계좌 30
+    async with get_session() as s:
+        plan = await seed_holding(s, eng, qty=60)
+        await eng._sell_cross(s, plan, seq=1, qty=50, cur=D("9"), kind="immediate", old_leg=None)
+        assert [c[2] for c in raw.calls if c[0] == "limit_create"] == [30]          # 계좌 보유 30 까지만
+        assert await sizing.accepted_sell(s, plan.id) == 30
+        await eng._sell_cross(s, plan, seq=2, qty=10, cur=D("9"), kind="immediate", old_leg=None)
+        assert raw.count("limit_create") == 1                  # 접수 30 = 보유 30 → 더 내지 않음
+        assert await sizing.accepted_sell(s, plan.id) == 30
+
+
+async def test_immediate_sell_qty_capped_by_plan_qty_minus_accepted(plan_db):
+    raw, eng = await setup(price="9.00", qty=100)              # 계좌가 넉넉해도 계획 수량 60 이 상한
+    async with get_session() as s:
+        plan = await seed_holding(s, eng, qty=60)
+        await sizing.reserve(s, plan.id, "triggered", 20, "T1")
+        await eng._sell_cross(s, plan, seq=1, qty=60, cur=D("9"), kind="immediate", old_leg=None)
+        assert [c[2] for c in raw.calls if c[0] == "limit_create"] == [40]          # 60 − 접수 20
