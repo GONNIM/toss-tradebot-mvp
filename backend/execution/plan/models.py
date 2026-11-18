@@ -213,3 +213,10 @@ class PlanExecutorHeartbeat(Base):
     last_resync_at: Mapped[Optional[datetime]] = mapped_column(DateTime)
     stale_alerted_at: Mapped[Optional[datetime]] = mapped_column(DateTime)  # 같은 끊김에 반복 안 함
     recovered_notified_at: Mapped[Optional[datetime]] = mapped_column(DateTime)
+    # 화면용 마지막 값 (실행기가 남김 · 화면 서버는 토스를 부르지 않는다)
+    toss_status: Mapped[str] = mapped_column(String(8), default="none")       # none | ok | error
+    toss_ok_at: Mapped[Optional[datetime]] = mapped_column(DateTime)
+    buying_power_usd: Mapped[Optional[float]] = mapped_column(Float)
+    buying_power_at: Mapped[Optional[datetime]] = mapped_column(DateTime)
+    app_conds_json: Mapped[Optional[str]] = mapped_column(Text)               # {종목: 계획 밖(앱) 조건주문 수}
+    app_conds_at: Mapped[Optional[datetime]] = mapped_column(DateTime)

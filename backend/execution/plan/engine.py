@@ -11,7 +11,7 @@ from __future__ import annotations
 
 import json
 import logging
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from decimal import Decimal
 from typing import Any, Awaitable, Callable, Optional
 
@@ -37,6 +37,28 @@ MAX_LEG_ERRORS = 3               # 같은 다리 오류 3번 → HALTED (9절)
 REPRICE_AFTER_SEC = 10           # 접수된 매도가 주문가 아래로 내려가면 10초 안에 다시 내기 (7-4)
 
 Notify = Callable[[str, str, str, str], Awaitable[Any]]   # (level, title, body, category)
+
+
+def parse_dt(raw) -> datetime:
+    """`YYYY-MM-DDTHH:mm:00+09:00` 같은 시간대 있는 값도 · 시간대 없는 값도 받아 엔진 시계(UTC · 시간대 없음)로 맞춘다."""
+    d = datetime.fromisoformat(str(raw).replace("Z", "+00:00"))
+    if d.tzinfo is not None:
+        d = d.astimezone(timezone.utc).replace(tzinfo=None)
+    return d
+
+
+def runtime_of(plan: Plan) -> dict:
+    """실행기가 남긴 마지막 값(현재가 · 실제 다리 · 계좌 수량 …) · 승인 대상 값이 아니라 내용 해시에 들어가지 않는다."""
+    r = params_of(plan).get("_runtime")
+    return r if isinstance(r, dict) else {}
+
+
+def set_runtime(plan: Plan, **kv) -> None:
+    p = params_of(plan)
+    r = dict(p.get("_runtime") or {})
+    r.update(kv)
+    p["_runtime"] = r
+    set_params(plan, p)
 
 
 def params_of(plan: Plan) -> dict:
@@ -67,6 +89,13 @@ def approval_values(plan: Plan) -> dict:
 
 def refresh_hash(plan: Plan) -> None:
     plan.content_hash = content_hash_of(approval_values(plan))
+
+
+def _num(v):
+    try:
+        return float(v)
+    except (TypeError, ValueError):
+        return None
 
 
 class PlanEngine:
@@ -146,7 +175,9 @@ class PlanEngine:
         by_user=True 이면 대표가 바꾼 값(예산 · 매수가 · TP1 · 손절 폭)을 「사용자 수정」으로 표시한다 (v4 7절).
         """
         if plan.state not in state.EDITABLE:
-            raise state.TransitionError("초안(DRAFT)만 값을 고칠 수 있습니다")
+            # 「발표 시각 입력」 은 승인 뒤에도 가능 (시간 손절 기준 · v4 8절) · 다른 값은 DRAFT 만
+            if not (set(values) <= {"announce_at"} and plan.state not in state.TERMINAL):
+                raise state.TransitionError("초안(DRAFT)만 값을 고칠 수 있습니다")
         p = params_of(plan)
         before = approval_values(plan)
         if by_user:
@@ -713,7 +744,7 @@ class PlanEngine:
             if buy_leg:
                 await self.cancel_buys_on_switch_off(s, plan)
             return
-        if plan.state == state.ENTRY_ARMED and close_at and now >= datetime.fromisoformat(str(close_at)):
+        if plan.state == state.ENTRY_ARMED and close_at and now >= parse_dt(close_at):
             await self._cancel_pending_buys(s, plan)           # 마감 처리
             if await sizing.plan_qty(s, plan) > 0:
                 await self._on_buy_filled(s, plan)
@@ -722,7 +753,7 @@ class PlanEngine:
             return
         if plan.state == state.ENTRY_RETRY:
             end = p.get("entry_window_end")
-            if end and now >= datetime.fromisoformat(str(end)):
+            if end and now >= parse_dt(end):
                 await state.transition(s, plan, state.CANCELLED, reason="진입 창 끝")
                 return
             reg = self.regular_window(now)
@@ -755,7 +786,8 @@ class PlanEngine:
 
     async def _tick_adopt(self, s, plan: Plan, now: datetime) -> None:
         """10초마다 그 종목의 계획 밖 조건주문(앱에서 건 것)을 본다. 0건이 되는 즉시 다리 등록. 10분 넘으면 ⑨ 1번."""
-        foreign = await self._foreign_conds(s, plan)
+        foreign, rows = await self._foreign_conds(s, plan)
+        set_runtime(plan, adopt_foreign=rows, adopt_checked_at=now.isoformat())
         if foreign == 0:
             p = params_of(plan)
             a = p.get("adopt") or {}
@@ -767,10 +799,12 @@ class PlanEngine:
             plan.adopt_notified = True
             await self._alert(plan, "critical", "인수 대기 중", f"앱 조건주문 {foreign}건 남음 · 인수 대기 중")
 
-    async def _foreign_conds(self, s, plan: Plan) -> int:
+    async def _foreign_conds(self, s, plan: Plan) -> tuple[int, list[dict]]:
         own = {l.toss_id for l in await s.scalars(select(PlanLeg).where(PlanLeg.plan_id == plan.id)) if l.toss_id}
         lst = await self.gate.cond_open_list(s, plan.symbol)
-        return len([o for o in lst if o and o.get("id") not in own])
+        rows = [{"toss_id": o.get("id"), "qty": o.get("qty"), "watch": _num(o.get("watch")), "order": _num(o.get("order")),
+                 "side": o.get("side")} for o in lst if o and o.get("id") not in own]
+        return len(rows), rows
 
     # ── TP1 ──
     async def _tp1_step(self, s, plan: Plan, sw_live: bool) -> None:
@@ -800,6 +834,7 @@ class PlanEngine:
                 await self._sanity_reject(s, plan, "TP1", why)
             return
         if sizing.must_use_tp1_watch(acct, pq) or p.get("tp1_mode") == "watch":
+            set_runtime(plan, tp1_mode="watch")
             await self._tp1_watch_mode(s, plan, qty, watch)
             return
         try:
@@ -812,6 +847,7 @@ class PlanEngine:
         except ExecutionError:
             return
         if res.kind == "cond":
+            set_runtime(plan, tp1_mode="register")
             s.add(PlanLeg(plan_id=plan.id, role="tp1", seq=1, kind="cond", toss_id=res.id, qty=qty,
                           watch_price=float(watch), order_price=float(order), status="WATCHING",
                           expire_date=self._expire()))
@@ -991,7 +1027,7 @@ class PlanEngine:
         reg = self.regular_window(now)
         if not reg or not (reg[0] <= now < reg[1]):
             return
-        if not sess.timestop_due(datetime.fromisoformat(str(p["announce_at"])), now, self.holidays()):
+        if not sess.timestop_due(parse_dt(p["announce_at"]), now, self.holidays()):
             return
         w = sess.timestop_window(reg)
         today = now.strftime("%Y-%m-%d")

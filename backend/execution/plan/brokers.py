@@ -70,6 +70,10 @@ class RawBroker:
     async def limit_cancel(self, s, order_id: str) -> None: ...
     async def limit_get(self, s, order_id: str) -> Optional[dict]: ...
 
+    async def buying_power_usd(self, s) -> Optional[float]:
+        """계좌 USD 매수 가능 금액 (모의 · 시험 도구는 None = 확인 못 함)."""
+        return None
+
 
 def _to_int(v: Any) -> int:
     try:
@@ -113,6 +117,18 @@ class RealRaw(RawBroker):
             if it.get("symbol") == symbol:
                 return _to_int(it.get("quantity"))
         return 0
+
+    async def buying_power_usd(self, s):
+        """토스 buying-power(USD) · 응답 열쇠 이름은 미확인이라 흔한 이름 몇 개만 보고 없으면 None (확인 못 함)."""
+        data = await self._run(self._c().buying_power, "USD")
+        if isinstance(data, dict):
+            for k in ("orderableAmount", "buyingPower", "orderable", "amount", "cash"):
+                v = data.get(k)
+                try:
+                    return float(v)
+                except (TypeError, ValueError):
+                    continue
+        return None
 
     @staticmethod
     def _cond_body(symbol, side, qty, watch, order, client_id, expire) -> dict:

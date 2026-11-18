@@ -317,7 +317,7 @@ async def run_draft_cycle(s, eng, *, today: date, symbols: list, loader: Candida
     from sqlalchemy import select
 
     from . import sizing, state
-    from .engine import params_of, set_params
+    from .engine import params_of, parse_dt, set_params
     from .models import Plan
 
     decisions: list[DraftDecision] = []
@@ -325,7 +325,7 @@ async def run_draft_cycle(s, eng, *, today: date, symbols: list, loader: Candida
     existing = {p.symbol: p for p in await s.scalars(select(Plan).where(Plan.source == "draft", Plan.state == state.DRAFT))}
     for sym, plan in list(existing.items()):                        # 만료: 창이 닫힌 초안
         end = params_of(plan).get("entry_window_end")
-        if end and datetime.fromisoformat(str(end)).date() < today:
+        if end and parse_dt(end).date() < today:
             await state.transition(s, plan, state.CANCELLED, reason="진입 창 닫힘 · 초안 만료")
             expired.append(sym)
             existing.pop(sym)

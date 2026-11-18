@@ -11,7 +11,7 @@ from typing import Optional
 from sqlalchemy import select
 
 from . import sizing, state
-from .engine import EXPIRE_EXTEND_BELOW_DAYS, PlanEngine
+from .engine import EXPIRE_EXTEND_BELOW_DAYS, PlanEngine, _num, set_runtime
 from .models import Plan, PlanLeg, PlanLegPending
 from .pricing import D
 
@@ -96,7 +96,28 @@ async def resync_plan(s, eng: PlanEngine, plan: Plan, now: Optional[datetime] = 
             await eng._alert(plan, "critical", "매도 합이 계좌 보유를 넘음",
                              f"계획 밖 매도 {foreign}주 + 계획 다리 {mine}주가 계좌 보유 {acct}주를 넘습니다.")
     rep["ladder"] = await eng.ensure_ladder(s, plan)
+    await _save_actual(s, eng, plan, open_conds, now)
     return rep
+
+
+async def _save_actual(s, eng: PlanEngine, plan: Plan, open_conds: list[dict], now: datetime) -> None:
+    """화면용: 다시 맞추기가 마지막으로 본 토스(또는 모의)의 실제 다리 · 계좌 보유 (계획 상세 「실제 걸린 다리」)."""
+    legs = list(await s.scalars(select(PlanLeg).where(PlanLeg.plan_id == plan.id)))
+    by_id = {l.toss_id: l for l in legs if l.toss_id}
+    actual = []
+    for o in open_conds:
+        if o and o["id"] in by_id:
+            l = by_id[o["id"]]
+            actual.append({"toss_id": o["id"], "role": l.role, "qty": o.get("qty"), "watch": _num(o.get("watch")),
+                           "order": _num(o.get("order"))})
+    for l in legs:                                         # 일반 지정가(매수)는 조건주문 목록에 없다
+        if l.kind == "limit" and l.status == "WATCHING" and l.toss_id:
+            g = await eng.gate.limit_get(s, l.toss_id)
+            if g and g.get("status") == "OPEN":
+                actual.append({"toss_id": l.toss_id, "role": l.role, "qty": g.get("remaining"), "watch": l.watch_price,
+                               "order": l.order_price})
+    acct = await eng.gate.account_qty(s, plan.id, plan.symbol)
+    set_runtime(plan, actual_legs=actual, actual_at=now.isoformat(), account_qty=int(acct), account_qty_at=now.isoformat())
 
 
 async def resync_all(s, eng: PlanEngine, now: Optional[datetime] = None) -> list[dict]:

@@ -12,6 +12,7 @@ from backend.tests.plan_fakes import plan_db  # noqa: F401
 TOKEN = "plan_api_test_token_32_chars_long_0"
 OK_ORIGIN = {"Origin": "http://localhost:4000"}
 BAD_ORIGIN = {"Origin": "https://evil.example.com"}
+J = {"thesis": "근거 한 줄", "invalidation_price": 8.5, "target_price": 12.0}   # 승인과 함께 저장하는 판단 기록
 PARAMS = {"buy_watch": 9.5, "buy_order": 9.5, "qty": 60, "ladder_pcts": [0.03, 0.05, 0.07]}
 
 
@@ -165,17 +166,17 @@ async def test_paper_approval_needs_no_code_and_aside_may_approve(api):
 async def test_live_approval_requires_code_and_rejects_aside(api):
     plan = await mk_plan(api, "live")
     url = f"/api/v1/plans/{plan['id']}/approve"
-    r = await api.post(url, json={}, headers=OK_ORIGIN)
+    r = await api.post(url, json={**J}, headers=OK_ORIGIN)
     assert r.status_code == 400 and r.json()["detail"]["reason"] == "code_required"       # 코드 없이 거부
     r = await api.post(url, json={"approver": "Aside(대표 지시)"}, headers=OK_ORIGIN)
     assert r.status_code == 400                                                            # Aside 는 실전 승인 불가
     c = await api.post("/api/v1/plans/confirm/challenge", json={"action": "approve", "plan_id": plan["id"]}, headers=OK_ORIGIN)
     assert c.status_code == 200 and "code" not in c.text.lower().replace("challenge", "")  # 응답에 코드 없음
-    bad = await api.post(url, json={"challenge_id": c.json()["challenge_id"], "code": "000000" if api.phone.code != "000000" else "111111"}, headers=OK_ORIGIN)
+    bad = await api.post(url, json={"challenge_id": c.json()["challenge_id"], "code": "000000" if api.phone.code != "000000" else "111111", **J}, headers=OK_ORIGIN)
     assert bad.status_code == 400 and bad.json()["detail"]["reason"] == "wrong"
-    ok = await api.post(url, json={"challenge_id": c.json()["challenge_id"], "code": api.phone.code}, headers=OK_ORIGIN)
+    ok = await api.post(url, json={"challenge_id": c.json()["challenge_id"], "code": api.phone.code, **J}, headers=OK_ORIGIN)
     assert ok.status_code == 200 and ok.json()["plan"]["state"] == "APPROVED"
-    again = await api.post(url, json={"challenge_id": c.json()["challenge_id"], "code": api.phone.code}, headers=OK_ORIGIN)
+    again = await api.post(url, json={"challenge_id": c.json()["challenge_id"], "code": api.phone.code, **J}, headers=OK_ORIGIN)
     assert again.status_code in (400, 409)                                                 # 재사용 거부
 
 
@@ -184,12 +185,12 @@ async def test_code_for_other_plan_or_action_or_live_on_is_rejected(api):
     b = await mk_plan(api, "live", "TESTB")
     c = await api.post("/api/v1/plans/confirm/challenge", json={"action": "approve", "plan_id": a["id"]}, headers=OK_ORIGIN)
     code_a = api.phone.code
-    r = await api.post(f"/api/v1/plans/{b['id']}/approve", json={"challenge_id": c.json()["challenge_id"], "code": code_a}, headers=OK_ORIGIN)
+    r = await api.post(f"/api/v1/plans/{b['id']}/approve", json={"challenge_id": c.json()["challenge_id"], "code": code_a, **J}, headers=OK_ORIGIN)
     assert r.status_code == 400 and r.json()["detail"]["reason"] == "mismatch"           # 다른 계획 번호
     r = await api.post(f"/api/v1/plans/{a['id']}/resume", json={"challenge_id": c.json()["challenge_id"], "code": code_a}, headers=OK_ORIGIN)
     assert r.status_code in (400, 409)                                                     # 다른 동작 (정지 상태도 아님)
     lc = await api.post("/api/v1/plans/switches/live/challenge", json={}, headers=OK_ORIGIN)
-    r = await api.post(f"/api/v1/plans/{a['id']}/approve", json={"challenge_id": lc.json()["challenge_id"], "code": api.phone.code}, headers=OK_ORIGIN)
+    r = await api.post(f"/api/v1/plans/{a['id']}/approve", json={"challenge_id": lc.json()["challenge_id"], "code": api.phone.code, **J}, headers=OK_ORIGIN)
     assert r.status_code == 400 and r.json()["detail"]["reason"] == "mismatch"           # 실거래 켜기 코드로 승인 거부
 
 
@@ -199,7 +200,7 @@ async def test_edit_after_code_request_invalidates_the_code(api):
     code = api.phone.code
     r = await api.patch(f"/api/v1/plans/{plan['id']}", json={"values": {"qty": 66}}, headers=OK_ORIGIN)
     assert r.status_code == 200 and r.json()["plan"]["revision"] == plan["revision"] + 1
-    r = await api.post(f"/api/v1/plans/{plan['id']}/approve", json={"challenge_id": c.json()["challenge_id"], "code": code}, headers=OK_ORIGIN)
+    r = await api.post(f"/api/v1/plans/{plan['id']}/approve", json={"challenge_id": c.json()["challenge_id"], "code": code, **J}, headers=OK_ORIGIN)
     assert r.status_code == 400 and r.json()["detail"]["reason"] == "changed"             # 값이 바뀌었습니다
 
 
@@ -222,7 +223,7 @@ async def test_test_plan_needs_code_and_respects_test_cap(api):
     big = await api.post("/api/v1/plans", json={"symbol": "TESTA", "mode": "test", "params": {**PARAMS, "qty": 60}}, headers=OK_ORIGIN)
     pid = big.json()["plan"]["id"]
     c = await api.post("/api/v1/plans/confirm/challenge", json={"action": "approve", "plan_id": pid}, headers=OK_ORIGIN)
-    r = await api.post(f"/api/v1/plans/{pid}/approve", json={"challenge_id": c.json()["challenge_id"], "code": api.phone.code}, headers=OK_ORIGIN)
+    r = await api.post(f"/api/v1/plans/{pid}/approve", json={"challenge_id": c.json()["challenge_id"], "code": api.phone.code, **J}, headers=OK_ORIGIN)
     assert r.status_code == 409 and "상한" in r.json()["detail"]                          # 570 > 시험 상한 100
 
 
@@ -270,7 +271,7 @@ async def test_daily_lock_blocks_codes_but_stop_and_off_still_work(api):
         await api.post("/api/v1/plans/switches/live", json={"on": True, "reason": "x", "challenge_id": c.json()["challenge_id"], "code": "abcdef"}, headers=OK_ORIGIN)
     c2 = await api.post("/api/v1/plans/confirm/challenge", json={"action": "approve", "plan_id": plan["id"]}, headers=OK_ORIGIN)
     for _ in range(5):
-        await api.post(f"/api/v1/plans/{plan['id']}/approve", json={"challenge_id": c2.json()["challenge_id"], "code": "abcdef"}, headers=OK_ORIGIN)
+        await api.post(f"/api/v1/plans/{plan['id']}/approve", json={"challenge_id": c2.json()["challenge_id"], "code": "abcdef", **J}, headers=OK_ORIGIN)
     lock = await api.post("/api/v1/plans/switches/live/challenge", json={}, headers=OK_ORIGIN)
     assert lock.status_code == 423                                                           # 합산 10번 → 켜기 잠금
     lock2 = await api.post("/api/v1/plans/confirm/challenge", json={"action": "approve", "plan_id": plan["id"]}, headers=OK_ORIGIN)

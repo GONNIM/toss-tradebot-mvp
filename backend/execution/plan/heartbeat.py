@@ -66,3 +66,31 @@ async def notify_recovered(s, send: Send, legs_matched: int, now: Optional[datet
     await s.flush()
     await send("실행기 복구", f"실행기 복구 · 다리 {legs_matched}건 일치")
     return True
+
+
+async def _row(s) -> PlanExecutorHeartbeat:
+    row = await s.get(PlanExecutorHeartbeat, 1)
+    if row is None:
+        row = PlanExecutorHeartbeat(id=1)
+        s.add(row)
+    return row
+
+
+async def mark_toss(s, ok: bool, now: Optional[datetime] = None) -> None:
+    """토스 호출 성공 · 실패 표시 (화면의 「토스 API 연결 · 마지막 성공 시각」)."""
+    row = await _row(s)
+    row.toss_status = "ok" if ok else "error"
+    if ok:
+        row.toss_ok_at = now or utcnow()
+    await s.flush()
+
+
+async def save_resync_snapshot(s, *, buying_power: Optional[float], app_conds: dict, now: Optional[datetime] = None) -> None:
+    import json
+
+    row = await _row(s)
+    now = now or utcnow()
+    if buying_power is not None:
+        row.buying_power_usd, row.buying_power_at = float(buying_power), now
+    row.app_conds_json, row.app_conds_at = json.dumps(app_conds, ensure_ascii=False), now
+    await s.flush()

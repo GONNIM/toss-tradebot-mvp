@@ -20,7 +20,7 @@ from sqlalchemy import select
 
 from . import drafts, heartbeat, resync, sizing, state
 from .brokers import DirectionGate, PaperRaw, RawBroker, RealRaw, access_token as _token
-from .engine import PlanEngine
+from .engine import PlanEngine, set_runtime
 from .models import Plan, PlanEvent, PlanLeg, PlanPaperOrder, PlanRequest, utcnow
 from .switches import read_switches
 from .ws import PriceStore, PlanWsClient
@@ -179,6 +179,8 @@ class PlanExecutor:
                 elif r.action == "adopt_cancel":
                     if plan.state == state.ADOPT_PENDING:
                         await state.transition(s, plan, state.CANCELLED, reason="인수 취소")
+                elif r.action == "resync":
+                    r.result = json.dumps(await resync.resync_plan(s, eng, plan), ensure_ascii=False, default=str)[:300]
                 elif r.action == "timestop_stop":
                     await eng.stop_timestop(s, plan)
                 else:
@@ -203,8 +205,45 @@ class PlanExecutor:
                         if px is not None:
                             await self.paper_raw.on_price(s, plan.symbol, px)
                     await self._engine(plan).tick_plan(s, plan)
+                    await self._record_runtime(s, plan)
                 except Exception as exc:  # noqa: BLE001 — 한 계획의 오류가 다른 계획을 멈추지 않는다
                     logger.error("[plan] tick 실패 · 계획 %s · %s", plan.id, exc.__class__.__name__)
+
+    async def _record_runtime(self, s, plan: Plan) -> None:
+        """화면용 마지막 값: 현재가 · 다음 시간대 전환 시각(KST) · 토스 연결 상태 (읽기만 · 실패해도 계획 처리는 계속)."""
+        eng = self._engine(plan)
+        now = utcnow()
+        try:
+            cur = await eng.gate.current(s, plan.symbol)
+        except Exception:  # noqa: BLE001
+            await heartbeat.mark_toss(s, False)
+            return
+        await heartbeat.mark_toss(s, True)
+        nxt = None
+        reg = eng.regular_window(now)
+        if reg:
+            from datetime import timedelta as _td
+
+            cands = [t for t in (reg[0] + _td(minutes=1), reg[1] + _td(minutes=1)) if t > now]
+            if cands:
+                nxt = min(cands).replace(tzinfo=timezone.utc).astimezone(timezone(_td(hours=9))).isoformat(timespec="seconds")
+        set_runtime(plan, price=float(cur), price_at=now.isoformat(), next_swap_at=nxt)
+
+    async def _snapshot_for_screen(self, s) -> None:
+        """다시 맞추기 때: 계정 USD 매수 가능 금액 · 종목별 앱(계획 밖) 조건주문 수를 남긴다 (새 계획 검증용)."""
+        eng = self.engines["live"]
+        try:
+            bp = await eng.gate.raw.buying_power_usd(s)
+            own = {l.toss_id for l in await s.scalars(select(PlanLeg)) if l.toss_id}
+            counts: dict[str, int] = {}
+            for o in await eng.gate.cond_open_list(s, None):
+                if o and o.get("id") not in own and o.get("symbol"):
+                    counts[o["symbol"]] = counts.get(o["symbol"], 0) + 1
+            await heartbeat.save_resync_snapshot(s, buying_power=bp, app_conds=counts)
+            await heartbeat.mark_toss(s, True)
+        except Exception as exc:  # noqa: BLE001
+            logger.warning("[plan] 화면용 스냅샷 실패 · %s", exc.__class__.__name__)
+            await heartbeat.mark_toss(s, False)
 
     async def resync_once(self) -> int:
         async with self.gs() as s:
@@ -216,6 +255,7 @@ class PlanExecutor:
                     rep = await resync.resync_plan(s, eng, p)
                     if rep.get("ok"):
                         total += len(await sizing.live_sl_legs(s, p.id))
+            await self._snapshot_for_screen(s)
             await heartbeat.write(s, ws_status=self.ws.status, last_resync_at=utcnow())
             return total
 
