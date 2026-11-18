@@ -2,6 +2,7 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api";
+import { PlanExecutorCard } from "@/components/plans/PlanExecutorCard";
 
 function isCurrencyKey(key: string, description: string | null): boolean {
   const k = key.toLowerCase();
@@ -43,6 +44,8 @@ export default function SettingsPage() {
           지금은 읽기만 가능합니다. 바꾸려면 서버 설정을 고쳐야 합니다.
         </p>
       </header>
+
+      <PlanExecutorCard />
 
       {isLoading && <div className="text-muted-foreground">로딩 중...</div>}
       {data && (
