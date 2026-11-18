@@ -202,7 +202,7 @@ async def test_job_creates_drafts_and_sends_one_biotech_summary(plan_db, monkeyp
         sent.append((level, title, category))
 
     monkeypatch.setattr(runner, "default_notify", fake_notify)
-    monkeypatch.setattr(runner, "_draft_loader", lambda sym: data())
+    monkeypatch.setattr(runner, "_make_draft_loader", lambda today: (lambda sym: data()))
     monkeypatch.setenv("PLAN_RADAR_DIR", str(tmp_path))
     (tmp_path / "radar_v1_3_20261120.csv").write_text("ticker,name\nTESTA,a\nTESTB,b\n", encoding="utf-8")
     now = datetime(2026, 11, 20, 7, 15, tzinfo=dr._KST).astimezone(timezone.utc).replace(tzinfo=None)

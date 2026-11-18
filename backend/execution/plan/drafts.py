@@ -20,6 +20,7 @@
 from __future__ import annotations
 
 import csv
+import inspect
 import re
 from dataclasses import dataclass, field
 from datetime import date, datetime, timedelta, timezone
@@ -35,26 +36,47 @@ ATTEMPT_TIMES = ((7, 15), (7, 25), (7, 35), (7, 45), (7, 55), (8, 5))
 MAX_ATTEMPTS = len(ATTEMPT_TIMES)
 
 
-def radar_dir() -> Optional[Path]:
+def radar_dirs() -> list:
+    """레이더 파일을 찾는 폴더 목록. 기존 바이오 규칙(BIOTECH_RUNTIME_DIR > docs > backend/data)을 화면과 똑같이 쓴다.
+    PLAN_RADAR_DIR 은 시험용 덮어쓰기(설정하면 그 폴더 하나만)."""
     import os
 
     raw = os.environ.get("PLAN_RADAR_DIR")
-    return Path(raw) if raw else None
+    if raw:
+        return [Path(raw)]
+    try:
+        from backend.api.routes import biotech as bt
+
+        return list(bt._search_dirs("candidates"))
+    except Exception:  # noqa: BLE001
+        return []
 
 
-def latest_radar_date(directory: Optional[Path]) -> Optional[date]:
-    """파일 이름의 날짜만 본다."""
-    if directory is None or not directory.is_dir():
-        return None
+def radar_dir() -> list:
+    """옛 이름 · radar_dirs 와 같다."""
+    return radar_dirs()
+
+
+def _dirs(directory) -> list:
+    if directory is None:
+        return []
+    return [directory] if isinstance(directory, Path) else list(directory)
+
+
+def latest_radar_date(directory) -> Optional[date]:
+    """파일 이름의 날짜만 본다 (폴더 하나 또는 목록)."""
     best: Optional[date] = None
-    for f in directory.iterdir():
-        m = RADAR_RE.match(f.name)
-        if m:
-            try:
-                d = datetime.strptime(m.group(1), "%Y%m%d").date()
-            except ValueError:
-                continue
-            best = d if best is None or d > best else best
+    for d in _dirs(directory):
+        if not d.is_dir():
+            continue
+        for f in d.iterdir():
+            m = RADAR_RE.match(f.name)
+            if m:
+                try:
+                    day = datetime.strptime(m.group(1), "%Y%m%d").date()
+                except ValueError:
+                    continue
+                best = day if best is None or day > best else best
     return best
 
 
@@ -65,7 +87,7 @@ def today_kst(now_utc: Optional[datetime] = None) -> date:
     return n.astimezone(_KST).date()
 
 
-def radar_ready(directory: Optional[Path], today: date) -> bool:
+def radar_ready(directory, today: date) -> bool:
     """어제 날짜 · 파일 없음이면 False (초안을 만들지 않는다)."""
     return latest_radar_date(directory) == today
 
@@ -78,16 +100,18 @@ def attempt_number(now_kst: datetime) -> Optional[int]:
     return None
 
 
-def radar_symbols(directory: Optional[Path], today: date) -> list[str]:
-    """오늘 날짜 레이더 파일의 ticker 열 (없으면 빈 목록)."""
-    if directory is None:
-        return []
-    f = directory / f"radar_v1_3_{today:%Y%m%d}.csv"
-    try:
-        with f.open(encoding="utf-8", newline="") as fh:
-            return [r["ticker"].strip().upper() for r in csv.DictReader(fh) if (r.get("ticker") or "").strip()]
-    except (OSError, KeyError, UnicodeDecodeError):
-        return []
+def radar_symbols(directory, today: date) -> list[str]:
+    """오늘 날짜 레이더 파일의 ticker 열 (없으면 빈 목록) · 폴더가 여럿이면 먼저 찾은 파일."""
+    for d in _dirs(directory):
+        f = d / f"radar_v1_3_{today:%Y%m%d}.csv"
+        if not f.exists():
+            continue
+        try:
+            with f.open(encoding="utf-8", newline="") as fh:
+                return [r["ticker"].strip().upper() for r in csv.DictReader(fh) if (r.get("ticker") or "").strip()]
+        except (OSError, KeyError, UnicodeDecodeError):
+            return []
+    return []
 
 
 # ─── 촉매 날짜 · 진입 창 ─────────────────────────────────────────
@@ -307,7 +331,10 @@ async def run_draft_cycle(s, eng, *, today: date, symbols: list, loader: Candida
             existing.pop(sym)
     for sym in sorted(set(symbols) | set(existing)):
         plan = existing.get(sym)
-        d = decide(sym, loader(sym), today, open_plan=await sizing.open_plan_exists(s, sym), holidays=holidays)
+        data = loader(sym)
+        if inspect.isawaitable(data):
+            data = await data
+        d = decide(sym, data, today, open_plan=await sizing.open_plan_exists(s, sym), holidays=holidays)
         if d.action == "create" and plan is not None:
             cur = params_of(plan)
             keep = set(cur.get("user_edited") or [])

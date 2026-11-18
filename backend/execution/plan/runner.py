@@ -271,9 +271,16 @@ async def start_executor(stop: asyncio.Event) -> Optional[asyncio.Task]:
 
 # ─── 자동 초안 잡 (cron 프로세스 · 실행기가 켜진 곳에서만 등록) ───────────────
 
-def _draft_loader(symbol: str) -> dict:
-    """촉매 · 제외 · 경고 · 기준가 출처 (이 저장소에는 판정 출처가 없어 기본은 「자료 없음」 · drafts.py 머리말)."""
-    return drafts.no_data_loader(symbol)
+def _make_draft_loader(today):
+    """기존 바이오 산출물 + 토스 시세(읽기)를 연결한 로더 (draft_sources.py 머리말 참고)."""
+    from .draft_sources import BiotechDraftLoader
+
+    real = RealRaw()
+
+    async def _price(symbol):
+        return await real.last_price_rest(None, symbol)
+
+    return BiotechDraftLoader(today, _price)
 
 
 async def job_plan_draft(now_utc: Optional[datetime] = None) -> str:
@@ -293,7 +300,7 @@ async def job_plan_draft(now_utc: Optional[datetime] = None) -> str:
             s.add(PlanEvent(plan_id=None, kind="draft_done", detail=key))
             eng = PlanEngine(DirectionGate(RawBroker.__new__(RawBroker)), notify=default_notify)   # DB 만 쓴다 (브로커 부르지 않음)
             symbols = drafts.radar_symbols(drafts.radar_dir(), today)
-            decisions, expired = await drafts.run_draft_cycle(s, eng, today=today, symbols=symbols, loader=_draft_loader)
+            decisions, expired = await drafts.run_draft_cycle(s, eng, today=today, symbols=symbols, loader=_make_draft_loader(today))
             summary = drafts.build_summary(decisions, expired)
             if summary:
                 await default_notify("info", summary[0], summary[1], "biotech")      # 「바이오」 범주 1건 요약
