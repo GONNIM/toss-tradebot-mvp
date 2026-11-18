@@ -124,6 +124,33 @@ export interface ValidateResult {
   values: { order_usd: number; qty: number; qty_source?: "server" | "given"; qty_given?: number | null };
 }
 
+export interface UnknownOrder {
+  id: number;
+  role: string;
+  side: string;
+  kind: string;
+  qty: number;
+  price: number | null;
+  watch: number | null;
+  state: string;
+  client_order_id?: string;
+  toss_id: string | null;
+  leg_id: number | null;
+  replaces_id: number | null;
+  parent_id: number | null;
+  sent_at: string | null;
+  reason: string | null;
+  candidates: { toss_id: string; qty: number; watch: number | null; order: number | null }[];
+  human: unknown;
+}
+
+export interface UnknownOrders {
+  orders: UnknownOrder[];
+  settle_sec: number;
+  list_searchable: boolean;
+  list_paging_known: boolean;
+}
+
 export interface PlanDetail {
   plan: Plan;
   approval_values: Record<string, unknown>;
@@ -134,6 +161,7 @@ export interface PlanDetail {
   /** 실행기가 토스에서 마지막으로 읽은 다리 · null 이면 확인 못 함 */
   actual_legs?: ActualLeg[] | null;
   actual_at?: string | null;
+  unknown_orders?: number;
   live?: PlanLive;
   adopt?: AdoptWait | null;
 }
@@ -212,6 +240,12 @@ export const plansApi = {
     call<Challenge>("POST", "/confirm/challenge", { action, plan_id }),
   validate: (b: { symbol: string; mode: PlanMode; source: "manual" | "adopt"; params: PlanParams }) =>
     call<ValidateResult>("POST", "/validate", b),
+  unknownOrders: (id: number) => call<UnknownOrders>("GET", `/${id}/unknown-orders`),
+  resolveOrder: (
+    id: number,
+    lineId: number,
+    b: { decision: "filled" | "not_created" | "open"; filled_qty?: number; toss_id?: string; challenge_id?: number; code?: string; approver?: string },
+  ) => call<{ order: UnknownOrder; remaining: number }>("POST", `/${id}/unknown-orders/${lineId}/resolve`, { approver: "대표", ...b }),
   resync: (id: number) => call<{ queued: number }>("POST", `/${id}/resync`),
   approve: (
     id: number,
@@ -262,6 +296,9 @@ export const TERMINAL_STATES = ["CLOSED", "CANCELLED"];
 
 export const ROLE_LABEL: Record<string, string> = { buy: "매수", sl: "손절", tp1: "1차 익절" };
 /** 손절 다리에 붙는 시간대 이름표 (regular = 정규장 사다리 · emergency = 정규장 밖 비상 손절) */
+export const ORDER_KIND_LABEL: Record<string, string> = { cond: "조건주문", limit: "지정가 주문" };
+export const ORDER_SIDE_LABEL: Record<string, string> = { BUY: "매수", SELL: "매도" };
+export const ORDER_ROLE_LABEL: Record<string, string> = { buy: "매수", sl: "손절", tp1: "1차 익절", sell: "매도" };
 export const TAG_LABEL: Record<string, string> = { regular: "정규장", emergency: "정규장 밖 비상", pre: "장 시작 전", after: "장 마감 뒤" };
 export const WS_LABEL: Record<string, string> = { connected: "연결됨", down: "끊김", none: "확인 못 함" };
 export const PLAN_SOURCE_LABEL: Record<string, string> = { manual: "직접 입력", adopt: "보유 인수" };

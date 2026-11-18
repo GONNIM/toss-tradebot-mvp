@@ -15,6 +15,7 @@ import type { ActualLeg, Leg, Plan, PlanDetail } from "@/lib/plans";
 import { upDownText } from "@/lib/updown";
 import { AdoptNotice } from "@/components/plans/AdoptNotice";
 import { CodeDialog } from "@/components/plans/CodeDialog";
+import { UnknownOrdersPanel } from "@/components/plans/UnknownOrders";
 import { BTN_LINE, BTN_PRIMARY, BTN_WARN, Field, INPUT, Notice, Row } from "@/components/plans/ui";
 
 const HALTABLE = ["APPROVED", "ENTRY_ARMED", "ENTRY_RETRY", "HOLDING", "TP1_WAIT", "TRAILING", "ADOPT_PENDING"];
@@ -246,6 +247,7 @@ export default function PlanDetailPage() {
   const expectedKeys = expectedLegs.map((l) => legKey(l)).sort();
   const actualKeys = actual ? actual.map((l) => legKey(l)).sort() : [];
   const legMismatch = actual !== null && expectedKeys.join(",") !== actualKeys.join(",");
+  const unknownN = d.unknown_orders ?? 0;
   const invBad = d.invariant.status !== "ok";
   const qty = num(p.qty ?? p.params.qty ?? p.params.adopt?.qty);
   const pnl = live?.pnl ?? null;
@@ -330,6 +332,8 @@ export default function PlanDetailPage() {
       </header>
 
       <Progress plan={p} />
+
+      <UnknownOrdersPanel planId={id} count={d.unknown_orders ?? 0} isPaper={isPaper} guard={guarded} onChanged={refresh} />
 
       {msg && <Notice testid="detail-msg">{msg}</Notice>}
       {p.state === "ADOPT_PENDING" && (
@@ -426,9 +430,15 @@ export default function PlanDetailPage() {
             </button>
           )}
           {p.state === "HALTED" && (
-            <button type="button" onClick={() => setDlg("resume")} aria-label="정지 풀고 재개" data-testid="btn-resume" className={BTN_PRIMARY}>
-              정지 풀고 재개
-            </button>
+            <>
+              <button
+                type="button" onClick={() => setDlg("resume")} disabled={unknownN > 0} aria-disabled={unknownN > 0}
+                aria-label="정지 풀고 재개" data-testid="btn-resume" className={BTN_PRIMARY}
+              >
+                정지 풀고 재개
+              </button>
+              {unknownN > 0 && <p data-testid="resume-blocked" className="w-full text-sm text-warn">결과 모르는 주문을 먼저 확정해 주십시오</p>}
+            </>
           )}
           {p.state === "ADOPT_PENDING" && (
             <button type="button" onClick={() => setDlg("adopt-cancel")} aria-label="인수 취소" data-testid="btn-adopt-cancel" className={BTN_LINE}>
