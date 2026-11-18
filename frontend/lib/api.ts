@@ -783,6 +783,20 @@ export interface StockSignal {
   summary: string;
   link: string;
   locked: boolean;
+  explain?: string | null; // 1119-01 · 뜻 설명
+}
+// 1119-01 · 임상 완료 예정일 (결과 발표일이 아님) · days_to 음수 = 지남
+export interface StockCatalyst {
+  nct_id: string;
+  phase: string;
+  event_date: string;
+  days_to: number;
+  past: boolean;
+}
+// 1119-01 · 계속기업 문구 · scope=out 이면 장부에 이 회사 행이 없음 (확인 대상 밖)
+export interface StockGoingConcern {
+  scope: "checked" | "out" | "unreadable" | "no_cik";
+  detail: import("./biotech-display").GoingConcern | null;
 }
 export interface StockOverview {
   ticker: string;
@@ -794,6 +808,9 @@ export interface StockOverview {
   holding: StockHolding | null;
   judgments: StockJudgment[] | null;
   signals: StockSignal[];
+  catalysts?: StockCatalyst[] | null; // null = 자료 없음 · 해당 없음 (화면은 그 칸을 숨김)
+  going_concern?: StockGoingConcern | null;
+  quote_available?: boolean | null; // 바이오 후보 여부
 }
 
 // 1022-10 4단계 · 오늘 (홈) · 계약은 서버 routes/today.py 와 같다

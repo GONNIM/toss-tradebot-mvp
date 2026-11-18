@@ -173,7 +173,8 @@ async def load_candidates(limit: int = MAX_TICKERS) -> list[str]:
 async def candidate_set() -> set[str]:
     """조회 API 용 · 5분 캐시 (아무 기호나 바깥 호출하지 않게 후보만 허용 · Fable 1차 막음 4)."""
     now = time.monotonic()
-    if now - _CAND_CACHE["at"] > CANDIDATE_CACHE_SEC or not _CAND_CACHE["list"]:
+    # 1119-01 (Fable 권고 3) · 후보가 0개여도 5분 기억한다 (at == 0.0 은 아직 읽은 적 없음)
+    if _CAND_CACHE["at"] == 0.0 or now - _CAND_CACHE["at"] > CANDIDATE_CACHE_SEC:
         _CAND_CACHE["list"] = await load_candidates(limit=10_000)
         _CAND_CACHE["at"] = now
     return set(_CAND_CACHE["list"])

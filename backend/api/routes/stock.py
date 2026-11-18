@@ -1,20 +1,24 @@
 """종목 한 장 API (1022-10 3단계) · GET /api/v1/stock/{ticker}.
 
 - 저장된 자료 (DB · 로컬 파일) 만 읽는다. 외부 HTTP 0 · 쓰기 0 · SEC 보충·토스 호출 없음.
-- 역할은 get_current_role (예외 없음 · 접근 기록 안 씀). 관리자 전용 자료는 비로그인에게 늘 null / locked.
+- 역할은 get_current_role (예외 없음 · 접근 기록 안 씀).
+- 1119-01 · 공개 범위: 신호 · 일정 · 계속기업 (자체 · 공개 자료) 은 비로그인에게도 보인다 (잠금 행 없음).
+  관리자만: 보유 · 판단 · 국내 스나이퍼의 진입/청산 상태 낱말. 야후 · 네이버 자료는 이 API 가 아예 부르지 않는다
+  (화면이 로그인 상태에서만 기존 /api/v1/biotech/quote/{ticker} 를 따로 부른다).
 - 출처마다 작은 함수 하나 · 실패하면 그 칸만 빠지고 200.
 """
 from __future__ import annotations
 
 import logging
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
 from typing import Awaitable, Callable, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Response
 from sqlalchemy import desc, func, select
 
 from backend.api.auth import get_current_role
-from backend.api.schemas import StockHolding, StockJudgment, StockOverview, StockSignal
+from backend.api.schemas import (StockCatalyst, StockGoingConcern, StockHolding, StockJudgment, StockOverview,
+                                 StockSignal)
 from backend.services.broker_links import broker_link, is_kr_code, normalize_symbol
 from backend.services.db import get_session
 
@@ -22,7 +26,11 @@ logger = logging.getLogger(__name__)
 router = APIRouter()
 
 _NO_STORE = {"Cache-Control": "private, no-store", "Vary": "Cookie"}
-_LOCKED_SUMMARY = "로그인하면 보입니다"
+
+# 뜻 설명 (기준이 코드에 있는 것만 · 명령문 · 신호 낱말 금지 · 4절)
+_MEME_STAGES = (  # backend/discovery/meme_watch/confluence.py _label_and_emoji 와 같은 표
+    ("BLAZING", "1.00 이상"), ("HOT", "0.75 이상"), ("WATCH", "0.50 이상"), ("OBSERVE", "0.25 이상"), ("SLEEP", "0.25 미만"))
+_EXPLAIN_RANK = "점수는 0~100 종합 점수이고, 순위는 그날 후보 안의 순서입니다."
 
 
 def _d(v) -> Optional[str]:
@@ -55,7 +63,7 @@ async def _crazy(t: str, kr: bool) -> Optional[StockSignal]:
     if r is None:
         return None
     return StockSignal(source="crazy", label="Crazy 후보", as_of=r.pick_date, link="/lab/crazy",
-                       summary=f"{_md(r.pick_date)} {r.rank}위 · 점수 {_f(r.composite_score)}")
+                       summary=f"{_md(r.pick_date)} {r.rank}위 · 점수 {_f(r.composite_score)}", explain=_EXPLAIN_RANK)
 
 
 async def _moonshot(t: str, kr: bool) -> Optional[StockSignal]:
@@ -67,7 +75,7 @@ async def _moonshot(t: str, kr: bool) -> Optional[StockSignal]:
     if r is None:
         return None
     return StockSignal(source="moonshot", label="Moonshot 후보", as_of=r.pick_date, link="/lab/moonshot",
-                       summary=f"{_md(r.pick_date)} {r.rank}위 · 점수 {_f(r.composite_score)}")
+                       summary=f"{_md(r.pick_date)} {r.rank}위 · 점수 {_f(r.composite_score)}", explain=_EXPLAIN_RANK)
 
 
 async def _serenity(t: str, kr: bool) -> Optional[StockSignal]:
@@ -107,11 +115,14 @@ async def _meme(t: str, kr: bool) -> Optional[StockSignal]:
         as_of = _d(h.snapshot_at)
     else:
         summary, as_of = "밈 추적 대상 · 점수 기록 아직 없음", _d(u.last_updated)
-    return StockSignal(source="meme", label="밈 워치", as_of=as_of, link="/lab/meme-watch", summary=summary)
+    explain = None
+    if h is not None and h.label in {n for n, _ in _MEME_STAGES}:  # 옛 행 낱말이 표에 없으면 설명 생략
+        explain = "단계는 밈 점수 구간입니다: " + " · ".join(f"{n} {c}" for n, c in _MEME_STAGES) + "."
+    return StockSignal(source="meme", label="밈 워치", as_of=as_of, link="/lab/meme-watch", summary=summary, explain=explain)
 
 
 async def _biotech(t: str, kr: bool) -> Optional[StockSignal]:
-    """레이더 CSV (biotech 라우트와 같은 파일 찾기) · biotech 화면이 관리자 전용이라 여기도 관리자만 (호출 쪽에서 거름)."""
+    """레이더 CSV (biotech 라우트와 같은 파일 찾기) · 순위 · 점수 · 시점만 (자체 계산 값 · 1119-01 비로그인에도 공개)."""
     import csv
 
     from backend.api.routes.biotech import _latest_radar_csv
@@ -124,7 +135,8 @@ async def _biotech(t: str, kr: bool) -> Optional[StockSignal]:
             if (row.get("ticker") or "").strip().upper() == t:
                 return StockSignal(source="biotech", label="바이오 레이더", link="/biotech",
                                    as_of=datetime.fromtimestamp(path.stat().st_mtime, timezone.utc).date().isoformat(),
-                                   summary=f"레이더 {idx}위 · 점수 {_f(float(row.get('score') or 0))} · 시점 {row.get('time_state') or '-'}")
+                                   summary=f"레이더 {idx}위 · 점수 {_f(float(row.get('score') or 0))} · 시점 {row.get('time_state') or '-'}",
+                                   explain="바이오 레이더 점수는 검증 중입니다 · 추정 · 보장 아님.")
     return None
 
 
@@ -152,7 +164,8 @@ async def _powderkeg(t: str, kr: bool) -> Optional[StockSignal]:
     extra = (f" · 순현금/시총 {_f(r.net_cash_ratio, 2)}" if r.net_cash_ratio is not None else "") + \
             (f" · F점수 {r.piotroski_f_score}" if r.piotroski_f_score is not None else "")
     return StockSignal(source="powderkeg", label="화약고", as_of=_d(r.created_at), link="/powderkeg",
-                       summary=f"화약고 {label}{extra}")
+                       summary=f"화약고 {label}{extra}",
+                       explain="상태는 통과 · 탈락 · 현금 의심 중 하나입니다 (저장된 스크리닝 결과 기준).")
 
 
 async def _blue_chip(t: str, kr: bool) -> Optional[StockSignal]:
@@ -166,7 +179,8 @@ async def _blue_chip(t: str, kr: bool) -> Optional[StockSignal]:
     # tier 는 1단계 시총 구간 (models.py BlueChipCandidate.tier) · 우량주 등급이 아님 (1029-01)
     cap = {"premium": "시총 10조 이상", "entry": "시총 5조 이상"}.get(r.tier, "시총 5조 미만")
     return StockSignal(source="blue_chip", label="우량주 후보", as_of=_d(r.created_at), link="/rulebook",
-                       summary=f"5단계 중 {r.pass_count}단계 통과 · {cap}")
+                       summary=f"5단계 중 {r.pass_count}단계 통과 · {cap}",
+                       explain="통과 수는 5단계 검사 중 통과한 개수이고, 시총 구간은 1단계 기준입니다.")
 
 
 async def _principles(t: str, kr: bool) -> Optional[StockSignal]:
@@ -180,7 +194,8 @@ async def _principles(t: str, kr: bool) -> Optional[StockSignal]:
     v = {"PASS": "통과", "FAIL": "미통과", "INSUFFICIENT_DATA": "자료 부족"}.get(r.verdict, r.verdict)
     per = f" · PER {_f(r.per_ttm)}" if r.per_ttm is not None else ""
     return StockSignal(source="principles", label="5원칙 스크리너", as_of=_d(r.created_at),
-                       link="/principles/screener", summary=f"5원칙 {v}{per}")
+                       link="/principles/screener", summary=f"5원칙 {v}{per}",
+                       explain="5원칙 검사 결과는 통과 · 미통과 · 자료 부족 중 하나입니다.")
 
 
 async def _sector_leaders(t: str, kr: bool) -> Optional[StockSignal]:
@@ -210,7 +225,8 @@ async def _watchlist(t: str, kr: bool) -> Optional[StockSignal]:
                        summary=f"{_md(r.trade_date)} {r.rank}위 · 점수 {_f(r.composite_score)}")
 
 
-async def _sniper(t: str, kr: bool) -> Optional[StockSignal]:
+async def _sniper(t: str, kr: bool, admin: bool = False) -> Optional[StockSignal]:
+    """국내 스나이퍼 · 진입 · 청산 상태는 주문 이력과 이어져 관리자만 (1119-01 Fable 1차 막음 2) · 그 밖에는 날짜 · 점수만."""
     from backend.services.models import SniperSignal
 
     async with get_session() as s:
@@ -218,22 +234,109 @@ async def _sniper(t: str, kr: bool) -> Optional[StockSignal]:
                              .order_by(desc(SniperSignal.detected_at)).limit(1))).scalar_one_or_none()
     if r is None:
         return None
-    state = "청산" if r.exit_price is not None else ("진입" if r.entry_price is not None else "탐지")
+    if admin:
+        state = "청산" if r.exit_price is not None else ("진입" if r.entry_price is not None else "탐지")
+    else:
+        state = "탐지"
     return StockSignal(source="sniper", label="스나이퍼", as_of=_d(r.detected_at), link="/sniper",
                        summary=f"{_md(_d(r.detected_at))} {state} · 체결 흐름 점수 {_f(r.tape_score)}")
 
 
-async def _safe(fn: Source, t: str, kr: bool) -> Optional[StockSignal]:
+async def _safe(fn: Source, t: str, kr: bool, **kw) -> Optional[StockSignal]:
     """한 출처가 실패해도 그 줄만 빠진다."""
     try:
-        return await fn(t, kr)
+        return await fn(t, kr, **kw)
     except Exception as e:  # noqa: BLE001 — 칸 하나 때문에 화면 전체가 죽으면 안 됨
         logger.warning("[stock] %s 읽기 실패 (%s): %s", fn.__name__, t, e)
         return None
 
 
-def _locked(source: str, label: str, link: str) -> StockSignal:
-    return StockSignal(source=source, label=label, as_of=None, summary=_LOCKED_SUMMARY, link=link, locked=True)
+# ─── 1119-01 새 칸 · 일정 · 계속기업 · 후보 여부 (모두 저장 파일만 · 실패하면 그 칸만 null) ─────────
+
+async def _is_candidate(t: str) -> Optional[bool]:
+    """바이오 후보인지 (저장 파일 · 5분 기억). 읽기 실패 · 후보 목록이 비어 판단 못 함 → None (Fable 권고 3)."""
+    try:
+        from backend.services import biotech_quotes as bq
+
+        n = bq.normalize(t)
+        if n is None:
+            return False
+        cands = await bq.candidate_set()
+        if not cands:
+            return None
+        return n in cands
+    except Exception as e:  # noqa: BLE001
+        logger.warning("[stock] 후보 여부 읽기 실패 (%s): %s", t, e)
+        return None
+
+
+def _catalysts(t: str) -> Optional[list[StockCatalyst]]:
+    """최신 후보 파일 state_note 의 임상 완료 예정일 (결과 발표일이 아님) · 파일 없음 → None · 해석 실패 줄은 뺌."""
+    try:
+        from backend.api.routes import biotech as R
+
+        notes = R._latest_candidate_notes()
+        if not notes:
+            return None
+        note = notes.get(t, "")
+        out: list[StockCatalyst] = []
+        for m in R._NOTE_RE.finditer(note or ""):
+            try:
+                f = R._note_fields(m.group(0))
+                if not f:
+                    continue
+                date.fromisoformat(f["event_date"])  # 날짜가 깨진 줄은 종목 API 쪽에서 뺀다 (공용 _note_fields 는 그대로)
+                out.append(StockCatalyst(nct_id=f["nct_id"], phase=f["phase"], event_date=f["event_date"],
+                                         days_to=int(f["days_to"]), past=int(f["days_to"]) < 0))
+            except Exception as e:  # noqa: BLE001
+                logger.warning("[stock] 일정 줄 해석 실패 (%s): %s", t, e)
+        if note and not out:
+            logger.warning("[stock] 일정 문장 해석 실패 (%s)", t)
+        out.sort(key=lambda c: c.event_date)
+        return out
+    except Exception as e:  # noqa: BLE001
+        logger.warning("[stock] 일정 읽기 실패 (%s): %s", t, e)
+        return None
+
+
+def _going_concern(t: str) -> Optional[StockGoingConcern]:
+    """계속기업 문구 (SEC 공개 자료) · 표시 규칙은 /biotech 의 _going_concern_for 그대로 (Fable 권고 1).
+
+    장부 파일 없음 → None (칸 숨김) · 장부에 이 회사 행 없음 → scope=out · 종목 → CIK 는 레이더 행 값 (없으면 SEC 표 역조회).
+    """
+    try:
+        import csv
+
+        from backend.api.routes import biotech as R
+
+        store = R._going_concern_store()
+        if store is None:
+            return None
+        cik = ""
+        path = R._latest_radar_csv()
+        if path and path.exists():
+            with path.open(encoding="utf-8") as f:
+                for row in csv.DictReader(f):
+                    if (row.get("ticker") or "").strip().upper() == t:
+                        cik = (row.get("cik") or "").strip()
+                        break
+        if not cik:
+            cik = next((c for c, tk in R._cik_ticker_map().items() if tk == t), "")
+        if not cik:
+            return StockGoingConcern(scope="no_cik")   # 회사 번호를 못 찾음 (장부에 없음과 구별)
+        try:
+            row = store["rows"].get(str(int(cik)).zfill(10))
+        except (ValueError, TypeError, KeyError, AttributeError):
+            return StockGoingConcern(scope="no_cik")
+        if not row:
+            return StockGoingConcern(scope="out")      # 장부에 이 회사 행 없음
+        gc = R._going_concern_for(store, cik)
+        if gc is None:
+            return StockGoingConcern(scope="unreadable")  # 행은 있는데 state 가 비었거나 깨짐
+        return StockGoingConcern(scope="checked", detail=gc.model_dump())
+    except Exception as e:  # noqa: BLE001
+        logger.warning("[stock] 계속기업 읽기 실패 (%s): %s", t, e)
+        return None
 
 
 # ─── 이름 · 보유 · 판정 ──────────────────────────────────────────────────
@@ -309,7 +412,7 @@ async def get_stock(ticker: str, response: Response, role: str = Depends(get_cur
     try:
         t = normalize_symbol(ticker)
     except ValueError as e:
-        raise HTTPException(status_code=400, detail="종목 기호 형식이 올바르지 않습니다.", headers=_NO_STORE) from e
+        raise HTTPException(status_code=400, detail="종목 코드 형식이 아닙니다.", headers=_NO_STORE) from e
     response.headers.update(_NO_STORE)
 
     admin = role == "admin"
@@ -322,24 +425,25 @@ async def get_stock(ticker: str, response: Response, role: str = Depends(get_cur
             signals.append(sig)
 
     if not kr:
-        # Crazy · Moonshot 은 관리자 전용 — 비로그인에는 자료 유무와 상관없이 잠금 행만
-        if admin:
-            await add(_crazy)
-            await add(_moonshot)
-        else:
-            signals.append(_locked("crazy", "Crazy 후보", "/lab/crazy"))
-            signals.append(_locked("moonshot", "Moonshot 후보", "/lab/moonshot"))
+        # 1119-01 · 잠금 행 없음 — 자체 계산 신호는 비로그인에게도 보인다 (「자세히」 링크는 화면이 관리자에게만 보임)
+        await add(_crazy)
+        await add(_moonshot)
         await add(_serenity)
     await add(_meme)
-    if not kr:  # 바이오 레이더 화면이 관리자 전용 · 비로그인은 잠금 행 (1022-10 4단계 사용자 결정 · 홈과 같게)
-        if admin:
-            await add(_biotech)
-        else:
-            signals.append(_locked("biotech", "바이오 레이더", "/biotech"))
+    if not kr:
+        await add(_biotech)
     await add(_activist)
     if kr:
-        for fn in (_powderkeg, _blue_chip, _principles, _sector_leaders, _watchlist, _sniper):
+        for fn in (_powderkeg, _blue_chip, _principles, _sector_leaders, _watchlist):
             await add(fn)
+        sig = await _safe(_sniper, t, kr, admin=admin)
+        if sig is not None:
+            signals.append(sig)
+
+    candidate = None if kr else await _is_candidate(t)
+    if kr:
+        candidate = False
+    cands_ok = candidate is True
 
     return StockOverview(
         ticker=t,
@@ -351,4 +455,7 @@ async def get_stock(ticker: str, response: Response, role: str = Depends(get_cur
         holding=await _holding(t) if admin else None,
         judgments=await _judgments(t) if admin else None,
         signals=signals,
+        catalysts=_catalysts(t) if cands_ok else None,
+        going_concern=_going_concern(t) if cands_ok else None,
+        quote_available=candidate,
     )
