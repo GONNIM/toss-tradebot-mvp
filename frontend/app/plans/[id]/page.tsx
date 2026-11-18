@@ -440,7 +440,7 @@ export default function PlanDetailPage() {
               시간 손절 중지
             </button>
           )}
-          {HALTABLE.includes(p.state) && (
+          {HALTABLE.includes(p.state) && p.state !== "ADOPT_PENDING" && (
             <button type="button" onClick={() => setDlg("stop")} aria-label={p.state === "ADOPT_PENDING" ? "인수 취소로 정지" : "이 계획 정지"} data-testid="btn-stop" className={BTN_WARN}>
               {p.state === "ADOPT_PENDING" ? "정지 (인수 취소)" : "이 계획 정지"}
             </button>
