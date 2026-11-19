@@ -60,22 +60,30 @@ async def _insert(row, busy_ms: Optional[int] = None) -> None:
         async with db.get_session() as session:
             session.add(row)
         return
-    async with db.AsyncSessionLocal() as session:
-        sqlite = session.get_bind().dialect.name == "sqlite"
+    # 막음 H · 값 바꾸기 · 쓰기 · 되돌리기를 연결 하나에서 끝낸다. 세션이 commit 하면 연결이 풀에
+    # 돌아가 되돌리기 PRAGMA 가 다른 연결에 들어가므로, 연결을 직접 쥐고 세션을 그 연결에 묶는다.
+    from sqlalchemy.ext.asyncio import AsyncSession
+
+    async with db.engine.connect() as conn:
+        sqlite = conn.dialect.name == "sqlite"
+        if sqlite:
+            await conn.exec_driver_sql(f"PRAGMA busy_timeout={int(busy_ms)}")
+            await conn.commit()    # 연결의 자동 시작 트랜잭션을 닫아 세션이 자기 트랜잭션을 쓰게 한다
         try:
-            if sqlite:
-                await session.execute(text(f"PRAGMA busy_timeout={int(busy_ms)}"))
-            session.add(row)
-            await session.commit()
-        except Exception:
-            await session.rollback()
-            raise
+            async with AsyncSession(bind=conn, expire_on_commit=False) as session:
+                try:
+                    session.add(row)
+                    await session.commit()
+                except Exception:
+                    await session.rollback()
+                    raise
         finally:
             if sqlite:
                 try:
-                    await session.execute(text(f"PRAGMA busy_timeout={_BUSY_DEFAULT_MS}"))
-                except Exception:  # noqa: BLE001
-                    pass
+                    await conn.exec_driver_sql(f"PRAGMA busy_timeout={_BUSY_DEFAULT_MS}")
+                    await conn.commit()
+                except Exception:  # noqa: BLE001 — 되돌리지 못한 연결은 풀에 남기지 않는다
+                    await conn.invalidate()
 
 
 def _make_row(fields: dict):

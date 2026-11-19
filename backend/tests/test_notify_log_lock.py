@@ -187,3 +187,69 @@ async def test_c_job_plan_draft_notifies_after_commit(file_db, monkeypatch, tmp_
     monkeypatch.setattr(drafts, "build_summary", lambda d, e, names: ("자동 초안 1건", "본문"))
     assert await runner.job_plan_draft(utc(21, 7, 15)) == "drafted"
     assert seen == [("자동 초안 없음", True), ("자동 초안 1건", True)]
+
+
+# ── 막음 H · 짧은 busy_timeout 이 풀에 남지 않는다 ─────────────────
+
+async def _warm_pool(eng, n=3):
+    """쉬는 연결을 n개 만든다 (동시에 꺼냈다 돌려줌)."""
+    conns = [await eng.connect() for _ in range(n)]
+    for c in conns:
+        await c.exec_driver_sql("SELECT 1")
+    for c in conns:
+        await c.close()
+
+
+async def _pool_busy_values(eng, n=3):
+    conns = [await eng.connect() for _ in range(n)]
+    try:
+        vals = []
+        for c in conns:
+            vals.append((await c.exec_driver_sql("PRAGMA busy_timeout")).scalar())
+        return vals
+    finally:
+        for c in conns:
+            await c.close()
+
+
+@pytest.mark.asyncio
+async def test_h1_pool_busy_timeout_restored_after_success(file_db):
+    await _warm_pool(file_db)
+    await nl.record("vip", "k", "t", "sent")
+    assert nl.pending_count() == 0
+    assert await _pool_busy_values(file_db) == [30000, 30000, 30000]
+
+
+@pytest.mark.asyncio
+async def test_h2_pool_busy_timeout_restored_after_lock_failure(file_db):
+    await _warm_pool(file_db)
+    holder = await _hold_lock(file_db)
+    await nl.record("vip", "k", "t", "sent")
+    assert nl.pending_count() == 1
+    await holder.rollback()
+    await holder.close()
+    assert await _pool_busy_values(file_db) == [30000, 30000, 30000]
+
+
+@pytest.mark.asyncio
+async def test_h3_plain_write_after_record_waits_for_lock(file_db):
+    import asyncio
+
+    from backend.services.db import get_session
+    from backend.services.models import NotificationLog
+
+    await _warm_pool(file_db)
+    await nl.record("vip", "k", "t", "sent")
+    holder = await _hold_lock(file_db)
+
+    async def _release():
+        await asyncio.sleep(2.5)
+        await holder.rollback()
+        await holder.close()
+
+    rel = asyncio.create_task(_release())
+    t0 = time.monotonic()
+    async with get_session() as s:     # 평범한 쓰기 · 1.5초에 포기하면 안 된다
+        s.add(NotificationLog(category="vip", dedupe_key="x", title="y", result="sent", created_at=nl.utcnow()))
+    assert time.monotonic() - t0 >= 2.0
+    await rel
