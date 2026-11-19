@@ -4,6 +4,7 @@ from __future__ import annotations
 import json
 import logging
 import time
+from pathlib import Path
 from datetime import datetime, timedelta, timezone
 
 import httpx
@@ -134,3 +135,84 @@ def test_forbidden_windows():
     assert probe.in_forbidden_window(datetime(2026, 11, 20, 10, 0, tzinfo=_KST))      # 장 시간
     assert probe.in_forbidden_window(datetime(2026, 11, 20, 6, 0, tzinfo=_KST))       # 05:55-06:45
     assert not probe.in_forbidden_window(datetime(2026, 11, 20, 22, 0, tzinfo=_KST))
+
+
+# ---- 막음 1 · 2 · 권고 ㄴ · 투자자 매매동향 (명세 v1.2.28 예시 모양) ----
+def _candle(ts, close="100"):
+    return {"timestamp": ts, "openPrice": "1", "highPrice": "1", "lowPrice": "1", "closePrice": close, "volume": "1", "currency": "KRW"}
+
+
+def _spec_handler(seen):
+    def handler(req):
+        seen.append((req.url.path, dict(req.url.params)))
+        path, q = req.url.path, req.url.params
+        if path.endswith("/investor-trading"):
+            yr = q["until"][:4]
+            return httpx.Response(200, json={"result": {"records": [{"date": f"{yr}-01-05"}, {"date": f"{yr}-01-04"}], "nextUntil": f"{yr}-01-03"}})
+        close = "90" if q.get("adjusted") == "true" else "100"
+        return httpx.Response(200, json={"result": {"candles": [_candle("2016-01-08T00:00:00+09:00", close), _candle("2015-06-01T00:00:00+09:00", close)],
+                                                     "nextBefore": "2015-05-31T00:00:00+09:00"}})
+    return handler
+
+
+def test_candle_rows_reads_spec_object_and_list_shapes():
+    r1 = httpx.Response(200, json={"result": {"candles": [_candle("2016-01-08T00:00:00+09:00")], "nextBefore": None}})
+    r2 = httpx.Response(200, json={"result": [_candle("2016-01-08T00:00:00+09:00")]})
+    assert len(probe._candle_rows(r1)) == 1 and len(probe._candle_rows(r2)) == 1
+    assert probe._candle_rows(httpx.Response(200, text="x")) == []
+
+
+def test_probe_toss_runs_end_to_end_within_limit(token_file, issue_counter):
+    seen = []
+    p = _prober(token_file, _spec_handler(seen))
+    out = probe.probe_toss(p, "000000", "000001")
+    assert out["stock_oldest_year"] == 2015 and out["stock_adjusted_oldest_year"] == 2015
+    assert out["adjusted_diff_count"] == 2 and out["delisted_status"] == 200
+    assert out["kospi_oldest_year"] == 2015 and out["kosdaq_oldest_year"] == 2015
+    assert out["investor_until_2016"] == {"status": 200, "records": 2, "oldest_year": 2016}
+    assert out["investor_until_2020"]["oldest_year"] == 2020 and out["investor_until_2023"]["oldest_year"] == 2023
+    assert p.toss_calls == 8 and p.toss_calls <= probe.TOSS_MAX_CALLS
+    deep = [q for path, q in seen if path == "/api/v1/candles" and "before" in q]
+    assert deep and all(q["before"].startswith("2016-01-08") for q in deep)      # 쪽 넘기기 없이 직접 지정
+    assert issue_counter == []
+    assert "000000" not in json.dumps(out) and "000001" not in json.dumps(out)    # 결과에 종목 코드 없음
+
+
+def test_probe_toss_transport_error_logs_only_type_and_continues(token_file, issue_counter):
+    def handler(req):
+        if "investor-trading" in req.url.path:
+            raise httpx.ReadTimeout("secret-detail https://x/000000?crtfc_key=ABC")
+        return httpx.Response(200, json={"result": {"candles": [_candle("2016-01-08T00:00:00+09:00")]}})
+
+    out = probe.probe_toss(_prober(token_file, handler), "000000", None)
+    assert out["investor_until_2016"] == "전송 오류 ReadTimeout"
+    assert out["stock_oldest_year"] == 2016 and "secret" not in json.dumps(out, ensure_ascii=False)
+
+
+def test_probe_dart_runs_end_to_end_and_survives_transport_error():
+    def handler(req):
+        if req.url.path.endswith("document.xml") and req.url.params["rcept_no"] == "2":
+            raise httpx.ConnectError("detail with key")
+        if req.url.path.endswith("document.xml"):
+            return httpx.Response(200, content=b"<x>rcept_tm</x>")
+        return httpx.Response(200, json={"list": [{"rcept_dt": "20160105"}, {"rcept_dt": "20200101"}]})
+
+    p = probe.Prober(Path("none"), http=httpx.Client(transport=httpx.MockTransport(handler)), sleep=lambda s: None, dart_key="k")
+    out = probe.probe_dart(p, "c", "1", "2")
+    assert out["document_status"] == 200 and out["document_has_time_field"] is True
+    assert out["first_version_status"] == "전송 오류 ConnectError"
+    assert out["elestock_total"] == 2 and out["elestock_2016_count"] == 1 and p.dart_calls == 3
+
+
+def test_main_catches_transport_error_with_type_only(tmp_path, monkeypatch, caplog):
+    monkeypatch.setattr(probe, "in_forbidden_window", lambda now=None: False)
+    monkeypatch.setattr(TossClient, "__init__", lambda self, **k: setattr(self, "_token_cache_path", tmp_path / "t.json"))
+    monkeypatch.setattr(probe, "probe_toss", lambda *a, **k: (_ for _ in ()).throw(httpx.ConnectTimeout("SECRETURL")))
+    saved = {n: TossClient.__dict__[n] for n in ("access_token", "_refresh_token", "_issue_token_locked", "_raise_from_response")}
+    try:
+        with caplog.at_level(logging.INFO):
+            code = probe.main(["--symbol", "000000"])
+    finally:
+        for n, f in saved.items():
+            setattr(TossClient, n, f)
+    assert code == probe.EXIT_TRANSPORT and "ConnectTimeout" in caplog.text and "SECRETURL" not in caplog.text

@@ -11,7 +11,7 @@
   5. httpx · httpcore 로그를 WARNING 으로 올린다 (요청 주소 줄에 종목 코드 · DART 키가 찍히지 않게).
   6. 호출 사이를 1초 이상 띄운다 (속도 제한기는 프로세스마다 따로라 서버 사용량을 모른다).
 
-호출 수 상한: 토스 30회 · DART 30회. 로그에는 개수 · 연도 · 상태 코드만 남긴다.
+토스 호출은 약 8회 (2016년 깊이는 before 에 날짜를 직접 넣어 한 번에 묻는다). 호출 수 상한: 토스 30회 · DART 30회. 로그에는 개수 · 연도 · 상태 코드만 남긴다.
 종목 · 회사는 실행할 때 인자로 넣는다 (저장소에 적지 않음). 비밀값은 환경변수 DART_API_KEY 에서만 읽는다.
 실행 시각 제한: 장 시간과 정해진 작업 시각 앞뒤에는 실행하지 않는다.
 """
@@ -38,7 +38,7 @@ TOSS_MAX_CALLS = 30
 DART_MAX_CALLS = 30
 MIN_GAP_SEC = 1.0
 EXPIRY_MARGIN_SEC = 300
-EXIT_OK, EXIT_NO_TOKEN, EXIT_UNAUTHORIZED, EXIT_BAD_TIME, EXIT_LIMIT = 0, 2, 3, 4, 5
+EXIT_OK, EXIT_NO_TOKEN, EXIT_UNAUTHORIZED, EXIT_BAD_TIME, EXIT_LIMIT, EXIT_TRANSPORT = 0, 2, 3, 4, 5, 6
 
 # (시작, 끝) KST 분 단위 · 정해진 작업 시각 앞뒤 (기획서 3-1-1) + 장 시간
 _FORBIDDEN = [(5 * 60 + 55, 6 * 60 + 45), (9 * 60, 9 * 60 + 15), (9 * 60 + 15, 15 * 60 + 30),
@@ -129,64 +129,92 @@ def _oldest_year(rows: Any) -> Optional[int]:
 
 
 def _candle_rows(resp: httpx.Response) -> list[dict[str, Any]]:
+    """명세 응답 `result.candles` 를 읽는다 (목록 모양 `result` 도 받음)."""
     try:
         body = resp.json()
     except ValueError:
         return []
     result = body.get("result") if isinstance(body, dict) else body
-    return [r for r in (result or []) if isinstance(r, dict)] if isinstance(result, list) else []
+    if isinstance(result, dict):
+        result = result.get("candles")
+    return [r for r in result if isinstance(r, dict)] if isinstance(result, list) else []
 
 
-def probe_toss(p: Prober, symbol: str, delisted_symbol: Optional[str], max_pages: int = 8) -> dict[str, Any]:
-    """(나) 가장 오래된 일봉 연도와 수정주가 차이 수 · (다) 상장폐지 종목 상태 코드 · 지수 일봉 가장 오래된 연도."""
+def _safe(out: dict[str, Any], key: str, fn: Callable[[], Any]) -> None:
+    """전송 오류는 오류 종류 이름만 남기고 다음 항목으로 넘어간다 (추적 글 · 주소 · 키를 찍지 않음)."""
+    try:
+        out[key] = fn()
+    except httpx.HTTPError as exc:
+        out[key] = f"전송 오류 {type(exc).__name__}"
+
+
+# 깊이를 잴 기준 시각 · 날짜 (쪽 넘기기 없이 한 번에 묻는다)
+DEEP_BEFORE = "2016-01-08T23:59:59+09:00"
+INVESTOR_UNTILS = ("2016-01-08", "2020-01-08", "2023-01-09")
+
+
+def _investor_depth(p: Prober, symbol: str, until: str) -> dict[str, Any]:
+    resp = p.toss_get(f"/api/v1/stocks/{symbol}/investor-trading", {"count": 100, "until": until})
+    try:
+        body = resp.json()
+    except ValueError:
+        body = {}
+    result = body.get("result", body) if isinstance(body, dict) else {}
+    records = result.get("records") if isinstance(result, dict) else None
+    years = [int(str(r.get("date"))[:4]) for r in (records or []) if isinstance(r, dict) and str(r.get("date"))[:4].isdigit()]
+    return {"status": resp.status_code, "records": len(records or []), "oldest_year": min(years) if years else None}
+
+
+def probe_toss(p: Prober, symbol: str, delisted_symbol: Optional[str]) -> dict[str, Any]:
+    """(나) 2016년 기준 일봉 가장 오래된 연도와 수정주가 차이 수 · (다) 상장폐지 종목 상태 코드 · 지수 일봉 연도 ·
+    종목별 투자자 매매동향 깊이. 토스 호출은 8회 안팎 (상한 30)."""
     out: dict[str, Any] = {}
+    base = {"symbol": symbol, "interval": "1d", "count": 200, "before": DEEP_BEFORE}
 
-    def oldest(path: str, base: dict[str, Any]) -> tuple[Optional[int], list[dict[str, Any]]]:
-        rows_all: list[dict[str, Any]] = []
-        before: Optional[str] = None
-        for _ in range(max_pages):
-            params = dict(base)
-            if before:
-                params["before"] = before
-            rows = _candle_rows(p.toss_get(path, params))
-            if not rows:
-                break
-            rows_all.extend(rows)
-            before = str(rows[-1].get("timestamp") or "") or None
-            if before is None:
-                break
-        return _oldest_year(rows_all), rows_all
+    def stock_pair() -> None:
+        raw = _candle_rows(p.toss_get("/api/v1/candles", {**base, "adjusted": "false"}))
+        out["stock_oldest_year"] = _oldest_year(raw)
+        adj = _candle_rows(p.toss_get("/api/v1/candles", {**base, "adjusted": "true"}))
+        out["stock_adjusted_oldest_year"] = _oldest_year(adj)
+        by_ts = {str(r.get("timestamp"))[:10]: r.get("closePrice") for r in adj}      # 같은 before 한 쪽끼리 비교
+        out["adjusted_diff_count"] = sum(1 for r in raw if by_ts.get(str(r.get("timestamp"))[:10]) not in (None, r.get("closePrice")))
 
-    y_raw, raw = oldest("/api/v1/candles", {"symbol": symbol, "interval": "1d", "count": 200, "adjusted": "false"})
-    y_adj, adj = oldest("/api/v1/candles", {"symbol": symbol, "interval": "1d", "count": 200, "adjusted": "true"})
-    by_ts = {str(r.get("timestamp"))[:10]: r.get("closePrice") for r in adj}
-    diff = sum(1 for r in raw if by_ts.get(str(r.get("timestamp"))[:10]) not in (None, r.get("closePrice")))
-    out["stock_oldest_year"] = y_raw
-    out["stock_adjusted_oldest_year"] = y_adj
-    out["adjusted_diff_count"] = diff
+    try:
+        stock_pair()
+    except httpx.HTTPError as exc:
+        out["stock_candles"] = f"전송 오류 {type(exc).__name__}"
     if delisted_symbol:
-        out["delisted_status"] = p.toss_get("/api/v1/candles", {"symbol": delisted_symbol, "interval": "1d", "count": 5}).status_code
+        _safe(out, "delisted_status", lambda: p.toss_get(
+            "/api/v1/candles", {"symbol": delisted_symbol, "interval": "1d", "count": 5}).status_code)
     for idx in ("KOSPI", "KOSDAQ"):
-        y, _ = oldest(f"/api/v1/market-indicators/{idx}/candles", {"interval": "1d", "count": 200})
-        out[f"{idx.lower()}_oldest_year"] = y
+        _safe(out, f"{idx.lower()}_oldest_year", lambda idx=idx: _oldest_year(_candle_rows(p.toss_get(
+            f"/api/v1/market-indicators/{idx}/candles", {"interval": "1d", "count": 200, "before": DEEP_BEFORE}))))
+    for until in INVESTOR_UNTILS:
+        _safe(out, f"investor_until_{until[:4]}", lambda until=until: _investor_depth(p, symbol, until))
     return out
 
 
 def probe_dart(p: Prober, corp_code: str, receipt_no: str, first_receipt_no: Optional[str]) -> dict[str, Any]:
     """(마) 원문에 시각 칸이 있는지 · (바) 정정 전 접수번호 원문을 받았는지 · (사) elestock 2016년 건수."""
     out: dict[str, Any] = {}
-    doc = p.dart_get("document.xml", {"rcept_no": receipt_no})
-    out["document_status"] = doc.status_code
-    out["document_has_time_field"] = b"rcept_tm" in doc.content    # [추정] 칸 이름 · 아니오가 나오면 원문을 눈으로 한 번 더 본다
+    def document() -> None:
+        doc = p.dart_get("document.xml", {"rcept_no": receipt_no})
+        out["document_status"] = doc.status_code
+        out["document_has_time_field"] = b"rcept_tm" in doc.content    # [추정] 칸 이름 · 아니오가 나오면 원문을 눈으로 한 번 더 본다
+
+    def elestock() -> None:
+        ele = p.dart_get("elestock.json", {"corp_code": corp_code})
+        try:
+            rows = (ele.json() or {}).get("list") or []
+        except ValueError:
+            rows = []
+        out["elestock_total"] = len(rows)
+        out["elestock_2016_count"] = sum(1 for r in rows if str(r.get("rcept_dt") or "").startswith("2016"))
+
+    _safe(out, "document", document)
     if first_receipt_no:
-        out["first_version_status"] = p.dart_get("document.xml", {"rcept_no": first_receipt_no}).status_code
-    ele = p.dart_get("elestock.json", {"corp_code": corp_code})
-    try:
-        rows = (ele.json() or {}).get("list") or []
-    except ValueError:
-        rows = []
-    out["elestock_total"] = len(rows)
-    out["elestock_2016_count"] = sum(1 for r in rows if str(r.get("rcept_dt") or "").startswith("2016"))
+        _safe(out, "first_version_status", lambda: p.dart_get("document.xml", {"rcept_no": first_receipt_no}).status_code)
+    _safe(out, "elestock", elestock)
     return out
 
 
@@ -221,6 +249,9 @@ def main(argv: Optional[list[str]] = None) -> int:
     except ProbeStop as stop:
         logger.info("중단(종료 코드 %s): %s", stop.code, stop.reason)
         code = stop.code
+    except httpx.HTTPError as exc:                      # 안전망 · 종류 이름만
+        logger.info("중단: 전송 오류 %s", type(exc).__name__)
+        code = EXIT_TRANSPORT
     logger.info("호출 수 · 토스 %s · DART %s", prober.toss_calls, prober.dart_calls)
     return code
 
