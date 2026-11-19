@@ -129,7 +129,7 @@ async def _send_approx_alert(ticker: str, approx: int, held_qty: int) -> None:
             body = f"{label} 청산에서 봇이 산 수량을 알 수 없어 팔지 않았습니다 (계좌 보유 {held_qty}주). 직접 확인해 주십시오."
         await TelegramNotifier().send_warning("청산 수량 짐작", body, category="execution")
     except Exception as exc:  # noqa: BLE001
-        logger.debug("[sniper·exit] 근사 알림 실패 · %s", exc)
+        logger.warning("[sniper·exit] 근사 알림 실패 · %s", exc.__class__.__name__)
 
 
 async def execute_exit(
