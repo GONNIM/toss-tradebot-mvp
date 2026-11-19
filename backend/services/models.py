@@ -2182,3 +2182,5 @@ class SwingReference(Base):
 # 새 표는 init_db 의 create_all 로 생기고 alembic 대상이 아니다 (기존 표 열 추가 없음).
 if __name__.startswith("backend."):
     from backend.execution.plan import models as _plan_models  # noqa: E402,F401
+    # 1119-03 ① · 큰손 발자국 새 표 4개 (기존 표 열 추가 없음 · create_all 이 함께 만듦)
+    from backend.discovery.big_hands import models as _big_hands_models  # noqa: E402,F401

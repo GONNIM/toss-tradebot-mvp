@@ -176,6 +176,14 @@ def _fetch_individual(client: Any) -> tuple[Optional[datetime], list[dict[str, A
     return parse_individual_result(getattr(env, "result", env))
 
 
+def _fetch_individual_keep_raw(client: Any, holder: dict[str, Any]) -> tuple[Optional[datetime], list[dict[str, Any]]]:
+    """_fetch_individual 과 같은 결과 · 같은 한 번의 호출 응답을 holder 에 남긴다 (1119-03 ㉤ · 호출을 늘리지 않는다)."""
+    env = client.investor_trading_rankings(count=_TOP_N)
+    result = getattr(env, "result", env)
+    holder["result"] = result
+    return parse_individual_result(result)
+
+
 def _fetch_change_rates(client: Any, tickers: list[str], today: str) -> dict[str, float]:
     """순위 응답에 등락률이 없는 종목의 당일 등락률 (소수 비율).
 
@@ -291,7 +299,8 @@ async def collect_rank_daily(client: Any = None, now: Optional[datetime] = None)
     kinds_state: dict[str, dict[str, Any]] = {}
     changes: dict[str, float] = {}
 
-    fetchers: dict[str, Any] = {KIND_INDIVIDUAL: lambda: _fetch_individual(toss)}
+    raw_holder: dict[str, Any] = {}      # 1119-03 ㉤ · 개인 순매수 호출 응답 원본 (외국인 · 기관 저장용)
+    fetchers: dict[str, Any] = {KIND_INDIVIDUAL: lambda: _fetch_individual_keep_raw(toss, raw_holder)}
     for k in KINDS_1D:
         fetchers[k] = (lambda kk=k: _fetch_1d(toss, kk))
 
@@ -328,7 +337,20 @@ async def collect_rank_daily(client: Any = None, now: Optional[datetime] = None)
     _write_status("daily", {"run_at": now.isoformat(), "date": today, "kinds": kinds_state})
     stats = {"date": today, "kinds": kinds_state, "signals": signal_stats}
     logger.info("[rank] daily %s", stats)
+    await _save_investor_flows_best_effort(raw_holder.get("result"), today)
     return stats
+
+
+async def _save_investor_flows_best_effort(result: Any, today: str) -> None:
+    """1119-03 ㉤ · 기존 저장 · 신호 · 상태 파일이 끝난 뒤 자기 세션에서 쓴다 · 실패해도 경고 로그만 (Fable 조건 나)."""
+    if result is None:
+        return
+    try:
+        from backend.discovery.big_hands.flows import save_investor_flows
+
+        await save_investor_flows(result, today)
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("[rank] 외국인·기관 저장 실패 · 기존 흐름은 그대로 · %s", exc)
 
 
 # ═══════════════════════════════════════════════════════════════
