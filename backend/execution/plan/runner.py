@@ -401,6 +401,8 @@ async def job_plan_draft(now_utc: Optional[datetime] = None) -> str:
     today = drafts.today_kst(now)
     now_kst = (now.replace(tzinfo=timezone.utc)).astimezone(drafts._KST)
     n = drafts.attempt_number(now_kst)
+    notices: list[tuple[str, str, str, str]] = []   # 1119-04 · 알림은 세션 블록(커밋) 밖에서 보낸다 — 쓰기 잠금을 쥔 채 알림을 부르면 기록이 멈춘다
+    result = "wait"
     async with get_session() as s:
         key = f"draft:{today.isoformat()}"
         done = await s.scalar(select(PlanEvent.id).where(PlanEvent.kind == "draft_done", PlanEvent.detail == key).limit(1))
@@ -420,13 +422,16 @@ async def job_plan_draft(now_utc: Optional[datetime] = None) -> str:
             decisions, expired = await drafts.run_draft_cycle(s, eng, today=today, symbols=symbols, loader=_make_draft_loader(today))
             summary = drafts.build_summary(decisions, expired, names)
             if summary:
-                await default_notify("info", summary[0], summary[1], "biotech")      # 「바이오」 범주 1건 요약
+                notices.append(("info", summary[0], summary[1], "biotech"))      # 「바이오」 범주 1건 요약
             if any(d.action in ("create", "update") for d in decisions):
-                return "drafted"
-            s.add(PlanEvent(plan_id=None, kind="draft_none", detail=f"후보 {len(symbols)}건 · 만든 초안 0건"))
-            return "no_rule"
-        if n == drafts.MAX_ATTEMPTS:
+                result = "drafted"
+            else:
+                s.add(PlanEvent(plan_id=None, kind="draft_none", detail=f"후보 {len(symbols)}건 · 만든 초안 0건"))
+                result = "no_rule"
+        elif n == drafts.MAX_ATTEMPTS:
             s.add(PlanEvent(plan_id=None, kind="draft_done", detail=key))
-            await default_notify("warning", "자동 초안 없음", "오늘 날짜 레이더 파일이 08:05 까지 없어 초안을 만들지 않았습니다.", "system")
-            return "warned"
-        return "wait"
+            notices.append(("warning", "자동 초안 없음", "오늘 날짜 레이더 파일이 08:05 까지 없어 초안을 만들지 않았습니다.", "system"))
+            result = "warned"
+    for level, title, body, category in notices:   # 커밋 뒤
+        await default_notify(level, title, body, category)
+    return result
