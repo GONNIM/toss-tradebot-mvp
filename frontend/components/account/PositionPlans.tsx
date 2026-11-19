@@ -7,7 +7,7 @@
  * 트리거 도달 시 카드 border 적색 · Activist 심볼은 배지.
  */
 import Link from "next/link";
-import { StockLink } from "@/components/stock/StockLink";
+import { StockLabel, stockLabelText } from "@/components/stock/StockLabel";
 import { useEffect, useRef } from "react";
 import { useIsFetching, useQuery } from "@tanstack/react-query";
 import { api, type PositionCard, type PositionExitPlan } from "@/lib/api";
@@ -142,10 +142,7 @@ function PositionCardView({ card }: { card: PositionCard }) {
     <article className={"rounded-xl border p-4 " + borderClass}>
       <header className="mb-3 border-b border-border/40 pb-2">
         <div className="flex flex-wrap items-baseline gap-2">
-          <span className="font-mono text-lg font-bold"><StockLink ticker={card.symbol}>{card.symbol}</StockLink></span>
-          {card.name && (
-            <span className="text-sm text-muted-foreground">{card.name}</span>
-          )}
+          <span className="text-lg font-bold"><StockLabel code={card.symbol} name={card.name} market={card.currency === "KRW" ? "KR" : "US"} /></span>
           <span className="rounded-lg bg-muted px-1.5 py-0.5 text-xs font-semibold text-muted-foreground">
             {card.currency}
           </span>
@@ -233,7 +230,7 @@ function TrancheBlock({ card }: { card: PositionCard }) {
         </span>
       </div>
       <div className="mt-1 font-mono">
-        {card.symbol} {card.qty}{card.currency === "KRW" ? "주" : ""} = {parts.join(" + ")}
+        {stockLabelText(card.symbol, card.name, card.currency === "KRW" ? "KR" : "US")} {card.qty}{card.currency === "KRW" ? "주" : ""} = {parts.join(" + ")}
       </div>
       {card.qty_mismatch && (
         <div className="mt-1 text-xs text-warn">

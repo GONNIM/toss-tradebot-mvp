@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { StockLink } from "@/components/stock/StockLink";
+import { StockLabel } from "@/components/stock/StockLabel";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Bar,
@@ -295,6 +295,7 @@ function ListTab({ isAdmin, guideNonce = 0 }: { isAdmin: boolean; guideNonce?: n
   // Phase E · 판정 팝업 자동 트리거 · lock 성공 시 강제 판정 기록.
   const [judgmentOpen, setJudgmentOpen] = useState(false);
   const [judgmentTicker, setJudgmentTicker] = useState("");
+  const [judgmentName, setJudgmentName] = useState<string | null>(null);
   const toggleLock = useMutation({
     mutationFn: ({ id, locked }: { id: number; locked: boolean }) =>
       api.powderkeg.toggleListLock("", id, locked),
@@ -305,6 +306,7 @@ function ListTab({ isAdmin, guideNonce = 0 }: { isAdmin: boolean; guideNonce?: n
         const it = rawItems.find((x) => x.id === variables.id);
         if (it) {
           setJudgmentTicker(it.ticker);
+          setJudgmentName(it.name ?? null);
           setJudgmentOpen(true);
         }
       }
@@ -407,7 +409,7 @@ function ListTab({ isAdmin, guideNonce = 0 }: { isAdmin: boolean; guideNonce?: n
                         className="font-medium text-left hover:underline hover:text-primary"
                         title="종목 상세 팝업 열기 (재무 3년·조건·이벤트·외부 링크)"
                       >
-                        {it.name || "-"}
+                        <StockLabel code={it.ticker} name={it.name} link={false} />
                       </button>
                       {it.locked ? (
                         <span
@@ -463,7 +465,6 @@ function ListTab({ isAdmin, guideNonce = 0 }: { isAdmin: boolean; guideNonce?: n
                       </div>
                     ) : null}
                     <div className="flex flex-wrap items-center gap-1 text-xs text-muted-foreground">
-                      {it.ticker}
                       {/* 1025-06 · 국내 종목은 코드로 바로 토스증권 주문 화면 (서버 조회 없음) */}
                       <BrokerLink symbol={it.ticker} links={NO_LINKS} />
                     </div>
@@ -541,6 +542,7 @@ function ListTab({ isAdmin, guideNonce = 0 }: { isAdmin: boolean; guideNonce?: n
         open={judgmentOpen}
         onOpenChange={setJudgmentOpen}
         ticker={judgmentTicker}
+        name={judgmentName}
         pageSource="powderkeg"
         hypothesisId="powderkeg-v2-lock"
       />
@@ -770,7 +772,7 @@ function EventRow({ event }: { event: PowderKegEventItem }) {
       </div>
       {/* 종목명 + 이벤트 타입 */}
       <div className="mb-2 flex flex-wrap items-center gap-2">
-        <span className="text-lg font-bold"><StockLink ticker={event.ticker}>{event.ticker}</StockLink></span>
+        <span className="text-lg font-bold"><StockLabel code={event.ticker} name={event.name} /></span>
         <span className={`rounded-lg px-2 py-0.5 text-xs font-bold ${isTypeB ? "bg-warn text-white" : "bg-warn text-white"}`}>
           {info?.icon} {info?.short || event.event_type}
         </span>
@@ -1065,7 +1067,7 @@ function RunDiffSummaryCard({ data }: { data: PowderKegRunDiffSummaryResponse | 
         <div className="mt-2 max-h-48 space-y-0.5 overflow-y-auto text-xs">
           {data.items.slice(0, 40).map((it) => (
             <div key={it.ticker} className="flex items-center gap-2 rounded-lg px-1 py-0.5 hover:bg-white/60">
-              <span className="font-mono text-xs text-slate-600"><StockLink ticker={it.ticker}>{it.ticker}</StockLink></span>
+              <span className="text-xs text-slate-600"><StockLabel code={it.ticker} name={it.name} /></span>
               {it.tier_moved ? (
                 <span className="rounded-lg bg-primary/20 px-1 text-xs font-bold text-primary">
                   ⇄ {it.prev_tier || "-"} → {it.curr_tier || "-"}
@@ -1208,8 +1210,7 @@ function TickerDetailModal({ ticker, onClose }: { ticker: string; onClose: () =>
       >
         <div className="sticky top-0 flex items-center justify-between border-b bg-white px-4 py-3">
           <div className="flex items-center gap-2">
-            <span className="text-xl font-bold">{d?.name || ticker}</span>
-            <span className="rounded-lg bg-slate-100 px-2 py-0.5 text-xs text-slate-700">{ticker}</span>
+            <span className="text-xl font-bold"><StockLabel code={ticker} name={d?.name} link={false} /></span>
             {d?.market ? (
               <span className="rounded-lg bg-primary/10 px-2 py-0.5 text-xs text-primary">{d.market.market}</span>
             ) : null}
@@ -1554,7 +1555,7 @@ function LowPbrDiscoveryCard({ isAdmin }: { isAdmin: boolean }) {
                   <div className="grid grid-cols-3 gap-1 font-mono">
                     {candidates.data.items.slice(0, 30).map((c) => (
                       <div key={c.ticker} className="truncate rounded-lg bg-primary/5 px-1 py-0.5">
-                        <StockLink ticker={c.ticker}>{c.ticker}</StockLink> <span className="text-muted-foreground">PBR {c.pbr}</span>
+                        <StockLabel code={c.ticker} name={c.name} /> <span className="text-muted-foreground">PBR {c.pbr}</span>
                       </div>
                     ))}
                   </div>

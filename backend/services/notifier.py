@@ -334,7 +334,7 @@ def format_moonshot_alert(picks: list) -> tuple[str, str]:
     lines = []
     for p in picks:
         risk = _RISK_TEXT.get(p.risk_level, at.esc(p.risk_level or "—"))
-        lines.append(f"{p.rank}. {at.esc(p.ticker)} {at.usd(p.current_price)} · {int(p.total_score + 0.5)}점 · 조작 위험 {p.manipulation_risk}/5 ({risk})")
+        lines.append(f"{p.rank}. {at.us_stock(p.ticker, getattr(p, 'company_name', None))} {at.usd(p.current_price)} · {int(p.total_score + 0.5)}점 · 조작 위험 {p.manipulation_risk}/5 ({risk})")
         lines.append(f"   지정가 참고: 지금 {at.usd(p.buy_price_market)} · 3% 아래 {at.usd(p.buy_price_limit_3pct)} · 7% 아래 {at.usd(p.buy_price_limit_7pct)}")
         note = f" · 주의: {at.esc(p.risk_warning)}" if p.risk_warning else ""
         lines.append(f"   분석: {at.esc(_cut(p.thesis, 40))}{note}")
@@ -358,7 +358,7 @@ def format_crazy_alert(picks: list) -> tuple[str, str]:
     title = at.title("discovery_crazy", f"{_today_md()} 상위 {len(shown)}", "🎯")
     lines = ["커뮤니티 언급·공매도·내부자 매매·뉴스 등으로 점수를 매긴 미국 종목입니다."]
     for p in shown:
-        lines.append(f"{p.rank}. {at.esc(p.ticker)} {at.usd(p.current_price)} · {int(p.total_score + 0.5)}점 · {at.esc(_cut(p.thesis, 30))}")
+        lines.append(f"{p.rank}. {at.us_stock(p.ticker, getattr(p, 'company_name', None))} {at.usd(p.current_price)} · {int(p.total_score + 0.5)}점 · {at.esc(_cut(p.thesis, 30))}")
     rest = len(picks) - len(shown)
     lines.append(f"나머지 {rest}종목과 분석 전문은 화면에서" if rest > 0 else "분석 전문은 화면에서")
     lines.append(at.link("discovery_crazy"))
@@ -398,7 +398,7 @@ def format_sector_leaders_alert(
         horizon = f"{months}개월 뒤 " if months else ""
         pct_text = at.NONE if it.point_pct is None else _fmt_pct(it.point_pct)
         lines.append(
-            f"{it.rank}. {at.esc(it.name)} {at.won(it.current_price)}{price_tag}"
+            f"{it.rank}. {at.stock(getattr(it, 'name', None), getattr(it, 'ticker', ''))} {at.won(it.current_price)}{price_tag}"
             f" · 지정가 참고 {at.won(it.entry_price)}"
             f" · 통계 추정 {horizon}{at.won(it.point_price)} ({pct_text})"
             f" · {at.entry_status_text(it.entry_status)}"

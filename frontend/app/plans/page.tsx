@@ -3,6 +3,8 @@
 // /plans · 계획 목록 (계획서 11절 · v4 8절)
 // 걸린 조건주문 수 · 토스 API 마지막 성공 시각 · 1차 익절 방식 · 마지막 현재가는 서버 값이고 null 이면 「확인 못 함」.
 import Link from "next/link";
+
+import { StockLabel } from "@/components/stock/StockLabel";
 import { useQuery } from "@tanstack/react-query";
 import { plansApi, MODE_LABEL, STATE_LABEL, TERMINAL_STATES, TP1_MODE_LABEL, WS_LABEL, errText, kst, shares, usd } from "@/lib/plans";
 import { usePlanStatus } from "@/components/plans/ModeBand";
@@ -72,7 +74,7 @@ function PlanList({ title, rows, testid }: { title: string; rows: import("@/lib/
               >
                 <span className="flex flex-wrap items-center gap-2">
                   <span className="text-sm tabular-nums text-muted-foreground">#{p.id}</span>
-                  <span className="font-bold">{p.symbol}</span>
+                  <span className="font-bold"><StockLabel code={p.symbol} name={p.name} market="US" link={false} /></span>
                   <span className="text-xs text-muted-foreground">{MODE_LABEL[p.mode] ?? "알 수 없는 종류"}</span>
                   {p.source === "adopt" && <span className="text-xs text-muted-foreground">보유 인수</span>}
                 </span>

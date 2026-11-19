@@ -148,10 +148,15 @@ class PlanEngine:
     async def _alert(self, plan: Plan, level: str, title: str, body: str) -> None:
         """실전 · 시험 = ⑨ 실주문 · 모의 = 시스템 범주에 「모의 시험」 표시 (1절 9항)."""
         try:
+            from backend.services import alert_text as at
+            from backend.services.stock_names import peek_name
+
+            # 1119-02 · 종목 줄은 기억된 회사명만 쓴다 (새 조회를 기다리지 않음 · 없으면 티커만) · 제목에는 이름을 넣지 않는다
+            who = f"종목 {at.us_stock(plan.symbol, peek_name(plan.symbol))}"
             if plan.mode == "paper":
-                await self._notify(level, f"[모의 시험] {title}", f"[모의 시험] 계획 번호 {plan.id}\n{body}", "system")
+                await self._notify(level, f"[모의 시험] {title}", f"[모의 시험] 계획 번호 {plan.id}\n{who}\n{body}", "system")
             else:
-                await self._notify(level, title, f"계획 번호 {plan.id}\n{body}", "execution")
+                await self._notify(level, title, f"계획 번호 {plan.id}\n{who}\n{body}", "execution")
         except Exception as exc:  # noqa: BLE001 — 알림 실패가 주문 흐름을 막지 않는다
             logger.warning("[plan] 알림 실패 · %s", exc.__class__.__name__)
 

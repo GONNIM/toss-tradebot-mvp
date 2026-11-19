@@ -57,6 +57,7 @@ class InvalidationHitItem(BaseModel):
     id: int
     ts: datetime
     ticker: str
+    name: Optional[str] = None   # 1119-02 · 종목 이름 (못 찾으면 None)
     page_source: str
     hypothesis_id: str
     invalidation_price: Optional[float]
@@ -136,7 +137,12 @@ async def get_invalidation_hits(
             .order_by(desc(UserJudgment.invalidation_hit_ts))
             .limit(limit)
         )
-        return (await session.execute(stmt)).scalars().all()
+        rows = (await session.execute(stmt)).scalars().all()
+    from backend.services.stock_names import fill_names
+
+    outs = [InvalidationHitItem.model_validate(r) for r in rows]
+    await fill_names(outs, "ticker")   # 1119-02
+    return outs
 
 
 @router.get("/rr-calc", response_model=RRCalcResult)

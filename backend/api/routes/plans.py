@@ -10,6 +10,7 @@
 """
 from __future__ import annotations
 
+import functools
 import json
 import logging
 from datetime import datetime
@@ -139,6 +140,21 @@ def _plan_json(p: Plan) -> dict:
     }
 
 
+def _with_names(key: str):
+    """1119-02 · 응답의 계획 줄(목록은 plans[] · 상세는 plan)에 종목 이름(name)을 붙인다. 세션 밖에서 읽고, 실패해도 응답은 그대로."""
+    def deco(fn):
+        @functools.wraps(fn)
+        async def inner(*a, **kw):
+            from backend.services.stock_names import fill_names
+
+            res = await fn(*a, **kw)
+            rows = res.get(key)
+            await fill_names(rows if isinstance(rows, list) else [rows], "symbol")
+            return res
+        return inner
+    return deco
+
+
 async def _get_plan(s, plan_id: int) -> Plan:
     p = await s.get(Plan, plan_id)
     if p is None:
@@ -167,6 +183,7 @@ async def _tp1_mode(s, p: Plan) -> Optional[str]:
 
 
 @router.get("")
+@_with_names("plans")
 async def list_plans(_: str = Depends(require_sniper_token)) -> dict:
     """plans[] 각 줄에 live_cond_count(걸린 조건주문 수) · tp1_mode · price(마지막 현재가) 를 더했고, toss 칸을 더했다."""
     async with get_session() as s:
@@ -211,6 +228,7 @@ async def executor_status(_: str = Depends(require_sniper_token)) -> dict:
 
 
 @router.get("/{plan_id:int}")
+@_with_names("plan")
 async def plan_detail(plan_id: int, _: str = Depends(require_sniper_token)) -> dict:
     now = datetime.utcnow()
     async with get_session() as s:

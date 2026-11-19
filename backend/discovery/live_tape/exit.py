@@ -10,6 +10,7 @@ trailing 발동 (또는 hard_sl · force_close) → TossAdapter/PaperAdapter.sub
 """
 from __future__ import annotations
 
+import asyncio
 import logging
 from dataclasses import dataclass
 from datetime import datetime, timezone
@@ -66,6 +67,8 @@ def _exit_message(ticker: str, name, entry_price, exit_price, qty: int, pnl_pct,
 
 # 근사 수량 알림은 신호마다 1회 (프로세스 메모리 · 재시작하면 다시 1회)
 _approx_alerted: set[int] = set()
+# 떼어 보낸 알림 작업 참조 (끝나기 전에 사라지지 않게 모아 두고 끝나면 지운다 · 1119-02 Fable 권고 2)
+_bg_alerts: set = set()
 
 
 async def _sellable_qty(signal_id: int, ticker: str, entry_uuid, entry_price: float, held_qty: int) -> int:
@@ -83,7 +86,7 @@ async def _sellable_qty(signal_id: int, ticker: str, entry_uuid, entry_price: fl
             "[sniper·exit] 봇 매수 기록 없음 · 근사 수량 사용 · signal=%d · %s · 근사 %d주 · 보유 %d주",
             signal_id, ticker, approx, held_qty,
         )
-        await _alert_approx_once(signal_id, ticker, approx, held_qty)
+        _alert_approx_once(signal_id, ticker, approx, held_qty)   # 떼어 보냄 · 팔 수량 계산이 알림(이름 조회 포함)을 기다리지 않는다
         if approx <= 0:
             return -1
         return min(held_qty, approx)
@@ -97,22 +100,36 @@ async def _sellable_qty(signal_id: int, ticker: str, entry_uuid, entry_price: fl
     return min(held_qty, bot_qty)
 
 
-async def _alert_approx_once(signal_id: int, ticker: str, approx: int, held_qty: int) -> None:
+def _alert_approx_once(signal_id: int, ticker: str, approx: int, held_qty: int) -> None:
+    """신호마다 1회 · 알림은 별도 작업으로 떼어 보낸다 (이벤트 루프가 없으면 건너뜀)."""
     if signal_id in _approx_alerted:
         return
     _approx_alerted.add(signal_id)
     try:
+        task = asyncio.get_running_loop().create_task(_send_approx_alert(ticker, approx, held_qty))
+    except RuntimeError:
+        return
+    _bg_alerts.add(task)
+    task.add_done_callback(_bg_alerts.discard)
+
+
+async def _send_approx_alert(ticker: str, approx: int, held_qty: int) -> None:
+    try:
+        from backend.services import alert_text as at
         from backend.services.notifier import TelegramNotifier
+        from backend.services.stock_names import lookup_kr_name
+
+        label = at.stock(await lookup_kr_name(ticker), ticker)   # 이름(코드) · 이름 없으면 「코드 (종목명 확인 안 됨)」
         body = (
-            f"{ticker} 청산에서 봇이 산 수량 기록을 찾지 못했습니다. "
+            f"{label} 청산에서 봇이 산 수량 기록을 찾지 못했습니다. "
             f"한 번에 사는 금액 ÷ 산 가격으로 {approx}주를 짐작해 팝니다 (계좌 보유 {held_qty}주). "
             "짐작이 틀리면 봇 주식이 조금 남거나 직접 사신 주식이 조금 팔릴 수 있습니다."
         )
         if approx <= 0:
-            body = f"{ticker} 청산에서 봇이 산 수량을 알 수 없어 팔지 않았습니다 (계좌 보유 {held_qty}주). 직접 확인해 주십시오."
+            body = f"{label} 청산에서 봇이 산 수량을 알 수 없어 팔지 않았습니다 (계좌 보유 {held_qty}주). 직접 확인해 주십시오."
         await TelegramNotifier().send_warning("청산 수량 짐작", body, category="execution")
     except Exception as exc:  # noqa: BLE001
-        logger.debug("[sniper·exit] 근사 알림 실패 · %s", exc)
+        logger.warning("[sniper·exit] 근사 알림 실패 · %s", exc.__class__.__name__)
 
 
 async def execute_exit(

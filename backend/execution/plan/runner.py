@@ -210,7 +210,12 @@ class PlanExecutor:
         await self.handle_switch_changes()
         await self.process_requests()
         async with self.gs() as s:
-            ids = list(await s.scalars(select(Plan.id).where(Plan.state.in_(_LIVE_ACTIVE)).order_by(Plan.id)))
+            rows = (await s.execute(select(Plan.id, Plan.symbol).where(Plan.state.in_(_LIVE_ACTIVE)).order_by(Plan.id))).all()
+        ids = [r[0] for r in rows]
+        if rows:   # 1119-02 · 알림용 회사명을 떼어 미리 읽어 둔다 (기다리지 않음 · 실행기 알림은 기억된 값만 쓴다)
+            from backend.services.stock_names import warm_names_bg
+
+            warm_names_bg([r[1] for r in rows])
         for pid in ids:
             try:
                 async with self.gs() as s:                      # 계획마다 세션 · 토스 호출 결과는 엔진이 바로 commit
@@ -403,10 +408,17 @@ async def job_plan_draft(now_utc: Optional[datetime] = None) -> str:
             return "skip"
         if drafts.radar_ready(drafts.radar_dir(), today):
             s.add(PlanEvent(plan_id=None, kind="draft_done", detail=key))
+            names: dict = {}
+            try:   # 1119-02 · 알림 본문용 회사명 (실패해도 초안은 그대로 · 주문 경로 아님)
+                from backend.services.stock_names import lookup_us_names
+
+                names = await lookup_us_names(drafts.radar_symbols(drafts.radar_dir(), today))
+            except Exception as exc:  # noqa: BLE001
+                logger.warning("[plan] 초안 회사명 조회 실패 · %s", exc.__class__.__name__)
             eng = PlanEngine(DirectionGate(RawBroker.__new__(RawBroker)), notify=default_notify)   # DB 만 쓴다 (브로커 부르지 않음)
             symbols = drafts.radar_symbols(drafts.radar_dir(), today)
             decisions, expired = await drafts.run_draft_cycle(s, eng, today=today, symbols=symbols, loader=_make_draft_loader(today))
-            summary = drafts.build_summary(decisions, expired)
+            summary = drafts.build_summary(decisions, expired, names)
             if summary:
                 await default_notify("info", summary[0], summary[1], "biotech")      # 「바이오」 범주 1건 요약
             if any(d.action in ("create", "update") for d in decisions):

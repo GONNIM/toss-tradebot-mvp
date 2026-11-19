@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { StockLink } from "@/components/stock/StockLink";
+import { StockLabel } from "@/components/stock/StockLabel";
 import {
   useMutation,
   useQuery,
@@ -373,8 +373,7 @@ function CandidatesPanel() {
           <table className="w-full text-xs">
             <thead>
               <tr className="border-b border-border text-left">
-                <th className="py-1">티커</th>
-                <th className="py-1">이름</th>
+                <th className="py-1">종목</th>
                 <th className="py-1 text-right" title="종합 점수 · 3소스 가중합">tape</th>
                 <th className="py-1 text-right" title="순위 이동 z-score">순위 z</th>
                 <th className="py-1 text-right" title="초당 체결 z-score">체결 z</th>
@@ -387,8 +386,7 @@ function CandidatesPanel() {
             <tbody>
               {q.data.map((r) => (
                 <tr key={r.ticker} className="border-b border-border/60">
-                  <td className="py-1 font-mono"><StockLink ticker={r.ticker}>{r.ticker}</StockLink></td>
-                  <td className="py-1">{r.name}</td>
+                  <td className="py-1"><StockLabel code={r.ticker} name={r.name} /></td>
                   <td className="py-1 text-right">{r.tape_score.toFixed(2)}</td>
                   <td className="py-1 text-right">{r.rank_velocity_score.toFixed(1)}</td>
                   <td className="py-1 text-right">{r.trades_intensity_score.toFixed(1)}</td>
@@ -449,7 +447,7 @@ function SignalsPanel() {
             <thead>
               <tr className="border-b border-border text-left">
                 <th className="py-1">감지 (KST)</th>
-                <th className="py-1">티커</th>
+                <th className="py-1">종목</th>
                 <th className="py-1 text-right" title="종합 점수">tape</th>
                 <th className="py-1 text-right">진입가</th>
                 <th className="py-1 text-right" title="보유 중 최고가">최고가</th>
@@ -463,7 +461,7 @@ function SignalsPanel() {
               {q.data.map((r) => (
                 <tr key={r.id} className="border-b border-border/60">
                   <td className="py-1 font-mono">{fmtKstDateTime(r.detected_at)}</td>
-                  <td className="py-1 font-semibold"><StockLink ticker={r.ticker}>{r.ticker}</StockLink></td>
+                  <td className="py-1 font-semibold"><StockLabel code={r.ticker} name={r.name} /></td>
                   <td className="py-1 text-right">{r.tape_score?.toFixed(2) ?? "—"}</td>
                   <td className="py-1 text-right">{fmtPriceForTicker(r.ticker, r.entry_price)}</td>
                   <td className="py-1 text-right">{fmtPriceForTicker(r.ticker, r.peak_price)}</td>
@@ -560,8 +558,7 @@ function UniversePanel({ isAdmin }: { isAdmin: boolean }) {
             <table className="w-full text-xs">
               <thead>
                 <tr className="border-b border-border text-left">
-                  <th className="py-1">티커</th>
-                  <th className="py-1">이름</th>
+                  <th className="py-1">종목</th>
                   <th className="py-1 text-right">시가총액</th>
                   <th className="py-1 text-right">종가</th>
                   <th className="py-1 text-right">발행주식수</th>
@@ -572,8 +569,7 @@ function UniversePanel({ isAdmin }: { isAdmin: boolean }) {
               <tbody>
                 {q.data.items.map((r: SniperUniverseItem) => (
                   <tr key={r.ticker} className="border-b border-border/60">
-                    <td className="py-1 font-mono"><StockLink ticker={r.ticker}>{r.ticker}</StockLink></td>
-                    <td className="py-1">{r.name}</td>
+                    <td className="py-1"><StockLabel code={r.ticker} name={r.name} /></td>
                     <td className="py-1 text-right">{fmtKrw(r.market_cap_krw)}</td>
                     <td className="py-1 text-right font-semibold">{fmtKrwPrice(r.close_price)}</td>
                     <td className="py-1 text-right">{fmtShares(r.shares)}</td>

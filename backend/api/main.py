@@ -284,7 +284,7 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(
     title="Toss Tradebot MVP API",
-    version="0.3.66",
+    version="0.3.67",
     description="자동매매 + Crazy + Moonshot Discovery API",
     lifespan=lifespan,
 )

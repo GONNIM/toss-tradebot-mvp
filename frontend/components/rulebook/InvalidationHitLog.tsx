@@ -8,13 +8,14 @@
  */
 
 import { useEffect, useState } from "react";
-import { StockLink } from "@/components/stock/StockLink";
+import { StockLabel } from "@/components/stock/StockLabel";
 import { upDownText } from "@/lib/updown";
 
 type Hit = {
   id: number;
   ts: string;
   ticker: string;
+  name?: string | null;
   page_source: string;
   hypothesis_id: string;
   invalidation_price: number | null;
@@ -78,7 +79,7 @@ export function InvalidationHitLog() {
               {items.map((h) => (
                 <tr key={h.id} className="border-b border-border/40">
                   <td className="py-1.5 font-mono">#{h.id}</td>
-                  <td className="py-1.5 font-mono font-bold"><StockLink ticker={h.ticker}>{h.ticker}</StockLink></td>
+                  <td className="py-1.5 font-mono font-bold"><StockLabel code={h.ticker} name={h.name} /></td>
                   <td className="py-1.5 text-xs text-muted-foreground">{h.page_source}</td>
                   <td className="py-1.5 text-right font-mono">
                     {h.invalidation_price?.toLocaleString() ?? "—"}

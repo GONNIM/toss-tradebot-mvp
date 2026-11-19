@@ -206,7 +206,11 @@ async def outcomes_recent(limit: int = Query(50, ge=1, le=200)):
             .order_by(desc(MemeAlertOutcome.signal_date), desc(MemeAlertOutcome.first_alert_at))
             .limit(limit)
         )).scalars().all()
-    return {"cost": COST, "items": recent_rows(list(rows))}
+    items = recent_rows(list(rows))
+    from backend.services.stock_names import fill_names
+
+    await fill_names(items, "ticker")   # 1119-02
+    return {"cost": COST, "items": items}
 
 
 @router.get("/vip/status", dependencies=[Depends(require_sniper_token)])

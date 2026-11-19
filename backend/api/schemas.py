@@ -773,6 +773,7 @@ class TodayFailure(BaseModel):
 class TodayJudgmentDue(BaseModel):
     id: int
     ticker: str
+    name: Optional[str] = None   # 1119-02 · 종목 이름 (못 찾으면 None)
     strategy: Optional[str] = None
     ts: Optional[str] = None
     due_date: str  # YYYY-MM-DD
@@ -781,6 +782,7 @@ class TodayJudgmentDue(BaseModel):
 
 class TodayHoldingAlert(BaseModel):
     symbol: str
+    name: Optional[str] = None   # 1119-02
     market: str
     kind: str  # stop_hit | stop_near | deadline
     price: Optional[float] = None

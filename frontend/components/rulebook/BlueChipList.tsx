@@ -6,7 +6,7 @@
  */
 
 import { useEffect, useState } from "react";
-import { StockLink } from "@/components/stock/StockLink";
+import { StockLabel } from "@/components/stock/StockLabel";
 
 type BlueChipItem = {
   ticker: string;
@@ -195,8 +195,8 @@ export function BlueChipList({ isAdmin = false }: { isAdmin?: boolean }) {
           <table className="w-full text-xs">
             <thead>
               <tr className="border-b border-border text-left text-muted-foreground">
-                <th className="py-1.5">티커</th>
                 <th className="py-1.5">종목</th>
+                <th className="py-1.5">시장</th>
                 <th className="py-1.5">tier</th>
                 <th className="py-1.5 text-right">시총</th>
                 <th className="py-1.5 text-right">종가</th>
@@ -226,13 +226,8 @@ export function BlueChipList({ isAdmin = false }: { isAdmin?: boolean }) {
                     }`}
                     title={it.reject_reasons || "5단계 모두 통과"}
                   >
-                    <td className="py-1.5 font-mono font-bold"><StockLink ticker={it.ticker}>{it.ticker}</StockLink></td>
-                    <td className="py-1.5">
-                      <div>{it.name ?? "—"}</div>
-                      <div className="text-xs text-muted-foreground">
-                        {it.market}
-                      </div>
-                    </td>
+                    <td className="py-1.5 font-bold"><StockLabel code={it.ticker} name={it.name} /></td>
+                    <td className="py-1.5 text-xs text-muted-foreground">{it.market}</td>
                     <td className="py-1.5">
                       <span
                         className={`rounded-lg px-1.5 py-0.5 text-xs font-semibold ${tb.className}`}

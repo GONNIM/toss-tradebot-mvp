@@ -59,7 +59,11 @@ async def list_codes() -> dict:
 
     async with get_session() as session:
         rows = (await session.execute(select(TossStockCode).order_by(TossStockCode.verified, TossStockCode.symbol))).scalars().all()
-    return {"codes": [_row_view(r) for r in rows if not bl.is_kr_code(r.symbol)]}
+    codes = [_row_view(r) for r in rows if not bl.is_kr_code(r.symbol)]
+    from backend.services.stock_names import fill_names
+
+    await fill_names(codes, "symbol")   # 1119-02 · 미국 회사명
+    return {"codes": codes}
 
 
 class CodeUpdate(BaseModel):

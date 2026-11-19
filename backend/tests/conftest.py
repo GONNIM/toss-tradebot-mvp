@@ -74,3 +74,13 @@ def _watchlist_runtime_dir(tmp_path, monkeypatch):
     """1030-04 · Watchlist 런타임 파일(코스피 직전 목록·순위 수집 상태)이 실 backend/data 에 쓰이지 않게 테스트마다 임시 폴더로 돌린다."""
     monkeypatch.setenv("WATCHLIST_RUNTIME_DIR", str(tmp_path / "watchlist_rt"))
     yield
+
+
+@_pytest_wp98.fixture(autouse=True)
+def _fresh_stock_name_memo():
+    """1119-02 · 종목명 10분 기억이 앞 테스트에서 넘어오면 DB 를 비운 뒤에도 이름이 남는다."""
+    from backend.services import stock_names
+
+    stock_names.clear_memo()
+    yield
+    stock_names.clear_memo()

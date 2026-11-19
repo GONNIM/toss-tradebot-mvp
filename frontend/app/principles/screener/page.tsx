@@ -4,7 +4,7 @@
 // 최신 배치 요약 + 3탭 (PASS/FAIL/INSUFFICIENT_DATA) + 종목별 지표·근거
 
 import { useEffect, useState } from "react";
-import { StockLink } from "@/components/stock/StockLink";
+import { StockLabel } from "@/components/stock/StockLabel";
 
 interface Reason {
   code: string;
@@ -165,8 +165,7 @@ export default function ScreenerPage() {
           <table className="w-full text-xs">
             <thead className="text-muted-foreground border-b border-border">
               <tr className="text-left">
-                <th className="py-2 pr-3">티커</th>
-                <th className="py-2 pr-3">종목명</th>
+                <th className="py-2 pr-3">종목</th>
                 <th className="py-2 pr-3 text-right">PER TTM</th>
                 <th className="py-2 pr-3 text-right">주주환원 3y</th>
                 <th className="py-2 pr-3 text-right">배당년</th>
@@ -179,7 +178,7 @@ export default function ScreenerPage() {
             <tbody>
               {currentList.length === 0 ? (
                 <tr>
-                  <td colSpan={9} className="py-4 text-center text-muted-foreground">
+                  <td colSpan={8} className="py-4 text-center text-muted-foreground">
                     해당 분류 종목 없음
                   </td>
                 </tr>
@@ -192,7 +191,7 @@ export default function ScreenerPage() {
                       onClick={() => setOpenTicker(openTicker === r.ticker ? null : r.ticker)}
                     >
                       <td className="py-1 pr-3 font-mono">
-                        <StockLink ticker={r.ticker}>{r.ticker}</StockLink>
+                        <StockLabel code={r.ticker} name={r.name} />
                         {r.verification_tags && r.verification_tags.length > 0 && (
                           <span
                             title={`실체 검증 필요 · ${r.verification_tags.join(", ")}`}
@@ -202,7 +201,6 @@ export default function ScreenerPage() {
                           </span>
                         )}
                       </td>
-                      <td className="py-1 pr-3">{r.name ?? "—"}</td>
                       <td className="py-1 pr-3 text-right font-mono">{fmtNum(r.per_ttm)}</td>
                       <td className="py-1 pr-3 text-right font-mono">
                         {fmtPct(r.payout_ratio_3y_avg)}
@@ -224,7 +222,7 @@ export default function ScreenerPage() {
                     </tr>
                     {openTicker === r.ticker && (
                       <tr key={`${r.ticker}-detail`}>
-                        <td colSpan={9} className="bg-muted/20 py-3 px-3">
+                        <td colSpan={8} className="bg-muted/20 py-3 px-3">
                           <ul className="space-y-1 text-xs">
                             {r.reasons?.map((rn) => (
                               <li

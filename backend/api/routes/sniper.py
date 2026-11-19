@@ -133,7 +133,7 @@ async def recent_signals(
             .limit(limit)
         )
         rows = (await session.execute(stmt)).scalars().all()
-    return [
+    out = [
         {
             "id": r.id,
             "ticker": r.ticker,
@@ -152,6 +152,10 @@ async def recent_signals(
         }
         for r in rows
     ]
+    from backend.services.stock_names import fill_names
+
+    await fill_names(out, "ticker")   # 1119-02
+    return out
 
 
 @router.get("/debug/rankings")

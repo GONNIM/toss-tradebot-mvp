@@ -174,6 +174,7 @@ export function HunterTable({ rows }: { rows: HunterRow[] }) {
                     <Link href={`/influencer/serenity/${r.ticker}`} className="text-primary hover:underline">
                       {r.ticker}
                     </Link>
+                    {r.name && <span className="block max-w-[16rem] truncate text-xs font-normal text-muted-foreground" title={r.name}>{r.name}</span>}
                     {r.is_avoid_new && (
                       <span className="ml-1 text-xs font-semibold text-warn" title="인플루언서 경고 신규">
                         ⚠경고신규

@@ -56,6 +56,7 @@ class JudgmentOut(BaseModel):
     ts: datetime
     user_id: str
     ticker: str
+    name: Optional[str] = None   # 1119-02 · 종목 이름 (못 찾으면 None)
     page_source: str
     hypothesis_id: str
     thesis_md: str
@@ -117,6 +118,16 @@ class Baseline(BaseModel):
 # ─── Endpoints ───────────────────────────────────────────────────
 
 
+async def _named(rows):
+    """1119-02 · 판정 행(하나 또는 목록)에 종목 이름을 붙여 응답 모양으로 돌려준다 (이름 조회 실패해도 응답은 그대로)."""
+    from backend.services.stock_names import fill_names
+
+    one = not isinstance(rows, (list, tuple))
+    outs = [JudgmentOut.model_validate(r) for r in ([rows] if one else rows)]
+    await fill_names(outs, "ticker")
+    return outs[0] if one else outs
+
+
 @router.post("", response_model=JudgmentOut, status_code=201, dependencies=[Depends(require_sniper_token)])
 async def create_judgment(payload: JudgmentCreate):
     """판정 생성 · invalidation_price 필수 · git_sha·market_regime 자동."""
@@ -142,7 +153,7 @@ async def create_judgment(payload: JudgmentCreate):
         session.add(row)
         await session.commit()
         await session.refresh(row)
-        return row
+    return await _named(row)
 
 
 @router.get("", response_model=list[JudgmentOut], dependencies=[Depends(require_sniper_token)])
@@ -168,7 +179,7 @@ async def list_judgments(
             stmt = stmt.where(UserJudgment.superseded_by_id.is_(None))
         stmt = stmt.order_by(desc(UserJudgment.ts)).limit(limit)
         result = await session.execute(stmt)
-        return result.scalars().all()
+    return await _named(result.scalars().all())
 
 
 # ─── Supersede · 티커당 1건 원칙 (2026-08-14 · Fable 5) ───────────────
@@ -214,7 +225,7 @@ async def supersede_judgment(judgment_id: int, payload: SupersedeRequest):
         row.supersede_reason = payload.reason
         await session.commit()
         await session.refresh(row)
-        return row
+    return await _named(row)
 
 
 class JudgmentPatch(BaseModel):
@@ -287,7 +298,7 @@ async def patch_judgment(judgment_id: int, payload: JudgmentPatch):
         row.updated_history = _json.dumps(history, ensure_ascii=False)
         await session.commit()
         await session.refresh(row)
-        return row
+    return await _named(row)
 
 
 @router.get("/baseline", response_model=Baseline, dependencies=[Depends(require_sniper_token)])
@@ -389,4 +400,4 @@ async def update_outcome(judgment_id: int, payload: OutcomeUpdate):
         row.result_computed_at = datetime.utcnow()
         await session.commit()
         await session.refresh(row)
-        return row
+    return await _named(row)
