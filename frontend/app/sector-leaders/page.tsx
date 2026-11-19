@@ -26,6 +26,7 @@ import {
 
 import { AnalysisPanel } from "@/components/sector-leaders/AnalysisPanel";
 import { Top10Modal } from "@/components/sector-leaders/Top10Modal";
+import { StockLabel } from "@/components/stock/StockLabel";
 import { api, type SectorItemSummary, type SectorLeader } from "@/lib/api";
 import {
   confidenceBadgeClass,
@@ -319,8 +320,7 @@ function LeaderCard({
       }`}
     >
       <div className="flex items-baseline justify-between gap-2 mb-1">
-        <span className="font-semibold">{leader.name}</span>
-        <span className="text-xs text-muted-foreground">{leader.ticker}</span>
+        <span className="font-semibold"><StockLabel code={leader.ticker} name={leader.name} link={false} /></span>
       </div>
       <div className="text-xs space-y-1">
         <div className="flex justify-between">

@@ -28,6 +28,7 @@ export interface Plan {
   mode: PlanMode;
   source: "manual" | "adopt";
   symbol: string;
+  name?: string | null;
   state: string;
   revision: number;
   halted_reason: string | null;

@@ -134,6 +134,7 @@ export interface MemeOutcomesSummary {
 export interface MemeOutcomeItem {
   signal_date: string;
   ticker: string;
+  name?: string | null;
   market: "KR" | "US";
   alert_type: string | null;
   score: number | null;
@@ -830,6 +831,7 @@ export interface TodayFailure {
 export interface TodayJudgmentDue {
   id: number;
   ticker: string;
+  name?: string | null;
   strategy: string | null;
   ts: string | null;
   due_date: string;
@@ -837,6 +839,7 @@ export interface TodayJudgmentDue {
 }
 export interface TodayHoldingAlert {
   symbol: string;
+  name?: string | null;
   market: string;
   kind: "stop_hit" | "stop_near" | "deadline";
   price: number | null;
@@ -1432,6 +1435,7 @@ export interface SniperParams {
 
 export interface TossStockCodeRow {
   symbol: string;
+  name?: string | null;
   toss_code: string | null;
   list_date: string | null;
   source: "api" | "manual";
@@ -1480,6 +1484,7 @@ export interface SniperUniverseItem {
 export interface SniperSignalRow {
   id: number;
   ticker: string;
+  name?: string | null;
   detected_at: string | null;
   tape_score: number | null;
   rank_velocity: number | null;
@@ -1708,6 +1713,7 @@ export interface ActivistStatusResponse {
   universe_kr: number;
   events_total: number;
   insider_watchlist_kr?: string[];
+  insider_watchlist_kr_names?: Record<string, string>;   // 1119-02 · 코드 → 종목 이름 (못 찾은 코드는 빠짐)
   insider_watchlist_us?: UsInsiderWatchEntry[];
   buckets: Record<ActivistIntensity, ActivistEventItem[]>;
 }
@@ -1997,6 +2003,7 @@ export interface WatchlistSourceStatus {
 export interface WatchlistSignal {
   id: number;
   ticker: string;
+  name?: string | null;
   source: string;          // news_yhap · board_naver · youtube_shuka 등
   signal_type: string;     // headline · board_post_velocity · video_upload 등
   intensity: number;
@@ -2140,6 +2147,7 @@ export interface PowderKegTickerDetail {
 export interface PowderKegEventItem {
   id: number;
   ticker: string;
+  name?: string | null;
   event_type: string;            // A1~A6 · B1~B3
   kind: "A" | "B";
   source: string;
@@ -2250,6 +2258,7 @@ export interface PowderKegRunDiffLatestResponse {
 
 export interface PowderKegRunDiffSummaryItem {
   ticker: string;
+  name?: string | null;
   diff_count: number;
   tier_moved: boolean;
   prev_tier: string | null;

@@ -1,7 +1,7 @@
 "use client";
 
 import { Fragment, useEffect, useMemo, useState } from "react";
-import { StockLink } from "@/components/stock/StockLink";
+import { StockLabel } from "@/components/stock/StockLabel";
 import {
   useMutation,
   useQuery,
@@ -435,8 +435,7 @@ function WatchlistTable({ tradeDate, isAdmin }: { tradeDate: string; isAdmin: bo
                     </button>
                   </td>
                   <td className="p-2">
-                    <div className="font-medium">{it.name || "-"}</div>
-                    <div className="text-xs text-muted-foreground"><StockLink ticker={it.ticker}>{it.ticker}</StockLink></div>
+                    <div className="font-medium"><StockLabel code={it.ticker} name={it.name} /></div>
                   </td>
                   <td className="p-2 text-right font-bold text-primary">
                     {it.composite_score.toFixed(3)}
@@ -684,6 +683,7 @@ function ManualAdd({ tradeDate, isAdmin }: { tradeDate: string; isAdmin: boolean
   // Phase E · 판정 팝업 자동 트리거 · 수동 편입 성공 시 강제 판정 기록.
   const [judgmentOpen, setJudgmentOpen] = useState(false);
   const [judgmentTicker, setJudgmentTicker] = useState("");
+  const [judgmentName, setJudgmentName] = useState<string | null>(null);
 
   const add = useMutation({
     mutationFn: () =>
@@ -695,6 +695,7 @@ function ManualAdd({ tradeDate, isAdmin }: { tradeDate: string; isAdmin: boolean
     onSuccess: () => {
       // 판정 팝업 트리거 (Phase B 주 3 계획 · Phase E 착수 · roadmap-12week.md)
       setJudgmentTicker(ticker);
+      setJudgmentName(name || null);
       setJudgmentOpen(true);
       setTicker("");
       setName("");
@@ -746,6 +747,7 @@ function ManualAdd({ tradeDate, isAdmin }: { tradeDate: string; isAdmin: boolean
         open={judgmentOpen}
         onOpenChange={setJudgmentOpen}
         ticker={judgmentTicker}
+        name={judgmentName}
         pageSource="watchlist"
         hypothesisId="watchlist-manual-add"
       />
@@ -796,7 +798,7 @@ function SignalsInspector({ tradeDate }: { tradeDate: string }) {
           <ul className="space-y-0.5 p-2 text-xs">
             {sigs.slice(0, 30).map((s) => (
               <li key={s.id} className="flex gap-2">
-                <span className="font-mono text-muted-foreground"><StockLink ticker={s.ticker}>{s.ticker}</StockLink></span>
+                <span className="text-muted-foreground"><StockLabel code={s.ticker} name={s.name} /></span>
                 <span>{s.signal_type}</span>
                 <span className="text-primary">int={s.intensity.toFixed(2)}</span>
                 <span className="ml-auto text-muted-foreground">

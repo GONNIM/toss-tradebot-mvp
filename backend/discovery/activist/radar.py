@@ -746,7 +746,14 @@ async def get_status() -> Dict[str, Any]:
     since = _now() - _INSIDER_WATCH_DAYS * 86400
     kr_watchlist = state.kr_insider_watchlist(since)
     us_watchlist = state.us_insider_watchlist(since)
+    try:   # 1119-02 · 국내 감시 종목 이름 (못 찾거나 실패하면 빈 값 · 응답은 그대로)
+        from backend.services.stock_names import lookup_kr_names
+
+        kr_names = await lookup_kr_names(kr_watchlist)
+    except Exception:  # noqa: BLE001
+        kr_names = {}
     return {
+        "insider_watchlist_kr_names": kr_names,
         "universe_size": len(universe),
         "universe_us": sum(1 for a in universe if a.country == "US"),
         "universe_kr": sum(1 for a in universe if a.country == "KR"),

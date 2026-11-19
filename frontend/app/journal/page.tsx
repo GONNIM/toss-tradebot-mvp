@@ -9,7 +9,7 @@
 
 import { Suspense, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { StockLink } from "@/components/stock/StockLink";
+import { StockLabel } from "@/components/stock/StockLabel";
 import { AdminSessionBar } from "@/components/admin/AdminSessionBar";
 import type { SessionInfo } from "@/lib/auth";
 import { baseNote, notScoredText, outcomeText } from "@/lib/outcome-display";
@@ -20,6 +20,7 @@ type Judgment = {
   ts: string;
   user_id: string;
   ticker: string;
+  name?: string | null;
   page_source: string;
   hypothesis_id: string;
   thesis_md: string;
@@ -508,7 +509,7 @@ function JudgmentCard({
       {/* 헤더 · 배지 */}
       <div className="flex flex-wrap items-center gap-2">
         <span className={"font-mono text-sm font-bold " + (superseded ? "line-through" : "")}>
-          <StockLink ticker={j.ticker}>{j.ticker}</StockLink>
+          <StockLabel code={j.ticker} name={j.name} />
         </span>
         <span className={`rounded-lg px-2 py-0.5 text-xs ${pageBadge(j.page_source)}`}>
           {j.page_source}

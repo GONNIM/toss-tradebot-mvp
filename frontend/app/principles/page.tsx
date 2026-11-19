@@ -5,7 +5,7 @@
 // charter.json SSOT · backend/principles/charter.json
 
 import { useEffect, useState } from "react";
-import { StockLink } from "@/components/stock/StockLink";
+import { StockLabel } from "@/components/stock/StockLabel";
 
 interface Threshold {
   [key: string]: number | boolean;
@@ -53,7 +53,7 @@ interface Charter {
   };
   manual_overrides: {
     financial_sector: {
-      entries: { ticker: string; value: boolean; reason: string }[];
+      entries: { ticker: string; name?: string | null; value: boolean; reason: string }[];
     };
   };
   revision_history: Revision[];
@@ -271,7 +271,7 @@ export default function PrinciplesPage() {
           <ul className="space-y-1 text-xs font-mono">
             {charter.manual_overrides.financial_sector.entries.map((e) => (
               <li key={e.ticker}>
-                <span className="text-primary"><StockLink ticker={e.ticker}>{e.ticker}</StockLink></span> · {String(e.value)} ·{" "}
+                <span className="text-primary"><StockLabel code={e.ticker} name={e.name} /></span> · {String(e.value)} ·{" "}
                 <span className="text-muted-foreground">{e.reason}</span>
               </li>
             ))}

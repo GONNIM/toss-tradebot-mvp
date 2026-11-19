@@ -133,7 +133,11 @@ async def _judgments_due(today: date) -> list[TodayJudgmentDue]:
             out.append(TodayJudgmentDue(id=j.id, ticker=j.ticker, strategy=j.strategy, ts=j.ts.isoformat(),
                                         due_date=due.isoformat(), overdue=due < today))
     out.sort(key=lambda x: (x.due_date, x.id))
-    return out[:_LIMIT_JUDGMENTS]
+    out = out[:_LIMIT_JUDGMENTS]
+    from backend.services.stock_names import fill_names
+
+    await fill_names(out, "ticker")   # 1119-02
+    return out
 
 
 async def _holding_alerts(today: date) -> list[TodayHoldingAlert]:
@@ -172,7 +176,11 @@ async def _holding_alerts(today: date) -> list[TodayHoldingAlert]:
                     alerts.append(TodayHoldingAlert(kind="deadline", deadline=dl.isoformat(), **base))
     order = {"stop_hit": 0, "stop_near": 1, "deadline": 2}
     alerts.sort(key=lambda a: (order[a.kind], a.gap_pct if a.gap_pct is not None else 1e9, a.symbol))
-    return alerts[:_LIMIT_ALERTS]
+    alerts = alerts[:_LIMIT_ALERTS]
+    from backend.services.stock_names import fill_names
+
+    await fill_names(alerts, "symbol")   # 1119-02
+    return alerts
 
 
 # ─── 후보 섹션 ───────────────────────────────────────────────────────────

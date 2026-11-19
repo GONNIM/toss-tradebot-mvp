@@ -16,6 +16,7 @@ import { upDownText } from "@/lib/updown";
 import { AdoptNotice } from "@/components/plans/AdoptNotice";
 import { CodeDialog } from "@/components/plans/CodeDialog";
 import { UnknownOrdersPanel } from "@/components/plans/UnknownOrders";
+import { StockLabel } from "@/components/stock/StockLabel";
 import { BTN_LINE, BTN_PRIMARY, BTN_WARN, Field, INPUT, Notice, Row } from "@/components/plans/ui";
 
 const HALTABLE = ["APPROVED", "ENTRY_ARMED", "ENTRY_RETRY", "HOLDING", "TP1_WAIT", "TRAILING", "ADOPT_PENDING"];
@@ -326,7 +327,7 @@ export default function PlanDetailPage() {
       </section>
 
       <header className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
-        <h2 className="text-xl font-bold" data-testid="plan-title">#{p.id} {p.symbol}</h2>
+        <h2 className="text-xl font-bold" data-testid="plan-title">#{p.id} <StockLabel code={p.symbol} name={p.name} market="US" link={false} layout="inline" /></h2>
         <span data-testid="plan-state" className="text-sm font-semibold">{STATE_LABEL[p.state] ?? "알 수 없는 단계"}</span>
         <span className="text-xs tabular-nums text-muted-foreground">판 번호 {p.revision} · 내용 확인값 {d.content_hash}</span>
       </header>

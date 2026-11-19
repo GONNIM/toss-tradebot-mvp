@@ -4,7 +4,7 @@
  * Crazy Picks 페이지 — Top 10 테이블 + History 토글 + Thesis expand.
  */
 import { useQuery } from "@tanstack/react-query";
-import { StockLink } from "@/components/stock/StockLink";
+import { StockLabel } from "@/components/stock/StockLabel";
 import { useState } from "react";
 import { api, type CrazyPick } from "@/lib/api";
 import { formatMarketCap, formatUSD } from "@/lib/utils";
@@ -140,8 +140,7 @@ function PicksTable({ picks, showDate = false }: { picks: CrazyPick[]; showDate?
           <tr className="text-left">
             {showDate && <th className="px-4 py-3">날짜</th>}
             <th className="px-4 py-3">#</th>
-            <th className="px-4 py-3">티커</th>
-            <th className="px-4 py-3">회사</th>
+            <th className="px-4 py-3">종목</th>
             <th className="px-4 py-3">섹터</th>
             <th className="px-4 py-3 text-right">현재가</th>
             <th className="px-4 py-3 text-right">시총</th>
@@ -169,9 +168,8 @@ function PicksTable({ picks, showDate = false }: { picks: CrazyPick[]; showDate?
                   <td className="px-4 py-3 text-muted-foreground">#{p.rank}</td>
                   <td className="px-4 py-3 font-bold">
                     {isOpen ? "▾ " : "▸ "}
-                    <StockLink ticker={p.ticker}>{p.ticker}</StockLink>
+                    <StockLabel code={p.ticker} name={p.company_name} />
                   </td>
-                  <td className="px-4 py-3 max-w-[180px] truncate">{p.company_name || "—"}</td>
                   <td className="px-4 py-3 text-muted-foreground">{p.sector || "—"}</td>
                   <td className="px-4 py-3 text-right font-mono">
                     {p.close_price && p.close_price > 0 ? formatUSD(p.close_price) : "—"}

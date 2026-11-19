@@ -85,6 +85,7 @@ export type VerificationResponse = {
 
 export type HunterRow = {
   ticker: string;
+  name?: string | null;
   industry: string | null;
   sector: string | null;
   first_mention_at: string | null;
@@ -121,6 +122,7 @@ export type HunterResponse = {
 
 export type ActionCard = {
   ticker: string;
+  name?: string | null;
   tier: string | null;
   tier_rank: number;
   financing_tier: string | null;
@@ -156,6 +158,7 @@ export type ActionCard = {
 
 export type WatchOnlyItem = {
   ticker: string;
+  name?: string | null;
   industry: string | null;
   bull_pct: number;
   mentions_7d: number;
@@ -165,6 +168,7 @@ export type WatchOnlyItem = {
 
 export type ExcludedItem = {
   ticker: string;
+  name?: string | null;
   reason: string;
 };
 

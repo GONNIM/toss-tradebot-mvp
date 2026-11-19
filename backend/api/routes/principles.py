@@ -28,7 +28,15 @@ router = APIRouter()
 
 @router.get("/charter")
 async def get_charter() -> dict:
-    return load_charter()
+    charter = load_charter()
+    try:   # 1119-02 · 금융업 예외 목록의 종목 이름 (정적 파일 · 못 찾으면 비움)
+        from backend.services.stock_names import fill_names
+
+        entries = (((charter.get("manual_overrides") or {}).get("financial_sector") or {}).get("entries")) or []
+        await fill_names([e for e in entries if isinstance(e, dict)], "ticker")
+    except Exception:  # noqa: BLE001
+        pass
+    return charter
 
 
 @router.get("/screener/runs")
@@ -152,7 +160,7 @@ async def list_blocked_recent(
             if r.reason == "whitelist_bypass":
                 bypass_24h += 1
         block_24h = len(last_24h_rows) - bypass_24h
-        return {
+        out = {
             "total_24h": len(last_24h_rows),
             "block_24h": block_24h,
             "bypass_24h": bypass_24h,
@@ -170,6 +178,10 @@ async def list_blocked_recent(
                 for r in recent_rows
             ],
         }
+    from backend.services.stock_names import fill_names
+
+    await fill_names(out["recent"], "ticker")   # 1119-02 · 종목 이름
+    return out
 
 
 # ─── gate-design-v1 §3-3 · 실체 검증 확인 (세션 B · 2026-08-23) ────

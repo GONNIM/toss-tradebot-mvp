@@ -17,7 +17,7 @@ import {
 } from "@/lib/api";
 import { useSessionListener } from "@/lib/auth";
 import { homeKillLabel } from "@/lib/sniper-safety";
-import { StockLink } from "@/components/stock/StockLink";
+import { StockLabel } from "@/components/stock/StockLabel";
 import { JournalKpiBadge } from "@/components/home/JournalKpiBadge";
 
 const LOCKED = "로그인하면 보입니다";
@@ -100,7 +100,7 @@ function JudgmentsCard({ d }: { d: TodayResponse }) {
         <ul>
           {rows.map((j) => (
             <li key={j.id} className="flex flex-wrap items-center gap-x-3 gap-y-1 border-b border-border py-2 text-sm last:border-0">
-              <StockLink ticker={j.ticker} className="font-semibold">{j.ticker}</StockLink>
+              <StockLabel code={j.ticker} name={j.name} className="font-semibold" />
               {j.strategy && <span className="rounded-lg border border-border px-2 py-0.5 text-xs">{j.strategy}</span>}
               <span className="tabular-nums text-muted-foreground">기한 {md(j.due_date)}</span>
               {j.overdue && <span className="rounded-lg bg-warn/15 px-2 py-0.5 text-xs text-warn">기한 지남</span>}
@@ -134,7 +134,7 @@ function AlertsCard({ d }: { d: TodayResponse }) {
           {rows.map((a, i) => (
             <li key={`${a.symbol}-${a.kind}-${i}`} className="space-y-0.5 border-b border-border py-2 text-sm last:border-0">
               <div className="flex flex-wrap items-center gap-x-3">
-                <StockLink ticker={a.symbol} className="font-semibold">{a.symbol}</StockLink>
+                <StockLabel code={a.symbol} name={a.name} market={a.market === "KR" ? "KR" : "US"} className="font-semibold" />
                 <span>{alertFact(a, d.near_stop_pct)}</span>
               </div>
               <p className="text-xs tabular-nums text-muted-foreground">
@@ -167,15 +167,14 @@ function CandidateBlock({ b }: { b: TodayCandidateBlock }) {
       ) : (
         <ul>
           {b.items.map((it, i) => (
-            // 1108-01 · 모든 후보 줄을 같은 모양으로: 이름(굵게) · 종목 번호(작게) / 왜 올라왔는지 한 줄
+            // 1119-02 · 한국은 이름(코드) 한 줄 · 미국은 티커 아래 회사명 (StockLabel) / 왜 올라왔는지 한 줄
             <li key={`${it.ticker}-${i}`} className="space-y-0.5 border-b border-border py-2 text-sm last:border-0">
               <div className="flex flex-wrap items-baseline gap-x-2">
                 {it.ticker ? (
-                  <StockLink ticker={it.ticker} className="font-semibold">{it.name ?? it.ticker}</StockLink>
+                  <StockLabel code={it.ticker} name={it.name} className="font-semibold" />
                 ) : (
                   <span className="font-semibold">{it.name ?? "이름 없음"}</span>
                 )}
-                {it.ticker && it.name && <span className="text-xs tabular-nums text-muted-foreground">{it.ticker}</span>}
               </div>
               {it.note && <p className="text-muted-foreground">{it.note}</p>}
             </li>

@@ -416,10 +416,7 @@ async def get_events(
         stmt = stmt.order_by(PowderKegEvent.detected_at.desc()).limit(limit)
         rows = (await session.execute(stmt)).scalars().all()
 
-    return {
-        "disclaimer": DISCLAIMER,
-        "count": len(rows),
-        "items": [
+    items = [
             {
                 "id": r.id, "ticker": r.ticker, "event_type": r.event_type,
                 "kind": "A" if r.event_type.startswith("A") else "B",
@@ -434,7 +431,14 @@ async def get_events(
                 "validated": r.validated,
             }
             for r in rows
-        ],
+        ]
+    from backend.services.stock_names import fill_names
+
+    await fill_names(items, "ticker")   # 1119-02 · 종목 이름
+    return {
+        "disclaimer": DISCLAIMER,
+        "count": len(rows),
+        "items": items,
     }
 
 
@@ -751,6 +755,9 @@ async def get_run_diff_summary(
             })
 
     items = sorted(by_ticker.values(), key=lambda x: (not x["tier_moved"], -x["diff_count"]))
+    from backend.services.stock_names import fill_names
+
+    await fill_names(items, "ticker")   # 1119-02 · 종목 이름
 
     return {
         "disclaimer": DISCLAIMER,

@@ -113,6 +113,19 @@ def stock(name: Optional[str], code: str) -> str:
     return f"{esc(name)}({esc(code)})"
 
 
+US_NAME_MAX = 24
+
+
+def us_stock(ticker: str, name: Optional[str]) -> str:
+    """미국 종목 `티커 · 회사명` (회사명은 앞 24자에서 자르고 「…」) · 이름이 없으면 티커만. 제목에는 쓰지 않는다 (본문 전용)."""
+    n = (name or "").strip()
+    if not n or n == ticker:
+        return esc(ticker)
+    if len(n) > US_NAME_MAX:
+        n = n[:US_NAME_MAX] + "…"
+    return f"{esc(ticker)} · {esc(n)}"
+
+
 def won(v: Optional[float]) -> str:
     return NONE if v is None else f"{v:,.0f}원"
 

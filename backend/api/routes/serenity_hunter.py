@@ -121,6 +121,7 @@ class VerificationResponse(BaseModel):
 
 class HunterRow(BaseModel):
     ticker: str
+    name: Optional[str] = None   # 1119-02 · 회사명 (못 찾으면 None)
     industry: Optional[str] = None
     sector: Optional[str] = None
     first_mention_at: Optional[str] = None
@@ -157,6 +158,7 @@ class HunterResponse(BaseModel):
 
 class ActionCard(BaseModel):
     ticker: str
+    name: Optional[str] = None   # 1119-02
     tier: Optional[str] = None
     tier_rank: int = 99
     financing_tier: Optional[str] = None
@@ -193,6 +195,7 @@ class ActionCard(BaseModel):
 
 class WatchOnlyItem(BaseModel):
     ticker: str
+    name: Optional[str] = None   # 1119-02
     industry: Optional[str] = None
     bull_pct: float
     mentions_7d: int
@@ -202,6 +205,7 @@ class WatchOnlyItem(BaseModel):
 
 class ExcludedItem(BaseModel):
     ticker: str
+    name: Optional[str] = None   # 1119-02
     reason: str
 
 
@@ -383,13 +387,17 @@ async def hunter() -> HunterResponse:
     else:
         result = await hunter_rows()
 
+    rows = [HunterRow(**r) for r in result.get("rows", [])]
+    from backend.services.stock_names import fill_names
+
+    await fill_names(rows, "ticker")   # 1119-02
     return HunterResponse(
         gate_open=result["gate_open"],
         deprecation_triggered=result["deprecation_triggered"],
         mid_gate_warning=result["mid_gate_warning"],
         gate_close_reasons=result.get("gate_close_reasons", []),
         deprecation_recommended=result.get("deprecation_recommended", False),
-        rows=[HunterRow(**r) for r in result.get("rows", [])],
+        rows=rows,
     )
 
 
@@ -405,7 +413,7 @@ async def action_cards() -> ActionCardsResponse:
     """
     from backend.discovery.serenity.action_cards import build_action_cards
     data = await build_action_cards()
-    return ActionCardsResponse(
+    resp = ActionCardsResponse(
         as_of=data["as_of"],
         fx_rate=data["fx_rate"],
         fx_source=data["fx_source"],
@@ -417,3 +425,7 @@ async def action_cards() -> ActionCardsResponse:
         filters=ActionCardFilters(**data["filters"]),
         risk=ActionRiskParams(**data["risk"]),
     )
+    from backend.services.stock_names import fill_names   # 1119-02 · 회사명
+
+    await fill_names([*resp.cards, *resp.cards_hidden, *resp.watch_only, *resp.excluded], "ticker")
+    return resp

@@ -7,7 +7,7 @@
 //   옛 주소는 next.config redirect (307) · 보유 종목 표는 이 화면의 표 하나.
 
 import { useState } from "react";
-import { StockLink } from "@/components/stock/StockLink";
+import { StockLabel } from "@/components/stock/StockLabel";
 import Link from "next/link";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { AccountHolding, AccountHoldingsResponse, api, SniperStatus, TossStockCodeRow } from "@/lib/api";
@@ -57,8 +57,8 @@ function HoldingRow({ h, fx }: { h: AccountHolding; fx: { rate: number | null; s
   return (
     <tr className="border-b border-border align-top last:border-0">
       <td className="p-2">
-        <div className="font-medium">{h.name ?? h.symbol}</div>
-        <div className="font-mono text-xs text-muted-foreground"><StockLink ticker={h.symbol}>{h.symbol}</StockLink> · {h.market === "KR" ? "국내" : "미국"}</div>
+        <div className="font-medium"><StockLabel code={h.symbol} name={h.name} market={h.market === "KR" ? "KR" : "US"} /></div>
+        <div className="text-xs text-muted-foreground">{h.market === "KR" ? "국내" : "미국"}</div>
       </td>
       <td className="p-2 text-right">{h.qty.toLocaleString("ko-KR")}</td>
       <td className="p-2 text-right">
@@ -162,7 +162,7 @@ function CodeRow({ row }: { row: TossStockCodeRow }) {
   const tryUrl = row.toss_code ? `${TOSS_HOME}stocks/${row.toss_code}/order` : null;
   return (
     <tr className="border-b border-border align-top last:border-0">
-      <td className="p-2 font-mono"><StockLink ticker={row.symbol}>{row.symbol}</StockLink></td>
+      <td className="p-2"><StockLabel code={row.symbol} name={row.name} /></td>
       <td className="p-2">
         {row.verified ? "확인함" : "확인 전"}
         {tryUrl && (
@@ -209,7 +209,7 @@ function CodeTable({ isAdmin }: { isAdmin: boolean }) {
       <table className="w-full text-sm">
         <thead>
           <tr className="border-b border-border text-left text-xs text-muted-foreground">
-            <th className="p-2">티커</th>
+            <th className="p-2">종목</th>
             <th className="p-2">상태</th>
             <th className="p-2">토스 주소 붙여 넣기</th>
           </tr>

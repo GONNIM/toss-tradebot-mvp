@@ -14,6 +14,7 @@
 //   />
 
 import { useEffect, useRef, useState } from "react";
+import { StockLabel } from "@/components/stock/StockLabel";
 import { capture } from "@/lib/observability";
 
 type Judgment = {
@@ -28,6 +29,8 @@ type Props = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   ticker: string;
+  /** 1119-02 · 종목 이름 (모르면 비움 · 한국은 「종목명 확인 안 됨」 표시) */
+  name?: string | null;
   pageSource: string;
   hypothesisId: string;
   onSuccess?: (j: Judgment) => void;
@@ -51,6 +54,7 @@ export function JudgmentDialog({
   open,
   onOpenChange,
   ticker,
+  name,
   pageSource,
   hypothesisId,
   onSuccess,
@@ -160,7 +164,7 @@ export function JudgmentDialog({
         <header>
           <h2 className="text-lg font-bold">📓 판정 기록</h2>
           <p className="mt-1 text-xs text-muted-foreground">
-            <span className="font-mono">{ticker}</span> · {pageSource} · {hypothesisId}
+            <StockLabel code={ticker} name={name} link={false} layout="inline" /> · {pageSource} · {hypothesisId}
           </p>
           <p className="mt-1 text-xs text-muted-foreground">
             reject criteria (invalidation) 없으면 판정 아님 · Kahneman hot/cold state 기록

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { StockLink } from "@/components/stock/StockLink";
+import { StockLabel } from "@/components/stock/StockLabel";
 
 import type { MemeScoreItem } from "@/lib/api";
 import { cn } from "@/lib/utils";
@@ -88,11 +88,8 @@ export function MemeWatchTable({ items }: { items: MemeScoreItem[] }) {
                     {i + 1}
                   </td>
                   <td className="px-3 py-2.5">
-                    <div className="font-mono font-semibold text-foreground">
-                      <StockLink ticker={it.ticker}>{it.ticker}</StockLink>
-                    </div>
-                    <div className="text-xs text-muted-foreground">
-                      {it.name || "—"}
+                    <div className="font-semibold text-foreground">
+                      <StockLabel code={it.ticker} name={it.name} />
                     </div>
                   </td>
                   <td className="px-3 py-2.5 text-right font-mono font-bold text-foreground">

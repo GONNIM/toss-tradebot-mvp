@@ -31,6 +31,7 @@ import {
   toneOf,
 } from "@/lib/holdings-swing";
 import { MaChart } from "@/components/account/MaChart";
+import { StockLabel } from "@/components/stock/StockLabel";
 import { pctText } from "@/lib/holdings-display";
 
 const TONE_CLASS = { up: "text-up", down: "text-down", flat: "text-muted-foreground" } as const;
@@ -369,8 +370,8 @@ export function HoldingSwing({ holdings, isAdmin }: { holdings: AccountHolding[]
           return (
             <article key={`${h.market}-${h.symbol}`} className="space-y-3 rounded-lg border border-border bg-card p-3">
               <header>
-                <div className="font-medium">{h.name ?? h.symbol}</div>
-                <div className="font-mono text-xs text-muted-foreground">{h.symbol} · {h.market === "KR" ? "국내" : "미국"}</div>
+                <div className="font-medium"><StockLabel code={h.symbol} name={h.name} market={h.market === "KR" ? "KR" : "US"} link={false} /></div>
+                <div className="text-xs text-muted-foreground">{h.market === "KR" ? "국내" : "미국"}</div>
               </header>
               {!card ? (
                 <p className="text-sm text-muted-foreground">보류 · 보유 기록이 쌓이면 보여 드립니다 (국내 15:50 · 미국 07:10 기록).</p>

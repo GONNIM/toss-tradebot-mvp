@@ -293,7 +293,14 @@ def decide(symbol: str, data: dict, today: date, *, open_plan: bool = False,
     return DraftDecision(symbol, "create", warnings=warn, window=w, params=params)
 
 
-def build_summary(decisions: list, expired: list) -> Optional[tuple[str, str]]:
+def _label(symbol: str, names: Optional[dict]) -> str:
+    """미국 종목 `티커 · 회사명` (이름을 모르면 티커만). 알림 본문 전용 · 제목에는 쓰지 않는다."""
+    from backend.services import alert_text as at
+
+    return at.us_stock(symbol, (names or {}).get(symbol))
+
+
+def build_summary(decisions: list, expired: list, names: Optional[dict] = None) -> Optional[tuple[str, str]]:
     """「바이오」 범주 1건 요약 (제목 · 본문) · 바뀐 것이 없으면 None. 금액은 적지 않는다."""
     made = [d for d in decisions if d.action in ("create", "update")]
     excl = [d for d in decisions if d.action == "exclude"]
@@ -302,9 +309,9 @@ def build_summary(decisions: list, expired: list) -> Optional[tuple[str, str]]:
     lines = []
     for d in made:
         w = d.window
-        lines.append(f"{d.symbol} · 진입 창 {w.opens} ~ {w.ends}" + (f" · 경고 {len(d.warnings)}건" if d.warnings else ""))
+        lines.append(f"{_label(d.symbol, names)} · 진입 창 {w.opens} ~ {w.ends}" + (f" · 경고 {len(d.warnings)}건" if d.warnings else ""))
     if excl:
-        lines.append("제외: " + ", ".join(f"{d.symbol}({'/'.join(d.reasons)})" for d in excl))
+        lines.append("제외: " + ", ".join(f"{_label(d.symbol, names)}({'/'.join(d.reasons)})" for d in excl))
     if expired:
         lines.append("만료: " + ", ".join(expired))
     return f"자동 초안 {len(made)}건", "\n".join(lines) + "\n승인은 대표가 계획 화면에서 합니다."

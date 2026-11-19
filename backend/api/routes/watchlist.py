@@ -71,7 +71,11 @@ async def get_signals(
     else:
         td = trade_date or next_trade_date()
         items = await signals_for_date(td)
-    return {"count": len(items), "items": items[:limit]}
+    items = items[:limit]
+    from backend.services.stock_names import fill_names
+
+    await fill_names(items, "ticker")   # 1119-02
+    return {"count": len(items), "items": items}
 
 
 @router.get("/report")
