@@ -108,35 +108,28 @@ def _month_key(d: date) -> str:
 
 
 def months_to_catch_up(
-    last_ingested: Optional[date],
+    present: Optional[set[str]],
     current: date,
     max_months: int = MOTIR_CATCHUP_MAX_MONTHS,
 ) -> list[date]:
-    """마지막으로 적재한 발표월 다음 달부터 이번 달까지 (오래된 달 → 최신 달).
+    """최근 max_months 개월(이번 달 포함) 가운데 DB 에 그 발표월 행이 하나도 없는 달 (오래된 달 → 최신 달).
 
-    - last_ingested 가 None(적재 이력 없음)이면 이번 달만.
-    - 이미 이번 달까지 적재했으면 빈 목록.
-    - 빠진 달이 max_months 보다 많으면 가장 최근 max_months 개만 (PDF 한 장이 13개월 시계열을 담음).
+    present: motir_item_exports 의 source_report_month 집합 ('YYYY-MM').
+    - present 가 None 또는 빈 집합(적재 이력 없음)이면 이번 달만.
+    - 중간 달이 비어 있으면 뒤 달이 성공했어도 그 달을 다시 시도한다 (1120-01 PO 요청).
     """
-    if last_ingested is None:
+    if not present:
         return [current]
-    out: list[date] = []
-    m = _add_month(last_ingested, 1)
-    while m <= current:
-        out.append(m)
-        m = _add_month(m, 1)
-    return out[-max_months:]
+    window = [_add_month(current, -i) for i in range(max_months - 1, -1, -1)]
+    return [m for m in window if _month_key(m) not in present]
 
 
-async def _last_ingested_report_month(session: AsyncSession) -> Optional[date]:
-    """DB motir_item_exports 의 source_report_month 최대값 (없으면 None)."""
-    val = (
-        await session.execute(select(func.max(MotirItemExport.source_report_month)))
-    ).scalar_one_or_none()
-    if not val:
-        return None
-    y, m = str(val).split("-")
-    return date(int(y), int(m), 1)
+async def _ingested_report_months(session: AsyncSession) -> set[str]:
+    """DB motir_item_exports 에 행이 있는 source_report_month 집합."""
+    rows = (
+        await session.execute(select(MotirItemExport.source_report_month).distinct())
+    ).scalars().all()
+    return {str(r) for r in rows if r}
 
 
 async def motir_catchup(
@@ -146,7 +139,7 @@ async def motir_catchup(
     max_months: int = MOTIR_CATCHUP_MAX_MONTHS,
     log_tag: str = "motir_catchup",
 ) -> dict:
-    """DB 의 마지막 발표월 다음 달부터 이번 달까지 빠진 달을 차례로 받아 적재.
+    """최근 6개월(이번 달 포함) 중 DB 에 발표월 행이 없는 달을 오래된 달부터 차례로 받아 적재.
 
     - 한 달이 실패해도 다음 달 계속.
     - 이번 달이 아직 KDI 에 없으면(KeyError) WARNING 「아직 없음」 · 지난 달이 빠졌는데 못 받으면 ERROR.
@@ -154,10 +147,10 @@ async def motir_catchup(
     """
     cur = current or _first_of_current_month()
     async with get_session() as session:
-        last = await _last_ingested_report_month(session)
-    targets = months_to_catch_up(last, cur, max_months)
+        present = await _ingested_report_months(session)
+    targets = months_to_catch_up(present, cur, max_months)
     stats: dict = {
-        "last_ingested": _month_key(last) if last else None,
+        "last_ingested": max(present) if present else None,
         "targets": [_month_key(m) for m in targets],
         "months": {},
         "ok": 0,

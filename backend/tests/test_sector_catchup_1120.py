@@ -19,29 +19,41 @@ from backend.discovery.sector_leaders import scheduler as S
 
 
 def test_months_to_catch_up_several_missing():
-    got = S.months_to_catch_up(date(2026, 8, 1), date(2026, 11, 1))
-    assert got == [date(2026, 9, 1), date(2026, 10, 1), date(2026, 11, 1)]
+    got = S.months_to_catch_up({"2026-08"}, date(2026, 11, 1))
+    # 최근 6개월 창(06~11) 중 비어 있는 달 전부
+    assert got == [date(2026, 6, 1), date(2026, 7, 1), date(2026, 9, 1), date(2026, 10, 1), date(2026, 11, 1)]
+
+
+def test_months_to_catch_up_middle_hole_only():
+    present = {"2026-05", "2026-06", "2026-07", "2026-08", "2026-10"}
+    # 8월 있음 · 9월 없음 · 10월 있음 → 이번 달이 10월이면 9월만
+    assert S.months_to_catch_up(present, date(2026, 10, 1)) == [date(2026, 9, 1)]
+    # 이번 달이 11월이고 아직 없으면 9월 + 11월
+    assert S.months_to_catch_up(present, date(2026, 11, 1)) == [date(2026, 9, 1), date(2026, 11, 1)]
 
 
 def test_months_to_catch_up_nothing_missing():
-    assert S.months_to_catch_up(date(2026, 11, 1), date(2026, 11, 1)) == []
+    full = {f"2026-{m:02d}" for m in range(6, 12)}
+    assert S.months_to_catch_up(full, date(2026, 11, 1)) == []
 
 
 def test_months_to_catch_up_no_history_only_current():
+    assert S.months_to_catch_up(set(), date(2026, 11, 1)) == [date(2026, 11, 1)]
     assert S.months_to_catch_up(None, date(2026, 11, 1)) == [date(2026, 11, 1)]
 
 
-def test_months_to_catch_up_cap_keeps_latest_six_across_year_end():
-    got = S.months_to_catch_up(date(2025, 1, 1), date(2026, 2, 1))
-    assert len(got) == S.MOTIR_CATCHUP_MAX_MONTHS == 6
-    assert got[0] == date(2025, 9, 1) and got[-1] == date(2026, 2, 1)
+def test_months_to_catch_up_window_is_six_months_across_year_end():
+    got = S.months_to_catch_up({"2025-01"}, date(2026, 2, 1))
+    assert got == [date(2025, 9, 1), date(2025, 10, 1), date(2025, 11, 1), date(2025, 12, 1),
+                   date(2026, 1, 1), date(2026, 2, 1)]
+    assert S.MOTIR_CATCHUP_MAX_MONTHS == 6
 
 
 # ── motir_catchup 동작 (DB · KDI 가짜) ────────────────────────
 
 
 class _Env:
-    last = date(2026, 8, 1)
+    present: set = set()
     behavior: dict = {}
     calls: list = []
 
@@ -49,7 +61,7 @@ class _Env:
 @pytest.fixture
 def fake_env(monkeypatch):
     env = _Env()
-    env.last = date(2026, 8, 1)
+    env.present = {"2026-06", "2026-07", "2026-08"}
     env.behavior = {}
     env.calls = []
 
@@ -57,8 +69,8 @@ def fake_env(monkeypatch):
     async def fake_session():
         yield object()
 
-    async def fake_last(_session):
-        return env.last
+    async def fake_present(_session):
+        return env.present
 
     async def fake_ingest(report_month=None, *, pdf_dir=None):
         key = S._month_key(report_month)
@@ -71,7 +83,7 @@ def fake_env(monkeypatch):
         return {"item_inserted": 1}
 
     monkeypatch.setattr(S, "get_session", fake_session)
-    monkeypatch.setattr(S, "_last_ingested_report_month", fake_last)
+    monkeypatch.setattr(S, "_ingested_report_months", fake_present)
     monkeypatch.setattr(S, "monthly_ingest_job", fake_ingest)
     return env
 
@@ -111,7 +123,7 @@ async def test_past_month_missing_is_error_and_later_months_continue(fake_env, c
 
 @pytest.mark.asyncio
 async def test_catchup_cap_limits_downloads(fake_env):
-    fake_env.last = date(2025, 1, 1)
+    fake_env.present = {"2025-01"}
     await S.motir_catchup(current=date(2026, 11, 1))
     assert len(fake_env.calls) == 6
     assert fake_env.calls[-1] == "2026-11"
@@ -119,9 +131,17 @@ async def test_catchup_cap_limits_downloads(fake_env):
 
 @pytest.mark.asyncio
 async def test_already_current_does_nothing(fake_env):
-    fake_env.last = date(2026, 11, 1)
+    fake_env.present = {f"2026-{m:02d}" for m in range(6, 12)}
     st = await S.motir_catchup(current=date(2026, 11, 1))
     assert fake_env.calls == [] and st["targets"] == []
+
+
+@pytest.mark.asyncio
+async def test_middle_hole_is_retried_even_if_later_month_present(fake_env):
+    # 8월 있음 · 9월 없음 · 10월 있음 · 이번 달(11월) 없음 → 9월과 11월만 시도
+    fake_env.present = {"2026-05", "2026-06", "2026-07", "2026-08", "2026-10"}
+    await S.motir_catchup(current=date(2026, 11, 1))
+    assert fake_env.calls == ["2026-09", "2026-11"]
 
 
 @pytest.mark.asyncio
