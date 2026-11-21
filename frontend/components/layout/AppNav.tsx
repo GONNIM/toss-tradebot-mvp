@@ -13,6 +13,15 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef } from "react";
 import type { ReactNode } from "react";
+import { useQueryClient } from "@tanstack/react-query";
+import { bestTabKey, firstVisibleHref, isHidden, visibleGroups, visibleTabs } from "@/lib/menu-visibility";
+import { MENU_QUERY_KEY, useMenuVisibility } from "@/lib/use-menu-visibility";
+
+// 1120-01 (2026-11-21): 메뉴 보이기 설정 반영.
+// - 숨긴 탭은 빼고(지금 화면 탭은 남김) · 탭이 모두 숨은 묶음도 뺀다 (원래 탭 없는 「오늘」은 안 뺌).
+// - 묶음 링크 · PC 분류 링크는 보이는 첫 탭으로 간다. 화면 이동마다 설정을 다시 읽는다.
+// - 「기록」 묶음은 잠긴 탭이 없어 두 탭을 모두 숨기면 묶음이 빠진다 (의도 · 주소 · 오늘 화면 링크로는 열림).
+// - 잠금 8개는 frontend/lib/menu-visibility.ts LOCKED_KEYS · 서버 LOCKED 와 같아야 한다.
 
 interface Tab {
   href: string;
@@ -30,7 +39,7 @@ interface Group {
   tabs: Tab[];
 }
 
-const GROUPS: Group[] = [
+export const GROUPS: Group[] = [
   { key: "today", label: "오늘", href: "/", tabs: [] },
   {
     key: "candidates",
@@ -89,6 +98,7 @@ const GROUPS: Group[] = [
     tabs: [
       { href: "/admin/settings", label: "운영 값" },
       { href: "/admin/notifications", label: "알림" },
+      { href: "/admin/menu", label: "메뉴 보이기" }, // 1120-01
       { href: "/principles", label: "원칙", also: ["/principles/verification", "/principles/gate-history"] },
       { href: "/lab", label: "실험장", also: ["/lab/backtest", "/lab/super-signals"] },
     ],
@@ -143,7 +153,23 @@ export function AppNav({ brand, session }: { brand: ReactNode; session: ReactNod
   const { group: current, tab: currentTab } = activeTab(pathname);
   const groupsRef = useRef<HTMLElement>(null);
   const tabsRef = useRef<HTMLElement>(null);
-  const sections = sectionsOf(current.tabs);
+
+  // 1120-01 · 화면 이동(주소 바뀜)마다 메뉴 설정을 다시 읽는다 (첫 마운트는 훅이 읽음)
+  const { menu } = useMenuVisibility();
+  const qc = useQueryClient();
+  const firstPath = useRef(true);
+  useEffect(() => {
+    if (firstPath.current) {
+      firstPath.current = false;
+      return;
+    }
+    qc.invalidateQueries({ queryKey: MENU_QUERY_KEY });
+  }, [pathname, qc]);
+
+  const currentHref = currentTab?.href ?? null;
+  const groups = visibleGroups(GROUPS, menu, currentHref);
+  const shownTabs = visibleTabs(current.tabs, menu, currentHref);
+  const sections = sectionsOf(shownTabs);
   const currentSection = sections.find((sec) => currentTab !== null && sec.tabs.includes(currentTab)) ?? null;
 
   // 좁은 화면에서 지금 묶음·탭이 가로 스크롤 밖에 있으면 보이게 한다
@@ -162,21 +188,29 @@ export function AppNav({ brand, session }: { brand: ReactNode; session: ReactNod
         <nav
           ref={groupsRef}
           aria-label="주 메뉴"
-          className="flex min-w-0 flex-1 overflow-x-auto text-base md:gap-1"
+          className="flex min-w-0 flex-1 overflow-x-auto text-sm md:gap-1 md:text-base"
         >
-        {GROUPS.map((g) => {
+        {groups.map((g) => {
           const active = g.key === current.key;
           return (
             <Link
               key={g.key}
-              href={g.href}
+              href={g.tabs.length > 0 ? firstVisibleHref(g.tabs, menu, g.href) : g.href}
               aria-current={active ? "page" : undefined}
               className={
-                "flex min-h-[44px] shrink-0 items-center rounded-lg px-2 md:px-3 " +
+                "flex min-h-[44px] shrink-0 items-center whitespace-nowrap rounded-lg px-1 md:px-3 " +
                 (active ? "font-semibold text-foreground" : "text-muted-foreground hover:text-foreground")
               }
             >
-              {g.label}
+              {/* 1120-01 · 휴대폰 폭에서 「설정」이 잘리지 않게 「내 계좌」는 「계좌」로 줄여 보인다 */}
+              {g.label.startsWith("내 ") ? (
+                <>
+                  <span className="hidden md:inline">내 </span>
+                  {g.label.slice(2)}
+                </>
+              ) : (
+                g.label
+              )}
             </Link>
           );
         })}
@@ -191,7 +225,7 @@ export function AppNav({ brand, session }: { brand: ReactNode; session: ReactNod
             return (
               <Link
                 key={sec.name}
-                href={sec.tabs[0].href}
+                href={firstVisibleHref(sec.tabs, menu, sec.tabs[0].href)}
                 aria-current={active ? "true" : undefined}
                 className={
                   "flex min-h-[44px] shrink-0 items-center whitespace-nowrap rounded-lg px-3 " +
@@ -228,7 +262,7 @@ export function AppNav({ brand, session }: { brand: ReactNode; session: ReactNod
           })}
         </nav>
       )}
-      {current.tabs.length > 0 && (
+      {shownTabs.length > 0 && (
         <nav
           ref={tabsRef}
           aria-label={`${current.label} 화면`}
@@ -238,7 +272,7 @@ export function AppNav({ brand, session }: { brand: ReactNode; session: ReactNod
             (sections.length > 0 ? "md:hidden" : "md:flex-wrap md:overflow-visible")
           }
         >
-          {current.tabs.map((t) => {
+          {shownTabs.map((t) => {
             const active = currentTab !== null && t.href === currentTab.href && tabMatches(pathname, t);
             return (
               <Link
@@ -259,5 +293,18 @@ export function AppNav({ brand, session }: { brand: ReactNode; session: ReactNod
         </nav>
       )}
     </>
+  );
+}
+
+/** 1120-01 · 메뉴에서 숨긴 화면을 주소로 열었을 때 맨 위 한 줄 (layout 공통 · 가장 길게 맞는 탭 key · also 포함). */
+export function HiddenScreenNotice() {
+  const pathname = usePathname();
+  const { menu } = useMenuVisibility();
+  const key = bestTabKey(pathname, GROUPS.flatMap((g) => g.tabs));
+  if (!key || !isHidden(menu, key)) return null;
+  return (
+    <p role="status" className="mb-4 rounded-lg border border-border bg-card px-4 py-3 text-sm text-muted-foreground">
+      메뉴에서 숨긴 화면입니다 · <Link href="/admin/menu" className="text-primary underline-offset-2 hover:underline">설정 › 메뉴 보이기</Link>에서 다시 켤 수 있습니다
+    </p>
   );
 }

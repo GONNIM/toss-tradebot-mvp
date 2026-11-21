@@ -37,6 +37,7 @@ from backend.api.routes import (
     judgments,
     logs,
     meme_watch,
+    menu_visibility,
     moonshot,
     notifications,
     plans,
@@ -284,7 +285,7 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(
     title="Toss Tradebot MVP API",
-    version="0.3.69",
+    version="0.3.70",
     description="자동매매 + Crazy + Moonshot Discovery API",
     lifespan=lifespan,
 )
@@ -347,6 +348,7 @@ app.include_router(
 # ── 관리
 app.include_router(settings.router, prefix="/api/v1/settings", tags=["settings"])
 app.include_router(plans.router, prefix="/api/v1/plans", tags=["plans"])  # 1116-01 · 계획 실행기
+app.include_router(menu_visibility.router, prefix="/api/v1/menu-visibility", tags=["menu-visibility"])  # 1120-01 · GET 공개 · 쓰기 관리자
 app.include_router(notifications.router, prefix="/api/v1/notifications", tags=["notifications"])
 from backend.api.routes import broker_links as _broker_links  # noqa: E402 · 1025-06
 app.include_router(_broker_links.router, prefix="/api/v1/broker-links", tags=["broker-links"])

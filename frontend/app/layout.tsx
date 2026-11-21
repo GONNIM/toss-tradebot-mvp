@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import "./globals.css";
 import { Providers } from "./providers";
-import { AppNav } from "@/components/layout/AppNav";
+import { AppNav, HiddenScreenNotice } from "@/components/layout/AppNav";
 import { HeaderSession } from "@/components/layout/HeaderSession";
 
 export const metadata: Metadata = {
@@ -27,7 +27,7 @@ export default function RootLayout({
       <body className="min-h-screen bg-background font-sans antialiased">
         <Providers>
           <header className="sticky top-0 z-50 border-b border-border bg-card/95 backdrop-blur">
-            <div className="container mx-auto flex flex-col gap-1 px-4 py-1 md:gap-2 md:py-3">
+            <div className="container mx-auto flex flex-col gap-1 px-3 py-1 sm:px-4 md:gap-2 md:py-3">
               <AppNav
                 brand={
                   <Link href="/" className="flex min-h-[44px] shrink-0 items-center text-lg font-bold">
@@ -39,7 +39,10 @@ export default function RootLayout({
               />
             </div>
           </header>
-          <main className="container mx-auto break-words px-4 py-6">{children}</main>
+          <main className="container mx-auto break-words px-4 py-6">
+            <HiddenScreenNotice />
+            {children}
+          </main>
           <footer className="mt-8 border-t border-border py-3 text-center text-xs text-muted-foreground">
             <span title="build sha · 배포 확증용 (3차 리뷰)">
               build {process.env.NEXT_PUBLIC_BUILD_SHA ?? "unknown"} · {process.env.NEXT_PUBLIC_BUILD_TIME ?? "-"}

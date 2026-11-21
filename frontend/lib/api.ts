@@ -420,6 +420,11 @@ export interface Setting {
   description: string | null;
 }
 
+// ─── 메뉴 보이기 (1120-01 · /admin/menu) ───────────────
+export interface MenuVisibilityResponse {
+  screens: { key: string; visible: boolean; locked: boolean }[];
+}
+
 // ─── 알림 설정 (1022-09 · /admin/notifications) ───────────────
 export type NotificationMode = "immediate" | "digest";
 export type NotificationLevel = "info" | "warning" | "critical";
@@ -908,6 +913,14 @@ export const api = {
   },
   settings: {
     list: () => get<Setting[]>(`/settings`),
+  },
+  menuVisibility: {
+    // 1120-01 · GET 은 공개(비로그인 메뉴도 같은 값) · 쓰기 3개는 관리자 쿠키 (알림 설정과 같은 방식)
+    list: () => get<MenuVisibilityResponse>(`/menu-visibility`),
+    update: (key: string, visible: boolean) =>
+      putWithToken<MenuVisibilityResponse>(`/menu-visibility/${key.replace(/^\//, "")}`, "", { visible }),
+    applyRecommended: () => postWithToken<MenuVisibilityResponse & { applied: number }>(`/menu-visibility/apply-recommended`, ""),
+    showAll: () => postWithToken<MenuVisibilityResponse>(`/menu-visibility/show-all`, ""),
   },
   notifications: {
     list: () => getWithSession<NotificationSettingRow[]>(`/notifications/settings`),
