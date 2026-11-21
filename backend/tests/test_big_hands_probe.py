@@ -137,6 +137,19 @@ def test_forbidden_windows():
     assert not probe.in_forbidden_window(datetime(2026, 11, 20, 22, 0, tzinfo=_KST))
 
 
+def test_market_hours_weekday_only():
+    # 11/21 은 토요일 · 11/22 일요일 — 장 시간 제한 없음, 정해진 작업 시각은 그대로 막음
+    assert not probe.in_forbidden_window(datetime(2026, 11, 21, 11, 29, tzinfo=_KST))
+    assert not probe.in_forbidden_window(datetime(2026, 11, 22, 14, 0, tzinfo=_KST))
+    assert probe.in_forbidden_window(datetime(2026, 11, 21, 6, 0, tzinfo=_KST))
+    assert probe.in_forbidden_window(datetime(2026, 11, 21, 9, 5, tzinfo=_KST))
+    assert probe.in_forbidden_window(datetime(2026, 11, 22, 20, 30, tzinfo=_KST))
+    # 평일 경계 — 09:15 막음 · 15:30 풀림
+    assert probe.in_forbidden_window(datetime(2026, 11, 20, 9, 15, tzinfo=_KST))
+    assert probe.in_forbidden_window(datetime(2026, 11, 20, 15, 29, tzinfo=_KST))
+    assert not probe.in_forbidden_window(datetime(2026, 11, 20, 15, 30, tzinfo=_KST))
+
+
 # ---- 막음 1 · 2 · 권고 ㄴ · 투자자 매매동향 (명세 v1.2.28 예시 모양) ----
 def _candle(ts, close="100"):
     return {"timestamp": ts, "openPrice": "1", "highPrice": "1", "lowPrice": "1", "closePrice": close, "volume": "1", "currency": "KRW"}
