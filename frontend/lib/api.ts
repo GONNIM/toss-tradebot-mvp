@@ -724,6 +724,12 @@ export interface Top10Item {
   entry_method: string;
 }
 
+export interface SectorStatus {
+  latest_export_month: string | null;
+  latest_report_month: string | null;
+  computed_at: string | null;
+}
+
 export interface Top10Response {
   items: Top10Item[];
   total_candidates: number;
@@ -942,6 +948,7 @@ export const api = {
   },
   sectorLeaders: {
     items: () => get<SectorItemSummary[]>(`/sector-leaders/`),
+    status: () => get<SectorStatus>(`/sector-leaders/status`),
     itemDetail: (item: string, topN = 3) =>
       get<SectorItemDetail>(
         `/sector-leaders/items/${encodeURIComponent(item)}?top_n=${topN}`,

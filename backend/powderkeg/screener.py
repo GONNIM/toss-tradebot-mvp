@@ -8,7 +8,7 @@
     5  감사의견 적정 (최근 2개 연도)
     6  이자수익 교차검증 (verify_cash_reality)
     7  영업이익 최근 3년 중 2년 이상 흑자
-    8  피오트로스키 F-Score ≥ 6
+    8  피오트로스키 F-Score ≥ 기준값 (config piotroski_f_score_min · 기본 4)
     9  60일 일평균 거래대금 ≥ 1억
     10 관리종목/거래정지/감사비적정 이력 3년 없음
 
@@ -93,7 +93,7 @@ def _compute_robustness(
       · c1 pbr < 0.5      → (0.5 - pbr) / 0.5
       · c2 net_cash > 40% → (net_cash - 0.4) / 0.4
       · c3 owner >= 40%   → (owner - 0.4) / 0.4
-      · c8 fscore >= 6    → (fscore - 6) / 6
+      · c8 fscore >= 기준(기본 4) → (fscore - 기준) / 기준
 
     Grade (min margin 기준):
       · ≥ 0.20 · strong     🟢
@@ -362,7 +362,7 @@ async def screen_ticker(
             result.reject_reasons.append(f"op_profit_history({positive}/{len(op_incomes)})")
     result.conditions["7_operating_profit"] = c7
 
-    # ── 조건 8 · F-Score ≥ 6 ────────────────
+    # ── 조건 8 · F-Score ≥ 기준값 (config piotroski_f_score_min · 기본 4) ────────────────
     # v1.29 · 3차 리뷰 P1 · 데이터 <2년(None) 과 F-Score < 임계(False) 분리.
     if len(fin_all) >= 2:
         fscore = calculate_f_score(

@@ -30,6 +30,7 @@ from backend.api.schemas import (
     RiskRewardResponse,
     SectorItemDetail,
     SectorItemSummary,
+    SectorStatusResponse,
     SectorLeaderResponse,
     SignalContributionResponse,
     StopTakeProfitResponse,
@@ -133,6 +134,34 @@ async def _load_interim_by_month(
     return result
 
 
+async def _latest_computed_at(session) -> str:
+    """sector_leaders.computed_at 최대값 (UTC · ISO · 'Z'). 계산 기록이 없으면 빈 문자열."""
+    latest = (
+        await session.execute(select(func.max(SectorLeader.computed_at)))
+    ).scalar_one_or_none()
+    if latest is None:
+        return ""
+    return latest.isoformat(timespec="seconds") + "Z"
+
+
+@router.get("/status", response_model=SectorStatusResponse)
+async def get_status():
+    """섹터 화면 상단 한 줄: 최신 수출 자료 월 · 마지막 계산 시각 (1120-01)."""
+    async with get_session() as session:
+        latest_data_month = (
+            await session.execute(select(func.max(MotirItemExport.month)))
+        ).scalar_one_or_none()
+        latest_report_month = (
+            await session.execute(select(func.max(MotirItemExport.source_report_month)))
+        ).scalar_one_or_none()
+        computed_at = await _latest_computed_at(session)
+    return SectorStatusResponse(
+        latest_export_month=latest_data_month,
+        latest_report_month=latest_report_month,
+        computed_at=computed_at or None,
+    )
+
+
 # ─────────────────────────────────────────────────────────────────
 # GET /top10  — 투자 종목 Top 10 (B-2j)
 # ─────────────────────────────────────────────────────────────────
@@ -141,19 +170,19 @@ async def _load_interim_by_month(
 @router.get("/top10", response_model=Top10Response)
 async def get_top10(limit: int = Query(10, ge=1, le=51)):
     """매력도 점수 상위 N — Confluence 0.5 + 신뢰도 0.3 + R/R 0.2."""
-    from datetime import datetime
-
     async with get_session() as session:
         items = await compute_top10(session, top_n=limit)
         # total_candidates: 양의 매력도 종목 개수 (참고용)
         all_count = (
             await session.execute(select(func.count()).select_from(SectorLeader))
         ).scalar() or 0
+        computed_at = await _latest_computed_at(session)
 
     return Top10Response(
         items=[Top10ItemResponse(**it.__dict__) for it in items],
         total_candidates=all_count,
-        computed_at=datetime.utcnow().isoformat(timespec="seconds") + "Z",
+        # 요청 시각이 아니라 실제 계산 시각 (sector_leaders.computed_at 최대값 · 1120-01)
+        computed_at=computed_at,
     )
 
 
