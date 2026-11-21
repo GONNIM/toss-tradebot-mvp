@@ -537,6 +537,13 @@ class Top10ItemResponse(BaseModel):
     entry_method: str = "v2.0-atr"
 
 
+class SectorStatusResponse(BaseModel):
+    """섹터 화면 상단 상태 — 최신 수출 자료 월(데이터 월) · 최신 발표월 · 마지막 계산 시각."""
+    latest_export_month: Optional[str] = None
+    latest_report_month: Optional[str] = None
+    computed_at: Optional[str] = None
+
+
 class Top10Response(BaseModel):
     items: list[Top10ItemResponse]
     total_candidates: int

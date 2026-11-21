@@ -325,6 +325,12 @@ function ListTab({ isAdmin, guideNonce = 0 }: { isAdmin: boolean; guideNonce?: n
 
   return (
     <section className="space-y-3 rounded-lg border p-4">
+      <div
+        className="rounded-lg border-2 border-amber-500/60 bg-amber-500/10 px-4 py-2 text-sm font-bold"
+        data-testid="powderkeg-last-rescreen"
+      >
+        마지막 재평가 {fmtRunIdKst(q.data?.run_id).slice(0, 10)} · 사람이 눌러야 다시 계산됩니다
+      </div>
       <UsageGuideCard key={`ug-${guideNonce}`} />
       <FunnelCard runId={q.data?.run_id || null} />
       <RunDiffSummaryCard data={diffSummary.data} />

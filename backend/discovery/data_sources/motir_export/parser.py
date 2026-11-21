@@ -48,6 +48,13 @@ ITEM_ORDER_15 = (
 )
 
 
+# 2026-11-21 (1120-01): 2026-09 발표분부터 표의 품목 이름이 바뀐 것 → 같은 품목으로 읽는 별칭.
+# 키는 공백 · 줄바꿈을 뺀 이름. 새 이름이 늘면 여기에만 더한다 (점수 대상 품목 목록은 늘리지 않음).
+ITEM_ALIASES = {
+    "철강": "철강제품",
+}
+
+
 # 5대 유망 소비재 별표 (모든 PDF, 12r × 15c, 각 2행)
 CONSUMER_5_ITEMS = (
     "농수산식품", "화장품", "패션의류", "생활유아용품", "의약품",
@@ -193,6 +200,22 @@ def _find_main_item_table(pdf: pdfplumber.PDF) -> Optional[tuple[int, list[list[
     return None
 
 
+def _find_extension_tables(pdf: pdfplumber.PDF) -> list[tuple[int, list[list[Optional[str]]]]]:
+    """메인 표 밖으로 옮겨진 품목을 담은 보조 표 (17r × 15c · 3행 묶음 · '품목명' 헤더).
+
+    2026-09 발표분부터 가전 · 섬유 · 이차전지 · 화장품 · 생활용품이 별도 표로 나옴 (1120-01).
+    """
+    found = []
+    for page_idx, page in enumerate(pdf.pages):
+        for t in page.extract_tables():
+            if not t or len(t) != 17 or not t[0] or len(t[0]) < 14:
+                continue
+            if t[0][0] != "품목명":
+                continue
+            found.append((page_idx, t))
+    return found
+
+
 def _find_consumer_table(pdf: pdfplumber.PDF) -> Optional[tuple[int, list[list[Optional[str]]]]]:
     """5대 유망 소비재 별표 (12r × 15c, '농수산식품' 시작)."""
     for page_idx, page in enumerate(pdf.pages):
@@ -229,6 +252,8 @@ def _parse_block(
     expected_order: tuple[str, ...],
     *,
     has_share: bool,
+    warn_unexpected: bool = True,
+    warn_missing: bool = True,
 ) -> list[ExportItemRecord]:
     """헤더 2행 + 각 품목당 (3 or 2) 행 묶음 → ExportItemRecord 리스트.
 
@@ -243,6 +268,9 @@ def _parse_block(
     out: list[ExportItemRecord] = []
 
     canonical_by_norm = {_norm_text(n): n for n in expected_order}
+    for alias, target in ITEM_ALIASES.items():
+        if target in expected_order:
+            canonical_by_norm.setdefault(alias, target)
     seen: set[str] = set()
 
     i = 0
@@ -254,9 +282,10 @@ def _parse_block(
         item_name = _norm_text(value_row[0])
         canonical = canonical_by_norm.get(item_name)
         if canonical is None:
-            logger.warning(
-                f"[motir_export] 표에 예상 외 품목 등장 name={item_name!r} · skip block"
-            )
+            if warn_unexpected:
+                logger.warning(
+                    f"[motir_export] 표에 예상 외 품목 등장 name={item_name!r} · skip block"
+                )
             i += block_size
             continue
         if canonical in seen:
@@ -295,7 +324,7 @@ def _parse_block(
         i += block_size
 
     missing = set(expected_order) - seen
-    if missing:
+    if missing and warn_missing:
         logger.warning(
             f"[motir_export] 예상 품목 {len(missing)}건 미발견: {sorted(missing)}"
         )
@@ -305,6 +334,15 @@ def _parse_block(
 # ─────────────────────────────────────────────────────────────────
 # 공개 API
 # ─────────────────────────────────────────────────────────────────
+
+
+def missing_items(
+    records: list[ExportItemRecord], *, include_consumer: bool = True
+) -> list[str]:
+    """읽은 행에 없는 점수 대상 품목 (표에서 정말 빠졌거나 못 찾은 것)."""
+    expected = ENRICHED_17_ITEMS if include_consumer else ITEM_ORDER_15
+    have = {r.item for r in records}
+    return [i for i in expected if i not in have]
 
 
 def parse_item_timeseries(
@@ -341,7 +379,21 @@ def parse_item_timeseries(
         if main is None:
             raise ValueError(f"메인 품목 표 미발견 (47r×15c): {pdf_path}")
         _, main_table = main
-        records.extend(_parse_block(main_table, months, ITEM_ORDER_15, has_share=True))
+        records.extend(
+            _parse_block(main_table, months, ITEM_ORDER_15, has_share=True, warn_missing=False)
+        )
+
+        # 메인 표에서 빠진 품목이 보조 표(3행 묶음)에 있으면 거기서 읽는다 (1120-01).
+        present = {r.item for r in records}
+        if present != set(ITEM_ORDER_15):
+            for _, ext_table in _find_extension_tables(pdf):
+                for r in _parse_block(
+                    ext_table, months, ITEM_ORDER_15, has_share=True,
+                    warn_unexpected=False, warn_missing=False,
+                ):
+                    if r.item not in present:
+                        records.append(r)
+                present = {r.item for r in records}
 
         # 별표 보강: 농수산식품·화장품만 픽업
         if include_consumer_supplement:
@@ -358,6 +410,12 @@ def parse_item_timeseries(
                     if r.item in ("농수산식품", "화장품"):
                         records.append(r)
 
+    absent = missing_items(records, include_consumer=include_consumer_supplement)
+    if absent:
+        logger.warning(
+            f"[motir_export] {pdf_path.name}: 끝내 못 읽은 품목 {len(absent)}건 {absent} "
+            f"· 억지로 채우지 않음"
+        )
     logger.info(
         f"[motir_export] parse_item_timeseries({pdf_path.name}): {len(records)} rows"
     )

@@ -2,8 +2,8 @@
 
 cron 3개 (모두 KST):
   ① 매월 1일 11:30  — motir PDF + customs 1~말일 + SectorLeader 재계산
-  ② 매월 11일 12:00 — customs 1~10일 + SectorLeader 재계산
-  ③ 매월 21일 12:00 — customs 1~20일 + SectorLeader 재계산
+  ② 매월 11일 12:00 — (motir 빠진 달 따라잡기) + customs 1~10일 + SectorLeader 재계산
+  ③ 매월 21일 12:00 — (motir 빠진 달 따라잡기) + customs 1~20일 + SectorLeader 재계산
 
 각 단계는 try/except 로 격리 — motir KDI catalog 미등재 같은 부분 실패가
 customs / recompute 진행을 막지 않음.
@@ -26,6 +26,7 @@ from apscheduler.events import (
 )
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.cron import CronTrigger
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.discovery.data_sources.customs_interim import fetch_and_save
@@ -39,7 +40,7 @@ from backend.discovery.sector_leaders.analysis import (
 )
 from backend.discovery.sector_leaders.ingest import ingest_pdf
 from backend.services.db import get_session
-from backend.services.models import Log
+from backend.services.models import Log, MotirItemExport
 
 logger = logging.getLogger(__name__)
 
@@ -80,6 +81,109 @@ async def monthly_ingest_job(
     async with get_session() as session:
         stats = await ingest_pdf(session, pdf_path, rm)
     logger.info(f"[motir_ingest] done report_month={rm} stats={stats}")
+    return stats
+
+
+# ─────────────────────────────────────────────────────────────────
+# 빠진 달 따라잡기 (1120-01 · 교훈 #22)
+# ─────────────────────────────────────────────────────────────────
+
+# 한 번에 따라잡는 최대 달 수 (가장 최근 달부터 이만큼). 달마다 KDI 목록 1회 + PDF 1회 이내.
+MOTIR_CATCHUP_MAX_MONTHS = 6
+
+
+def _add_month(d: date, n: int = 1) -> date:
+    y, m = d.year, d.month + n
+    while m > 12:
+        m -= 12
+        y += 1
+    while m < 1:
+        m += 12
+        y -= 1
+    return date(y, m, 1)
+
+
+def _month_key(d: date) -> str:
+    return f"{d.year:04d}-{d.month:02d}"
+
+
+def months_to_catch_up(
+    present: Optional[set[str]],
+    current: date,
+    max_months: int = MOTIR_CATCHUP_MAX_MONTHS,
+) -> list[date]:
+    """최근 max_months 개월(이번 달 포함) 가운데 DB 에 그 발표월 행이 하나도 없는 달 (오래된 달 → 최신 달).
+
+    present: motir_item_exports 의 source_report_month 집합 ('YYYY-MM').
+    - present 가 None 또는 빈 집합(적재 이력 없음)이면 이번 달만.
+    - 중간 달이 비어 있으면 뒤 달이 성공했어도 그 달을 다시 시도한다 (1120-01 PO 요청).
+    """
+    if not present:
+        return [current]
+    window = [_add_month(current, -i) for i in range(max_months - 1, -1, -1)]
+    return [m for m in window if _month_key(m) not in present]
+
+
+async def _ingested_report_months(session: AsyncSession) -> set[str]:
+    """DB motir_item_exports 에 행이 있는 source_report_month 집합."""
+    rows = (
+        await session.execute(select(MotirItemExport.source_report_month).distinct())
+    ).scalars().all()
+    return {str(r) for r in rows if r}
+
+
+async def motir_catchup(
+    *,
+    pdf_dir: Optional[Path] = None,
+    current: Optional[date] = None,
+    max_months: int = MOTIR_CATCHUP_MAX_MONTHS,
+    log_tag: str = "motir_catchup",
+) -> dict:
+    """최근 6개월(이번 달 포함) 중 DB 에 발표월 행이 없는 달을 오래된 달부터 차례로 받아 적재.
+
+    - 한 달이 실패해도 다음 달 계속.
+    - 이번 달이 아직 KDI 에 없으면(KeyError) WARNING 「아직 없음」 · 지난 달이 빠졌는데 못 받으면 ERROR.
+    - 반환 stats["months"][YYYY-MM] = {"status": ok|not_yet|failed, ...}.
+    """
+    cur = current or _first_of_current_month()
+    async with get_session() as session:
+        present = await _ingested_report_months(session)
+    targets = months_to_catch_up(present, cur, max_months)
+    stats: dict = {
+        "last_ingested": max(present) if present else None,
+        "targets": [_month_key(m) for m in targets],
+        "months": {},
+        "ok": 0,
+        "not_yet": 0,
+        "failed": 0,
+    }
+    for rm in targets:
+        key = _month_key(rm)
+        is_current = rm >= cur
+        try:
+            stats["months"][key] = {
+                "status": "ok",
+                "stats": await monthly_ingest_job(report_month=rm, pdf_dir=pdf_dir),
+            }
+            stats["ok"] += 1
+        except KeyError as e:
+            if is_current:
+                logger.warning(
+                    f"[{log_tag}] {key} 자료가 아직 KDI 에 없음 (다음 작업에서 다시 시도): {e}"
+                )
+                stats["months"][key] = {"status": "not_yet", "error": str(e)}
+                stats["not_yet"] += 1
+            else:
+                logger.error(
+                    f"[{log_tag}] 지난 달 {key} 자료를 KDI 에서 못 찾음 · 빠진 채로 남음: {e}"
+                )
+                stats["months"][key] = {"status": "failed", "error": f"catalog_miss: {e}"}
+                stats["failed"] += 1
+        except Exception as e:  # noqa: BLE001
+            logger.exception(f"[{log_tag}] {key} 받기·적재 실패: {e}")
+            stats["months"][key] = {"status": "failed", "error": str(e)}
+            stats["failed"] += 1
+    logger.info(f"[{log_tag}] done stats={stats}")
     return stats
 
 
@@ -138,16 +242,16 @@ async def monthly_full_refresh_job(
         logger.warning(f"[monthly_full_refresh] KDI 캐시 갱신 실패 · 시드 fallback: {e}")
         stats["kdi_cache_refresh"] = {"ok": False, "error": str(e)}
 
-    # 1) motir PDF (KeyError 는 재발 방지 승격 · ERROR + Exception 재발생 → 알람 감지)
+    # 1) motir PDF — 빠진 달 따라잡기 (report_month 를 직접 준 수동 실행은 그 달만)
     try:
-        stats["motir"] = await monthly_ingest_job(
-            report_month=report_month, pdf_dir=pdf_dir
-        )
+        if report_month is not None:
+            stats["motir"] = await monthly_ingest_job(
+                report_month=report_month, pdf_dir=pdf_dir
+            )
+        else:
+            stats["motir"] = await motir_catchup(pdf_dir=pdf_dir, log_tag="monthly_full_refresh")
     except KeyError as e:
-        logger.error(
-            f"[monthly_full_refresh] motir KDI num 3단 fallback 모두 실패: {e} · "
-            f"discovery 사이트 구조 변경 가능 · 조사 필요"
-        )
+        logger.error(f"[monthly_full_refresh] motir KDI num 3단 fallback 모두 실패: {e}")
         stats["motir"] = {"error": f"catalog_miss: {e}"}
     except Exception as e:
         logger.exception(f"[monthly_full_refresh] motir error: {e}")
@@ -178,6 +282,12 @@ async def monthly_full_refresh_job(
 async def customs_interim_10day_job() -> dict:
     """매월 11일 12:00 — customs 1~10일 잠정 fetch + KRX 일봉 + recompute."""
     stats: dict = {}
+    # 빠진 달 따라잡기 먼저 (실패해도 나머지 단계 계속)
+    try:
+        stats["motir"] = await motir_catchup(log_tag="customs_10day")
+    except Exception as e:  # noqa: BLE001
+        logger.exception(f"[customs_10day] motir 따라잡기 error: {e}")
+        stats["motir"] = {"error": str(e)}
     async with get_session() as session:
         try:
             stats["customs"] = await _customs_fetch_recent(session, months_back=2)
@@ -201,6 +311,12 @@ async def customs_interim_10day_job() -> dict:
 async def customs_interim_20day_job() -> dict:
     """매월 21일 12:00 — customs 1~20일 잠정 fetch + KRX 일봉 + recompute."""
     stats: dict = {}
+    # 빠진 달 따라잡기 먼저 (실패해도 나머지 단계 계속)
+    try:
+        stats["motir"] = await motir_catchup(log_tag="customs_20day")
+    except Exception as e:  # noqa: BLE001
+        logger.exception(f"[customs_20day] motir 따라잡기 error: {e}")
+        stats["motir"] = {"error": str(e)}
     async with get_session() as session:
         try:
             stats["customs"] = await _customs_fetch_recent(session, months_back=2)

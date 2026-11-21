@@ -26,6 +26,7 @@ from backend.discovery.data_sources.motir_export import (
     parse_item_timeseries,
     parse_region_timeseries,
 )
+from backend.discovery.data_sources.motir_export.parser import missing_items
 from backend.services.models import (
     MotirExportHistory,
     MotirItemExport,
@@ -103,6 +104,8 @@ async def ingest_pdf(
         "region_updated": 0,
         "history_added": 0,
         "conflicts": 0,
+        # 점수 대상 17품목 중 PDF 에서 끝내 못 읽은 품목 수 (이름은 경고 기록에 남음)
+        "items_missing": len(missing_items(items)),
     }
     pdf_name = pdf_path.name
     rm_str = _month_str(report_month)
@@ -277,6 +280,7 @@ async def ingest_directory(
         "region_updated": 0,
         "history_added": 0,
         "conflicts": 0,
+        "items_missing": 0,
         "pdfs_processed": 0,
     }
     for data_month, pdf in pdfs:

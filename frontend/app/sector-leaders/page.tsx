@@ -37,6 +37,14 @@ import {
 } from "@/lib/utils";
 import { upDownText } from "@/lib/updown";
 
+/** 서버가 준 UTC 시각(…Z)을 한국 시각 문자열로. 없으면 「기록 없음」. */
+function formatComputedAt(iso: string | null | undefined): string {
+  if (!iso) return "기록 없음";
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return iso;
+  return d.toLocaleString("ko-KR", { timeZone: "Asia/Seoul", hour12: false });
+}
+
 export default function SectorLeadersPage() {
   const [selectedItem, setSelectedItem] = useState<string | null>(null);
   const [selectedTicker, setSelectedTicker] = useState<string | null>(null);
@@ -45,6 +53,12 @@ export default function SectorLeadersPage() {
     queryKey: ["sector-leaders", "items"],
     queryFn: () => api.sectorLeaders.items(),
   });
+
+  const statusQuery = useQuery({
+    queryKey: ["sector-leaders", "status"],
+    queryFn: () => api.sectorLeaders.status(),
+  });
+  const status = statusQuery.data;
 
   const items = itemsQuery.data ?? [];
   const activeItem = selectedItem ?? (items.length > 0 ? items[0].item : null);
@@ -69,6 +83,13 @@ export default function SectorLeadersPage() {
             산업통상부 월간 수출입동향 ↔ KRX 주도주 ·{" "}
             매월 1일 발표 자료 자동 갱신 · 24개월 Pearson 상관 + lead/lag 시그널
           </p>
+          {status && (
+            <p className="text-sm font-medium" data-testid="sector-status-line">
+              최신 수출 자료 월 {status.latest_export_month ?? "없음"}
+              {status.latest_report_month ? ` (${status.latest_report_month} 발표분)` : ""} ·
+              마지막 계산 {formatComputedAt(status.computed_at)}
+            </p>
+          )}
         </div>
         <button
           onClick={() => setTop10Open(true)}
