@@ -87,7 +87,7 @@ export function HeaderSession() {
         type="button"
         onClick={() => setOpen(!open)}
         aria-expanded={open}
-        className="min-h-[44px] rounded-lg px-2 text-sm text-muted-foreground hover:text-foreground md:px-3"
+        className="min-h-[44px] rounded-lg px-1 text-sm text-muted-foreground hover:text-foreground md:px-3"
       >
         <span className="hidden md:inline">관리자 </span>로그인
       </button>

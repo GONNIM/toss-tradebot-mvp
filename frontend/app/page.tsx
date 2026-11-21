@@ -19,6 +19,8 @@ import { useSessionListener } from "@/lib/auth";
 import { homeKillLabel } from "@/lib/sniper-safety";
 import { StockLabel } from "@/components/stock/StockLabel";
 import { JournalKpiBadge } from "@/components/home/JournalKpiBadge";
+import { splitHiddenCandidates } from "@/lib/menu-visibility";
+import { useMenuVisibility } from "@/lib/use-menu-visibility";
 
 const LOCKED = "로그인하면 보입니다";
 
@@ -196,6 +198,9 @@ export default function Home() {
     queryFn: () => api.today(),
     retry: false,
   });
+  // 1120-01 · 「오늘 후보」 칸이 가리키는 화면이 메뉴에서 숨김이면 그 칸을 뺀다 (메뉴 값 읽기 실패면 7개 모두 보임)
+  const { menu } = useMenuVisibility();
+  const { shown, hiddenCount } = splitHiddenCandidates(q.data?.candidates ?? [], menu);
 
   return (
     <div className="space-y-6">
@@ -220,9 +225,14 @@ export default function Home() {
             <p className="text-sm text-muted-foreground">
               점수는 모두 100점 만점인 추정값입니다. 각 후보 화면의 기준으로 매긴 값이라 서로 비교하지 않습니다. 오를 것을 보장하지 않습니다.
             </p>
-            {q.data.candidates.map((b) => (
+            {shown.map((b) => (
               <CandidateBlock key={b.source} b={b} />
             ))}
+            {hiddenCount > 0 && (
+              <p className="text-sm text-muted-foreground">
+                숨긴 후보 칸 {hiddenCount}개 · 설정 › 메뉴 보이기에서 다시 켤 수 있습니다
+              </p>
+            )}
           </div>
         </>
       )}

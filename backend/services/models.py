@@ -2004,6 +2004,16 @@ class NotificationSetting(Base):
     updated_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, server_default=func.now(), onupdate=func.now())
 
 
+class MenuVisibility(Base):
+    """메뉴 탭 보이기 설정 (1120-01). 행이 없으면 보임. 화면은 지우지 않고 메뉴에서만 뺀다."""
+
+    __tablename__ = "menu_visibility"
+
+    key: Mapped[str] = mapped_column(String(80), primary_key=True)
+    visible: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, server_default=func.now(), onupdate=func.now())
+
+
 class NotificationLog(Base):
     """발송 시도 기록 (30일 보관). result: sent | failed | skipped | queued."""
 
