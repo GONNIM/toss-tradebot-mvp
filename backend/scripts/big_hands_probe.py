@@ -40,9 +40,11 @@ MIN_GAP_SEC = 1.0
 EXPIRY_MARGIN_SEC = 300
 EXIT_OK, EXIT_NO_TOKEN, EXIT_UNAUTHORIZED, EXIT_BAD_TIME, EXIT_LIMIT, EXIT_TRANSPORT = 0, 2, 3, 4, 5, 6
 
-# (시작, 끝) KST 분 단위 · 정해진 작업 시각 앞뒤 (기획서 3-1-1) + 장 시간
-_FORBIDDEN = [(5 * 60 + 55, 6 * 60 + 45), (9 * 60, 9 * 60 + 15), (9 * 60 + 15, 15 * 60 + 30),
+# (시작, 끝) KST 분 단위 · 정해진 작업 시각 앞뒤 (기획서 3-1-1) — 요일 상관없이 막음
+_FORBIDDEN = [(5 * 60 + 55, 6 * 60 + 45), (9 * 60, 9 * 60 + 15),
               (16 * 60 + 40, 17 * 60 + 15), (17 * 60 + 40, 18 * 60 + 20), (20 * 60 + 20, 20 * 60 + 45)]
+# 장 시간은 평일(월~금)에만 막음 — 토·일은 장이 서지 않음 (11/21 사용자 지적 · 평일 휴장일은 그대로 막음)
+_MARKET_HOURS = (9 * 60 + 15, 15 * 60 + 30)
 
 
 class ProbeStop(Exception):
@@ -55,6 +57,8 @@ class ProbeStop(Exception):
 def in_forbidden_window(now: Optional[datetime] = None) -> bool:
     now = (now or datetime.now(tz=_KST)).astimezone(_KST)
     m = now.hour * 60 + now.minute
+    if now.weekday() < 5 and _MARKET_HOURS[0] <= m < _MARKET_HOURS[1]:
+        return True
     return any(a <= m < b for a, b in _FORBIDDEN)
 
 
