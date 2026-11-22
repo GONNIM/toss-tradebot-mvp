@@ -114,3 +114,12 @@ async def test_g_judgments_api_stays_401_without_login(monkeypatch):
         for path in ("/api/v1/judgments", "/api/v1/judgments/baseline?days=90"):
             r = await ac.get(path)
             assert r.status_code == 401, (path, r.status_code)
+
+
+# ── h · 스나이퍼 후보 칸: 「스캔 중…」 멈춤처럼 보이지 않게 · 주문 · 비상 정지 코드는 안 건드림 ──
+def test_h_sniper_candidates_wording_and_order_code_untouched():
+    page = _read("frontend/app/sniper/page.tsx")
+    assert "후보 목록을 계산하는 중" in page and "sniper-candidates-error" in page
+    assert '<p className="text-sm">스캔 중…</p>' not in page
+    # 전역 상태 배지의 「스캔 중」(스나이퍼가 켜진 상태)은 그대로다
+    assert '"스캔 중"' in _read("frontend/lib/sniper-safety.ts")
