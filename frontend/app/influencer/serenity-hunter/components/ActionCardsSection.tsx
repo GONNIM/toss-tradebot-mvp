@@ -18,6 +18,14 @@ function _fmtKrw(v: number): string {
   return `${Math.round(v).toLocaleString("ko-KR")}원`;
 }
 
+/** 1120-01 단계 4 e · 환율 문구. 서버가 코드의 고정값(1330)을 쓰면 그 사실과 「추정」임을 밝힌다 (바깥 호출 없음 · 값 그대로). */
+function _fxText(rate: number, source: string): string {
+  const won = Math.round(rate).toLocaleString("ko-KR");
+  return source === "hardcoded"
+    ? `고정값 ${won}원 기준 (실제 환율과 다름 · 원화 금액은 추정)`
+    : `환율 ${won}원 (${source})`;
+}
+
 export function ActionCardsSection({ data }: { data: ActionCardsResponse }) {
   const [dialogTicker, setDialogTicker] = useState<string | null>(null);
   const [showRest, setShowRest] = useState(false);
@@ -41,7 +49,7 @@ export function ActionCardsSection({ data }: { data: ActionCardsResponse }) {
           </p>
         </div>
         <div className="text-xs text-muted-foreground">
-          FX {data.fx_rate.toFixed(0)} ({data.fx_source}) · as of {data.as_of.slice(0, 19)}
+          {_fxText(data.fx_rate, data.fx_source)} · as of {data.as_of.slice(0, 19)}
         </div>
       </header>
 

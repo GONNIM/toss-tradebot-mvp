@@ -79,3 +79,13 @@ def test_d_today_display_check_ts():
     r = subprocess.run(["npx", "--yes", "tsx", "lib/today-display.check.ts"], cwd=FE, capture_output=True, text=True, timeout=120)
     assert r.returncode == 0, r.stdout + r.stderr
     assert "today-display ok" in r.stdout
+
+
+# ── e · Serenity Hunter 환율: 바깥 호출 없이 고정값임을 밝힘 ──────────────────
+def test_e_fx_text_says_fixed_value_and_no_outside_call():
+    comp = _read("frontend/app/influencer/serenity-hunter/components/ActionCardsSection.tsx")
+    assert "고정값 ${won}원 기준" in comp and "원화 금액은 추정" in comp
+    assert "FX {data.fx_rate" not in comp
+    cards = _read("backend/discovery/serenity/action_cards.py")
+    assert '"fx_source": "hardcoded"' in cards            # 값 · 출처 표시는 서버 그대로
+    assert "get_toss_client" not in cards and "usd_krw(" not in cards   # 비로그인 요청이 토스를 부르지 않음
