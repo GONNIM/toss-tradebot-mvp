@@ -46,3 +46,16 @@ def test_b_unit_follows_description_before_key_suffix():
     page = _read("frontend/app/admin/settings/page.tsx")
     body = page[page.index("function currencyUnit"):page.index("export default function")]
     assert body.index("KRW|원") < body.index('k.endsWith("_usd")')
+
+
+# ── c · 섹터 시총 출처 안내 (점수 · 수집 방식은 그대로) ──────────────────────
+def test_c_sector_market_cap_source_note_and_no_regular_writer():
+    page = _read("frontend/app/sector-leaders/page.tsx")
+    assert "정해진 일정으로 갱신하는 작업이 없어" in page
+    # 안내가 거짓이 되지 않게: 종목 정보 표를 쓰는 곳은 정기 잡이 아니다 (생기면 안내를 고친다)
+    writers = [
+        str(p.relative_to(ROOT))
+        for p in (ROOT / "backend").rglob("*.py")
+        if "venv" not in p.parts and "tests" not in p.parts and "upsert_meta(" in p.read_text(encoding="utf-8")
+    ]
+    assert writers == ["backend/discovery/data_sources/krx_price/loader.py"]   # 정의만 있고 부르는 곳 없음
