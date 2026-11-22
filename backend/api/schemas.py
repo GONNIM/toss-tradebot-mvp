@@ -63,8 +63,8 @@ class MoonshotPickResponse(BaseModel):
     score_insider: Optional[float] = None
     # 매수 3 가격대 (Decision 33)
     buy_price_a: Optional[float] = None  # 시장가
-    buy_price_b: Optional[float] = None  # -5% drop
-    buy_price_c: Optional[float] = None  # +8% breakout
+    buy_price_b: Optional[float] = None  # 현재가 -3% 지정가 (저장 값은 cron.py 의 limit_3pct)
+    buy_price_c: Optional[float] = None  # 현재가 -7% 지정가 (저장 값은 cron.py 의 limit_7pct · 예전 이름은 +8% 돌파)
     # 매도 정책 (Decision 34)
     target_sell_multiplier: Optional[float] = None
     stop_loss_multiplier: Optional[float] = None

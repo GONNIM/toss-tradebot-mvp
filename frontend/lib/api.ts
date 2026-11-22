@@ -210,8 +210,8 @@ export interface MoonshotPick {
   score_insider: number | null;
   // 매수 3 가격대 (Decision 33)
   buy_price_a: number | null;          // 시장가
-  buy_price_b: number | null;          // -5% drop
-  buy_price_c: number | null;          // +8% breakout
+  buy_price_b: number | null;          // 현재가 -3% 지정가
+  buy_price_c: number | null;          // 현재가 -7% 지정가
   // 매도 정책 (Decision 34)
   target_sell_multiplier: number | null;
   stop_loss_multiplier: number | null;
