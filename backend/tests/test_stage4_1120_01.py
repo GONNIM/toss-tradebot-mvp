@@ -172,3 +172,12 @@ def test_n_powderkeg_guide_matches_code_threshold():
     assert "8. F-Score ≥ 4" in guide and "(F-Score - 4) / 4" in guide
     assert "8. F-Score ≥ 6" not in guide and "(F-Score - 6) / 6" not in guide
     assert "(F-Score - " in _read("backend/powderkeg/screener.py") or "piotroski_f_score_min" in _read("backend/powderkeg/screener.py")
+
+
+# ── o · 행동주의 카드: 원문 값은 그대로, 0 으로만 된 CUSIP · 100% 지분율에 설명 ──────
+def test_o_activist_card_labels_placeholder_cusip_and_hundred_percent():
+    page = _read("frontend/app/activist-radar/page.tsx")
+    assert "CUSIP 없음 (원문이 0 으로만 채움)" in page and "percent-100-note" in page
+    assert r"/^0+$/.test(cusip.trim())" in page
+    parser = _read("backend/discovery/activist/sec_filing_details.py")
+    assert "percent_of_class = _max_float(pcs)" in parser       # 파싱(수집 방식)은 그대로

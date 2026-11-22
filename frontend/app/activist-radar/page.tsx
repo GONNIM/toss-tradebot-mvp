@@ -172,7 +172,7 @@ function EventRow({ e }: { e: ActivistEventItem }) {
           {e.details?.issuer_cik && (
             <span className="ml-auto text-xs font-mono text-slate-500">
               issuer CIK {e.details.issuer_cik}
-              {e.details.issuer_cusip && ` · CUSIP ${e.details.issuer_cusip}`}
+              {e.details.issuer_cusip && ` · ${cusipText(e.details.issuer_cusip)}`}
             </span>
           )}
         </div>
@@ -208,6 +208,11 @@ function EventRow({ e }: { e: ActivistEventItem }) {
                   {e.details.percent_of_class.toFixed(1)}
                   <span className="text-xl">%</span>
                 </div>
+                {e.details.percent_of_class >= 100 && (
+                  <div className="mt-1 text-xs text-slate-600" data-testid="percent-100-note">
+                    신고서 원문에 적힌 값 그대로입니다. 100%는 이례적이라 원문 링크에서 확인하십시오.
+                  </div>
+                )}
               </div>
             )}
             {e.details?.aggregate_amount_owned !== null &&
@@ -814,6 +819,11 @@ function UniverseEditor({
       </div>
     </div>
   );
+}
+
+/** 1120-01 단계 4 o · CUSIP 이 0 으로만 채워져 있으면 번호가 아니라 「번호 없음」 표시다 (신고서 원문 그대로 · 값은 바꾸지 않음). */
+function cusipText(cusip: string): string {
+  return /^0+$/.test(cusip.trim()) ? "CUSIP 없음 (원문이 0 으로만 채움)" : `CUSIP ${cusip}`;
 }
 
 export default function ActivistRadarPage() {
