@@ -40,6 +40,17 @@ async def fetch_all_meta() -> pd.DataFrame:
     return await asyncio.to_thread(fdr.StockListing, "KRX")
 
 
+async def fetch_sector_listing() -> pd.DataFrame:
+    """섹터 시총 갱신용 — FDR StockListing('KOSPI') + ('KOSDAQ') 을 이어 붙인 표 (1122-01).
+
+    fetch_all_meta(StockListing('KRX'))는 보유 관리(holdings_swing)가 쓰므로 건드리지 않고 따로 둔다.
+    한쪽이라도 실패하면 예외를 그대로 올린다 (반쪽 목록으로 시총을 덮어쓰지 않기 위해).
+    """
+    kospi = await asyncio.to_thread(fdr.StockListing, "KOSPI")
+    kosdaq = await asyncio.to_thread(fdr.StockListing, "KOSDAQ")
+    return pd.concat([kospi, kosdaq], ignore_index=True)
+
+
 async def upsert_meta(
     session: AsyncSession,
     tickers: Iterable[str],

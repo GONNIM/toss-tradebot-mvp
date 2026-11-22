@@ -39,6 +39,7 @@ from backend.services.models import (
     MotirRegionExport,
     SectorLeader,
 )
+from backend.discovery.sector_leaders.mcap_source import latest_snapshots, pick_last_close
 
 
 @dataclass(frozen=True)
@@ -137,6 +138,8 @@ async def compute_top10(
     ).scalars().all()
     metas = (await session.execute(select(KrxStockMeta))).scalars().all()
     meta_by_ticker = {m.ticker: m for m in metas}
+    # 1122-01: 메타 종가가 없거나 스냅샷이 더 새로우면 스냅샷 종가를 대체 가격으로 쓴다
+    snap_by_ticker = await latest_snapshots(session, [lead.ticker for lead in leaders])
 
     # 실시간 현재가 일괄 fetch (60초 캐시, 외부 실패 시 last_close fallback)
     live_quotes = await fetch_quotes([leader.ticker for leader in leaders])
@@ -219,7 +222,8 @@ async def compute_top10(
         ticker = leader.ticker
         item = leader.item
         meta = meta_by_ticker.get(ticker)
-        if meta is None or not meta.last_close or meta.last_close <= 0:
+        fb_price, fb_date = pick_last_close(meta, snap_by_ticker.get(ticker))
+        if fb_price is None:
             continue
 
         # 현재가 — 실시간 우선, 실패 시 last_close fallback
@@ -232,9 +236,9 @@ async def compute_top10(
             ).isoformat()
             price_market_status = quote.market_status
         else:
-            current_price = meta.last_close
+            current_price = fb_price
             price_source = "fallback"
-            price_at = None
+            price_at = fb_date  # 스냅샷 종가를 쓴 경우만 그 날짜 (YYYY-MM-DD) · 메타면 None
             price_market_status = None
 
         close_map, ret_map = monthly_by_ticker.get(ticker, ({}, {}))
