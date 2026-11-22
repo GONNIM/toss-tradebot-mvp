@@ -10,7 +10,7 @@ router = APIRouter()
 
 # 정적 설정 (DB 미사용 — 추후 Phase J 확장)
 STATIC_SETTINGS = {
-    "max_position_size_usd": ("1000000", "단일 종목 최대 매수 (KRW)"),
+    "max_position_size_usd": ("1000000", "단일 종목 최대 매수 (원 · 이 값을 읽는 매수 코드는 없음 · 표시만 됨)"),
     "moonshot_seed_krw":     ("1000000", "Moonshot 고위험 시드"),
     "auto_trade_seed_krw":   ("15000000", "자동매매 시드"),
     "take_profit_pct":       ("0.20", "단타 익절 (+20%)"),

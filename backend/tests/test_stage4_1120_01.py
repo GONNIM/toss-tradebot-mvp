@@ -24,3 +24,25 @@ def test_a_moonshot_price_labels_match_stored_values():
     page = _read("frontend/app/lab/moonshot/page.tsx")
     assert "B 현재가 -3% 지정가" in page and "C 현재가 -7% 지정가" in page
     assert "+8% 돌파" not in page and "-5% drop" not in page
+
+
+# ── b · max_position_size_usd: 값 · 키 이름은 그대로, 설명과 단위 표시만 ─────
+def test_b_unused_value_is_labeled_and_value_unchanged():
+    from backend.api.routes.settings import STATIC_SETTINGS
+
+    value, desc = STATIC_SETTINGS["max_position_size_usd"]
+    assert value == "1000000"                      # 운영 값은 바꾸지 않았다
+    assert "원" in desc and "읽는 매수 코드는 없음" in desc
+    # 이 키를 읽는 코드가 정말 없는지 (생기면 이 시험이 알려 설명을 다시 본다)
+    hits = [
+        str(p.relative_to(ROOT))
+        for p in (ROOT / "backend").rglob("*.py")
+        if "venv" not in p.parts and "tests" not in p.parts and "max_position_size_usd" in p.read_text(encoding="utf-8")
+    ]
+    assert hits == ["backend/api/routes/settings.py"]
+
+
+def test_b_unit_follows_description_before_key_suffix():
+    page = _read("frontend/app/admin/settings/page.tsx")
+    body = page[page.index("function currencyUnit"):page.index("export default function")]
+    assert body.index("KRW|원") < body.index('k.endsWith("_usd")')

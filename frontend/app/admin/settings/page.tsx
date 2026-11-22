@@ -23,9 +23,10 @@ function formatValue(value: string, key: string, description: string | null): st
 function currencyUnit(key: string, description: string | null): string {
   const k = key.toLowerCase();
   if (k.endsWith("_krw") || k.endsWith("_won")) return "원";
-  if (k.endsWith("_usd")) return "USD";
+  // 1120-01 단계 4 b · 설명에 단위가 적혀 있으면 키 이름 끝(_usd)보다 설명을 따른다 (키 이름은 예전 그대로라 단위와 어긋남).
   if (description && /KRW|원|시드|자금|매수|예산/.test(description)) return "원";
   if (description && /USD|달러/.test(description)) return "USD";
+  if (k.endsWith("_usd")) return "USD";
   return "";
 }
 
