@@ -54,8 +54,14 @@ def test_b_unit_follows_description_before_key_suffix():
 # ── c · 섹터 시총 출처 안내 (점수 · 수집 방식은 그대로) ──────────────────────
 def test_c_sector_market_cap_source_note_and_no_regular_writer():
     page = _read("frontend/app/sector-leaders/page.tsx")
-    assert "정해진 일정으로 갱신하는 작업이 없어" in page
-    # 안내가 거짓이 되지 않게: 종목 정보 표를 쓰는 곳은 정기 잡이 아니다 (생기면 안내를 고친다)
+    # 1123-01 · 1122-01 로 섹터 잡 3개(1·11·21일)가 재계산 직전에 시총을 받으므로 안내를 그 동작으로 고침
+    assert "정해진 일정으로 갱신하는 작업이 없어" not in page
+    assert "12/01 계산부터는 계산(매달 1·11·21일) 직전에 시총을 새로 받고" in page
+    sched = _read("backend/discovery/sector_leaders/scheduler.py")
+    assert sched.count("await _krx_meta_refresh(session)") == 3                 # 안내가 거짓이 되지 않게
+    for d in ("day=1, hour=11, minute=30", "day=11, hour=12", "day=21, hour=12"):
+        assert d in sched
+    # upsert_meta 는 여전히 부르는 곳이 없다 (정기 갱신은 mcap_source.refresh_sector_meta 가 한다)
     writers = [
         str(p.relative_to(ROOT))
         for p in (ROOT / "backend").rglob("*.py")
@@ -188,6 +194,8 @@ def test_heading_merged_tabs_hide_original_h1_only_inside_tabs():
     tabs = _read("frontend/components/layout/MergedTabs.tsx")
     assert '[&_h1]:hidden' in tabs and 'data-testid="merged-tab-original"' in tabs
     assert '<h1 className="sr-only">{tabs[cur].label}</h1>' in tabs      # 숨긴 자리에 화면 제목 하나
+    # 1123-01 · 화면 제목은 숨김 칸 밖 (안에 있으면 [&_h1]:hidden 이 그것까지 숨김)
+    assert tabs.index('<h1 className="sr-only">') < tabs.index('className="[&_h1]:hidden"')
     assert "cur === 0 ?" in tabs                                          # 첫 탭(받는 화면 자신)은 그대로
     # 옛 주소로 바로 열면 옛 제목 그대로 (옛 화면 파일에는 숨기는 코드가 없다)
     for rel in ("app/vip/page.tsx", "app/logs/page.tsx", "app/rulebook/page.tsx", "app/lab/moonshot/page.tsx"):
