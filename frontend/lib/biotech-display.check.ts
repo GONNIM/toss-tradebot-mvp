@@ -131,7 +131,7 @@ assert.equal(conditionsLine([{ en: "Neoplasms by Histologic Type", ignored: true
   "Neoplasms by Histologic Type (일반 용어)");
 // WP98-2 · 소문 카드 머리 레딧 상태
 assert.equal(redditLine({ subs_total: 4, subs_collected: 4, mode: "combined" }), "레딧 4곳 중 4곳 수집");
-assert.equal(redditLine({ subs_total: 4, subs_collected: 0, mode: "none" }), "레딧 입력 없음(HTTP 429) · 4곳 모두 차단");
+assert.equal(redditLine({ subs_total: 4, subs_collected: 0, mode: "none" }), "레딧 입력 없음 · 4곳 모두 글을 받지 못했습니다 (레딧이 요청을 막은 응답, HTTP 429). 레딧 쪽 제한이라 이 화면에서는 고칠 수 없으며, 레딧 글 수가 0으로 보여도 실제로 0건이라는 뜻이 아닙니다.");
 assert.equal(redditLine(null), null);
 // WP100 · 경보 기준 문구
 assert.ok(alertCriteria(3).includes("레딧 조건은 기준선 수집 중(어제까지 3/7일)"));

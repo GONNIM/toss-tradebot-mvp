@@ -144,3 +144,10 @@ def test_j_tag_label_states_threshold_not_measured_value():
     assert "평균의 100% 넘게 벗어남 (태그 기준이며 이 종목의 실제 편차 값이 아님)" in page
     assert "한 분기가 합계의 50% 넘게 차지" in page
     assert "직전 4Q 평균 대비 100% 편차" not in page
+
+
+# ── k · 레딧 입력 없음(HTTP 429): 수집 방식은 그대로, 까닭을 쉬운 말로 ───────────
+def test_k_reddit_line_explains_block_without_changing_collection():
+    disp = _read("frontend/lib/biotech-display.ts")
+    assert "레딧이 요청을 막은 응답, HTTP 429" in disp and "실제로 0건이라는 뜻이 아닙니다" in disp
+    assert "모두 차단`" not in disp
