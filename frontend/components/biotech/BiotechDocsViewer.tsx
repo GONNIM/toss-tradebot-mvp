@@ -36,9 +36,10 @@ async function fetchDoc(key: DocTabKey): Promise<BiotechDoc> {
 // md HTML → 계약 클래스 주입 (h1/h2/h3/p/li/blockquote/table/th/td)
 function applyContractToHtml(html: string): string {
   let out = html;
-  out = out.replace(/<h1(\s[^>]*)?>/gi, '<h1 class="text-lg font-bold mt-3 mb-1">');
   out = out.replace(/<h2(\s[^>]*)?>/gi, '<h2 class="text-base font-semibold mt-3 mb-1">');
   out = out.replace(/<h3(\s[^>]*)?>/gi, '<h3 class="text-sm font-medium mt-2 mb-1">');
+  // 1120-01 단계 4 · 문서 속 h1 은 h2 로 낮춘다 (화면의 큰 제목은 화면마다 하나 · 모양은 예전 h1 그대로).
+  out = out.replace(/<h1(\s[^>]*)?>/gi, '<h2 class="text-lg font-bold mt-3 mb-1">').replace(/<\/h1>/gi, "</h2>");
   out = out.replace(/<p(\s[^>]*)?>/gi, '<p class="text-sm leading-5 my-1">');
   out = out.replace(/<li(\s[^>]*)?>/gi, '<li class="text-sm leading-5">');
   out = out.replace(/<blockquote(\s[^>]*)?>/gi, '<blockquote class="border-l-2 border-border pl-2 text-sm leading-5 text-muted-foreground my-1">');

@@ -39,7 +39,17 @@ function MergedTabsInner({ tabs, label }: { tabs: MergedTab[]; label: string }) 
   return (
     <div className="space-y-4">
       <TabBar tabs={tabs} label={label} pathname={pathname} current={cur} />
-      <div key={tabs[cur].key}>{tabs[cur].render()}</div>
+      {cur === 0 ? (
+        <div key={tabs[cur].key}>{tabs[cur].render()}</div>
+      ) : (
+        // 1120-01 단계 4 · 제목 겹침 다듬기. 둘째 탭부터는 옛 화면을 그대로 불러 그리는데, 그 화면의 큰 제목(h1)이
+        // 탭 이름과 겹쳐 두 번 보이고 화면에 제목이 둘이 된다. 탭 안에서만 옛 h1 을 숨기고(display:none · 보조 기기에서도 빠짐)
+        // 탭 이름을 화면 제목(h1) 하나로 둔다 (눈에는 탭 줄이 제목 구실). 옛 주소로 바로 열면 옛 제목이 그대로 보인다.
+        <div key={tabs[cur].key} className="[&_h1]:hidden" data-testid="merged-tab-original">
+          <h1 className="sr-only">{tabs[cur].label}</h1>
+          {tabs[cur].render()}
+        </div>
+      )}
     </div>
   );
 }

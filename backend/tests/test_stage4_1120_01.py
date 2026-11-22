@@ -181,3 +181,22 @@ def test_o_activist_card_labels_placeholder_cusip_and_hundred_percent():
     assert r"/^0+$/.test(cusip.trim())" in page
     parser = _read("backend/discovery/activist/sec_filing_details.py")
     assert "percent_of_class = _max_float(pcs)" in parser       # 파싱(수집 방식)은 그대로
+
+
+# ── 제목 겹침 다듬기 (단계 3 권고 9): 탭 안에서만 옛 h1 숨김 · 화면마다 h1 하나 ─────
+def test_heading_merged_tabs_hide_original_h1_only_inside_tabs():
+    tabs = _read("frontend/components/layout/MergedTabs.tsx")
+    assert '[&_h1]:hidden' in tabs and 'data-testid="merged-tab-original"' in tabs
+    assert '<h1 className="sr-only">{tabs[cur].label}</h1>' in tabs      # 숨긴 자리에 화면 제목 하나
+    assert "cur === 0 ?" in tabs                                          # 첫 탭(받는 화면 자신)은 그대로
+    # 옛 주소로 바로 열면 옛 제목 그대로 (옛 화면 파일에는 숨기는 코드가 없다)
+    for rel in ("app/vip/page.tsx", "app/logs/page.tsx", "app/rulebook/page.tsx", "app/lab/moonshot/page.tsx"):
+        src = _read("frontend/" + rel)
+        assert "<h1" in src and "_h1]:hidden" not in src
+
+
+def test_heading_no_nested_main_and_docs_h1_demoted():
+    ver = _read("frontend/app/principles/verification/page.tsx")
+    assert "<main" not in ver and "</main>" not in ver               # layout 이 이미 main 을 그린다
+    doc = _read("frontend/components/biotech/BiotechDocsViewer.tsx")
+    assert "<h2 class=\"text-lg font-bold mt-3 mb-1\">" in doc and "<h1 class=" not in doc

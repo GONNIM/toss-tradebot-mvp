@@ -68,21 +68,21 @@ export default function VerificationPage() {
 
   if (err)
     return (
-      <main style={{ padding: 20 }}>
+      <div style={{ padding: 20 }}>
         <h1>실체 검증 · 확인 대기</h1>
         <p style={{ color: "crimson" }}>로드 실패: {err}</p>
-      </main>
+      </div>
     );
   if (!data)
     return (
-      <main style={{ padding: 20 }}>
+      <div style={{ padding: 20 }}>
         <h1>실체 검증 · 확인 대기</h1>
         <p>로드 중...</p>
-      </main>
+      </div>
     );
 
   return (
-    <main style={{ padding: 20, maxWidth: 1000, margin: "0 auto" }}>
+    <div style={{ padding: 20, maxWidth: 1000, margin: "0 auto" }}>
       <h1>실체 검증 · 확인 대기</h1>
       {/* 1028-03 · 확인 저장은 관리자 로그인 필요 */}
       <AdminSessionBar scope="verification" />
@@ -154,7 +154,7 @@ export default function VerificationPage() {
         </table>
         </div>
       )}
-    </main>
+    </div>
   );
 }
 
