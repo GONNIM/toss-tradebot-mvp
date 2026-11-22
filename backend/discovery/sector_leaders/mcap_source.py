@@ -14,6 +14,7 @@
 """
 from __future__ import annotations
 
+import asyncio
 import logging
 import math
 from dataclasses import dataclass
@@ -31,8 +32,13 @@ logger = logging.getLogger(__name__)
 # 받은 목록(KOSPI+KOSDAQ) 행 수가 이 값 미만이면 부분 응답으로 보고 갱신 전체를 건너뛴다.
 # 근거: 11/22 로컬 실측 KOSPI 935 + KOSDAQ 1836 = 2771행 · 운영 스냅샷 2771행. 그 약 72%.
 MIN_LISTING_ROWS = 2000
-# 매핑 종목 중 유효한 시총을 찾은 비율이 이 값 미만이면 갱신 전체를 건너뛴다 (51종목이면 41개 미만).
+# 매핑 종목 중 유효한 시총을 찾은 비율이 이 값 미만이면 갱신 전체를 건너뛴다 (51쌍 · 49종목이면 40개 미만 · 40 = 49 의 0.8 올림).
 MIN_FOUND_RATIO = 0.8
+# FDR 목록 받기 제한 시간(초). FDR 내부 requests.get 에 timeout 이 없어 멈추면 잡이 안 끝난다 (1122-04).
+# 근거: 11/22 로컬 정상 실측 3회 0.8~1.4초 (KOSPI+KOSDAQ 두 번 받기). 약 20배인 30초로 둔다.
+# 주의: wait_for 는 기다리는 쪽만 끊는다. asyncio.to_thread 로 돈 FDR 스레드는 못 죽이고 끝날 때까지 남아 돈다
+# (결과는 버려짐 · 다음 잡 때 새 스레드로 다시 받음 · 스레드가 영영 안 끝나면 그만큼 새는 점은 남은 위험).
+FETCH_TIMEOUT_SEC = 30.0
 
 
 def _valid(v: Any) -> Optional[float]:
@@ -63,10 +69,17 @@ async def refresh_sector_meta(
     - 쓰기 뒤 commit 은 호출자가 한다.
     """
     wanted = sorted(set(codes))
-    df = await (fetcher or fetch_sector_listing)()
-    rows = len(df)
-    stats: dict = {"wanted": len(wanted), "listing_rows": rows, "found": 0,
+    stats: dict = {"wanted": len(wanted), "listing_rows": 0, "found": 0,
                    "updated": 0, "inserted": 0, "skipped": False}
+    try:
+        df = await asyncio.wait_for((fetcher or fetch_sector_listing)(), timeout=FETCH_TIMEOUT_SEC)
+    except asyncio.TimeoutError:
+        stats["skipped"] = True
+        stats["reason"] = f"timeout>{FETCH_TIMEOUT_SEC:g}s"
+        logger.warning(f"[krx_meta_refresh] 건너뜀 · 목록 받기가 {FETCH_TIMEOUT_SEC:g}초 안에 끝나지 않음 (재계산은 계속)")
+        return stats
+    rows = len(df)
+    stats["listing_rows"] = rows
     if rows < MIN_LISTING_ROWS:
         stats["skipped"] = True
         stats["reason"] = f"listing_rows<{MIN_LISTING_ROWS}"
@@ -195,6 +208,14 @@ async def load_mcap_choice(session: AsyncSession, codes: Iterable[str]) -> McapC
         if c in first:
             values[c], d = first[c]
             sources[c] = (primary, d)
+            # 주 출처가 메타인데 이 종목만 갱신에서 빠져 날짜가 옛것이고 스냅샷이 더 새로우면 스냅샷으로 채운다 (1122-04)
+            if primary == "meta" and c in second and second[c][1] > d:
+                old_d = d
+                values[c], d = second[c]
+                sources[c] = (second_name, d)
+                logger.warning(
+                    f"[mcap_source] {c} 메타 {old_d} 가 스냅샷 {d} 보다 오래돼 snapshot {d} 로 채움"
+                )
         elif c in second:
             values[c], d = second[c]
             sources[c] = (second_name, d)
