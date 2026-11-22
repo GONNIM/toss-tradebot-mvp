@@ -181,7 +181,7 @@ async def compute_sector_leaders(
     """
     item_yoy = await _load_item_yoy(session)
     ticker_ret = await _load_ticker_monthly_return(session)
-    # 1122-01: 시총은 「날짜가 더 새로운 출처」(메타 · 스냅샷) 하나를 51종목에 같이 쓴다.
+    # 1122-01: 시총은 「날짜가 더 새로운 출처」(메타 · 스냅샷) 하나를 51쌍 · 49종목에 같이 쓴다.
     mcap = await load_mcap_choice(session, [mt.code for mt in iter_all_tickers()])
 
     results: list[PairResult] = []

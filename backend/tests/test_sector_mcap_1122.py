@@ -308,3 +308,64 @@ async def test_meta_refresh_step_commits_before_fetch_and_rolls_back_on_failure(
     with pytest.raises(RuntimeError):
         await S._krx_meta_refresh(FakeSession())
     assert calls == ["commit", "fetch", "rollback"]
+
+
+# ── 1122-04 · 받기 시간 제한 · 오래된 메타 종목만 스냅샷으로 ─────────────
+
+
+@pytest.mark.asyncio
+async def test_fetch_timeout_skips_and_recompute_still_runs(db, monkeypatch):
+    """받기가 제한 시간을 넘으면 건너뜀 · 아무것도 안 쓰고 · 재계산 단계는 그대로 돈다."""
+    import asyncio
+
+    monkeypatch.setattr(M, "FETCH_TIMEOUT_SEC", 0.05)
+
+    async def hang():
+        await asyncio.sleep(5)
+
+    monkeypatch.setattr(M, "fetch_sector_listing", hang)
+    recomputed = []
+
+    async def fake_recompute(session):
+        recomputed.append(1)
+        return {"ok": True}
+
+    monkeypatch.setattr(S, "_recompute_sector_leaders", fake_recompute)
+    async with get_session() as s:
+        await _seed_meta(s)
+        st = await S._krx_meta_refresh(s)  # 예외 없이 건너뜀으로 돌아와야 한다
+        assert st["skipped"] is True and st["reason"].startswith("timeout")
+        assert (await _meta(s, CODES[0])).market_cap_krw == 5.0e11
+        out = await S._recompute_sector_leaders(s)
+    assert out == {"ok": True} and recomputed == [1]
+
+
+@pytest.mark.asyncio
+async def test_stale_meta_ticker_only_filled_from_newer_snapshot(db):
+    """주 출처=메타 · 한 종목만 메타 날짜가 옛것 → 그 종목만 스냅샷 값."""
+    stale = CODES[2]
+    async with get_session() as s:
+        await _seed_meta(s, fetched=datetime(2026, 11, 22, 3, 0, 0))
+        (await _meta(s, stale)).fetched_at = datetime(2026, 6, 1, 3, 0, 0)
+        s.add(KrxMarketSnapshot(ticker=stale, snapshot_date="2026-11-10", market_cap=7.0e11, close_price=70.0))
+        await s.flush()
+        ch = await M.load_mcap_choice(s, CODES)
+    assert ch.primary == "meta"
+    assert ch.sources[stale] == ("snapshot", "2026-11-10")
+    assert ch.values[stale] == pytest.approx(7.0e11)
+    others = [c for c in CODES if c != stale]
+    assert all(ch.sources[c] == ("meta", "2026-11-22") for c in others)
+    assert all(ch.values[c] == pytest.approx(5.0e11) for c in others)
+
+
+@pytest.mark.asyncio
+async def test_same_date_keeps_meta(db):
+    """메타 날짜와 스냅샷 날짜가 같으면 그대로 메타."""
+    c = CODES[2]
+    async with get_session() as s:
+        await _seed_meta(s, fetched=datetime(2026, 11, 22, 3, 0, 0))
+        s.add(KrxMarketSnapshot(ticker=c, snapshot_date="2026-11-22", market_cap=7.0e11, close_price=70.0))
+        await s.flush()
+        ch = await M.load_mcap_choice(s, CODES)
+    assert ch.sources[c] == ("meta", "2026-11-22")
+    assert ch.values[c] == pytest.approx(5.0e11)

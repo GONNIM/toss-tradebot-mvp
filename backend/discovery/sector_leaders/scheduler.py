@@ -206,10 +206,11 @@ async def _krx_candles_refresh(session: AsyncSession) -> dict:
 
 
 async def _krx_meta_refresh(session: AsyncSession) -> dict:
-    """매핑 51종목 시총 · 종가를 KrxStockMeta 에 갱신 (1122-01 · 재계산 직전).
+    """매핑 51쌍 · 49종목 시총 · 종가를 KrxStockMeta 에 갱신 (1122-01 · 재계산 직전).
 
     FDR KOSPI+KOSDAQ 한 번 · 기준 미달이면 건너뜀 · 유효한 값만 씀 (mcap_source 참고).
     11:30 · 12:00 에 받은 값은 장중 값일 수 있다 (추정). 실패해도 재계산은 돈다 (호출부 try/except).
+    목록 받기는 mcap_source.FETCH_TIMEOUT_SEC 를 넘으면 건너뜀(stats["skipped"]) 으로 돌려주고 재계산은 그대로 돈다 (1122-04).
     """
     codes = sorted({t.code for t in iter_all_tickers()})
     logger.info(f"[krx_meta_refresh] {len(codes)} 종목 시총 갱신 시작")
