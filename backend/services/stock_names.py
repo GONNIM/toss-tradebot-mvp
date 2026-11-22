@@ -2,7 +2,8 @@
 
 DB 칸 추가 없이 이미 있는 표에서 이름을 찾는다. 조회가 실패·지연돼도 알림은 그대로 나가야 하므로
 예외와 시간 초과는 None 으로 돌려준다 (호출 측은 「종목명 확인 안 됨 (코드)」로 표시).
-순서: 화약고 시장 스냅샷 최신 → 실주문 유니버스 → 화약고 목록 최신 → KRX 메타 (채우는 잡이 없어 마지막).
+순서: 화약고 시장 스냅샷 최신 → 실주문 유니버스 → 화약고 목록 최신 → KRX 메타 (채우는 잡이 없어) → ETF 이름 목록 (1119-02 · 맨 뒤 · 주식 이름이 먼저).
+이 모듈은 표를 읽기만 한다 (바깥 호출 없음 · ETF 목록은 services/etf_names.py 가 따로 채운다).
 """
 from __future__ import annotations
 
@@ -25,7 +26,7 @@ def _session():
 async def _query(ticker: str) -> Optional[str]:
     from sqlalchemy import select
 
-    from backend.services.models import KrxMarketSnapshot, KrxStockMeta, LiveTapeUniverse, PowderKegList
+    from backend.services.models import KrxEtfName, KrxMarketSnapshot, KrxStockMeta, LiveTapeUniverse, PowderKegList
 
     stmts = (
         select(KrxMarketSnapshot.name)
@@ -36,6 +37,7 @@ async def _query(ticker: str) -> Optional[str]:
         .where(PowderKegList.ticker == ticker, PowderKegList.name.is_not(None), PowderKegList.name != "")
         .order_by(PowderKegList.run_id.desc()).limit(1),
         select(KrxStockMeta.name).where(KrxStockMeta.ticker == ticker).limit(1),
+        select(KrxEtfName.name).where(KrxEtfName.ticker == ticker).limit(1),   # 1119-02 · 맨 뒤
     )
     async with _session() as session:
         for stmt in stmts:
@@ -64,6 +66,7 @@ async def lookup_kr_name(ticker: str, cache: Optional[dict[str, Optional[str]]] 
 # ─────────────────────────────────────────────────────────────────
 # 1119-02 · 한꺼번에 찾기 (화면 응답 · 알림용). 한 건 조회(lookup_kr_name)는 위 그대로 둔다.
 # ─────────────────────────────────────────────────────────────────
+KR_TABLES = 5          # 한국 이름 표 개수 (_kr_table 의 idx 0~4 · 4곳 + ETF 이름 목록)
 CHUNK = 500            # SQLite 변수 한도 대비 · 500개씩 IN 조회
 MEMO_TTL_SEC = 600     # 서버 안 기억 10분
 _memo: dict[tuple[str, str], tuple[float, Optional[str]]] = {}
@@ -104,7 +107,7 @@ async def _kr_table(idx: int, chunk: list[str]) -> dict[str, str]:
     """표 하나에서 코드 묶음의 이름을 한 번에 읽는다 (날짜가 쌓이는 표는 코드별 최신 한 행만)."""
     from sqlalchemy import and_, func, select
 
-    from backend.services.models import KrxMarketSnapshot as M, KrxStockMeta, LiveTapeUniverse, PowderKegList as P
+    from backend.services.models import KrxEtfName, KrxMarketSnapshot as M, KrxStockMeta, LiveTapeUniverse, PowderKegList as P
 
     if idx == 0:
         sub = (select(M.ticker.label("t"), func.max(M.snapshot_date).label("d"))
@@ -116,8 +119,10 @@ async def _kr_table(idx: int, chunk: list[str]) -> dict[str, str]:
         sub = (select(P.ticker.label("t"), func.max(P.run_id).label("d"))
                .where(P.ticker.in_(chunk), P.name.is_not(None), P.name != "").group_by(P.ticker).subquery())
         stmt = select(P.ticker, P.name).join(sub, and_(P.ticker == sub.c.t, P.run_id == sub.c.d))
-    else:
+    elif idx == 3:
         stmt = select(KrxStockMeta.ticker, KrxStockMeta.name).where(KrxStockMeta.ticker.in_(chunk))
+    else:   # idx == 4 · 1119-02 ETF 이름 목록 (맨 뒤)
+        stmt = select(KrxEtfName.ticker, KrxEtfName.name).where(KrxEtfName.ticker.in_(chunk))
     out: dict[str, str] = {}
     async with _session() as session:
         for code, name in (await session.execute(stmt)).all():
@@ -193,7 +198,7 @@ async def _lookup_many(market: str, codes: Iterable[str], table_fn, tables: int)
 
 async def lookup_kr_names(codes: Iterable[str]) -> dict[str, str]:
     """한국 종목 코드 묶음 → {코드: 이름} (못 찾은 코드는 빠짐). 출처 순서는 lookup_kr_name 과 같다."""
-    return await _lookup_many("KR", codes, _kr_table, 4)
+    return await _lookup_many("KR", codes, _kr_table, KR_TABLES)
 
 
 async def lookup_us_names(tickers: Iterable[str]) -> dict[str, str]:
