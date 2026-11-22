@@ -490,7 +490,7 @@ export type RedditStatus = { subs_total?: number; subs_collected?: number; mode?
 export function redditLine(st?: RedditStatus | null): string | null {
   if (!st || typeof st.subs_collected !== "number") return null;
   const total = st.subs_total ?? 4;
-  if (st.subs_collected === 0) return `레딧 입력 없음(HTTP 429) · ${total}곳 모두 차단`;
+  if (st.subs_collected === 0) return `레딧 입력 없음 · ${total}곳 모두 글을 받지 못했습니다 (레딧이 요청을 막은 응답, HTTP 429). 레딧 쪽 제한이라 이 화면에서는 고칠 수 없으며, 레딧 글 수가 0으로 보여도 실제로 0건이라는 뜻이 아닙니다.`;
   return `레딧 ${total}곳 중 ${st.subs_collected}곳 수집`;
 }
 

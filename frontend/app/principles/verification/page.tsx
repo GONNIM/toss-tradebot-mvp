@@ -23,8 +23,8 @@ interface Payload {
 }
 
 const TAG_LABEL: Record<string, string> = {
-  single_quarter_outlier: "단분기 이례 (직전 4Q 평균 대비 100% 편차)",
-  ttm_concentration: "TTM 특정 분기 의존 (>50%)",
+  single_quarter_outlier: "단분기 이례 · 한 분기 값이 직전 4분기 평균에서 평균의 100% 넘게 벗어남 (태그 기준이며 이 종목의 실제 편차 값이 아님)",
+  ttm_concentration: "TTM(최근 4분기 합계) 쏠림 · 한 분기가 합계의 50% 넘게 차지 (태그 기준)",
 };
 
 export default function VerificationPage() {
@@ -68,21 +68,21 @@ export default function VerificationPage() {
 
   if (err)
     return (
-      <main style={{ padding: 20 }}>
+      <div style={{ padding: 20 }}>
         <h1>실체 검증 · 확인 대기</h1>
         <p style={{ color: "crimson" }}>로드 실패: {err}</p>
-      </main>
+      </div>
     );
   if (!data)
     return (
-      <main style={{ padding: 20 }}>
+      <div style={{ padding: 20 }}>
         <h1>실체 검증 · 확인 대기</h1>
         <p>로드 중...</p>
-      </main>
+      </div>
     );
 
   return (
-    <main style={{ padding: 20, maxWidth: 1000, margin: "0 auto" }}>
+    <div style={{ padding: 20, maxWidth: 1000, margin: "0 auto" }}>
       <h1>실체 검증 · 확인 대기</h1>
       {/* 1028-03 · 확인 저장은 관리자 로그인 필요 */}
       <AdminSessionBar scope="verification" />
@@ -154,7 +154,7 @@ export default function VerificationPage() {
         </table>
         </div>
       )}
-    </main>
+    </div>
   );
 }
 

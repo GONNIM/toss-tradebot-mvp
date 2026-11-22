@@ -408,7 +408,7 @@ _SECTIONS = [
     ("meme", "밈 급등 신호 (국내·미국)", "/lab/meme-watch", _meme, False),
     ("activist", "큰손 지분 공시 (행동주의)", "/activist-radar", _activist, False),
     ("crazy", "미국 · 중대형주 급등 후보 (Crazy)", "/lab/crazy", _crazy, True),
-    ("moonshot", "미국 · 소형주 고위험 급등 후보 (Moonshot)", "/lab/moonshot", _moonshot, True),
+    ("moonshot", "미국 · 소형주 고위험 급등 후보 (Moonshot)", "/lab/crazy?view=moonshot", _moonshot, True),  # 1120-01 단계 3 · Crazy 화면 탭으로 합침
     ("biotech", "미국 · 바이오 소식 앞둔 종목", "/biotech", _biotech, True),
 ]
 

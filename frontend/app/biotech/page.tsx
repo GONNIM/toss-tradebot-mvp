@@ -12,6 +12,7 @@
 import Link from "next/link";
 import { StockLink } from "@/components/stock/StockLink";
 import { useCallback, useEffect, useState } from "react";
+import { BiotechDocsViewer } from "@/components/biotech/BiotechDocsViewer";
 import { BiotechSessionControl } from "@/components/biotech/BiotechSessionControl";
 import { CatalystTimeline } from "@/components/biotech/CatalystTimeline";
 import { StatBox } from "@/components/ui/stat-box";
@@ -748,15 +749,32 @@ export default function BiotechPage() {
         </div>
       )}
 
-      {/* WP74 3단계 · 문서는 /biotech/docs 로 분리 · 첫 화면에는 링크 3개만 */}
-      {isAdmin && (
-        <nav className="flex flex-wrap gap-4 border-t border-border pt-3 text-sm">
-          <span className="text-muted-foreground">📄 문서</span>
-          <Link href="/biotech/docs?tab=status" className="text-primary hover:underline">상태판</Link>
-          <Link href="/biotech/docs?tab=glossary" className="text-primary hover:underline">용어집</Link>
-          <Link href="/biotech/docs?tab=final" className="text-primary hover:underline">최종 리포트</Link>
-        </nav>
-      )}
+      {/* WP74 3단계 · 문서는 /biotech/docs 로 분리 · 1120-01 단계 3 · 이 화면 맨 아래 접기 안에서도 본다 (펼칠 때만 받음) */}
+      {isAdmin && <BiotechDocsFold isAdmin={isAdmin} />}
     </div>
+  );
+}
+
+// 1120-01 단계 3 · /biotech/docs 를 이 화면 안 접기로 합침 (옛 주소는 그대로 열림 · 펼칠 때만 문서를 받는다)
+function BiotechDocsFold({ isAdmin }: { isAdmin: boolean }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <details
+      id="biotech-docs"
+      className="rounded-lg border border-border bg-card p-3"
+      onToggle={(e) => setOpen((e.currentTarget as HTMLDetailsElement).open)}
+    >
+      <summary className="flex min-h-[44px] cursor-pointer items-center text-sm font-semibold">
+        📄 바이오 문서 · 상태판 · 용어집 · 최종 리포트
+      </summary>
+      {open && (
+        <div className="mt-2 space-y-2">
+          <BiotechDocsViewer isAdmin={isAdmin} embedded />
+          <p className="text-xs text-muted-foreground">
+            <Link href="/biotech/docs" className="text-primary hover:underline">문서만 따로 열기 →</Link>
+          </p>
+        </div>
+      )}
+    </details>
   );
 }

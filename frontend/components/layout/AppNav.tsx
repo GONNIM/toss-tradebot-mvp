@@ -14,14 +14,14 @@ import { usePathname } from "next/navigation";
 import { useEffect, useRef } from "react";
 import type { ReactNode } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { bestTabKey, firstVisibleHref, isHidden, visibleGroups, visibleTabs } from "@/lib/menu-visibility";
+import { bestTabKey, firstVisibleHref, isHidden, mergedTarget, visibleGroups, visibleTabs } from "@/lib/menu-visibility";
 import { MENU_QUERY_KEY, useMenuVisibility } from "@/lib/use-menu-visibility";
 
 // 1120-01 (2026-11-21): 메뉴 보이기 설정 반영.
 // - 숨긴 탭은 빼고(지금 화면 탭은 남김) · 탭이 모두 숨은 묶음도 뺀다 (원래 탭 없는 「오늘」은 안 뺌).
 // - 묶음 링크 · PC 분류 링크는 보이는 첫 탭으로 간다. 화면 이동마다 설정을 다시 읽는다.
 // - 「기록」 묶음은 잠긴 탭이 없어 두 탭을 모두 숨기면 묶음이 빠진다 (의도 · 주소 · 오늘 화면 링크로는 열림).
-// - 잠금 8개는 frontend/lib/menu-visibility.ts LOCKED_KEYS · 서버 LOCKED 와 같아야 한다.
+// - 잠금 7개는 frontend/lib/menu-visibility.ts LOCKED_KEYS · 서버 LOCKED 와 같아야 한다 (단계 3 에서 /sniper 잠금을 풂 · 상황판은 /admin/settings 에도 있음).
 
 interface Tab {
   href: string;
@@ -302,9 +302,16 @@ export function HiddenScreenNotice() {
   const { menu } = useMenuVisibility();
   const key = bestTabKey(pathname, GROUPS.flatMap((g) => g.tabs));
   if (!key || !isHidden(menu, key)) return null;
+  // 단계 3 · 합친 옛 주소면 같은 내용이 있는 곳을 함께 알린다 (옛 주소 정확 일치로만 찾는다)
+  const merged = mergedTarget(pathname);
   return (
     <p role="status" className="mb-4 rounded-lg border border-border bg-card px-4 py-3 text-sm text-muted-foreground">
       메뉴에서 숨긴 화면입니다 · <Link href="/admin/menu" className="text-primary underline-offset-2 hover:underline">설정 › 메뉴 보이기</Link>에서 다시 켤 수 있습니다
+      {merged && (
+        <>
+          {" "}· 같은 내용: <Link href={merged.href} className="text-primary underline-offset-2 hover:underline">{merged.label}</Link>
+        </>
+      )}
     </p>
   );
 }

@@ -84,6 +84,23 @@ export default function PowderKegPage() {
           </a>
         </div>
       </header>
+      {/* 1120-01 단계 3 · /docs/powderkeg-user-guide 를 이 화면 안 접기로 합침. 안내서 원본은 GitHub markdown 이라 끼워 넣지 않고 무엇이 있는지와 원본 링크만 둔다 (옛 주소는 그대로 원본으로 넘김) */}
+      <details id="powderkeg-guide" className="rounded-lg border border-border bg-card p-3 text-sm">
+        <summary className="flex min-h-[44px] cursor-pointer items-center font-semibold">📖 사용자 안내서</summary>
+        <ul className="mt-2 list-disc space-y-1 pl-5 text-muted-foreground">
+          <li>화약고가 무엇인지와 10개 조건으로 판정하는 방법을 설명합니다.</li>
+          <li>통과 조건 수에 따라 나눈 등급마다 무엇을 지켜볼지 적었습니다.</li>
+          <li>공시 사건이 생겼을 때 할 일과 날마다 · 주마다 쓰는 순서, 자주 묻는 질문을 담았습니다.</li>
+        </ul>
+        <a
+          href="https://github.com/GONNIM/toss-tradebot-mvp/blob/main/docs/plans/powderkeg-screener/user-guide.md"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="mt-2 inline-flex min-h-[44px] items-center text-primary underline-offset-2 hover:underline"
+        >
+          안내서 원본 열기 (GitHub) →
+        </a>
+      </details>
       <WorkflowFlowchart />
       <OnboardingBanner key={`ob-${guideNonce}`} />
       <IdentityBanner />

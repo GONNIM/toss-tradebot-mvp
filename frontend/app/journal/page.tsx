@@ -7,6 +7,9 @@
 
 "use client";
 
+import dynamic from "next/dynamic";
+import { MergedTabs } from "@/components/layout/MergedTabs";
+
 import { Suspense, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { StockLabel } from "@/components/stock/StockLabel";
@@ -106,7 +109,7 @@ async function loadPriceMap(): Promise<Record<string, number>> {
   }
 }
 
-export default function JournalPage() {
+function JournalMain() {
   // useSearchParams 는 Suspense 안에서만 (Next 14 빌드 규칙)
   return (
     <Suspense fallback={<div className="text-xs text-muted-foreground">로딩...</div>}>
@@ -128,23 +131,30 @@ function JournalPageInner() {
   const [error, setError] = useState<string | null>(null);
   const [days, setDays] = useState(30);
 
+  // 1120-01 단계 4 g · 401(로그인 안 함)은 「에러」가 아니라 「로그인 필요」로 보인다. API 는 그대로 401 (열지 않음).
+  const [needLogin, setNeedLogin] = useState(false);
+
   const load = async (d: number, t: string = tickerFilter) => {
     setLoading(true);
     setError(null);
     try {
-      const [j, b, pm] = await Promise.all([
-        fetch(`/api/v1/judgments?days=${d}&limit=100${t ? `&ticker=${encodeURIComponent(t)}` : ""}`, { credentials: "include" }).then((r) => {
-          if (!r.ok) throw new Error(`judgments ${r.status}`);
-          return r.json();
-        }),
-        fetch(`/api/v1/judgments/baseline?days=90`, { credentials: "include" }).then((r) => {
-          if (!r.ok) throw new Error(`baseline ${r.status}`);
-          return r.json();
-        }),
+      const [jr, br, pm] = await Promise.all([
+        fetch(`/api/v1/judgments?days=${d}&limit=100${t ? `&ticker=${encodeURIComponent(t)}` : ""}`, { credentials: "include" }),
+        fetch(`/api/v1/judgments/baseline?days=90`, { credentials: "include" }),
         loadPriceMap(),
       ]);
-      setJudgments(j);
-      setBaseline(b);
+      const login = jr.status === 401 || br.status === 401;
+      setNeedLogin(login);
+      if (login) {
+        setJudgments([]);
+        setBaseline(null);
+        setPriceMap(pm);
+        return;
+      }
+      if (!jr.ok) throw new Error(`판단 목록을 불러오지 못했습니다 (HTTP ${jr.status})`);
+      if (!br.ok) throw new Error(`성적 요약을 불러오지 못했습니다 (HTTP ${br.status})`);
+      setJudgments(await jr.json());
+      setBaseline(await br.json());
       setPriceMap(pm);
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : String(e));
@@ -209,7 +219,9 @@ function JournalPageInner() {
             />
           </div>
         ) : (
-          <div className="mt-3 text-xs text-muted-foreground">baseline 로딩...</div>
+          <div className="mt-3 text-xs text-muted-foreground">
+            {needLogin ? "로그인 필요 · 판정 성적은 관리자 로그인 뒤 보입니다." : "불러오는 중..."}
+          </div>
         )}
         {baseline && (
           <div className="mt-4 grid gap-4 sm:grid-cols-2">
@@ -281,9 +293,14 @@ function JournalPageInner() {
           </div>
         )}
         {loading && <div className="text-xs text-muted-foreground">로딩...</div>}
+        {needLogin && !loading && (
+          <div className="rounded-lg border border-dashed border-border p-6 text-center text-sm text-muted-foreground" data-testid="journal-login-needed">
+            로그인 필요 · 판단 기록은 개인 논지라 관리자 로그인 뒤 보입니다. 위의 「관리자 로그인」을 이용하십시오.
+          </div>
+        )}
         {error && <div className="rounded-lg border border-warn/40 bg-warn/10 p-3 text-xs text-warn">에러: {error}</div>}
 
-        {!loading && !error && judgments.length === 0 && (
+        {!loading && !error && !needLogin && judgments.length === 0 && (
           <div className="rounded-lg border border-dashed border-border p-8 text-center">
             <div className="text-3xl">📝</div>
             <p className="mt-2 text-sm text-muted-foreground">아직 판정이 없습니다.</p>
@@ -1796,5 +1813,21 @@ function NewJudgmentForm({
         </div>
       )}
     </section>
+  );
+}
+
+// ─── 1120-01 단계 3 · /logs 를 판단 기록 화면 탭으로 합침 ───
+// 옛 주소는 그대로 자기 화면을 그린다 (알림 링크 보호). 여기서는 같은 컴포넌트를 탭으로 불러 그린다 (복사 없음).
+const LogsTab = dynamic(() => import("../logs/page"), { loading: () => <p className="text-sm text-muted-foreground">불러오는 중…</p> });
+
+export default function JournalPage() {
+  return (
+    <MergedTabs
+      label="기록 화면"
+      tabs={[
+        { key: "journal", label: "판단 기록", render: () => <JournalMain /> },
+        { key: "logs", label: "실행 로그", render: () => <LogsTab /> },
+      ]}
+    />
   );
 }

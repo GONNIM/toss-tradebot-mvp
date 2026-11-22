@@ -366,8 +366,16 @@ function CandidatesPanel() {
           · 컬럼 rank_z/trades_z/book_z 는 3개 소스 z-score
         </p>
       </div>
+      {/* 1120-01 단계 4 h · 「스캔 중…」은 이 목록을 서버에서 계산하는 동안의 글자다 (스나이퍼가 켜져 있다는 뜻이 아님).
+          종목마다 체결 · 호가를 조회해 장이 닫힌 때나 조회가 느리면 오래 걸린다. 실패하면 이유를 보인다. */}
       {q.isLoading ? (
-        <p className="text-sm">스캔 중…</p>
+        <p className="text-sm" data-testid="sniper-candidates-loading">
+          후보 목록을 계산하는 중… 종목마다 체결 · 호가를 조회해 오래 걸릴 수 있습니다 (스나이퍼가 꺼져 있어도 이 목록은 미리보기로 계산됩니다).
+        </p>
+      ) : q.isError ? (
+        <p className="text-xs text-warn" data-testid="sniper-candidates-error">
+          후보 목록을 불러오지 못했습니다. 잠시 뒤 자동으로 다시 시도합니다 (30초 간격).
+        </p>
       ) : q.data && q.data.length > 0 ? (
         <div className="overflow-x-auto">
           <table className="w-full text-xs">
@@ -418,7 +426,7 @@ function CandidatesPanel() {
           </table>
         </div>
       ) : (
-        <p className="text-xs text-muted-foreground">candidate 없음</p>
+        <p className="text-xs text-muted-foreground">지금 조건을 넘은 후보가 없습니다 (candidate 없음)</p>
       )}
     </section>
   );

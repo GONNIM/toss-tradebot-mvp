@@ -266,6 +266,21 @@ class KrxStockMeta(Base):
     )
 
 
+class KrxEtfName(Base):
+    """한국 ETF 이름 목록 (1119-02) — FinanceDataReader StockListing('ETF/KR') (원 출처: 네이버 금융 ETF 목록).
+
+    이름 조회(stock_names)가 맨 뒤에 읽기만 한다. 채우기는 주간 잡 · 서버 시작 때 빈 표일 때만 (services/etf_names.py).
+    KrxStockMeta 에 넣지 않는 까닭: 섹터 리더 모집단이 그 표 전 행을 읽어, ETF 를 넣으면 순위 대상이 바뀐다.
+    행은 지우지 않는다 (upsert 만).
+    """
+
+    __tablename__ = "krx_etf_name"
+
+    ticker: Mapped[str] = mapped_column(String(6), primary_key=True)
+    name: Mapped[str] = mapped_column(String(100))
+    fetched_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
+
+
 class KrxDailyCandle(Base):
     """KRX 일봉 캐시 — pykrx 수집 (B-2c).
 

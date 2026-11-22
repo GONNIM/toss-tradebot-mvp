@@ -467,6 +467,7 @@ _JOB_DISPLAY = {
     "Moonshot Picks": "Moonshot 종목",
     "Sector Leaders 09:05": "섹터 리더 09:05",
     "Sector Leaders 17:05": "섹터 리더 17:05",
+    "ETF 이름 목록": "ETF 이름 목록 갱신",
 }
 
 
@@ -929,6 +930,25 @@ async def job_activist_us_form4():
         logger.error(f"[cron.activist.us_form4] failed: {e}", exc_info=True)
 
 
+async def job_etf_names():
+    """한국 ETF 이름 목록 주간 갱신 (일요일 12:30 KST · 1119-02). 실패하거나 행이 500개 미만이면 표는 그대로 두고 시스템 알림."""
+    from backend.services import etf_names
+
+    try:
+        stats = await etf_names.refresh_etf_names()
+        logger.info(f"[cron] etf names refreshed {stats}")
+    except Exception as e:
+        logger.error(f"[cron] etf names failed: {e}", exc_info=True)
+        await _alert_job_failure("ETF 이름 목록", e)    # 다음 실행 줄은 일 단위가 아니라 생략
+
+
+async def job_etf_names_startup():
+    """서버 시작 때 ETF 이름 표가 비었을 때만 한 번 채운다 (뒤에서 · 시작을 기다리게 하지 않음). 실패해도 시작은 계속."""
+    from backend.services import etf_names
+
+    await etf_names.fill_on_start(alert=lambda e: _alert_job_failure("ETF 이름 목록", e))
+
+
 # ─────────────────────────────────────────────
 # Scheduler + entry
 # ─────────────────────────────────────────────
@@ -981,6 +1001,11 @@ def build_scheduler() -> AsyncIOScheduler:
     scheduler.add_job(job_notification_digest, CronTrigger(hour=18, minute=0),
                       id="notification_digest_1800",
                       name="알림 하루 요약 18:00 KST",
+                      replace_existing=True, coalesce=True, misfire_grace_time=GRACE_DEFAULT)
+    # 1119-02 · 한국 ETF 이름 목록 (주 1회 · 일요일 12:30 · 다른 cron 서비스 잡과 5분 이상 간격)
+    scheduler.add_job(job_etf_names, CronTrigger(day_of_week="sun", hour=12, minute=30),
+                      id="etf_names_weekly",
+                      name="한국 ETF 이름 목록 일요일 12:30 KST",
                       replace_existing=True, coalesce=True, misfire_grace_time=GRACE_DEFAULT)
     # VIP 감시 (env VIP_ENABLED=true 일 때만 실효 — tick 내부에서 skip)
     scheduler.add_job(
@@ -1069,6 +1094,8 @@ async def main_daemon():
 
     _plan_stop = asyncio.Event()
     _plan_task = await start_executor(_plan_stop)
+    # 1119-02 · ETF 이름 표가 비었을 때만 한 번 채움 · 뒤에서(start 를 기다리게 하지 않음) · 주간 잡을 등록하는 이 프로세스에서만
+    _etf_task = asyncio.create_task(job_etf_names_startup())
     logger.info("[cron] Scheduler 시작 — 등록 job:")
     for job in scheduler.get_jobs():
         logger.info(f"  - {job.id}: {job.name} → next {job.next_run_time}")
@@ -1084,6 +1111,8 @@ async def main_daemon():
     _plan_stop.set()
     if _plan_task is not None:
         await asyncio.gather(_plan_task, return_exceptions=True)
+    _etf_task.cancel()      # 시작 채움이 아직 돌고 있으면 멈춘다 (표는 한 번에 쓰므로 반쯤 쓰인 채 남지 않음)
+    await asyncio.gather(_etf_task, return_exceptions=True)
     scheduler.shutdown(wait=True)
     logger.info("[cron] Shutdown complete")
 

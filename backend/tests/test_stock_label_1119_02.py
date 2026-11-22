@@ -104,12 +104,12 @@ async def test_kr_names_one_query_per_table_and_chunks_of_500(db, monkeypatch):
 
     monkeypatch.setattr(sn, "_kr_table", spy)
     await sn.lookup_kr_names([f"{i:06d}" for i in range(1, 51)])
-    assert calls == [(0, 50), (1, 50), (2, 50), (3, 50)]          # 표마다 1번
+    assert calls == [(0, 50), (1, 50), (2, 50), (3, 50), (4, 50)]   # 표마다 1번 (1119-02 · 5번째는 ETF 이름 목록)
     sn.clear_memo()
     calls.clear()
     await sn.lookup_kr_names([f"{i:06d}" for i in range(1, 1204)])   # 1203개 → 500 · 500 · 203
     assert [c for c in calls if c[0] == 0] == [(0, 500), (0, 500), (0, 203)]
-    assert len(calls) == 12
+    assert len(calls) == 15
 
 
 @pytest.mark.asyncio

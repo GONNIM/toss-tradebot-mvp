@@ -21,6 +21,7 @@ import { StockLabel } from "@/components/stock/StockLabel";
 import { JournalKpiBadge } from "@/components/home/JournalKpiBadge";
 import { splitHiddenCandidates } from "@/lib/menu-visibility";
 import { useMenuVisibility } from "@/lib/use-menu-visibility";
+import { deadlineFact, todayKst } from "@/lib/today-display";
 
 const LOCKED = "로그인하면 보입니다";
 
@@ -120,7 +121,7 @@ function alertFact(a: TodayHoldingAlert, nearPct: number): string {
     const gap = a.gap_pct != null ? ` (손절가와 ${a.gap_pct.toFixed(1)}% 차이)` : "";
     return `손절가까지 ${nearPct}% 이내${gap}`;
   }
-  return `기한 도달${a.deadline ? ` (${md(a.deadline)})` : ""}`;
+  return deadlineFact(a.deadline, todayKst());
 }
 
 function AlertsCard({ d }: { d: TodayResponse }) {

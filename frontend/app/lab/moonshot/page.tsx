@@ -139,7 +139,7 @@ function PickCard({ pick }: { pick: MoonshotPick }) {
       )}
 
       <div className="rounded-lg border border-border bg-muted/30 p-3 text-sm">
-        <div className="font-semibold">💰 매수 가격대 (Decision 33)</div>
+        <div className="font-semibold">💰 매수 가격대 (참고 · 현재가 기준)</div>
         <div className="mt-2 grid grid-cols-3 gap-2 text-center text-xs">
           <div>
             <div className="text-muted-foreground">A 시장가</div>
@@ -148,13 +148,13 @@ function PickCard({ pick }: { pick: MoonshotPick }) {
             </div>
           </div>
           <div>
-            <div className="text-muted-foreground">B -5% drop</div>
+            <div className="text-muted-foreground">B 현재가 -3% 지정가</div>
             <div className="font-mono font-bold text-primary">
               {pick.buy_price_b != null ? formatUSD(pick.buy_price_b, 4) : "—"}
             </div>
           </div>
           <div>
-            <div className="text-muted-foreground">C +8% 돌파</div>
+            <div className="text-muted-foreground">C 현재가 -7% 지정가</div>
             <div className="font-mono font-bold text-primary">
               {pick.buy_price_c != null ? formatUSD(pick.buy_price_c, 4) : "—"}
             </div>

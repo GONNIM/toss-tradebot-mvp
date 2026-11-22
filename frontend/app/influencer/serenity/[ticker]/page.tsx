@@ -10,12 +10,13 @@ import type { TickerDetailResponse } from "@/lib/serenity/types";
 import { BacktestChart } from "@/components/serenity/BacktestChart";
 import { ChecklistCard } from "@/components/serenity/ChecklistCard";
 import { SignalFeedCard } from "@/components/serenity/SignalFeedCard";
+import { TabBar } from "@/components/layout/MergedTabs";
 
 // Next 14 client component · params 는 plain object (Promise 아님)
 // use(params) 사용 시 React error #438 · L12 hotfix 2026-08-03
 type PageProps = { params: { ticker: string } };
 
-export default function TickerDetailPage({ params }: PageProps) {
+function TickerDetailMain({ params }: PageProps) {
   const upper = params.ticker.toUpperCase();
   const [data, setData] = useState<TickerDetailResponse | null>(null);
   const [err, setErr] = useState<string | null>(null);
@@ -131,6 +132,23 @@ export default function TickerDetailPage({ params }: PageProps) {
         </Link>{" "}
         )
       </footer>
+    </div>
+  );
+}
+
+// 1120-01 단계 3 · 종목 상세는 종목마다 다른 화면이라 탭이 될 수 없다.
+// 맨 위에 Serenity 화면과 같은 탭 줄(목록 · 백테스트 · 방법론)을 붙여 Serenity 화면 안으로 묶는다. 켜진 탭은 없다.
+const SERENITY_TABS = [
+  { key: "list", label: "종목 목록" },
+  { key: "backtest", label: "백테스트" },
+  { key: "methodology", label: "방법론" },
+];
+
+export default function TickerDetailPage({ params }: PageProps) {
+  return (
+    <div className="space-y-4">
+      <TabBar tabs={SERENITY_TABS} label="Serenity 화면" pathname="/influencer/serenity" current={-1} />
+      <TickerDetailMain params={params} />
     </div>
   );
 }
