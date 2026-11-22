@@ -39,6 +39,7 @@ from backend.discovery.sector_leaders.analysis import (
     persist_sector_leaders,
 )
 from backend.discovery.sector_leaders.ingest import ingest_pdf
+from backend.discovery.sector_leaders.mcap_source import refresh_sector_meta
 from backend.services.db import get_session
 from backend.services.models import Log, MotirItemExport
 
@@ -204,6 +205,24 @@ async def _krx_candles_refresh(session: AsyncSession) -> dict:
     return stats
 
 
+async def _krx_meta_refresh(session: AsyncSession) -> dict:
+    """매핑 51종목 시총 · 종가를 KrxStockMeta 에 갱신 (1122-01 · 재계산 직전).
+
+    FDR KOSPI+KOSDAQ 한 번 · 기준 미달이면 건너뜀 · 유효한 값만 씀 (mcap_source 참고).
+    11:30 · 12:00 에 받은 값은 장중 값일 수 있다 (추정). 실패해도 재계산은 돈다 (호출부 try/except).
+    """
+    codes = sorted({t.code for t in iter_all_tickers()})
+    logger.info(f"[krx_meta_refresh] {len(codes)} 종목 시총 갱신 시작")
+    await session.commit()  # 받기 전에 앞 단계의 열린 거래를 닫는다 (받는 동안 쓰기 잠금 없음)
+    try:
+        stats = await refresh_sector_meta(session, codes)
+        await session.commit()
+    except Exception:
+        await session.rollback()  # 반쯤 쓴 값을 남기지 않는다
+        raise
+    return stats
+
+
 async def _customs_fetch_recent(
     session: AsyncSession,
     months_back: int = 3,
@@ -270,6 +289,11 @@ async def monthly_full_refresh_job(
             logger.exception(f"[monthly_full_refresh] krx_candles error: {e}")
             stats["krx_candles"] = {"error": str(e)}
         try:
+            stats["krx_meta"] = await _krx_meta_refresh(session)
+        except Exception as e:
+            logger.exception(f"[monthly_full_refresh] krx_meta error: {e}")
+            stats["krx_meta"] = {"error": str(e)}
+        try:
             stats["recompute"] = await _recompute_sector_leaders(session)
         except Exception as e:
             logger.exception(f"[monthly_full_refresh] recompute error: {e}")
@@ -300,6 +324,11 @@ async def customs_interim_10day_job() -> dict:
             logger.exception(f"[customs_10day] krx_candles error: {e}")
             stats["krx_candles"] = {"error": str(e)}
         try:
+            stats["krx_meta"] = await _krx_meta_refresh(session)
+        except Exception as e:
+            logger.exception(f"[customs_10day] krx_meta error: {e}")
+            stats["krx_meta"] = {"error": str(e)}
+        try:
             stats["recompute"] = await _recompute_sector_leaders(session)
         except Exception as e:
             logger.exception(f"[customs_10day] recompute error: {e}")
@@ -328,6 +357,11 @@ async def customs_interim_20day_job() -> dict:
         except Exception as e:
             logger.exception(f"[customs_20day] krx_candles error: {e}")
             stats["krx_candles"] = {"error": str(e)}
+        try:
+            stats["krx_meta"] = await _krx_meta_refresh(session)
+        except Exception as e:
+            logger.exception(f"[customs_20day] krx_meta error: {e}")
+            stats["krx_meta"] = {"error": str(e)}
         try:
             stats["recompute"] = await _recompute_sector_leaders(session)
         except Exception as e:

@@ -20,6 +20,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.discovery.data_sources.mapping import iter_all_tickers
+from backend.discovery.sector_leaders.mcap_source import load_mcap_choice
 from backend.services.models import (
     KrxDailyCandle,
     KrxStockMeta,
@@ -180,7 +181,8 @@ async def compute_sector_leaders(
     """
     item_yoy = await _load_item_yoy(session)
     ticker_ret = await _load_ticker_monthly_return(session)
-    meta_by_code = await _load_meta(session)
+    # 1122-01: 시총은 「날짜가 더 새로운 출처」(메타 · 스냅샷) 하나를 51종목에 같이 쓴다.
+    mcap = await load_mcap_choice(session, [mt.code for mt in iter_all_tickers()])
 
     results: list[PairResult] = []
     for mt in iter_all_tickers():
@@ -195,8 +197,7 @@ async def compute_sector_leaders(
         r0 = _pearson(yoy_s.tolist(), ret_s.tolist())
         best_r, best_lag = _best_lag(yoy_s, ret_s)
 
-        meta = meta_by_code.get(mt.code)
-        market_cap = meta.market_cap_krw if meta else None
+        market_cap = mcap.values.get(mt.code)
         score = _score(market_cap, mt.export_ratio_hint)
 
         results.append(

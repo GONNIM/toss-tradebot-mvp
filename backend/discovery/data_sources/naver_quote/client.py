@@ -22,7 +22,8 @@ URL:
 
 장 마감 후엔 nv = pcv (당일 종가).
 
-Why: KrxStockMeta.last_close 는 매일 야간 갱신이라 장중·실시간 가격과 차이.
+Why: KrxStockMeta.last_close 는 매일 갱신되지 않고 (섹터 잡 3개가 돌 때만 · 월 3회, 1122-01)
+장중·실시간 가격과 차이.
 사용자가 보는 "현재가"는 실제 시세여야 함.
 
 How to apply: fetch_quotes(tickers) → 60초 메모리 캐시 → 호출자는 fallback 보유.
