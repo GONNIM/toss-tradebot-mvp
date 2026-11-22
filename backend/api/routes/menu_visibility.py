@@ -37,8 +37,13 @@ LOCKED: frozenset[str] = frozenset({
     "/admin/settings", "/admin/notifications", "/admin/menu", "/sniper",
 })
 
-# 「권고대로 숨기기」 대상 (메뉴 탭만)
-RECOMMENDED_HIDE: tuple[str, ...] = ("/lab", "/influencer/serenity-hunter")
+# 「권고대로 숨기기」 대상 (메뉴 탭만) · 화면 상수 frontend/lib/menu-visibility.ts RECOMMENDED_HIDE_KEYS 와 같아야 한다 (시험이 대조).
+# 1120-01 단계 3 (11/22): 다른 화면 탭으로 합친 옛 화면 5개를 더함 — /vip(→ /account) · /logs(→ /journal) ·
+# /lab/moonshot(→ /lab/crazy) · /principles · /rulebook(→ /principles/screener). 옛 주소는 그대로 열린다.
+RECOMMENDED_HIDE: tuple[str, ...] = (
+    "/lab", "/influencer/serenity-hunter",
+    "/vip", "/logs", "/lab/moonshot", "/principles", "/rulebook",
+)
 
 router = APIRouter()
 

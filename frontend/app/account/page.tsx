@@ -1,5 +1,8 @@
 "use client";
 
+import dynamic from "next/dynamic";
+import { MergedTabs } from "@/components/layout/MergedTabs";
+
 // 1025-06 · 「내 계좌」 — 내 증권 계좌로 가는 길 · 토스 실계좌 요약 · 실주문 안전 한 줄 · 미국 종목 토스 주소 확인.
 // 1025-08 · 토스 실계좌 보유 종목 표 (보유 일수 · 최고가 대비 · 청산 계획 · 토스증권으로 가기) — 사실만.
 // 사이트는 주문을 넣지 않는다 (정체성 원칙 1). 주문은 토스증권 화면에서 직접 한다.
@@ -220,7 +223,7 @@ function CodeTable({ isAdmin }: { isAdmin: boolean }) {
   );
 }
 
-export default function AccountPage() {
+function AccountMain() {
   const [isAdmin, setIsAdmin] = useState(false);
   const qc = useQueryClient();
   return (
@@ -262,5 +265,21 @@ export default function AccountPage() {
         <CodeTable isAdmin={isAdmin} />
       </Card>
     </div>
+  );
+}
+
+// ─── 1120-01 단계 3 · /vip 를 계좌 화면 탭으로 합침 ───
+// 옛 주소는 그대로 자기 화면을 그린다 (알림 링크 보호). 여기서는 같은 컴포넌트를 탭으로 불러 그린다 (복사 없음).
+const VipTab = dynamic(() => import("../vip/page"), { loading: () => <p className="text-sm text-muted-foreground">불러오는 중…</p> });
+
+export default function AccountPage() {
+  return (
+    <MergedTabs
+      label="내 계좌 화면"
+      tabs={[
+        { key: "account", label: "계좌", render: () => <AccountMain /> },
+        { key: "vip", label: "VIP 감시", render: () => <VipTab /> },
+      ]}
+    />
   );
 }

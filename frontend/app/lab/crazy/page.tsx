@@ -1,5 +1,8 @@
 "use client";
 
+import dynamic from "next/dynamic";
+import { MergedTabs } from "@/components/layout/MergedTabs";
+
 /**
  * Crazy Picks 페이지 — Top 10 테이블 + History 토글 + Thesis expand.
  */
@@ -21,7 +24,7 @@ function parseJsonArray(s: string | null): string[] {
   }
 }
 
-export default function CrazyPage() {
+function CrazyMain() {
   const [tab, setTab] = useState<"today" | "history">("today");
   const [days, setDays] = useState(7);
   const { data: summary } = useQuery({
@@ -274,4 +277,20 @@ function PerfCell({ value }: { value: number | null }) {
   const pct = value * 100;
   const color = upDownText(pct);
   return <span className={color}>{pct >= 0 ? "+" : ""}{pct.toFixed(2)}%</span>;
+}
+
+// ─── 1120-01 단계 3 · /lab/moonshot 을 Crazy 화면 탭으로 합침 ───
+// 옛 주소는 그대로 자기 화면을 그린다 (알림 링크 보호). 여기서는 같은 컴포넌트를 탭으로 불러 그린다 (복사 없음).
+const MoonshotTab = dynamic(() => import("../moonshot/page"), { loading: () => <p className="text-sm text-muted-foreground">불러오는 중…</p> });
+
+export default function CrazyPage() {
+  return (
+    <MergedTabs
+      label="미국 후보 화면"
+      tabs={[
+        { key: "crazy", label: "Crazy (중대형주)", render: () => <CrazyMain /> },
+        { key: "moonshot", label: "Moonshot (소형주)", render: () => <MoonshotTab /> },
+      ]}
+    />
+  );
 }

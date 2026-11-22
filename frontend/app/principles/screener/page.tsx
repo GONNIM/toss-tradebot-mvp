@@ -1,5 +1,8 @@
 "use client";
 
+import dynamic from "next/dynamic";
+import { MergedTabs } from "@/components/layout/MergedTabs";
+
 // Principles v1.0.2 · 스크리너 결과 페이지 (2026-08-17)
 // 최신 배치 요약 + 3탭 (PASS/FAIL/INSUFFICIENT_DATA) + 종목별 지표·근거
 
@@ -66,7 +69,7 @@ function fmtNum(v: number | null, digits: number = 2): string {
   return v.toFixed(digits);
 }
 
-export default function ScreenerPage() {
+function ScreenerMain() {
   const [data, setData] = useState<LatestResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [tab, setTab] = useState<Tab>("PASS");
@@ -259,5 +262,25 @@ export default function ScreenerPage() {
         ⚠️ 본 정보는 투자 자문이 아니며, 투자 판단과 책임은 이용자 본인에게 있습니다.
       </footer>
     </div>
+  );
+}
+
+// ─── 1120-01 단계 3 · /rulebook · /principles · /principles/verification 을 탭으로 합침 ───
+// 옛 주소는 그대로 자기 화면을 그린다 (알림 링크 보호). 여기서는 같은 컴포넌트를 탭으로 불러 그린다 (복사 없음).
+const RulebookTab = dynamic(() => import("../../rulebook/page"), { loading: () => <p className="text-sm text-muted-foreground">불러오는 중…</p> });
+const CharterTab = dynamic(() => import("../page"), { loading: () => <p className="text-sm text-muted-foreground">불러오는 중…</p> });
+const VerificationTab = dynamic(() => import("../verification/page"), { loading: () => <p className="text-sm text-muted-foreground">불러오는 중…</p> });
+
+export default function ScreenerPage() {
+  return (
+    <MergedTabs
+      label="원칙 스크리너 화면"
+      tabs={[
+        { key: "screener", label: "스크리너", render: () => <ScreenerMain /> },
+        { key: "rulebook", label: "5단계 필터", render: () => <RulebookTab /> },
+        { key: "charter", label: "원칙", render: () => <CharterTab /> },
+        { key: "verification", label: "확인 대기", render: () => <VerificationTab /> },
+      ]}
+    />
   );
 }

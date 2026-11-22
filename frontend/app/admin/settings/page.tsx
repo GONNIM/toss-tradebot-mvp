@@ -1,8 +1,10 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import { PlanExecutorCard } from "@/components/plans/PlanExecutorCard";
+import { AdminSessionBar } from "@/components/admin/AdminSessionBar";
+import { SafetyPanel } from "@/components/sniper/SafetyPanel";
 
 function isCurrencyKey(key: string, description: string | null): boolean {
   const k = key.toLowerCase();
@@ -28,6 +30,7 @@ function currencyUnit(key: string, description: string | null): string {
 }
 
 export default function SettingsPage() {
+  const qc = useQueryClient();
   const { data, isLoading } = useQuery({
     queryKey: ["settings"],
     queryFn: () => api.settings.list(),
@@ -40,12 +43,21 @@ export default function SettingsPage() {
         <p className="mt-2 text-sm">
           <a href="/admin/notifications" className="text-primary underline">🔔 알림 받는 방식 바꾸기 →</a>
         </p>
-        <p className="mt-1 text-sm text-muted-foreground">
-          지금은 읽기만 가능합니다. 바꾸려면 서버 설정을 고쳐야 합니다.
-        </p>
       </header>
 
+      {/* 1120-01 단계 3 · /sniper 의 실주문 안전 상황판(비상 정지 발동 · 해제)을 숨길 수 없는 이 화면에도 둔다.
+          /sniper 에도 그대로 남는다 (같은 부품 · 같은 조회 key). 로그인 · 로그아웃 때 Kill Switch 상태를 다시 읽는다 (/sniper 와 같음). */}
+      <AdminSessionBar
+        scope="settings"
+        onSessionChange={() => qc.invalidateQueries({ queryKey: ["sniper", "kill-switch"] })}
+      />
+      <SafetyPanel />
+
       <PlanExecutorCard />
+
+      <p className="text-sm text-muted-foreground">
+        아래 운영 값 표는 읽기만 가능합니다. 바꾸려면 서버 설정을 고쳐야 합니다.
+      </p>
 
       {isLoading && <div className="text-muted-foreground">로딩 중...</div>}
       {data && (

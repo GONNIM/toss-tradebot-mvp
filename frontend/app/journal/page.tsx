@@ -7,6 +7,9 @@
 
 "use client";
 
+import dynamic from "next/dynamic";
+import { MergedTabs } from "@/components/layout/MergedTabs";
+
 import { Suspense, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { StockLabel } from "@/components/stock/StockLabel";
@@ -106,7 +109,7 @@ async function loadPriceMap(): Promise<Record<string, number>> {
   }
 }
 
-export default function JournalPage() {
+function JournalMain() {
   // useSearchParams 는 Suspense 안에서만 (Next 14 빌드 규칙)
   return (
     <Suspense fallback={<div className="text-xs text-muted-foreground">로딩...</div>}>
@@ -1796,5 +1799,21 @@ function NewJudgmentForm({
         </div>
       )}
     </section>
+  );
+}
+
+// ─── 1120-01 단계 3 · /logs 를 판단 기록 화면 탭으로 합침 ───
+// 옛 주소는 그대로 자기 화면을 그린다 (알림 링크 보호). 여기서는 같은 컴포넌트를 탭으로 불러 그린다 (복사 없음).
+const LogsTab = dynamic(() => import("../logs/page"), { loading: () => <p className="text-sm text-muted-foreground">불러오는 중…</p> });
+
+export default function JournalPage() {
+  return (
+    <MergedTabs
+      label="기록 화면"
+      tabs={[
+        { key: "journal", label: "판단 기록", render: () => <JournalMain /> },
+        { key: "logs", label: "실행 로그", render: () => <LogsTab /> },
+      ]}
+    />
   );
 }

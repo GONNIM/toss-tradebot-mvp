@@ -87,10 +87,53 @@ export function bestTabKey(pathname: string, tabs: { href: string; also?: string
   return best ? best.key : null;
 }
 
-/** 오늘 화면 「오늘 후보」 칸: 가리키는 화면(link)이 숨김이면 뺀다. menu 가 null 이면 모두 보인다. */
+/** 주소에서 `?` · `#` 뒤를 뗀 경로 (메뉴 key 대조용 · 1120-01 단계 3). */
+export function pathOf(href: string): string {
+  return href.split(/[?#]/)[0] || "/";
+}
+
+/**
+ * 오늘 화면 「오늘 후보」 칸: 가리키는 화면(link 의 경로)이 숨김이면 뺀다. menu 가 null 이면 모두 보인다.
+ * 단계 3 · Moonshot 칸은 `/lab/crazy?view=moonshot` 을 가리킨다 → /lab/crazy 를 숨기면 Crazy · Moonshot 두 칸이 함께 빠지고,
+ * /lab/moonshot 을 숨겨도 칸은 남는다.
+ */
 export function splitHiddenCandidates<B extends { link: string }>(blocks: B[], menu: MenuState): { shown: B[]; hiddenCount: number } {
-  const shown = blocks.filter((b) => !isHidden(menu, b.link));
+  const shown = blocks.filter((b) => !isHidden(menu, pathOf(b.link)));
   return { shown, hiddenCount: blocks.length - shown.length };
+}
+
+// ─── 단계 3 합침 (1120-01) ───
+
+/** 「권고대로 숨기기」 대상 · 서버 RECOMMENDED_HIDE(backend/api/routes/menu_visibility.py)와 같아야 한다 (시험이 대조). */
+export const RECOMMENDED_HIDE_KEYS = [
+  "/lab",
+  "/influencer/serenity-hunter",
+  "/vip",
+  "/logs",
+  "/lab/moonshot",
+  "/principles",
+  "/rulebook",
+] as const;
+
+/**
+ * 합친 옛 주소 → 같은 내용이 있는 받을 화면 탭.
+ * 옛 주소와 정확히 같을 때만 쓴다 (메뉴 key 로 찾으면 /principles/gate-history 처럼 합치지 않은 화면에 틀린 안내가 붙는다).
+ */
+export const MERGED_INTO: Record<string, { href: string; label: string }> = {
+  "/vip": { href: "/account?view=vip", label: "내 계좌 › VIP 감시 탭" },
+  "/logs": { href: "/journal?view=logs", label: "기록 › 판단 기록 화면의 실행 로그 탭" },
+  "/lab/moonshot": { href: "/lab/crazy?view=moonshot", label: "후보 › Crazy 화면의 Moonshot 탭" },
+  "/influencer/serenity/backtest": { href: "/influencer/serenity?view=backtest", label: "Serenity 화면의 백테스트 탭" },
+  "/influencer/serenity/methodology": { href: "/influencer/serenity?view=methodology", label: "Serenity 화면의 방법론 탭" },
+  "/principles": { href: "/principles/screener?view=charter", label: "원칙 스크리너 화면의 원칙 탭" },
+  "/principles/verification": { href: "/principles/screener?view=verification", label: "원칙 스크리너 화면의 확인 대기 탭" },
+  "/rulebook": { href: "/principles/screener?view=rulebook", label: "원칙 스크리너 화면의 5단계 필터 탭" },
+  "/biotech/docs": { href: "/biotech#biotech-docs", label: "바이오 화면 맨 아래 「바이오 문서」 접기" },
+};
+
+/** 지금 주소(정확 일치)의 받을 화면 안내. 없으면 null. */
+export function mergedTarget(pathname: string): { href: string; label: string } | null {
+  return MERGED_INTO[pathname] ?? null;
 }
 
 // ─── 브라우저 보관 (마지막 값 · 첫 그림에서 메뉴가 흔들리지 않게) ───

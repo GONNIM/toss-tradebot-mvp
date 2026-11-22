@@ -14,7 +14,7 @@ import { usePathname } from "next/navigation";
 import { useEffect, useRef } from "react";
 import type { ReactNode } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { bestTabKey, firstVisibleHref, isHidden, visibleGroups, visibleTabs } from "@/lib/menu-visibility";
+import { bestTabKey, firstVisibleHref, isHidden, mergedTarget, visibleGroups, visibleTabs } from "@/lib/menu-visibility";
 import { MENU_QUERY_KEY, useMenuVisibility } from "@/lib/use-menu-visibility";
 
 // 1120-01 (2026-11-21): 메뉴 보이기 설정 반영.
@@ -302,9 +302,16 @@ export function HiddenScreenNotice() {
   const { menu } = useMenuVisibility();
   const key = bestTabKey(pathname, GROUPS.flatMap((g) => g.tabs));
   if (!key || !isHidden(menu, key)) return null;
+  // 단계 3 · 합친 옛 주소면 같은 내용이 있는 곳을 함께 알린다 (옛 주소 정확 일치로만 찾는다)
+  const merged = mergedTarget(pathname);
   return (
     <p role="status" className="mb-4 rounded-lg border border-border bg-card px-4 py-3 text-sm text-muted-foreground">
       메뉴에서 숨긴 화면입니다 · <Link href="/admin/menu" className="text-primary underline-offset-2 hover:underline">설정 › 메뉴 보이기</Link>에서 다시 켤 수 있습니다
+      {merged && (
+        <>
+          {" "}· 같은 내용: <Link href={merged.href} className="text-primary underline-offset-2 hover:underline">{merged.label}</Link>
+        </>
+      )}
     </p>
   );
 }

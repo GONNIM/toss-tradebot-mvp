@@ -17,7 +17,7 @@ import { api } from "@/lib/api";
 import type { MenuVisibilityResponse } from "@/lib/api";
 import type { SessionInfo } from "@/lib/auth";
 import { editErrorMessage } from "@/lib/auth";
-import { isLocked, toMenuMap, writeStored } from "@/lib/menu-visibility";
+import { isLocked, RECOMMENDED_HIDE_KEYS, toMenuMap, writeStored } from "@/lib/menu-visibility";
 import { MENU_QUERY_KEY } from "@/lib/use-menu-visibility";
 
 type Banner = { kind: "ok" | "error"; text: string } | null;
@@ -34,6 +34,16 @@ const OFF_MENU: { href: string; label: string }[] = [
   { href: "/biotech/docs", label: "바이오 · 안내서" },
   { href: "/docs/powderkeg-user-guide", label: "화약고 · 사용 안내서" },
 ];
+
+/**
+ * 「권고대로 숨기기」 확인 문구 · 권고 목록(화면 상수 = 서버 RECOMMENDED_HIDE · 시험이 대조)의 메뉴 이름을 모두 적는다.
+ * 1120-01 단계 3 · 합친 옛 화면 5개가 더해져 7개 · 이름을 고정해 적으면 사용자가 모르는 화면이 함께 숨는다.
+ */
+function recommendedConfirmText(): string {
+  const labels = new Map(GROUPS.flatMap((g) => g.tabs.map((t) => [t.href, t.label] as const)));
+  const names = RECOMMENDED_HIDE_KEYS.map((k) => labels.get(k) ?? k);
+  return `권고 목록 ${names.length}개(${names.join(" · ")})만 메뉴에서 숨깁니다. 다른 화면 설정은 그대로입니다. 계속할까요?`;
+}
 
 export default function MenuVisibilityPage() {
   const qc = useQueryClient();
@@ -83,7 +93,7 @@ export default function MenuVisibilityPage() {
   }
 
   async function applyRecommended() {
-    if (!window.confirm("권고 목록(실험장 · 인플루언서 Hunter)만 메뉴에서 숨깁니다. 다른 화면 설정은 그대로입니다. 계속할까요?")) return;
+    if (!window.confirm(recommendedConfirmText())) return;
     setBusy(true);
     try {
       const r = await api.menuVisibility.applyRecommended();

@@ -1,5 +1,8 @@
 "use client";
 
+import dynamic from "next/dynamic";
+import { MergedTabs } from "@/components/layout/MergedTabs";
+
 // Serenity 랜딩 · 최적 투자 종목 후보 중심 · Phase L9 UX 재구성 · 2026-08-03
 // 참조: docs/plans/serenity-integration/01-ui-spec.md §5
 // 재구성 원칙 (사용자 지시)
@@ -53,7 +56,7 @@ function momentumRatio(t: TickerCardItem): number {
   return t.mentions_7d / expected7d;
 }
 
-export default function SerenityLanding() {
+function SerenityMain() {
   const [summary, setSummary] = useState<SerenitySummary | null>(null);
   const [signals, setSignals] = useState<SignalFeedItem[] | null>(null);
   const [tickers, setTickers] = useState<TickerCardItem[] | null>(null);
@@ -383,5 +386,23 @@ function SummaryStat({
       <div className="mt-1 text-lg font-bold">{value}</div>
       {hint && <div className="text-xs text-muted-foreground">{hint}</div>}
     </div>
+  );
+}
+
+// ─── 1120-01 단계 3 · Serenity 백테스트 · 방법론을 탭으로 합침 ───
+// 옛 주소는 그대로 자기 화면을 그린다 (알림 링크 보호). 여기서는 같은 컴포넌트를 탭으로 불러 그린다 (복사 없음).
+const BacktestTab = dynamic(() => import("./backtest/page"), { loading: () => <p className="text-sm text-muted-foreground">불러오는 중…</p> });
+const MethodologyTab = dynamic(() => import("./methodology/page"), { loading: () => <p className="text-sm text-muted-foreground">불러오는 중…</p> });
+
+export default function SerenityLanding() {
+  return (
+    <MergedTabs
+      label="Serenity 화면"
+      tabs={[
+        { key: "list", label: "종목 목록", render: () => <SerenityMain /> },
+        { key: "backtest", label: "백테스트", render: () => <BacktestTab /> },
+        { key: "methodology", label: "방법론", render: () => <MethodologyTab /> },
+      ]}
+    />
   );
 }
