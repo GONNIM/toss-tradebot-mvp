@@ -7,6 +7,9 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import pytest
+from httpx import ASGITransport, AsyncClient
+
 ROOT = Path(__file__).resolve().parents[2]
 FE = ROOT / "frontend"
 
@@ -89,3 +92,25 @@ def test_e_fx_text_says_fixed_value_and_no_outside_call():
     cards = _read("backend/discovery/serenity/action_cards.py")
     assert '"fx_source": "hardcoded"' in cards            # 값 · 출처 표시는 서버 그대로
     assert "get_toss_client" not in cards and "usd_krw(" not in cards   # 비로그인 요청이 토스를 부르지 않음
+
+
+# ── g · 판단 기록: 비로그인은 API 401 그대로, 화면은 「로그인 필요」 ─────────────
+def test_g_journal_screen_shows_login_needed_not_baseline_error():
+    page = _read("frontend/app/journal/page.tsx")
+    assert "로그인 필요" in page and "journal-login-needed" in page
+    assert "baseline ${r.status}" not in page            # 영어 「에러: baseline 401」 문구가 사라짐
+    assert "jr.status === 401 || br.status === 401" in page
+
+
+@pytest.mark.asyncio
+async def test_g_judgments_api_stays_401_without_login(monkeypatch):
+    from backend.services.db import init_db
+
+    monkeypatch.setenv("SNIPER_API_TOKEN", "stage4-g-token-0000000000000000")
+    await init_db()
+    from backend.api.main import app
+
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
+        for path in ("/api/v1/judgments", "/api/v1/judgments/baseline?days=90"):
+            r = await ac.get(path)
+            assert r.status_code == 401, (path, r.status_code)
