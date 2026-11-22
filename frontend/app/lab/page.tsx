@@ -25,7 +25,7 @@ const ITEMS: LabItem[] = [
     desc: "US 시총 ≥ $1B universe · 5인자 가중 · 분석 글은 Claude (실패 시 Z.ai)",
     lastReviewed: "2026-10-27",
     live: true,
-    reason: "06:30 알림과 이어짐 · 1주·1달 과거 실현 결과 표시 · 로그인 필요 (1025-03)",
+    reason: "06:30 알림과 이어짐 · 1주·1달 과거 실현 결과 표시 · 로그인 필요",
   },
   {
     href: "/lab/moonshot",
@@ -33,7 +33,7 @@ const ITEMS: LabItem[] = [
     desc: "16:50 KST US 장 · Top 3 · 100만원 고위험 시드",
     lastReviewed: "2026-10-27",
     live: true,
-    reason: "16:50 알림과 이어짐 · 1·3·5일 과거 실현 결과 표시 · 로그인 필요 (1025-03)",
+    reason: "16:50 알림과 이어짐 · 1·3·5일 과거 실현 결과 표시 · 로그인 필요",
   },
   {
     href: "/lab/meme-watch",
@@ -49,7 +49,7 @@ const ITEMS: LabItem[] = [
     desc: "meme + vip + activist 병합 (2+ 소스 승격)",
     lastReviewed: "2026-10-27",
     live: false,
-    reason: "쉬는 기능 · 5분 자동 승격·매수 잡을 껐습니다 (1025-03) · 세 원천 모두 사후 반응이라 병합이 편향을 키움 (리뷰 A)",
+    reason: "쉬는 기능 · 5분 자동 승격·매수 잡을 껐습니다 · 세 원천 모두 사후 반응이라 병합이 편향을 키움 (리뷰 A)",
   },
   {
     href: "/lab/backtest",
@@ -57,12 +57,12 @@ const ITEMS: LabItem[] = [
     desc: "다중 sources 백테스트 (조합 grid)",
     lastReviewed: "2026-10-27",
     live: false,
-    reason: "쉬는 기능 · 화면 퇴역 (1025-03) · 임의 조합 백테스트는 데이터 마이닝 편향 (리뷰 A)",
+    reason: "쉬는 기능 · 화면 퇴역 · 임의 조합 백테스트는 데이터 마이닝 편향 (리뷰 A)",
   },
   {
     href: "/sniper",
     name: "Execution → Sniper 안전 상황판",
-    desc: "Kill Switch 발동·해제와 실주문 상태는 /sniper 「실주문 안전 상황판」 으로 옮겼습니다 (2026-10-25)",
+    desc: "Kill Switch 발동·해제와 실주문 상태는 「실주문 안전 상황판」(스나이퍼 화면 · 설정 › 운영 값 화면)에서 봅니다",
     lastReviewed: "2026-10-25",
     live: false,
     reason: "옛 실행 화면 퇴역 · 서버에 연결되지 않은 카드 정리 · 원칙 1 (자동매매 연결 금지) 과 맞춤",
@@ -75,10 +75,10 @@ export default function LabIndex() {
       <header>
         <h1 className="text-2xl font-bold">🧪 Lab (실험장)</h1>
         <p className="mt-2 text-sm text-muted-foreground">
-          아직 검증 중인 기능을 모아 둔 곳입니다. 메뉴에는 보이지 않으며, 결과를 실제 매매 판단에 쓰기 전에 검증이 필요합니다.
+          아직 검증 중인 기능을 모아 둔 곳입니다. 설정 › 실험장 메뉴로 열 수 있고, Crazy · Moonshot · 밈은 「후보」 메뉴에도 있습니다. 결과를 실제 매매 판단에 쓰기 전에 검증이 필요합니다.
         </p>
         <p className="mt-1 text-xs text-muted-foreground">
-          규율: 6개월 방치 라우트 자동 삭제 (예정) · 각 항목 정체성 정합성 명시
+          메뉴에서 보이거나 숨기는 것은 설정 › 메뉴 보이기에서 고릅니다. 화면은 지우지 않고 메뉴에서만 숨기며, 주소로는 언제나 열립니다.
         </p>
       </header>
       <div className="rounded-lg border border-border">
@@ -88,7 +88,7 @@ export default function LabIndex() {
               <th className="p-3">항목</th>
               <th className="p-3">라이브</th>
               <th className="p-3">마지막 검토</th>
-              <th className="p-3">L3 이관 이유</th>
+              <th className="p-3">메모</th>
             </tr>
           </thead>
           <tbody>

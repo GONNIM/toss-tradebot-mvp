@@ -151,3 +151,13 @@ def test_k_reddit_line_explains_block_without_changing_collection():
     disp = _read("frontend/lib/biotech-display.ts")
     assert "레딧이 요청을 막은 응답, HTTP 429" in disp and "실제로 0건이라는 뜻이 아닙니다" in disp
     assert "모두 차단`" not in disp
+
+
+# ── l · 실험장 설명: 옛 메뉴 기준(「메뉴에는 보이지 않으며」)을 현재 메뉴로 ─────────
+def test_l_lab_index_matches_current_menu():
+    page = _read("frontend/app/lab/page.tsx")
+    assert "메뉴에는 보이지 않으며" not in page and "자동 삭제 (예정)" not in page
+    assert "(1025-03)" not in page and "L3 이관" not in page   # 내부 기호를 화면 문구에 쓰지 않음 (코드 주석은 제외)
+    assert "설정 › 실험장 메뉴로 열 수 있고" in page
+    nav = _read("frontend/components/layout/AppNav.tsx")
+    assert '{ href: "/lab", label: "실험장"' in nav            # 안내가 가리키는 메뉴가 실제로 있다
