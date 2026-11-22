@@ -33,7 +33,7 @@ export default function BacktestReportPage() {
         <div>
           <h1 className="text-2xl font-bold">📊 Serenity Backtest Report</h1>
           <p className="mt-1 text-xs text-muted-foreground">
-            signal → 실 주가 대조 (yfinance) · 5·10·30·60·180일 후 평균 % return
+            신호와 실제 주가 대조 (yfinance) · 5·10·30·60·180 거래일 뒤 평균 수익률(%)
           </p>
         </div>
         <select
@@ -69,6 +69,14 @@ export default function BacktestReportPage() {
 
       {data && data.total_backtests > 0 && (
         <>
+          {/* 1120-01 단계 4 i · 「—」의 까닭. 수익률은 신호가 나온 다음 거래일 시가 대비 N일 뒤 종가라서, 신호가 N일 지나기 전에는 계산할 수 없다. */}
+          <p className="rounded-lg border border-dashed border-border p-3 text-xs text-muted-foreground" data-testid="backtest-dash-note">
+            「—」는 값이 0이라는 뜻이 아니라 아직 계산할 수 없다는 뜻입니다. 수익률은 신호 다음 거래일 시가를 기준으로 5 · 10 · 30 · 60 · 180 거래일 뒤 종가와 비교하므로,
+            신호가 그만큼 오래되지 않았으면 그 칸은 비어 있습니다.
+            {data.overall.avg_return_180d === null && (
+              <> 지금은 신호가 나온 지 180 거래일(약 8개월 반)이 지난 기록이 없어 180d 칸이 모두 비어 있고, 가장 오래된 신호가 180 거래일이 되는 날부터 채워집니다.</>
+            )}
+          </p>
           <BucketBlock title="전체 평균" buckets={[data.overall]} />
           <BucketBlock title="Sentiment 별" buckets={data.by_sentiment} />
           <BucketBlock title="Financing Tier 별 (S~F)" buckets={data.by_financing_tier} />

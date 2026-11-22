@@ -123,3 +123,12 @@ def test_h_sniper_candidates_wording_and_order_code_untouched():
     assert '<p className="text-sm">스캔 중…</p>' not in page
     # 전역 상태 배지의 「스캔 중」(스나이퍼가 켜진 상태)은 그대로다
     assert '"스캔 중"' in _read("frontend/lib/sniper-safety.ts")
+
+
+# ── i · Serenity 백테스트 180d 칸: 고칠 수 없는 까닭(기간 부족)을 화면에 밝힘 ──────
+def test_i_backtest_dash_note_explains_horizon_in_trading_days():
+    bt = _read("backend/discovery/serenity/backtest.py")
+    assert "RETURN_WINDOWS = (1, 3, 5, 10, 30, 60, 180)" in bt
+    assert "idx = 1 + days" in bt and "if len(hist) > idx" in bt        # N 거래일 뒤 종가가 없으면 None
+    page = _read("frontend/app/influencer/serenity/backtest/page.tsx")
+    assert "backtest-dash-note" in page and "180 거래일" in page and "아직 계산할 수 없다는 뜻" in page
