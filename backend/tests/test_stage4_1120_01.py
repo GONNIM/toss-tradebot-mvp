@@ -59,3 +59,23 @@ def test_c_sector_market_cap_source_note_and_no_regular_writer():
         if "venv" not in p.parts and "tests" not in p.parts and "upsert_meta(" in p.read_text(encoding="utf-8")
     ]
     assert writers == ["backend/discovery/data_sources/krx_price/loader.py"]   # 정의만 있고 부르는 곳 없음
+
+
+# ── d · 오늘 화면 기한 경보: 규칙은 그대로, 「N일 지남」 문구만 ────────────────
+def test_d_deadline_alert_rule_unchanged_and_wording_uses_helper():
+    today = _read("backend/api/routes/today.py")
+    assert "if dl <= today:" in today                     # 경보 규칙(기한 ≤ 오늘) 그대로
+    page = _read("frontend/app/page.tsx")
+    assert "deadlineFact(a.deadline, todayKst())" in page
+
+
+def test_d_today_display_check_ts():
+    import shutil
+    import subprocess
+
+    if not shutil.which("npx"):
+        import pytest
+        pytest.skip("npx 없음")
+    r = subprocess.run(["npx", "--yes", "tsx", "lib/today-display.check.ts"], cwd=FE, capture_output=True, text=True, timeout=120)
+    assert r.returncode == 0, r.stdout + r.stderr
+    assert "today-display ok" in r.stdout
