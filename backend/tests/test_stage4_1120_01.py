@@ -132,3 +132,15 @@ def test_i_backtest_dash_note_explains_horizon_in_trading_days():
     assert "idx = 1 + days" in bt and "if len(hist) > idx" in bt        # N 거래일 뒤 종가가 없으면 None
     page = _read("frontend/app/influencer/serenity/backtest/page.tsx")
     assert "backtest-dash-note" in page and "180 거래일" in page and "아직 계산할 수 없다는 뜻" in page
+
+
+# ── j · 확인 대기 태그 문구: 「100% 편차」는 판정 기준값이지 종목별 실제 값이 아니다 ────
+def test_j_tag_label_states_threshold_not_measured_value():
+    from backend.principles import verification_tagger as vt
+
+    assert vt.SINGLE_QUARTER_DEVIATION_MULTIPLIER == 1.0          # 기준값(규칙)은 그대로
+    assert vt.TTM_CONCENTRATION_RATIO_THRESHOLD == 0.5
+    page = _read("frontend/app/principles/verification/page.tsx")
+    assert "평균의 100% 넘게 벗어남 (태그 기준이며 이 종목의 실제 편차 값이 아님)" in page
+    assert "한 분기가 합계의 50% 넘게 차지" in page
+    assert "직전 4Q 평균 대비 100% 편차" not in page

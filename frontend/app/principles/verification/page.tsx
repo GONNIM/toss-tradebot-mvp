@@ -23,8 +23,8 @@ interface Payload {
 }
 
 const TAG_LABEL: Record<string, string> = {
-  single_quarter_outlier: "단분기 이례 (직전 4Q 평균 대비 100% 편차)",
-  ttm_concentration: "TTM 특정 분기 의존 (>50%)",
+  single_quarter_outlier: "단분기 이례 · 한 분기 값이 직전 4분기 평균에서 평균의 100% 넘게 벗어남 (태그 기준이며 이 종목의 실제 편차 값이 아님)",
+  ttm_concentration: "TTM(최근 4분기 합계) 쏠림 · 한 분기가 합계의 50% 넘게 차지 (태그 기준)",
 };
 
 export default function VerificationPage() {
