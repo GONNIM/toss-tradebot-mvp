@@ -41,7 +41,8 @@ def _by_key(resp) -> dict:
 
 def test_constants_shape():
     assert len(MENU_SCREENS) == 25 and len(set(MENU_SCREENS)) == 25
-    assert LOCKED == {"/plans", "/plans/new", "/plans/adopt", "/account", "/admin/settings", "/admin/notifications", "/admin/menu", "/sniper"}
+    # 1120-01 단계 3 · /sniper 잠금을 풂 (상황판을 /admin/settings 에도 둠 · test_safety_panel_on_settings_screen)
+    assert LOCKED == {"/plans", "/plans/new", "/plans/adopt", "/account", "/admin/settings", "/admin/notifications", "/admin/menu"}
     # 1120-01 단계 3 · 권고 7개 정확 대조 (합친 옛 화면 5개 더함)
     assert RECOMMENDED_HIDE == ("/lab", "/influencer/serenity-hunter", "/vip", "/logs", "/lab/moonshot", "/principles", "/rulebook")
     assert LOCKED <= set(MENU_SCREENS) and set(RECOMMENDED_HIDE) <= set(MENU_SCREENS)
@@ -238,8 +239,9 @@ def test_safety_panel_on_settings_screen():
     assert "<SafetyPanel" in src and "<AdminSessionBar" in src
     assert '"sniper", "kill-switch"' in src  # 로그인 · 로그아웃 때 Kill Switch 상태 다시 읽기
     assert "/admin/settings" in LOCKED
-    if "/sniper" not in LOCKED:
-        assert "<SafetyPanel" in _src("app/sniper/page.tsx") or "<SafetyPanel" in src
+    # /sniper 는 잠금 밖이다 → 숨겨도 발동 · 해제 길은 /admin/settings 에 남아야 한다 (위 검사). /sniper 에도 그대로 둔다.
+    assert "/sniper" not in LOCKED
+    assert "<SafetyPanel" in _src("app/sniper/page.tsx")
 
 
 def test_frontend_recommended_keys_match_server():

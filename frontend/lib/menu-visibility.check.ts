@@ -30,8 +30,10 @@ const groups = [
 assert.equal(isHidden(null, "/watchlist"), false);
 assert.equal(isHidden({}, "/watchlist"), false);
 assert.equal(isHidden({ "/watchlist": false }, "/watchlist"), true);
-// 잠금 화면은 숨김 값이 있어도 보임
-assert.equal(isHidden({ "/sniper": false, "/admin/menu": false, "/plans": false }, "/sniper"), false);
+// 잠금 화면은 숨김 값이 있어도 보임 · /sniper 는 단계 3 에서 잠금을 풀어 숨길 수 있다
+assert.equal(isHidden({ "/sniper": false, "/admin/menu": false, "/plans": false }, "/plans"), false);
+assert.equal(isHidden({ "/sniper": false }, "/sniper"), true);
+assert.equal(isHidden({ "/admin/settings": false }, "/admin/settings"), false);
 assert.equal(isHidden({ "/admin/menu": false }, "/admin/menu"), false);
 
 // 숨긴 탭 빠짐 · 지금 화면 탭은 남음
@@ -42,9 +44,12 @@ assert.deepEqual(visibleTabs(tabs, null, null).length, 3);
 
 // 빈 묶음 빠짐 · 오늘(원래 탭 없음)은 어떤 설정에서도 남음 · 지금 화면 탭 든 묶음은 남음
 const all = { "/journal": false, "/logs": false, "/watchlist": false, "/sniper": false, "/lab/crazy": false };
-// /sniper 는 잠금이라 숨김 값이 있어도 후보 묶음이 남는다 · 기록 묶음(잠금 없음)은 두 탭이 숨으면 빠진다
-assert.deepEqual(visibleGroups(groups, all, null).map((g) => g.key), ["today", "candidates"]);
-assert.deepEqual(visibleGroups(groups, all, "/journal").map((g) => g.key), ["today", "candidates", "records"]);
+// 단계 3 · /sniper 잠금을 풀어 후보 세 탭이 모두 숨으면 후보 묶음도 빠진다 · 기록 묶음(잠금 없음)도 두 탭이 숨으면 빠진다
+assert.deepEqual(visibleGroups(groups, all, null).map((g) => g.key), ["today"]);
+assert.deepEqual(visibleGroups(groups, all, "/journal").map((g) => g.key), ["today", "records"]);
+assert.deepEqual(visibleGroups(groups, all, "/sniper").map((g) => g.key), ["today", "candidates"]);
+// 한 탭이라도 보이면 묶음은 남는다
+assert.deepEqual(visibleGroups(groups, { ...all, "/sniper": true }, null).map((g) => g.key), ["today", "candidates"]);
 assert.deepEqual(visibleGroups(groups, null, null).map((g) => g.key), ["today", "candidates", "records"]);
 assert.deepEqual(visibleGroups(groups, { "/journal": false }, null).map((g) => g.key), ["today", "candidates", "records"]);
 // 모든 key 를 숨김으로 줘도 오늘은 남는다

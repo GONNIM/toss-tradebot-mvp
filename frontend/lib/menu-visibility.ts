@@ -11,7 +11,10 @@ export interface MenuScreenRow {
   locked: boolean;
 }
 
-/** 숨길 수 없는 화면 8개 · 서버 LOCKED(backend/api/routes/menu_visibility.py)와 같아야 한다 (시험이 대조). */
+/**
+ * 숨길 수 없는 화면 7개 · 서버 LOCKED(backend/api/routes/menu_visibility.py)와 같아야 한다 (시험이 대조).
+ * 1120-01 단계 3 · 비상 정지 상황판을 /admin/settings 에도 두고 확인한 뒤 /sniper 잠금을 풀었다 (8 → 7).
+ */
 export const LOCKED_KEYS = [
   "/plans",
   "/plans/new",
@@ -20,7 +23,6 @@ export const LOCKED_KEYS = [
   "/admin/settings",
   "/admin/notifications",
   "/admin/menu",
-  "/sniper",
 ] as const;
 
 const LOCKED = new Set<string>(LOCKED_KEYS);

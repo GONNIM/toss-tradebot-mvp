@@ -30,11 +30,12 @@ MENU_SCREENS: tuple[str, ...] = (
     "/admin/settings", "/admin/notifications", "/admin/menu", "/principles", "/lab",
 )
 
-# 잠금 8개: 실주문 · 비상 정지 · 다시 켜기로 가는 길은 숨길 수 없다 (서버와 화면 상수 양쪽에서 강제).
-# /sniper 는 비상 정지 발동·해제 단추가 여기에만 있어 단계 3 에서 상황판을 옮기고 확인한 뒤에만 푼다.
+# 잠금 7개: 실주문 · 비상 정지 · 다시 켜기로 가는 길은 숨길 수 없다 (서버와 화면 상수 양쪽에서 강제).
+# 1120-01 단계 3 (11/22): 비상 정지 상황판(발동 · 해제)을 잠긴 /admin/settings 에도 두고 로컬에서 발동 → 해제 한 바퀴를
+# 확인한 뒤 /sniper 잠금을 풀었다 (8 → 7). /admin/settings 에서 상황판을 빼면 test_safety_panel_on_settings_screen 이 실패한다.
 LOCKED: frozenset[str] = frozenset({
     "/plans", "/plans/new", "/plans/adopt", "/account",
-    "/admin/settings", "/admin/notifications", "/admin/menu", "/sniper",
+    "/admin/settings", "/admin/notifications", "/admin/menu",
 })
 
 # 「권고대로 숨기기」 대상 (메뉴 탭만) · 화면 상수 frontend/lib/menu-visibility.ts RECOMMENDED_HIDE_KEYS 와 같아야 한다 (시험이 대조).

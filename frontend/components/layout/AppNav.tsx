@@ -21,7 +21,7 @@ import { MENU_QUERY_KEY, useMenuVisibility } from "@/lib/use-menu-visibility";
 // - 숨긴 탭은 빼고(지금 화면 탭은 남김) · 탭이 모두 숨은 묶음도 뺀다 (원래 탭 없는 「오늘」은 안 뺌).
 // - 묶음 링크 · PC 분류 링크는 보이는 첫 탭으로 간다. 화면 이동마다 설정을 다시 읽는다.
 // - 「기록」 묶음은 잠긴 탭이 없어 두 탭을 모두 숨기면 묶음이 빠진다 (의도 · 주소 · 오늘 화면 링크로는 열림).
-// - 잠금 8개는 frontend/lib/menu-visibility.ts LOCKED_KEYS · 서버 LOCKED 와 같아야 한다.
+// - 잠금 7개는 frontend/lib/menu-visibility.ts LOCKED_KEYS · 서버 LOCKED 와 같아야 한다 (단계 3 에서 /sniper 잠금을 풂 · 상황판은 /admin/settings 에도 있음).
 
 interface Tab {
   href: string;
