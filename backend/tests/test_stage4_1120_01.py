@@ -161,3 +161,14 @@ def test_l_lab_index_matches_current_menu():
     assert "설정 › 실험장 메뉴로 열 수 있고" in page
     nav = _read("frontend/components/layout/AppNav.tsx")
     assert '{ href: "/lab", label: "실험장"' in nav            # 안내가 가리키는 메뉴가 실제로 있다
+
+
+# ── n · 화약고 F-Score 기준: 조건(코드)은 그대로, 안내서 문구만 코드에 맞춤 ───────
+def test_n_powderkeg_guide_matches_code_threshold():
+    from backend.powderkeg.config import ScreenerThresholds
+
+    assert ScreenerThresholds().piotroski_f_score_min == 4                # 코드 조건은 바꾸지 않았다
+    guide = _read("docs/plans/powderkeg-screener/user-guide.md")
+    assert "8. F-Score ≥ 4" in guide and "(F-Score - 4) / 4" in guide
+    assert "8. F-Score ≥ 6" not in guide and "(F-Score - 6) / 6" not in guide
+    assert "(F-Score - " in _read("backend/powderkeg/screener.py") or "piotroski_f_score_min" in _read("backend/powderkeg/screener.py")
