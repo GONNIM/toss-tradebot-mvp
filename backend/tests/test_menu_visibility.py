@@ -252,3 +252,19 @@ def test_frontend_recommended_keys_match_server():
     # 확인 문구는 권고 상수에서 만든다 (이름을 고정해 적지 않음)
     menu = _src("app/admin/menu/page.tsx")
     assert "RECOMMENDED_HIDE_KEYS" in menu and "실험장 · 인플루언서 Hunter)만" not in menu
+
+
+# ── 1123-02 · 합친 화면에서 위 메뉴 탭 줄과 화면 안 탭 줄이 겹치지 않음 ─────
+def test_merged_host_hides_duplicate_nav_row():
+    nav = _src("components/layout/AppNav.tsx")
+    lib = _src("lib/menu-visibility.ts")
+    assert "export function mergedTabsHere(pathname: string)" in lib
+    assert "pathOf(t.href) === pathname" in lib                    # ?view= 를 뗀 받을 화면 주소로 대조
+    assert "new Set([pathname, ...olds])" in lib                   # 화면 자신 + 합쳐 들어온 옛 주소
+    assert "const covered = sections.length === 0 ? mergedTabsHere(pathname) : null;" in nav  # 분류 줄 묶음(후보)은 그대로
+    assert "{rowTabs.length > 0 && (" in nav and "{rowTabs.map((t) =>" in nav
+    assert "{shownTabs.map((t) =>" not in nav
+    # 받을 화면 두 곳이 실제로 MergedTabs 를 그리고, 옛 주소가 그 화면으로 합쳐져 있다
+    for host, old in (("app/account/page.tsx", '"/vip": { href: "/account?view=vip"'), ("app/journal/page.tsx", '"/logs": { href: "/journal?view=logs"')):
+        assert "<MergedTabs" in _src(host)
+        assert old in lib

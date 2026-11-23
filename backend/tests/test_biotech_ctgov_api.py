@@ -200,9 +200,14 @@ def _setup_out(tmp_path, monkeypatch):
     return calls
 
 
+# 1123-02 · 실행 시각을 TODAY 로 고정한다. 안 넣으면 실제 지금 시각을 써서, 자료 시각(11/16)보다 7일 넘게 지난
+# 11/23 부터 「자료 시각 늦음」 경고가 붙어 행복 경로 시험이 깨졌다 (코드 동작은 그대로).
+NOW = datetime(2026, 11, 17, 6, 0, tzinfo=timezone.utc)
+
+
 def _run(fake, tmp_path, allow=(), names=None):
     return api.run_snapshot(names or NAMES, ALIASES, n_cand=len(names or NAMES), client=_client(fake), today=TODAY,
-                            allow_missing=allow)
+                            now=NOW, allow_missing=allow)
 
 
 def test_page_limit_writes_no_file(tmp_path, monkeypatch):

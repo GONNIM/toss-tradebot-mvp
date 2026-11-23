@@ -14,7 +14,7 @@ import { usePathname } from "next/navigation";
 import { useEffect, useRef } from "react";
 import type { ReactNode } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { bestTabKey, firstVisibleHref, isHidden, mergedTarget, visibleGroups, visibleTabs } from "@/lib/menu-visibility";
+import { bestTabKey, firstVisibleHref, isHidden, mergedTarget, mergedTabsHere, visibleGroups, visibleTabs } from "@/lib/menu-visibility";
 import { MENU_QUERY_KEY, useMenuVisibility } from "@/lib/use-menu-visibility";
 
 // 1120-01 (2026-11-21): 메뉴 보이기 설정 반영.
@@ -171,6 +171,10 @@ export function AppNav({ brand, session }: { brand: ReactNode; session: ReactNod
   const shownTabs = visibleTabs(current.tabs, menu, currentHref);
   const sections = sectionsOf(shownTabs);
   const currentSection = sections.find((sec) => currentTab !== null && sec.tabs.includes(currentTab)) ?? null;
+  // 1123-02 · 합친 화면(/account · /journal)은 화면 안에 같은 탭 줄(MergedTabs)이 있다. 분류 줄이 없는 묶음에서는
+  // 그 화면 자신과 합쳐 들어온 옛 주소 탭을 이 줄에서 빼 같은 이름이 두 번 보이지 않게 한다 (옛 주소로 열면 그대로 보임).
+  const covered = sections.length === 0 ? mergedTabsHere(pathname) : null;
+  const rowTabs = covered ? shownTabs.filter((t) => !covered.has(t.href)) : shownTabs;
 
   // 좁은 화면에서 지금 묶음·탭이 가로 스크롤 밖에 있으면 보이게 한다
   useEffect(() => {
@@ -205,7 +209,8 @@ export function AppNav({ brand, session }: { brand: ReactNode; session: ReactNod
               {/* 1120-01 · 휴대폰 폭에서 「설정」이 잘리지 않게 「내 계좌」는 「계좌」로 줄여 보인다 */}
               {g.label.startsWith("내 ") ? (
                 <>
-                  <span className="hidden md:inline">내 </span>
+                  {/* 1123-02 · 링크가 flex 라 span 끝 빈칸이 지워져 「내계좌」로 붙어 보였다 → 붙지 않는 빈칸 */}
+                  <span className="hidden md:inline">내&nbsp;</span>
                   {g.label.slice(2)}
                 </>
               ) : (
@@ -262,7 +267,7 @@ export function AppNav({ brand, session }: { brand: ReactNode; session: ReactNod
           })}
         </nav>
       )}
-      {shownTabs.length > 0 && (
+      {rowTabs.length > 0 && (
         <nav
           ref={tabsRef}
           aria-label={`${current.label} 화면`}
@@ -272,7 +277,7 @@ export function AppNav({ brand, session }: { brand: ReactNode; session: ReactNod
             (sections.length > 0 ? "md:hidden" : "md:flex-wrap md:overflow-visible")
           }
         >
-          {shownTabs.map((t) => {
+          {rowTabs.map((t) => {
             const active = currentTab !== null && t.href === currentTab.href && tabMatches(pathname, t);
             return (
               <Link
