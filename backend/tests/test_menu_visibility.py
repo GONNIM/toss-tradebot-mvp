@@ -261,10 +261,30 @@ def test_merged_host_hides_duplicate_nav_row():
     assert "export function mergedTabsHere(pathname: string)" in lib
     assert "pathOf(t.href) === pathname" in lib                    # ?view= 를 뗀 받을 화면 주소로 대조
     assert "new Set([pathname, ...olds])" in lib                   # 화면 자신 + 합쳐 들어온 옛 주소
-    assert "const covered = sections.length === 0 ? mergedTabsHere(pathname) : null;" in nav  # 분류 줄 묶음(후보)은 그대로
+    assert "const merged = mergedTabsHere(pathname);" in nav
     assert "{rowTabs.length > 0 && (" in nav and "{rowTabs.map((t) =>" in nav
     assert "{shownTabs.map((t) =>" not in nav
     # 받을 화면 두 곳이 실제로 MergedTabs 를 그리고, 옛 주소가 그 화면으로 합쳐져 있다
     for host, old in (("app/account/page.tsx", '"/vip": { href: "/account?view=vip"'), ("app/journal/page.tsx", '"/logs": { href: "/journal?view=logs"')):
         assert "<MergedTabs" in _src(host)
         assert old in lib
+
+
+# ── 1123-03 · 분류 줄 묶음(후보)의 합친 화면은 옛 주소 탭만 빼고 화면 자신은 남김 ─────
+def test_sectioned_merged_host_drops_only_old_tabs():
+    nav = _src("components/layout/AppNav.tsx")
+    lib = _src("lib/menu-visibility.ts")
+    # 분류 줄 묶음이면 지금 화면(pathname)은 빼지 않는다 → 「지금 어느 화면인지」 표시가 남는다
+    assert "merged && sections.length > 0 ? new Set([...merged].filter((h) => h !== pathname)) : merged" in nav
+    # PC 분류 안 화면 줄도 같은 기준으로 거른다 · 분류 옆 개수(sec.tabs.length)는 그대로
+    assert "currentSection.tabs.filter((t) => !covered?.has(t.href))" in nav
+    assert "{sectionTabs.map((t) =>" in nav and "{currentSection.tabs.map((t) =>" not in nav
+    assert "{sec.tabs.length}" in nav
+    # 후보 묶음의 받을 화면 두 곳과 그 옛 주소 (둘 다 위 메뉴에 탭으로 있음)
+    for host, old, tab in (
+        ("app/lab/crazy/page.tsx", '"/lab/moonshot": { href: "/lab/crazy?view=moonshot"', '{ href: "/lab/moonshot",'),
+        ("app/principles/screener/page.tsx", '"/rulebook": { href: "/principles/screener?view=rulebook"', '{ href: "/rulebook",'),
+    ):
+        assert "<MergedTabs" in _src(host)
+        assert old in lib
+        assert tab in nav
