@@ -133,6 +133,17 @@ export const MERGED_INTO: Record<string, { href: string; label: string }> = {
   "/biotech/docs": { href: "/biotech#biotech-docs", label: "바이오 화면 맨 아래 「바이오 문서」 접기" },
 };
 
+/**
+ * 1123-02 · 지금 주소가 합친 화면(받을 화면)이면 그 화면 안 탭 줄이 이미 보이는 메뉴 주소들(그 화면 자신 + 합쳐 들어온 옛 주소).
+ * 합친 화면이 아니면 null. 예: "/account" → {"/account", "/vip"} · "/vip" → null.
+ */
+export function mergedTabsHere(pathname: string): Set<string> | null {
+  const olds = Object.entries(MERGED_INTO)
+    .filter(([, t]) => pathOf(t.href) === pathname)
+    .map(([old]) => old);
+  return olds.length > 0 ? new Set([pathname, ...olds]) : null;
+}
+
 /** 지금 주소(정확 일치)의 받을 화면 안내. 없으면 null. */
 export function mergedTarget(pathname: string): { href: string; label: string } | null {
   return MERGED_INTO[pathname] ?? null;
