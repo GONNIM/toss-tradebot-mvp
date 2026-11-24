@@ -2,7 +2,8 @@
 
 /**
  * 페이지 안 확인 코드 대화상자 (계획서 11절 · 4-2 · 4-2-1).
- * - 열리면 코드를 요청한다(휴대폰 텔레그램으로 6자리가 간다). 남은 시간이 줄어들고 「코드 다시 받기」가 있다.
+ * - 열려도 코드를 요청하지 않는다. 「코드 받기」를 누를 때만 요청한다(휴대폰 텔레그램으로 6자리가 간다 · 1116-01 H).
+ *   받은 뒤에는 남은 시간이 줄어들고 「코드 다시 받기」가 있다. 승인 · 재개 · 결과 모르는 주문 확정 · 실거래 켜기 창이 모두 이 부품을 쓴다.
  * - requireCode=false 면 코드 없이 확인만 받는다(모의 계획 승인).
  * - 브라우저 기본 confirm() 은 쓰지 않는다 (자동 조작 시험용).
  */
@@ -70,11 +71,10 @@ export function CodeDialog({
       setCode("");
       setErr(null);
       setReqErr(null);
-      if (requireCode) void request();
     } else if (!open && el.open) {
       el.close();
     }
-    // 열릴 때만 코드를 요청한다
+    // 열릴 때는 상태만 비운다 · 코드 요청은 「코드 받기」 단추에서만 한다
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
 
@@ -118,15 +118,34 @@ export function CodeDialog({
         {requireCode && ch && renderValues && (
           <div data-testid={`${testid}-values`} className="rounded-lg border border-border bg-background p-3 text-sm">
             <p className="mb-1 text-xs text-muted-foreground">
-              코드를 요청한 순간의 값입니다. 판 번호 {ch.revision ?? "—"} · 내용 확인값 {ch.content_hash ?? "—"}
+              코드를 요청한 순간의 값입니다. 판 번호 <span data-testid={`${testid}-revision`}>{ch.revision ?? "—"}</span> (텔레그램 알림의 판 번호와 맞는지 확인하십시오)
             </p>
             {renderValues(ch.values)}
+            <details className="mt-1 text-xs text-muted-foreground">
+              <summary className="cursor-pointer" aria-label="내용 확인값 펼치기">자세히</summary>
+              <p className="break-all tabular-nums">내용 확인값 {ch.content_hash ?? "—"}</p>
+            </details>
           </div>
         )}
         {children}
         {requireCode && (
           <div className="space-y-2">
-            <p className="text-sm">휴대폰 텔레그램으로 온 6자리를 넣어 주십시오 · 5분 유효</p>
+            {ch === null && (
+              <div className="space-y-1">
+                <p className="text-sm">「코드 받기」를 누르면 휴대폰 텔레그램으로 6자리가 갑니다 · 5분 유효</p>
+                <button
+                  type="button"
+                  onClick={() => void request()}
+                  disabled={busy}
+                  aria-label="확인 코드 받기"
+                  data-testid={`${testid}-request`}
+                  className={BTN_PRIMARY}
+                >
+                  {busy ? "코드를 보내는 중입니다" : "코드 받기"}
+                </button>
+              </div>
+            )}
+            {ch !== null && <p className="text-sm">휴대폰 텔레그램으로 온 6자리를 넣어 주십시오 · 5분 유효</p>}
             <input
               inputMode="numeric"
               autoComplete="one-time-code"
@@ -139,9 +158,10 @@ export function CodeDialog({
               className={`${INPUT} text-center text-xl tracking-[0.4em]`}
               placeholder="000000"
             />
+            {ch !== null && (
             <div className="flex flex-wrap items-center justify-between gap-2 text-sm">
               <span data-testid={`${testid}-left`} className="tabular-nums text-muted-foreground">
-                {ch === null ? (busy ? "코드를 보내는 중입니다" : "코드가 아직 없습니다") : expired ? "시간이 지났습니다 · 코드를 다시 받아 주십시오" : `남은 시간 ${mm}:${ss}`}
+                {expired ? "시간이 지났습니다 · 코드를 다시 받아 주십시오" : `남은 시간 ${mm}:${ss}`}
               </span>
               <button
                 type="button"
@@ -154,6 +174,7 @@ export function CodeDialog({
                 코드 다시 받기
               </button>
             </div>
+            )}
             <p className="text-xs text-muted-foreground">새 코드를 받으면 앞의 코드는 쓸 수 없습니다. 틀린 코드를 5번 넣으면 그 코드는 무효가 됩니다.</p>
           </div>
         )}

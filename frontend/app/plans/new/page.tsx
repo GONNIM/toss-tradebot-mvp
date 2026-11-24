@@ -4,12 +4,15 @@
 // 화면은 양수 · 1차 익절가 위치만 직접 본다. 수량 · 상한 · 매수 가능 금액 · 가격 단위 · 값 이상 여부 · 앱 조건주문은
 // 서버 POST /plans/validate 결과를 보인다 (아무것도 저장하지 않는 읽기 점검). 초안 저장 뒤 승인 때 서버가 다시 막는다.
 // 예시 칸의 TESTA 는 가짜 이름이다.
+// 1116-01 D · 보이는 칸은 종목 · 예산 · 매수 감시가 · 매수 주문가 네 칸(두 가격은 따로 보냄 · 보내는 값 모양은 그대로). 나머지는 「더 입력하기」에 접는다.
+// 손절은 입력받지 않고 보여 주기만 한다(계획에 손절 폭이 없으므로 기본 규칙). E · 오류 문구는 「초안 저장」을 누른 뒤에만 보인다.
 import { Suspense, useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { plansApi, MODE_LABEL, errText, num, shares } from "@/lib/plans";
 import type { PlanMode, ValidateResult } from "@/lib/plans";
 import { usePlanStatus } from "@/components/plans/ModeBand";
+import { PRICE_NOTE, ladderLine } from "@/components/plans/planView";
 import { BTN_LINE, BTN_PRIMARY, Field, INPUT, Notice } from "@/components/plans/ui";
 
 function toKst(v: string): string | null {
@@ -33,6 +36,8 @@ function NewPlanForm() {
   const [windowEnd, setWindowEnd] = useState("");
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
+  const [submitted, setSubmitted] = useState(false); // E · 저장을 눌러 본 뒤에만 오류 문구를 보인다
+  const [more, setMore] = useState(false);
 
   // 같은 종목에 열린 계획이 있는지 목록에서 바로 알려 준다 (서버도 막는다)
   const list = useQuery({ queryKey: ["plans", "list"], queryFn: () => plansApi.list(), staleTime: 0, retry: false });
@@ -112,7 +117,12 @@ function NewPlanForm() {
 
   async function save(e: React.FormEvent) {
     e.preventDefault();
-    if (problems.length > 0) return;
+    setSubmitted(true);
+    if (problems.length > 0) {
+      // 접힌 칸에서 막힌 값이 있으면 펼쳐 보여 준다
+      if (given.editable || (t1w !== null && t1w <= 0) || (t1o !== null && t1o <= 0)) setMore(true);
+      return;
+    }
     setBusy(true);
     setErr(null);
     try {
@@ -128,62 +138,73 @@ function NewPlanForm() {
     <form onSubmit={save} className="space-y-4" aria-label="새 계획 초안 입력">
       <h2 className="text-xl font-bold">새 계획 초안</h2>
       <Notice>저장하면 초안이 됩니다. 주문은 승인한 뒤에 시작됩니다. 수량은 예산과 매수 주문가로 서버가 다시 정하므로 입력과 다를 수 있습니다(예산 · 매수가가 없을 때만 입력한 수량을 씁니다). 추정 · 보장 아님.</Notice>
+      <p className="text-sm text-muted-foreground" data-testid="new-mode-line">계획 종류: {MODE_LABEL[mode] ?? "알 수 없는 종류"} (바꾸려면 아래 「더 입력하기」)</p>
       <div className="grid gap-3 sm:grid-cols-2">
         <Field label="종목 이름 (예 TESTA)">
           <input value={symbol} onChange={(e) => setSymbol(e.target.value)} aria-label="종목 이름" data-testid="in-symbol" className={INPUT} autoCapitalize="characters" placeholder="TESTA" />
         </Field>
-        <Field label="계획 종류">
-          <select value={mode} onChange={(e) => setMode(e.target.value as PlanMode)} aria-label="계획 종류" data-testid="in-mode" className={INPUT}>
-            <option value="live">{MODE_LABEL.live}</option>
-            <option value="test">{MODE_LABEL.test}</option>
-            {(paperOk || mode === "paper") && <option value="paper">{MODE_LABEL.paper}</option>}
-          </select>
-        </Field>
         <Field label="예산 (달러)">
           <input inputMode="decimal" value={budget} onChange={(e) => setBudget(e.target.value)} aria-label="예산 달러" data-testid="in-budget" className={INPUT} placeholder="100" />
         </Field>
-        {given.editable ? (
-          <Field label="수량 (주) · 예산 · 매수가가 없어 직접 넣은 값" hint="예산과 매수 주문가를 넣으면 서버가 수량을 정합니다(예산 ÷ (매수가 × 1.001) 을 6 의 배수로 내림).">
-            <input inputMode="numeric" value={qtyIn} onChange={(e) => setQtyIn(e.target.value)} aria-label="수량 직접 입력" data-testid="in-qty" className={INPUT} placeholder="6" />
-          </Field>
-        ) : (
-          <Field label="서버가 정한 수량" hint="예산 ÷ (매수가 × 1.001) 을 6 의 배수로 내린 값입니다. 저장할 때 보내는 수량이 달라도 서버가 정한 값이 쓰입니다.">
-            <output data-testid="out-qty" aria-label="서버가 정한 수량" className={`${INPUT} flex items-center`}>{given.serverQty === null ? "확인하는 중" : shares(given.serverQty)}</output>
-          </Field>
-        )}
-        <Field label="매수 감시가 (달러)">
+        <Field label="매수 감시가 (달러)" hint="살 때 감시하는 값입니다.">
           <input inputMode="decimal" value={buyWatch} onChange={(e) => setBuyWatch(e.target.value)} aria-label="매수 감시가" data-testid="in-buy-watch" className={INPUT} placeholder="1.00" />
         </Field>
-        <Field label="매수 주문가 (달러)">
+        <Field label="매수 주문가 (달러)" hint="살 때 내는 주문 값입니다.">
           <input inputMode="decimal" value={buyOrder} onChange={(e) => setBuyOrder(e.target.value)} aria-label="매수 주문가" data-testid="in-buy-order" className={INPUT} placeholder="1.02" />
         </Field>
-        <Field label="1차 익절 감시가 (달러)">
-          <input inputMode="decimal" value={tp1Watch} onChange={(e) => setTp1Watch(e.target.value)} aria-label="1차 익절 감시가" data-testid="in-tp1-watch" className={INPUT} />
-        </Field>
-        <Field label="1차 익절 주문가 (달러)">
-          <input inputMode="decimal" value={tp1Order} onChange={(e) => setTp1Order(e.target.value)} aria-label="1차 익절 주문가" data-testid="in-tp1-order" className={INPUT} />
-        </Field>
-        <Field label="발표 시각 (한국 시각 · 비워도 됨)">
-          <input type="datetime-local" value={announce} onChange={(e) => setAnnounce(e.target.value)} aria-label="발표 시각" data-testid="in-announce" className={INPUT} />
-        </Field>
-        <Field label="매수 마감 시각 (한국 시각 · 비워도 됨)">
-          <input type="datetime-local" value={close} onChange={(e) => setClose(e.target.value)} aria-label="매수 마감 시각" data-testid="in-close" className={INPUT} />
-        </Field>
-        <Field label="진입 창 끝 (한국 시각 · 비워도 됨)">
-          <input type="datetime-local" value={windowEnd} onChange={(e) => setWindowEnd(e.target.value)} aria-label="진입 창 끝" data-testid="in-window-end" className={INPUT} />
-        </Field>
       </div>
+      <section aria-label="손절 규칙" data-testid="new-stop-rule" className="rounded-lg border border-border bg-card px-3 py-2 text-sm">
+        <p className="font-semibold">{ladderLine(undefined).text}</p>
+        <p className="text-xs text-muted-foreground">입력 칸이 아니라 보여 주기만 합니다 · 체결 전에는 달러 값이 정해지지 않습니다. {PRICE_NOTE}</p>
+      </section>
 
-      {problems.length > 0 && (
+      <details open={more} onToggle={(e) => setMore((e.currentTarget as HTMLDetailsElement).open)} data-testid="new-more" className="rounded-lg border border-border bg-card px-3 py-2">
+        <summary className="min-h-[32px] cursor-pointer text-sm font-semibold" aria-label="나머지 칸 펼치기">더 입력하기 (계획 종류 · 수량 · 1차 익절 · 시각)</summary>
+        <div className="mt-2 grid gap-3 sm:grid-cols-2">
+          <Field label="계획 종류">
+            <select value={mode} onChange={(e) => setMode(e.target.value as PlanMode)} aria-label="계획 종류" data-testid="in-mode" className={INPUT}>
+              <option value="live">{MODE_LABEL.live}</option>
+              <option value="test">{MODE_LABEL.test}</option>
+              {(paperOk || mode === "paper") && <option value="paper">{MODE_LABEL.paper}</option>}
+            </select>
+          </Field>
+          {given.editable ? (
+            <Field label="수량 (주) · 예산 · 매수가가 없어 직접 넣은 값" hint="예산과 매수 주문가를 넣으면 서버가 수량을 정합니다(예산 ÷ (매수가 × 1.001) 을 6 의 배수로 내림).">
+              <input inputMode="numeric" value={qtyIn} onChange={(e) => setQtyIn(e.target.value)} aria-label="수량 직접 입력" data-testid="in-qty" className={INPUT} placeholder="6" />
+            </Field>
+          ) : (
+            <Field label="서버가 정한 수량" hint="예산 ÷ (매수가 × 1.001) 을 6 의 배수로 내린 값입니다. 저장할 때 보내는 수량이 달라도 서버가 정한 값이 쓰입니다.">
+              <output data-testid="out-qty" aria-label="서버가 정한 수량" className={`${INPUT} flex items-center`}>{given.serverQty === null ? "확인하는 중" : shares(given.serverQty)}</output>
+            </Field>
+          )}
+          <Field label="1차 익절 감시가 (달러)">
+            <input inputMode="decimal" value={tp1Watch} onChange={(e) => setTp1Watch(e.target.value)} aria-label="1차 익절 감시가" data-testid="in-tp1-watch" className={INPUT} />
+          </Field>
+          <Field label="1차 익절 주문가 (달러)">
+            <input inputMode="decimal" value={tp1Order} onChange={(e) => setTp1Order(e.target.value)} aria-label="1차 익절 주문가" data-testid="in-tp1-order" className={INPUT} />
+          </Field>
+          <Field label="발표 시각 (한국 시각 · 비워도 됨)">
+            <input type="datetime-local" value={announce} onChange={(e) => setAnnounce(e.target.value)} aria-label="발표 시각" data-testid="in-announce" className={INPUT} />
+          </Field>
+          <Field label="매수 마감 시각 (한국 시각 · 비워도 됨)">
+            <input type="datetime-local" value={close} onChange={(e) => setClose(e.target.value)} aria-label="매수 마감 시각" data-testid="in-close" className={INPUT} />
+          </Field>
+          <Field label="진입 창 끝 (한국 시각 · 비워도 됨)">
+            <input type="datetime-local" value={windowEnd} onChange={(e) => setWindowEnd(e.target.value)} aria-label="진입 창 끝" data-testid="in-window-end" className={INPUT} />
+          </Field>
+        </div>
+      </details>
+
+      {submitted && problems.length > 0 && (
         <ul data-testid="new-problems" role="alert" className="list-disc space-y-1 rounded-lg border border-warn/40 bg-warn/5 py-2 pl-7 pr-3 text-sm text-warn">
           {problems.map((m) => <li key={m}>{m}</li>)}
         </ul>
       )}
-      {soft.map((m) => <Notice key={m} tone="warn" testid="new-soft">{m}</Notice>)}
+      {submitted && soft.map((m) => <Notice key={m} tone="warn" testid="new-soft">{m}</Notice>)}
       <section aria-label="서버 점검 결과" data-testid="new-validate" className="space-y-2">
         <h3 className="text-sm font-bold">서버 점검 결과 {vBusy && <span className="font-normal text-muted-foreground">· 확인하는 중</span>}</h3>
-        {vErr && <Notice tone="warn" testid="new-validate-error">점검을 하지 못했습니다 · {vErr}</Notice>}
-        {!vr && !vErr && !vBusy && <Notice testid="new-validate-empty">종목 · 예산 · 매수 주문가를 넣으면 서버가 한도 · 매수 가능 금액 · 가격 단위 · 값 이상 여부 · 앱 조건주문을 점검합니다.</Notice>}
+        {submitted && vErr && <Notice tone="warn" testid="new-validate-error">점검을 하지 못했습니다 · {vErr}</Notice>}
+        {!vr && !(submitted && vErr) && !vBusy && <Notice testid="new-validate-empty">종목 · 예산 · 매수 주문가를 넣으면 서버가 한도 · 매수 가능 금액 · 가격 단위 · 값 이상 여부 · 앱 조건주문을 점검합니다.</Notice>}
         {vr && (
           <ul className="divide-y divide-border rounded-[14px] border border-border bg-card">
             {vr.checks.map((c) => (
@@ -199,9 +220,9 @@ function NewPlanForm() {
           </ul>
         )}
       </section>
-      {err && <Notice tone="warn" testid="new-error">{err}</Notice>}
+      {submitted && err && <Notice tone="warn" testid="new-error">{err}</Notice>}
       <div className="flex flex-wrap gap-2">
-        <button type="submit" disabled={busy || problems.length > 0} aria-label="초안 저장" data-testid="btn-save-draft" className={BTN_PRIMARY}>
+        <button type="submit" disabled={busy} aria-label="초안 저장" data-testid="btn-save-draft" className={BTN_PRIMARY}>
           {busy ? "저장 중" : "초안 저장"}
         </button>
         <button type="button" onClick={() => router.push("/plans")} aria-label="목록으로 돌아가기" data-testid="btn-cancel-new" className={BTN_LINE}>

@@ -17,7 +17,7 @@ function decisionText(d: Decision, o: UnknownOrder): string {
   const buy = o.side === "BUY";
   if (d === "filled") {
     if (buy) return "체결됨으로 확정하면 입력한 수량이 매수된 것으로 보고 보유에 더한 뒤 그 수량에 손절을 겁니다.";
-    if (o.replaces_id != null) return "체결됨으로 확정하면 입력한 수량이 팔린 것으로 보고 계획 보유에서 뺍니다. 고치려던 다리는 끝나고 남은 보유에는 손절이 계속 걸립니다.";
+    if (o.replaces_id != null) return "체결됨으로 확정하면 입력한 수량이 팔린 것으로 보고 계획 보유에서 뺍니다. 고치려던 걸린 주문은 끝나고 남은 보유에는 손절이 계속 걸립니다.";
     return `체결됨으로 확정하면 입력한 수량이 팔린 것으로 보고 계획 보유에서 뺍니다. ${o.role === "tp1" ? "1차 익절 뒤 단계로 넘어갑니다. " : ""}남은 보유에는 손절이 계속 걸립니다.`;
   }
   if (d === "not_created") {
@@ -84,7 +84,7 @@ export function UnknownOrdersPanel({
       )}
       {count > 0 && (
         <Notice testid="unknown-pause-note">
-          확정 전까지 이 계획은 정지 상태라 시간 손절 · 고점 따라 손절 올림 · 1차 익절이 돌지 않습니다. 손절 다리는 그대로 걸려 있습니다.
+          확정 전까지 이 계획은 정지 상태라 시간 손절 · 고점 따라 손절 올림 · 1차 익절이 돌지 않습니다. 손절로 걸린 주문은 그대로 걸려 있습니다.
         </Notice>
       )}
       {done && <Notice testid="unknown-done">{done}</Notice>}

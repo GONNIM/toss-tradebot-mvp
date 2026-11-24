@@ -1,14 +1,16 @@
 "use client";
 
 // /plans · 계획 목록 (계획서 11절 · v4 8절)
-// 걸린 조건주문 수 · 토스 API 마지막 성공 시각 · 1차 익절 방식 · 마지막 현재가는 서버 값이고 null 이면 「확인 못 함」.
+// 맨 위 한 줄(주문 나감/안 나감)과 상태 칩은 ModeBand(자세히). 걸린 조건주문 수 · 1차 익절 방식 · 마지막 현재가는 서버 값이고 null 이면 「확인 못 함」.
+// 카드는 종목 · 살 값 · 팔 값 · 손절 값 · 수량 다섯 줄 (1116-01 B). 손절은 계획의 손절 폭이 있으면 그 값, 없을 때만 기본 규칙.
 import Link from "next/link";
 
 import { StockLabel } from "@/components/stock/StockLabel";
 import { useQuery } from "@tanstack/react-query";
-import { plansApi, MODE_LABEL, STATE_LABEL, TERMINAL_STATES, TP1_MODE_LABEL, WS_LABEL, errText, kst, shares, usd } from "@/lib/plans";
+import { plansApi, MODE_LABEL, STATE_LABEL, TERMINAL_STATES, TP1_MODE_LABEL, errText, kst, num, shares, usd } from "@/lib/plans";
 import { usePlanStatus } from "@/components/plans/ModeBand";
-import { BTN_LINE, BTN_PRIMARY, Chip, Notice } from "@/components/plans/ui";
+import { ADOPT_NAME, PRICE_NOTE, ladderLine } from "@/components/plans/planView";
+import { BTN_LINE, BTN_PRIMARY, Notice } from "@/components/plans/ui";
 
 export default function PlansPage() {
   const status = usePlanStatus();
@@ -22,20 +24,12 @@ export default function PlansPage() {
 
   return (
     <div className="space-y-4">
-      <section aria-label="실행기 상태 칩" className="flex flex-wrap gap-2" data-testid="plans-chips">
-        <Chip testid="chip-ws">시세 연결 {WS_LABEL[st?.ws_status ?? "none"] ?? "확인 못 함"}</Chip>
-        <Chip testid="chip-resync">토스와 마지막으로 맞춘 시각 {kst(st?.last_resync_at)}</Chip>
-        <Chip testid="chip-toss" tone={q.data?.toss?.status === "ok" ? "plain" : "warn"}>
-          토스 API 연결 {q.data?.toss?.status === "ok" ? "정상" : q.data?.toss?.status === "error" ? "오류" : "확인 못 함"} · 마지막 성공 {kst(q.data?.toss?.last_ok_at ?? st?.toss?.last_ok_at)}
-        </Chip>
-      </section>
-
       <div className="flex flex-wrap gap-2">
         <Link href="/plans/new" aria-label="새 계획 만들기" data-testid="btn-new-plan" className={BTN_PRIMARY}>
           새 계획
         </Link>
         <Link href="/plans/adopt" aria-label="보유 종목 인수하기" data-testid="btn-adopt-plan" className={BTN_LINE}>
-          보유 인수
+          {ADOPT_NAME}
         </Link>
         {paperOk && (
           <Link href="/plans/new?mode=paper" aria-label="모의 시험 계획 만들기" data-testid="btn-new-paper" className={BTN_LINE}>
@@ -64,28 +58,37 @@ function PlanList({ title, rows, testid }: { title: string; rows: import("@/lib/
         {rows.map((p) => {
           const qty = p.params.qty ?? p.params.adopt?.qty;
           const warn = p.state === "HALTED";
+          const adopt = p.source === "adopt";
+          const lad = ladderLine(p.params);
           return (
             <li key={p.id}>
               <Link
                 href={`/plans/${p.id}`}
                 aria-label={`계획 ${p.id} ${p.symbol} 상세`}
                 data-testid={`plan-row-${p.id}`}
-                className="flex min-h-[44px] flex-col gap-1 px-3 py-3 sm:flex-row sm:items-center sm:justify-between"
+                className="block min-h-[44px] space-y-1 px-3 py-3"
               >
                 <span className="flex flex-wrap items-center gap-2">
                   <span className="text-sm tabular-nums text-muted-foreground">#{p.id}</span>
-                  <span className="font-bold"><StockLabel code={p.symbol} name={p.name} market="US" link={false} /></span>
+                  <span className="font-bold" data-testid={`row-symbol-${p.id}`}><StockLabel code={p.symbol} name={p.name} market="US" link={false} /></span>
                   <span className="text-xs text-muted-foreground">{MODE_LABEL[p.mode] ?? "알 수 없는 종류"}</span>
-                  {p.source === "adopt" && <span className="text-xs text-muted-foreground">보유 인수</span>}
+                  {adopt && <span className="text-xs text-muted-foreground">{ADOPT_NAME}</span>}
+                  <span className={`ml-auto text-sm ${warn ? "font-semibold text-warn" : "font-semibold"}`}>{STATE_LABEL[p.state] ?? "알 수 없는 단계"}</span>
                 </span>
-                <span className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm tabular-nums">
-                  <span className={warn ? "font-semibold text-warn" : "font-semibold"}>{STATE_LABEL[p.state] ?? "알 수 없는 단계"}</span>
-                  <span>수량 {shares(qty)}</span>
-                  <span>매수 주문가 {usd(p.params.buy_order ?? p.avg_price)}</span>
+                <span className="block space-y-0.5 text-sm tabular-nums">
+                  <span className="block" data-testid={`row-buy-${p.id}`}>
+                    {adopt ? `살 값: 평균 단가 ${usd(p.params.adopt?.avg_price ?? p.avg_price)}` : `살 값: 매수 감시가 ${usd(p.params.buy_watch)} · 매수 주문가 ${usd(p.params.buy_order)}`}
+                  </span>
+                  <span className="block" data-testid={`row-sell-${p.id}`}>팔 값: 1차 익절 감시가 {usd(p.params.tp1_watch)} · 1차 익절 주문가 {usd(p.params.tp1_order)}</span>
+                  <span className="block" data-testid={`row-stop-${p.id}`}>{lad.text}</span>
+                  <span className="block" data-testid={`row-qty-${p.id}`}>수량: {num(qty) !== null && (num(qty) ?? 0) > 0 ? shares(qty) : "0주 · 빠진 값이 있을 수 있음"}</span>
+                </span>
+                <span className="flex flex-wrap gap-x-4 gap-y-1 text-xs tabular-nums text-muted-foreground">
                   <span data-testid={`row-conds-${p.id}`}>걸린 조건주문 {p.live_cond_count ?? "확인 못 함"}{typeof p.live_cond_count === "number" ? "건" : ""}</span>
-                  <span data-testid={`row-tp1-${p.id}`} className="text-muted-foreground">1차 익절 {p.tp1_mode ? TP1_MODE_LABEL[p.tp1_mode] : "정해지지 않음"}</span>
-                  <span data-testid={`row-price-${p.id}`} className="text-muted-foreground">현재가 {p.price != null ? `${usd(p.price, 4)} · ${kst(p.price_at)}` : "확인 못 함"}</span>
+                  <span data-testid={`row-tp1-${p.id}`}>1차 익절 {p.tp1_mode ? TP1_MODE_LABEL[p.tp1_mode] : "정해지지 않음"}</span>
+                  <span data-testid={`row-price-${p.id}`}>현재가 {p.price != null ? `${usd(p.price, 4)} · ${kst(p.price_at)}` : "확인 못 함"}</span>
                 </span>
+                <span className="block text-xs text-muted-foreground" data-testid={`row-note-${p.id}`}>{PRICE_NOTE}</span>
               </Link>
             </li>
           );
