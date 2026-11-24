@@ -1,6 +1,7 @@
 "use client";
 
-// /plans/adopt · 보유 인수 초안 (계획서 8-0 · 8-1 · 11절)
+// /plans/adopt · 이미 산 종목 맡기기 초안 (보이는 이름만 바뀜 · 서버 값 이름 adopt 는 그대로 · 1116-01 F)
+// 오류 문구는 「인수 초안 저장」을 누른 뒤에만 보인다 (1116-01 E) (계획서 8-0 · 8-1 · 11절)
 // 계좌 보유 수량 · 평균단가를 서버에서 읽어 오는 API 가 없어 직접 입력한다 (보고 「필요한 API」).
 // 인수 승인(쿠키 + 확인 코드)은 저장 뒤 상세 화면에서 한다. 예시 TESTA 는 가짜 이름이다.
 import { useMemo, useState } from "react";
@@ -23,6 +24,7 @@ export default function AdoptPage() {
   const [tp1Order, setTp1Order] = useState("");
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
+  const [submitted, setSubmitted] = useState(false);
 
   const list = useQuery({ queryKey: ["plans", "list"], queryFn: () => plansApi.list(), staleTime: 0, retry: false });
   const sym = symbol.trim().toUpperCase();
@@ -44,6 +46,7 @@ export default function AdoptPage() {
 
   async function save(e: React.FormEvent) {
     e.preventDefault();
+    setSubmitted(true);
     if (problems.length) return;
     setBusy(true);
     setErr(null);
@@ -62,9 +65,9 @@ export default function AdoptPage() {
 
   return (
     <form onSubmit={save} className="space-y-4" aria-label="보유 인수 초안 입력">
-      <h2 className="text-xl font-bold">보유 인수 초안</h2>
+      <h2 className="text-xl font-bold">이미 산 종목 맡기기 초안</h2>
       <AdoptNotice />
-      <Notice>인수를 승인하면 실행기가 그 종목의 앱 조건주문이 없어지기를 10초마다 확인하고, 0건이 되는 즉시 손절 다리를 겁니다. 실거래 스위치가 꺼져 있으면 인수를 시작하지 않습니다.</Notice>
+      <Notice>맡기기를 승인하면 실행기가 그 종목의 앱 조건주문이 없어지기를 10초마다 확인하고, 0건이 되는 즉시 손절 주문을 겁니다. 실거래 스위치가 꺼져 있으면 맡기기를 시작하지 않습니다.</Notice>
       <div className="grid gap-3 sm:grid-cols-2">
         <Field label="종목 이름 (예 TESTA)">
           <input value={symbol} onChange={(e) => setSymbol(e.target.value)} aria-label="종목 이름" data-testid="in-symbol" className={INPUT} placeholder="TESTA" />
@@ -97,16 +100,16 @@ export default function AdoptPage() {
           </Field>
         )}
       </div>
-      {problems.length > 0 && (
+      {submitted && problems.length > 0 && (
         <ul data-testid="adopt-problems" role="alert" className="list-disc space-y-1 rounded-lg border border-warn/40 bg-warn/5 py-2 pl-7 pr-3 text-sm text-warn">
           {problems.map((m) => <li key={m}>{m}</li>)}
         </ul>
       )}
       <Notice testid="adopt-server-check-note">앱에서 건 같은 종목 조건주문 수는 서버가 목록을 주는 대로 인수 대기 화면에 보입니다.</Notice>
-      {err && <Notice tone="warn" testid="adopt-error">{err}</Notice>}
+      {submitted && err && <Notice tone="warn" testid="adopt-error">{err}</Notice>}
       <div className="flex flex-wrap gap-2">
-        <button type="submit" disabled={busy || problems.length > 0} aria-label="인수 초안 저장" data-testid="btn-save-adopt" className={BTN_PRIMARY}>
-          {busy ? "저장 중" : "인수 초안 저장"}
+        <button type="submit" disabled={busy} aria-label="인수 초안 저장" data-testid="btn-save-adopt" className={BTN_PRIMARY}>
+          {busy ? "저장 중" : "맡기기 초안 저장"}
         </button>
         <button type="button" onClick={() => router.push("/plans")} aria-label="목록으로 돌아가기" data-testid="btn-cancel-adopt" className={BTN_LINE}>
           목록으로

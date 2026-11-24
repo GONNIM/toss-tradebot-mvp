@@ -13,6 +13,7 @@ import type { SessionInfo } from "@/lib/auth";
 import { plansApi, errText, kst, heartbeatText } from "@/lib/plans";
 import { CodeDialog } from "@/components/plans/CodeDialog";
 import { usePlanStatus } from "@/components/plans/ModeBand";
+import { KILL_NAME, KILL_TEXT } from "@/components/plans/planView";
 import { BTN_LINE, BTN_PRIMARY, BTN_WARN, Field, INPUT, Notice, Row } from "@/components/plans/ui";
 
 export function PlanExecutorCard() {
@@ -60,7 +61,7 @@ export function PlanExecutorCard() {
         <dl>
           <Row k="실거래 주문" v={st.switches.live ? "켜짐" : "꺼짐"} testid="pe-live" />
           <Row k="모의 시험" v={st.switches.paper ? "켜짐" : "꺼짐"} testid="pe-paper" />
-          <Row k="Kill Switch" v={st.kill_switch.active ? (st.kill_switch.sell_allowed ? "작동 중 · 새 주문 멈춤" : "작동 중 · 매도도 멈춤") : "꺼짐"} testid="pe-kill" />
+          <Row k={KILL_NAME} v={KILL_TEXT(st.kill_switch)} testid="pe-kill" />
           <Row k="실행기 마지막 응답" v={heartbeatText(st.heartbeat_age_sec)} testid="pe-heartbeat" />
           <Row
             k="마지막 변경"
@@ -69,7 +70,7 @@ export function PlanExecutorCard() {
           />
         </dl>
       )}
-      <p className="text-xs text-muted-foreground">실거래 켜기는 휴대폰 텔레그램으로 온 6자리 코드가 필요합니다. Kill Switch 해제는 이 칸에서 하지 않습니다.</p>
+      <p className="text-xs text-muted-foreground">실거래 켜기는 휴대폰 텔레그램으로 온 6자리 코드가 필요합니다. 비상 정지 해제는 이 칸에서 하지 않습니다.</p>
 
       <div className="grid gap-4 md:grid-cols-2">
         <div className="space-y-2" aria-label="실거래 스위치">
