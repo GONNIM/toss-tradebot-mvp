@@ -173,8 +173,12 @@ export function AppNav({ brand, session }: { brand: ReactNode; session: ReactNod
   const currentSection = sections.find((sec) => currentTab !== null && sec.tabs.includes(currentTab)) ?? null;
   // 1123-02 · 합친 화면(/account · /journal)은 화면 안에 같은 탭 줄(MergedTabs)이 있다. 분류 줄이 없는 묶음에서는
   // 그 화면 자신과 합쳐 들어온 옛 주소 탭을 이 줄에서 빼 같은 이름이 두 번 보이지 않게 한다 (옛 주소로 열면 그대로 보임).
-  const covered = sections.length === 0 ? mergedTabsHere(pathname) : null;
+  // 1123-03 · 분류 줄이 있는 묶음(후보 · /lab/crazy · /principles/screener)은 합쳐 들어온 옛 주소만 뺀다.
+  // 그 화면 자신은 남겨 「지금 어느 화면인지」 표시를 지킨다. 분류 옆 개수는 다른 화면과 같게 그대로 둔다.
+  const merged = mergedTabsHere(pathname);
+  const covered = merged && sections.length > 0 ? new Set([...merged].filter((h) => h !== pathname)) : merged;
   const rowTabs = covered ? shownTabs.filter((t) => !covered.has(t.href)) : shownTabs;
+  const sectionTabs = currentSection ? currentSection.tabs.filter((t) => !covered?.has(t.href)) : [];
 
   // 좁은 화면에서 지금 묶음·탭이 가로 스크롤 밖에 있으면 보이게 한다
   useEffect(() => {
@@ -244,10 +248,10 @@ export function AppNav({ brand, session }: { brand: ReactNode; session: ReactNod
           })}
         </nav>
       )}
-      {sections.length > 0 && currentSection && currentSection.tabs.length > 1 && (
+      {sections.length > 0 && currentSection && sectionTabs.length > 1 && (
         // PC 전용 · 고른 분류 안의 화면만
         <nav aria-label={`${currentSection.name} 화면`} className="-mx-1 hidden gap-1 pt-0.5 text-sm md:flex md:flex-wrap">
-          {currentSection.tabs.map((t) => {
+          {sectionTabs.map((t) => {
             const active = t.href === currentTab?.href && tabMatches(pathname, t);
             return (
               <Link
