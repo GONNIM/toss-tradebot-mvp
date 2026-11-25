@@ -39,3 +39,6 @@ diff SHA-256(`--full-index`) · 봉인 두 파일과 WP39 해시 불변 · 장�
 
 ## 7. 배포 뒤 확인
 22:00 전에 배포 → 그날 밤 `var/biotech/logs/readout-weekly.log` 요약 줄(기간 · 처리 N/340) → 다음 날 07:00 후보 로그 「더한 사건 N」(두 파일 따로).
+
+## 8. 백업 결정 (2026-11-25 사용자 「백업 ㉠② 그대로 둠」)
+RUNTIME 본(`var/biotech/h39_readouts_increment.json`)은 03:30 백업에 넣지 않는다. 잃으면 22:00 이어 받기가 다시 받는다(추정 1~3주 · DEPLOY.md 운영 메모). 그동안 후보 단계는 docs 본과 WP39 명부로 계속 돈다.
