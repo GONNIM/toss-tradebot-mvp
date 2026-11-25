@@ -222,9 +222,13 @@ async def test_test_plan_needs_code_and_respects_test_cap(api):
     cookie(api)
     big = await api.post("/api/v1/plans", json={"symbol": "TESTA", "mode": "test", "params": {**PARAMS, "qty": 60}}, headers=OK_ORIGIN)
     pid = big.json()["plan"]["id"]
+    n = len(api.phone.msgs)
     c = await api.post("/api/v1/plans/confirm/challenge", json={"action": "approve", "plan_id": pid}, headers=OK_ORIGIN)
-    r = await api.post(f"/api/v1/plans/{pid}/approve", json={"challenge_id": c.json()["challenge_id"], "code": api.phone.code, **J}, headers=OK_ORIGIN)
-    assert r.status_code == 409 and "상한" in r.json()["detail"]                          # 570 > 시험 상한 100
+    assert c.status_code == 409 and "상한" in c.json()["detail"] and len(api.phone.msgs) == n   # 570 > 시험 상한 100 · 코드를 보내기 전에 거부 (1116-01 S3)
+    ok = await api.post("/api/v1/plans", json={"symbol": "TESTB", "mode": "test", "params": {**PARAMS, "qty": 6, "buy_watch": 9.5, "buy_order": 9.5}}, headers=OK_ORIGIN)
+    pid2 = ok.json()["plan"]["id"]
+    c2 = await api.post("/api/v1/plans/confirm/challenge", json={"action": "approve", "plan_id": pid2}, headers=OK_ORIGIN)
+    assert c2.status_code == 200                                                              # 57 ≤ 100 · 코드가 나간다
 
 
 async def test_one_open_plan_per_symbol(api):

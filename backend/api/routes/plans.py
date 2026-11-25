@@ -25,6 +25,7 @@ from backend.execution.exceptions import ExecutionError
 from backend.execution.plan import heartbeat, sizing, state
 from backend.execution.plan import orderbook as ob
 from backend.execution.plan import switches as sw
+from backend.execution.plan import us_holidays
 from backend.execution.plan.brokers import DirectionGate, RawBroker
 from backend.execution.plan.engine import PlanEngine, approval_values, derive_qty, params_of, parse_dt, runtime_of
 from backend.execution.plan.models import (
@@ -58,7 +59,7 @@ async def _noop_notify(level: str, title: str, body: str, category: str) -> None
 
 
 def _engine() -> PlanEngine:
-    return PlanEngine(DirectionGate(_NoBroker()), notify=_noop_notify)
+    return PlanEngine(DirectionGate(_NoBroker()), notify=_noop_notify, holidays=us_holidays.provider())
 
 
 def _kill_state():
@@ -128,6 +129,17 @@ def _check_dates(values: dict) -> None:
             raise HTTPException(status_code=400, detail={"reason": "bad_date", "message": f"{k} 날짜 형식이 올바르지 않습니다 (예: 2026-12-10T22:00:00+09:00)"})
 
 
+def _when_of(p: Plan) -> Optional[dict]:
+    """응답 전용 「언제」 칸 (params 에 저장하지 않는다 · 승인 값 · 내용 확인값에 들어가지 않음). 계산이 실패해도 응답은 그대로."""
+    from backend.execution.plan.when import build_when
+
+    try:
+        return build_when(p, datetime.utcnow())
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("[plans] 언제 칸 계산 실패 · %s", exc.__class__.__name__)
+        return None
+
+
 def _plan_json(p: Plan) -> dict:
     return {
         "id": p.id, "mode": p.mode, "source": p.source, "symbol": p.symbol, "state": p.state,
@@ -135,7 +147,7 @@ def _plan_json(p: Plan) -> dict:
         "avg_price": p.avg_price, "peak_price": p.peak_price, "timestop_stage": p.timestop_stage,
         "approved_at": p.approved_at.isoformat() if p.approved_at else None,
         "qty": _qty_of(p),
-        "params": params_of(p), "created_at": p.created_at.isoformat() if p.created_at else None,
+        "params": params_of(p), "when": _when_of(p), "created_at": p.created_at.isoformat() if p.created_at else None,
         "updated_at": p.updated_at.isoformat() if p.updated_at else None,
     }
 
@@ -506,6 +518,10 @@ async def confirm_challenge(body: ConfirmChallengeReq, src: str = Depends(requir
         p = await _get_plan(s, body.plan_id)
         if p.mode == "paper":
             raise HTTPException(status_code=400, detail="모의 계획은 확인 코드가 필요 없습니다")
+        if body.action in ("approve", "adopt"):     # 값이 틀리면 코드를 보내지 않는다 (1116-01 S3)
+            why = await _engine().approval_block_reason(s, p)
+            if why:
+                raise HTTPException(status_code=409, detail=why)
         try:
             cid = await sw.request_challenge(s, action=body.action, send=_send_code, plan_id=p.id,
                                              revision=p.revision, content_hash=p.content_hash)
@@ -557,6 +573,9 @@ async def approve_plan(plan_id: int, body: ConfirmBody, src: str = Depends(requi
             wants_judgment = p.mode != "paper" or any(v is not None for v in (body.thesis, body.invalidation_price, body.target_price))
             if wants_judgment and (not (body.thesis or "").strip() or not (body.invalidation_price and body.invalidation_price > 0)):
                 raise HTTPException(status_code=400, detail={"reason": "judgment_required", "message": "판단 기록(근거 · 무효 가격)이 필요합니다"})
+            why = await eng.approval_block_reason(s, p)      # 값 검사를 코드 확인보다 먼저 · 틀리면 코드를 쓰지 않는다 (1116-01 S3)
+            if why:
+                raise state.TransitionError(why)
             await _verify(s, p, "adopt" if is_adopt else "approve", body)
             await eng.approve(s, p, by=body.approver)
             if is_adopt:

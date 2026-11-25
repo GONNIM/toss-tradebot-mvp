@@ -201,7 +201,7 @@ async def _noop(*a, **k):
 
 
 def make_engine(raw: RawBroker, *, clock=None, alerts=None, limit_factor=D("0.98"), regular=None, switches=None,
-                kill=(False, True)):
+                kill=(False, True), holidays=None):
     """regular: (시작, 끝) 또는 None. 값이 없으면 정규장 밖(off)이다."""
     alerts = alerts if alerts is not None else []
 
@@ -215,6 +215,7 @@ def make_engine(raw: RawBroker, *, clock=None, alerts=None, limit_factor=D("0.98
         regular_window=(lambda now: regular),
         switches=(switches or (lambda: {"live": True, "paper": True})),
         kill_state=(lambda: kill),
+        **({"holidays": holidays} if holidays else {}),
     )
     eng._alerts = alerts
     return eng
