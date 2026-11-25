@@ -49,7 +49,7 @@ export interface PlanWhen {
 export interface Plan {
   id: number;
   mode: PlanMode;
-  source: "manual" | "adopt";
+  source: "manual" | "adopt" | "draft";
   symbol: string;
   name?: string | null;
   state: string;
@@ -67,12 +67,32 @@ export interface Plan {
   qty?: number | string | null;
 }
 
+/** 1125-02 · 서버가 응답에만 붙이는 「오른 까닭」 표시 값 (backend/execution/plan/why.py) · 주문 · 승인 값에 쓰이지 않는다. 자료가 없으면 null. */
+export interface WhyBrief { rank: number | null; total: number; asof: string | null; pcd: string | null }
+export interface WhyFactor { key: string; label: string; value: number | null; meaning: string }
+export interface WhyEightK {
+  date: string; items: string; items_text: string; direction: "positive" | "mixed" | "negative" | null; direction_ko: string | null;
+  quote: string | null; keywords: string[]; accession: string | null; url: string; has_body_tag: boolean;
+  decision: { clinical: boolean; direction: string | null; direction_ko: string | null } | null;
+}
+export interface WhyTrial { nct_id: string; phase: string; phase_ko: string; pcd: string; days_to: number | null; url: string; note: string }
+export interface WhyRisk { key: string; label: string; value: string; tone: "ok" | "mid" | "bad" | "none"; note: string; url?: string | null }
+export interface PlanWhy {
+  asof: string | null;
+  in_radar: boolean;
+  radar: { rank: number; total: number; score: number | null; factors: WhyFactor[]; why_easy: string | null } | null;
+  eight_k: WhyEightK | null;
+  trial: WhyTrial | null;
+  risks: WhyRisk[];
+}
+
 /** 목록 한 줄 · 서버가 더해 준 칸 (live_cond_count · tp1_mode · price · price_at) */
 export interface PlanRow extends Plan {
   live_cond_count?: number;
   tp1_mode?: "register" | "watch" | null;
   price?: number | null;
   price_at?: string | null;
+  why?: WhyBrief | null;
 }
 
 export interface TossState {
@@ -187,6 +207,7 @@ export interface PlanDetail {
   actual_legs?: ActualLeg[] | null;
   actual_at?: string | null;
   unknown_orders?: number;
+  why?: PlanWhy | null;
   live?: PlanLive;
   adopt?: AdoptWait | null;
 }

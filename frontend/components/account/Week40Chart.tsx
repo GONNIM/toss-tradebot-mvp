@@ -4,7 +4,7 @@
 // 검은 선 = 끝난 주 종가 · 틸 선 = 40주 단순평균 · 선 아래 주는 옅은 바탕. 숫자는 tabular-nums.
 
 import { useMemo } from "react";
-import { CartesianGrid, ComposedChart, Line, ReferenceArea, ReferenceDot, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
+import { CartesianGrid, ComposedChart, Line, ReferenceArea, ReferenceDot, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { CrossList, crossShape } from "@/components/account/CrossMarks";
 import {
   WEEK40_BASIS_LINE,
@@ -52,7 +52,16 @@ function Tip({ active, payload, marks }: { active?: boolean; payload?: { payload
   );
 }
 
-export function Week40Chart({ week40 }: { week40: Week40 | null }) {
+/** 1125-02 · 가로선(이름 · 값을 받아 그린다) · 넘기지 않으면 아무 선도 그리지 않는다 (계좌 · VIP 화면 그대로). */
+export interface HLine {
+  value: number;
+  /** 범례와 선 끝 글자에 쓰는 이름 (값은 따로 붙인다) */
+  label: string;
+  color: string;
+  dash?: string;
+}
+
+export function Week40Chart({ week40, hLines }: { week40: Week40 | null; hLines?: HLine[] }) {
   const runs = useMemo(() => (week40 ? belowRuns(week40.series) : []), [week40]);
   // 끝난 주만 들어 있는 series 로 계산 → 이번 주(안 끝남)는 지점이 되지 않는다.
   const marks = useMemo(() => (week40 ? crossPoints(week40.series.map((p) => ({ date: p.w, c: p.c, m: p.m }))) : []), [week40]);
@@ -86,6 +95,9 @@ export function Week40Chart({ week40 }: { week40: Week40 | null }) {
               <Tooltip content={<Tip marks={markMap} />} isAnimationActive={false} />
               <Line type="linear" dataKey="c" stroke="hsl(var(--foreground))" strokeWidth={1.5} dot={false} isAnimationActive={false} />
               <Line type="linear" dataKey="m" stroke="hsl(var(--primary))" strokeWidth={2} dot={false} connectNulls={false} isAnimationActive={false} />
+              {(hLines ?? []).map((h) => (
+                <ReferenceLine key={h.label} y={h.value} stroke={h.color} strokeWidth={1.25} strokeDasharray={h.dash} ifOverflow="extendDomain" />
+              ))}
               {marks.map((m) => (
                 <ReferenceDot key={m.date} x={m.date} y={m.c} r={0} ifOverflow="visible" shape={crossShape(m.dir)} />
               ))}
@@ -97,6 +109,12 @@ export function Week40Chart({ week40 }: { week40: Week40 | null }) {
         <span><span className="mr-1 inline-block h-0.5 w-4 bg-foreground align-middle" />주 종가</span>
         <span><span className="mr-1 inline-block h-0.5 w-4 bg-primary align-middle" />40주 평균선</span>
         <span><span className="mr-1 inline-block h-3 w-4 bg-muted-foreground/20 align-middle" />선 아래 주</span>
+        {(hLines ?? []).map((h) => (
+          <span key={h.label} className="tabular-nums" data-testid="hline-legend">
+            <span className="mr-1 inline-block h-0 w-4 border-t-2 align-middle" style={{ borderColor: h.color, borderStyle: h.dash ? "dashed" : "solid" }} />
+            {h.label} {h.value.toFixed(2)}
+          </span>
+        ))}
         <span><span className="text-up">▲</span>/<span className="text-down">▼</span> 선을 넘은 주</span>
         {first && <span className="tabular-nums">{first.slice(0, 7)} ~ {week40.as_of_week.slice(0, 7)}</span>}
       </div>

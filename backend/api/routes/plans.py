@@ -140,6 +140,41 @@ def _when_of(p: Plan) -> Optional[dict]:
         return None
 
 
+def _why_sources():
+    """1125-02 · 「오른 까닭」 자료 묶음 (응답 전용 · 한 요청에 한 번만 읽음). 레이더 파일이 없거나 깨졌거나 오류면 None."""
+    from backend.execution.plan import why
+
+    try:
+        return why.load_sources()
+    except Exception as exc:  # noqa: BLE001 — 표시 전용 · 실패해도 응답은 200
+        logger.warning("[plans] 까닭 자료 읽기 실패 · %s", exc.__class__.__name__)
+        return None
+
+
+def _why_brief(src, p: Plan) -> Optional[dict]:
+    from backend.execution.plan import why
+
+    if src is None:
+        return None
+    try:
+        return why.brief(src, p.symbol)
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("[plans] 까닭 한 줄 계산 실패 · %s", exc.__class__.__name__)
+        return None
+
+
+def _why_detail(src, p: Plan) -> Optional[dict]:
+    from backend.execution.plan import why
+
+    if src is None:
+        return None
+    try:
+        return why.detail(src, p.symbol)
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("[plans] 까닭 계산 실패 · %s", exc.__class__.__name__)
+        return None
+
+
 def _plan_json(p: Plan) -> dict:
     return {
         "id": p.id, "mode": p.mode, "source": p.source, "symbol": p.symbol, "state": p.state,
@@ -201,12 +236,13 @@ async def list_plans(_: str = Depends(require_sniper_token)) -> dict:
     async with get_session() as s:
         rows = list(await s.scalars(select(Plan).order_by(Plan.id.desc()).limit(200)))
         out = []
+        wsrc = _why_sources()   # 1125-02 · 파일은 목록 응답 한 번에 한 번만 읽는다
         for p in rows:
             n = await s.scalar(select(func.count()).select_from(PlanLeg).where(
                 PlanLeg.plan_id == p.id, PlanLeg.status == "WATCHING", PlanLeg.kind == "cond"))
             rt = runtime_of(p)
             out.append({**_plan_json(p), "live_cond_count": int(n or 0), "tp1_mode": await _tp1_mode(s, p),
-                        "price": rt.get("price"), "price_at": rt.get("price_at")})
+                        "price": rt.get("price"), "price_at": rt.get("price_at"), "why": _why_brief(wsrc, p)})
         return {"plans": out, "toss": await _toss_state(s)}
 
 
@@ -292,6 +328,7 @@ async def plan_detail(plan_id: int, _: str = Depends(require_sniper_token)) -> d
             },
             "adopt": adopt,
             "unknown_orders": len(await ob.unresolved_lines(s, p.id)),
+            "why": _why_detail(_why_sources(), p),   # 1125-02 · 표시 전용 (params · content_hash · revision 에 쓰지 않음)
         }
 
 
