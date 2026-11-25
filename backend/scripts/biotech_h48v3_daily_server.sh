@@ -4,6 +4,7 @@
 # crontab -e (root):
 #   0 7 * * * /bin/bash /root/toss-tradebot-mvp/backend/scripts/biotech_h48v3_daily_server.sh >> /root/toss-tradebot-mvp/var/biotech/logs/daily.log 2>&1
 #   0 6 * * 1 /bin/bash /root/toss-tradebot-mvp/backend/scripts/biotech_h48v3_daily_server.sh --aact-weekly-only >> /root/toss-tradebot-mvp/var/biotech/logs/aact-weekly.log 2>&1
+#   0 22 * * * /bin/bash /root/toss-tradebot-mvp/backend/scripts/biotech_h48v3_daily_server.sh --readout-weekly-only >> /root/toss-tradebot-mvp/var/biotech/logs/readout-weekly.log 2>&1   (1112-08 · deploy/biotech_cron_lines.txt 가 관리)
 #
 # 산출·로그 전부 런타임 폴더 (git 추적 밖 · 배포 reset --hard 영향 없음):
 #   /root/toss-tradebot-mvp/var/biotech/{candidates,community_daily,rumor-daily,watchlist,logs}
@@ -83,6 +84,16 @@ if [ "${1:-}" = "--radar-nlm-weekly-only" ]; then
     exit 0
 fi
 
+# 1112-08 · 결과 발표 보충 (SEC EFTS · 매일 22:00 KST 이어 받기 · 기간은 스크립트가 정함 · 결과는 RUNTIME 본에만 씀)
+#   종료 코드: 0 정상 · 2 차단 · 3 하루 상한/날짜 넘김 · 4 일부 실패 · 5 멈춤 상태 · 6 파일 깨짐 → 알림은 파이썬 안에서 (같은 원인 하루 1번) · 여기서는 로그만 남기고 0 으로 끝냄
+if [ "${1:-}" = "--readout-weekly-only" ]; then
+    echo "=== $(date -u +%Y-%m-%dT%H:%M:%SZ) readout weekly only ==="
+    $VENV -m backend.scripts.biotech_readout_increment --weekly
+    RC=$?
+    echo "=== $(date -u +%Y-%m-%dT%H:%M:%SZ) readout weekly done · exit $RC ==="
+    exit 0
+fi
+
 if [ "${1:-}" = "--aact-weekly-only" ]; then
     echo "=== $(date -u +%Y-%m-%dT%H:%M:%SZ) AACT weekly only ==="
     $VENV -m backend.scripts.biotech_h69_aact_weekly || { _notify_failure "aact_weekly" "exit $?"; exit 20; }
@@ -92,6 +103,10 @@ fi
 
 STARTED=$(date -u +%Y-%m-%dT%H:%M:%SZ)
 echo "=== $STARTED biotech daily start (server · KST $(date +%H:%M)) ==="
+
+# 0. 결과 발표 보충 오래됨 점검 (1112-08 · 요청 0 · 파일만 읽음 · 실패해도 파이프 계속)
+echo "[0/11] readout stale check (skip 허용)"
+$VENV -m backend.scripts.biotech_readout_increment --check-stale || echo "  readout stale check skip (알림은 파이썬 안에서)"
 
 # 1. 후보 우주 갱신 (biotech_candidates_YYYYMMDD.csv · v1)
 echo "[1/11] candidates"

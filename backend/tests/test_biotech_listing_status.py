@@ -335,6 +335,8 @@ def test_source_a_drops_merger_events(tmp_path, monkeypatch):
     (tmp_path / "h39_readouts_increment.json").write_text(json.dumps(inc))
     (tmp_path / "h39_merger_8k_exclude.json").write_text(json.dumps({"accessions": ["x-2"]}))
     monkeypatch.setattr(cand, "_find", lambda name: (tmp_path / name) if (tmp_path / name).exists() else None)
+    monkeypatch.setattr(cand, "FALLBACK_DIR", tmp_path)      # 1112-08 · 보충 파일은 docs 본 · RUNTIME 본 두 곳을 직접 읽음
+    monkeypatch.setattr(cand, "RUNTIME_DIR", None)
     monkeypatch.delenv("BIOTECH_LISTING_FILTER", raising=False)
     assert [o["cik"] for o in cand.source_a_readout("sha")] == ["0000000001", "0000000004", "0000000005"]
     monkeypatch.setenv("BIOTECH_LISTING_FILTER", "0")

@@ -195,6 +195,22 @@ def _merger_exclude_set() -> frozenset[str]:
         return frozenset()
 
 
+INCREMENT_NAME = "h39_readouts_increment.json"
+
+
+def _increment_files() -> list[tuple[str, Path | None]]:
+    """결과 발표 보충 파일 두 개 · 읽는 순서 = 같은 접수번호에서 이기는 순서 (docs 본 먼저 · RUNTIME 본 나중)."""
+    docs = FALLBACK_DIR / INCREMENT_NAME
+    out: list[tuple[str, Path | None]] = [("docs", docs if docs.exists() else None)]
+    if RUNTIME_DIR is not None:
+        rt = RUNTIME_DIR / INCREMENT_NAME
+        out.append(("RUNTIME", rt if rt.exists() else None))
+    elif out[0][1] is None:
+        legacy = DATA_DIR / INCREMENT_NAME          # 로컬 옛 위치
+        out[0] = ("docs", legacy if legacy.exists() else None)
+    return out
+
+
 def source_a_readout(sha: str, days_recent: int = 90) -> list[dict]:
     """WP39 결과 발표 최근 N일 · checkpoint 우선 (csv 미갱신 대응)."""
     events: list[dict] = []
@@ -207,16 +223,26 @@ def source_a_readout(sha: str, days_recent: int = 90) -> list[dict]:
             with p.open() as f:
                 events = list(csv.DictReader(f))
     # 1112-07 · WP39 명부는 9/01 에서 멈춘 고정 파일 · 그 뒤 사건은 보충 파일에서 더함 (같은 접수번호는 한 번만)
-    inc = _find("h39_readouts_increment.json")
-    if inc is not None and inc.exists():
+    # 1112-08 · 보충 파일 두 개 (docs 본 = 9/02~11/12 고정 · RUNTIME 본 = 서버 매일 이어 받기) 를 합쳐 읽음 · 같은 접수번호는 WP39 > docs 본 > RUNTIME 본 순서로 앞 것을 씀
+    #   한쪽이 없거나 깨져도 다른 쪽과 WP39 명부로 계속 진행 · 두 파일이 더한 사건 수는 따로 로그
+    seen = {e.get("accession") for e in events if e.get("accession")}
+    added: dict[str, int] = {}
+    events = list(events)
+    for label, inc in _increment_files():
+        if inc is None:
+            continue
         try:
-            seen = {e.get("accession") for e in events if e.get("accession")}
             extra = [e for e in json.loads(inc.read_text()).get("events", [])
                      if e.get("accession") and e.get("accession") not in seen]
-            events = list(events) + extra
-            LOG.info("결과 발표 보충 %s · 더한 사건 %d", inc.name, len(extra))
-        except Exception as e:  # 보충 파일이 깨져도 기존 명부로 진행
-            LOG.warning("결과 발표 보충 파일 읽기 실패 · 기존 명부만 씀 · %s", e)
+        except Exception as e:  # 이 보충 파일이 깨져도 나머지로 진행
+            LOG.warning("결과 발표 보충 파일 읽기 실패 · %s 건너뜀 · %s", label, e)
+            continue
+        seen |= {e["accession"] for e in extra}
+        events += extra
+        added[label] = len(extra)
+    if added:
+        LOG.info("결과 발표 보충 · docs 본 더한 사건 %d · RUNTIME 본 더한 사건 %d · 합 %d",
+                 added.get("docs", 0), added.get("RUNTIME", 0), sum(added.values()))
     # 1114-05 · 합병 계약 체결 8-K (항목 1.01 + 체결 문구) 는 결과 발표로 세지 않는다 · WP39 명부 파일은 고치지 않고 여기서 거른다
     # 표지(merger_announcement)가 참인 이벤트와 거름 목록(h39_merger_8k_exclude.json)의 접수번호만 뺀다 · 표지가 없으면 판정 안 됨 = 유지
     if _listing.filter_enabled():
