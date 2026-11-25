@@ -263,28 +263,45 @@ class PlanEngine:
             await self._event(s, plan, "draft_edit", f"revision {plan.revision}")
         return plan
 
-    async def approve(self, s, plan: Plan, *, by: str) -> Plan:
-        """DRAFT → APPROVED. 인증 · 확인 코드는 호출 측(API)이 마친다. 실전 · 시험 계획은 Aside 표시를 고를 수 없다."""
+    async def approval_block_reason(self, s, plan: Plan) -> Optional[str]:
+        """승인이 거부하는 값 · 상태 까닭을 한 곳에 모은 검사 (통과면 None · 1116-01 S1~S3).
+        코드 확인 앞(`/confirm/challenge` · 승인 API)과 `approve()` 안에서 같은 함수를 부른다 — 값이 틀리면 확인 코드를 쓰지 않는다."""
         from .pricing import check_caps
 
+        if plan.state != state.DRAFT:
+            return "초안만 승인할 수 있습니다"
+        if await sizing.open_plan_exists(s, plan.symbol, plan.id):
+            return "같은 종목에 열린 계획이 이미 있습니다"
+        p = params_of(plan)
+        adopt = p.get("adopt")
+        qty = int(_num(p.get("qty")) or 0)
+        if adopt:        # 보유 맡기기: 맡길 수량이 0 이하면 거부 (S2)
+            if int(_num((adopt or {}).get("qty") if isinstance(adopt, dict) else None) or 0) <= 0:
+                return "맡길 수량이 0 입니다 · 보유 수량을 확인해 주십시오"
+        else:
+            if qty <= 0:
+                return "수량이 0 입니다 · 예산 또는 매수가를 확인해 주십시오"
+            if not ((_num(p.get("buy_watch")) or 0) > 0 and (_num(p.get("buy_order")) or 0) > 0):     # S1 · 모의 포함
+                return "매수 감시가 · 매수 주문가가 비어 있습니다 · 두 값을 모두 넣어 주십시오"
+        price = D(p.get("buy_order") or p.get("avg_price") or 0)
+        if plan.mode != "paper":
+            open_total = await self._open_total_usd(s, plan.id)
+            why = check_caps(mode=plan.mode, order_usd=price * qty, open_total_usd=open_total)
+            if why:
+                return why
+        return None
+
+    async def approve(self, s, plan: Plan, *, by: str) -> Plan:
+        """DRAFT → APPROVED. 인증 · 확인 코드는 호출 측(API)이 마친다. 실전 · 시험 계획은 Aside 표시를 고를 수 없다."""
         if plan.state != state.DRAFT:
             raise state.TransitionError("초안만 승인할 수 있습니다")
         if plan.mode != "paper" and by != "대표":
             raise state.TransitionError("실전 · 시험 계획은 대표만 승인합니다")
         if by not in ("대표", "Aside(대표 지시)"):
             raise state.TransitionError("승인 주체가 올바르지 않습니다")
-        if await sizing.open_plan_exists(s, plan.symbol, plan.id):
-            raise state.TransitionError("같은 종목에 열린 계획이 이미 있습니다")
-        p = params_of(plan)
-        qty = int(p.get("qty") or 0)
-        price = D(p.get("buy_order") or p.get("avg_price") or 0)
-        if not p.get("adopt") and qty <= 0:
-            raise state.TransitionError("수량이 0 입니다 · 예산 또는 매수가를 확인해 주십시오")
-        if plan.mode != "paper":
-            open_total = await self._open_total_usd(s, plan.id)
-            why = check_caps(mode=plan.mode, order_usd=price * qty, open_total_usd=open_total)
-            if why:
-                raise state.TransitionError(why)
+        why = await self.approval_block_reason(s, plan)        # 코드 확인 앞에서 부르는 같은 검사 (1116-01 S1~S3)
+        if why:
+            raise state.TransitionError(why)
         plan.approved_by, plan.approved_at = by, self.clock()
         await state.transition(s, plan, state.APPROVED, reason=f"approved by {by}")
         return plan
@@ -1414,10 +1431,12 @@ class PlanEngine:
         reg = self.regular_window(now)
         if not reg or not (reg[0] <= now < reg[1]):
             return
-        if not sess.timestop_due(parse_dt(p["announce_at"]), now, self.holidays()):
-            return
-        w = sess.timestop_window(reg)
         today = now.strftime("%Y-%m-%d")
+        if not sess.timestop_due(parse_dt(p["announce_at"]), now, self.holidays()):
+            # 휴장일 반영으로 「아직 아님」이 되어도, 이미 끌어올리기 · 정리 단계에 들어간 오늘은 끝까지 간다 (종료 1분 전 취소 · 비상 다리 되돌리기가 돌아야 한다 · 1116-01 지킬 것 1)
+            if not (plan.timestop_stage in ("lift", "clean") and plan.timestop_lift_session == today):
+                return
+        w = sess.timestop_window(reg)
         cur = self._held_price(plan, await self.gate.current(s, plan.symbol), now)     # 이상값 보류 (7-3)
         legs = await sizing.live_sl_legs(s, plan.id)
         if plan.timestop_stage in ("none", "lift") and plan.timestop_lift_session in (None, today) \

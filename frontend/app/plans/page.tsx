@@ -2,7 +2,7 @@
 
 // /plans · 계획 목록 (계획서 11절 · v4 8절)
 // 맨 위 한 줄(주문 나감/안 나감)과 상태 칩은 ModeBand(자세히). 걸린 조건주문 수 · 1차 익절 방식 · 마지막 현재가는 서버 값이고 null 이면 「확인 못 함」.
-// 카드는 종목 · 살 값 · 팔 값 · 손절 값 · 수량 다섯 줄 (1116-01 B). 손절은 계획의 손절 폭이 있으면 그 값, 없을 때만 기본 규칙.
+// 카드 맨 위는 「언제」 칩(발표 · 매수 마감 · 시간 손절 시작 · 서버 when 값만 읽음). 카드는 종목 · 살 값 · 팔 값 · 손절 값 · 수량 다섯 줄 (1116-01 B). 손절은 계획의 손절 폭이 있으면 그 값, 없을 때만 기본 규칙.
 import Link from "next/link";
 
 import { StockLabel } from "@/components/stock/StockLabel";
@@ -11,6 +11,7 @@ import { plansApi, MODE_LABEL, STATE_LABEL, TERMINAL_STATES, TP1_MODE_LABEL, err
 import { usePlanStatus } from "@/components/plans/ModeBand";
 import { ADOPT_NAME, PRICE_NOTE, ladderLine } from "@/components/plans/planView";
 import { BTN_LINE, BTN_PRIMARY, Notice } from "@/components/plans/ui";
+import { WhenChips } from "@/components/plans/WhenCard";
 
 export default function PlansPage() {
   const status = usePlanStatus();
@@ -68,6 +69,7 @@ function PlanList({ title, rows, testid }: { title: string; rows: import("@/lib/
                 data-testid={`plan-row-${p.id}`}
                 className="block min-h-[44px] space-y-1 px-3 py-3"
               >
+                {!TERMINAL_STATES.includes(p.state) && <WhenChips when={p.when} id={p.id} />}
                 <span className="flex flex-wrap items-center gap-2">
                   <span className="text-sm tabular-nums text-muted-foreground">#{p.id}</span>
                   <span className="font-bold" data-testid={`row-symbol-${p.id}`}><StockLabel code={p.symbol} name={p.name} market="US" link={false} /></span>

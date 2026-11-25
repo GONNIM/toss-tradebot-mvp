@@ -23,6 +23,29 @@ export interface PlanParams {
   [k: string]: unknown;
 }
 
+/** 서버가 응답에만 붙이는 「언제」 칸 (backend/execution/plan/when.py) · 화면은 날짜를 계산하지 않고 이 값만 읽는다. 날짜는 한국 날짜(KST) 문자열 YYYY-MM-DD. */
+export type WhenKind = "confirmed" | "estimated" | "unknown" | "manual" | "edited";
+export type WhenStepKey = "window_open" | "entry_close" | "announce" | "timestop";
+export interface PlanWhen {
+  today: string;
+  steps: { key: WhenStepKey; at: string | null; date: string | null; passed: boolean }[];
+  window_open_date: string | null;
+  entry_close_date: string | null;
+  announce_date: string | null;
+  announce_at: string | null;
+  d_day: number | null;
+  timestop_from_date: string | null;
+  catalyst_kind: WhenKind;
+  catalyst_confirmed: boolean | null;
+  basis: string;
+  basis_stale: boolean;
+  window_text: string | null;
+  warnings: string[];
+  timestop_applies: { applies: boolean | null; text: string };
+  tz: string;
+  estimate: boolean;
+}
+
 export interface Plan {
   id: number;
   mode: PlanMode;
@@ -37,6 +60,7 @@ export interface Plan {
   peak_price: number | null;
   timestop_stage: string;
   params: PlanParams;
+  when?: PlanWhen | null;
   created_at: string | null;
   updated_at: string | null;
   approved_at?: string | null;

@@ -285,6 +285,9 @@ def decide(symbol: str, data: dict, today: date, *, open_plan: bool = False,
                                 entry_close_at=at(w.close_on), entry_window_end=at(w.ends), tp1_pct=data.get("tp1_pct"))
     params["rationale"] = {
         "catalyst": cat.basis,
+        "catalyst_confirmed": cat.confirmed,      # 1116-01 S5 · 화면 「추정/확정」 은 글자열이 아니라 이 칸을 읽는다
+        "catalyst_day": cat.day.isoformat(),
+        "window_open": w.opens.isoformat(),
         "window": f"진입 창 = 촉매 −30일 ~ +14일 ({w.opens} ~ {w.ends}) · "
                   + ("확정 발표라 5거래일 전 마감" if cat.confirmed else "추정 날짜라 창 끝에 마감"),
         **rationale_lines(ref_price=ref, budget_usd=budget, tp1_pct=data.get("tp1_pct"), params=params),

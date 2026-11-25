@@ -22,6 +22,7 @@ import { UnknownOrdersPanel } from "@/components/plans/UnknownOrders";
 import { usePlanStatus } from "@/components/plans/ModeBand";
 import { ADOPT_NAME, KILL_NAME, PRICE_NOTE, TAG_NAME, ladderLine, missingValues } from "@/components/plans/planView";
 import { StockLabel } from "@/components/stock/StockLabel";
+import { WhenPanel } from "@/components/plans/WhenCard";
 import { BTN_LINE, BTN_PRIMARY, BTN_WARN, Field, INPUT, Notice, Row } from "@/components/plans/ui";
 
 const HALTABLE = ["APPROVED", "ENTRY_ARMED", "ENTRY_RETRY", "HOLDING", "TP1_WAIT", "TRAILING", "ADOPT_PENDING"];
@@ -223,6 +224,7 @@ export default function PlanDetailPage() {
   const [msg, setMsg] = useState<string | null>(null);
   const [announce, setAnnounce] = useState("");
   const [editErr, setEditErr] = useState<string | null>(null);
+  const [announceErr, setAnnounceErr] = useState<string | null>(null);
   const [resyncBusy, setResyncBusy] = useState(false);
   const status = usePlanStatus();
   // C · 초안 고치기 입력 (빠진 값을 채운다)
@@ -311,7 +313,7 @@ export default function PlanDetailPage() {
   }
 
   async function saveAnnounce() {
-    setEditErr(null);
+    setAnnounceErr(null);
     try {
       await guarded(async () => {
         await plansApi.edit(id, { announce_at: announce ? `${announce}:00+09:00` : null });
@@ -320,7 +322,7 @@ export default function PlanDetailPage() {
         await refresh();
       });
     } catch (e) {
-      setEditErr(errText(e));
+      setAnnounceErr(errText(e));
     }
   }
 
@@ -403,6 +405,20 @@ export default function PlanDetailPage() {
           <p className="tabular-nums">판 번호 {p.revision} · 내용 확인값 {d.content_hash}</p>
         </details>
       </header>
+
+      <WhenPanel when={p.when}>
+        {p.state === "DRAFT" && (
+          <div className="flex flex-wrap items-end gap-2">
+            <Field label="발표 시각 입력 (한국 시각)">
+              <input type="datetime-local" value={announce} onChange={(e) => setAnnounce(e.target.value)} aria-label="발표 시각" data-testid="in-announce" className={INPUT} />
+            </Field>
+            <button type="button" onClick={saveAnnounce} disabled={!announce} aria-label="발표 시각 저장" data-testid="btn-save-announce" className={BTN_LINE}>
+              발표 시각 저장
+            </button>
+          </div>
+        )}
+        {announceErr && <Notice tone="warn" testid="edit-error-when">{announceErr}</Notice>}
+      </WhenPanel>
 
       {p.state === "DRAFT" && missing.length > 0 && (
         <section aria-label="빠진 값" data-testid="missing-values" role="alert" className="space-y-2 rounded-[14px] border border-warn/40 bg-warn/5 p-3 text-sm text-warn">
@@ -586,16 +602,6 @@ export default function PlanDetailPage() {
             </button>
           )}
         </div>
-        {p.state === "DRAFT" && (
-          <div className="flex flex-wrap items-end gap-2">
-            <Field label="발표 시각 입력 (한국 시각)">
-              <input type="datetime-local" value={announce} onChange={(e) => setAnnounce(e.target.value)} aria-label="발표 시각" data-testid="in-announce" className={INPUT} />
-            </Field>
-            <button type="button" onClick={saveAnnounce} disabled={!announce} aria-label="발표 시각 저장" data-testid="btn-save-announce" className={BTN_LINE}>
-              발표 시각 저장
-            </button>
-          </div>
-        )}
         {editErr && <Notice tone="warn" testid="edit-error">{editErr}</Notice>}
         <p className="text-xs text-muted-foreground">실거래 · 모의 스위치와 비상 정지는 이 화면에서 바꾸지 않습니다. 관리자 설정의 「계획 실행기」 칸에서 바꿉니다.</p>
         <p className="text-xs text-muted-foreground">「이 계획 정지」 는 새 등록과 매수를 멈추고 대기 중인 매수를 취소합니다. 걸린 매도 주문은 지우지 않습니다.</p>

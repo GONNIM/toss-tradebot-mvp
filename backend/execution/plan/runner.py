@@ -18,7 +18,7 @@ from typing import Optional
 
 from sqlalchemy import select
 
-from . import drafts, heartbeat, resync, sizing, state
+from . import drafts, heartbeat, resync, sizing, state, us_holidays
 from .brokers import DirectionGate, PaperRaw, RawBroker, RealRaw, access_token as _token
 from .engine import PlanEngine, set_runtime
 from .models import Plan, PlanEvent, PlanLeg, PlanPaperOrder, PlanRequest, utcnow
@@ -129,7 +129,8 @@ class PlanExecutor:
         paper_raw = PaperRaw(_price)
         paper_gate = DirectionGate(paper_raw, store)
         common = dict(notify=notify, limit_factor=_limit_factor_from_calendar,
-                      regular_window=_regular_window_from_calendar, kill_state=_kill_state)
+                      regular_window=_regular_window_from_calendar, kill_state=_kill_state,
+                      holidays=us_holidays.provider())          # 1116-01 S4 · 미국 정규장 휴장일
         return cls(real_engine=PlanEngine(live_gate, **common), paper_engine=PlanEngine(paper_gate, **common),
                    paper_raw=paper_raw, notify=notify, store=store)
 
@@ -417,9 +418,11 @@ async def job_plan_draft(now_utc: Optional[datetime] = None) -> str:
                 names = await lookup_us_names(drafts.radar_symbols(drafts.radar_dir(), today))
             except Exception as exc:  # noqa: BLE001
                 logger.warning("[plan] 초안 회사명 조회 실패 · %s", exc.__class__.__name__)
-            eng = PlanEngine(DirectionGate(RawBroker.__new__(RawBroker)), notify=default_notify)   # DB 만 쓴다 (브로커 부르지 않음)
+            eng = PlanEngine(DirectionGate(RawBroker.__new__(RawBroker)), notify=default_notify,
+                             holidays=us_holidays.provider())   # DB 만 쓴다 (브로커 부르지 않음)
             symbols = drafts.radar_symbols(drafts.radar_dir(), today)
-            decisions, expired = await drafts.run_draft_cycle(s, eng, today=today, symbols=symbols, loader=_make_draft_loader(today))
+            decisions, expired = await drafts.run_draft_cycle(s, eng, today=today, symbols=symbols, loader=_make_draft_loader(today),
+                                                         holidays=us_holidays.current())      # 1116-01 S4 · 매수 마감 날짜에도 휴장일 반영
             summary = drafts.build_summary(decisions, expired, names)
             if summary:
                 notices.append(("info", summary[0], summary[1], "biotech"))      # 「바이오」 범주 1건 요약
