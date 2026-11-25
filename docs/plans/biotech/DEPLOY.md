@@ -149,4 +149,11 @@ crontab -e
 
 ---
 
+## 운영 메모 · 결과 발표 보충 파일 백업 (1112-08 · 2026-11-25 확인)
+
+- 03:30 백업(`scripts/backup.sh`)은 `backend/data/tradebot.db` 하나만 담는다 (`DB_PATH` · VACUUM INTO). `var/biotech` 는 담지 않는다 (같은 스크립트에 `var/biotech` 경로 없음).
+- 그래서 `var/biotech/h39_readouts_increment.json` (RUNTIME 본)을 잃으면 백업에서 돌릴 수 없고 SEC 에서 다시 받아야 한다.
+- 다시 받는 데 드는 요청 (추정 · 계획 4절의 한 주 필요량 약 350~440): 회사 340곳 EFTS 검색 340건 + 본문 10~100건이 기간 하나당 든다. 11/09 부터 3주 치를 한꺼번에 받으면 약 500~600건, 하루 상한 300 과 22:00 남는 몫(하루 약 50~130) 때문에 약 1~3주 걸린다.
+- 잃는 동안에도 후보 단계는 WP39 명부와 docs 본(9/02~11/12 · 사건 214)으로 계속 돈다. 이어 받기는 매일 22:00 줄이 스스로 한다 (기간은 docs 본 until 11/12 에서 다시 시작).
+
 - 문서 링크: [PHASE-A-FINAL](PHASE-A-FINAL.md) · [STATUS](STATUS.md) · [GLOSSARY](GLOSSARY.md) · [INDEX](INDEX.md) · [PENDING](PENDING.md)

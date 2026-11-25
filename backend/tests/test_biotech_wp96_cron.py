@@ -40,7 +40,7 @@ def test_merge_twice_same_result_user_lines_kept(tmp_path):
     cur.write_text(first)
     second = _merge(cur)
     assert second == first                                          # 몇 번 실행해도 같음
-    assert len(_entries(first)) == 3 + len(BOT) == 7                # 사용자 3 + 봇 4 (1103-03 백업 줄 포함)
+    assert len(_entries(first)) == 3 + len(BOT) == 8                # 사용자 3 + 봇 5 (1103-03 백업 줄 · 1112-08 22:00 줄 포함)
     assert first.startswith(EXISTING)                               # 구역 밖 줄 (주석 포함) 은 순서·내용 그대로
     assert sum("--radar-13d-weekly-only" in ln for ln in _entries(second)) == 1
 
@@ -74,7 +74,7 @@ def test_empty_crontab_gets_block_only(tmp_path):
 
 def test_missing_trailing_newline_does_not_join_lines(tmp_path):
     out = _merge(_write(tmp_path / "cron", EXISTING.rstrip("\n")))
-    assert len(_entries(out)) == 7
+    assert len(_entries(out)) == 3 + len(BOT)
 
 
 def test_empty_bot_lines_aborts_and_keeps_crontab(tmp_path):

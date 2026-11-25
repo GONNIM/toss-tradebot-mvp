@@ -43,7 +43,7 @@ def _base():
 
 
 def _ledger(tmp_path):
-    return SecDailyLedger(tmp_path / "led.json", "20261112")
+    return SecDailyLedger(tmp_path / "sec_usage_20261112.json", "20261112")   # 파일 이름은 장부 규칙 (요청마다 다시 읽음)
 
 
 def test_new_events_added_known_and_items_skipped(tmp_path):
@@ -85,6 +85,7 @@ def test_cap_counts_before_send(tmp_path):
     seen: list = []
     led = _ledger(tmp_path)
     led.add("form4", 299)
+    led.save()                                              # 요청마다 장부 파일을 다시 읽으므로 디스크에도 있어야 함 (1112-08)
     with _client({"ciks=": (200, _efts([]))}, seen) as c:
         get = ri.make_getter(c, led, 300, sleep=lambda s: None)
         d = ri.load_out(tmp_path / "o.json", "a", "b")
@@ -105,22 +106,33 @@ def test_resume_skips_processed(tmp_path):
     assert len(seen) == 1 and "0000000002" in seen[0]
 
 
+def _cand_dirs(tmp_path, monkeypatch, runtime=True):
+    docs = tmp_path / "docs"
+    rt = tmp_path / "rt"
+    docs.mkdir()
+    rt.mkdir()
+    monkeypatch.setattr(cand, "FALLBACK_DIR", docs)
+    monkeypatch.setattr(cand, "RUNTIME_DIR", rt if runtime else None)
+    monkeypatch.setattr(cand, "DATA_DIR", tmp_path / "nodata")
+    return docs, rt
+
+
 def test_candidates_source_a_merges_increment(tmp_path, monkeypatch):
+    docs, rt = _cand_dirs(tmp_path, monkeypatch)
     base = {"events": [{"cik": "0000000001", "accession": "x-1", "d_day": "2020-01-01", "direction": "positive"}]}
     inc = {"events": [{"cik": "0000000002", "accession": "x-2", "d_day": "2099-01-01", "direction": "negative"},
                       {"cik": "0000000001", "accession": "x-1", "d_day": "2099-01-01"}]}   # 같은 접수번호 → 한 번만
-    (tmp_path / "h39_readouts_checkpoint.json").write_text(json.dumps(base))
-    (tmp_path / "h39_readouts_increment.json").write_text(json.dumps(inc))
-    monkeypatch.setattr(cand, "_find", lambda name: (tmp_path / name) if (tmp_path / name).exists() else None)
+    (docs / "h39_readouts_checkpoint.json").write_text(json.dumps(base))
+    (docs / "h39_readouts_increment.json").write_text(json.dumps(inc))
     out = cand.source_a_readout("sha", days_recent=90)
     assert [o["cik"] for o in out] == ["0000000002"]
 
 
 def test_candidates_source_a_broken_increment_falls_back(tmp_path, monkeypatch):
-    (tmp_path / "h39_readouts_checkpoint.json").write_text(json.dumps({"events": [
+    docs, rt = _cand_dirs(tmp_path, monkeypatch)
+    (docs / "h39_readouts_checkpoint.json").write_text(json.dumps({"events": [
         {"cik": "0000000001", "accession": "x-1", "d_day": "2099-01-01"}]}))
-    (tmp_path / "h39_readouts_increment.json").write_text("{broken")
-    monkeypatch.setattr(cand, "_find", lambda name: (tmp_path / name) if (tmp_path / name).exists() else None)
+    (docs / "h39_readouts_increment.json").write_text("{broken")
     assert [o["cik"] for o in cand.source_a_readout("sha")] == ["0000000001"]
 
 
