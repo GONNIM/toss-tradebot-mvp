@@ -12,6 +12,7 @@ import { BIOTECH_BASIS_LINE, QuoteView, md, ratioPct, usd } from "@/lib/biotech-
 import type { Plan, PlanWhy, WhyBrief, WhyRisk } from "@/lib/plans";
 import { num } from "@/lib/plans";
 import { parseServerIso } from "@/lib/time";
+import { cardText, conditionsLine, insiderTxLine, mcapBadge, mentionSentence, shortName, trialSentence } from "@/lib/biotech-display";
 
 const CARD_BOX = "space-y-3 rounded-xl border border-border bg-card p-4";
 export const WHY_TITLE = "이 종목이 계획에 오른 까닭";
@@ -153,20 +154,63 @@ export function WhyCard({ plan, why }: { plan: Plan; why: PlanWhy | null | undef
 
       <div className="space-y-1" data-testid="why-trial">
         <h4 className="text-sm font-semibold text-muted-foreground">다음 임상 일정</h4>
+        {why.company && (
+          <p className="text-sm font-semibold" data-testid="why-company">
+            {why.company.name ? shortName(why.company.name) : ""}
+            {why.company.name && mcapBadge(why.company.mcap_bucket, why.company.mcap_asof, why.company.mcap_shares_asof) ? " · " : ""}
+            {mcapBadge(why.company.mcap_bucket, why.company.mcap_asof, why.company.mcap_shares_asof) ?? ""}
+          </p>
+        )}
         {t ? (
           <>
-            <p className="flex flex-wrap items-baseline gap-x-2 text-sm tabular-nums">
-              <span>{t.nct_id}</span>
-              <span>· {t.phase_ko}</span>
-              <span>· 1차 완료 예정 <b>{t.pcd}</b>{dDay(t.days_to)}</span>
-              <ExtLink href={t.url}>등록부 원문 ↗</ExtLink>
-            </p>
+            {(() => {
+              const ct = cardText(why.trial_detail ?? undefined, t.phase, t.pcd, t.days_to, why.theme ?? undefined);
+              const reg = why.trial_detail ?? undefined;
+              return (
+                <>
+                  <p className="text-sm" data-testid="why-trial-main">
+                    {ct.main ?? trialSentence(t.phase, t.pcd, t.days_to, reg) ?? `${t.phase_ko} · 1차 완료 예정 ${t.pcd}${dDay(t.days_to)}`}
+                  </p>
+                  {ct.theme && <p className="text-xs text-muted-foreground" data-testid="why-theme">{ct.theme}</p>}
+                  <p className="flex flex-wrap items-baseline gap-x-2 text-sm tabular-nums">
+                    <span>{t.nct_id}</span>
+                    <span>· 1차 완료 예정 <b>{t.pcd}</b>{dDay(t.days_to)}</span>
+                    <ExtLink href={t.url}>임상 원문 보기 ↗</ExtLink>
+                  </p>
+                  {reg?.official_title && (
+                    <p className="text-xs text-muted-foreground" data-testid="why-official-title">시험 정식 제목 (원문): {reg.official_title}</p>
+                  )}
+                  {(reg?.conditions ?? []).length > 0 && (
+                    <p className="text-xs text-muted-foreground" data-testid="why-conditions">대상 질환: {conditionsLine(reg?.conditions)}</p>
+                  )}
+                </>
+              );
+            })()}
             <p className="text-xs text-muted-foreground">{t.note}</p>
           </>
         ) : (
           <p className="text-sm text-muted-foreground">자료 없음 · 등록부 일정을 찾지 못했습니다.</p>
         )}
       </div>
+
+      {(why.mention || (why.insider ?? []).length > 0) && (
+        <div className="space-y-1" data-testid="why-community">
+          <h4 className="text-sm font-semibold text-muted-foreground">커뮤니티 언급 · 내부자 신고 (공개 자료)</h4>
+          {why.mention && (
+            <p className="text-sm" data-testid="why-mention">
+              {mentionSentence(why.mention.stage, why.mention.baseline_n, why.mention.st_24h, why.mention.mult, why.mention.baseline_mean)}
+            </p>
+          )}
+          {(why.insider ?? []).length > 0 && (
+            <ul className="space-y-0.5 text-sm tabular-nums" data-testid="why-insider">
+              {why.insider!.map((x, i) => (
+                <li key={i}>{x.filer_type ? `${x.filer_type} · ` : ""}{insiderTxLine(x)} <span className="text-xs text-muted-foreground">(SEC 신고 {x.filing_date ? md(x.filing_date) : "날짜 미확인"})</span></li>
+              ))}
+            </ul>
+          )}
+          <p className="text-xs text-muted-foreground">표시만 합니다 · 추정 · 보장 아님.</p>
+        </div>
+      )}
     </section>
   );
 }

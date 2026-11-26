@@ -1,3 +1,4 @@
+import type { ThemeRank, TrialDisplay } from "@/lib/biotech-display";
 // 1116-01 계획 실행기 화면 · 서버 계약: backend/api/routes/plans.py (응답 모양의 진리)
 // 화면 서버는 토스를 부르지 않는다. 쿠키 전용 동작(승인 · 인수 · 재개 · 스위치)은 같은 주소의 로그인 쿠키로만 된다.
 // 화면에 예시로 쓰는 종목 · 금액은 가짜 값(TESTA)뿐이다. 실제 종목 · 금액 · 계좌 값은 쓰지 않는다.
@@ -77,8 +78,17 @@ export interface WhyEightK {
 }
 export interface WhyTrial { nct_id: string; phase: string; phase_ko: string; pcd: string; days_to: number | null; url: string; note: string }
 export interface WhyRisk { key: string; label: string; value: string; tone: "ok" | "mid" | "bad" | "none"; note: string; url?: string | null }
+/** 레이더 카드와 같은 재료 · 서버 helper 결과를 그대로 싣는다 (표시 전용) */
+export interface WhyCompany { name: string; mcap_bucket: string; mcap_asof: string; mcap_shares_asof: string }
+export interface WhyMention { stage: string; baseline_n: number | null; st_24h: number; mult: string; baseline_mean: number | null }
+export interface WhyInsiderTx { shares: number | null; price: number | null; tx_date: string; filing_date: string; filer_type: string }
 export interface PlanWhy {
   asof: string | null;
+  trial_detail?: TrialDisplay | null;
+  theme?: (ThemeRank & { theme?: string }) | null;
+  company?: WhyCompany | null;
+  mention?: WhyMention | null;
+  insider?: WhyInsiderTx[];
   in_radar: boolean;
   radar: { rank: number; total: number; score: number | null; factors: WhyFactor[]; why_easy: string | null } | null;
   eight_k: WhyEightK | null;
