@@ -12,6 +12,7 @@ import { usePlanStatus } from "@/components/plans/ModeBand";
 import { ADOPT_NAME, PRICE_NOTE, ladderLine } from "@/components/plans/planView";
 import { BTN_LINE, BTN_PRIMARY, CARD, Chip, Notice, StatCell, StatGrid } from "@/components/plans/ui";
 import { WhenChips } from "@/components/plans/WhenCard";
+import { whyBriefLine } from "@/components/plans/WhyCards";
 
 export default function PlansPage() {
   const status = usePlanStatus();
@@ -89,6 +90,9 @@ function PlanList({ title, rows, testid }: { title: string; rows: import("@/lib/
                   <StatCell label="손절" testid={`row-stop-${p.id}`} lines={[{ v: stopVal }]} note={lad.isDefault ? "평균 매수가 기준 · 기본 규칙" : "평균 매수가 기준"} />
                   <StatCell label="수량" testid={`row-qty-${p.id}`} lines={[{ v: qtyOk ? shares(qty) : "0주" }]} note={qtyOk ? undefined : "빠진 값이 있을 수 있음"} />
                 </StatGrid>
+                {whyBriefLine(p.why) && (
+                  <span className="block text-sm text-muted-foreground tabular-nums" data-testid={`row-why-${p.id}`}>{whyBriefLine(p.why)}</span>
+                )}
                 <span className="flex flex-wrap gap-x-4 gap-y-1 text-xs tabular-nums text-muted-foreground">
                   <span data-testid={`row-conds-${p.id}`}>걸린 조건주문 {p.live_cond_count ?? "확인 못 함"}{typeof p.live_cond_count === "number" ? "건" : ""}</span>
                   <span data-testid={`row-tp1-${p.id}`}>1차 익절 {p.tp1_mode ? TP1_MODE_LABEL[p.tp1_mode] : "정해지지 않음"}</span>

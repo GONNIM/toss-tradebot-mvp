@@ -8,7 +8,7 @@
 import { useMemo, useState } from "react";
 import { CartesianGrid, ComposedChart, Customized, Line, ReferenceDot, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { CrossList, crossShape } from "@/components/account/CrossMarks";
-import { Week40Chart } from "@/components/account/Week40Chart";
+import { Week40Chart, type HLine } from "@/components/account/Week40Chart";
 import {
   Chart,
   CrossPoint,
@@ -148,8 +148,9 @@ function DailyChart({ chart, basisLine }: { chart: Chart; basisLine: string }) {
 
 // 1111-01 · initialView 로 처음 보일 그림을 고른다 (바이오 칸은 주봉 5년·40주가 기본 · 계좌 카드·VIP 는 그대로 일봉)
 // 1112-01 · basisLine: 그림 아래 출처 설명 줄 (계좌 카드·VIP 는 기본값 그대로 · 바이오 칸은 「카드 글자 줄」이 없어 따로 줌)
-export function MaChart({ chart, initialView = "daily", basisLine = DAILY_BASIS_LINE }: {
-  chart: Chart | null; initialView?: View; basisLine?: string;
+// 1125-02 · hLines: 주봉 그림에 그리는 가로선 (선택 속성 · 기본값 없음 · 안 넘기면 계좌 · VIP · 바이오 칸 그림은 그대로)
+export function MaChart({ chart, initialView = "daily", basisLine = DAILY_BASIS_LINE, hLines }: {
+  chart: Chart | null; initialView?: View; basisLine?: string; hLines?: HLine[];
 }) {
   const [view, setView] = useState<View>(initialView);
   if (!chart || chart.daily.length === 0) {
@@ -186,7 +187,7 @@ export function MaChart({ chart, initialView = "daily", basisLine = DAILY_BASIS_
           <DailyChart chart={chart} basisLine={basisLine} />
         </div>
       ) : (
-        <Week40Chart week40={chart.week40} />
+        <Week40Chart week40={chart.week40} hLines={hLines} />
       )}
     </div>
   );

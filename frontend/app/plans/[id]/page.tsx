@@ -23,6 +23,7 @@ import { usePlanStatus } from "@/components/plans/ModeBand";
 import { ADOPT_NAME, KILL_NAME, PRICE_NOTE, TAG_NAME, ladderLine, missingValues } from "@/components/plans/planView";
 import { StockLabel } from "@/components/stock/StockLabel";
 import { WhenPanel } from "@/components/plans/WhenCard";
+import { PriceCard, RiskCard, WhyCard } from "@/components/plans/WhyCards";
 import { BTN_LINE, BTN_PRIMARY, BTN_WARN, Field, INPUT, Notice, Row } from "@/components/plans/ui";
 
 const HALTABLE = ["APPROVED", "ENTRY_ARMED", "ENTRY_RETRY", "HOLDING", "TP1_WAIT", "TRAILING", "ADOPT_PENDING"];
@@ -404,7 +405,15 @@ export default function PlanDetailPage() {
           <summary className="cursor-pointer" aria-label="판 번호와 내용 확인값 펼치기">자세히</summary>
           <p className="tabular-nums">판 번호 {p.revision} · 내용 확인값 {d.content_hash}</p>
         </details>
+        <Link href={`/stock/${encodeURIComponent(p.symbol)}`} aria-label={`${p.symbol} 종목 하나 보기`} data-testid="link-stock" className="inline-flex min-h-[44px] items-center text-sm font-semibold text-primary hover:opacity-75">
+          종목 하나 보기 →
+        </Link>
       </header>
+
+      {/* 1125-02 · 표시 전용 카드 (서버 why · 기존 시세 API) · 승인 값 · 주문과 무관 */}
+      <WhyCard plan={p} why={d.why} />
+      <PriceCard plan={p} />
+      <RiskCard why={d.why} />
 
       <WhenPanel when={p.when}>
         {p.state === "DRAFT" && (
