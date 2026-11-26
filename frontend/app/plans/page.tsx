@@ -2,7 +2,7 @@
 
 // /plans · 계획 목록 (계획서 11절 · v4 8절)
 // 맨 위 한 줄(주문 나감/안 나감)과 상태 칩은 ModeBand(자세히). 걸린 조건주문 수 · 1차 익절 방식 · 마지막 현재가는 서버 값이고 null 이면 「확인 못 함」.
-// 카드 맨 위는 「언제」 칩(발표 · 매수 마감 · 시간 손절 시작 · 서버 when 값만 읽음). 카드는 종목 · 살 값 · 팔 값 · 손절 값 · 수량 이름표 칸 네 개 (1116-01 B · 1125-01 에서 줄 → 칸으로). 손절은 계획의 손절 폭이 있으면 그 값, 없을 때만 기본 규칙.
+// 카드 맨 위는 종목 이름표 · 종류 · 상태 칩이고, 그 바로 아래가 「언제」 칩(발표 · 매수 마감 · 시간 손절 시작 · 서버 when 값만 읽음 · 끝난 계획은 없음). 카드는 종목 · 살 값 · 팔 값 · 손절 값 · 수량 이름표 칸 네 개 (1116-01 B · 1125-01 에서 줄 → 칸으로). 손절은 계획의 손절 폭이 있으면 그 값, 없을 때만 기본 규칙.
 import Link from "next/link";
 
 import { StockLabel } from "@/components/stock/StockLabel";
@@ -87,7 +87,7 @@ function PlanList({ title, rows, testid }: { title: string; rows: import("@/lib/
                     lines={adopt ? [{ k: "평균 단가", v: usd(p.params.adopt?.avg_price ?? p.avg_price) }] : [{ k: "매수 감시가", v: usd(p.params.buy_watch) }, { k: "매수 주문가", v: usd(p.params.buy_order) }]}
                   />
                   <StatCell label="팔 값" testid={`row-sell-${p.id}`} lines={[{ k: "1차 익절 감시가", v: usd(p.params.tp1_watch) }, { k: "1차 익절 주문가", v: usd(p.params.tp1_order) }]} />
-                  <StatCell label="손절" testid={`row-stop-${p.id}`} lines={[{ v: stopVal }]} note={lad.isDefault ? "평균 매수가 기준 · 기본 규칙" : "평균 매수가 기준"} />
+                  <StatCell label="손절" testid={`row-stop-${p.id}`} lines={[{ v: stopVal }]} note={<span className="break-keep">{lad.isDefault ? "평균 매수가 기준 · 기본 규칙" : "평균 매수가 기준"}</span>} />
                   <StatCell label="수량" testid={`row-qty-${p.id}`} lines={[{ v: qtyOk ? shares(qty) : "0주" }]} note={qtyOk ? undefined : "빠진 값이 있을 수 있음"} />
                 </StatGrid>
                 {whyBriefLine(p.why) && (

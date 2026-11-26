@@ -11,13 +11,15 @@ import { Chip } from "@/components/plans/ui";
 import { BIOTECH_BASIS_LINE, QuoteView, md, ratioPct, usd } from "@/lib/biotech-quote";
 import type { Plan, PlanWhy, WhyBrief, WhyRisk } from "@/lib/plans";
 import { num } from "@/lib/plans";
+import { parseServerIso } from "@/lib/time";
 
 const CARD_BOX = "space-y-3 rounded-xl border border-border bg-card p-4";
 export const WHY_TITLE = "이 종목이 계획에 오른 까닭";
 export const RULE_TEXT =
-  "바이오 레이더 목록에 있고, 임상시험 등록부의 1차 완료 예정일이 진입 창 안이며, 빼는 조건(상장폐지 · 합병 · 계속기업 의문 · 30일 안 증자)이 없습니다.";
+  "초안을 만든 날 기준으로, 바이오 레이더 목록에 있고, 임상시험 등록부의 1차 완료 예정일이 진입 창 안이며, 빼는 조건(상장폐지 · 합병 · 계속기업 의문 · 30일 안 증자)이 없고, 같은 종목의 열린 계획이 없습니다.";
 export const PCD_NOTE = "1차 완료 예정일 · 결과 발표일 아님 · 등록부 · 추정";
 export const DIRECTION_NOTE = "자동 낱말 표시 · 확정 전";
+export const ASOF_NOTE = "승인한 날의 값과 다를 수 있습니다 (오늘 자료 기준).";
 export const RADAR_NOTE = "검증 중 · 추정 · 보장 아님";
 
 function f2(v: number | null | undefined): string {
@@ -52,6 +54,21 @@ export function whyBriefLine(w: WhyBrief | null | undefined): string | null {
   return `오른 까닭: ${parts.join(" · ")}`;
 }
 
+/** 초안 만든 날 · 한국 시각 MM/DD (계획 응답의 created_at · 없으면 빈 문자열) */
+export function createdMd(iso: string | null | undefined): string {
+  const d = parseServerIso(iso);
+  if (!d) return "";
+  const parts = new Intl.DateTimeFormat("ko-KR", { month: "2-digit", day: "2-digit", timeZone: "Asia/Seoul" }).formatToParts(d);
+  const g = (t: string) => parts.find((x) => x.type === t)?.value ?? "";
+  return `${g("month")}/${g("day")}`;
+}
+
+/** 8-K 소제목 · 사용자 대표 확정이 있으면 그 내용에 맞게 바꾼다 (없으면 「임상 발표인지 확인 전」 그대로) */
+export function eightKTitle(dec: { clinical: boolean } | null | undefined): string {
+  if (!dec) return "최근 8-K (임상 발표인지 확인 전)";
+  return dec.clinical ? "최근 8-K (대표가 임상 발표로 확정)" : "최근 8-K (대표가 임상 발표 아님으로 확정)";
+}
+
 function dDay(n: number | null): string {
   if (n === null) return "";
   return n >= 0 ? ` (D-${n})` : ` (D+${-n})`;
@@ -74,7 +91,10 @@ export function WhyCard({ plan, why }: { plan: Plan; why: PlanWhy | null | undef
     <section aria-label={WHY_TITLE} data-testid="why-card" className={CARD_BOX}>
       <h3 className="text-base font-bold">{WHY_TITLE}</h3>
       {plan.source === "draft" ? (
-        <p className="rounded-lg bg-primary/5 px-3 py-2 text-sm" data-testid="why-rule">자동 초안 규칙: {RULE_TEXT}</p>
+        <div className="space-y-1 rounded-lg bg-primary/5 px-3 py-2 text-sm" data-testid="why-rule">
+          <p>자동 초안 규칙: {RULE_TEXT}</p>
+          {createdMd(plan.created_at) && <p className="text-xs text-muted-foreground tabular-nums" data-testid="why-created">초안 만든 날 {createdMd(plan.created_at)} (한국 시각)</p>}
+        </div>
       ) : (
         <p className="rounded-lg bg-muted/50 px-3 py-2 text-sm" data-testid="why-rule">직접 만든 계획이라 자동 초안 규칙은 해당 없습니다. 아래는 오늘 자료입니다.</p>
       )}
@@ -83,7 +103,7 @@ export function WhyCard({ plan, why }: { plan: Plan; why: PlanWhy | null | undef
         <div className="space-y-2" data-testid="why-radar">
           <h4 className="text-sm font-semibold text-muted-foreground">바이오 레이더{why.asof ? ` · ${md(why.asof)} 자료 기준` : ""}</h4>
           <p className="text-xs text-muted-foreground">
-            화면을 열 때 가장 최근 자료를 읽습니다.{!draft && " 승인한 날의 값과 다를 수 있습니다 (오늘 자료 기준)."}
+            화면을 열 때 가장 최근 자료를 읽습니다.{!draft && ` ${ASOF_NOTE}`}
           </p>
           <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
             <MiniCell testid="why-rank" label="순위" value={<>{r.rank} <span className="text-sm font-normal text-muted-foreground">/ {r.total}</span></>} note={`점수 ${f2(r.score)}`} />
@@ -97,11 +117,12 @@ export function WhyCard({ plan, why }: { plan: Plan; why: PlanWhy | null | undef
         <p className="rounded-lg border border-border px-3 py-2 text-sm" data-testid="why-not-in-radar">
           오늘 레이더에 없음{draft ? " · 초안은 진입 창이 닫히면 만료" : ""}
           {why.asof ? <span className="text-muted-foreground"> ({md(why.asof)} 자료 기준)</span> : null}
+          {!draft && <span className="block text-xs text-muted-foreground" data-testid="why-asof-note">{ASOF_NOTE}</span>}
         </p>
       )}
 
       <div className="space-y-1" data-testid="why-8k">
-        <h4 className="text-sm font-semibold text-muted-foreground">최근 8-K (임상 발표인지 확인 전)</h4>
+        <h4 className="text-sm font-semibold text-muted-foreground">{eightKTitle(k?.decision)}</h4>
         {k ? (
           <>
             <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm">
