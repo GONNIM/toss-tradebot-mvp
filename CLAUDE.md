@@ -172,7 +172,8 @@ grep -l "push:\|workflow_dispatch:" .github/workflows/*.yml  # 트리거 파악
 <!-- po가 작업을 마칠 때마다 1~3줄 추가합니다. 형식: - (YYYY-MM-DD) 규칙 — 이유 -->
 - (2026-10-21) 이 프로젝트는 thetak·naver 두 프로필에서 공용으로 연다. 오래 지킬 규칙은 메모리가 아니라 이 절이나 `.claude/PROJECT_PROFILE.md` 에 남긴다 — 메모리는 프로필마다 따로 쌓여 갈라진다.
 - (2026-10-21 · 11/06 이유 고침) 전체 pytest 는 커밋 hook 에 걸지 않는다 — 처음에는 기존 실패 21건 때문이었고, 11/06 지금은 0 실패지만 약 160초가 걸려 커밋마다 돌리기에 길다. hook 은 biotech 묶음·compileall·tsc 만 (2026-11-06 · 1106-03 사용자 결정) 정해진 시각 작업 시험 `tests/test_job_watch.py` 도 hook 에 넣는다 — 「늦어도 실행」 빠짐과 5분 안 겹침을 커밋에서 막는다 (교훈 #3).
-- (2026-10-22) main 병합은 자동 모드 분류기가 막으므로 사용자가 `! gh pr merge N --merge` 로 한 건씩 실행하고, 각 배포 run 이 끝난 뒤 다음 건을 병합한다 — deploy.yml 에 concurrency 가 없어 배포가 겹칠 수 있다.
+- (2026-11-26 · claude-studio:1126-07 · 사용자 이 창 승인 「병합 규칙 바꾸기 승인」) main 병합은 사용자의 「<번호> 승인」(이 대화에서 그 PR 을 가리킨 승인)을 받은 뒤 Claude 가 `gh pr merge N --merge` 로 실행한다. Fable GO 만으로는 하지 않는다. 자동 모드가 막으면 그 막힌 출력을 근거에 붙여 그때만 사용자에게 넘긴다. 각 배포 run 이 끝난 뒤 다음 건을 병합한다 — deploy.yml 에 concurrency 가 없다.
+- (옛 · 10/22 · 11/26 바꿈) main 병합은 자동 모드 분류기가 막으므로 사용자가 `! gh pr merge N --merge` 로 한 건씩 실행하고, 각 배포 run 이 끝난 뒤 다음 건을 병합한다 — deploy.yml 에 concurrency 가 없어 배포가 겹칠 수 있다.
 - (2026-10-22) "배포일" 이 기준인 상수는 병합 직전에 KST 날짜를 다시 확인한다 — 병합 사이에 날짜가 넘어가 START_ET 를 두 번 고쳤다.
 - (2026-10-22) 테스트는 루트 `backend/tests/conftest.py` 맨 위에서 DATABASE_URL 을 메모리로, 텔레그램 토큰을 빈 값으로 강제한다 — `.env` 가 먼저 로드되면 테스트가 실 DB 를 지운 것으로 보이고 실 봇으로 발송했다.
 - (2026-10-22) 버전 번호는 `frontend/package.json` (화면 변경) · `backend/api/main.py` (서버 변경) 둘 다 쓴다 — 사용자 결정 · 그전에는 기준 파일이 정해지지 않아 0.1.0 그대로였다.
