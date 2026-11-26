@@ -99,3 +99,6 @@ backend/.env.bak*
 
 # Fable 검수 번들 zip (로컬 생성물 · 전달용 · 2026-09-28)
 docs/plans/biotech/fable-bundles/
+
+# 결과 파일의 화면 그림 · 기록은 커밋하지 않음 (claude-studio:1126-06)
+docs/outputs/*/raw/
