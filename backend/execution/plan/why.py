@@ -148,6 +148,71 @@ def brief(src: WhySources, symbol: str) -> dict:
             "pcd": t["pcd"] if t else None}
 
 
+# ── 1125-02 추가 · 레이더 카드와 같은 시험 상세 · 회사 · 테마 · 언급 · 내부자 (읽기만 · 칸마다 실패하면 그 칸만 비움) ──
+
+def _safe(label: str, fn):
+    try:
+        return fn()
+    except Exception as exc:  # noqa: BLE001 — 한 칸이 깨져도 why 전체는 산다
+        logger.warning("[plan-why] %s 계산 실패 · %s", label, exc.__class__.__name__)
+        return None
+
+
+def _trial_detail(src: WhySources, trial: Optional[dict]) -> Optional[dict]:
+    """레이더 카드 문장의 재료 (AACT 시험 상세) · 없으면 None."""
+    if not trial:
+        return None
+    return src.bt._trial_display(trial["nct_id"]) or None
+
+
+def _company(src: WhySources, sym: str, row: Optional[dict]) -> Optional[dict]:
+    name = ((row or {}).get("name") or "").strip()
+    bucket, asof = src.bt._mcap_display(sym, (row or {}).get("mcap", ""))
+    if not name and not bucket:
+        return None
+    shares = src.bt._mcap_shares_carried(sym) if asof else ""
+    return {"name": name[:40], "mcap_bucket": bucket, "mcap_asof": asof, "mcap_shares_asof": shares}
+
+
+def _mention(src: WhySources, sym: str) -> Optional[dict]:
+    """커뮤니티 언급 단계 (가장 늦은 community_confirm 파일 · 공개 자료)."""
+    path = _first_file(src.bt, "community_daily", "community_confirm_????????.csv")
+    rows = src.bt._cached(path, _csv_rows) if path is not None else None
+    for r in rows or []:
+        if (r.get("ticker") or "").upper() == sym:
+            n = _fnum(r.get("st_baseline_n"))
+            return {"stage": r.get("stage") or "", "baseline_n": int(n) if n is not None else None,
+                    "st_24h": int(_fnum(r.get("st_24h")) or 0), "mult": str(r.get("st_baseline_mult") or ""),
+                    "baseline_mean": _fnum(r.get("st_baseline_mean"))}
+    return None
+
+
+def _insider(src: WhySources, sym: str, limit: int = 3) -> list[dict]:
+    """내부자 Form 4 최근 거래 (h65 일별 표 · 공개 SEC 신고) · 가장 늦은 신고 순 · 없으면 빈 목록."""
+    bt = src.bt
+    path = None
+    for base in [d for d in (bt.DATA_DIR_RUNTIME, bt.DATA_DIR_DOCS, bt.DATA_DIR) if d is not None]:
+        if base.exists():
+            hits = sorted(base.glob("h65_form4_daily_table_*.csv"))
+            if hits:
+                path = hits[-1]
+                break
+    rows = bt._cached(path, _csv_rows) if path is not None else None
+    if not rows:
+        return []
+    cik2tk = bt._cik_ticker_map()
+    out = []
+    for r in rows:
+        cik10 = (r.get("issuer_cik") or "").zfill(10)
+        if (r.get("issuer_ticker") or cik2tk.get(cik10, "")).upper() != sym:
+            continue
+        out.append({"shares": _fnum(r.get("shares")), "price": _fnum(r.get("price_per_share")),
+                    "tx_date": r.get("tx_date") or "", "filing_date": r.get("filing_date") or "",
+                    "filer_type": r.get("filer_type") or ""})
+    out.sort(key=lambda x: x["filing_date"], reverse=True)
+    return out[:limit]
+
+
 # ── 상세 ─────────────────────────────────────────────────────────────
 
 def _items_text(items: str) -> str:
@@ -287,6 +352,11 @@ def detail(src: WhySources, symbol: str, *, now: Optional[datetime] = None) -> d
     readout_row = next((r for r in src.readouts.values() if (r.get("ticker") or "").upper() == sym), None)
     cik = ((row or {}).get("cik") or (readout_row or {}).get("cik") or "").strip()
     key = str(int(cik)).zfill(10) if cik.isdigit() else ""
+    trial = _trial(src, sym)
     return {"asof": src.asof, "in_radar": hit is not None, "radar": radar,
             "eight_k": _eight_k(src, sym, cik, src.derived.get(key) if key else None),
-            "trial": _trial(src, sym), "risks": _risks(src, sym, row, cik, today)}
+            "trial": trial, "trial_detail": _safe("시험 상세", lambda: _trial_detail(src, trial)),
+            "theme": _safe("테마 순위", lambda: src.bt._theme_rank(sym) or None),
+            "company": _safe("회사", lambda: _company(src, sym, row)),
+            "mention": _safe("언급 단계", lambda: _mention(src, sym)),
+            "insider": _safe("내부자 신고", lambda: _insider(src, sym)) or [], "risks": _risks(src, sym, row, cik, today)}

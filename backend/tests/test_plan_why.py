@@ -211,3 +211,77 @@ async def test_detail_exposes_created_at_for_created_day(api, bio):
     plan = await mk_plan(api, symbol="TESTA")
     d = await _detail(api, plan["id"])
     assert d["plan"]["created_at"] and d["why"]["in_radar"] is True
+
+
+# ── 1125-02 추가 · 레이더 카드와 같은 시험 상세 · 회사 · 테마 · 언급 · 내부자 ─────────────
+
+@pytest.fixture
+def bio_detail(bio):
+    """가짜 시험 사본 · 언급 파일 · 내부자 표 (가상 종목 TESTA · 실제 호출 0)."""
+    (bio / "ctgov_snapshot.json").write_text(json.dumps({"matches": [{
+        "nct_id": "NCT00000001", "brief_title": "t", "official_title": "A Fake Study of Drug X (TEST)",
+        "conditions": ["Obesity"], "mesh_terms": [], "interventions": [{"name": "Drug X", "type": "DRUG"},
+                                                                       {"name": "Placebo", "type": "DRUG"}],
+        "enrollment": "160", "enrollment_type": "ESTIMATED", "allocation": "RANDOMIZED", "masking": "DOUBLE",
+        "primary_outcomes": [{"measure": "Percent change in hsCRP"}], "overall_status": "RECRUITING"}]}))
+    (bio / "community_daily").mkdir(exist_ok=True)
+    (bio / "community_daily" / "community_confirm_20261125.csv").write_text(
+        "ticker,stage,st_24h,st_baseline_n,st_baseline_mult,st_baseline_mean\nTESTA,quiet,2,9,1.5,1.0\n", encoding="utf-8")
+    (bio / "h65_form4_daily_table_20261125.csv").write_text(
+        "issuer_cik,issuer_ticker,issuer_name,filer_cik,filer_name,filer_type,shares,price_per_share,filing_date,tx_date,elapsed_days\n"
+        "0000000001,TESTA,a,1,F,임원,1000,2.5,2026-11-20,2026-11-18,5\n", encoding="utf-8")
+    from backend.api.routes import biotech as bt
+    bt._FILE_CACHE.clear()
+    return bio
+
+
+async def test_trial_detail_company_theme_mention_insider(api, bio_detail, monkeypatch):
+    from backend.api.routes import biotech as bt
+
+    monkeypatch.setattr(bt, "_theme_rank", lambda t: {"theme": "obesity_glp1", "theme_ko": "비만·GLP-1", "rank": 5, "of": 6, "quarter": "2026Q2"})
+    plan = await mk_plan(api, symbol="TESTA")
+    a = await _detail(api, plan["id"])
+    b = await _detail(api, plan["id"])
+    assert a["plan"]["revision"] == b["plan"]["revision"] and a["content_hash"] == b["content_hash"]
+    assert a["plan"]["params"] == b["plan"]["params"] == plan["params"]
+    w = a["why"]
+    td = w["trial_detail"]
+    assert td["official_title"].startswith("A Fake Study") and td["enrollment"] == "160" and td["placebo"] is True
+    assert td["primary_outcomes"][0]["measure"] == "Percent change in hsCRP"
+    assert w["theme"]["rank"] == 5 and w["theme"]["of"] == 6
+    assert w["company"]["name"] == "a" and w["company"]["mcap_bucket"] == "50M-300M"
+    assert w["mention"]["stage"] == "quiet" and w["mention"]["baseline_n"] == 9
+    assert w["insider"][0]["shares"] == 1000.0 and w["insider"][0]["tx_date"] == "2026-11-18"
+    assert "why" not in w["trial_detail"] and "why" not in a["approval_values"]
+
+
+async def test_one_failing_cell_empties_only_that_cell(api, bio_detail, monkeypatch):
+    from backend.api.routes import biotech as bt
+
+    def boom(*a, **k):
+        raise RuntimeError("fake")
+
+    monkeypatch.setattr(bt, "_trial_display", boom)
+    monkeypatch.setattr(bt, "_theme_rank", boom)
+    plan = await mk_plan(api, symbol="TESTA")
+    w = (await _detail(api, plan["id"]))["why"]
+    assert w is not None and w["trial_detail"] is None and w["theme"] is None
+    assert w["trial"]["pcd"] == "2026-12-31" and w["company"] is not None and w["mention"] is not None
+    assert w["radar"]["rank"] == 2
+
+
+async def test_no_detail_files_leaves_cells_empty_but_why_alive(api, bio):
+    plan = await mk_plan(api, symbol="TESTA")
+    w = (await _detail(api, plan["id"]))["why"]
+    assert w["trial_detail"] is None and w["mention"] is None and w["insider"] == []
+    assert w["trial"] is not None
+
+
+def test_screen_uses_radar_card_helpers():
+    from pathlib import Path
+
+    src = (Path(__file__).resolve().parents[2] / "frontend/components/plans/WhyCards.tsx").read_text(encoding="utf-8")
+    for must in ("cardText(", "trialSentence", "conditionsLine", "mcapBadge", "임상 원문 보기 ↗", "시험 정식 제목 (원문)", "대상 질환:"):
+        assert must in src, must
+    for w in BANNED:
+        assert w not in src, w
