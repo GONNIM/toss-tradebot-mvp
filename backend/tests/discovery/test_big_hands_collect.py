@@ -553,3 +553,65 @@ async def test_identical_lines_in_one_filing_are_both_saved():
     assert await _count(DartInsiderRow) == 3
     a = parse_elestock_item(same)
     assert a.key == parse_elestock_item(dict(same)).key                   # 첫 줄 열쇠는 순번 도입 전과 같다
+
+
+# ── 1119-03 ② 셋째 묶음 · 막음 A-2 (원문 오류는 XML 로 온다) ─────────────────
+
+def _xml(status: str, message: str = "x") -> httpx.Response:
+    body = f"<?xml version='1.0' encoding='UTF-8'?><result><status>{status}</status><message>{message}</message></result>"
+    return httpx.Response(200, content=body.encode(), headers={"content-type": "application/xml"})
+
+
+@pytest.mark.asyncio
+async def test_xml_document_020_stops_without_cache_or_processed_mark():
+    f = _DocStatus(_xml("020"), ele={CORP: [_ele("A1", "20260310", "갑", "100"), _ele("A2", "20260311", "을", "100")]})
+    with pytest.raises(dc.RateLimited):
+        await dc.collect_corp(f.collector(), CORP, kinds=("elestock",))
+    assert f.seen.count("document.xml") == 1                          # 첫 호출에서 멈춤 · 남은 원문을 부르지 않음
+    assert await _count(DartDocCache) == 0 and await _count(DartCollectCursor) == 0
+    async with get_session() as ses:
+        rows = (await ses.execute(select(DartInsiderRow))).scalars().all()
+    assert all(r.processed_at is None for r in rows)
+
+
+@pytest.mark.asyncio
+async def test_xml_document_014_is_cached_as_missing_and_marks_processed():
+    f = _DocStatus(_xml("014", "파일이 존재하지 않습니다."), ele={CORP: [_ele("A1", "20260310", "갑", "100")]})
+    await dc.collect_corp(f.collector(), CORP, kinds=("elestock",))
+    async with get_session() as ses:
+        got = {r.status for r in (await ses.execute(select(DartDocCache))).scalars()}
+        row = (await ses.execute(select(DartInsiderRow))).scalar_one()
+    assert got == {"missing"} and row.doc_status == "missing" and row.processed_at is not None
+
+
+@pytest.mark.asyncio
+async def test_xml_document_010_is_error_not_cached():
+    f = _DocStatus(_xml("010"), ele={CORP: [_ele("A1", "20260310", "갑", "100")]})
+    await dc.collect_corp(f.collector(), CORP, kinds=("elestock",))
+    assert await _count(DartDocCache) == 0
+    async with get_session() as ses:
+        row = (await ses.execute(select(DartInsiderRow))).scalar_one()
+    assert row.processed_at is None
+
+
+def test_error_status_ignores_entities_and_truncates_big_body():
+    evil = b'<?xml version="1.0"?><!DOCTYPE r [<!ENTITY a "x">]><result><status>020</status></result>'
+    assert dc._error_status(evil) is None                              # DOCTYPE 이 있는 XML 은 읽지 않는다
+    assert dc._error_status(b"<result><status>014</status></result>" + b" " * 100000) == "014"
+    assert dc._error_status(b"<result><message>x</message></result>") is None
+
+
+@pytest.mark.asyncio
+async def test_backfill_moves_on_even_when_a_corp_has_missing_xml_document():
+    fake = _DocStatus(_xml("014"),
+                      ele={CORP: [_ele("A1", "20260310", "갑", "100")], CORP2: [dict(_ele("B1", "20260311", "을", "100"), corp_code=CORP2)]})
+
+    async def nosleep(x):
+        pass
+    kw = dict(since_year=2016, max_calls=50, batch_size=1, dry_run=False, sleep=nosleep)
+    assert await bf.run([CORP, CORP2], limit=1, collector=fake.collector(), **kw) == bf.EXIT_OK
+    assert await bf.run([CORP, CORP2], limit=1, collector=fake.collector(), **kw) == bf.EXIT_OK
+    assert fake.seen.count("document.xml") == 2                        # 회사마다 1번씩 · 같은 회사를 다시 부르지 않음
+    async with get_session() as ses:
+        corps = {r.corp_code for r in (await ses.execute(select(DartInsiderRow))).scalars()}
+    assert corps == {CORP, CORP2}
