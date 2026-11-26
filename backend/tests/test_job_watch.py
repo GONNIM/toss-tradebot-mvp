@@ -62,6 +62,7 @@ def test_every_cron_job_has_misfire_grace():
 # ── 2. 등록된 잡의 실제 값 ────────────────────────────────────────────────
 
 def _api_scheduler() -> AsyncIOScheduler:
+    from backend.discovery.big_hands.scheduler import register_big_hands_jobs
     from backend.discovery.meme_watch.scheduler import register_meme_jobs
     from backend.discovery.sector_leaders.scheduler import register_monthly_jobs
     from backend.discovery.serenity.scheduler import register_serenity_jobs
@@ -76,6 +77,7 @@ def _api_scheduler() -> AsyncIOScheduler:
     register_powderkeg_jobs(s)
     register_serenity_jobs(s)
     register_principles_jobs(s)
+    register_big_hands_jobs(s, force=True)   # 1119-03 ② · 운영에서는 기본 꺼짐이지만 켰을 때의 시각을 시험이 본다
     return s
 
 
@@ -87,6 +89,7 @@ def _api_scheduler() -> AsyncIOScheduler:
     ("watchlist_rank_daily", GRACE_DEFAULT),
     ("watchlist_rank_rt", GRACE_BEFORE_OPEN),
     ("powderkeg_holding_expiry", GRACE_DEFAULT),
+    ("big_hands_dart_collect", GRACE_DEFAULT),
 ])
 def test_registered_grace_values(job_id, grace):
     job = _api_scheduler().get_job(job_id)
