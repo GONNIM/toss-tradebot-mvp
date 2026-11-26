@@ -15,6 +15,7 @@ import asyncio
 import json
 import logging
 import os
+import xml.etree.ElementTree as ET
 from dataclasses import dataclass, field
 from datetime import date, datetime, timedelta, timezone
 from typing import Any, Awaitable, Callable, Iterable, Optional
@@ -44,8 +45,29 @@ ENABLE_ENV = "BIG_HANDS_COLLECT_ENABLED"
 # document.xml 이 ZIP 대신 돌려주는 오류 글의 status 중 「그 접수번호의 원문이 없음」인 것 (client.py 의 013 · 시험 자료의 014).
 # 나머지(010 키 오류 · 011 · 012 · 020 한도 · 021 · 100 · 800 점검 · 900 · 901)는 일시 오류라 캐시하지 않는다.
 DOC_MISSING_STATUS = frozenset({"013", "014"})
+ERROR_BODY_MAX = 4096          # 오류 글은 작다 · 이보다 큰 본문은 앞부분만 읽는다
 LIST_PAGE_COUNT = 100
 LIST_MAX_PAGES = 30
+
+
+def _error_status(content: bytes) -> Optional[str]:
+    """ZIP 이 아닌 document.xml 응답의 status. XML(<result><status>)을 먼저 읽고, 없으면 JSON 을 읽는다.
+
+    DART 원문 주소는 오류를 XML 로 돌려준다 (실제 응답 확인 · 010). 외부 엔티티는 읽지 않고(DOCTYPE 이 있으면 XML 은 버림),
+    큰 본문은 앞부분만 본다. 읽지 못하면 None.
+    """
+    head = content[:ERROR_BODY_MAX]
+    if head.lstrip()[:1] == b"<" and b"<!DOCTYPE" not in head.upper() and b"<!ENTITY" not in head.upper():
+        try:
+            node = ET.fromstring(head).find("status")
+            if node is not None and (node.text or "").strip():
+                return node.text.strip()
+        except ET.ParseError:
+            pass
+    try:
+        return str(json.loads(head).get("status") or "") or None
+    except Exception:  # noqa: BLE001
+        return None
 
 
 def _now() -> datetime:
@@ -137,12 +159,8 @@ class DartCollector:
         text = document_zip_to_text(resp.content)
         if text is not None:
             return "ok", text
-        # ZIP 이 아니다 · DART 는 오류를 HTTP 200 과 오류 글(JSON)로도 돌려준다. 그 status 를 읽는다.
-        status = None
-        try:
-            status = str(json.loads(resp.content).get("status") or "")
-        except Exception:  # noqa: BLE001
-            status = None
+        # ZIP 이 아니다 · DART 는 오류를 HTTP 200 과 오류 글(XML · 드물게 JSON)로도 돌려준다. 그 status 를 읽는다.
+        status = _error_status(resp.content)
         if status == "020":
             raise RateLimited("DART 요청 한도 초과(020)")
         if resp.status_code == 200 and status in DOC_MISSING_STATUS:
