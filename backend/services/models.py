@@ -2209,3 +2209,5 @@ if __name__.startswith("backend."):
     from backend.execution.plan import models as _plan_models  # noqa: E402,F401
     # 1119-03 ① · 큰손 발자국 새 표 4개 (기존 표 열 추가 없음 · create_all 이 함께 만듦)
     from backend.discovery.big_hands import models as _big_hands_models  # noqa: E402,F401
+    # 1119-03 ② · 국내 공시 수집 새 표 5개 (공시 줄 2 · 원문 캐시 · 처리 표시 · 가격)
+    from backend.discovery.big_hands import collect_models as _big_hands_collect_models  # noqa: E402,F401

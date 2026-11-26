@@ -203,6 +203,10 @@ async def lifespan(app: FastAPI):
     from backend.principles.scheduler import register_principles_jobs
     register_principles_jobs(scheduler)
 
+    # 큰손 발자국 ② · 국내 공시 수집 (평일 19:10 · 기본 꺼짐 · BIG_HANDS_COLLECT_ENABLED=1 일 때만 등록)
+    from backend.discovery.big_hands.scheduler import register_big_hands_jobs
+    register_big_hands_jobs(scheduler)
+
     # Rulebook · Blue-Chip 5단계 스크리너 (Phase E+ · 2026-08-02)
     # 매일 22:30 KST · Powderkeg 22:00 이후 · 존마 강의 원칙 1
     if _os.environ.get("RULEBOOK_BLUECHIP_ENABLED", "true").lower() in {"1", "true", "yes", "on"}:
@@ -285,7 +289,7 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(
     title="Toss Tradebot MVP API",
-    version="0.3.80",
+    version="0.3.81",
     description="자동매매 + Crazy + Moonshot Discovery API",
     lifespan=lifespan,
 )
