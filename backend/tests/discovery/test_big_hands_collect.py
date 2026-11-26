@@ -601,6 +601,13 @@ def test_error_status_ignores_entities_and_truncates_big_body():
     assert dc._error_status(b"<result><message>x</message></result>") is None
 
 
+def test_error_status_survives_multibyte_encoding_and_reads_after_bom():
+    euckr = '<?xml version="1.0" encoding="EUC-KR"?><result><status>013</status><message>없음</message></result>'.encode("euc-kr")
+    assert dc._error_status(euckr) is None                             # 예외로 수집 전체가 멈추지 않고 error 로 간다
+    assert dc._error_status(b"\xef\xbb\xbf<result><status>014</status></result>") == "014"
+    assert dc._error_status(b'\xef\xbb\xbf{"status": "020"}') == "020"
+
+
 @pytest.mark.asyncio
 async def test_backfill_moves_on_even_when_a_corp_has_missing_xml_document():
     fake = _DocStatus(_xml("014"),
