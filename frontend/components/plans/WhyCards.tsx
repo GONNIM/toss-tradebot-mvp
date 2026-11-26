@@ -16,7 +16,7 @@ import { parseServerIso } from "@/lib/time";
 const CARD_BOX = "space-y-3 rounded-xl border border-border bg-card p-4";
 export const WHY_TITLE = "이 종목이 계획에 오른 까닭";
 export const RULE_TEXT =
-  "초안을 만든 날 기준으로, 바이오 레이더 목록에 있고, 임상시험 등록부의 1차 완료 예정일이 진입 창 안이며, 빼는 조건(상장폐지 · 합병 · 계속기업 의문 · 30일 안 증자)이 없고, 같은 종목의 열린 계획이 없습니다.";
+  "초안을 만든 날 기준으로, 바이오 레이더 목록에 있고, 임상시험 등록부의 1차 완료 예정일이 진입 창 안이며, 빼는 조건(상장폐지 · 인수 완료 · 합병 진행 · 거래 정지)이 없고, 같은 종목의 열린 계획이 없습니다. 계속기업 의문 · 최근 30일 증자는 빼는 조건이 아니며 아래 위험 확인 칸에 따로 보입니다.";
 export const PCD_NOTE = "1차 완료 예정일 · 결과 발표일 아님 · 등록부 · 추정";
 export const DIRECTION_NOTE = "자동 낱말 표시 · 확정 전";
 export const ASOF_NOTE = "승인한 날의 값과 다를 수 있습니다 (오늘 자료 기준).";

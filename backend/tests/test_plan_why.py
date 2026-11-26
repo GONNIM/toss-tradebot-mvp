@@ -190,6 +190,10 @@ def test_followup_wording_rule_created_day_asof_note_and_8k_title():
     src = (root / "components/plans/WhyCards.tsx").read_text(encoding="utf-8")
     # ① 규칙 문장
     assert "초안을 만든 날 기준" in src and "같은 종목의 열린 계획이 없습니다" in src
+    # 빼는 조건은 drafts.EXCLUDE_FLAGS 와 같다 · 경고 줄(계속기업 의문 · 30일 증자)은 빼는 조건으로 적지 않는다
+    from execution.plan.drafts import EXCLUDE_FLAGS
+    assert "빼는 조건(" + " · ".join(label for _, label in EXCLUDE_FLAGS) + ")" in src
+    assert "계속기업 의문 · 최근 30일 증자는 빼는 조건이 아니며" in src
     # ② 초안 만든 날 (한국 시각 MM/DD)
     assert "createdMd(plan.created_at)" in src and "Asia/Seoul" in src and "초안 만든 날" in src
     # ③ 레이더 줄이 없을 때도 승인된 계획이면 같은 문구
