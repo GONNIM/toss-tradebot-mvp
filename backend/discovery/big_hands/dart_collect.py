@@ -54,15 +54,17 @@ def _error_status(content: bytes) -> Optional[str]:
     """ZIP 이 아닌 document.xml 응답의 status. XML(<result><status>)을 먼저 읽고, 없으면 JSON 을 읽는다.
 
     DART 원문 주소는 오류를 XML 로 돌려준다 (실제 응답 확인 · 010). 외부 엔티티는 읽지 않고(DOCTYPE 이 있으면 XML 은 버림),
-    큰 본문은 앞부분만 본다. 읽지 못하면 None.
+    큰 본문은 앞부분만 본다. 맨 앞 BOM 은 떼고 읽는다. 읽지 못하면(인코딩 선언 · 깨진 본문 포함) None.
     """
     head = content[:ERROR_BODY_MAX]
+    if head.startswith(b"\xef\xbb\xbf"):
+        head = head[3:]
     if head.lstrip()[:1] == b"<" and b"<!DOCTYPE" not in head.upper() and b"<!ENTITY" not in head.upper():
         try:
             node = ET.fromstring(head).find("status")
             if node is not None and (node.text or "").strip():
                 return node.text.strip()
-        except ET.ParseError:
+        except Exception:  # noqa: BLE001 · ParseError 말고도 ValueError(EUC-KR 같은 다중 바이트 선언)가 난다
             pass
     try:
         return str(json.loads(head).get("status") or "") or None
