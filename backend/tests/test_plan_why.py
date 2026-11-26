@@ -180,3 +180,34 @@ def test_screen_source_wording_and_design():
     # 가로선은 선택 속성 · 기본값 없음 (계좌 · VIP 화면 그대로)
     ma = (root / "components/account/MaChart.tsx").read_text(encoding="utf-8")
     assert "hLines?: HLine[]" in ma and "hLines =" not in ma
+
+
+def test_followup_wording_rule_created_day_asof_note_and_8k_title():
+    """1125-02 후속 · 권고 ①~④ — 화면 낱말 시험 (표시 전용)."""
+    from pathlib import Path
+
+    root = Path(__file__).resolve().parents[2] / "frontend"
+    src = (root / "components/plans/WhyCards.tsx").read_text(encoding="utf-8")
+    # ① 규칙 문장
+    assert "초안을 만든 날 기준" in src and "같은 종목의 열린 계획이 없습니다" in src
+    # 빼는 조건은 drafts.EXCLUDE_FLAGS 와 같다 · 경고 줄(계속기업 의문 · 30일 증자)은 빼는 조건으로 적지 않는다
+    from execution.plan.drafts import EXCLUDE_FLAGS
+    assert "빼는 조건(" + " · ".join(label for _, label in EXCLUDE_FLAGS) + ")" in src
+    assert "계속기업 의문 · 최근 30일 증자는 빼는 조건이 아니며" in src
+    # ② 초안 만든 날 (한국 시각 MM/DD)
+    assert "createdMd(plan.created_at)" in src and "Asia/Seoul" in src and "초안 만든 날" in src
+    # ③ 레이더 줄이 없을 때도 승인된 계획이면 같은 문구
+    assert src.count("ASOF_NOTE") >= 3 and "why-asof-note" in src and "승인한 날의 값과 다를 수 있습니다" in src
+    # ④ 대표 확정이 없으면 옛 소제목 그대로 · 있으면 바꿈
+    assert "최근 8-K (임상 발표인지 확인 전)" in src and "eightKTitle(k?.decision)" in src and "대표가 임상 발표로 확정" in src
+    for w in BANNED:
+        assert w not in src, w
+    assert "하십시오" not in src and "shadow" not in src
+    lst = (root / "app/plans/page.tsx").read_text(encoding="utf-8")
+    assert "break-keep" in lst and "카드 맨 위는 종목 이름표" in lst
+
+
+async def test_detail_exposes_created_at_for_created_day(api, bio):
+    plan = await mk_plan(api, symbol="TESTA")
+    d = await _detail(api, plan["id"])
+    assert d["plan"]["created_at"] and d["why"]["in_radar"] is True
