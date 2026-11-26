@@ -422,3 +422,134 @@ def test_new_tables_exist_and_price_table_is_empty_until_next_batch():
                               DartCollectCursor.__table__, PriceDaily.__table__)}
     assert names == {"dart_insider_row", "dart_majorstock_row", "dart_doc_cache", "dart_collect_cursor",
                      "big_hands_price_daily"}
+
+
+# ── 1119-03 ② 둘째 묶음 · 막음 A · B · 권고 ㄱ ㄹ ㅁ ─────────────────────────
+
+class _DocStatus(FakeDart):
+    """document.xml 만 지정한 응답(HTTP 코드 · 본문)으로 바꾼다."""
+
+    def __init__(self, doc_resp, **kw):
+        super().__init__(**kw)
+        self.doc_resp = doc_resp
+
+    def handler(self, req):
+        if req.url.path.endswith("document.xml"):
+            self.seen.append("document.xml")
+            return self.doc_resp
+        return super().handler(req)
+
+
+@pytest.mark.asyncio
+async def test_document_020_stops_without_cache_or_processed_mark():
+    f = _DocStatus(httpx.Response(200, json={"status": "020", "message": "limit"}),
+                   ele={CORP: [_ele("A1", "20260310", "갑", "100")]})
+    with pytest.raises(dc.RateLimited):
+        await dc.collect_corp(f.collector(), CORP, kinds=("elestock",))
+    assert await _count(DartDocCache) == 0 and await _count(DartCollectCursor) == 0
+    async with get_session() as ses:
+        row = (await ses.execute(select(DartInsiderRow))).scalar_one()
+    assert row.processed_at is None and row.doc_status is None
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("resp", [
+    httpx.Response(200, json={"status": "800", "message": "점검"}), httpx.Response(404, json={"status": "014"}),
+    httpx.Response(200, content=b"not json"), httpx.Response(200, json={"status": "010"})])
+async def test_document_other_errors_are_not_cached_and_get_refetched(resp):
+    f = _DocStatus(resp, ele={CORP: [_ele("A1", "20260310", "갑", "100")]})
+    await dc.collect_corp(f.collector(), CORP, kinds=("elestock",))
+    assert await _count(DartDocCache) == 0
+    async with get_session() as ses:
+        row = (await ses.execute(select(DartInsiderRow))).scalar_one()
+    assert row.processed_at is None                                    # 다음에 다시 받는다
+    g = FakeDart(ele={CORP: [_ele("A1", "20260310", "갑", "100")]}, docs={"A1": BUY_DOC})
+    await dc.collect_corp(g.collector(), CORP, kinds=("elestock",))   # 다시 돌리면 다시 받는다
+    assert g.seen.count("document.xml") == 1
+    async with get_session() as ses:
+        row = (await ses.execute(select(DartInsiderRow))).scalar_one()
+    assert row.doc_status == "parsed"
+
+
+@pytest.mark.asyncio
+async def test_document_file_missing_status_is_cached_as_missing():
+    for st in ("013", "014"):
+        f = _DocStatus(httpx.Response(200, json={"status": st}), ele={CORP: [_ele("A" + st, "20260310", "갑", "100")]})
+        await dc.collect_corp(f.collector(), CORP, kinds=("elestock",))
+    async with get_session() as ses:
+        got = {r.status for r in (await ses.execute(select(DartDocCache))).scalars()}
+    assert got == {"missing"} and await _count(DartDocCache) == 2
+
+
+def test_httpx_loggers_are_warning_in_api_main():
+    import logging
+
+    import backend.api.main  # noqa: F401  · 불러올 때 로그 수준을 올린다
+
+    assert logging.getLogger("httpx").level == logging.WARNING
+    assert logging.getLogger("httpcore").level == logging.WARNING
+
+
+@pytest.mark.asyncio
+async def test_backfill_stops_cleanly_when_window_closes_mid_run(monkeypatch):
+    fake = FakeDart(ele={CORP: [_ele("A1", "20260310", "갑", "100")], CORP2: [dict(_ele("B1", "20260311", "을", "100"), corp_code=CORP2)]},
+                    docs={"A1": BUY_DOC, "B1": BUY_DOC})
+    calls = iter([False, True])                                        # 첫 회사는 통과 · 둘째 회사 앞에서 걸림
+    monkeypatch.setattr(bf, "_in_window", lambda: next(calls))
+    code = await bf.run([CORP, CORP2], since_year=2016, limit=5, max_calls=50, batch_size=1, dry_run=False,
+                        collector=fake.collector(), check_window=True)
+    assert code == bf.EXIT_BAD_TIME
+    async with get_session() as ses:
+        done = {c.corp_code for c in (await ses.execute(select(DartCollectCursor))).scalars() if c.processed_at}
+    assert done == {CORP}                                             # 둘째 회사는 손대지 않음 · 처리 표시 일관
+
+
+@pytest.mark.asyncio
+async def test_daily_list_calls_count_against_limit_and_failure_is_reported():
+    fake = FakeDart()
+    col = fake.collector(max_calls=1)
+    out = await dc.collect_daily(date(2026, 3, 10), collector=col)    # 목록 호출도 상한 1 에 걸린다
+    assert out["stopped"] == "call_limit" and out["dart_calls"] == 1
+
+    class ListBoom(FakeDart):
+        def handler(self, req):
+            if req.url.path.endswith("list.json"):
+                return httpx.Response(500)
+            return super().handler(req)
+    g = ListBoom()
+    out = await dc.collect_daily(date(2026, 3, 10), collector=g.collector())
+    assert out["list_failed"] == ["D002", "D001"] and out["corps_found"] == 0
+
+    class ListEmpty(FakeDart):
+        def handler(self, req):
+            if req.url.path.endswith("list.json"):
+                return httpx.Response(200, json={"status": "013"})
+            return super().handler(req)
+    out = await dc.collect_daily(date(2026, 3, 10), collector=ListEmpty().collector())
+    assert out["list_failed"] == [] and out["corps_found"] == 0       # 「공시 없음」은 실패가 아님
+
+
+@pytest.mark.asyncio
+async def test_daily_list_reads_pages_and_skips_unlisted():
+    class Paged(FakeDart):
+        def handler(self, req):
+            if req.url.path.endswith("list.json"):
+                pg = int(req.url.params["page_no"])
+                it = {"corp_code": CORP, "stock_code": "000001", "rcept_no": f"P{pg}", "report_nm": "x"}
+                un = {"corp_code": CORP2, "stock_code": " ", "rcept_no": "U", "report_nm": "x"}
+                return httpx.Response(200, json={"status": "000", "total_page": 2, "list": [it, un]})
+            return super().handler(req)
+    got = await Paged().collector().list_disclosures(date(2026, 3, 1), date(2026, 3, 10), "D002")
+    assert [d.rcept_no for d in got] == ["P1", "P2"]
+
+
+@pytest.mark.asyncio
+async def test_identical_lines_in_one_filing_are_both_saved():
+    same = _ele("A1", "20260310", "갑", "100")
+    fake = FakeDart(ele={CORP: [same, dict(same), dict(same, sp_stock_lmp_cnt="2000")]}, docs={"A1": BUY_DOC})
+    await dc.collect_corp(fake.collector(), CORP, kinds=("elestock",))
+    assert await _count(DartInsiderRow) == 3
+    await dc.collect_corp(fake.collector(), CORP, kinds=("elestock",))   # 다시 돌려도 늘지 않음
+    assert await _count(DartInsiderRow) == 3
+    a = parse_elestock_item(same)
+    assert a.key == parse_elestock_item(dict(same)).key                   # 첫 줄 열쇠는 순번 도입 전과 같다

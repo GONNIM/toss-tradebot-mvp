@@ -77,6 +77,9 @@ logging.basicConfig(
 )
 # 1102-04: 5초 잡의 「Running job / executed successfully」 INFO 를 끔 (잡 실패는 ERROR · 놓침은 WARNING 으로 남음)
 logging.getLogger("apscheduler.executors.default").setLevel(logging.WARNING)
+# 1119-03 막음 B: httpx · httpcore 는 INFO 에서 요청 주소 전체를 남기고, DART 주소에는 crtfc_key 가 들어 있다
+for _noisy in ("httpx", "httpcore"):
+    logging.getLogger(_noisy).setLevel(logging.WARNING)
 
 logger = logging.getLogger(__name__)
 
@@ -289,7 +292,7 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(
     title="Toss Tradebot MVP API",
-    version="0.3.81",
+    version="0.3.82",
     description="자동매매 + Crazy + Moonshot Discovery API",
     lifespan=lifespan,
 )

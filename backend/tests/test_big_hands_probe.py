@@ -134,7 +134,11 @@ def test_main_sets_httpx_warning_and_ends_without_token(tmp_path, monkeypatch):
 def test_forbidden_windows():
     assert probe.in_forbidden_window(datetime(2026, 11, 20, 10, 0, tzinfo=_KST))      # 장 시간
     assert probe.in_forbidden_window(datetime(2026, 11, 20, 6, 0, tzinfo=_KST))       # 05:55-06:45
-    assert not probe.in_forbidden_window(datetime(2026, 11, 20, 22, 0, tzinfo=_KST))
+    assert probe.in_forbidden_window(datetime(2026, 11, 20, 22, 0, tzinfo=_KST))      # 22:00-22:15 (1119-03 ② 보강 · 옛 시험은 22:00 을 열어 뒀음)
+    assert not probe.in_forbidden_window(datetime(2026, 11, 20, 22, 15, tzinfo=_KST))
+    assert probe.in_forbidden_window(datetime(2026, 11, 20, 19, 10, tzinfo=_KST))     # 19:05-19:40 매일 수집 잡 앞뒤
+    assert not probe.in_forbidden_window(datetime(2026, 11, 21, 19, 4, tzinfo=_KST))
+    assert not probe.in_forbidden_window(datetime(2026, 11, 20, 19, 40, tzinfo=_KST))
 
 
 def test_market_hours_weekday_only():

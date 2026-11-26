@@ -20,7 +20,7 @@
 안전:
   - 처리 표시(dart_collect_cursor · 줄마다 processed_at): 다시 돌려도 끝낸 회사는 건너뛰고 같은 줄은 중복 저장하지 않는다.
   - 호출 사이 1초 이상. 한도 초과(020)나 호출 상한에 닿으면 그 자리에서 끝낸다(종료 코드 5).
-  - 장 시간(평일 09:15~15:30)과 정해진 작업 시각 앞뒤에는 시작하지 않는다 (종료 코드 4).
+  - 장 시간(평일 09:15~15:30)과 정해진 작업 시각 앞뒤에는 시작하지 않고, 실행 중 회사마다 다시 보아 걸리면 그 자리에서 끝낸다 (종료 코드 4).
   - 로그에는 개수만 남긴다. 회사 · 보고자 이름 · 키 · 응답 원문은 남기지 않는다.
 """
 from __future__ import annotations
@@ -82,9 +82,15 @@ async def _done_corps() -> set[str]:
     return {c for c, k in kinds.items() if {"elestock", "majorstock"} <= k}
 
 
+def _in_window() -> bool:
+    from backend.scripts.big_hands_probe import in_forbidden_window
+
+    return in_forbidden_window()
+
+
 async def run(
     corps: list[str], *, since_year: int, limit: int, max_calls: int, batch_size: int, dry_run: bool,
-    collector=None, sleep=asyncio.sleep,
+    collector=None, sleep=asyncio.sleep, check_window: bool = False,
 ) -> int:
     from datetime import date
 
@@ -105,6 +111,10 @@ async def run(
     since = date(since_year, 1, 1)
     total, n, code = CorpStats(), 0, EXIT_OK
     for corp in todo:
+        if check_window and _in_window():             # 회사마다 다시 본다 · 걸리면 그 회사를 시작하기 전에 끝낸다 (처리 표시 일관)
+            logger.info("실행 제한 시각에 닿아 멈춥니다 · 끝낸 회사 %d", n)
+            code = EXIT_BAD_TIME
+            break
         try:
             total.add(await collect_corp(col, corp, since=since))
         except (CallLimit, RateLimited) as stop:
@@ -148,7 +158,8 @@ def main(argv: Optional[list[str]] = None) -> int:
     try:
         return asyncio.run(run(
             corps, since_year=args.since, limit=args.limit, max_calls=args.max_calls,
-            batch_size=args.batch_size, dry_run=args.dry_run))
+            batch_size=args.batch_size, dry_run=args.dry_run,
+            check_window=not args.ignore_time_window))
     except Exception as exc:  # noqa: BLE001
         logger.info("중단: %s", type(exc).__name__)
         return EXIT_ERROR

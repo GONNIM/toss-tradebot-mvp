@@ -10,7 +10,7 @@ import hashlib
 import io
 import re
 import zipfile
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import date
 from typing import Any, Optional
 
@@ -48,6 +48,26 @@ def row_key(*parts: Any) -> str:
     return hashlib.sha1(raw.encode("utf-8")).hexdigest()
 
 
+def _seq_part(seq: int) -> tuple:
+    """순번 0 은 열쇠에 넣지 않는다 (순번 도입 전에 만든 열쇠와 같게)."""
+    return (f"#{seq}",) if seq > 0 else ()
+
+
+def number_duplicate_lines(items: list) -> list:
+    """같은 (접수번호 · 보고자 · 보유 수 · 증감 수) 줄이 여럿이면 나온 순서대로 순번 0, 1, 2... 를 붙인다.
+
+    응답에 같은 줄이 두 번 나오면 둘 다 저장해 사건 수가 줄지 않게 한다 (열쇠가 같아 하나로 합쳐지던 문제).
+    """
+    seen: dict[tuple, int] = {}
+    out = []
+    for it in items:
+        base = (it.rcept_no, it.repror, it.hold_qty, it.change_qty)
+        n = seen.get(base, 0)
+        seen[base] = n + 1
+        out.append(replace(it, seq=n) if n else it)
+    return out
+
+
 @dataclass(frozen=True)
 class InsiderItem:
     rcept_no: str
@@ -61,10 +81,11 @@ class InsiderItem:
     change_qty: Optional[float]
     hold_rate: Optional[float]
     change_rate: Optional[float]
+    seq: int = 0          # 같은 접수번호 안에 네 값이 같은 줄이 또 있을 때의 순번 (첫 줄은 0 · 열쇠는 그대로)
 
     @property
     def key(self) -> str:
-        return row_key("E", self.rcept_no, self.repror, self.hold_qty, self.change_qty)
+        return row_key("E", self.rcept_no, self.repror, self.hold_qty, self.change_qty, *(_seq_part(self.seq)))
 
 
 def parse_elestock_item(item: dict[str, Any]) -> Optional[InsiderItem]:
@@ -100,10 +121,11 @@ class MajorItem:
     hold_rate: Optional[float]
     change_rate: Optional[float]
     report_resn: str
+    seq: int = 0
 
     @property
     def key(self) -> str:
-        return row_key("M", self.rcept_no, self.repror, self.hold_qty, self.change_qty)
+        return row_key("M", self.rcept_no, self.repror, self.hold_qty, self.change_qty, *(_seq_part(self.seq)))
 
 
 def parse_majorstock_item(item: dict[str, Any]) -> Optional[MajorItem]:

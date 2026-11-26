@@ -12,6 +12,7 @@
 from __future__ import annotations
 
 import asyncio
+import json
 import logging
 import os
 from dataclasses import dataclass, field
@@ -26,7 +27,7 @@ from backend.services.db import get_session
 
 from .collect_models import DartCollectCursor, DartDocCache, DartInsiderRow, DartMajorstockRow
 from .dart_parse import (
-    MajorItem, document_zip_to_text, parse_elestock_item, parse_holding_purpose,
+    MajorItem, document_zip_to_text, number_duplicate_lines, parse_elestock_item, parse_holding_purpose,
     parse_insider_trade_lines, parse_majorstock_item,
 )
 
@@ -40,6 +41,11 @@ DAILY_MAX_DOCS = 300
 DAILY_MAX_CALLS = 1500          # 하루 한도(보통 20,000)의 한 자리 수 %
 DAILY_GAP_SEC = 0.5
 ENABLE_ENV = "BIG_HANDS_COLLECT_ENABLED"
+# document.xml 이 ZIP 대신 돌려주는 오류 글의 status 중 「그 접수번호의 원문이 없음」인 것 (client.py 의 013 · 시험 자료의 014).
+# 나머지(010 키 오류 · 011 · 012 · 020 한도 · 021 · 100 · 800 점검 · 900 · 901)는 일시 오류라 캐시하지 않는다.
+DOC_MISSING_STATUS = frozenset({"013", "014"})
+LIST_PAGE_COUNT = 100
+LIST_MAX_PAGES = 30
 
 
 def _now() -> datetime:
@@ -128,12 +134,64 @@ class DartCollector:
         except Exception as exc:  # noqa: BLE001
             logger.warning("[big_hands.dart] document 실패 · %s", type(exc).__name__)
             return "error", None
-        if resp.status_code >= 500:
-            return "error", None
         text = document_zip_to_text(resp.content)
-        if text is None:
+        if text is not None:
+            return "ok", text
+        # ZIP 이 아니다 · DART 는 오류를 HTTP 200 과 오류 글(JSON)로도 돌려준다. 그 status 를 읽는다.
+        status = None
+        try:
+            status = str(json.loads(resp.content).get("status") or "")
+        except Exception:  # noqa: BLE001
+            status = None
+        if status == "020":
+            raise RateLimited("DART 요청 한도 초과(020)")
+        if resp.status_code == 200 and status in DOC_MISSING_STATUS:
             return "missing", None
-        return "ok", text
+        logger.warning("[big_hands.dart] document 받지 못함 · http=%s status=%s", resp.status_code, status)
+        return "error", None                     # 4xx · 5xx · 알 수 없는 응답은 캐시하지 않고 다음에 다시 받는다
+
+    async def list_disclosures(self, bgn: date, end: date, detail: str) -> Optional[list["ListedDisclosure"]]:
+        """공시 목록(D001·D002). 호출 상한 · 간격을 지킨다. 실패는 None(공시 없음 = 빈 목록과 구분) · 한도 초과는 예외."""
+        out: list[ListedDisclosure] = []
+        page = 1
+        while page <= LIST_MAX_PAGES:
+            try:
+                resp = await self._get("list.json", {
+                    "bgn_de": bgn.strftime("%Y%m%d"), "end_de": end.strftime("%Y%m%d"), "pblntf_ty": "D",
+                    "pblntf_detail_ty": detail, "page_count": LIST_PAGE_COUNT, "page_no": page})
+                resp.raise_for_status()
+                data = resp.json()
+            except (CallLimit, RateLimited):
+                raise
+            except Exception as exc:  # noqa: BLE001
+                logger.warning("[big_hands.dart] list %s 실패 · %s", detail, type(exc).__name__)
+                return None
+            status = data.get("status")
+            if status == "013":
+                return out
+            if status == "020":
+                raise RateLimited("DART 요청 한도 초과(020)")
+            if status != "000":
+                logger.warning("[big_hands.dart] list %s status=%s", detail, status)
+                return None
+            for it in data.get("list") or []:
+                if not (it.get("stock_code") or "").strip():
+                    continue                                   # 상장 회사만 (기존 목록 읽기와 같은 기준)
+                out.append(ListedDisclosure(
+                    corp_code=str(it.get("corp_code") or ""), rcept_no=str(it.get("rcept_no") or ""),
+                    report_nm=str(it.get("report_nm") or "")))
+            if page >= int(data.get("total_page") or 1):
+                return out
+            page += 1
+        logger.warning("[big_hands.dart] list %s 쪽 수 상한 %d 에서 멈춤", detail, LIST_MAX_PAGES)
+        return None                                            # 끝까지 못 읽은 목록은 실패로 본다
+
+
+@dataclass(frozen=True)
+class ListedDisclosure:
+    corp_code: str
+    rcept_no: str
+    report_nm: str
 
 
 @dataclass
@@ -284,7 +342,7 @@ async def collect_corp(
         if raw is None:
             stats.failed_corps = 1
         else:
-            items = [i for i in (parse_elestock_item({**r, "corp_code": r.get("corp_code") or corp_code}) for r in raw) if i]
+            items = number_duplicate_lines([i for i in (parse_elestock_item({**r, "corp_code": r.get("corp_code") or corp_code}) for r in raw) if i])
             stats.insider_new += len(await _save_insider(items, since, nm))
             await _process_insider_docs(collector, corp_code, stats, budget)
             if mark_cursor:
@@ -294,7 +352,7 @@ async def collect_corp(
         if raw is None:
             stats.failed_corps = 1
         else:
-            items = [i for i in (parse_majorstock_item({**r, "corp_code": r.get("corp_code") or corp_code}) for r in raw) if i]
+            items = number_duplicate_lines([i for i in (parse_majorstock_item({**r, "corp_code": r.get("corp_code") or corp_code}) for r in raw) if i])
             stats.major_new += len(await _save_major(items, since, nm))
             await _process_major_docs(collector, corp_code, stats, budget)
             if mark_cursor:
@@ -304,19 +362,14 @@ async def collect_corp(
 
 # ── 매일 수집 ───────────────────────────────────────────────────────────
 
-async def _list_disclosures(bgn: date, end: date, detail: str):
-    return await dart_client.fetch_recent_disclosures(
-        bgn_de=bgn, end_de=end, pblntf_ty="D", pblntf_detail_ty=detail, only_listed=True,
-    )
-
-
 async def collect_daily(
     today: Optional[date] = None, *, collector: Optional[DartCollector] = None,
-    lister: Callable[[date, date, str], Awaitable[list]] = _list_disclosures,
+    lister: Optional[Callable[[date, date, str], Awaitable[Optional[list]]]] = None,
 ) -> dict[str, Any]:
     """장 마감 뒤 1회. 최근 며칠의 임원(D002) · 5%(D001) 공시 목록에서 회사를 찾아 그 회사만 받는다.
 
-    목록 호출은 하루 몇 쪽이라 회사 수천 곳을 모두 부르는 것보다 훨씬 적다.
+    목록 호출도 호출 상한 · 간격에 들어간다. 목록 호출이 실패하면 빈 목록으로 두지 않고
+    요약의 list_failed 에 적는다(「공시 없음」과 구분). lister 는 시험용 · 실패는 None 으로 돌려준다.
     """
     if not dart_client.is_configured() and collector is None:
         logger.info("[big_hands_dart_collect] DART 키 없음 · 건너뜀")
@@ -324,14 +377,30 @@ async def collect_daily(
     end = today or datetime.now(timezone(timedelta(hours=9))).date()
     bgn = end - timedelta(days=DAILY_LOOKBACK_DAYS)
     col = collector or DartCollector(gap_sec=DAILY_GAP_SEC, max_calls=DAILY_MAX_CALLS)
-    insiders = await lister(bgn, end, "D002")
-    majors = await lister(bgn, end, "D001")
+    fetch_list = lister or col.list_disclosures
+    list_failed: list[str] = []
+    stopped = None
+    lists: dict[str, list] = {}
+    try:
+        for detail in ("D002", "D001"):
+            got = await fetch_list(bgn, end, detail)
+            if got is None:
+                list_failed.append(detail)
+                got = []
+            lists[detail] = got
+    except CallLimit:
+        stopped = "call_limit"
+    except RateLimited:
+        stopped = "rate_limited"
+    insiders, majors = lists.get("D002", []), lists.get("D001", [])
+    if list_failed:
+        logger.warning("[big_hands_dart_collect] 공시 목록 호출 실패 %s · 「공시 없음」이 아님", list_failed)
     names = {d.rcept_no: d.report_nm for d in [*insiders, *majors]}
     ins_corps = sorted({d.corp_code for d in insiders if d.corp_code})
     maj_corps = sorted({d.corp_code for d in majors if d.corp_code})
-    corps = sorted(set(ins_corps) | set(maj_corps))[:DAILY_MAX_CORPS]
+    corps = sorted(set(ins_corps) | set(maj_corps))[:DAILY_MAX_CORPS] if stopped is None else []
     total, budget = CorpStats(), [DAILY_MAX_DOCS]
-    done, stopped = 0, None
+    done = 0
     for corp in corps:
         kinds = tuple(k for k, s in (("elestock", ins_corps), ("majorstock", maj_corps)) if corp in s)
         try:
@@ -348,6 +417,7 @@ async def collect_daily(
         "insider_new": total.insider_new, "major_new": total.major_new,
         "docs_fetched": total.docs_fetched, "doc_cache_hits": total.doc_cache_hits,
         "failed_corps": total.failed_corps, "dart_calls": col.calls, "stopped": stopped,
+        "list_failed": list_failed,
     }
     logger.info("[big_hands_dart_collect] %s", summary)
     return summary
