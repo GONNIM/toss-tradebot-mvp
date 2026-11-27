@@ -111,6 +111,16 @@ def test_parse_elestock_and_majorstock_items():
     assert (m.report_tp, m.change_qty) == ("신규보고", 5000.0)
 
 
+def test_dashed_receipt_date_is_read_for_elestock_and_majorstock():
+    """DART 안내서: elestock 접수일은 YYYY-MM-DD. 8자리만 읽어 11/27 첫 수집이 0건이었다."""
+    i = parse_elestock_item(_ele("20261127000001", "2026-11-27", "가짜임원", "100"))
+    assert i is not None and i.rcept_date == date(2026, 11, 27)
+    m = parse_majorstock_item(_maj("20261127000002", "2026-11-27", "신규보고", "신규보고"))
+    assert m is not None and m.rcept_date == date(2026, 11, 27)
+    assert parse_elestock_item(_ele("20261127000003", "2026-13-01", "가짜임원", "1")) is None
+    assert parse_elestock_item(_ele("20261127000004", "2026/11/27", "가짜임원", "1")) is None
+
+
 def test_row_key_is_stable_and_differs_by_reporter():
     a = parse_elestock_item(_ele("1", "20260310", "갑", "10"))
     b = parse_elestock_item(_ele("1", "20260310", "을", "10"))
@@ -334,6 +344,19 @@ async def test_collect_daily_uses_lists_and_does_not_touch_cursor():
         r = (await ses.execute(select(DartInsiderRow))).scalar_one()
         m = (await ses.execute(select(DartMajorstockRow))).scalar_one()
     assert r.report_nm == "임원ㆍ주요주주특정증권등소유상황보고서" and m.report_nm.startswith("[기재정정]")
+
+
+@pytest.mark.asyncio
+async def test_collect_daily_saves_dashed_dates_and_counts_dropped_rows():
+    """11/27 운영 첫 수집 재현: elestock 접수일이 YYYY-MM-DD 이면 예전 코드는 0건 저장."""
+    fake = FakeDart(ele={CORP: [_ele("A1", "2026-03-10", "갑", "-100"), _ele("A9", "", "을", "100")]})
+
+    async def lister(bgn, end, detail):
+        return [_Disc(CORP, "A1")] if detail == "D002" else []
+
+    out = await dc.collect_daily(date(2026, 3, 10), collector=fake.collector(), lister=lister)
+    assert out["insider_new"] == 1 and out["dropped_rows"] == 1
+    assert await _count(DartInsiderRow) == 1
 
 
 @pytest.mark.asyncio
