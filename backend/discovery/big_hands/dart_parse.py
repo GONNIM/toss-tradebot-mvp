@@ -33,7 +33,14 @@ def to_float(v: Any) -> Optional[float]:
 
 
 def parse_yyyymmdd(s: Any) -> Optional[date]:
+    """「20261127」과 「2026-11-27」을 모두 읽는다.
+
+    DART 안내서는 elestock 접수일을 YYYY-MM-DD, majorstock · list 를 YYYYMMDD 로 적는다.
+    8자리만 읽어 elestock 줄이 모두 버려졌다 (11/27 첫 수집 저장 0건 · 교훈 #26).
+    """
     t = str(s or "").strip()
+    if len(t) == 10 and t[4] == "-" and t[7] == "-":
+        t = t[:4] + t[5:7] + t[8:]
     if len(t) == 8 and t.isdigit():
         try:
             return date(int(t[:4]), int(t[4:6]), int(t[6:8]))

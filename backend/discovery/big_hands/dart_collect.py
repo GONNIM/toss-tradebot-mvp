@@ -37,7 +37,7 @@ logger = logging.getLogger(__name__)
 DART_BASE = "https://opendart.fss.or.kr/api"
 _TIMEOUT = 20.0
 DAILY_LOOKBACK_DAYS = 3        # 서버가 하루 쉬었어도 이어 받는다 (같은 줄은 row_key 로 중복 없음)
-DAILY_MAX_CORPS = 300
+DAILY_MAX_CORPS = 500   # 11/27 첫 수집에서 314곳 중 300곳만 · 회사 번호 순으로 잘라 늘 같은 회사가 빠졌다 · 500곳 ≈ 호출 1,000번 < 상한 1,500
 DAILY_MAX_DOCS = 300
 DAILY_MAX_CALLS = 1500          # 하루 한도(보통 20,000)의 한 자리 수 %
 DAILY_GAP_SEC = 0.5
@@ -218,6 +218,7 @@ class ListedDisclosure:
 class CorpStats:
     insider_new: int = 0
     major_new: int = 0
+    dropped_rows: int = 0     # 받은 줄 가운데 읽지 못해 버린 줄 (접수번호 · 접수일 없음) · 0 이 아니면 형식이 바뀐 것
     docs_fetched: int = 0
     doc_cache_hits: int = 0
     failed_corps: int = 0
@@ -225,6 +226,7 @@ class CorpStats:
     def add(self, o: "CorpStats") -> None:
         self.insider_new += o.insider_new
         self.major_new += o.major_new
+        self.dropped_rows += o.dropped_rows
         self.docs_fetched += o.docs_fetched
         self.doc_cache_hits += o.doc_cache_hits
         self.failed_corps += o.failed_corps
@@ -363,6 +365,7 @@ async def collect_corp(
             stats.failed_corps = 1
         else:
             items = number_duplicate_lines([i for i in (parse_elestock_item({**r, "corp_code": r.get("corp_code") or corp_code}) for r in raw) if i])
+            stats.dropped_rows += len(raw) - len(items)
             stats.insider_new += len(await _save_insider(items, since, nm))
             await _process_insider_docs(collector, corp_code, stats, budget)
             if mark_cursor:
@@ -373,6 +376,7 @@ async def collect_corp(
             stats.failed_corps = 1
         else:
             items = number_duplicate_lines([i for i in (parse_majorstock_item({**r, "corp_code": r.get("corp_code") or corp_code}) for r in raw) if i])
+            stats.dropped_rows += len(raw) - len(items)
             stats.major_new += len(await _save_major(items, since, nm))
             await _process_major_docs(collector, corp_code, stats, budget)
             if mark_cursor:
@@ -435,9 +439,14 @@ async def collect_daily(
     summary = {
         "window": f"{bgn}~{end}", "corps_found": len(set(ins_corps) | set(maj_corps)), "corps_done": done,
         "insider_new": total.insider_new, "major_new": total.major_new,
+        "dropped_rows": total.dropped_rows,
         "docs_fetched": total.docs_fetched, "doc_cache_hits": total.doc_cache_hits,
         "failed_corps": total.failed_corps, "dart_calls": col.calls, "stopped": stopped,
         "list_failed": list_failed,
     }
+    if summary["corps_found"] > len(corps) and stopped is None:
+        logger.warning("[big_hands_dart_collect] 회사 상한 %d 에 걸림 · %d곳 중 %d곳만 받음", DAILY_MAX_CORPS, summary["corps_found"], len(corps))
+    if total.dropped_rows:
+        logger.warning("[big_hands_dart_collect] 읽지 못해 버린 줄 %d개 · 응답 형식이 바뀌었는지 확인", total.dropped_rows)
     logger.info("[big_hands_dart_collect] %s", summary)
     return summary
