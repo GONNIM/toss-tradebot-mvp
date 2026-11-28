@@ -485,3 +485,21 @@ async def test_default_fetch_with_fake_yfinance_module(yh, monkeypatch):
     assert asked == ["ZQAA", "6y"]
     assert b["basics"]["price_close"] == CLOSE_LAST and b["close_date"] == LAST_DONE.isoformat()
     assert b["opinion"]["n_opinions"] == 4 and b["opinion"]["dist"]["hold"] == 2
+
+
+@pytest.mark.asyncio
+async def test_overview_flag_hides_private_tables_from_non_admin(client, yh):
+    """Fable 병합 막음 ㄱ · 보유 · 판단 기록만 있는 기호는 비관리자에게 false, 관리자에게 true."""
+    from backend.services.db import get_session
+
+    async with get_session() as s:
+        s.add(HoldingSnapshot(symbol="ZQHO", market="US", trade_date=DAY, kind="holding"))
+        s.add(UserJudgment(ticker="ZQJO", page_source="manual", hypothesis_id="h", thesis_md="가상"))
+    for t in ("ZQHO", "ZQJO"):
+        pub = (await client.get(f"/api/v1/stock/{t}")).json()
+        adm = (await client.get(f"/api/v1/stock/{t}", headers=H)).json()
+        assert pub["us_quote_available"] is False, t
+        assert adm["is_admin"] is True and adm["us_quote_available"] is True, t
+    pub = (await client.get("/api/v1/stock/ZQAA")).json()          # 공개 표(universe)는 비관리자에게도 true
+    assert pub["us_quote_available"] is True
+    assert await uq.lookup_allowed("ZQHO", public=True) is None and await uq.lookup_allowed("ZQHO") == "ZQHO"

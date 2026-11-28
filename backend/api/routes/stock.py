@@ -462,7 +462,7 @@ async def get_stock(ticker: str, response: Response, role: str = Depends(get_cur
         from backend.services import us_quotes
 
         try:
-            us_quote = await us_quotes.lookup_allowed(t) is not None
+            us_quote = await us_quotes.lookup_allowed(t, public=not admin) is not None  # 비관리자는 보유 · 판단 표 제외
         except Exception as e:  # noqa: BLE001
             logger.warning("[stock] 미국 허용 목록 조회 실패 (%s): %s", t, e)
 

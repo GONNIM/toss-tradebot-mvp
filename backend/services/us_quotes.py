@@ -120,8 +120,14 @@ def in_block_window(now: Optional[datetime] = None) -> bool:
 # 허용 목록 (저장 표만 읽음 · 바깥 호출 0)
 # ─────────────────────────────────────────────────────────────────
 
-async def lookup_allowed(ticker: str) -> Optional[str]:
-    """허용 표에 있는 미국 기호면 대문자 기호 · 아니면 None."""
+PRIVATE_SOURCES = ("HoldingSnapshot", "UserJudgment")   # 내 보유 · 판단 기록 표 · 비로그인 응답에는 쓰지 않는다 (Fable 병합 막음 ㄱ)
+
+
+async def lookup_allowed(ticker: str, public: bool = False) -> Optional[str]:
+    """허용 표에 있는 미국 기호면 대문자 기호 · 아니면 None.
+
+    public=True (비로그인 개요 응답)면 보유 · 판단 기록 표는 보지 않는다 — 플래그로 보유 · 기록 여부가 새지 않게.
+    """
     from backend.services import models as M
 
     t = normalize(ticker)
@@ -129,6 +135,8 @@ async def lookup_allowed(ticker: str) -> Optional[str]:
         return None
     async with _session() as s:
         for cls_name, sym_col, mkt_col, mkt_val in ALLOWED_SOURCES:
+            if public and cls_name in PRIVATE_SOURCES:
+                continue
             cls = getattr(M, cls_name)
             q = select(getattr(cls, sym_col)).where(func.upper(getattr(cls, sym_col)) == t)
             if mkt_col:
