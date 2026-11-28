@@ -518,7 +518,7 @@ def ma200_line(market: str, dates: list[date], closes: list[float]) -> dict:
     return base
 
 
-def daily_ma_series(dates: list[date], closes: list[float]) -> list[dict]:
+def daily_ma_series(dates: list[date], closes: list[float], volumes: Optional[list] = None) -> list[dict]:
     """최근 1년 일봉 + 20·50·200일 평균. 평균은 긴 일봉 전체에서 계산하므로 창 앞쪽도 값이 있다 (모자라면 그 점만 null)."""
     pre = [0.0]
     for c in closes:
@@ -526,21 +526,29 @@ def daily_ma_series(dates: list[date], closes: list[float]) -> list[dict]:
     out = []
     for i in range(max(0, len(closes) - CHART_DAILY_ROWS), len(closes)):
         row: dict = {"d": dates[i], "c": round(closes[i], 4)}
+        if volumes is not None:  # 1128-01 · 거래량 막대 · 그날 거래량이 없으면 null
+            v = volumes[i] if i < len(volumes) else None
+            row["v"] = None if v is None else round(float(v))
         for n in CHART_MAS:
             row[f"m{n}"] = round((pre[i + 1] - pre[i + 1 - n]) / n, 4) if i + 1 >= n else None
         out.append(row)
     return out
 
 
-def build_chart(market: str, long_series, local_today: date) -> Optional[dict]:
-    """그림 자료 {daily, daily_note, daily_source, week40}. 긴 일봉이 없으면 None (화면은 「자료 없음」). 문장은 만들지 않는다."""
+def build_chart(market: str, long_series, local_today: date, volumes: Optional[list] = None,
+                source_text: Optional[str] = None) -> Optional[dict]:
+    """그림 자료 {daily, daily_note, daily_source, week40}. 긴 일봉이 없으면 None (화면은 「자료 없음」). 문장은 만들지 않는다.
+
+    1128-01 · volumes(날짜와 같은 길이 · 없는 날 None)를 주면 일 점마다 v, 주 점마다 그 주 합계 v 를 더한다 (안 주면 지금과 같음).
+    source_text 는 출처 문장을 바꿀 때만 준다 (예: 국내 네이버 일봉).
+    """
     if not long_series or not long_series[0]:
         return None
     dates, closes, _src = long_series
-    daily = daily_ma_series(dates, closes)
+    daily = daily_ma_series(dates, closes, volumes)
     return {"daily": daily, "daily_note": "자료 부족" if daily and daily[-1]["m200"] is None else None,
-            "daily_source": {"source": LONG_TEXT_SOURCE[market], "from": dates[0], "to": dates[-1], "n": len(dates)},
-            "week40": build_week40(market, dates, closes, local_today)}
+            "daily_source": {"source": source_text or LONG_TEXT_SOURCE[market], "from": dates[0], "to": dates[-1], "n": len(dates)},
+            "week40": build_week40(market, dates, closes, local_today, volumes, source_text)}
 
 
 def split_suspect(closes: list[float]) -> bool:
@@ -772,7 +780,7 @@ def week_friday(d: date) -> date:
     return d + timedelta(days=(4 - d.weekday()) % 7)
 
 
-def ended_weeks(dates: list[date], closes: list[float], local_today: date) -> list[dict]:
+def ended_weeks(dates: list[date], closes: list[float], local_today: date, volumes: Optional[list] = None) -> list[dict]:
     """주 묶음 가운데 끝난 주만. 주 종가 = 묶음의 마지막 자료 날 종가.
 
     마지막 묶음은 「자료 마지막 날 >= 그 주 금요일」 또는 「현지 오늘 > 그 주 금요일 이고 자료 마지막 날 >= 그 주 월요일」
@@ -787,6 +795,13 @@ def ended_weeks(dates: list[date], closes: list[float], local_today: date) -> li
             groups.append({"w": f, "idx": i, "last": d, "c": 0.0})
     for g in groups:
         g["c"] = closes[g["idx"]]
+    if volumes is not None:  # 1128-01 · 주 거래량 = 그 주 합계 · 빈 날이 하나라도 있으면 합계를 내지 않고 None (Fable ㅅ)
+        by_week: dict = {}
+        for i, d in enumerate(dates):
+            by_week.setdefault(week_friday(d), []).append(volumes[i] if i < len(volumes) else None)
+        for g in groups:
+            vs = by_week.get(g["w"], [])
+            g["v"] = None if (not vs or any(v is None for v in vs)) else round(sum(float(v) for v in vs))
     if groups:
         g = groups[-1]
         f = g["w"]
@@ -916,11 +931,12 @@ def week40_check(dates: list[date], closes: list[float], weeks: list[dict], mean
             "whipsaw_pct": whip, "cost_pct": round(cost * 100, 2)}
 
 
-def build_week40(market: str, dates: list[date], closes: list[float], local_today: date) -> Optional[dict]:
+def build_week40(market: str, dates: list[date], closes: list[float], local_today: date,
+                 volumes: Optional[list] = None, source_text: Optional[str] = None) -> Optional[dict]:
     """카드 칸 week40. 긴 일봉이 없으면 None (화면은 「자료 없음」). 판정 문장은 만들지 않는다."""
     if not dates:
         return None
-    weeks = ended_weeks(dates, closes, local_today)
+    weeks = ended_weeks(dates, closes, local_today, volumes)
     if not weeks:
         return None
     means = week_means(weeks)
@@ -935,11 +951,12 @@ def build_week40(market: str, dates: list[date], closes: list[float], local_toda
         out["note"] = "40주 자료 부족"
     start = max(0, len(weeks) - WEEK_SERIES_KEEP)
     out["series"] = [{"w": weeks[i]["w"], "c": round(weeks[i]["c"], 4),
-                      "m": None if means[i] is None else round(means[i], 4)} for i in range(start, len(weeks))]
+                      "m": None if means[i] is None else round(means[i], 4),
+                      **({"v": weeks[i]["v"]} if volumes is not None else {})} for i in range(start, len(weeks))]
     if last_m is not None:
         chk = week40_check(dates, closes, weeks, means)
         if chk:
-            chk["source"] = WEEK40_SOURCE[market]
+            chk["source"] = source_text or WEEK40_SOURCE[market]
         out["check"] = chk
     return out
 

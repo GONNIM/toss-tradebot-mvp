@@ -71,6 +71,7 @@ export interface DailyPoint {
   m20: number | null;
   m50: number | null;
   m200: number | null;
+  v?: number | null; // 1128-01 · 그날 거래량 (없으면 null · 옛 미국 자료는 키 없음)
 }
 
 export interface Chart {
@@ -85,6 +86,7 @@ export interface Week40Point {
   w: string; // 그 주 금요일
   c: number; // 주 종가
   m: number | null; // 40주 평균선
+  v?: number | null; // 1128-01 · 그 주 거래량 합계 (빈 날이 있으면 null)
 }
 
 export interface Week40Check {

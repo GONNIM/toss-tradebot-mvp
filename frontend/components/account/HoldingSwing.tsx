@@ -370,7 +370,7 @@ export function HoldingSwing({ holdings, isAdmin }: { holdings: AccountHolding[]
           return (
             <article key={`${h.market}-${h.symbol}`} className="space-y-3 rounded-lg border border-border bg-card p-3">
               <header>
-                <div className="font-medium"><StockLabel code={h.symbol} name={h.name} market={h.market === "KR" ? "KR" : "US"} link={false} /></div>
+                <div className="font-medium"><StockLabel code={h.symbol} name={h.name} market={h.market === "KR" ? "KR" : "US"} /></div>
                 <div className="text-xs text-muted-foreground">{h.market === "KR" ? "국내" : "미국"}</div>
               </header>
               {!card ? (

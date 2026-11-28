@@ -71,7 +71,7 @@ async def test_anon_no_locked_rows_when_no_data(client):
 
 
 ANON_TOP_KEYS = {"ticker", "market", "name", "is_admin", "fetched_at", "broker_link", "holding", "judgments",
-                 "signals", "catalysts", "going_concern", "quote_available"}
+                 "signals", "catalysts", "going_concern", "quote_available", "market_label"}  # 1128-01 market_label 추가 (저장값 · 바깥 호출 0)
 ANON_SIGNAL_KEYS = {"source", "label", "as_of", "summary", "link", "locked", "explain"}
 YAHOO_KEYS = ("close", "last_price", "target", "market_cap", "high_52w", "low_52w", "short_pct", "total_cash",
               "avg_volume", "opinion", "summary_lines", "avg_price", "analyst", "yahoo", "live", "chart")

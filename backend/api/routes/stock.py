@@ -5,6 +5,8 @@
 - 1119-01 · 공개 범위: 신호 · 일정 · 계속기업 (자체 · 공개 자료) 은 비로그인에게도 보인다 (잠금 행 없음).
   관리자만: 보유 · 판단 · 국내 스나이퍼의 진입/청산 상태 낱말. 야후 · 네이버 자료는 이 API 가 아예 부르지 않는다
   (화면이 로그인 상태에서만 기존 /api/v1/biotech/quote/{ticker} 를 따로 부른다).
+- 예외 (1128-01): GET /api/v1/stock/{code}/quote 는 관리자 전용이고 국내 허용 목록 코드에서만 네이버를 부른다 (services/kr_quotes.py).
+  개요 API 는 여전히 바깥 호출 0 이다 (시장 표시 · quote_available 은 저장된 표만 읽음).
 - 출처마다 작은 함수 하나 · 실패하면 그 칸만 빠지고 200.
 """
 from __future__ import annotations
@@ -16,7 +18,7 @@ from typing import Awaitable, Callable, Optional
 from fastapi import APIRouter, Depends, HTTPException, Response
 from sqlalchemy import desc, func, select
 
-from backend.api.auth import get_current_role
+from backend.api.auth import get_current_role, require_sniper_token
 from backend.api.schemas import (StockCatalyst, StockGoingConcern, StockHolding, StockJudgment, StockOverview,
                                  StockSignal)
 from backend.services.broker_links import broker_link, is_kr_code, normalize_symbol
@@ -441,9 +443,19 @@ async def get_stock(ticker: str, response: Response, role: str = Depends(get_cur
             signals.append(sig)
 
     candidate = None if kr else await _is_candidate(t)
+    market_label = None
     if kr:
-        candidate = False
-    cands_ok = candidate is True
+        # 1128-01 · 저장된 표만 읽음 (바깥 호출 0 · Fable 막음 ㄱ) · 허용 목록에 있으면 가격 칸을 열 수 있음 (관리자 여부는 /quote 가 막음)
+        from backend.services.kr_quotes import lookup_allowed
+
+        try:
+            hit = await lookup_allowed(t)
+        except Exception as e:  # noqa: BLE001
+            logger.warning("[stock] 국내 허용 목록 조회 실패 (%s): %s", t, e)
+            hit = None
+        candidate = hit is not None
+        market_label = hit["market"] if hit and hit.get("market") in ("KOSPI", "KOSDAQ") else None
+    cands_ok = candidate is True and not kr
 
     return StockOverview(
         ticker=t,
@@ -458,4 +470,20 @@ async def get_stock(ticker: str, response: Response, role: str = Depends(get_cur
         catalysts=_catalysts(t) if cands_ok else None,
         going_concern=_going_concern(t) if cands_ok else None,
         quote_available=candidate,
+        market_label=market_label,
     )
+
+
+@router.get("/{ticker}/quote")
+async def get_kr_quote(ticker: str, response: Response, _admin: str = Depends(require_sniper_token)) -> dict:
+    """1128-01 · 국내 종목 가격 · 증권사 의견 칸 (관리자 전용 · 네이버). 인증이 먼저라 비로그인 요청은 네이버를 부르지 않는다.
+
+    6자리 코드가 저장된 목록(krx_stock_meta · DART 상장 행)에 없으면 404 · 바깥 호출 0.
+    """
+    from backend.services import kr_quotes
+
+    response.headers.update(_NO_STORE)
+    info = await kr_quotes.lookup_allowed(ticker)
+    if info is None:
+        raise HTTPException(status_code=404, detail="목록에 없는 국내 종목입니다.", headers=_NO_STORE)
+    return await kr_quotes.quote_view(ticker, info=info)

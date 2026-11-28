@@ -766,7 +766,10 @@ class StockOverview(BaseModel):
     # 1119-01 · null = 자료를 못 읽었거나 해당 없음 (화면은 그 칸을 숨김)
     catalysts: Optional[list[StockCatalyst]] = None
     going_concern: Optional[StockGoingConcern] = None
-    quote_available: Optional[bool] = None   # 바이오 후보 여부 · 로그인 화면이 가격 칸을 열지 정함
+    # 가격 칸을 열지 정함 · 미국 = 바이오 후보 여부 · 국내(1128-01) = 저장된 종목 목록(krx_stock_meta · DART 상장 행)에 있는지
+    # 관리자 여부는 이 값이 아니라 /api/v1/stock/{code}/quote 가 따로 막는다
+    quote_available: Optional[bool] = None
+    market_label: Optional[str] = None       # 1128-01 · 국내 KOSPI / KOSDAQ (저장값만 · 없으면 None → 화면은 「국내」) · 미국은 None
 
 
 # ─── 오늘 홈 (1022-10 4단계) · GET /api/v1/today ───────────────────────────

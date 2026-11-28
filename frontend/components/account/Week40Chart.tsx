@@ -6,6 +6,7 @@
 import { useMemo } from "react";
 import { CartesianGrid, ComposedChart, Line, ReferenceArea, ReferenceDot, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { CrossList, crossShape } from "@/components/account/CrossMarks";
+import { VolumeBars } from "@/components/account/VolumeBars";
 import {
   WEEK40_BASIS_LINE,
   WEEK40_FIRST_LINE,
@@ -19,6 +20,7 @@ import {
   week40FactText,
   week40TipText,
 } from "@/lib/holdings-swing";
+import { hasVolume, volumeBars } from "@/lib/stock-display";
 
 /** 선 아래 주(종가 < 선)가 이어진 구간 [처음 주, 끝 주]. */
 function belowRuns(series: Week40Point[]): [string, string][] {
@@ -61,7 +63,9 @@ export interface HLine {
   dash?: string;
 }
 
-export function Week40Chart({ week40, hLines }: { week40: Week40 | null; hLines?: HLine[] }) {
+export function Week40Chart({ week40, hLines, showVolume = false }: { week40: Week40 | null; hLines?: HLine[]; showVolume?: boolean }) {
+  // 1128-01 · 주 거래량 = 그 주 합계 (서버가 계산) · showVolume 기본 꺼짐
+  const vol = useMemo(() => (showVolume && week40 && hasVolume(week40.series) ? volumeBars(week40.series.map((p) => ({ x: p.w, c: p.c, v: p.v }))) : null), [week40, showVolume]);
   const runs = useMemo(() => (week40 ? belowRuns(week40.series) : []), [week40]);
   // 끝난 주만 들어 있는 series 로 계산 → 이번 주(안 끝남)는 지점이 되지 않는다.
   const marks = useMemo(() => (week40 ? crossPoints(week40.series.map((p) => ({ date: p.w, c: p.c, m: p.m }))) : []), [week40]);
@@ -105,6 +109,7 @@ export function Week40Chart({ week40, hLines }: { week40: Week40 | null; hLines?
           </ResponsiveContainer>
         </div>
       )}
+      {vol && <VolumeBars bars={vol} rightMargin={4} unit="주" />}
       <div className="flex flex-wrap gap-x-3 text-[11px] text-muted-foreground">
         <span><span className="mr-1 inline-block h-0.5 w-4 bg-foreground align-middle" />주 종가</span>
         <span><span className="mr-1 inline-block h-0.5 w-4 bg-primary align-middle" />40주 평균선</span>

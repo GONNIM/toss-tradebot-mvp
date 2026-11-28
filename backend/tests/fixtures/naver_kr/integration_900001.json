@@ -1,0 +1,125 @@
+{
+ "stockEndType": "stock",
+ "itemCode": "900001",
+ "reutersCode": "900001",
+ "stockName": "가상전자",
+ "totalInfos": [
+  {
+   "code": "lastClosePrice",
+   "key": "전일",
+   "value": "12,300"
+  },
+  {
+   "code": "openPrice",
+   "key": "시가",
+   "value": "12,450",
+   "compareToPreviousPrice": {
+    "code": "2",
+    "text": "상승",
+    "name": "RISING"
+   }
+  },
+  {
+   "code": "highPrice",
+   "key": "고가",
+   "value": "12,900",
+   "compareToPreviousPrice": {
+    "code": "2",
+    "text": "상승",
+    "name": "RISING"
+   }
+  },
+  {
+   "code": "lowPrice",
+   "key": "저가",
+   "value": "12,100",
+   "compareToPreviousPrice": {
+    "code": "5",
+    "text": "하락",
+    "name": "FALLING"
+   }
+  },
+  {
+   "code": "accumulatedTradingVolume",
+   "key": "거래량",
+   "value": "1,234,567"
+  },
+  {
+   "code": "accumulatedTradingValue",
+   "key": "대금",
+   "value": "1조 2,345억"
+  },
+  {
+   "code": "marketValue",
+   "key": "시총",
+   "value": "2,468조 1,357억"
+  },
+  {
+   "code": "foreignRate",
+   "key": "외인소진율",
+   "value": "33.33%"
+  },
+  {
+   "code": "highPriceOf52Weeks",
+   "key": "52주 최고",
+   "value": "20,000"
+  },
+  {
+   "code": "lowPriceOf52Weeks",
+   "key": "52주 최저",
+   "value": "8,800"
+  },
+  {
+   "code": "per",
+   "key": "PER",
+   "value": "7.77배",
+   "valueDesc": "2026.09."
+  },
+  {
+   "code": "eps",
+   "key": "EPS",
+   "value": "1,234원",
+   "valueDesc": "2026.09."
+  },
+  {
+   "code": "cnsPer",
+   "key": "추정PER",
+   "value": "6.66배"
+  },
+  {
+   "code": "cnsEps",
+   "key": "추정EPS",
+   "value": "1,888원"
+  },
+  {
+   "code": "pbr",
+   "key": "PBR",
+   "value": "1.11배",
+   "valueDesc": "2026.09."
+  },
+  {
+   "code": "bps",
+   "key": "BPS",
+   "value": "11,111원",
+   "valueDesc": "2026.09."
+  },
+  {
+   "code": "dividendYieldRatio",
+   "key": "배당수익률",
+   "value": "1.23%",
+   "valueDesc": "2025.12."
+  },
+  {
+   "code": "dividend",
+   "key": "주당배당금",
+   "value": "150원",
+   "valueDesc": "2025.12."
+  }
+ ],
+ "consensusInfo": {
+  "itemCode": "900001",
+  "createDate": "2026-11-26",
+  "recommMean": "3.75",
+  "priceTargetMean": "15,432"
+ }
+}
