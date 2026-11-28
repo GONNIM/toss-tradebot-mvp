@@ -1,0 +1,125 @@
+{
+ "stockEndType": "stock",
+ "itemCode": "005930",
+ "reutersCode": "005930",
+ "stockName": "삼성전자",
+ "totalInfos": [
+  {
+   "code": "lastClosePrice",
+   "key": "전일",
+   "value": "171,300"
+  },
+  {
+   "code": "openPrice",
+   "key": "시가",
+   "value": "172,700",
+   "compareToPreviousPrice": {
+    "code": "2",
+    "text": "상승",
+    "name": "RISING"
+   }
+  },
+  {
+   "code": "highPrice",
+   "key": "고가",
+   "value": "179,900",
+   "compareToPreviousPrice": {
+    "code": "2",
+    "text": "상승",
+    "name": "RISING"
+   }
+  },
+  {
+   "code": "lowPrice",
+   "key": "저가",
+   "value": "169,000",
+   "compareToPreviousPrice": {
+    "code": "5",
+    "text": "하락",
+    "name": "FALLING"
+   }
+  },
+  {
+   "code": "accumulatedTradingVolume",
+   "key": "거래량",
+   "value": "23,415,539"
+  },
+  {
+   "code": "accumulatedTradingValue",
+   "key": "대금",
+   "value": "4조 1,218억"
+  },
+  {
+   "code": "marketValue",
+   "key": "시총",
+   "value": "1,049조 4,070억"
+  },
+  {
+   "code": "foreignRate",
+   "key": "외인소진율",
+   "value": "45.84%"
+  },
+  {
+   "code": "highPriceOf52Weeks",
+   "key": "52주 최고",
+   "value": "380,000"
+  },
+  {
+   "code": "lowPriceOf52Weeks",
+   "key": "52주 최저",
+   "value": "99,900"
+  },
+  {
+   "code": "per",
+   "key": "PER",
+   "value": "5.64배",
+   "valueDesc": "2026.09."
+  },
+  {
+   "code": "eps",
+   "key": "EPS",
+   "value": "31,809원",
+   "valueDesc": "2026.09."
+  },
+  {
+   "code": "cnsPer",
+   "key": "추정PER",
+   "value": "3.94배"
+  },
+  {
+   "code": "cnsEps",
+   "key": "추정EPS",
+   "value": "45,515원"
+  },
+  {
+   "code": "pbr",
+   "key": "PBR",
+   "value": "1.93배",
+   "valueDesc": "2026.09."
+  },
+  {
+   "code": "bps",
+   "key": "BPS",
+   "value": "92,903원",
+   "valueDesc": "2026.09."
+  },
+  {
+   "code": "dividendYieldRatio",
+   "key": "배당수익률",
+   "value": "3.45%",
+   "valueDesc": "2025.12."
+  },
+  {
+   "code": "dividend",
+   "key": "주당배당금",
+   "value": "5,913원",
+   "valueDesc": "2025.12."
+  }
+ ],
+ "consensusInfo": {
+  "itemCode": "005930",
+  "createDate": "2026-11-26",
+  "recommMean": "4.00",
+  "priceTargetMean": "458,182"
+ }
+}

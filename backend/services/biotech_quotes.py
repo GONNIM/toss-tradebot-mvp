@@ -233,7 +233,12 @@ async def default_fetch(ticker: str, period: str) -> dict:
             changes = []
         hist = t.history(period=period, auto_adjust=False)
         closes = [(idx.date(), float(v)) for idx, v in hist["Close"].dropna().items() if float(v) > 0] if not hist.empty else []
-        return {"info": info, "dist": dist, "changes": changes, "closes": closes}
+        volumes: dict = {}   # 1128-01 · 거래량 막대 · 날짜 → 거래량 (NaN 은 뺌)
+        if not hist.empty and "Volume" in hist:
+            for idx, v in hist["Volume"].dropna().items():
+                if float(v) >= 0:
+                    volumes[idx.date()] = float(v)
+        return {"info": info, "dist": dist, "changes": changes, "closes": closes, "volumes": volumes}
 
     return await asyncio.to_thread(_call)
 
@@ -290,7 +295,7 @@ async def _read_state(tickers: list[str]) -> dict[str, dict]:
 
 
 async def _write_ticker(ticker: str, today: date, fields: dict, closes: list[tuple[date, float]],
-                        prev: Optional[dict], full: bool) -> int:
+                        prev: Optional[dict], full: bool, volumes: Optional[dict] = None) -> int:
     """한 종목만 · 짧은 세션 · 바로 커밋. 네트워크 호출 없음."""
     now = _utcnow()
     rows = sorted({d: c for d, c in closes if c and c > 0}.items())
@@ -301,7 +306,9 @@ async def _write_ticker(ticker: str, today: date, fields: dict, closes: list[tup
             else:
                 await s.execute(delete(BiotechLongClose).where(BiotechLongClose.ticker == ticker,
                                                                BiotechLongClose.trade_date >= rows[0][0]))
-            s.add_all([BiotechLongClose(ticker=ticker, trade_date=d, close=c, fetched_at=now) for d, c in rows])
+            vols = volumes or {}
+            s.add_all([BiotechLongClose(ticker=ticker, trade_date=d, close=c, volume=vols.get(d), fetched_at=now)
+                       for d, c in rows])
             await s.execute(delete(BiotechLongClose).where(BiotechLongClose.ticker == ticker,
                                                            BiotechLongClose.trade_date < today - timedelta(days=LONG_KEEP_DAYS)))
         await s.execute(delete(BiotechQuoteDaily).where(BiotechQuoteDaily.ticker == ticker, BiotechQuoteDaily.asof_date == today))
@@ -366,7 +373,8 @@ async def run_quotes(now: Optional[datetime] = None, fetch: Optional[Fetcher] = 
             failures += 1
             logger.warning("[biotech_quotes] 받기 실패 · %s · %s", t, type(exc).__name__)
             continue
-        long_rows += await _write_ticker(t, today, fields, raw.get("closes") or [], state[t]["prev"], full)
+        long_rows += await _write_ticker(t, today, fields, raw.get("closes") or [], state[t]["prev"], full,
+                                         raw.get("volumes") or None)
         ok += 1
     summ = await run_summaries(cands, today, sec_fetch=sec_fetch, summarize=summarize, pause=pause, budget=budget)
     pr = await _prune(cands, today)
@@ -375,6 +383,50 @@ async def run_quotes(now: Optional[datetime] = None, fetch: Optional[Fetcher] = 
     if cands and ok == 0:
         raise RuntimeError("바이오 종목 시세를 한 종목도 받지 못함")
     return {"candidates": len(cands), "ok": ok, "failures": failures, "long_rows": long_rows, "summary": summ, "prune": pr}
+
+
+async def refill_volumes(candidates: Optional[list[str]] = None, fetch: Optional[Fetcher] = None,
+                         pause: float = PAUSE_SEC) -> dict:
+    """1128-01 · 한 번만 (자동으로 돌지 않음 · scripts/biotech_refill_volumes.py --run 으로만) — 거래량이 빈 옛 날을 채운다.
+
+    하루 수집은 최근 1개월만 덮어써서, 열을 더한 직후에는 막대가 약 20점뿐이다 (Fable ㅅ). 거래량이 빈 행이 있는 종목만
+    긴 기간(FIRST_PERIOD)으로 다시 받아, 이미 있는 행의 volume 만 채운다 (종가 · 새 행 · 다른 표는 건드리지 않음).
+    야후 요청은 종목당 1번. 바깥 받기는 세션 밖에서 끝낸다 (1102-08).
+    """
+    from sqlalchemy import update
+
+    fetch = fetch or default_fetch
+    if candidates is None:
+        _require_runtime_dir()
+        candidates = await load_candidates()
+    async with _session() as s:
+        missing = set((await s.execute(select(BiotechLongClose.ticker).where(BiotechLongClose.volume.is_(None))
+                                       .distinct())).scalars().all())
+    todo = [t for t in candidates if t in missing]
+    ok, failures, filled = 0, 0, 0
+    for i, t in enumerate(todo):
+        if i and pause:
+            await asyncio.sleep(pause)
+        try:
+            raw = await asyncio.wait_for(fetch(t, FIRST_PERIOD), FETCH_TIMEOUT)
+        except Exception as exc:  # noqa: BLE001
+            failures += 1
+            logger.warning("[biotech_quotes] 거래량 다시 받기 실패 · %s · %s", t, type(exc).__name__)
+            continue
+        vols = raw.get("volumes") or {}
+        n = 0
+        async with _session() as s:
+            for d, v in vols.items():
+                res = await s.execute(update(BiotechLongClose).where(
+                    BiotechLongClose.ticker == t, BiotechLongClose.trade_date == d,
+                    BiotechLongClose.volume.is_(None)).values(volume=v))
+                n += res.rowcount or 0
+        filled += n
+        ok += 1
+        logger.info("[biotech_quotes] 거래량 채움 · %s · 받은 %d날 · 채운 행 %d", t, len(vols), n)
+    logger.info("[biotech_quotes] 거래량 다시 받기 끝 · 후보 %d · 대상 %d · 성공 %d · 실패 %d · 채운 행 %d",
+                len(candidates), len(todo), ok, failures, filled)
+    return {"candidates": len(candidates), "targets": len(todo), "ok": ok, "failures": failures, "filled": filled}
 
 
 # ─────────────────────────────────────────────────────────────────
@@ -685,12 +737,13 @@ async def quote_view(ticker: str, live_fetch: Optional[LiveFetcher] = None, now:
     async with _session() as s:
         row = (await s.execute(select(BiotechQuoteDaily).where(BiotechQuoteDaily.ticker == ticker)
                                .order_by(BiotechQuoteDaily.asof_date.desc()).limit(1))).scalar_one_or_none()
-        longs = (await s.execute(select(BiotechLongClose.trade_date, BiotechLongClose.close)
+        longs = (await s.execute(select(BiotechLongClose.trade_date, BiotechLongClose.close, BiotechLongClose.volume)
                                  .where(BiotechLongClose.ticker == ticker).order_by(BiotechLongClose.trade_date))).all()
     # 세션을 닫은 뒤에 바깥 호출
     live = await live_price(ticker, row.exchange if row else None, live_fetch)
     et_today = (now or datetime.now(timezone.utc)).astimezone(ET).date()
-    chart = build_chart("US", ([d for d, _ in longs], [c for _, c in longs], "yahoo"), et_today) if longs else None
+    chart = (build_chart("US", ([d for d, _, _ in longs], [c for _, c, _ in longs], "yahoo"), et_today,
+                         volumes=[v for _, _, v in longs]) if longs else None)
     analyst = json.loads(row.analyst_json) if row and row.analyst_json else {}
     dist = analyst.get("dist") or {}
     dsum = sum(v for v in dist.values() if isinstance(v, int)) if dist else None

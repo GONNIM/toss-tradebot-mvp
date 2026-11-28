@@ -1,0 +1,108 @@
+{
+ "stockEndType": "stock",
+ "itemCode": "900140",
+ "reutersCode": "900140",
+ "stockName": "엘브이엠씨홀딩스",
+ "totalInfos": [
+  {
+   "code": "lastClosePrice",
+   "key": "전일",
+   "value": "922"
+  },
+  {
+   "code": "openPrice",
+   "key": "시가",
+   "value": "-"
+  },
+  {
+   "code": "highPrice",
+   "key": "고가",
+   "value": "-"
+  },
+  {
+   "code": "lowPrice",
+   "key": "저가",
+   "value": "-"
+  },
+  {
+   "code": "accumulatedTradingVolume",
+   "key": "거래량",
+   "value": "-"
+  },
+  {
+   "code": "accumulatedTradingValue",
+   "key": "대금",
+   "value": "-"
+  },
+  {
+   "code": "marketValue",
+   "key": "시총",
+   "value": "1,779억"
+  },
+  {
+   "code": "foreignRate",
+   "key": "외인소진율",
+   "value": "11.24%"
+  },
+  {
+   "code": "highPriceOf52Weeks",
+   "key": "52주 최고",
+   "value": "1,854"
+  },
+  {
+   "code": "lowPriceOf52Weeks",
+   "key": "52주 최저",
+   "value": "866"
+  },
+  {
+   "code": "per",
+   "key": "PER",
+   "value": "8.31배",
+   "valueDesc": "2026.06."
+  },
+  {
+   "code": "eps",
+   "key": "EPS",
+   "value": "111원",
+   "valueDesc": "2026.06."
+  },
+  {
+   "code": "cnsPer",
+   "key": "추정PER",
+   "value": "N/A"
+  },
+  {
+   "code": "cnsEps",
+   "key": "추정EPS",
+   "value": "N/A"
+  },
+  {
+   "code": "pbr",
+   "key": "PBR",
+   "value": "0.32배",
+   "valueDesc": "2026.06."
+  },
+  {
+   "code": "bps",
+   "key": "BPS",
+   "value": "2,868원",
+   "valueDesc": "2026.06."
+  },
+  {
+   "code": "dividendYieldRatio",
+   "key": "배당수익률",
+   "value": "N/A"
+  },
+  {
+   "code": "dividend",
+   "key": "주당배당금",
+   "value": "N/A"
+  }
+ ],
+ "consensusInfo": {
+  "itemCode": "900140",
+  "createDate": "2026-11-26",
+  "recommMean": "4.00",
+  "priceTargetMean": "2,000"
+ }
+}

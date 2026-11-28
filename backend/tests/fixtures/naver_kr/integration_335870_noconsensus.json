@@ -1,0 +1,128 @@
+{
+ "stockEndType": "stock",
+ "itemCode": "335870",
+ "reutersCode": "335870",
+ "stockName": "윙스풋",
+ "totalInfos": [
+  {
+   "code": "lastClosePrice",
+   "key": "전일",
+   "value": "5,360"
+  },
+  {
+   "code": "openPrice",
+   "key": "시가",
+   "value": "6,960",
+   "compareToPreviousPrice": {
+    "code": "2",
+    "text": "상승",
+    "name": "RISING"
+   }
+  },
+  {
+   "code": "highPrice",
+   "key": "고가",
+   "value": "6,960",
+   "compareToPreviousPrice": {
+    "code": "2",
+    "text": "상승",
+    "name": "RISING"
+   }
+  },
+  {
+   "code": "lowPrice",
+   "key": "저가",
+   "value": "4,970",
+   "compareToPreviousPrice": {
+    "code": "5",
+    "text": "하락",
+    "name": "FALLING"
+   }
+  },
+  {
+   "code": "accumulatedTradingVolume",
+   "key": "거래량",
+   "value": "1,380,402"
+  },
+  {
+   "code": "accumulatedTradingValue",
+   "key": "대금",
+   "value": "81.1억"
+  },
+  {
+   "code": "marketValue",
+   "key": "시총",
+   "value": "169억"
+  },
+  {
+   "code": "foreignRate",
+   "key": "외인소진율",
+   "value": "11.96%"
+  },
+  {
+   "code": "highPriceOf52WeeksAdjusted",
+   "key": "52주 최고",
+   "value": "12,250"
+  },
+  {
+   "code": "highPriceOf52Weeks",
+   "key": "원주가 기준",
+   "value": "6,500"
+  },
+  {
+   "code": "lowPriceOf52WeeksAdjusted",
+   "key": "52주 최저",
+   "value": "2,390"
+  },
+  {
+   "code": "lowPriceOf52Weeks",
+   "key": "원주가 기준",
+   "value": "913"
+  },
+  {
+   "code": "per",
+   "key": "PER",
+   "value": "N/A",
+   "valueDesc": "2026.09."
+  },
+  {
+   "code": "eps",
+   "key": "EPS",
+   "value": "-1,995원",
+   "valueDesc": "2026.09."
+  },
+  {
+   "code": "cnsPer",
+   "key": "추정PER",
+   "value": "N/A"
+  },
+  {
+   "code": "cnsEps",
+   "key": "추정EPS",
+   "value": "N/A"
+  },
+  {
+   "code": "pbr",
+   "key": "PBR",
+   "value": "0.72배",
+   "valueDesc": "2026.09."
+  },
+  {
+   "code": "bps",
+   "key": "BPS",
+   "value": "7,000원",
+   "valueDesc": "2026.09."
+  },
+  {
+   "code": "dividendYieldRatio",
+   "key": "배당수익률",
+   "value": "N/A"
+  },
+  {
+   "code": "dividend",
+   "key": "주당배당금",
+   "value": "N/A"
+  }
+ ],
+ "consensusInfo": null
+}

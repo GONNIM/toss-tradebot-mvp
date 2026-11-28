@@ -2153,7 +2153,37 @@ class BiotechLongClose(Base):
     ticker: Mapped[str] = mapped_column(String(16), primary_key=True)
     trade_date: Mapped[date] = mapped_column(Date, primary_key=True)
     close: Mapped[float] = mapped_column(Float)
+    volume: Mapped[Optional[float]] = mapped_column(Float)  # 1128-01 · 거래량 막대 · 옛 행은 null (db.py _ADDED_COLUMNS 로 운영 표에 열 추가)
     fetched_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
+
+
+class KrQuoteDaily(Base):
+    """1128-01 · 국내 종목 네이버 일봉 (시가 · 고가 · 저가 · 종가 · 거래량) — 관리자 종목 상세 화면 전용 · 표시 전용.
+
+    biotech_long_close 와 분리: 그 표는 후보 밖 종목 30일 정리가 지운다. swing_long_close 와도 섞지 않는다 (1111-01 막음 1).
+    네이버 일봉이 수정주가인지는 확인 전이라 새로 받을 때마다 그 종목 행을 통째로 바꾼다 (분할 뒤 옛 값이 섞이지 않게).
+    """
+
+    __tablename__ = "kr_quote_daily"
+
+    ticker: Mapped[str] = mapped_column(String(6), primary_key=True)
+    trade_date: Mapped[date] = mapped_column(Date, primary_key=True)
+    open: Mapped[Optional[float]] = mapped_column(Float)
+    high: Mapped[Optional[float]] = mapped_column(Float)
+    low: Mapped[Optional[float]] = mapped_column(Float)
+    close: Mapped[float] = mapped_column(Float)
+    volume: Mapped[Optional[float]] = mapped_column(Float)
+    fetched_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
+
+
+class KrQuoteCallLog(Base):
+    """1128-01 · 네이버 일봉 · 종합 API 하루 바깥 호출 수 (KST 날짜별 · 상한 300 · 서버를 다시 켜도 이어짐)."""
+
+    __tablename__ = "kr_quote_call_log"
+
+    day: Mapped[date] = mapped_column(Date, primary_key=True)
+    calls: Mapped[int] = mapped_column(Integer, default=0)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now(), onupdate=func.now())
 
 
 class BiotechQuoteDaily(Base):
