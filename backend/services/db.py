@@ -105,6 +105,7 @@ _ADDED_COLUMNS = [
     ("holding_horizon", "deadline", "DATE"),                  # 1108-02 3단계
     ("holding_horizon", "memo", "VARCHAR(200)"),              # 1108-02 3단계
     ("meme_volume_snapshot", "bar_date", "DATE"),             # 1114-02
+    ("biotech_long_close", "volume", "FLOAT"),               # 1128-01 거래량 막대
 ]
 
 

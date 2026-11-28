@@ -399,7 +399,7 @@ export default function PlanDetailPage() {
       </section>
 
       <header className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
-        <h2 className="text-xl font-bold" data-testid="plan-title">#{p.id} <StockLabel code={p.symbol} name={p.name} market="US" link={false} layout="inline" /></h2>
+        <h2 className="text-xl font-bold" data-testid="plan-title">#{p.id} <StockLabel code={p.symbol} name={p.name} market="US" layout="inline" /></h2>
         <span data-testid="plan-state" className="text-sm font-semibold">{STATE_LABEL[p.state] ?? "알 수 없는 단계"}</span>
         <details className="text-xs text-muted-foreground" data-testid="plan-internal">
           <summary className="cursor-pointer" aria-label="판 번호와 내용 확인값 펼치기">자세히</summary>

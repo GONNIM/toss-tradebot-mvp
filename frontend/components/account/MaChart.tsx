@@ -8,6 +8,7 @@
 import { useMemo, useState } from "react";
 import { CartesianGrid, ComposedChart, Customized, Line, ReferenceDot, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { CrossList, crossShape } from "@/components/account/CrossMarks";
+import { VolumeBars } from "@/components/account/VolumeBars";
 import { Week40Chart, type HLine } from "@/components/account/Week40Chart";
 import {
   Chart,
@@ -24,6 +25,7 @@ import {
   monthTicks,
   spreadLabels,
 } from "@/lib/holdings-swing";
+import { hasVolume, volumeBars } from "@/lib/stock-display";
 
 type View = "daily" | "week";
 type MaKey = "m20" | "m50" | "m200";
@@ -56,8 +58,9 @@ type AxisProps = {
   offset?: { left: number; width: number };
 };
 
-function DailyChart({ chart, basisLine }: { chart: Chart; basisLine: string }) {
+function DailyChart({ chart, basisLine, showVolume }: { chart: Chart; basisLine: string; showVolume: boolean }) {
   const data = chart.daily;
+  const vol = useMemo(() => (showVolume && hasVolume(data) ? volumeBars(data.map((p) => ({ x: p.d, c: p.c, v: p.v }))) : null), [data, showVolume]);
   // 넘은 지점은 고른 선 하나만 (기본 200일 · 지점이 가장 적음). 선 값이 없는 날은 건너뜀.
   const [markKey, setMarkKey] = useState<MaKey>("m200");
   const markLine = MARK_LINES.find((l) => l.key === markKey)!.label;
@@ -127,6 +130,7 @@ function DailyChart({ chart, basisLine }: { chart: Chart; basisLine: string }) {
           </ComposedChart>
         </ResponsiveContainer>
       </div>
+      {vol && <VolumeBars bars={vol} rightMargin={38} unit="일" />}
       <div className="flex flex-wrap gap-x-3 text-[11px] text-muted-foreground">
         <span><span className="mr-1 inline-block h-0.5 w-4 bg-foreground align-middle" />종가</span>
         <span><span className="mr-1 inline-block h-0.5 w-4 align-middle" style={{ background: LINE_COLOR.m20 }} />20일 평균선</span>
@@ -148,9 +152,10 @@ function DailyChart({ chart, basisLine }: { chart: Chart; basisLine: string }) {
 
 // 1111-01 · initialView 로 처음 보일 그림을 고른다 (바이오 칸은 주봉 5년·40주가 기본 · 계좌 카드·VIP 는 그대로 일봉)
 // 1112-01 · basisLine: 그림 아래 출처 설명 줄 (계좌 카드·VIP 는 기본값 그대로 · 바이오 칸은 「카드 글자 줄」이 없어 따로 줌)
+// 1128-01 · showVolume: 가격 그림 아래 거래량 막대 (기본 꺼짐 · 종목 상세와 바이오 가격 칸만 켬)
 // 1125-02 · hLines: 주봉 그림에 그리는 가로선 (선택 속성 · 기본값 없음 · 안 넘기면 계좌 · VIP · 바이오 칸 그림은 그대로)
-export function MaChart({ chart, initialView = "daily", basisLine = DAILY_BASIS_LINE, hLines }: {
-  chart: Chart | null; initialView?: View; basisLine?: string; hLines?: HLine[];
+export function MaChart({ chart, initialView = "daily", basisLine = DAILY_BASIS_LINE, hLines, showVolume = false }: {
+  chart: Chart | null; initialView?: View; basisLine?: string; hLines?: HLine[]; showVolume?: boolean;
 }) {
   const [view, setView] = useState<View>(initialView);
   if (!chart || chart.daily.length === 0) {
@@ -184,10 +189,10 @@ export function MaChart({ chart, initialView = "daily", basisLine = DAILY_BASIS_
       </div>
       {view === "daily" ? (
         <div className="rounded-md border border-border p-3">
-          <DailyChart chart={chart} basisLine={basisLine} />
+          <DailyChart chart={chart} basisLine={basisLine} showVolume={showVolume} />
         </div>
       ) : (
-        <Week40Chart week40={chart.week40} hLines={hLines} />
+        <Week40Chart week40={chart.week40} hLines={hLines} showVolume={showVolume} />
       )}
     </div>
   );

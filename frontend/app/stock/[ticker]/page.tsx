@@ -18,7 +18,10 @@ import {
   isSecUrl,
 } from "@/lib/biotech-display";
 import { useSessionListener } from "@/lib/auth";
-import { BROKER_LABEL, SEARCH_LABEL } from "@/lib/broker-link";
+import { KrQuotePanel } from "@/components/stock/KrQuotePanel";
+import { StockActions } from "@/components/stock/StockActions";
+import { useKrQuote } from "@/components/stock/useKrQuote";
+import { marketText, staleBadge, todayKst } from "@/lib/stock-display";
 import { priceText } from "@/lib/holdings-display";
 import { outcomeText } from "@/lib/outcome-display";
 import { normalizeTicker } from "@/components/stock/StockLink";
@@ -100,18 +103,8 @@ function MineCard({ d }: { d: StockOverview }) {
 
 const PRICE_LOGIN_NOTE = "가격 · 전문가 의견은 로그인하면 보입니다 (자료 제공처 약관상 공개 게시 불가)";
 const PRICE_NONE_NOTE = "이 사이트는 이 종목의 가격 자료를 모으지 않습니다";
-const PRICE_KR_NOTE = "국내 종목 가격 · 전문가 의견은 이 화면에 아직 없습니다 · 토스에서 보실 수 있습니다";
+const PRICE_KR_NOTE = "이 사이트 종목 목록에 없는 국내 코드여서 가격 · 증권사 의견을 모으지 않습니다 · 토스에서 보실 수 있습니다";
 const NO_CATALYST_NOTE = "등록된 일정이 없습니다";
-
-function BrokerLink({ d }: { d: StockOverview }) {
-  const bl = d.broker_link;
-  if (!bl) return null;
-  return (
-    <a href={bl.url} target="_blank" rel="noopener noreferrer" className="inline-flex min-h-[44px] items-center text-sm underline">
-      {bl.kind === "order" ? BROKER_LABEL : SEARCH_LABEL}
-    </a>
-  );
-}
 
 // 2 · 가격 · 전문가 의견 — 로그인 + 후보면 /biotech 와 같은 칸, 아니면 한 줄
 function PriceCard({ d }: { d: StockOverview }) {
@@ -120,7 +113,6 @@ function PriceCard({ d }: { d: StockOverview }) {
     return (
       <Card title="가격 · 전문가 의견">
         <p className="text-sm text-muted-foreground">{d.market === "KR" ? PRICE_KR_NOTE : PRICE_NONE_NOTE}</p>
-        {d.market === "KR" && <BrokerLink d={d} />}
       </Card>
     );
   }
@@ -128,7 +120,14 @@ function PriceCard({ d }: { d: StockOverview }) {
     return (
       <Card title="가격 · 전문가 의견">
         <p className="text-sm text-muted-foreground" data-testid="price-login-note">{PRICE_LOGIN_NOTE}</p>
-        <BrokerLink d={d} />
+      </Card>
+    );
+  }
+  if (d.market === "KR") {
+    // 1128-01 · 국내: 네이버 일봉 · 증권사 의견 (관리자 전용)
+    return (
+      <Card title="가격 · 증권사 의견">
+        <KrQuotePanel code={d.ticker} />
       </Card>
     );
   }
@@ -226,16 +225,21 @@ function SourceCard({ d }: { d: StockOverview }) {
 const ADMIN_ONLY_LINKS = new Set<string>(["/lab/crazy", "/lab/moonshot", "/biotech"]);
 
 function SignalRow({ s, isAdmin }: { s: StockSignal; isAdmin: boolean }) {
+  // 1128-01 · 자료가 오래됐으면 회색 안내를 붙인다 (숨기지 않음 · 기준은 lib/stock-display.ts)
+  const stale = staleBadge(s.source, s.as_of, todayKst());
   return (
     <li className="space-y-1 border-b border-border py-2 last:border-0">
       <div className="flex flex-wrap items-baseline gap-2">
         <span className="text-sm font-medium">{s.label}</span>
         {s.as_of && <span className="text-xs tabular-nums text-muted-foreground">{s.as_of}</span>}
+        {stale && (
+          <span className="rounded-lg bg-muted px-2 py-0.5 text-[11px] text-muted-foreground" data-testid="stale-badge">{stale}</span>
+        )}
       </div>
       <p className="text-sm tabular-nums">{s.summary}</p>
       {s.explain && <p className="text-xs text-muted-foreground">{s.explain}</p>}
       {s.link && (isAdmin || !ADMIN_ONLY_LINKS.has(s.link)) && (
-        <Link href={s.link} className="inline-flex min-h-[44px] items-center text-sm text-primary underline">
+        <Link href={s.link} className="inline-flex min-h-[44px] items-center text-sm font-medium text-primary hover:text-primary/70">
           자세히
         </Link>
       )}
@@ -261,6 +265,10 @@ export default function StockPage() {
     retry: false,
   });
 
+  // 1128-01 · 국내 가격 칸과 「계획으로 옮기기」 준비 값이 같은 자료를 쓴다 (같은 열쇠라 한 번만 불러옴)
+  const krQuoteOn = !!q.data && q.data.market === "KR" && !!q.data.is_admin && q.data.quote_available === true;
+  const kq = useKrQuote(ticker, krQuoteOn);
+
   if (!ticker) {
     return <p className="text-sm text-muted-foreground">종목 코드 형식이 아닙니다</p>;
   }
@@ -280,9 +288,9 @@ export default function StockPage() {
       <header className="space-y-1">
         <h1 className="text-2xl font-bold">{d.name ?? d.ticker}</h1>
         <p className="text-sm text-muted-foreground">
-          <span className="font-mono">{d.ticker}</span> · {d.market === "KR" ? "국내" : "미국"}
+          <span className="font-mono">{d.ticker}</span> · {marketText(d.market, d.market_label)}
         </p>
-        <BrokerLink d={d} />
+        <StockActions d={d} planHints={kq.data?.plan_hints ?? null} />
       </header>
 
       <PriceCard d={d} />

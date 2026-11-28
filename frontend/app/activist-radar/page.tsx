@@ -945,7 +945,7 @@ export default function ActivistRadarPage() {
               <div className="flex flex-wrap gap-1 font-mono text-xs">
                 {s.insider_watchlist_kr!.map((code) => (
                   <span key={code} className="rounded-lg bg-primary/10 px-2 py-0.5 text-primary">
-                    <StockLabel code={code} name={s.insider_watchlist_kr_names?.[code]} market="KR" link={false} />
+                    <StockLabel code={code} name={s.insider_watchlist_kr_names?.[code]} market="KR" />
                   </span>
                 ))}
               </div>

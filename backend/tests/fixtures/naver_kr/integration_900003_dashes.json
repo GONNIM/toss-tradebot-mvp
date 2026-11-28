@@ -1,0 +1,108 @@
+{
+ "stockEndType": "stock",
+ "itemCode": "900003",
+ "reutersCode": "900003",
+ "stockName": "가상홀딩스",
+ "totalInfos": [
+  {
+   "code": "lastClosePrice",
+   "key": "전일",
+   "value": "1,111"
+  },
+  {
+   "code": "openPrice",
+   "key": "시가",
+   "value": "-"
+  },
+  {
+   "code": "highPrice",
+   "key": "고가",
+   "value": "-"
+  },
+  {
+   "code": "lowPrice",
+   "key": "저가",
+   "value": "-"
+  },
+  {
+   "code": "accumulatedTradingVolume",
+   "key": "거래량",
+   "value": "-"
+  },
+  {
+   "code": "accumulatedTradingValue",
+   "key": "대금",
+   "value": "-"
+  },
+  {
+   "code": "marketValue",
+   "key": "시총",
+   "value": "2,468억"
+  },
+  {
+   "code": "foreignRate",
+   "key": "외인소진율",
+   "value": "8.88%"
+  },
+  {
+   "code": "highPriceOf52Weeks",
+   "key": "52주 최고",
+   "value": "2,222"
+  },
+  {
+   "code": "lowPriceOf52Weeks",
+   "key": "52주 최저",
+   "value": "888"
+  },
+  {
+   "code": "per",
+   "key": "PER",
+   "value": "6.54배",
+   "valueDesc": "2026.06."
+  },
+  {
+   "code": "eps",
+   "key": "EPS",
+   "value": "99원",
+   "valueDesc": "2026.06."
+  },
+  {
+   "code": "cnsPer",
+   "key": "추정PER",
+   "value": "N/A"
+  },
+  {
+   "code": "cnsEps",
+   "key": "추정EPS",
+   "value": "N/A"
+  },
+  {
+   "code": "pbr",
+   "key": "PBR",
+   "value": "0.45배",
+   "valueDesc": "2026.06."
+  },
+  {
+   "code": "bps",
+   "key": "BPS",
+   "value": "3,333원",
+   "valueDesc": "2026.06."
+  },
+  {
+   "code": "dividendYieldRatio",
+   "key": "배당수익률",
+   "value": "N/A"
+  },
+  {
+   "code": "dividend",
+   "key": "주당배당금",
+   "value": "N/A"
+  }
+ ],
+ "consensusInfo": {
+  "itemCode": "900003",
+  "createDate": "2026-11-26",
+  "recommMean": "4.00",
+  "priceTargetMean": "3,000"
+ }
+}

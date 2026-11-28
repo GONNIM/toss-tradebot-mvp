@@ -377,3 +377,50 @@ async def fetch_daily_us_batch(
         f"[naver_daily_batch] done: {len(result)} / {len(reuters_codes)} success"
     )
     return result
+
+
+# ─────────────────────────────────────────────────────────────────
+# 1128-01 · 국내 종목 상세 — 일봉 원자료(시가 · 고가 · 저가 · 종가 · 거래량)와 종합 API (관리자 화면 전용)
+# ─────────────────────────────────────────────────────────────────
+
+_INTEGRATION_BASE = "https://m.stock.naver.com/api/stock"
+
+
+def _decode_json(content: bytes):
+    """네이버 응답 → JSON. 종합 API 는 UTF-8 · 옛 polling 은 CP949 라 둘 다 받는다."""
+    try:
+        return _json.loads(content.decode("utf-8"))
+    except UnicodeDecodeError:
+        return _json.loads(content.decode("cp949", errors="replace"))
+
+
+async def fetch_daily_kr_raw(ticker: str, start, end) -> Optional[list[dict]]:
+    """국내 일봉 원자료 줄 목록 (받은 그대로 · 날짜는 localDate 'YYYYMMDD' 문자열 · 값은 숫자).
+
+    한 번 호출에 10년 넘게 준다 (2026-11-28 확인 · 2016-01 부터 약 2천 6백여 줄). 실패하면 None. 해석은 호출자가 한다.
+    """
+    url = f"{_DAILY_BASE}/domestic/item/{_normalize(ticker)}/day"
+    try:
+        async with httpx.AsyncClient() as client:
+            resp = await client.get(url, params=_date_range_params_explicit(start, end),
+                                    timeout=_DAILY_TIMEOUT_SEC, headers={"User-Agent": _UA})
+            resp.raise_for_status()
+            data = _decode_json(resp.content)
+    except Exception as e:  # noqa: BLE001
+        logger.warning("[naver_daily_raw] %s failed: %s", ticker, type(e).__name__)
+        return None
+    return data if isinstance(data, list) else None
+
+
+async def fetch_integration_kr(ticker: str) -> Optional[dict]:
+    """종합 API 원자료 (consensusInfo · totalInfos 등 받은 그대로). 실패하면 None."""
+    url = f"{_INTEGRATION_BASE}/{_normalize(ticker)}/integration"
+    try:
+        async with httpx.AsyncClient() as client:
+            resp = await client.get(url, timeout=_DAILY_TIMEOUT_SEC, headers={"User-Agent": _UA})
+            resp.raise_for_status()
+            data = _decode_json(resp.content)
+    except Exception as e:  # noqa: BLE001
+        logger.warning("[naver_integration] %s failed: %s", ticker, type(e).__name__)
+        return None
+    return data if isinstance(data, dict) else None
