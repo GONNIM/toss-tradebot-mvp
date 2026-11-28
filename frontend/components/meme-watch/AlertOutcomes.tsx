@@ -118,7 +118,7 @@ function RecentTable({ items }: { items: MemeOutcomeItem[] }) {
           {items.map((r) => (
             <tr key={`${r.ticker}-${r.signal_date}`} className="border-t border-border/60">
               <td className="py-1.5 pr-2 tabular-nums">{r.signal_date.slice(5)}</td>
-              <td className="px-2 py-1.5"><StockLabel code={r.ticker} name={r.name} link={false} /></td>
+              <td className="px-2 py-1.5"><StockLabel code={r.ticker} name={r.name} /></td>
               <td className="px-2 py-1.5">{r.market === "KR" ? "국내" : "미국"}</td>
               <td className="px-2 py-1.5">{r.alert_type === "ERUPTING" ? "상승 강도" : r.alert_type === "BLAZING" ? "급등 전 단계" : "—"}</td>
               <td className="px-2 py-1.5 text-right tabular-nums">{r.score === null ? "—" : r.score.toFixed(2)}</td>

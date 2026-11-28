@@ -822,7 +822,8 @@ export interface StockOverview {
   signals: StockSignal[];
   catalysts?: StockCatalyst[] | null; // null = 자료 없음 · 해당 없음 (화면은 그 칸을 숨김)
   going_concern?: StockGoingConcern | null;
-  quote_available?: boolean | null; // 바이오 후보 여부
+  quote_available?: boolean | null; // 바이오 후보 여부 · 국내는 목록에 있는 6자리 코드면 true (1128-01)
+  market_label?: "KOSPI" | "KOSDAQ" | null; // 1128-01 · 국내 시장 이름 (없으면 null)
 }
 
 // 1022-10 4단계 · 오늘 (홈) · 계약은 서버 routes/today.py 와 같다
