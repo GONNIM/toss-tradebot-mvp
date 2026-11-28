@@ -2186,6 +2186,47 @@ class KrQuoteCallLog(Base):
     updated_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now(), onupdate=func.now())
 
 
+class UsQuoteDay(Base):
+    """1128-01 ㉣ · 미국 비후보 종목의 하루 1번 조회 기록 (관리자 종목 상세 화면 전용 · 표시 전용).
+
+    바이오 표(biotech_quote_daily · biotech_long_close)와 swing_long_close 와 분리 — 그 표들의 30일 정리가 지우지 않고, 이 표의 정리도 그 표들을 건드리지 않는다.
+    fetch_day = 미국 동부 거래일 키 (토 · 일은 직전 금요일). 같은 (종목, fetch_day) 는 한 번만 받는다 (PK).
+    그날 행 수 = 하루 상한(50종목)의 장부다 · 실패한 받기(status failed · rate_limited)도 행으로 남고 상한에 들어간다 · pending = 받는 중(비정상 종료 시 그날은 다시 받지 않음).
+    보존: fetch_day 가 30일 지난 행과 그 종목에 행이 하나도 남지 않은 일봉(us_quote_close)은 다음 받기 때 지운다.
+    """
+
+    __tablename__ = "us_quote_day"
+
+    ticker: Mapped[str] = mapped_column(String(16), primary_key=True)
+    fetch_day: Mapped[date] = mapped_column(Date, primary_key=True, index=True)
+    status: Mapped[str] = mapped_column(String(16))          # pending | ok | failed | rate_limited
+    fetched_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
+    price_date: Mapped[Optional[date]] = mapped_column(Date)  # 끝난 마지막 거래일 (일봉 기준 · 장중 값 아님)
+    price_close: Mapped[Optional[float]] = mapped_column(Float)
+    volume: Mapped[Optional[float]] = mapped_column(Float)    # price_date 하루 거래량
+    avg_volume: Mapped[Optional[float]] = mapped_column(Float)
+    market_cap: Mapped[Optional[float]] = mapped_column(Float)
+    low_52w: Mapped[Optional[float]] = mapped_column(Float)
+    high_52w: Mapped[Optional[float]] = mapped_column(Float)
+    total_cash: Mapped[Optional[float]] = mapped_column(Float)
+    short_pct_float: Mapped[Optional[float]] = mapped_column(Float)
+    short_asof: Mapped[Optional[date]] = mapped_column(Date)
+    exchange: Mapped[Optional[str]] = mapped_column(String(16))
+    analyst_json: Mapped[Optional[str]] = mapped_column(Text)
+    error: Mapped[Optional[str]] = mapped_column(String(80))  # 실패 때 예외 종류만 (내용 · 비밀값 없음)
+
+
+class UsQuoteClose(Base):
+    """1128-01 ㉣ · 미국 비후보 종목 일봉 종가 · 거래량 (끝난 거래일만 · 받을 때마다 그 종목 행을 통째로 바꿈). us_quote_day 와 같은 보존."""
+
+    __tablename__ = "us_quote_close"
+
+    ticker: Mapped[str] = mapped_column(String(16), primary_key=True)
+    trade_date: Mapped[date] = mapped_column(Date, primary_key=True)
+    close: Mapped[float] = mapped_column(Float)
+    volume: Mapped[Optional[float]] = mapped_column(Float)
+
+
 class BiotechQuoteDaily(Base):
     """1111-01 · 바이오 후보 종목 하루 1회 시세·전문가 의견 원자료 + AI 요약 (표시 전용 · 조회일 = asof_date).
 

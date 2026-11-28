@@ -824,6 +824,7 @@ export interface StockOverview {
   going_concern?: StockGoingConcern | null;
   quote_available?: boolean | null; // 바이오 후보 여부 · 국내는 목록에 있는 6자리 코드면 true (1128-01)
   market_label?: "KOSPI" | "KOSDAQ" | null; // 1128-01 · 국내 시장 이름 (없으면 null)
+  us_quote_available?: boolean; // 1128-01 ㉣ · 미국 비후보가 이 사이트 저장 목록에 있어 관리자에게 가격 칸을 열 수 있음 (저장 표만 읽은 값)
 }
 
 // 1022-10 4단계 · 오늘 (홈) · 계약은 서버 routes/today.py 와 같다

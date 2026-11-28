@@ -26,6 +26,8 @@ export type QuoteOpinion = {
   targets: Partial<Record<"mean" | "median" | "high" | "low", number | null>>;
   changes: QuoteChange[];
   source: string;
+  asof?: string | null; // 1128-01 ㉣ · 미국 비후보 · 야후에서 받은 조회일
+  use_note?: string;
 };
 export type QuoteSummary = { head: string; lines: string[]; sources: string[]; model?: string | null; made_at?: string | null };
 export type QuoteSec = { accession?: string; filing_date?: string; title?: string; lead?: string; url?: string };
@@ -40,6 +42,11 @@ export type QuoteView = {
   summary: QuoteSummary | null;
   sec8k: QuoteSec | null;
   use_note: string;
+  // 1128-01 ㉣ · 미국 비후보 응답에만 있는 칸 (바이오 응답에는 없음)
+  kind?: "us_stored";
+  close_date?: string | null; // 종가의 날짜 (끝난 마지막 거래일)
+  notes?: string[];
+  empty_note?: string;
 };
 
 // 의견 분포 라벨 · 증권사 표기 원문 그대로 (번역 안 함 · Fable 2차 질문 2)
@@ -91,6 +98,12 @@ export function md(ymd?: string | null): string {
 }
 
 export function liveLine(v: QuoteView): string {
+  if (v.kind === "us_stored") {
+    // 1128-01 ㉣ · 실시간 없음 (바이오 후보만) · 장중 값이 아니라 끝난 거래일 종가와 그 날짜
+    const c = v.basics?.price_close;
+    const head = c != null ? `저장 종가 ${c.toFixed(2)} 달러 (${md(v.close_date)} 거래일 종가)` : "저장 종가 없음";
+    return `${head}${v.live_note ? ` · ${v.live_note}` : ""}`;
+  }
   if (v.live) {
     const status = v.live.market_status === "OPEN" ? "장중" : v.live.market_status === "CLOSE" ? "장 마감" : v.live.market_status;
     return `현재가 ${v.live.price.toFixed(2)} 달러 (${signedPct(v.live.change_pct)}) · ${status} · ${v.live.source}`;
@@ -122,6 +135,9 @@ export function changeLine(c: QuoteChange): string {
 }
 
 export function sourceLine(v: QuoteView): string {
+  if (v.kind === "us_stored") {
+    return `시세·전문가 의견: 야후 (${md(v.asof)} 조회 · 종가는 ${md(v.close_date)} 거래일 · 의견이 나온 날 아님) · 같은 종목은 하루 한 번만 받습니다`;
+  }
   const parts = [`시세·전문가 의견: 야후 (${md(v.asof)} 조회 · 의견이 나온 날 아님)`, "현재가: 네이버 (펼칠 때 조회 · 60초 보관)"];
   if (v.sec8k?.filing_date) parts.push(`회사 공시: SEC 8-K (${md(v.sec8k.filing_date)} 제출)`);
   return parts.join(" · ");
