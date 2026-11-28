@@ -54,11 +54,23 @@ function Body({ v }: { v: QuoteView }) {
           <Cell label="공매도 비율 (유통 주식 대비)" value={ratioPct(b.short_pct_float)} note={b.short_asof ? `${md(b.short_asof)} 기준 · 한 달 두 번 갱신` : undefined} />
         </div>
       ) : (
-        <p className="text-muted-foreground">기본 시세 자료가 아직 없습니다. 하루 한 번(화~토 08:45) 받습니다.</p>
+        <p className="text-muted-foreground">{v.empty_note ?? "기본 시세 자료가 아직 없습니다. 하루 한 번(화~토 08:45) 받습니다."}</p>
+      )}
+      {v.notes && v.notes.length > 0 && (
+        <ul className="list-disc space-y-0.5 pl-5 text-[11px] text-muted-foreground" data-testid="quote-notes">
+          {v.notes.map((n, i) => (
+            <li key={i}>{n}</li>
+          ))}
+        </ul>
       )}
       {o && (
         <div className="space-y-1 rounded-md border border-border p-2" data-testid="quote-opinion">
           <div className="font-semibold">{o.head}</div>
+          {o.asof && (
+            <div className="text-[11px] text-muted-foreground tabular-nums" data-testid="quote-opinion-source">
+              출처 {o.source} · 조회일 {md(o.asof)}
+            </div>
+          )}
           <div className="tabular-nums">{countLine(o)}</div>
           {tl && <div className="tabular-nums">{tl}</div>}
           <div className="tabular-nums">
@@ -138,9 +150,12 @@ export function QuoteDetails({
   ticker,
   name,
   errorText,
+  endpoint,
 }: {
   ticker: string;
   name?: string;
+  /** 1128-01 ㉣ · 미국 비후보 종목은 /api/v1/stock/{ticker}/quote (없으면 바이오 후보 길) */
+  endpoint?: string;
   /** 1119-01 · 종목 한 장 화면이 401 · 404 문구를 자기 말로 바꿀 때 (없으면 /biotech 기본 문구) */
   errorText?: { 401?: string; 404?: string };
 }) {
@@ -150,7 +165,8 @@ export function QuoteDetails({
 
   useEffect(() => {
     let alive = true;
-    const hit = cache.get(ticker);
+    const url = endpoint ?? `/api/v1/biotech/quote/${encodeURIComponent(ticker)}`;
+    const hit = cache.get(url);
     if (hit && Date.now() - hit.at < CACHE_MS) {
       setView(hit.view);
       return;
@@ -159,12 +175,12 @@ export function QuoteDetails({
     setErr(null);
     (async () => {
       try {
-        const res = await fetch(`/api/v1/biotech/quote/${encodeURIComponent(ticker)}`, { credentials: "include", cache: "no-store" });
+        const res = await fetch(url, { credentials: "include", cache: "no-store" });
         if (res.status === 401) throw new Error(errorText?.[401] ?? "로그인이 필요합니다.");
         if (res.status === 404) throw new Error(errorText?.[404] ?? "후보 종목이 아니어서 자료가 없습니다.");
         if (!res.ok) throw new Error(`불러오지 못했습니다 (status ${res.status}).`);
         const j = (await res.json()) as QuoteView;
-        cache.set(ticker, { at: Date.now(), view: j });
+        cache.set(url, { at: Date.now(), view: j });
         if (alive) setView(j);
       } catch (e) {
         if (alive) setErr((e as Error).message);
@@ -175,7 +191,7 @@ export function QuoteDetails({
     return () => {
       alive = false;
     };
-  }, [ticker]);
+  }, [ticker, endpoint]);
 
   return (
     <div

@@ -456,6 +456,15 @@ async def get_stock(ticker: str, response: Response, role: str = Depends(get_cur
         candidate = hit is not None
         market_label = hit["market"] if hit and hit.get("market") in ("KOSPI", "KOSDAQ") else None
     cands_ok = candidate is True and not kr
+    # 1128-01 ㉣ · 미국 비후보 (후보 여부를 읽었고 후보가 아닐 때만) · 저장 표 허용 목록만 읽음 (야후 호출 0 · Fable 막음 ㄹ ⑤)
+    us_quote = False
+    if not kr and candidate is False:
+        from backend.services import us_quotes
+
+        try:
+            us_quote = await us_quotes.lookup_allowed(t, public=not admin) is not None  # 비관리자는 보유 · 판단 표 제외
+        except Exception as e:  # noqa: BLE001
+            logger.warning("[stock] 미국 허용 목록 조회 실패 (%s): %s", t, e)
 
     return StockOverview(
         ticker=t,
@@ -471,19 +480,40 @@ async def get_stock(ticker: str, response: Response, role: str = Depends(get_cur
         going_concern=_going_concern(t) if cands_ok else None,
         quote_available=candidate,
         market_label=market_label,
+        us_quote_available=us_quote,
     )
 
 
 @router.get("/{ticker}/quote")
 async def get_kr_quote(ticker: str, response: Response, _admin: str = Depends(require_sniper_token)) -> dict:
-    """1128-01 · 국내 종목 가격 · 증권사 의견 칸 (관리자 전용 · 네이버). 인증이 먼저라 비로그인 요청은 네이버를 부르지 않는다.
+    """1128-01 · 종목 가격 · 의견 칸 (관리자 전용). 인증이 먼저라 비로그인 요청은 바깥을 부르지 않는다.
 
-    6자리 코드가 저장된 목록(krx_stock_meta · DART 상장 행)에 없으면 404 · 바깥 호출 0.
+    국내 6자리 코드: 저장 목록(krx_stock_meta · DART 상장 행)에 없으면 404 · 네이버 (services/kr_quotes.py).
+    미국 기호 (㉣): 바이오 후보는 404 (그쪽 길 /biotech/quote 를 쓴다) · 저장 허용 목록 밖은 404 · 야후는 하루 1번 · 50종목 (services/us_quotes.py).
     """
     from backend.services import kr_quotes
 
     response.headers.update(_NO_STORE)
+    if not is_kr_code((ticker or "").strip().upper()):
+        return await _us_quote(ticker)
     info = await kr_quotes.lookup_allowed(ticker)
     if info is None:
         raise HTTPException(status_code=404, detail="목록에 없는 국내 종목입니다.", headers=_NO_STORE)
     return await kr_quotes.quote_view(ticker, info=info)
+
+
+async def _us_quote(ticker: str) -> dict:
+    from backend.services import biotech_quotes as bq
+    from backend.services import us_quotes
+
+    t = us_quotes.normalize(ticker)
+    if t is None:
+        raise HTTPException(status_code=404, detail="종목 코드 형식이 아닙니다.", headers=_NO_STORE)
+    cands = await bq.candidate_set()
+    if not cands:   # 후보 목록을 못 읽으면 후보인지 몰라 새로 받지 않는다 (같은 기호를 두 길로 받는 일 방지 · 권고 ㅁ)
+        raise HTTPException(status_code=404, detail="후보 목록을 읽지 못해 지금은 열 수 없습니다.", headers=_NO_STORE)
+    if bq.normalize(t) in cands:
+        raise HTTPException(status_code=404, detail="바이오 후보 종목은 바이오 화면의 가격 칸을 씁니다.", headers=_NO_STORE)
+    if await us_quotes.lookup_allowed(t) is None:
+        raise HTTPException(status_code=404, detail="이 사이트 저장 목록에 없는 미국 종목입니다.", headers=_NO_STORE)
+    return await us_quotes.quote_view(t)

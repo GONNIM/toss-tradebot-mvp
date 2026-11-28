@@ -2,7 +2,7 @@
 import assert from "node:assert/strict";
 import * as fs from "node:fs";
 import * as path from "node:path";
-import { BIOTECH_BASIS_LINE, changeLine, countLine, liveLine, ratioPct, shares, targetLine, usd, type QuoteOpinion, type QuoteView } from "./biotech-quote";
+import { BIOTECH_BASIS_LINE, changeLine, countLine, liveLine, ratioPct, shares, sourceLine, targetLine, usd, type QuoteOpinion, type QuoteView } from "./biotech-quote";
 
 const op: QuoteOpinion = {
   head: "전문가 의견 모음 · 추정 · 보장 아님", grade_note: "증권사 표기 원문 (번역 · 해석 안 함)", n_opinions: 10,
@@ -29,6 +29,14 @@ assert.equal(
   liveLine({ ...base, live: { price: 13, change_pct: 4, market_status: "OPEN", source: "네이버 실시간" } }),
   "현재가 13.00 달러 (+4.00%) · 장중 · 네이버 실시간",
 );
+
+// 1128-01 ㉣ · 미국 비후보: 실시간 없음 · 끝난 거래일 종가와 그 날짜 · 「실시간 실패」 낱말 없음 (Fable 권고 ㅂ)
+const us: QuoteView = { ...base, kind: "us_stored", asof: "2026-11-30", close_date: "2026-11-27", live_note: "실시간 가격은 바이오 후보만 보여 드립니다 · 아래는 저장한 종가입니다",
+  basics: { price_close: 123.45 } as QuoteView["basics"] };
+assert.equal(liveLine(us), "저장 종가 123.45 달러 (11/27 거래일 종가) · 실시간 가격은 바이오 후보만 보여 드립니다 · 아래는 저장한 종가입니다");
+assert.ok(!liveLine(us).includes("실시간 실패"));
+assert.equal(liveLine({ ...us, basics: null }).startsWith("저장 종가 없음"), true);
+assert.equal(sourceLine(us), "시세·전문가 의견: 야후 (11/30 조회 · 종가는 11/27 거래일 · 의견이 나온 날 아님) · 같은 종목은 하루 한 번만 받습니다");
 
 // 1112-01 · 바이오 칸 그림 출처 줄에 VIP·계좌 카드 낱말 없음
 assert.ok(!BIOTECH_BASIS_LINE.includes("카드 글자") && !/VIP/i.test(BIOTECH_BASIS_LINE));

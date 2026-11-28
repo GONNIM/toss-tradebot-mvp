@@ -109,6 +109,26 @@ const NO_CATALYST_NOTE = "등록된 일정이 없습니다";
 // 2 · 가격 · 전문가 의견 — 로그인 + 후보면 /biotech 와 같은 칸, 아니면 한 줄
 function PriceCard({ d }: { d: StockOverview }) {
   if (d.quote_available == null) return null; // 후보 파일을 못 읽음 → 칸 숨김
+  if (d.market === "US" && !d.quote_available && d.us_quote_available) {
+    // 1128-01 ㉣ · 미국 비후보 (저장 목록에 있는 기호) · 관리자만 · 야후는 관리자가 열 때만 · 실시간 없음 · AI 요약 없음
+    if (!d.is_admin) {
+      return (
+        <Card title="가격 · 전문가 의견">
+          <p className="text-sm text-muted-foreground" data-testid="price-login-note">{PRICE_LOGIN_NOTE}</p>
+        </Card>
+      );
+    }
+    return (
+      <Card title="가격 · 전문가 의견">
+        <QuoteDetails
+          ticker={d.ticker}
+          name={d.name ?? undefined}
+          endpoint={`/api/v1/stock/${encodeURIComponent(d.ticker)}/quote`}
+          errorText={{ 401: "다시 로그인하면 보입니다", 404: "이 사이트 저장 목록에 없는 종목이어서 가격 자료를 모으지 않습니다" }}
+        />
+      </Card>
+    );
+  }
   if (!d.quote_available) {
     return (
       <Card title="가격 · 전문가 의견">
@@ -205,7 +225,7 @@ function SourceCard({ d }: { d: StockOverview }) {
   if (d.catalysts != null) lines.push("일정: ClinicalTrials.gov 등록부 주간 사본");
   const det = d.going_concern?.detail;
   if (d.going_concern != null) lines.push(`계속기업 문구: SEC 제출 서류${det?.filed ? ` · ${det.filed} 제출` : ""}`);
-  if (d.is_admin && d.quote_available) lines.push("가격 · 전문가 의견: 위 칸에 적힌 출처와 조회일");
+  if (d.is_admin && (d.quote_available || d.us_quote_available)) lines.push("가격 · 전문가 의견: 위 칸에 적힌 출처와 조회일");
   return (
     <Card title="출처">
       <ul className="space-y-1 text-xs text-muted-foreground tabular-nums">

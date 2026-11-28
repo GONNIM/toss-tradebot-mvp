@@ -770,6 +770,8 @@ class StockOverview(BaseModel):
     # 관리자 여부는 이 값이 아니라 /api/v1/stock/{code}/quote 가 따로 막는다
     quote_available: Optional[bool] = None
     market_label: Optional[str] = None       # 1128-01 · 국내 KOSPI / KOSDAQ (저장값만 · 없으면 None → 화면은 「국내」) · 미국은 None
+    # 1128-01 ㉣ · 미국 비후보 종목이 저장 표(허용 목록)에 있어 관리자에게 가격 칸을 열 수 있는지 (저장된 표만 읽음 · 야후 호출 0) · 후보 · 국내 · 목록 밖은 False
+    us_quote_available: Optional[bool] = None
 
 
 # ─── 오늘 홈 (1022-10 4단계) · GET /api/v1/today ───────────────────────────
